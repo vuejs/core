@@ -83,8 +83,6 @@ export const h = ((tag: ElementType, data: any, children: any): VNode => {
       ref
     )
   } else {
-    // TODO: handle fragment & portal types
-    // TODO: warn ref on fragment
     // component
     return createComponentVNode(
       tag,
