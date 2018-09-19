@@ -265,7 +265,7 @@ export function createRenderer(options: RendererOptions) {
       el = mountComponentInstance(
         vnode,
         tag as ComponentClass,
-        container,
+        null,
         parentComponent,
         isSVG,
         endNode
