@@ -1,0 +1,1 @@
+describe('observer/computed', () => {})

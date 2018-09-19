@@ -1,5 +1,9 @@
 module.exports = {
   preset: 'ts-jest',
+  globals: {
+    __DEV__: true,
+    __COMPAT__: false
+  },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],
   collectCoverageFrom: ['packages/*/src/**/*.ts'],

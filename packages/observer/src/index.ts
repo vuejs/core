@@ -24,6 +24,7 @@ import {
 } from './autorun'
 
 export { Autorun, DebuggerEvent }
+export { OperationTypes } from './operations'
 export { computed, ComputedGetter } from './computed'
 export { lock, unlock } from './lock'
 
@@ -40,7 +41,7 @@ const canObserve = (value: any): boolean => {
   )
 }
 
-type identity = <T>(target: T) => T
+type identity = <T>(target?: T) => T
 
 export const observable = ((target: any = {}): any => {
   // if trying to observe an immutable proxy, return the immutable version.

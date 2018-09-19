@@ -32,12 +32,13 @@ export type Debugger = (event: DebuggerEvent) => void
 
 export const activeAutorunStack: Autorun[] = []
 
-const ITERATE_KEY = Symbol('iterate')
+export const ITERATE_KEY = Symbol('iterate')
 
 export function createAutorun(fn: Function, options: AutorunOptions): Autorun {
   const runner = function runner(...args): any {
     return run(runner as Autorun, fn, args)
   } as Autorun
+  runner.isAutorun = true
   runner.active = true
   runner.raw = fn
   runner.scheduler = options.scheduler
