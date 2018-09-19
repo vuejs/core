@@ -1,10 +1,11 @@
 const queue: Array<() => void> = []
 const postFlushCbs: Array<() => void> = []
 const p = Promise.resolve()
+
 let flushing = false
 
-export function nextTick(fn: () => void) {
-  p.then(fn)
+export function nextTick(fn?: () => void): Promise<void> {
+  return p.then(fn)
 }
 
 export function queueJob(job: () => void, postFlushCb?: () => void) {

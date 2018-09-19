@@ -23,10 +23,12 @@
     ]
   },
   "devDependencies": {
+    "@types/jest": "^23.3.2",
     "chalk": "^2.4.1",
     "dts-bundle": "^0.7.3",
     "execa": "^1.0.0",
     "fs-extra": "^7.0.0",
+    "jest": "^23.6.0",
     "lerna": "^3.4.0",
     "lint-staged": "^7.2.2",
     "minimist": "^1.2.0",
@@ -36,6 +38,7 @@
     "rollup-plugin-replace": "^2.0.0",
     "rollup-plugin-terser": "^2.0.2",
     "rollup-plugin-typescript2": "^0.17.0",
+    "ts-jest": "^23.10.0",
     "typescript": "^3.0.3",
     "yorkie": "^2.0.0"
   }
