@@ -1,0 +1,21 @@
+{
+  "name": "@vue/renderer-server",
+  "version": "3.0.0-alpha.1",
+  "description": "@vue/renderer-server",
+  "main": "index.js",
+  "module": "dist/renderer-server.esm.js",
+  "typings": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/renderer-server#readme"
+}

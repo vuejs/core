@@ -17,7 +17,7 @@ const execa = require('execa')
 const { targets, fuzzyMatchTarget } = require('./utils')
 
 const args = require('minimist')(process.argv.slice(2))
-const target = fuzzyMatchTarget(args._[0] || 'runtime-dom')
+const target = fuzzyMatchTarget(args._[0] || 'renderer-dom')
 const formats = args.formats || args.f
 
 execa(

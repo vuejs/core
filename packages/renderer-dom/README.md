@@ -1,7 +1,7 @@
-# @vue/runtime-dom
+# @vue/renderer-dom
 
 ``` js
-import { h, render, Component } from '@vue/runtime-dom'
+import { h, render, Component } from '@vue/renderer-dom'
 
 class App extends Component {
   data () {

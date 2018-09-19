@@ -22,7 +22,14 @@ const { render } = createRenderer({
 // important: inline the definition for nextTick
 const publicNextTick = nextTick as (fn: Function) => Promise<void>
 
-export { h, cloneVNode, createPortal, Component, render, publicNextTick as nextTick }
+export {
+  h,
+  cloneVNode,
+  createPortal,
+  Component,
+  render,
+  publicNextTick as nextTick
+}
 
 // also expose observer API
 export {
