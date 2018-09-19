@@ -1,24 +1,28 @@
-// Run Rollup in watch mode for a single package for development.
-// Only the ES modules format will be generated, as it is expected to be tested
-// in a modern browser using <script type="module">.
-// Defaults to watch the `vue` meta package.
-// To specific the package to watch, simply pass its name. e.g.
-// ```
-// yarn dev observer
-// ```
+/*
+Run Rollup in watch mode for development.
+
+To specific the package to watch, simply pass its name and the desired build
+formats to watch (defaults to "umd"):
+
+```
+# name supports fuzzy match. will watch all packages with name containing "dom"
+yarn dev dom
+
+# specify the format to output
+yarn dev core --formats cjs
+```
+*/
 
 const execa = require('execa')
 const { targets, fuzzyMatchTarget } = require('./utils')
 
-const target = fuzzyMatchTarget(process.argv[2] || 'runtime-dom')
+const args = require('minimist')(process.argv.slice(2))
+const target = fuzzyMatchTarget(args._[0] || 'runtime-dom')
+const formats = args.formats || args.f
 
 execa(
   'rollup',
-  [
-    '-wc',
-    '--environment',
-    `TARGET:${target},FORMATS:umd`
-  ],
+  ['-wc', '--environment', `TARGET:${target},FORMATS:${formats || 'umd'}`],
   {
     stdio: 'inherit'
   }
