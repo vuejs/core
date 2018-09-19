@@ -1,0 +1,26 @@
+{
+  "name": "@vue/observer",
+  "version": "3.0.0-alpha.1",
+  "description": "@vue/observer",
+  "main": "index.js",
+  "module": "dist/observer.esm.js",
+  "typings": "dist/index.d.ts",
+  "unpkg": "dist/observer.umd.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue.git"
+  },
+  "buildOptions": {
+    "name": "VueObserver",
+    "formats": ["esm", "cjs", "umd", "esm-browser"]
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/observer#readme"
+}
