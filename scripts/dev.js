@@ -2,7 +2,7 @@
 Run Rollup in watch mode for development.
 
 To specific the package to watch, simply pass its name and the desired build
-formats to watch (defaults to "umd"):
+formats to watch (defaults to "global"):
 
 ```
 # name supports fuzzy match. will watch all packages with name containing "dom"
@@ -22,7 +22,7 @@ const formats = args.formats || args.f
 
 execa(
   'rollup',
-  ['-wc', '--environment', `TARGET:${target},FORMATS:${formats || 'umd'}`],
+  ['-wc', '--environment', `TARGET:${target},FORMATS:${formats || 'global'}`],
   {
     stdio: 'inherit'
   }

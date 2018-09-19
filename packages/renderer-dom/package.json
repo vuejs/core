@@ -5,10 +5,10 @@
   "main": "index.js",
   "module": "dist/renderer-dom.esm.js",
   "typings": "dist/index.d.ts",
-  "unpkg": "dist/renderer-dom.umd.js",
+  "unpkg": "dist/renderer-dom.global.js",
   "buildOptions": {
-    "name": "Vue",
-    "formats": ["esm", "cjs", "umd", "esm-browser"]
+    "name": "VueDOMRenderer",
+    "formats": ["esm", "cjs", "global", "esm-browser"]
   },
   "repository": {
     "type": "git",

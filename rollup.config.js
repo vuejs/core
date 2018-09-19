@@ -29,16 +29,16 @@ let hasTSChecked = false
 
 const configs = {
   esm: {
-    file: resolve(`dist/${name}.esm.js`),
+    file: resolve(`dist/${name}.esm-bundler.js`),
     format: `es`
   },
   cjs: {
     file: resolve(`dist/${name}.cjs.js`),
     format: `cjs`
   },
-  umd: {
-    file: resolve(`dist/${name}.umd.js`),
-    format: `umd`
+  global: {
+    file: resolve(`dist/${name}.global.js`),
+    format: `iife`
   },
   'esm-browser': {
     file: resolve(`dist/${name}.esm-browser.js`),
@@ -49,14 +49,16 @@ const configs = {
 const defaultFormats = ['esm', 'cjs']
 const inlineFromats = process.env.FORMATS && process.env.FORMATS.split(',')
 const packageFormats = inlineFromats || packageOptions.formats || defaultFormats
-const packageConfigs = packageFormats.map(format => createConfig(configs[format]))
+const packageConfigs = packageFormats.map(format =>
+  createConfig(configs[format])
+)
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
     if (format === 'cjs') {
       packageConfigs.push(createProductionConfig(format))
     }
-    if (format === 'umd' || format === 'esm-browser') {
+    if (format === 'global' || format === 'esm-browser') {
       packageConfigs.push(createMinifiedConfig(format))
     }
   })
@@ -66,11 +68,11 @@ module.exports = packageConfigs
 
 function createConfig(output, plugins = []) {
   const isProductionBuild = /\.prod\.js$/.test(output.file)
-  const isUMDBuild = /\.umd(\.prod)?\.js$/.test(output.file)
+  const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
 
-  if (isUMDBuild) {
+  if (isGlobalBuild) {
     output.name = packageOptions.name
   }
 
@@ -91,11 +93,10 @@ function createConfig(output, plugins = []) {
 
   return {
     input: resolve(`src/index.ts`),
-    // UMD and Browser ESM builds inlines everything so that they can be
+    // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external: isUMDBuild || isBrowserESMBuild
-      ? []
-      : Object.keys(aliasOptions),
+    external:
+      isGlobalBuild || isBrowserESMBuild ? [] : Object.keys(aliasOptions),
     plugins: [
       tsPlugin,
       aliasPlugin,
@@ -114,10 +115,10 @@ function createConfig(output, plugins = []) {
 function createReplacePlugin(isProduction, isBunlderESMBuild) {
   return replace({
     __DEV__: isBunlderESMBuild
-      // preserve to be handled by bundlers
-      ? `process.env.NODE_ENV !== 'production'`
-      // hard coded dev/prod builds
-      : !isProduction,
+      ? // preserve to be handled by bundlers
+        `process.env.NODE_ENV !== 'production'`
+      : // hard coded dev/prod builds
+        !isProduction,
     // compatibility builds
     __COMPAT__: !!process.env.COMPAT
   })
@@ -126,21 +127,20 @@ function createReplacePlugin(isProduction, isBunlderESMBuild) {
 function createProductionConfig(format) {
   return createConfig({
     file: resolve(`dist/${name}.${format}.prod.js`),
-    format: /^esm/.test(format) ? 'es' : format
+    format: configs[format].format
   })
 }
 
 function createMinifiedConfig(format) {
   const { terser } = require('rollup-plugin-terser')
-  const isESM = /^esm/.test(format)
   return createConfig(
     {
       file: resolve(`dist/${name}.${format}.prod.js`),
-      format: isESM ? 'es' : format
+      format: configs[format].format
     },
     [
       terser({
-        module: isESM
+        module: /^esm/.test(format)
       })
     ]
   )
