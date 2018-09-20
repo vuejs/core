@@ -116,7 +116,9 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
-    addRunners(runners, depsMap.get(key as string | symbol))
+    if (key !== void 0) {
+      addRunners(runners, depsMap.get(key as string | symbol))
+    }
     // also run for iteration key on ADD | DELETE
     if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {
       const iterationKey = Array.isArray(target) ? 'length' : ITERATE_KEY

@@ -105,7 +105,9 @@ function createObservable(
   observed = new Proxy(target, handlers)
   toProxy.set(target, observed)
   toRaw.set(observed, target)
-  targetMap.set(target, new Map())
+  if (!targetMap.has(target)) {
+    targetMap.set(target, new Map())
+  }
   return observed
 }
 

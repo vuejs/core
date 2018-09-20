@@ -206,5 +206,34 @@ describe('observer/collections', () => {
       map.delete('key')
       expect(dummy).toBe(undefined)
     })
+
+    it('should not pollute original Map with Proxies', () => {
+      const map = new Map()
+      const observed = observable(map)
+      const value = observable({})
+      observed.set('key', value)
+      expect(map.get('key')).not.toBe(value)
+      expect(map.get('key')).toBe(unwrap(value))
+    })
+
+    it('should return observable versions of contained values', () => {
+      const observed = observable(new Map())
+      const value = {}
+      observed.set('key', value)
+      const wrapped = observed.get('key')
+      expect(isObservable(wrapped)).toBe(true)
+      expect(unwrap(wrapped)).toBe(value)
+    })
+
+    it('should observed nested data', () => {
+      const observed = observable(new Map())
+      observed.set('key', { a: 1 })
+      let dummy
+      autorun(() => {
+        dummy = observed.get('key').a
+      })
+      observed.get('key').a = 2
+      expect(dummy).toBe(2)
+    })
   })
 })

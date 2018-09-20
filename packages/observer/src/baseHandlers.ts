@@ -15,14 +15,14 @@ function get(
   target: any,
   key: string | symbol,
   receiver: any,
-  toObsevable: (t: any) => any
+  toObservable: (t: any) => any
 ) {
   const res = Reflect.get(target, key, receiver)
   if (typeof key === 'symbol' && builtInSymbols.has(key)) {
     return res
   }
   track(target, OperationTypes.GET, key)
-  return res !== null && typeof res === 'object' ? toObsevable(res) : res
+  return res !== null && typeof res === 'object' ? toObservable(res) : res
 }
 
 function set(
@@ -96,7 +96,10 @@ export const immutableHandlers: ProxyHandler<any> = {
   set(target: any, key: string | symbol, value: any, receiver: any): boolean {
     if (LOCKED) {
       if (__DEV__) {
-        console.warn(`Set operation failed: target is immutable.`, target)
+        console.warn(
+          `Set operation on key "${key as any}" failed: target is immutable.`,
+          target
+        )
       }
       return true
     } else {
@@ -107,7 +110,10 @@ export const immutableHandlers: ProxyHandler<any> = {
   deleteProperty(target: any, key: string | symbol): boolean {
     if (LOCKED) {
       if (__DEV__) {
-        console.warn(`Delete operation failed: target is immutable.`, target)
+        console.warn(
+          `Delete operation on key "${key as any}" failed: target is immutable.`,
+          target
+        )
       }
       return true
     } else {
