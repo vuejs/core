@@ -15,6 +15,8 @@ export function computed(getter: Function, context?: any): ComputedGetter {
       dirty = true
     }
   })
+  // mark runner as computed so that it gets priority during trigger
+  runner.computed = true
   const computedGetter = (() => {
     if (dirty) {
       value = runner()

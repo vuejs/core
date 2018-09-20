@@ -7,6 +7,7 @@ export interface Autorun {
   active: boolean
   raw: Function
   deps: Array<Dep>
+  computed?: boolean
   scheduler?: Scheduler
   onTrack?: Debugger
   onTrigger?: Debugger
@@ -109,33 +110,45 @@ export function trigger(
 ) {
   const depsMap = targetMap.get(target) as KeyToDepMap
   const runners = new Set()
+  const computedRunners = new Set()
   if (type === OperationTypes.CLEAR) {
     // collection being cleared, trigger all runners for target
     depsMap.forEach(dep => {
-      addRunners(runners, dep)
+      addRunners(runners, computedRunners, dep)
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      addRunners(runners, depsMap.get(key as string | symbol))
+      addRunners(runners, computedRunners, depsMap.get(key as string | symbol))
     }
     // also run for iteration key on ADD | DELETE
     if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {
       const iterationKey = Array.isArray(target) ? 'length' : ITERATE_KEY
-      addRunners(runners, depsMap.get(iterationKey))
+      addRunners(runners, computedRunners, depsMap.get(iterationKey))
     }
   }
-  runners.forEach(runner => {
+  const run = (runner: Autorun) => {
     scheduleRun(runner, target, type, key, extraInfo)
-  })
+  }
+  // Important: computed runners must be run first so that computed getters
+  // can be invalidated before any normal runners that depend on them are run.
+  computedRunners.forEach(run)
+  runners.forEach(run)
 }
 
 function addRunners(
   runners: Set<Autorun>,
+  computedRunners: Set<Autorun>,
   runnersToAdd: Set<Autorun> | undefined
 ) {
   if (runnersToAdd !== void 0) {
-    runnersToAdd.forEach(runners.add, runners)
+    runnersToAdd.forEach(runner => {
+      if (runner.computed) {
+        computedRunners.add(runner)
+      } else {
+        runners.add(runner)
+      }
+    })
   }
 }
 
