@@ -1,6 +1,7 @@
 import {
   h,
   render,
+  nextTick,
   Component,
   ComponentOptions,
   createComponentInstance
@@ -9,8 +10,9 @@ import {
 class Vue extends Component {
   static h = h
   static render = render
+  static nextTick = nextTick
 
-  constructor(options: ComponentOptions & { el: any }) {
+  constructor(options: ComponentOptions & { el?: any }) {
     super()
     if (!options) {
       return
@@ -21,7 +23,7 @@ class Vue extends Component {
     vnode.children = instance
 
     function mount(el: any) {
-      const dom = document.querySelector(el)
+      const dom = typeof el === 'string' ? document.querySelector(el) : el
       render(vnode, dom)
       return instance.$proxy
     }

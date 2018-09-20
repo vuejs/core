@@ -183,6 +183,11 @@ export function createComponentClassFromOptions(
         set: isGet ? undefined : value.set
       })
     }
+    if (key === 'methods') {
+      for (const method in value) {
+        ;(ObjectComponent.prototype as any)[method] = value[method]
+      }
+    }
   }
   return ObjectComponent as ComponentClass
 }
