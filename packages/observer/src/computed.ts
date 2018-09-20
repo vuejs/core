@@ -1,9 +1,9 @@
-import { autorun, stop } from './index'
+import { autorun } from './index'
 import { Autorun, activeAutorunStack } from './autorun'
 
 export interface ComputedGetter {
   (): any
-  stop: () => void
+  runner: Autorun
 }
 
 export function computed(getter: Function, context?: any): ComputedGetter {
@@ -15,8 +15,6 @@ export function computed(getter: Function, context?: any): ComputedGetter {
       dirty = true
     }
   })
-  // mark runner as computed so that it gets priority during trigger
-  runner.computed = true
   const computedGetter = (() => {
     if (dirty) {
       value = runner()
@@ -28,7 +26,10 @@ export function computed(getter: Function, context?: any): ComputedGetter {
     trackChildRun(runner)
     return value
   }) as ComputedGetter
-  computedGetter.stop = () => stop(runner)
+  // expose runner so computed can be stopped
+  computedGetter.runner = runner
+  // mark runner as computed so that it gets priority during trigger
+  runner.computed = true
   return computedGetter
 }
 

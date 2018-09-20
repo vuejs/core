@@ -1,5 +1,5 @@
 import { EMPTY_OBJ } from './utils'
-import { computed, ComputedGetter } from '@vue/observer'
+import { computed, stop, ComputedGetter } from '@vue/observer'
 import { Component, ComponentClass } from './component'
 import { ComponentComputedOptions } from './componentOptions'
 
@@ -59,7 +59,7 @@ export function teardownComputed(instance: Component) {
   const handles = instance._computedGetters
   if (handles !== null) {
     for (const key in handles) {
-      handles[key].stop()
+      stop(handles[key].runner)
     }
   }
 }

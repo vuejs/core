@@ -1,4 +1,4 @@
-import { computed, observable, autorun } from '../src'
+import { computed, observable, autorun, stop } from '../src'
 
 describe('observer/computed', () => {
   it('should return updated value', () => {
@@ -132,7 +132,7 @@ describe('observer/computed', () => {
     expect(dummy).toBe(undefined)
     value.foo = 1
     expect(dummy).toBe(1)
-    cValue.stop()
+    stop(cValue.runner)
     value.foo = 2
     expect(dummy).toBe(1)
   })
