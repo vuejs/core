@@ -17,18 +17,14 @@ export function queueJob(job: () => void, postFlushCb?: () => void) {
     }
   }
   if (postFlushCb) {
-    queuePostFlushCb(postFlushCb)
+    postFlushCbs.push(postFlushCb)
   }
   if (!flushing) {
     nextTick(flushJobs)
   }
 }
 
-export function queuePostFlushCb(cb: () => void) {
-  postFlushCbs.push(cb)
-}
-
-export function flushJobs() {
+function flushJobs() {
   flushing = true
   let job
   while ((job = queue.shift())) {

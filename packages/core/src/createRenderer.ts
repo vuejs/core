@@ -56,7 +56,10 @@ interface PatchDataFunction {
 }
 
 interface RendererOptions {
-  queueJob: (fn: () => void, postFlushJob?: () => void) => void
+  scheduler: {
+    nextTick: (fn: () => void) => Promise<any>
+    queueJob: (fn: () => void, postFlushJob?: () => void) => void
+  }
   nodeOps: NodeOps
   patchData: PatchDataFunction
   teardownVNode?: (vnode: VNode) => void
@@ -68,7 +71,7 @@ interface RendererOptions {
 // renderer alongside an actual renderer.
 export function createRenderer(options: RendererOptions) {
   const {
-    queueJob,
+    scheduler: { queueJob, nextTick },
     nodeOps: {
       createElement: platformCreateElement,
       createText: platformCreateText,
@@ -1185,6 +1188,10 @@ export function createRenderer(options: RendererOptions) {
     const instance =
       (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
       createComponentInstance(parentVNode, Component, parentComponent)
+
+    // renderer-injected scheduler methods
+    instance.$nextTick = nextTick
+    instance._queueJob = queueJob
 
     const queueUpdate = (instance.$forceUpdate = () => {
       queueJob(instance._updateHandle, flushHooks)

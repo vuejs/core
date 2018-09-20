@@ -1,6 +1,6 @@
 import { MountedComponent } from './component'
 import { ComponentWatchOptions } from './componentOptions'
-import { autorun, stop, Autorun } from '@vue/observer'
+import { autorun, stop } from '@vue/observer'
 
 export function initializeWatch(
   instance: MountedComponent,
@@ -14,6 +14,7 @@ export function initializeWatch(
 }
 
 // TODO deep watch
+// TODO sync watch
 export function setupWatcher(
   instance: MountedComponent,
   keyOrFn: string | Function,
@@ -21,22 +22,32 @@ export function setupWatcher(
 ): () => void {
   const handles = instance._watchHandles || (instance._watchHandles = new Set())
   const proxy = instance.$proxy
+
   const rawGetter =
     typeof keyOrFn === 'string'
       ? () => proxy[keyOrFn]
       : () => keyOrFn.call(proxy)
+
   let oldValue: any
+
+  const applyCb = () => {
+    const newValue = runner()
+    if (newValue !== oldValue) {
+      cb(newValue, oldValue)
+      oldValue = newValue
+    }
+  }
+
   const runner = autorun(rawGetter, {
-    scheduler: (runner: Autorun) => {
-      const newValue = runner()
-      if (newValue !== oldValue) {
-        cb(newValue, oldValue)
-        oldValue = newValue
-      }
+    scheduler: () => {
+      // defer watch callback using the scheduler injected defer.
+      instance._queueJob(applyCb)
     }
   })
+
   oldValue = runner()
   handles.add(runner)
+
   return () => {
     stop(runner)
     handles.delete(runner)

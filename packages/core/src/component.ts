@@ -44,7 +44,9 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   destroyed?(): void
 
   _updateHandle: Autorun
+  _queueJob: ((fn: () => void) => void)
   $forceUpdate: () => void
+  $nextTick: (fn: () => void) => Promise<any>
 
   _self: MountedComponent<D, P> // on proxies only
 }
@@ -68,6 +70,7 @@ export class Component {
   public $options: any
   public $proxy: any = null
   public $forceUpdate: (() => void) | null = null
+  public $nextTick: ((fn: () => void) => Promise<any>) | null = null
 
   public _rawData: Data | null = null
   public _computedGetters: Record<string, ComputedGetter> | null = null
@@ -76,6 +79,7 @@ export class Component {
   public _destroyed: boolean = false
   public _events: { [event: string]: Function[] | null } | null = null
   public _updateHandle: Autorun | null = null
+  public _queueJob: ((fn: () => void) => void) | null = null
   public _revokeProxy: () => void
   public _isVue: boolean = true
 

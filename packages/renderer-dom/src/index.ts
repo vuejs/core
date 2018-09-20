@@ -1,12 +1,15 @@
 import { createRenderer, VNode } from '@vue/core'
-import { queueJob } from '@vue/scheduler'
+import { queueJob, nextTick } from '@vue/scheduler'
 
 import { nodeOps } from './nodeOps'
 import { patchData } from './patchData'
 import { teardownVNode } from './teardownVNode'
 
 const { render: _render } = createRenderer({
-  queueJob,
+  scheduler: {
+    queueJob,
+    nextTick
+  },
   nodeOps,
   patchData,
   teardownVNode
