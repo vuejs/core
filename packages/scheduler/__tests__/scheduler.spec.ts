@@ -77,4 +77,21 @@ describe('scheduler', () => {
     await nextTick()
     expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
   })
+
+  test('should dedupe queued tasks', async () => {
+    const calls: any = []
+    const job1 = () => {
+      calls.push('job1')
+    }
+    const job2 = () => {
+      calls.push('job2')
+    }
+    queueJob(job1)
+    queueJob(job2)
+    queueJob(job1)
+    queueJob(job2)
+    expect(calls).toEqual([])
+    await nextTick()
+    expect(calls).toEqual(['job1', 'job2'])
+  })
 })
