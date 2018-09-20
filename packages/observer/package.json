@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.1",
   "description": "@vue/observer",
   "main": "index.js",
-  "module": "dist/observer.esm.js",
+  "module": "dist/observer.esm-bundler.js",
   "typings": "dist/index.d.ts",
   "unpkg": "dist/observer.global.js",
   "repository": {

@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.1",
   "description": "@vue/compiler-dom",
   "main": "index.js",
-  "module": "dist/compiler-dom.esm.js",
+  "module": "dist/compiler-dom.esm-bundler.js",
   "typings": "dist/index.d.ts",
   "repository": {
     "type": "git",

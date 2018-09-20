@@ -18,7 +18,10 @@ const packageOptions = pkg.buildOptions || {}
 // build aliases dynamically
 const aliasOptions = { resolve: ['.ts'] }
 fs.readdirSync(packagesDir).forEach(dir => {
-  if (fs.statSync(path.resolve(packagesDir, dir)).isDirectory()) {
+  if (
+    dir !== 'vue' &&
+    fs.statSync(path.resolve(packagesDir, dir)).isDirectory()
+  ) {
     aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)
   }
 })
@@ -71,6 +74,7 @@ function createConfig(output, plugins = []) {
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
+  const isCompat = /dist\/vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -100,7 +104,7 @@ function createConfig(output, plugins = []) {
     plugins: [
       tsPlugin,
       aliasPlugin,
-      createReplacePlugin(isProductionBuild, isBunlderESMBuild),
+      createReplacePlugin(isProductionBuild, isBunlderESMBuild, isCompat),
       ...plugins
     ],
     output,
@@ -112,7 +116,7 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBunlderESMBuild) {
+function createReplacePlugin(isProduction, isBunlderESMBuild, isCompat) {
   return replace({
     __DEV__: isBunlderESMBuild
       ? // preserve to be handled by bundlers
@@ -120,7 +124,7 @@ function createReplacePlugin(isProduction, isBunlderESMBuild) {
       : // hard coded dev/prod builds
         !isProduction,
     // compatibility builds
-    __COMPAT__: !!process.env.COMPAT
+    __COMPAT__: !!packageOptions.compat
   })
 }
 

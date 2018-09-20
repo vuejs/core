@@ -4,23 +4,11 @@ export { cloneVNode, createPortal, createFragment } from './vdom'
 export { createRenderer } from './createRenderer'
 
 import { Component as InternalComponent, ComponentClass } from './component'
-
 // the public component constructor with proper type inference.
 export const Component = InternalComponent as ComponentClass
 
 // observer api
-export {
-  autorun,
-  stop,
-  observable,
-  immutable,
-  computed,
-  isObservable,
-  isImmutable,
-  markImmutable,
-  markNonReactive,
-  unwrap
-} from '@vue/observer'
+export * from '@vue/observer'
 
 // flags & types
 export { FunctionalComponent } from './component'

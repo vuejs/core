@@ -21,7 +21,7 @@ files.forEach(shortName => {
       version: baseVersion,
       description: name,
       main: 'index.js',
-      module: `dist/${shortName}.esm.js`,
+      module: `dist/${shortName}.esm-bundler.js`,
       typings: 'dist/index.d.ts',
       repository: {
         type: 'git',

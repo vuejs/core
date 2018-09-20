@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.1",
   "description": "@vue/core",
   "main": "index.js",
-  "module": "dist/core.esm.js",
+  "module": "dist/core.esm-bundler.js",
   "typings": "dist/index.d.ts",
   "repository": {
     "type": "git",

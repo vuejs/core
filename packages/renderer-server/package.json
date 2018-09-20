@@ -3,8 +3,10 @@
   "version": "3.0.0-alpha.1",
   "description": "@vue/renderer-server",
   "main": "index.js",
-  "module": "dist/renderer-server.esm.js",
   "typings": "dist/index.d.ts",
+  "buildOptions": {
+    "formats": ["cjs"]
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"

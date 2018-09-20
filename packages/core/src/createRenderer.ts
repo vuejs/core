@@ -1283,7 +1283,7 @@ export function createRenderer(options: RendererOptions) {
 
   // API -----------------------------------------------------------------------
 
-  function render(vnode: VNode | null, container: RenderNode) {
+  function render(vnode: VNode | null, container: any) {
     const prevVNode = container.vnode
     if (vnode && vnode.el) {
       vnode = cloneVNode(vnode)

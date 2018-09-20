@@ -22,7 +22,7 @@ type ElementType =
   | typeof Portal
 
 export interface createElement {
-  (tag: ElementType, data: any, children: any): VNode
+  (tag: ElementType, data?: any, children?: any): VNode
   c: typeof createComponentVNode
   e: typeof createElementVNode
   t: typeof createTextVNode
@@ -30,7 +30,7 @@ export interface createElement {
   p: typeof createPortal
 }
 
-export const h = ((tag: ElementType, data: any, children: any): VNode => {
+export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
   if (Array.isArray(data) || (data !== void 0 && typeof data !== 'object')) {
     children = data
     data = null
