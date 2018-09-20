@@ -488,7 +488,7 @@ describe('observer/autorun', () => {
     expect(childSpy).toHaveBeenCalledTimes(5)
   })
 
-  test('should observe class method invocations', () => {
+  it('should observe class method invocations', () => {
     class Model {
       count: number
       constructor() {
@@ -508,7 +508,7 @@ describe('observer/autorun', () => {
     expect(dummy).toBe(1)
   })
 
-  test('scheduler', () => {
+  it('scheduler', () => {
     let runner: any, dummy
     const scheduler = jest.fn(_runner => {
       runner = _runner
@@ -533,7 +533,7 @@ describe('observer/autorun', () => {
     expect(dummy).toBe(2)
   })
 
-  test('events: onTrack', () => {
+  it('events: onTrack', () => {
     let events: any[] = []
     let dummy
     const onTrack = jest.fn((e: DebuggerEvent) => {
@@ -572,7 +572,7 @@ describe('observer/autorun', () => {
     ])
   })
 
-  test('events: onTrigger', () => {
+  it('events: onTrigger', () => {
     let events: any[] = []
     let dummy
     const onTrigger = jest.fn((e: DebuggerEvent) => {
@@ -610,7 +610,7 @@ describe('observer/autorun', () => {
     })
   })
 
-  test('stop', () => {
+  it('stop', () => {
     let dummy
     const obj = observable({ prop: 1 })
     const runner = autorun(() => {
@@ -623,7 +623,7 @@ describe('observer/autorun', () => {
     expect(dummy).toBe(2)
   })
 
-  test('markNonReactive', () => {
+  it('markNonReactive', () => {
     const obj = observable({
       foo: markNonReactive({
         prop: 0

@@ -1,7 +1,7 @@
 import { queueJob, nextTick } from '../src/index'
 
 describe('scheduler', () => {
-  test('queueJob', async () => {
+  it('queueJob', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
@@ -16,7 +16,7 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2'])
   })
 
-  test('queueJob while already flushing', async () => {
+  it('queueJob while already flushing', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
@@ -34,7 +34,7 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2'])
   })
 
-  test('queueJob w/ postFlushCb', async () => {
+  it('queueJob w/ postFlushCb', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
@@ -54,7 +54,7 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
   })
 
-  test('queueJob w/ postFlushCb while flushing', async () => {
+  it('queueJob w/ postFlushCb while flushing', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
@@ -78,7 +78,7 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
   })
 
-  test('should dedupe queued tasks', async () => {
+  it('should dedupe queued tasks', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')

@@ -2,25 +2,17 @@ import { unwrap } from './index'
 import { track, trigger } from './autorun'
 import { OperationTypes } from './operations'
 
-function instrument(
-  target: any,
-  key: string | symbol,
-  args: any[],
-  type: OperationTypes
-) {
-  target = unwrap(target)
-  const proto: any = Reflect.getPrototypeOf(target)
-  track(target, type)
-  return proto[key].apply(target, args)
+function makeInstrumentedMethod(method: string | symbol, type: OperationTypes) {
+  return function(...args: any[]) {
+    const target = unwrap(this)
+    const proto: any = Reflect.getPrototypeOf(target)
+    track(target, type, args[0])
+    return proto[method].apply(target, args)
+  }
 }
 
-function get(key: string | symbol) {
-  return instrument(this, key, [key], OperationTypes.GET)
-}
-
-function has(key: string | symbol): boolean {
-  return instrument(this, key, [key], OperationTypes.HAS)
-}
+const get = makeInstrumentedMethod('get', OperationTypes.GET)
+const has = makeInstrumentedMethod('has', OperationTypes.HAS)
 
 function size(target: any) {
   target = unwrap(target)
@@ -69,18 +61,20 @@ const mutableInstrumentations: any = {
     const hadKey = proto.has.call(target, key)
     const oldValue = proto.get.call(target, key)
     const result = proto.set.apply(target, arguments)
-    if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key, extraInfo)
+    if (value !== oldValue) {
+      if (__DEV__) {
+        const extraInfo = { oldValue, newValue: value }
+        if (!hadKey) {
+          trigger(target, OperationTypes.ADD, key, extraInfo)
+        } else {
+          trigger(target, OperationTypes.SET, key, extraInfo)
+        }
       } else {
-        trigger(target, OperationTypes.SET, key, extraInfo)
-      }
-    } else {
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key)
-      } else {
-        trigger(target, OperationTypes.SET, key)
+        if (!hadKey) {
+          trigger(target, OperationTypes.ADD, key)
+        } else {
+          trigger(target, OperationTypes.SET, key)
+        }
       }
     }
     return result
@@ -133,11 +127,9 @@ const immutableInstrumentations: any = {
   clear: makeWarning(OperationTypes.CLEAR)
 }
 ;['forEach', 'keys', 'values', 'entries', Symbol.iterator].forEach(key => {
-  mutableInstrumentations[key] = immutableInstrumentations[key] = function(
-    ...args: any[]
-  ) {
-    return instrument(this, key, args, OperationTypes.ITERATE)
-  }
+  mutableInstrumentations[key] = immutableInstrumentations[
+    key
+  ] = makeInstrumentedMethod(key, OperationTypes.ITERATE)
 })
 
 function getInstrumented(
