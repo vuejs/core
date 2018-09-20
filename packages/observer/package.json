@@ -6,6 +6,7 @@
   "module": "dist/observer.esm-bundler.js",
   "typings": "dist/index.d.ts",
   "unpkg": "dist/observer.global.js",
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"

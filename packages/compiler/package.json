@@ -5,6 +5,7 @@
   "main": "index.js",
   "module": "dist/compiler.esm-bundler.js",
   "typings": "dist/index.d.ts",
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"
