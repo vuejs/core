@@ -4,12 +4,6 @@ import { isObservable } from '@vue/core'
 const nonNumericRE = /acit|ex(?:s|g|n|p|$)|rph|ows|mnc|ntw|ine[ch]|zoo|^ord/i
 
 export function patchStyle(el: any, prev: any, next: any, data: any) {
-  // If next is observed, the user is likely to mutate the style object.
-  // We need to normalize + clone it and replace data.style with the clone.
-  if (isObservable(next)) {
-    data.style = normalizeStyle(next)
-  }
-
   const { style } = el
   if (!next) {
     el.removeAttribute('style')
@@ -17,9 +11,14 @@ export function patchStyle(el: any, prev: any, next: any, data: any) {
     style.cssText = next
   } else {
     // TODO: warn invalid value in dev
-    next = normalizeStyle(next)
-    for (const key in next) {
-      let value = next[key]
+    const normalizedNext: any = normalizeStyle(next)
+    // If next is observed, the user is likely to mutate the style object.
+    // We need to replace data.style with the normalized clone.
+    if (isObservable(next)) {
+      data.style = normalizedNext
+    }
+    for (const key in normalizedNext) {
+      let value = normalizedNext[key]
       if (typeof value === 'number' && !nonNumericRE.test(key)) {
         value = value + 'px'
       }
@@ -28,7 +27,7 @@ export function patchStyle(el: any, prev: any, next: any, data: any) {
     if (prev && typeof prev !== 'string') {
       prev = normalizeStyle(prev)
       for (const key in prev) {
-        if (!next[key]) {
+        if (!normalizedNext[key]) {
           style.setProperty(key, '')
         }
       }
