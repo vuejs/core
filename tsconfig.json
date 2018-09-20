@@ -24,9 +24,7 @@
       "@vue/scheduler": ["packages/scheduler/src"],
       "@vue/renderer-dom": ["packages/renderer-dom/src"],
       "@vue/renderer-server": ["packages/renderer-server/src"],
-      "@vue/compiler-core": ["packages/compiler-core/src"],
-      "@vue/compiler-dom": ["packages/compiler-dom/src"],
-      "@vue/compiler-server": ["packages/compiler-server/src"]
+      "@vue/compiler": ["packages/compiler-core/src"]
     }
   },
   "include": [

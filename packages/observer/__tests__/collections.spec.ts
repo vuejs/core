@@ -1,1 +1,3 @@
-describe('observer/collections', () => {})
+describe('observer/collections', () => {
+  describe('Map', () => {})
+})

@@ -1,9 +1,9 @@
 {
-  "name": "@vue/compiler-server",
+  "name": "@vue/compiler",
   "version": "3.0.0-alpha.1",
-  "description": "@vue/compiler-server",
+  "description": "@vue/compiler",
   "main": "index.js",
-  "module": "dist/compiler-server.esm-bundler.js",
+  "module": "dist/compiler.esm-bundler.js",
   "typings": "dist/index.d.ts",
   "repository": {
     "type": "git",
@@ -17,5 +17,5 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-server#readme"
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler#readme"
 }
