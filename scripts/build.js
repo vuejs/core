@@ -53,7 +53,7 @@ async function build(target) {
       '--environment',
       `NODE_ENV:production,` +
         `TARGET:${target}` +
-        (formats ? `FORMATS:${formats}` : ``)
+        (formats ? `,FORMATS:${formats}` : ``)
     ],
     { stdio: 'inherit' }
   )
