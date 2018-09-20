@@ -6,7 +6,6 @@
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "node",
-    // "declaration": true,
     "allowJs": false,
     "noUnusedLocals": true,
     "strictNullChecks": true,
@@ -29,6 +28,7 @@
   },
   "include": [
     "packages/global.d.ts",
-    "packages/*/src"
+    "packages/*/src",
+    "packages/*/__tests__"
   ]
 }
