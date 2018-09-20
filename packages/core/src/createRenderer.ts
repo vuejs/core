@@ -26,22 +26,22 @@ import {
   shouldUpdateFunctionalComponent
 } from './componentUtils'
 
-interface RendererOptions {
-  queueJob: (fn: () => void, postFlushJob?: () => void) => void
-  nodeOps: {
-    createElement: (tag: string, isSVG?: boolean) => any
-    createText: (text: string) => any
-    setText: (node: any, text: string) => void
-    appendChild: (parent: any, child: any) => void
-    insertBefore: (parent: any, child: any, ref: any) => void
-    replaceChild: (parent: any, oldChild: any, newChild: any) => void
-    removeChild: (parent: any, child: any) => void
-    clearContent: (node: any) => void
-    parentNode: (node: any) => any
-    nextSibling: (node: any) => any
-    querySelector: (selector: string) => any
-  }
-  patchData: (
+interface NodeOps {
+  createElement: (tag: string, isSVG?: boolean) => any
+  createText: (text: string) => any
+  setText: (node: any, text: string) => void
+  appendChild: (parent: any, child: any) => void
+  insertBefore: (parent: any, child: any, ref: any) => void
+  replaceChild: (parent: any, oldChild: any, newChild: any) => void
+  removeChild: (parent: any, child: any) => void
+  clearContent: (node: any) => void
+  parentNode: (node: any) => any
+  nextSibling: (node: any) => any
+  querySelector: (selector: string) => any
+}
+
+interface PatchDataFunction {
+  (
     el: any,
     key: string,
     prevValue: any,
@@ -52,7 +52,13 @@ interface RendererOptions {
     // passed for DOM operations that removes child content
     // e.g. innerHTML & textContent
     unmountChildren: (children: VNode[], childFlags: ChildrenFlags) => void
-  ) => void
+  ): void
+}
+
+interface RendererOptions {
+  queueJob: (fn: () => void, postFlushJob?: () => void) => void
+  nodeOps: NodeOps
+  patchData: PatchDataFunction
   teardownVNode?: (vnode: VNode) => void
 }
 
