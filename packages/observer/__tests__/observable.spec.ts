@@ -141,6 +141,10 @@ describe('observer/observable', () => {
     // built-ins should work and return same value
     const p = Promise.resolve()
     expect(observable(p)).toBe(p)
+    const r = new RegExp('')
+    expect(observable(r)).toBe(r)
+    const d = new Date()
+    expect(observable(d)).toBe(d)
   })
 
   test('markNonReactive', () => {
