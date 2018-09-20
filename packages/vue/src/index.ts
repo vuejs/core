@@ -18,8 +18,14 @@ class Vue extends Component {
       return
     }
 
+    // in compat mode, h() can take an options object and will convert it
+    // to a 3.x class-based component.
     const vnode = h(options)
+    // the component class is cached on the options object as ._normalized
     const instance = createComponentInstance(vnode, options._normalized, null)
+    // set the instance on the vnode before mounting.
+    // the mount function will skip creating a new instance if it finds an
+    // existing one.
     vnode.children = instance
 
     function mount(el: any) {
