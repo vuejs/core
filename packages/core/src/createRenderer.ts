@@ -1206,9 +1206,8 @@ export function createRenderer(options: RendererOptions) {
         }
       },
       {
-        scheduler: queueUpdate,
-        onTrigger:
-          instance.beforeUpdate && instance.beforeUpdate.bind(instance.$proxy)
+        scheduler: queueUpdate
+        // TODO add API for using onTrigger for component re-render debugging
       }
     )
 
@@ -1237,9 +1236,12 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     isSVG: boolean
   ) {
-    // beforeUpdate is called as the onTrack hook of the instance's reactive
-    // runner
     const prevVNode = instance.$vnode
+
+    if (instance.beforeUpdate) {
+      instance.beforeUpdate.call(instance.$proxy, prevVNode)
+    }
+
     const nextVNode = (instance.$vnode = renderInstanceRoot(instance))
     container =
       container || parentNode(prevVNode.el as RenderNode | RenderFragment)
