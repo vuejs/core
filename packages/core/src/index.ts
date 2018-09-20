@@ -10,8 +10,11 @@ export const Component = InternalComponent as ComponentClass
 // observer api
 export * from '@vue/observer'
 
+// internal api
+export { createComponentInstance } from './componentUtils'
+
 // flags & types
-export { FunctionalComponent } from './component'
+export { ComponentClass, FunctionalComponent } from './component'
 export { ComponentOptions, PropType } from './componentOptions'
 export { VNodeFlags, ChildrenFlags } from './flags'
 export { VNode, VNodeData, VNodeChildren, Key, Ref, Slots, Slot } from './vdom'

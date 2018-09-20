@@ -1174,11 +1174,11 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     endNode: RenderNode | RenderFragment | null
   ): RenderNode {
-    const instance = createComponentInstance(
-      parentVNode,
-      Component,
-      parentComponent
-    )
+    // a vnode may already have an instance if this is a compat call
+    // with new Vue()
+    const instance =
+      (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
+      createComponentInstance(parentVNode, Component, parentComponent)
 
     const queueUpdate = (instance.$forceUpdate = () => {
       queueJob(instance._updateHandle, flushHooks)

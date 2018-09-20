@@ -1,25 +1,36 @@
-import { h, render, ComponentOptions } from '@vue/renderer-dom'
+import {
+  h,
+  render,
+  Component,
+  ComponentOptions,
+  createComponentInstance
+} from '@vue/renderer-dom'
 
-function Vue(options: ComponentOptions & { el: any }) {
-  const { el, render: r } = options
+class Vue extends Component {
+  static h = h
+  static render = render
 
-  if (r) {
-    options.render = function(props, slots) {
-      return r.call(this, h, props, slots)
+  constructor(options: ComponentOptions & { el: any }) {
+    super()
+    if (!options) {
+      return
     }
-  }
 
-  function mount(el: any) {
-    const dom = document.querySelector(el)
-    render(h(options), dom)
-    return (dom as any).vnode.children.$proxy
-  }
+    const vnode = h(options)
+    const instance = createComponentInstance(vnode, options._normalized, null)
+    vnode.children = instance
 
-  if (el) {
-    return mount(el)
-  } else {
-    return {
-      $mount: mount
+    function mount(el: any) {
+      const dom = document.querySelector(el)
+      render(vnode, dom)
+      return instance.$proxy
+    }
+
+    if (options.el) {
+      return mount(options.el)
+    } else {
+      ;(instance as any).$mount = mount
+      return instance.$proxy
     }
   }
 }
