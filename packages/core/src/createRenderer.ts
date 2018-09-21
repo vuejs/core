@@ -1,4 +1,5 @@
 import { autorun, stop } from '@vue/observer'
+import { queueJob } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, isReservedProp } from './utils'
 import {
@@ -56,10 +57,6 @@ interface PatchDataFunction {
 }
 
 interface RendererOptions {
-  scheduler: {
-    nextTick: (fn: () => void) => Promise<any>
-    queueJob: (fn: () => void, postFlushJob?: () => void) => void
-  }
   nodeOps: NodeOps
   patchData: PatchDataFunction
   teardownVNode?: (vnode: VNode) => void
@@ -71,7 +68,6 @@ interface RendererOptions {
 // renderer alongside an actual renderer.
 export function createRenderer(options: RendererOptions) {
   const {
-    scheduler: { queueJob, nextTick },
     nodeOps: {
       createElement: platformCreateElement,
       createText: platformCreateText,
@@ -1189,10 +1185,6 @@ export function createRenderer(options: RendererOptions) {
       (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
       createComponentInstance(parentVNode, Component, parentComponent)
 
-    // renderer-injected scheduler methods
-    instance.$nextTick = nextTick
-    instance._queueJob = queueJob
-
     const queueUpdate = (instance.$forceUpdate = () => {
       queueJob(instance._updateHandle, flushHooks)
     })
@@ -1318,6 +1310,9 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     flushHooks()
+    return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
+      ? (vnode.children as MountedComponent).$proxy
+      : null
   }
 
   return { render }

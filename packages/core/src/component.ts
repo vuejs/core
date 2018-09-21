@@ -8,6 +8,7 @@ import {
 } from './componentOptions'
 import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
+import { nextTick } from '@vue/scheduler'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
 
@@ -70,7 +71,6 @@ export class Component {
   public $options: any
   public $proxy: any = null
   public $forceUpdate: (() => void) | null = null
-  public $nextTick: ((fn: () => void) => Promise<any>) | null = null
 
   public _rawData: Data | null = null
   public _computedGetters: Record<string, ComputedGetter> | null = null
@@ -89,6 +89,10 @@ export class Component {
     if (options !== void 0) {
       // mount this
     }
+  }
+
+  $nextTick(fn: () => any): Promise<any> {
+    return nextTick(fn)
   }
 
   $watch(

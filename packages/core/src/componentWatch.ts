@@ -1,6 +1,7 @@
 import { MountedComponent } from './component'
 import { ComponentWatchOptions } from './componentOptions'
 import { autorun, stop } from '@vue/observer'
+import { queueJob } from '@vue/scheduler'
 
 export function initializeWatch(
   instance: MountedComponent,
@@ -40,8 +41,9 @@ export function setupWatcher(
 
   const runner = autorun(rawGetter, {
     scheduler: () => {
-      // defer watch callback using the scheduler injected defer.
-      instance._queueJob(applyCb)
+      // defer watch callback using the scheduler so that multiple mutations
+      // result in one call only.
+      queueJob(applyCb)
     }
   })
 

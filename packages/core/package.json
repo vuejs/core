@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/core#readme",
   "dependencies": {
-    "@vue/observer": "3.0.0-alpha.1"
+    "@vue/observer": "3.0.0-alpha.1",
+    "@vue/scheduler": "3.0.0-alpha.1"
   }
 }

@@ -25,7 +25,6 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/renderer-dom#readme",
   "dependencies": {
-    "@vue/core": "3.0.0-alpha.1",
-    "@vue/scheduler": "3.0.0-alpha.1"
+    "@vue/core": "3.0.0-alpha.1"
   }
 }

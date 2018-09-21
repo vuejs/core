@@ -158,6 +158,7 @@ const immutableInstrumentations: any = {
     const target = unwrap(this)
     const proto: any = Reflect.getPrototypeOf(target)
     track(target, OperationTypes.ITERATE)
+    // TODO values retrived from iterations should also be observables
     return proto[method].apply(target, args)
   }
 })

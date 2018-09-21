@@ -11,3 +11,8 @@ The implementation of this module is inspired by the following prior art in the 
 - [Meteor Tracker](https://docs.meteor.com/api/tracker.html)
 - [nx-js/observer-util](https://github.com/nx-js/observer-util)
 - [salesforce/observable-membrane](https://github.com/salesforce/observable-membrane)
+
+
+## Caveats
+
+- Built-in objects are not observed except for `Map`, `WeakMap`, `Set` and `WeakSet`.

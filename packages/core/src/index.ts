@@ -10,6 +10,9 @@ export const Component = InternalComponent as ComponentClass
 // observer api
 export * from '@vue/observer'
 
+// scheduler api
+export { nextTick } from '@vue/scheduler'
+
 // internal api
 export { createComponentInstance } from './componentUtils'
 

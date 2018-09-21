@@ -235,5 +235,15 @@ describe('observer/collections', () => {
       observed.get('key').a = 2
       expect(dummy).toBe(2)
     })
+
+    it('should observe iterated values (forEach)', () => {})
+
+    it('should observe iterated values (values)', () => {})
+
+    it('should observe iterated values (keys)', () => {})
+
+    it('should observe iterated values (entries)', () => {})
+
+    it('should observe iterated values (for...of)', () => {})
   })
 })
