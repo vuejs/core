@@ -52,16 +52,26 @@ describe('observer/immutable', () => {
       observed.bar.baz = 3
       expect(observed.bar.baz).toBe(2)
       expect(warn).toHaveBeenCalledTimes(2)
+      delete observed.foo
+      expect(observed.foo).toBe(1)
+      expect(warn).toHaveBeenCalledTimes(3)
+      delete observed.bar.baz
+      expect(observed.bar.baz).toBe(2)
+      expect(warn).toHaveBeenCalledTimes(4)
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed: any = immutable({ foo: 1, bar: { baz: 2 } })
       unlock()
-      observed.foo = 2
-      observed.bar.baz = 3
+      observed.prop = 2
+      observed.bar.qux = 3
+      delete observed.bar.baz
+      delete observed.foo
       lock()
-      expect(observed.foo).toBe(2)
-      expect(observed.bar.baz).toBe(3)
+      expect(observed.prop).toBe(2)
+      expect(observed.foo).toBeUndefined()
+      expect(observed.bar.qux).toBe(3)
+      expect('baz' in observed.bar).toBe(false)
       expect(warn).not.toHaveBeenCalled()
     })
 
@@ -190,7 +200,9 @@ describe('observer/immutable', () => {
       lock()
     })
   })
-  ;[Map, WeakMap].forEach((Collection: any) => {
+
+  const maps = [Map, WeakMap]
+  maps.forEach((Collection: any) => {
     describe(Collection.name, () => {
       test('should make nested values immutable', () => {
         const key1 = {}
@@ -224,22 +236,25 @@ describe('observer/immutable', () => {
 
       test('should allow mutation & trigger autorun when unlocked', () => {
         const map = immutable(new Collection())
+        const isWeak = Collection === WeakMap
         const key = {}
         let dummy
         autorun(() => {
-          dummy = map.get(key)
+          dummy = map.get(key) + (isWeak ? 0 : map.size)
         })
-        expect(dummy).toBeUndefined()
+        expect(dummy).toBeNaN()
         unlock()
         map.set(key, 1)
         lock()
-        expect(dummy).toBe(1)
+        expect(dummy).toBe(isWeak ? 1 : 2)
         expect(map.get(key)).toBe(1)
         expect(warn).not.toHaveBeenCalled()
       })
     })
   })
-  ;[Set, WeakSet].forEach((Collection: any) => {
+
+  const sets = [Set, WeakSet]
+  sets.forEach((Collection: any) => {
     describe(Collection.name, () => {
       test('should make nested values immutable', () => {
         const key1 = {}

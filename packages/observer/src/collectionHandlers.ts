@@ -34,6 +34,7 @@ function add(value: any) {
   const hadKey = proto.has.call(target, value)
   const result = proto.add.call(target, value)
   if (!hadKey) {
+    /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.ADD, value, { value })
     } else {
@@ -51,6 +52,7 @@ function set(key: any, value: any) {
   const oldValue = proto.get.call(target, key)
   const result = proto.set.call(target, key, value)
   if (value !== oldValue) {
+    /* istanbul ignore else */
     if (__DEV__) {
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
@@ -77,6 +79,7 @@ function deleteEntry(key: any) {
   // forward the operation before queueing reactions
   const result = proto.delete.call(target, key)
   if (hadKey) {
+    /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.DELETE, key, { oldValue })
     } else {
@@ -94,6 +97,7 @@ function clear() {
   // forward the operation before queueing reactions
   const result = proto.clear.call(target)
   if (hadItems) {
+    /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.CLEAR, void 0, { oldTarget })
     } else {
@@ -158,22 +162,21 @@ const immutableInstrumentations: any = {
   }
 })
 
-function getInstrumented(
-  target: any,
-  key: string | symbol,
-  receiver: any,
-  instrumentations: any
-) {
-  target = instrumentations.hasOwnProperty(key) ? instrumentations : target
-  return Reflect.get(target, key, receiver)
+function makeInstrumentationGetter(instrumentations: any) {
+  return function getInstrumented(
+    target: any,
+    key: string | symbol,
+    receiver: any
+  ) {
+    target = instrumentations.hasOwnProperty(key) ? instrumentations : target
+    return Reflect.get(target, key, receiver)
+  }
 }
 
 export const mutableCollectionHandlers: ProxyHandler<any> = {
-  get: (target: any, key: string | symbol, receiver: any) =>
-    getInstrumented(target, key, receiver, mutableInstrumentations)
+  get: makeInstrumentationGetter(mutableInstrumentations)
 }
 
 export const immutableCollectionHandlers: ProxyHandler<any> = {
-  get: (target: any, key: string | symbol, receiver: any) =>
-    getInstrumented(target, key, receiver, immutableInstrumentations)
+  get: makeInstrumentationGetter(immutableInstrumentations)
 }

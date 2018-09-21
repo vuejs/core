@@ -621,6 +621,10 @@ describe('observer/autorun', () => {
     stop(runner)
     obj.prop = 3
     expect(dummy).toBe(2)
+
+    // stopped runner should still be manually callable
+    runner()
+    expect(dummy).toBe(3)
   })
 
   it('markNonReactive', () => {

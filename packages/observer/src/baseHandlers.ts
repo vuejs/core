@@ -11,18 +11,21 @@ const builtInSymbols = new Set(
     .filter(value => typeof value === 'symbol')
 )
 
-function get(
-  target: any,
-  key: string | symbol,
-  receiver: any,
-  toObservable: (t: any) => any
-) {
-  const res = Reflect.get(target, key, receiver)
-  if (typeof key === 'symbol' && builtInSymbols.has(key)) {
-    return res
+function makeGetter(isImmutable: boolean) {
+  return function get(target: any, key: string | symbol, receiver: any) {
+    const res = Reflect.get(target, key, receiver)
+    if (typeof key === 'symbol' && builtInSymbols.has(key)) {
+      return res
+    }
+    track(target, OperationTypes.GET, key)
+    return res !== null && typeof res === 'object'
+      ? isImmutable
+        ? // need to lazy access immutable and observable here to avoid
+          // circular dependency
+          immutable(res)
+        : observable(res)
+      : res
   }
-  track(target, OperationTypes.GET, key)
-  return res !== null && typeof res === 'object' ? toObservable(res) : res
 }
 
 function set(
@@ -37,6 +40,7 @@ function set(
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === unwrap(receiver)) {
+    /* istanbul ignore else */
     if (__DEV__) {
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
@@ -60,6 +64,7 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
   if (hadKey) {
+    /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.DELETE, key, { oldValue })
     } else {
@@ -81,8 +86,7 @@ function ownKeys(target: any): (string | number | symbol)[] {
 }
 
 export const mutableHandlers: ProxyHandler<any> = {
-  get: (target: any, key: string | symbol, receiver: any) =>
-    get(target, key, receiver, observable),
+  get: makeGetter(false),
   set,
   deleteProperty,
   has,
@@ -90,8 +94,7 @@ export const mutableHandlers: ProxyHandler<any> = {
 }
 
 export const immutableHandlers: ProxyHandler<any> = {
-  get: (target: any, key: string | symbol, receiver: any) =>
-    get(target, key, receiver, LOCKED ? immutable : observable),
+  get: makeGetter(true),
 
   set(target: any, key: string | symbol, value: any, receiver: any): boolean {
     if (LOCKED) {

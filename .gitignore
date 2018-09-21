@@ -1,5 +1,6 @@
 dist
 .DS_Store
 node_modules
+coverage
 explorations
 TODOs.md
