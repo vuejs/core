@@ -286,5 +286,74 @@ describe('observer/collections', () => {
       expect(observed.has(value)).toBe(true)
       expect(set.has(value)).toBe(false)
     })
+
+    it('should observe nested values in iterations (forEach)', () => {
+      const set = observable(new Set([{ foo: 1 }]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        set.forEach(value => {
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        })
+      })
+      expect(dummy).toBe(1)
+      set.forEach(value => {
+        value.foo++
+      })
+      expect(dummy).toBe(2)
+    })
+
+    it('should observe nested values in iterations (values)', () => {
+      const set = observable(new Set([{ foo: 1 }]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const value of set.values()) {
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      set.forEach(value => {
+        value.foo++
+      })
+      expect(dummy).toBe(2)
+    })
+
+    it('should observe nested values in iterations (entries)', () => {
+      const set = observable(new Set([{ foo: 1 }]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const [key, value] of set.entries()) {
+          expect(isObservable(key)).toBe(true)
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      set.forEach(value => {
+        value.foo++
+      })
+      expect(dummy).toBe(2)
+    })
+
+    it('should observe nested values in iterations (for...of)', () => {
+      const set = observable(new Set([{ foo: 1 }]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const value of set) {
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      set.forEach(value => {
+        value.foo++
+      })
+      expect(dummy).toBe(2)
+    })
   })
 })

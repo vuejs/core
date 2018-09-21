@@ -11,7 +11,7 @@ const builtInSymbols = new Set(
     .filter(value => typeof value === 'symbol')
 )
 
-function makeGetter(isImmutable: boolean) {
+function createGetter(isImmutable: boolean) {
   return function get(target: any, key: string | symbol, receiver: any) {
     const res = Reflect.get(target, key, receiver)
     if (typeof key === 'symbol' && builtInSymbols.has(key)) {
@@ -86,7 +86,7 @@ function ownKeys(target: any): (string | number | symbol)[] {
 }
 
 export const mutableHandlers: ProxyHandler<any> = {
-  get: makeGetter(false),
+  get: createGetter(false),
   set,
   deleteProperty,
   has,
@@ -94,7 +94,7 @@ export const mutableHandlers: ProxyHandler<any> = {
 }
 
 export const immutableHandlers: ProxyHandler<any> = {
-  get: makeGetter(true),
+  get: createGetter(true),
 
   set(target: any, key: string | symbol, value: any, receiver: any): boolean {
     if (LOCKED) {

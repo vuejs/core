@@ -236,14 +236,70 @@ describe('observer/collections', () => {
       expect(dummy).toBe(2)
     })
 
-    it('should observe iterated values (forEach)', () => {})
+    it('should observe nested values in iterations (forEach)', () => {
+      const map = observable(new Map([[1, { foo: 1 }]]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        map.forEach(value => {
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        })
+      })
+      expect(dummy).toBe(1)
+      ;(map.get(1) as any).foo++
+      expect(dummy).toBe(2)
+    })
 
-    it('should observe iterated values (values)', () => {})
+    it('should observe nested values in iterations (values)', () => {
+      const map = observable(new Map([[1, { foo: 1 }]]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const value of map.values()) {
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      ;(map.get(1) as any).foo++
+      expect(dummy).toBe(2)
+    })
 
-    it('should observe iterated values (keys)', () => {})
+    it('should observe nested values in iterations (entries)', () => {
+      const key = {}
+      const map = observable(new Map([[key, { foo: 1 }]]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const [key, value] of map.entries()) {
+          key
+          expect(isObservable(key)).toBe(true)
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      ;(map.get(key) as any).foo++
+      expect(dummy).toBe(2)
+    })
 
-    it('should observe iterated values (entries)', () => {})
-
-    it('should observe iterated values (for...of)', () => {})
+    it('should observe nested values in iterations (for...of)', () => {
+      const key = {}
+      const map = observable(new Map([[key, { foo: 1 }]]))
+      let dummy: any
+      autorun(() => {
+        dummy = 0
+        for (const [key, value] of map) {
+          key
+          expect(isObservable(key)).toBe(true)
+          expect(isObservable(value)).toBe(true)
+          dummy += value.foo
+        }
+      })
+      expect(dummy).toBe(1)
+      ;(map.get(key) as any).foo++
+      expect(dummy).toBe(2)
+    })
   })
 })

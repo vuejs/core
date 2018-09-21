@@ -3,13 +3,18 @@ import { track, trigger } from './autorun'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
 
-function get(target: any, key: any, toObservable: (t: any) => any): any {
+const isObject = (value: any) => value !== null && typeof value === 'object'
+const toObservable = (value: any) =>
+  isObject(value) ? observable(value) : value
+const toImmutable = (value: any) => (isObject(value) ? immutable(value) : value)
+
+function get(target: any, key: any, wrap: (t: any) => any): any {
   target = unwrap(target)
   key = unwrap(key)
   const proto: any = Reflect.getPrototypeOf(target)
   track(target, OperationTypes.GET, key)
   const res = proto.get.call(target, key)
-  return res !== null && typeof res === 'object' ? toObservable(res) : res
+  return wrap(res)
 }
 
 function has(key: any): boolean {
@@ -107,7 +112,58 @@ function clear() {
   return result
 }
 
-function makeImmutableMethod(method: Function, type: OperationTypes): Function {
+function createForEach(isImmutable: boolean) {
+  return function forEach(callback: Function, thisArg?: any) {
+    const observed = this
+    const target = unwrap(observed)
+    const proto: any = Reflect.getPrototypeOf(target)
+    const wrap = isImmutable ? toImmutable : toObservable
+    track(target, OperationTypes.ITERATE)
+    // important: create sure the callback is
+    // 1. invoked with the observable map as `this` and 3rd arg
+    // 2. the value received should be a corresponding observable/immutable.
+    function wrappedCallback(value: any, key: any) {
+      return callback.call(observed, wrap(value), wrap(key), observed)
+    }
+    return proto.forEach.call(target, wrappedCallback, thisArg)
+  }
+}
+
+function createIterableMethod(method: string | symbol, isImmutable: boolean) {
+  return function(...args: any[]) {
+    const target = unwrap(this)
+    const proto: any = Reflect.getPrototypeOf(target)
+    const isPair =
+      method === 'entries' ||
+      (method === Symbol.iterator && target instanceof Map)
+    const innerIterator = proto[method].apply(target, args)
+    const wrap = isImmutable ? toImmutable : toObservable
+    track(target, OperationTypes.ITERATE)
+    // return a wrapped iterator which returns observed versions of the
+    // values emitted from the real iterator
+    return {
+      // iterator protocol
+      next() {
+        const { value, done } = innerIterator.next()
+        return done
+          ? { value, done }
+          : {
+              value: isPair ? [wrap(value[0]), wrap(value[1])] : wrap(value),
+              done
+            }
+      },
+      // iterable protocol
+      [Symbol.iterator]() {
+        return this
+      }
+    }
+  }
+}
+
+function createImmutableMethod(
+  method: Function,
+  type: OperationTypes
+): Function {
   return function(...args: any[]) {
     if (LOCKED) {
       if (__DEV__) {
@@ -126,7 +182,7 @@ function makeImmutableMethod(method: Function, type: OperationTypes): Function {
 
 const mutableInstrumentations: any = {
   get(key: any) {
-    return get(this, key, observable)
+    return get(this, key, toObservable)
   },
   get size() {
     return size(this)
@@ -135,49 +191,49 @@ const mutableInstrumentations: any = {
   add,
   set,
   delete: deleteEntry,
-  clear
+  clear,
+  forEach: createForEach(false)
 }
 
 const immutableInstrumentations: any = {
   get(key: any) {
-    return get(this, key, immutable)
+    return get(this, key, toImmutable)
   },
   get size() {
     return size(this)
   },
   has,
-  add: makeImmutableMethod(add, OperationTypes.ADD),
-  set: makeImmutableMethod(set, OperationTypes.SET),
-  delete: makeImmutableMethod(deleteEntry, OperationTypes.DELETE),
-  clear: makeImmutableMethod(clear, OperationTypes.CLEAR)
+  add: createImmutableMethod(add, OperationTypes.ADD),
+  set: createImmutableMethod(set, OperationTypes.SET),
+  delete: createImmutableMethod(deleteEntry, OperationTypes.DELETE),
+  clear: createImmutableMethod(clear, OperationTypes.CLEAR),
+  forEach: createForEach(true)
 }
-;['forEach', 'keys', 'values', 'entries', Symbol.iterator].forEach(method => {
-  mutableInstrumentations[method] = immutableInstrumentations[
-    method
-  ] = function(...args: any[]) {
-    const target = unwrap(this)
-    const proto: any = Reflect.getPrototypeOf(target)
-    track(target, OperationTypes.ITERATE)
-    // TODO values retrived from iterations should also be observables
-    return proto[method].apply(target, args)
-  }
+
+const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
+iteratorMethods.forEach(method => {
+  mutableInstrumentations[method] = createIterableMethod(method, false)
+  immutableInstrumentations[method] = createIterableMethod(method, true)
 })
 
-function makeInstrumentationGetter(instrumentations: any) {
+function createInstrumentationGetter(instrumentations: any) {
   return function getInstrumented(
     target: any,
     key: string | symbol,
     receiver: any
   ) {
-    target = instrumentations.hasOwnProperty(key) ? instrumentations : target
+    target =
+      instrumentations.hasOwnProperty(key) && key in target
+        ? instrumentations
+        : target
     return Reflect.get(target, key, receiver)
   }
 }
 
 export const mutableCollectionHandlers: ProxyHandler<any> = {
-  get: makeInstrumentationGetter(mutableInstrumentations)
+  get: createInstrumentationGetter(mutableInstrumentations)
 }
 
 export const immutableCollectionHandlers: ProxyHandler<any> = {
-  get: makeInstrumentationGetter(immutableInstrumentations)
+  get: createInstrumentationGetter(immutableInstrumentations)
 }

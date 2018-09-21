@@ -250,6 +250,25 @@ describe('observer/immutable', () => {
         expect(map.get(key)).toBe(1)
         expect(warn).not.toHaveBeenCalled()
       })
+
+      if (Collection === Map) {
+        test('should retrive immutable values on iteration', () => {
+          const key1 = {}
+          const key2 = {}
+          const original = new Collection([[key1, {}], [key2, {}]])
+          const observed = immutable(original)
+          for (const [key, value] of observed) {
+            expect(isImmutable(key)).toBe(true)
+            expect(isImmutable(value)).toBe(true)
+          }
+          observed.forEach((value: any) => {
+            expect(isImmutable(value)).toBe(true)
+          })
+          for (const value of observed.values()) {
+            expect(isImmutable(value)).toBe(true)
+          }
+        })
+      }
     })
   })
 
@@ -299,6 +318,26 @@ describe('observer/immutable', () => {
         expect(set.has(key)).toBe(true)
         expect(warn).not.toHaveBeenCalled()
       })
+
+      if (Collection === Set) {
+        test('should retrive immutable values on iteration', () => {
+          const original = new Collection([{}, {}])
+          const observed = immutable(original)
+          for (const value of observed) {
+            expect(isImmutable(value)).toBe(true)
+          }
+          observed.forEach((value: any) => {
+            expect(isImmutable(value)).toBe(true)
+          })
+          for (const value of observed.values()) {
+            expect(isImmutable(value)).toBe(true)
+          }
+          for (const [v1, v2] of observed.entries()) {
+            expect(isImmutable(v1)).toBe(true)
+            expect(isImmutable(v2)).toBe(true)
+          }
+        })
+      }
     })
   })
 
