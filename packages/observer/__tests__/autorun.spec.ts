@@ -323,8 +323,6 @@ describe('observer/autorun', () => {
 
   it('should allow explicitly recursive raw function loops', () => {
     const counter = observable({ num: 0 })
-
-    // TODO: this should be changed to autorun loops, can it be done?
     const numSpy = jest.fn(() => {
       counter.num++
       if (counter.num < 10) {
@@ -332,7 +330,6 @@ describe('observer/autorun', () => {
       }
     })
     autorun(numSpy)
-
     expect(counter.num).toEqual(10)
     expect(numSpy).toHaveBeenCalledTimes(10)
   })

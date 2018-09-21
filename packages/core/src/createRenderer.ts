@@ -149,7 +149,6 @@ export function createRenderer(options: RendererOptions) {
     newNode: RenderNode | RenderFragment,
     refNode: RenderNode | RenderFragment | null
   ) {
-    // TODO special case for Fragment
     if (refNode === null) {
       appendChild(container, newNode)
     } else {
