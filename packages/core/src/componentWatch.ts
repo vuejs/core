@@ -34,6 +34,7 @@ export function setupWatcher(
   const applyCb = () => {
     const newValue = runner()
     if (newValue !== oldValue) {
+      // TODO handle error
       cb(newValue, oldValue)
       oldValue = newValue
     }
