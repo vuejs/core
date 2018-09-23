@@ -69,6 +69,7 @@ export class Component {
   public $parent: MountedComponent | null = null
   public $children: MountedComponent[] = []
   public $options: any
+  public $refs: Record<string, MountedComponent | RenderNode> = {}
   public $proxy: any = null
   public $forceUpdate: (() => void) | null = null
 
