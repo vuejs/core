@@ -83,8 +83,11 @@ function createObservable(
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>
 ) {
-  if ((__DEV__ && target === null) || typeof target !== 'object') {
-    throw new Error(`value is not observable: ${String(target)}`)
+  if (target === null || typeof target !== 'object') {
+    if (__DEV__) {
+      console.warn(`value is not observable: ${String(target)}`)
+    }
+    return target
   }
   // target already has corresponding Proxy
   let observed = toProxy.get(target)

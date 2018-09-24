@@ -43,9 +43,23 @@ export interface ComponentComputedOptions<D = Data, P = Data> {
 }
 
 export interface ComponentWatchOptions<D = Data, P = Data> {
-  [key: string]: (
-    this: MountedComponent<D, P> & D & P,
-    oldValue: any,
-    newValue: any
-  ) => void
+  [key: string]: ComponentWatchOption<MountedComponent<D, P> & D & P>
+}
+
+export type ComponentWatchOption<C = any> =
+  | WatchHandler<C>
+  | WatchHandler<C>[]
+  | WatchOptionsWithHandler<C>
+  | string
+
+export type WatchHandler<C = any> = (this: C, val: any, oldVal: any) => void
+
+export interface WatchOptionsWithHandler<C = any> extends WatchOptions {
+  handler: WatchHandler<C>
+}
+
+export interface WatchOptions {
+  sync?: boolean
+  deep?: boolean
+  immediate?: boolean
 }

@@ -4,7 +4,8 @@ import {
   Data,
   RenderFunction,
   ComponentOptions,
-  ComponentPropsOptions
+  ComponentPropsOptions,
+  WatchOptions
 } from './componentOptions'
 import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
@@ -102,9 +103,10 @@ export class Component {
   $watch(
     this: MountedComponent,
     keyOrFn: string | (() => any),
-    cb: () => void
+    cb: () => void,
+    options?: WatchOptions
   ) {
-    return setupWatcher(this, keyOrFn, cb)
+    return setupWatcher(this, keyOrFn, cb, options)
   }
 
   // eventEmitter interface
