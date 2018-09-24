@@ -1,4 +1,4 @@
-import { EMPTY_OBJ, isReservedProp } from './utils'
+import { EMPTY_OBJ } from './utils'
 import { Component, ComponentClass, MountedComponent } from './component'
 import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
@@ -38,29 +38,42 @@ export function updateProps(instance: MountedComponent, nextProps: Data) {
 // on every component vnode is guarunteed to be a fresh object.
 export function normalizeComponentProps(
   raw: any,
-  options: ComponentPropsOptions,
+  rawOptions: ComponentPropsOptions,
   Component: ComponentClass
 ): Data {
-  if (!raw) {
+  const hasDeclaredProps = rawOptions !== void 0
+  const options = (hasDeclaredProps &&
+    normalizePropsOptions(rawOptions)) as NormalizedPropsOptions
+  if (!raw && !hasDeclaredProps) {
     return EMPTY_OBJ
   }
   const res: Data = {}
-  const normalizedOptions = options && normalizePropsOptions(options)
-  for (const key in raw) {
-    if (isReservedProp(key)) {
-      continue
-    }
-    if (__DEV__ && normalizedOptions != null) {
-      validateProp(key, raw[key], normalizedOptions[key], Component)
-    } else {
-      res[key] = raw[key]
+  if (raw) {
+    for (const key in raw) {
+      if (key === 'key' || key === 'ref' || key === 'slot') {
+        continue
+      }
+      if (hasDeclaredProps) {
+        if (options.hasOwnProperty(key)) {
+          if (__DEV__) {
+            validateProp(key, raw[key], options[key], Component)
+          }
+          res[key] = raw[key]
+        } else {
+          // when props are explicitly declared, any non-matching prop is
+          // extracted into attrs instead.
+          ;(res.attrs || (res.attrs = {}))[key] = raw[key]
+        }
+      } else {
+        res[key] = raw[key]
+      }
     }
   }
   // set default values
-  if (normalizedOptions != null) {
-    for (const key in normalizedOptions) {
+  if (hasDeclaredProps) {
+    for (const key in options) {
       if (res[key] === void 0) {
-        const opt = normalizedOptions[key]
+        const opt = options[key]
         if (opt != null && opt.hasOwnProperty('default')) {
           const defaultValue = opt.default
           res[key] =

@@ -103,30 +103,31 @@ export function normalizeComponentRoot(
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
-      const parentData = componentVNode.data || EMPTY_OBJ
-      const childData = vnode.data || EMPTY_OBJ
-      let extraData: any = null
-      for (const key in parentData) {
-        // class/style bindings on parentVNode are merged down to child
-        // component root.
-        if (key === 'class') {
-          ;(extraData || (extraData = {})).class = childData.class
-            ? [].concat(childData.class, parentData.class)
-            : parentData.class
-        } else if (key === 'style') {
-          ;(extraData || (extraData = {})).style = childData.style
-            ? [].concat(childData.style, parentData.style)
-            : parentData.style
-        } else if (key.startsWith('nativeOn')) {
-          // nativeOn* handlers are merged down to child root as native listeners
-          const event = 'on' + key.slice(8)
-          ;(extraData || (extraData = {}))[event] = childData.event
-            ? [].concat(childData.event, parentData[key])
-            : parentData[key]
+      const parentData = componentVNode.data
+      if (parentData != null) {
+        let extraData: any = null
+        for (const key in parentData) {
+          // attrs/class/style bindings on parentVNode are merged down to child
+          // component root,
+          // nativeOn* handlers are merged to child root as normal on* handlers.
+          // cloneVNode contains special logic for merging these props with
+          // existing values.
+          if (key === 'attrs') {
+            extraData = extraData || {}
+            const { attrs } = parentData
+            for (const attr in attrs) {
+              extraData[attr] = attrs[attr]
+            }
+          } else if (key === 'class' || key === 'style') {
+            ;(extraData || (extraData = {}))[key] = parentData[key]
+          } else if (key.startsWith('nativeOn')) {
+            ;(extraData || (extraData = {}))['on' + key.slice(8)] =
+              parentData[key]
+          }
         }
-      }
-      if (extraData) {
-        vnode = cloneVNode(vnode, extraData)
+        if (extraData) {
+          vnode = cloneVNode(vnode, extraData)
+        }
       }
       if (vnode.el) {
         vnode = cloneVNode(vnode)
