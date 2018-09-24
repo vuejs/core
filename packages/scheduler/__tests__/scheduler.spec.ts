@@ -22,8 +22,6 @@ describe('scheduler', () => {
       calls.push('job1')
       // job1 queues job2
       queueJob(job2)
-      // should be called sync
-      expect(calls).toEqual(['job1', 'job2'])
     }
     const job2 = () => {
       calls.push('job2')
@@ -60,8 +58,6 @@ describe('scheduler', () => {
       calls.push('job1')
       // job1 queues job2
       queueJob(job2, cb2)
-      // should be called sync
-      expect(calls).toEqual(['job1', 'job2'])
     }
     const job2 = () => {
       calls.push('job2')

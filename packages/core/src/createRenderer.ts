@@ -160,10 +160,6 @@ export function createRenderer(options: RendererOptions) {
 
   const hooks: Function[] = []
 
-  function queueHook(fn: Function) {
-    hooks.push(fn)
-  }
-
   function flushHooks() {
     let fn
     while ((fn = hooks.shift())) {
@@ -251,7 +247,7 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function mountRef(ref: Ref, el: RenderNode | MountedComponent) {
-    queueHook(() => {
+    hooks.push(() => {
       ref(el)
     })
   }
@@ -1166,8 +1162,9 @@ export function createRenderer(options: RendererOptions) {
         }
       },
       {
-        scheduler: queueUpdate
-        // TODO add API for using onTrigger for component re-render debugging
+        scheduler: queueUpdate,
+        onTrack: instance.renderTracked,
+        onTrigger: instance.renderTriggered
       }
     )
 
@@ -1185,7 +1182,7 @@ export function createRenderer(options: RendererOptions) {
       mountRef(ref, instance)
     }
     if (instance.mounted) {
-      queueHook(() => {
+      hooks.push(() => {
         ;(instance as any).mounted.call(instance.$proxy)
       })
     }
@@ -1220,7 +1217,12 @@ export function createRenderer(options: RendererOptions) {
     }
 
     if (instance.updated) {
-      queueHook(() => {
+      // Because the child's update is executed by the scheduler and not
+      // synchronously within the parent's update call, the child's updated hook
+      // will be added to the queue AFTER the parent's, but they should be
+      // invoked BEFORE the parent's. Therefore we add them to the head of the
+      // queue instead.
+      hooks.unshift(() => {
         ;(instance as any).updated.call(instance.$proxy, nextVNode)
       })
     }
