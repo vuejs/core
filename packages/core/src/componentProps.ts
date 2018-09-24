@@ -1,5 +1,10 @@
 import { EMPTY_OBJ } from './utils'
-import { Component, ComponentClass, MountedComponent } from './component'
+import {
+  Component,
+  ComponentClass,
+  MountedComponent,
+  FunctionalComponent
+} from './component'
 import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   Data,
@@ -9,19 +14,30 @@ import {
   PropOptions
 } from './componentOptions'
 
-export function initializeProps(instance: Component, props: Data | null) {
+export function initializeProps(instance: Component, data: Data | null) {
+  const { props, attrs } = resolveProps(
+    data,
+    instance.$options.props,
+    instance.constructor as ComponentClass
+  )
   instance.$props = immutable(props || {})
+  instance.$attrs = immutable(attrs || {})
 }
 
-export function updateProps(instance: MountedComponent, nextProps: Data) {
-  // instance.$props is an observable that should not be replaced.
-  // instead, we mutate it to match latest props, which will trigger updates
-  // if any value has changed.
-  if (nextProps != null) {
-    const props = instance.$props
-    const rawProps = unwrap(props)
+export function updateProps(instance: MountedComponent, nextData: Data) {
+  // instance.$props and instance.$attrs are observables that should not be
+  // replaced. Instead, we mutate them to match latest props, which will trigger
+  // updates if any value that's been used in child component has changed.
+  if (nextData != null) {
+    const { props: nextProps, attrs: nextAttrs } = resolveProps(
+      nextData,
+      instance.$options.props,
+      instance.constructor as ComponentClass
+    )
     // unlock to temporarily allow mutatiing props
     unlock()
+    const props = instance.$props
+    const rawProps = unwrap(props)
     for (const key in rawProps) {
       if (!nextProps.hasOwnProperty(key)) {
         delete props[key]
@@ -30,24 +46,46 @@ export function updateProps(instance: MountedComponent, nextProps: Data) {
     for (const key in nextProps) {
       props[key] = nextProps[key]
     }
+    if (nextAttrs) {
+      const attrs = instance.$attrs
+      const rawAttrs = unwrap(attrs)
+      for (const key in rawAttrs) {
+        if (!nextAttrs.hasOwnProperty(key)) {
+          delete attrs[key]
+        }
+      }
+      for (const key in nextAttrs) {
+        attrs[key] = nextAttrs[key]
+      }
+    }
     lock()
   }
 }
 
-// This is called for every component vnode created. This also means the data
-// on every component vnode is guarunteed to be a fresh object.
-export function normalizeComponentProps(
+const EMPTY_PROPS = { props: EMPTY_OBJ }
+
+// resolve raw VNode data.
+// - filter out reserved keys (key, ref, slots)
+// - extract class, style and nativeOn* into $attrs (to be merged onto child
+//   component root)
+// - for the rest:
+//   - if has declared props: put declared ones in `props`, the rest in `attrs`
+//   - else: everything goes in `props`.
+export function resolveProps(
   raw: any,
-  rawOptions: ComponentPropsOptions,
-  Component: ComponentClass
-): Data {
+  rawOptions: ComponentPropsOptions | void,
+  Component: ComponentClass | FunctionalComponent
+): { props: Data; attrs?: Data } {
   const hasDeclaredProps = rawOptions !== void 0
   const options = (hasDeclaredProps &&
-    normalizePropsOptions(rawOptions)) as NormalizedPropsOptions
+    normalizePropsOptions(
+      rawOptions as ComponentPropsOptions
+    )) as NormalizedPropsOptions
   if (!raw && !hasDeclaredProps) {
-    return EMPTY_OBJ
+    return EMPTY_PROPS
   }
-  const res: Data = {}
+  const props: any = {}
+  let attrs: any = void 0
   if (raw) {
     for (const key in raw) {
       // key, ref, slots are reserved
@@ -66,35 +104,36 @@ export function normalizeComponentProps(
         (hasDeclaredProps && !options.hasOwnProperty(key))
       ) {
         const newKey = isNativeOn ? 'on' + key.slice(8) : key
-        ;(res.attrs || (res.attrs = {}))[newKey] = raw[key]
+        ;(attrs || (attrs = {}))[newKey] = raw[key]
       } else {
         if (__DEV__ && hasDeclaredProps && options.hasOwnProperty(key)) {
           validateProp(key, raw[key], options[key], Component)
         }
-        res[key] = raw[key]
+        props[key] = raw[key]
       }
     }
   }
   // set default values
   if (hasDeclaredProps) {
     for (const key in options) {
-      if (res[key] === void 0) {
+      if (props[key] === void 0) {
         const opt = options[key]
         if (opt != null && opt.hasOwnProperty('default')) {
           const defaultValue = opt.default
-          res[key] =
+          props[key] =
             typeof defaultValue === 'function' ? defaultValue() : defaultValue
         }
       }
     }
   }
-  return res
+  return { props, attrs }
 }
 
-const normalizeCache: WeakMap<
+const normalizeCache = new WeakMap<
   ComponentPropsOptions,
   NormalizedPropsOptions
-> = new WeakMap()
+>()
+
 function normalizePropsOptions(
   raw: ComponentPropsOptions
 ): NormalizedPropsOptions {
@@ -116,7 +155,7 @@ function validateProp(
   key: string,
   value: any,
   validator: PropValidator<any>,
-  Component: ComponentClass
+  Component: ComponentClass | FunctionalComponent
 ) {
   // TODO
 }

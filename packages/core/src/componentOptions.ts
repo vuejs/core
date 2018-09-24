@@ -4,7 +4,7 @@ import { MountedComponent } from './component'
 export type Data = Record<string, any>
 
 export interface RenderFunction<P = Data> {
-  (props: P, slots: Slots): any
+  (props: P, slots: Slots, attrs: Data): any
 }
 
 export interface ComponentOptions<D = Data, P = Data> {

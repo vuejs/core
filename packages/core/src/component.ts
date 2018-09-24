@@ -30,6 +30,7 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   $vnode: VNode
   $data: D
   $props: P
+  $attrs: Data
   $computed: Data
   $slots: Slots
   $root: MountedComponent
@@ -70,6 +71,7 @@ export class Component {
   public $parentVNode: VNode | null = null
   public $data: Data | null = null
   public $props: Data | null = null
+  public $attrs: Data | null = null
   public $computed: Data | null = null
   public $slots: Slots | null = null
   public $root: MountedComponent | null = null

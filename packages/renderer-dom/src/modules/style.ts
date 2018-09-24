@@ -22,13 +22,13 @@ export function patchStyle(el: any, prev: any, next: any, data: any) {
       if (typeof value === 'number' && !nonNumericRE.test(key)) {
         value = value + 'px'
       }
-      style.setProperty(key, value)
+      style[key] = value
     }
     if (prev && typeof prev !== 'string') {
       prev = normalizeStyle(prev)
       for (const key in prev) {
         if (!normalizedNext[key]) {
-          style.setProperty(key, '')
+          style[key] = ''
         }
       }
     }

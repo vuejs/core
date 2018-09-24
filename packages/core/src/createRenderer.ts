@@ -18,7 +18,7 @@ import {
   FunctionalComponent,
   ComponentClass
 } from './component'
-import { updateProps } from './componentProps'
+import { updateProps, resolveProps } from './componentProps'
 import {
   renderInstanceRoot,
   createComponentInstance,
@@ -272,12 +272,15 @@ export function createRenderer(options: RendererOptions) {
       )
     } else {
       // functional component
+      const render = tag as FunctionalComponent
+      const { props, attrs } = resolveProps(data, render.props, render)
       const subTree = (vnode.children = normalizeComponentRoot(
-        (tag as FunctionalComponent)(data || EMPTY_OBJ, slots || EMPTY_OBJ),
+        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         vnode,
-        (tag as FunctionalComponent).inheritAttrs
+        attrs,
+        render.inheritAttrs
       ))
-      el = vnode.el = mount(subTree, null, parentComponent, isSVG, null)
+      el = vnode.el = mount(subTree, null, parentComponent, isSVG, endNode)
     }
     if (container != null) {
       insertOrAppend(container, el, endNode)
@@ -508,7 +511,7 @@ export function createRenderer(options: RendererOptions) {
   function patchStatefulComponent(prevVNode: VNode, nextVNode: VNode) {
     const { childFlags: prevChildFlags } = prevVNode
     const {
-      data: nextProps,
+      data: nextData,
       slots: nextSlots,
       childFlags: nextChildFlags
     } = nextVNode
@@ -519,8 +522,8 @@ export function createRenderer(options: RendererOptions) {
     instance.$parentVNode = nextVNode
 
     // Update props. This will trigger child update if necessary.
-    if (nextProps !== null) {
-      updateProps(instance, nextProps)
+    if (nextData !== null) {
+      updateProps(instance, nextData)
     }
 
     // If has different slots content, or has non-compiled slots,
@@ -546,20 +549,22 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     // functional component tree is stored on the vnode as `children`
-    const { data: prevProps, slots: prevSlots } = prevVNode
-    const { data: nextProps, slots: nextSlots } = nextVNode
+    const { data: prevData, slots: prevSlots } = prevVNode
+    const { data: nextData, slots: nextSlots } = nextVNode
     const render = nextVNode.tag as FunctionalComponent
     const prevTree = prevVNode.children as VNode
 
     let shouldUpdate = true
     if (render.pure && prevSlots == null && nextSlots == null) {
-      shouldUpdate = shouldUpdateFunctionalComponent(prevProps, nextProps)
+      shouldUpdate = shouldUpdateFunctionalComponent(prevData, nextData)
     }
 
     if (shouldUpdate) {
+      const { props, attrs } = resolveProps(nextData, render.props, render)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(nextProps || EMPTY_OBJ, nextSlots || EMPTY_OBJ),
+        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         nextVNode,
+        attrs,
         render.inheritAttrs
       ))
       patch(prevTree, nextTree, container, parentComponent, isSVG)

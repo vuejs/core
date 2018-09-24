@@ -4,9 +4,7 @@ import {
   FunctionalComponent
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
-import { normalizeComponentProps } from './componentProps'
 import { createComponentClassFromOptions } from './componentUtils'
-import { ComponentPropsOptions } from './componentOptions'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -119,7 +117,6 @@ export function createComponentVNode(
 ) {
   // resolve type
   let flags: VNodeFlags
-  let propsOptions: ComponentPropsOptions
 
   // flags
   const compType = typeof comp
@@ -134,14 +131,12 @@ export function createComponentVNode(
         comp._normalized = true
       }
       comp = render
-      propsOptions = comp.props
     } else {
       // object literal stateful
       flags = VNodeFlags.COMPONENT_STATEFUL
       comp =
         comp._normalized ||
         (comp._normalized = createComponentClassFromOptions(comp))
-      propsOptions = comp.options && comp.options.props
     }
   } else {
     // assumes comp is function here now
@@ -150,19 +145,14 @@ export function createComponentVNode(
     }
     if (comp.prototype && comp.prototype.render) {
       flags = VNodeFlags.COMPONENT_STATEFUL
-      propsOptions = comp.options && comp.options.props
     } else {
       flags = VNodeFlags.COMPONENT_FUNCTIONAL
-      propsOptions = comp.props
     }
   }
 
   if (__DEV__ && flags === VNodeFlags.COMPONENT_FUNCTIONAL && ref) {
     // TODO warn functional component cannot have ref
   }
-
-  // props
-  const props = normalizeComponentProps(data, propsOptions, comp)
 
   // slots
   let slots: any
@@ -188,7 +178,7 @@ export function createComponentVNode(
   return createVNode(
     flags,
     comp,
-    props,
+    data,
     null, // to be set during mount
     childFlags,
     key,
@@ -258,28 +248,7 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
         }
       }
       for (const key in extraData) {
-        const existing = clonedData[key]
-        const extra = extraData[key]
-        if (extra === void 0) {
-          continue
-        }
-        // special merge behavior for attrs / class / style / on.
-        let isOn
-        if (key === 'attrs') {
-          clonedData.attrs = existing
-            ? Object.assign({}, existing, extra)
-            : extra
-        } else if (
-          key === 'class' ||
-          key === 'style' ||
-          (isOn = key.startsWith('on'))
-        ) {
-          // all three props can handle array format, so we simply merge them
-          // by concating.
-          clonedData[key] = existing ? [].concat(existing, extra) : extra
-        } else {
-          clonedData[key] = extra
-        }
+        clonedData[key] = extraData[key]
       }
     }
     return createVNode(

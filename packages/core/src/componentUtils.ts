@@ -74,6 +74,7 @@ export function renderInstanceRoot(instance: MountedComponent) {
   return normalizeComponentRoot(
     vnode,
     instance.$parentVNode,
+    instance.$attrs,
     instance.$options.inheritAttrs
   )
 }
@@ -93,6 +94,7 @@ export function teardownComponentInstance(instance: MountedComponent) {
 export function normalizeComponentRoot(
   vnode: any,
   componentVNode: VNode | null,
+  attrs: Data | void,
   inheritAttrs: boolean | void
 ): VNode {
   if (vnode == null) {
@@ -108,9 +110,10 @@ export function normalizeComponentRoot(
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
-      const parentData = componentVNode.data
-      if (inheritAttrs !== false && parentData && parentData.attrs) {
-        vnode = cloneVNode(vnode, parentData.attrs)
+      if (inheritAttrs !== false && attrs !== void 0) {
+        // TODO should merge
+        console.log(attrs)
+        vnode = cloneVNode(vnode, attrs)
       }
       if (vnode.el) {
         vnode = cloneVNode(vnode)
