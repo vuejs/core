@@ -14,6 +14,7 @@ import {
 import { initializeWatch, teardownWatch } from './componentWatch'
 import { Data, ComponentOptions } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
+import { handleError, ErrorTypes } from './errorHandling'
 
 export function createComponentInstance(
   vnode: VNode,
@@ -53,11 +54,24 @@ export function createComponentInstance(
 }
 
 export function renderInstanceRoot(instance: MountedComponent) {
-  // TODO handle render error
-  return normalizeComponentRoot(
-    instance.render.call(instance.$proxy, instance.$props, instance.$slots),
-    instance.$parentVNode
-  )
+  let vnode
+  try {
+    vnode = instance.render.call(
+      instance.$proxy,
+      instance.$props,
+      instance.$slots
+    )
+  } catch (e1) {
+    handleError(e1, instance, ErrorTypes.RENDER)
+    if (__DEV__ && instance.renderError) {
+      try {
+        vnode = instance.renderError.call(instance.$proxy, e1)
+      } catch (e2) {
+        handleError(e2, instance, ErrorTypes.RENDER_ERROR)
+      }
+    }
+  }
+  return normalizeComponentRoot(vnode, instance.$parentVNode)
 }
 
 export function teardownComponentInstance(instance: MountedComponent) {

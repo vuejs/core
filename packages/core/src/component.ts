@@ -34,6 +34,7 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   $options: ComponentOptions<D, P>
 
   render: RenderFunction<P>
+  renderError?: (e: Error) => any
   data?(): Partial<D>
   beforeCreate?(): void
   created?(): void

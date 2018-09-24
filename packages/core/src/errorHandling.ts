@@ -2,9 +2,10 @@ import { MountedComponent } from './component'
 
 export const enum ErrorTypes {
   LIFECYCLE = 1,
-  RENDER = 2,
-  NATIVE_EVENT_HANDLER = 3,
-  COMPONENT_EVENT_HANDLER = 4
+  RENDER,
+  RENDER_ERROR,
+  NATIVE_EVENT_HANDLER,
+  COMPONENT_EVENT_HANDLER
 }
 
 const globalHandlers: Function[] = []
@@ -19,8 +20,7 @@ export function globalHandleError(handler: () => void) {
 export function handleError(
   err: Error,
   instance: MountedComponent,
-  type: ErrorTypes,
-  code: number
+  type: ErrorTypes
 ) {
   // TODO
 }
