@@ -36,15 +36,17 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   $children: MountedComponent[]
   $options: ComponentOptions<D, P>
 
-  render: RenderFunction<P>
-  renderError?: (e: Error) => any
+  render(props: P, slots: Slots): any
+  renderError?(e: Error): any
+  renderTracked?(e: DebuggerEvent): void
+  renderTriggered?(e: DebuggerEvent): void
   data?(): Partial<D>
   beforeCreate?(): void
   created?(): void
   beforeMount?(): void
   mounted?(): void
-  beforeUpdate?(e: DebuggerEvent): void
-  updated?(): void
+  beforeUpdate?(vnode: VNode): void
+  updated?(vnode: VNode): void
   beforeDestroy?(): void
   destroyed?(): void
   errorCaptured?(): (err: Error, type: ErrorTypes) => boolean | void
