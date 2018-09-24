@@ -50,21 +50,27 @@ export function normalizeComponentProps(
   const res: Data = {}
   if (raw) {
     for (const key in raw) {
-      if (key === 'key' || key === 'ref' || key === 'slot') {
+      // key, ref, slots are reserved
+      if (key === 'key' || key === 'ref' || key === 'slots') {
         continue
       }
-      if (hasDeclaredProps) {
-        if (options.hasOwnProperty(key)) {
-          if (__DEV__) {
-            validateProp(key, raw[key], options[key], Component)
-          }
-          res[key] = raw[key]
-        } else {
-          // when props are explicitly declared, any non-matching prop is
-          // extracted into attrs instead.
-          ;(res.attrs || (res.attrs = {}))[key] = raw[key]
-        }
+      // class, style & nativeOn are always extracted into a separate `attrs`
+      // object, which can then be merged onto child component root.
+      // in addition, if the component has explicitly declared props, then
+      // any non-matching props are extracted into `attrs` as well.
+      let isNativeOn
+      if (
+        key === 'class' ||
+        key === 'style' ||
+        (isNativeOn = key.startsWith('nativeOn')) ||
+        (hasDeclaredProps && !options.hasOwnProperty(key))
+      ) {
+        const newKey = isNativeOn ? 'on' + key.slice(8) : key
+        ;(res.attrs || (res.attrs = {}))[newKey] = raw[key]
       } else {
+        if (__DEV__ && hasDeclaredProps && options.hasOwnProperty(key)) {
+          validateProp(key, raw[key], options[key], Component)
+        }
         res[key] = raw[key]
       }
     }

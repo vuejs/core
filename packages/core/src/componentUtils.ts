@@ -109,30 +109,8 @@ export function normalizeComponentRoot(
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
       const parentData = componentVNode.data
-      if (parentData != null && inheritAttrs !== false) {
-        let extraData: any = null
-        for (const key in parentData) {
-          // attrs/class/style bindings on parentVNode are merged down to child
-          // component root,
-          // nativeOn* handlers are merged to child root as normal on* handlers.
-          // cloneVNode contains special logic for merging these props with
-          // existing values.
-          if (key === 'attrs') {
-            extraData = extraData || {}
-            const { attrs } = parentData
-            for (const attr in attrs) {
-              extraData[attr] = attrs[attr]
-            }
-          } else if (key === 'class' || key === 'style') {
-            ;(extraData || (extraData = {}))[key] = parentData[key]
-          } else if (key.startsWith('nativeOn')) {
-            ;(extraData || (extraData = {}))['on' + key.slice(8)] =
-              parentData[key]
-          }
-        }
-        if (extraData) {
-          vnode = cloneVNode(vnode, extraData)
-        }
+      if (inheritAttrs !== false && parentData && parentData.attrs) {
+        vnode = cloneVNode(vnode, parentData.attrs)
       }
       if (vnode.el) {
         vnode = cloneVNode(vnode)
