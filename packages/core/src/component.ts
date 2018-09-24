@@ -21,6 +21,7 @@ export interface ComponentClass extends Flatten<typeof Component> {
 export interface FunctionalComponent<P = Data> extends RenderFunction<P> {
   pure?: boolean
   props?: ComponentPropsOptions<P>
+  inheritAttrs?: boolean
 }
 
 // this interface is merged with the class type

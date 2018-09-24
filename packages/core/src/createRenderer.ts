@@ -278,7 +278,8 @@ export function createRenderer(options: RendererOptions) {
       // functional component
       const subTree = (vnode.children = normalizeComponentRoot(
         (tag as FunctionalComponent)(data || EMPTY_OBJ, slots || EMPTY_OBJ),
-        vnode
+        vnode,
+        (tag as FunctionalComponent).inheritAttrs
       ))
       el = vnode.el = mount(subTree, null, parentComponent, isSVG, null)
     }
@@ -562,7 +563,8 @@ export function createRenderer(options: RendererOptions) {
     if (shouldUpdate) {
       const nextTree = (nextVNode.children = normalizeComponentRoot(
         render(nextProps || EMPTY_OBJ, nextSlots || EMPTY_OBJ),
-        nextVNode
+        nextVNode,
+        render.inheritAttrs
       ))
       patch(prevTree, nextTree, container, parentComponent, isSVG)
       nextVNode.el = nextTree.el

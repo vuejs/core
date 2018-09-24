@@ -13,6 +13,7 @@ export interface ComponentOptions<D = Data, P = Data> {
   computed?: ComponentComputedOptions<D, P>
   watch?: ComponentWatchOptions<D, P>
   render?: RenderFunction<P>
+  inheritAttrs?: boolean
   // TODO other options
   readonly [key: string]: any
 }

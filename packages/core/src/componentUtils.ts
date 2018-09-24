@@ -71,7 +71,11 @@ export function renderInstanceRoot(instance: MountedComponent) {
       }
     }
   }
-  return normalizeComponentRoot(vnode, instance.$parentVNode)
+  return normalizeComponentRoot(
+    vnode,
+    instance.$parentVNode,
+    instance.$options.inheritAttrs
+  )
 }
 
 export function teardownComponentInstance(instance: MountedComponent) {
@@ -88,7 +92,8 @@ export function teardownComponentInstance(instance: MountedComponent) {
 
 export function normalizeComponentRoot(
   vnode: any,
-  componentVNode: VNode | null
+  componentVNode: VNode | null,
+  inheritAttrs: boolean | void
 ): VNode {
   if (vnode == null) {
     vnode = createTextVNode('')
@@ -104,7 +109,7 @@ export function normalizeComponentRoot(
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
       const parentData = componentVNode.data
-      if (parentData != null) {
+      if (parentData != null && inheritAttrs !== false) {
         let extraData: any = null
         for (const key in parentData) {
           // attrs/class/style bindings on parentVNode are merged down to child
