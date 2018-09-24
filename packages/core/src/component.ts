@@ -9,6 +9,7 @@ import {
 import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
+import { ErrorTypes } from './errorHandling'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
 
@@ -44,6 +45,7 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   updated?(): void
   beforeDestroy?(): void
   destroyed?(): void
+  errorCaptured?(): (err: Error, type: ErrorTypes) => boolean | void
 
   _updateHandle: Autorun
   _queueJob: ((fn: () => void) => void)
