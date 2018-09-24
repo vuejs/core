@@ -9,6 +9,7 @@ import {
   createFragment,
   createPortal
 } from './vdom'
+import { isObservable } from '@vue/observer'
 
 export const Fragment = Symbol()
 export const Portal = Symbol()
@@ -36,7 +37,15 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
     data = null
   }
 
-  // TODO clone data if it is observed
+  if (data === void 0) data = null
+  if (children === void 0) children = null
+
+  if (__DEV__ && isObservable(data)) {
+    console.warn(
+      `Do not used observed state as VNode data - always create fresh objects.`,
+      data
+    )
+  }
 
   let key = null
   let ref = null

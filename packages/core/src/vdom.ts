@@ -5,6 +5,7 @@ import {
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
+import { normalizeClass, normalizeStyle } from './utils'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -95,6 +96,15 @@ export function createVNode(
   return vnode
 }
 
+function normalizeClassAndStyle(data: VNodeData) {
+  if (data.class != null) {
+    data.class = normalizeClass(data.class)
+  }
+  if (data.style != null) {
+    data.style = normalizeStyle(data.style)
+  }
+}
+
 export function createElementVNode(
   tag: string,
   data: VNodeData | null,
@@ -104,6 +114,9 @@ export function createElementVNode(
   ref?: Ref | null
 ) {
   const flags = tag === 'svg' ? VNodeFlags.ELEMENT_SVG : VNodeFlags.ELEMENT_HTML
+  if (data !== null) {
+    normalizeClassAndStyle(data)
+  }
   return createVNode(flags, tag, data, children, childFlags, key, ref, null)
 }
 
@@ -173,6 +186,11 @@ export function createComponentVNode(
       }
       slots = normalizeSlots(slots)
     }
+  }
+
+  // class & style
+  if (data !== null) {
+    normalizeClassAndStyle(data)
   }
 
   return createVNode(
@@ -248,7 +266,18 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
         }
       }
       for (const key in extraData) {
-        clonedData[key] = extraData[key]
+        if (key === 'class') {
+          clonedData.class = normalizeClass([clonedData.class, extraData.class])
+        } else if (key === 'style') {
+          clonedData.style = normalizeStyle([clonedData.style, extraData.style])
+        } else if (key.startsWith('on')) {
+          const existing = clonedData[key]
+          clonedData[key] = existing
+            ? [].concat(existing, extraData[key])
+            : extraData[key]
+        } else {
+          clonedData[key] = extraData[key]
+        }
       }
     }
     return createVNode(

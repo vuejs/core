@@ -37,7 +37,7 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   $children: MountedComponent[]
   $options: ComponentOptions<D, P>
 
-  render(props: P, slots: Slots): any
+  render(props: P, slots: Slots, attrs: Data): any
   renderError?(e: Error): any
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void

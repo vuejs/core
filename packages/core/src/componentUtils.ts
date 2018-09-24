@@ -59,7 +59,8 @@ export function renderInstanceRoot(instance: MountedComponent) {
     vnode = instance.render.call(
       instance.$proxy,
       instance.$props,
-      instance.$slots
+      instance.$slots,
+      instance.$attrs
     )
   } catch (e1) {
     handleError(e1, instance, ErrorTypes.RENDER)
@@ -105,17 +106,13 @@ export function normalizeComponentRoot(
     vnode = createFragment(vnode)
   } else {
     const { flags } = vnode
-    // parentVNode data merge down
     if (
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
       if (inheritAttrs !== false && attrs !== void 0) {
-        // TODO should merge
-        console.log(attrs)
         vnode = cloneVNode(vnode, attrs)
-      }
-      if (vnode.el) {
+      } else if (vnode.el) {
         vnode = cloneVNode(vnode)
       }
       if (flags & VNodeFlags.COMPONENT) {

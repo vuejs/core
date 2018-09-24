@@ -11,6 +11,43 @@ export const isReservedProp = (key: string): boolean => {
   }
 }
 
+export function normalizeStyle(
+  value: any
+): Record<string, string | number> | void {
+  if (Array.isArray(value)) {
+    const res: Record<string, string | number> = {}
+    for (let i = 0; i < value.length; i++) {
+      const normalized = normalizeStyle(value[i])
+      if (normalized) {
+        for (const key in normalized) {
+          res[key] = normalized[key]
+        }
+      }
+    }
+    return res
+  } else if (value && typeof value === 'object') {
+    return value
+  }
+}
+
+export function normalizeClass(value: any): string {
+  let res = ''
+  if (typeof value === 'string') {
+    res = value
+  } else if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      res += normalizeClass(value[i]) + ' '
+    }
+  } else if (typeof value === 'object') {
+    for (const name in value) {
+      if (value[name]) {
+        res += name + ' '
+      }
+    }
+  }
+  return res.trim()
+}
+
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 export function lis(arr: number[]): number[] {
   const p = arr.slice()
