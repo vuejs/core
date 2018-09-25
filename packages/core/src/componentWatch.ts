@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, NOOP } from './utils'
 import { MountedComponent } from './component'
 import { ComponentWatchOptions, WatchOptions } from './componentOptions'
 import { autorun, stop } from '@vue/observer'
@@ -36,8 +36,16 @@ export function setupWatcher(
 
   const rawGetter =
     typeof keyOrFn === 'string'
-      ? () => proxy[keyOrFn]
+      ? parseDotPath(keyOrFn, proxy)
       : () => keyOrFn.call(proxy)
+
+  if (__DEV__ && rawGetter === NOOP) {
+    console.warn(
+      `Failed watching expression: "${keyOrFn}". ` +
+        `Watch expressions can only be dot-delimited paths. ` +
+        `For more complex expressions, use $watch with a function instead.`
+    )
+  }
 
   const getter = options.deep ? () => traverse(rawGetter()) : rawGetter
 
@@ -82,6 +90,27 @@ export function setupWatcher(
 export function teardownWatch(instance: MountedComponent) {
   if (instance._watchHandles !== null) {
     instance._watchHandles.forEach(stop)
+  }
+}
+
+const bailRE = /[^\w.$]/
+
+function parseDotPath(path: string, ctx: any): Function {
+  if (bailRE.test(path)) {
+    return NOOP
+  }
+  const segments = path.split('.')
+  if (segments.length === 1) {
+    return () => ctx[path]
+  } else {
+    return () => {
+      let obj = ctx
+      for (let i = 0; i < segments.length; i++) {
+        if (!obj) return
+        obj = obj[segments[i]]
+      }
+      return obj
+    }
   }
 }
 
