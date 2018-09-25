@@ -1,4 +1,4 @@
-import { Component, MountedComponent } from './component'
+import { MountedComponent } from './component'
 
 const bindCache = new WeakMap()
 
@@ -77,6 +77,6 @@ const renderProxyHandlers = {
   }
 }
 
-export function createRenderProxy(instance: Component): MountedComponent {
+export function createRenderProxy(instance: any): MountedComponent {
   return new Proxy(instance, renderProxyHandlers) as MountedComponent
 }

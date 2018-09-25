@@ -24,7 +24,7 @@ export interface Directive {
   unmounted: DirectiveHook
 }
 
-type DirectiveModifiers = Record<string, boolean>
+export type DirectiveModifiers = Record<string, boolean>
 
 export function applyDirective(
   vnode: VNode,
