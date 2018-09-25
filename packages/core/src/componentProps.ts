@@ -72,7 +72,7 @@ const EMPTY_PROPS = { props: EMPTY_OBJ }
 //   - if has declared props: put declared ones in `props`, the rest in `attrs`
 //   - else: everything goes in `props`.
 export function resolveProps(
-  raw: any,
+  rawData: any,
   rawOptions: ComponentPropsOptions | void,
   Component: ComponentClass | FunctionalComponent
 ): { props: Data; attrs?: Data } {
@@ -81,13 +81,13 @@ export function resolveProps(
     normalizePropsOptions(
       rawOptions as ComponentPropsOptions
     )) as NormalizedPropsOptions
-  if (!raw && !hasDeclaredProps) {
+  if (!rawData && !hasDeclaredProps) {
     return EMPTY_PROPS
   }
   const props: any = {}
   let attrs: any = void 0
-  if (raw) {
-    for (const key in raw) {
+  if (rawData != null) {
+    for (const key in rawData) {
       // key, ref, slots are reserved
       if (key === 'key' || key === 'ref' || key === 'slots') {
         continue
@@ -105,12 +105,12 @@ export function resolveProps(
         (hasDeclaredProps && !options.hasOwnProperty(key))
       ) {
         const newKey = isNativeOn ? 'on' + key.slice(8) : key
-        ;(attrs || (attrs = {}))[newKey] = raw[key]
+        ;(attrs || (attrs = {}))[newKey] = rawData[key]
       } else {
         if (__DEV__ && hasDeclaredProps && options.hasOwnProperty(key)) {
-          validateProp(key, raw[key], options[key], Component)
+          validateProp(key, rawData[key], options[key], Component)
         }
-        props[key] = raw[key]
+        props[key] = rawData[key]
       }
     }
   }
