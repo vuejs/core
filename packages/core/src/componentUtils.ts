@@ -110,7 +110,11 @@ export function normalizeComponentRoot(
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
-      if (inheritAttrs !== false && attrs !== void 0) {
+      if (
+        inheritAttrs !== false &&
+        attrs !== void 0 &&
+        Object.keys(attrs).length > 0
+      ) {
         vnode = cloneVNode(vnode, attrs)
       } else if (vnode.el) {
         vnode = cloneVNode(vnode)

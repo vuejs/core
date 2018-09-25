@@ -25,6 +25,7 @@ export function getComputedOptions(
       // as it's already defined on the prototype
     }
   }
+  extractionCache.set(comp, computedOptions)
   return computedOptions
 }
 
