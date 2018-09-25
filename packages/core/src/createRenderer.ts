@@ -156,13 +156,14 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  // lifecycle hooks -----------------------------------------------------------
+  // lifecycle lifecycleHooks -----------------------------------------------------------
 
-  const hooks: Function[] = []
+  const lifecycleHooks: Function[] = []
+  const vnodeUpdatedHooks: Function[] = []
 
   function flushHooks() {
     let fn
-    while ((fn = hooks.shift())) {
+    while ((fn = lifecycleHooks.shift())) {
       fn()
     }
   }
@@ -222,6 +223,9 @@ export function createRenderer(options: RendererOptions) {
       for (const key in data) {
         patchData(el, key, null, data[key], null, vnode, isSVG)
       }
+      if (data.vnodeBeforeMount) {
+        data.vnodeBeforeMount(vnode)
+      }
     }
     if (childFlags !== ChildrenFlags.NO_CHILDREN) {
       const hasSVGChildren = isSVG && tag !== 'foreignObject'
@@ -243,11 +247,16 @@ export function createRenderer(options: RendererOptions) {
     if (ref) {
       mountRef(ref, el)
     }
+    if (data != null && data.vnodeMounted) {
+      lifecycleHooks.push(() => {
+        data.vnodeMounted(vnode)
+      })
+    }
     return el
   }
 
   function mountRef(ref: Ref, el: RenderNode | MountedComponent) {
-    hooks.push(() => {
+    lifecycleHooks.push(() => {
       ref(el)
     })
   }
@@ -438,10 +447,14 @@ export function createRenderer(options: RendererOptions) {
     }
 
     const el = (nextVNode.el = prevVNode.el) as RenderNode
-
-    // data
     const prevData = prevVNode.data
     const nextData = nextVNode.data
+
+    if (nextData != null && nextData.vnodeBeforeUpdate) {
+      nextData.vnodeBeforeUpdate(nextVNode, prevVNode)
+    }
+
+    // patch data
     if (prevData !== nextData) {
       const prevDataOrEmpty = prevData || EMPTY_OBJ
       const nextDataOrEmpty = nextData || EMPTY_OBJ
@@ -483,6 +496,12 @@ export function createRenderer(options: RendererOptions) {
       isSVG && nextVNode.tag !== 'foreignObject',
       null
     )
+
+    if (nextData != null && nextData.vnodeUpdated) {
+      vnodeUpdatedHooks.push(() => {
+        nextData.vnodeUpdated(nextVNode, prevVNode)
+      })
+    }
   }
 
   function patchComponent(
@@ -1064,11 +1083,18 @@ export function createRenderer(options: RendererOptions) {
   // unmounting ----------------------------------------------------------------
 
   function unmount(vnode: VNode) {
-    const { flags, children, childFlags, ref } = vnode
-    if (flags & VNodeFlags.ELEMENT || flags & VNodeFlags.FRAGMENT) {
+    const { flags, data, children, childFlags, ref } = vnode
+    const isElement = flags & VNodeFlags.ELEMENT
+    if (isElement || flags & VNodeFlags.FRAGMENT) {
+      if (isElement && data != null && data.vnodeBeforeUnmount) {
+        data.vnodeBeforeUnmount(vnode)
+      }
       unmountChildren(children as VNodeChildren, childFlags)
       if (teardownVNode !== void 0) {
         teardownVNode(vnode)
+      }
+      if (isElement && data != null && data.vnodeUnmounted) {
+        data.vnodeUnmounted(vnode)
       }
     } else if (flags & VNodeFlags.COMPONENT) {
       if (flags & VNodeFlags.COMPONENT_STATEFUL) {
@@ -1187,7 +1213,7 @@ export function createRenderer(options: RendererOptions) {
       mountRef(ref, instance)
     }
     if (instance.mounted) {
-      hooks.push(() => {
+      lifecycleHooks.push(() => {
         ;(instance as any).mounted.call(instance.$proxy)
       })
     }
@@ -1227,8 +1253,18 @@ export function createRenderer(options: RendererOptions) {
       // will be added to the queue AFTER the parent's, but they should be
       // invoked BEFORE the parent's. Therefore we add them to the head of the
       // queue instead.
-      hooks.unshift(() => {
+      lifecycleHooks.unshift(() => {
         ;(instance as any).updated.call(instance.$proxy, nextVNode)
+      })
+    }
+
+    if (vnodeUpdatedHooks.length > 0) {
+      const vnodeUpdatedHooksForCurrentInstance = vnodeUpdatedHooks.slice()
+      vnodeUpdatedHooks.length = 0
+      lifecycleHooks.unshift(() => {
+        for (let i = 0; i < vnodeUpdatedHooksForCurrentInstance.length; i++) {
+          vnodeUpdatedHooksForCurrentInstance[i]()
+        }
       })
     }
   }

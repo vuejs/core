@@ -1,4 +1,4 @@
-import { EMPTY_OBJ, nativeOnRE } from './utils'
+import { EMPTY_OBJ, nativeOnRE, vnodeHookRE } from './utils'
 import {
   Component,
   ComponentClass,
@@ -92,14 +92,15 @@ export function resolveProps(
       if (key === 'key' || key === 'ref' || key === 'slots') {
         continue
       }
-      // class, style & nativeOn are always extracted into a separate `attrs`
-      // object, which can then be merged onto child component root.
-      // in addition, if the component has explicitly declared props, then
+      // class, style, nativeOn & directive hooks are always extracted into a
+      // separate `attrs` object, which can then be merged onto child component
+      // root. in addition, if the component has explicitly declared props, then
       // any non-matching props are extracted into `attrs` as well.
       let isNativeOn
       if (
         key === 'class' ||
         key === 'style' ||
+        vnodeHookRE.test(key) ||
         (isNativeOn = nativeOnRE.test(key)) ||
         (hasDeclaredProps && !options.hasOwnProperty(key))
       ) {
