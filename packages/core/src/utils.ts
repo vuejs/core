@@ -4,9 +4,7 @@ export const NOOP = () => {}
 
 export const onRE = /^on/
 export const nativeOnRE = /^nativeOn/
-
-const reserveRE = /^(?:key|ref|slots)$|^nativeOn/
-export const isReservedProp = (key: string): boolean => reserveRE.test(key)
+export const reservedPropRE = /^(?:key|ref|slots)$|^nativeOn/
 
 export function normalizeStyle(
   value: any

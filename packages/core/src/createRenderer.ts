@@ -1,7 +1,7 @@
 import { autorun, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
-import { EMPTY_OBJ, isReservedProp, lis } from './utils'
+import { EMPTY_OBJ, reservedPropRE, lis } from './utils'
 import {
   VNode,
   MountedVNode,
@@ -382,7 +382,7 @@ export function createRenderer(options: RendererOptions) {
     nextVNode: VNode,
     isSVG: boolean
   ) {
-    if (isReservedProp(key)) {
+    if (reservedPropRE.test(key)) {
       return
     }
     platformPatchData(
