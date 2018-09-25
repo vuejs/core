@@ -14,7 +14,7 @@ import { ErrorTypes } from './errorHandling'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
 
-export interface ComponentClass extends Flatten<typeof Component> {
+export interface ComponentClass extends Flatten<typeof InternalComponent> {
   new <D = Data, P = Data>(): MountedComponent<D, P> & D & P
 }
 
@@ -26,7 +26,8 @@ export interface FunctionalComponent<P = Data> extends RenderFunction<P> {
 
 // this interface is merged with the class type
 // to represent a mounted component
-export interface MountedComponent<D = Data, P = Data> extends Component {
+export interface MountedComponent<D = Data, P = Data>
+  extends InternalComponent {
   $vnode: VNode
   $data: D
   $props: P
@@ -60,7 +61,7 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   _self: MountedComponent<D, P> // on proxies only
 }
 
-export class Component {
+class InternalComponent {
   public static options?: ComponentOptions
 
   public get $el(): RenderNode | RenderFragment | null {
@@ -108,14 +109,14 @@ export class Component {
   $watch(
     this: MountedComponent,
     keyOrFn: string | (() => any),
-    cb: () => void,
+    cb: (newValue: any, oldValue: any) => void,
     options?: WatchOptions
   ) {
     return setupWatcher(this, keyOrFn, cb, options)
   }
 
   // eventEmitter interface
-  $on(event: string, fn: Function): Component {
+  $on(this: MountedComponent, event: string, fn: Function): MountedComponent {
     if (Array.isArray(event)) {
       for (let i = 0; i < event.length; i++) {
         this.$on(event[i], fn)
@@ -127,7 +128,7 @@ export class Component {
     return this
   }
 
-  $once(event: string, fn: Function): Component {
+  $once(this: MountedComponent, event: string, fn: Function): MountedComponent {
     const onceFn = (...args: any[]) => {
       this.$off(event, onceFn)
       fn.apply(this, args)
@@ -136,7 +137,11 @@ export class Component {
     return this.$on(event, onceFn)
   }
 
-  $off(event?: string, fn?: Function) {
+  $off(
+    this: MountedComponent,
+    event?: string,
+    fn?: Function
+  ): MountedComponent {
     if (this._events) {
       if (!event && !fn) {
         this._events = null
@@ -162,7 +167,11 @@ export class Component {
     return this
   }
 
-  $emit(this: MountedComponent, name: string, ...payload: any[]) {
+  $emit(
+    this: MountedComponent,
+    name: string,
+    ...payload: any[]
+  ): MountedComponent {
     const parentListener =
       this.$props['on' + name] || this.$props['on' + name.toLowerCase()]
     if (parentListener) {
@@ -188,3 +197,7 @@ function invokeListeners(value: Function | Function[], payload: any[]) {
     value(...payload)
   }
 }
+
+// the exported Component has the implementation details of the actual
+// InternalComponent class but with proper type inference of ComponentClass.
+export const Component = InternalComponent as ComponentClass

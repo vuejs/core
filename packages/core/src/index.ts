@@ -2,10 +2,7 @@
 export { h, Fragment, Portal } from './h'
 export { cloneVNode, createPortal, createFragment } from './vdom'
 export { createRenderer } from './createRenderer'
-
-import { Component as InternalComponent, ComponentClass } from './component'
-// the public component constructor with proper type inference.
-export const Component = InternalComponent as ComponentClass
+export { Component } from './component'
 
 // observer api
 export * from '@vue/observer'
@@ -15,7 +12,10 @@ export { nextTick } from '@vue/scheduler'
 
 // internal api
 export { createComponentInstance } from './componentUtils'
+
+// import-on-demand apis
 export { applyDirective } from './directive'
+export { Provide, Inject } from './context'
 
 // flags & types
 export { ComponentClass, FunctionalComponent } from './component'

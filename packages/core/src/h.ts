@@ -32,7 +32,10 @@ export interface createElement {
 }
 
 export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
-  if (Array.isArray(data) || (data !== void 0 && typeof data !== 'object')) {
+  if (
+    Array.isArray(data) ||
+    (data != null && (typeof data !== 'object' || data._isVNode))
+  ) {
     children = data
     data = null
   }

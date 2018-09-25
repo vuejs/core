@@ -103,7 +103,16 @@ export function normalizeComponentRoot(
   } else if (typeof vnode !== 'object') {
     vnode = createTextVNode(vnode + '')
   } else if (Array.isArray(vnode)) {
-    vnode = createFragment(vnode)
+    if (vnode.length === 1) {
+      vnode = normalizeComponentRoot(
+        vnode[0],
+        componentVNode,
+        attrs,
+        inheritAttrs
+      )
+    } else {
+      vnode = createFragment(vnode)
+    }
   } else {
     const { flags } = vnode
     if (

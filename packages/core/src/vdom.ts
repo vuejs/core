@@ -169,7 +169,7 @@ export function createComponentVNode(
 
   // slots
   let slots: any
-  if (childFlags == null) {
+  if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
     childFlags = children
       ? ChildrenFlags.DYNAMIC_SLOTS
       : ChildrenFlags.NO_CHILDREN
@@ -178,11 +178,12 @@ export function createComponentVNode(
       if (childrenType === 'function') {
         // function as children
         slots = { default: children }
-      } else if (childrenType === 'object' && !(children as VNode)._isVNode) {
+      } else if (Array.isArray(children) || (children as VNode)._isVNode) {
+        // direct vnode children
+        slots = { default: () => children }
+      } else if (typeof children === 'object') {
         // slot object as children
         slots = children
-      } else {
-        slots = { default: () => children }
       }
       slots = normalizeSlots(slots)
     }
