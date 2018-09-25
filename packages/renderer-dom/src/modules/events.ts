@@ -9,7 +9,7 @@ export function patchEvent(
   prevValue: EventValue | null,
   nextValue: EventValue | null
 ) {
-  if (delegateRE.test(name)) {
+  if (delegateRE.test(name) && !__JSDOM__) {
     handleDelegatedEvent(el, name, nextValue)
   } else {
     handleNormalEvent(el, name, prevValue, nextValue)

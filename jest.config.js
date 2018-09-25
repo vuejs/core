@@ -2,7 +2,8 @@ module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
-    __COMPAT__: false
+    __COMPAT__: false,
+    __JSDOM__: true
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],

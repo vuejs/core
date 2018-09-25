@@ -124,7 +124,9 @@ function createReplacePlugin(isProduction, isBunlderESMBuild, isCompat) {
       : // hard coded dev/prod builds
         !isProduction,
     // compatibility builds
-    __COMPAT__: !!packageOptions.compat
+    __COMPAT__: !!packageOptions.compat,
+    // this is only used during tests
+    __JSDOM__: false
   })
 }
 
