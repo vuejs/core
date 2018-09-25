@@ -2,16 +2,11 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = Object.freeze({})
 
 export const NOOP = () => {}
 
-export const isReservedProp = (key: string): boolean => {
-  switch (key) {
-    case 'key':
-    case 'ref':
-    case 'slots':
-      return true
-    default:
-      return key.startsWith('nativeOn')
-  }
-}
+export const onRE = /^on/
+export const nativeOnRE = /^nativeOn/
+
+const reserveRE = /^(?:key|ref|slots)$|^nativeOn/
+export const isReservedProp = (key: string): boolean => reserveRE.test(key)
 
 export function normalizeStyle(
   value: any

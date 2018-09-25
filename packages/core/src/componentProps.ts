@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, nativeOnRE } from './utils'
 import {
   Component,
   ComponentClass,
@@ -100,7 +100,7 @@ export function resolveProps(
       if (
         key === 'class' ||
         key === 'style' ||
-        (isNativeOn = key.startsWith('nativeOn')) ||
+        (isNativeOn = nativeOnRE.test(key)) ||
         (hasDeclaredProps && !options.hasOwnProperty(key))
       ) {
         const newKey = isNativeOn ? 'on' + key.slice(8) : key

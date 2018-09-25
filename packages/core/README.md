@@ -6,7 +6,6 @@
 import { createRenderer, h } from '@vue/core'
 
 const { render } = createRenderer({
-  queueJob,
   nodeOps,
   patchData,
   teardownVNode

@@ -5,6 +5,9 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 
+export const onRE = /^on/
+const domPropsRE = /^domProps/
+
 export function patchData(
   el: Element,
   key: string,
@@ -24,9 +27,9 @@ export function patchData(
       patchStyle(el, prevValue, nextValue, nextVNode.data)
       break
     default:
-      if (key.startsWith('on')) {
+      if (onRE.test(key)) {
         patchEvent(el, key.toLowerCase().slice(2), prevValue, nextValue)
-      } else if (key.startsWith('domProps')) {
+      } else if (domPropsRE.test(key)) {
         patchDOMProp(
           el,
           key[8].toLowerCase() + key.slice(9),
