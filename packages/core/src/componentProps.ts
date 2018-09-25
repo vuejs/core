@@ -9,7 +9,6 @@ import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   Data,
   ComponentPropsOptions,
-  NormalizedPropsOptions,
   PropValidator,
   PropOptions
 } from './componentOptions'
@@ -77,10 +76,7 @@ export function resolveProps(
   Component: ComponentClass | FunctionalComponent
 ): { props: Data; attrs?: Data } {
   const hasDeclaredProps = rawOptions !== void 0
-  const options = (hasDeclaredProps &&
-    normalizePropsOptions(
-      rawOptions as ComponentPropsOptions
-    )) as NormalizedPropsOptions
+  const options = rawOptions as ComponentPropsOptions
   if (!rawData && !hasDeclaredProps) {
     return EMPTY_PROPS
   }
@@ -120,7 +116,7 @@ export function resolveProps(
       if (props[key] === void 0) {
         const opt = options[key]
         if (opt != null && opt.hasOwnProperty('default')) {
-          const defaultValue = opt.default
+          const defaultValue = (opt as PropOptions).default
           props[key] =
             typeof defaultValue === 'function' ? defaultValue() : defaultValue
         }
@@ -128,28 +124,6 @@ export function resolveProps(
     }
   }
   return { props, attrs }
-}
-
-const normalizeCache = new WeakMap<
-  ComponentPropsOptions,
-  NormalizedPropsOptions
->()
-
-function normalizePropsOptions(
-  raw: ComponentPropsOptions
-): NormalizedPropsOptions {
-  let cached = normalizeCache.get(raw)
-  if (cached) {
-    return cached
-  }
-  const normalized: NormalizedPropsOptions = {}
-  for (const key in raw) {
-    const opt = raw[key]
-    normalized[key] =
-      typeof opt === 'function' ? { type: opt } : (opt as PropOptions)
-  }
-  normalizeCache.set(raw, normalized)
-  return normalized
 }
 
 function validateProp(

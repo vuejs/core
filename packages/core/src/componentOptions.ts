@@ -22,10 +22,6 @@ export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: PropValidator<P[K]>
 }
 
-export type NormalizedPropsOptions<P = Data> = {
-  [K in keyof P]: PropOptions<P[K]>
-}
-
 export type Prop<T> = { (): T } | { new (...args: any[]): T & object }
 
 export type PropType<T> = Prop<T> | Prop<T>[]
