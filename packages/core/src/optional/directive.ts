@@ -1,5 +1,5 @@
-import { VNode } from './vdom'
-import { MountedComponent } from './component'
+import { VNode } from '../vdom'
+import { MountedComponent } from '../component'
 
 export interface DirectiveBinding {
   instance: MountedComponent

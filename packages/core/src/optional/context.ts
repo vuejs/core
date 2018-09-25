@@ -1,6 +1,6 @@
 import { observable } from '@vue/observer'
-import { Component } from './component'
-import { Slots } from './vdom'
+import { Component } from '../component'
+import { Slots } from '../vdom'
 
 const contextStore = observable() as Record<string, any>
 

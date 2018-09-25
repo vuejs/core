@@ -1,21 +1,22 @@
-// render api
+// Core API
 export { h, Fragment, Portal } from './h'
+export { Component } from './component'
 export { cloneVNode, createPortal, createFragment } from './vdom'
 export { createRenderer } from './createRenderer'
-export { Component } from './component'
 
-// observer api
+// Observer API
 export * from '@vue/observer'
 
-// scheduler api
+// Scheduler API
 export { nextTick } from '@vue/scheduler'
 
-// internal api
+// Internal API
 export { createComponentInstance } from './componentUtils'
 
-// import-on-demand apis
-export { applyDirective } from './directive'
-export { Provide, Inject } from './context'
+// Optional APIs
+// these are imported on-demand and can be tree-shaken
+export { applyDirective } from './optional/directive'
+export { Provide, Inject } from './optional/context'
 
 // flags & types
 export { ComponentClass, FunctionalComponent } from './component'
