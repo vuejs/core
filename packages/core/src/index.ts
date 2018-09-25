@@ -15,6 +15,7 @@ export { nextTick } from '@vue/scheduler'
 
 // internal api
 export { createComponentInstance } from './componentUtils'
+export { applyDirective } from './directive'
 
 // flags & types
 export { ComponentClass, FunctionalComponent } from './component'

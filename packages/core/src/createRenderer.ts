@@ -1270,8 +1270,8 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function unmountComponentInstance(instance: MountedComponent) {
-    if (instance.beforeDestroy) {
-      instance.beforeDestroy.call(instance.$proxy)
+    if (instance.beforeUnmount) {
+      instance.beforeUnmount.call(instance.$proxy)
     }
     if (instance.$vnode) {
       unmount(instance.$vnode)
@@ -1279,8 +1279,8 @@ export function createRenderer(options: RendererOptions) {
     stop(instance._updateHandle)
     teardownComponentInstance(instance)
     instance._destroyed = true
-    if (instance.destroyed) {
-      instance.destroyed.call(instance.$proxy)
+    if (instance.unmounted) {
+      instance.unmounted.call(instance.$proxy)
     }
   }
 

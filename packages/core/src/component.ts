@@ -48,8 +48,8 @@ export interface MountedComponent<D = Data, P = Data> extends Component {
   mounted?(): void
   beforeUpdate?(vnode: VNode): void
   updated?(vnode: VNode): void
-  beforeDestroy?(): void
-  destroyed?(): void
+  beforeUnmount?(): void
+  unmounted?(): void
   errorCaptured?(): (err: Error, type: ErrorTypes) => boolean | void
 
   _updateHandle: Autorun
