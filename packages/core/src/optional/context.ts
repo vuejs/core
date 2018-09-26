@@ -36,16 +36,14 @@ export class Provide extends Component {
   }
 }
 
-if (__DEV__) {
-  Provide.options = {
-    props: {
-      id: {
-        type: [String, Symbol],
-        required: true
-      },
-      value: {
-        required: true
-      }
+Provide.options = {
+  props: {
+    id: {
+      type: [String, Symbol],
+      required: true
+    },
+    value: {
+      required: true
     }
   }
 }
