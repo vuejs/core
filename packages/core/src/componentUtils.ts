@@ -122,17 +122,13 @@ export function normalizeComponentRoot(
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
-      const isKeepAlive = (flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) > 0
       if (
         inheritAttrs !== false &&
         attrs !== void 0 &&
         Object.keys(attrs).length > 0
       ) {
         vnode = cloneVNode(vnode, attrs)
-        if (isKeepAlive) {
-          vnode.el = el
-        }
-      } else if (el && !isKeepAlive) {
+      } else if (el) {
         vnode = cloneVNode(vnode)
       }
       if (flags & VNodeFlags.COMPONENT) {

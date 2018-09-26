@@ -29,7 +29,7 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     this.keys = new Set()
   }
 
-  unmounted() {
+  beforeUnmount() {
     this.cache.forEach(vnode => {
       // change flag so it can be properly unmounted
       vnode.flags = VNodeFlags.COMPONENT_STATEFUL_NORMAL
@@ -88,21 +88,23 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     const { cache, keys } = this
     const key = vnode.key == null ? comp : vnode.key
     const cached = cache.get(key)
+    cache.set(key, vnode)
+
     if (cached) {
       vnode.children = cached.children
-      vnode.el = cached.el
+      // avoid vnode being mounted as fresh
       vnode.flags |= VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE
       // make this key the freshest
       keys.delete(key)
       keys.add(key)
     } else {
-      cache.set(key, vnode)
       keys.add(key)
       // prune oldest entry
       if (max && keys.size > parseInt(max, 10)) {
         this.pruneCacheEntry(Array.from(this.keys)[0])
       }
     }
+    // avoid vnode being unmounted
     vnode.flags |= VNodeFlags.COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE
     return vnode
   }

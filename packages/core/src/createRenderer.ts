@@ -274,8 +274,7 @@ export function createRenderer(options: RendererOptions) {
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
       if (flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
         // kept-alive
-        el = vnode.el as RenderNode
-        // TODO activated hook
+        el = activateComponentInstance(vnode)
       } else {
         el = mountComponentInstance(
           vnode,
@@ -287,7 +286,6 @@ export function createRenderer(options: RendererOptions) {
         )
       }
     } else {
-      debugger
       // functional component
       const render = tag as FunctionalComponent
       const { props, attrs } = resolveProps(data, render.props, render)
@@ -1106,7 +1104,9 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (flags & VNodeFlags.COMPONENT) {
       if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-        if ((flags & VNodeFlags.COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE) === 0) {
+        if (flags & VNodeFlags.COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE) {
+          deactivateComponentInstance(children as MountedComponent)
+        } else {
           unmountComponentInstance(children as MountedComponent)
         }
       } else {
@@ -1301,6 +1301,63 @@ export function createRenderer(options: RendererOptions) {
     if (instance.unmounted) {
       instance.unmounted.call(instance.$proxy)
     }
+  }
+
+  // Keep Alive ----------------------------------------------------------------
+
+  function activateComponentInstance(vnode: VNode): RenderNode {
+    const instance = vnode.children as MountedComponent
+    const el = (vnode.el = instance.$el)
+    lifecycleHooks.push(() => {
+      callActivatedHook(instance, true)
+    })
+    return el as RenderNode
+  }
+
+  function callActivatedHook(instance: MountedComponent, asRoot: boolean) {
+    // 1. check if we are inside an inactive parent tree.
+    if (asRoot) {
+      instance._inactiveRoot = false
+      if (isInInactiveTree(instance)) return
+    }
+    if (asRoot || !instance._inactiveRoot) {
+      // 2. recursively call activated on child tree, depth-first
+      const { $children } = instance
+      for (let i = 0; i < $children.length; i++) {
+        callActivatedHook($children[i], false)
+      }
+      if (instance.activated) {
+        instance.activated.call(instance.$proxy)
+      }
+    }
+  }
+
+  function deactivateComponentInstance(instance: MountedComponent) {
+    callDeactivateHook(instance, true)
+  }
+
+  function callDeactivateHook(instance: MountedComponent, asRoot: boolean) {
+    if (asRoot) {
+      instance._inactiveRoot = true
+      if (isInInactiveTree(instance)) return
+    }
+    if (asRoot || !instance._inactiveRoot) {
+      // 2. recursively call deactivated on child tree, depth-first
+      const { $children } = instance
+      for (let i = 0; i < $children.length; i++) {
+        callDeactivateHook($children[i], false)
+      }
+      if (instance.deactivated) {
+        instance.deactivated.call(instance.$proxy)
+      }
+    }
+  }
+
+  function isInInactiveTree(instance: MountedComponent): boolean {
+    while ((instance = instance.$parent as any) !== null) {
+      if (instance._inactiveRoot) return true
+    }
+    return false
   }
 
   // TODO hydrating ------------------------------------------------------------

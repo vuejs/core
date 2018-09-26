@@ -80,12 +80,14 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
     )
   } else if (tag === Fragment) {
     if (__DEV__ && ref) {
-      // TODO warn fragment cannot have ref
+      console.warn(
+        'Ref cannot be used on Fragments. Use it on inner elements instead.'
+      )
     }
     return createFragment(children, ChildrenFlags.UNKNOWN_CHILDREN, key)
   } else if (tag === Portal) {
     if (__DEV__ && !portalTarget) {
-      // TODO warn portal must have a target
+      console.warn('Portal must have a target: ', portalTarget)
     }
     return createPortal(
       portalTarget,
@@ -95,6 +97,12 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
       ref
     )
   } else {
+    if (
+      __DEV__ &&
+      (!tag || (typeof tag !== 'function' && typeof tag !== 'object'))
+    ) {
+      console.warn('Invalid component passed to h(): ', tag)
+    }
     // component
     return createComponentVNode(
       tag,

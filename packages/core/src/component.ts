@@ -54,6 +54,8 @@ export interface MountedComponent<D = Data, P = Data>
   beforeUnmount?(): void
   unmounted?(): void
   errorCaptured?(): (err: Error, type: ErrorTypes) => boolean | void
+  activated?(): void
+  deactivated?(): void
 
   _updateHandle: Autorun
   _queueJob: ((fn: () => void) => void)
@@ -95,6 +97,7 @@ class InternalComponent {
   public _queueJob: ((fn: () => void) => void) | null = null
   public _revokeProxy: () => void
   public _isVue: boolean = true
+  public _inactiveRoot: boolean = false
 
   constructor(options?: ComponentOptions) {
     this.$options = options || (this.constructor as any).options || EMPTY_OBJ
