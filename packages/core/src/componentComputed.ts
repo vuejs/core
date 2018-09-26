@@ -1,6 +1,6 @@
 import { EMPTY_OBJ } from './utils'
 import { computed, stop, ComputedGetter } from '@vue/observer'
-import { Component, ComponentClass } from './component'
+import { ComponentClass, MountedComponent } from './component'
 import { ComponentComputedOptions } from './componentOptions'
 
 const extractionCache: WeakMap<
@@ -30,7 +30,7 @@ export function getComputedOptions(
 }
 
 export function initializeComputed(
-  instance: Component,
+  instance: MountedComponent,
   computedOptions: ComponentComputedOptions | undefined
 ) {
   if (!computedOptions) {
@@ -56,7 +56,7 @@ export function initializeComputed(
   )
 }
 
-export function teardownComputed(instance: Component) {
+export function teardownComputed(instance: MountedComponent) {
   const handles = instance._computedGetters
   if (handles !== null) {
     for (const key in handles) {

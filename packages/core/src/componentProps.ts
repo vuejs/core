@@ -1,6 +1,5 @@
 import { EMPTY_OBJ, nativeOnRE, vnodeHookRE } from './utils'
 import {
-  Component,
   ComponentClass,
   MountedComponent,
   FunctionalComponent
@@ -13,7 +12,7 @@ import {
   PropOptions
 } from './componentOptions'
 
-export function initializeProps(instance: Component, data: Data | null) {
+export function initializeProps(instance: MountedComponent, data: Data | null) {
   const { props, attrs } = resolveProps(
     data,
     instance.$options.props,
