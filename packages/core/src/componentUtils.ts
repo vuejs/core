@@ -81,8 +81,11 @@ export function renderInstanceRoot(instance: MountedComponent) {
 }
 
 export function teardownComponentInstance(instance: MountedComponent) {
+  if (instance._unmounted) {
+    return
+  }
   const parentComponent = instance.$parent && instance.$parent._self
-  if (parentComponent && !parentComponent._destroyed) {
+  if (parentComponent && !parentComponent._unmounted) {
     parentComponent.$children.splice(
       parentComponent.$children.indexOf(instance.$proxy),
       1
@@ -114,24 +117,28 @@ export function normalizeComponentRoot(
       vnode = createFragment(vnode)
     }
   } else {
-    const { flags } = vnode
+    const { el, flags } = vnode
     if (
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
+      const isKeepAlive = (flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) > 0
       if (
         inheritAttrs !== false &&
         attrs !== void 0 &&
         Object.keys(attrs).length > 0
       ) {
         vnode = cloneVNode(vnode, attrs)
-      } else if (vnode.el) {
+        if (isKeepAlive) {
+          vnode.el = el
+        }
+      } else if (el && !isKeepAlive) {
         vnode = cloneVNode(vnode)
       }
       if (flags & VNodeFlags.COMPONENT) {
         vnode.parentVNode = componentVNode
       }
-    } else if (vnode.el) {
+    } else if (el) {
       vnode = cloneVNode(vnode)
     }
   }

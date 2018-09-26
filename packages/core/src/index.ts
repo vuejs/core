@@ -18,6 +18,7 @@ export { createComponentInstance } from './componentUtils'
 export * from './optional/directive'
 export * from './optional/context'
 export * from './optional/asyncComponent'
+export * from './optional/keepAlive'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'

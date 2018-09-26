@@ -26,6 +26,7 @@ import {
   normalizeComponentRoot,
   shouldUpdateFunctionalComponent
 } from './componentUtils'
+import { KeepAliveSymbol } from './optional/keepAlive'
 
 interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -271,15 +272,22 @@ export function createRenderer(options: RendererOptions) {
     let el: RenderNode | RenderFragment
     const { flags, tag, data, slots } = vnode
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-      el = mountComponentInstance(
-        vnode,
-        tag as ComponentClass,
-        null,
-        parentComponent,
-        isSVG,
-        endNode
-      )
+      if (flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
+        // kept-alive
+        el = vnode.el as RenderNode
+        // TODO activated hook
+      } else {
+        el = mountComponentInstance(
+          vnode,
+          tag as ComponentClass,
+          null,
+          parentComponent,
+          isSVG,
+          endNode
+        )
+      }
     } else {
+      debugger
       // functional component
       const render = tag as FunctionalComponent
       const { props, attrs } = resolveProps(data, render.props, render)
@@ -1098,7 +1106,9 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (flags & VNodeFlags.COMPONENT) {
       if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-        unmountComponentInstance(children as MountedComponent)
+        if ((flags & VNodeFlags.COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE) === 0) {
+          unmountComponentInstance(children as MountedComponent)
+        }
       } else {
         unmount(children as VNode)
       }
@@ -1161,11 +1171,16 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     endNode: RenderNode | RenderFragment | null
   ): RenderNode {
-    // a vnode may already have an instance if this is a compat call
-    // with new Vue()
+    // a vnode may already have an instance if this is a compat call with
+    // new Vue()
     const instance =
       (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
       createComponentInstance(parentVNode, Component, parentComponent)
+
+    // inject platform-specific unmount to keep-alive container
+    if ((Component as any)[KeepAliveSymbol] === true) {
+      ;(instance as any).$unmount = unmountComponentInstance
+    }
 
     if (instance.beforeMount) {
       instance.beforeMount.call(instance.$proxy)
@@ -1177,7 +1192,7 @@ export function createRenderer(options: RendererOptions) {
 
     instance._updateHandle = autorun(
       () => {
-        if (instance._destroyed) {
+        if (instance._unmounted) {
           return
         }
         if (instance._mounted) {
@@ -1271,6 +1286,9 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function unmountComponentInstance(instance: MountedComponent) {
+    if (instance._unmounted) {
+      return
+    }
     if (instance.beforeUnmount) {
       instance.beforeUnmount.call(instance.$proxy)
     }
@@ -1279,7 +1297,7 @@ export function createRenderer(options: RendererOptions) {
     }
     stop(instance._updateHandle)
     teardownComponentInstance(instance)
-    instance._destroyed = true
+    instance._unmounted = true
     if (instance.unmounted) {
       instance.unmounted.call(instance.$proxy)
     }

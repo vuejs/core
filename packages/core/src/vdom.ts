@@ -146,7 +146,7 @@ export function createComponentVNode(
       comp = render
     } else {
       // object literal stateful
-      flags = VNodeFlags.COMPONENT_STATEFUL
+      flags = VNodeFlags.COMPONENT_STATEFUL_NORMAL
       comp =
         comp._normalized ||
         (comp._normalized = createComponentClassFromOptions(comp))
@@ -157,7 +157,7 @@ export function createComponentVNode(
       // TODO warn invalid comp value in dev
     }
     if (comp.prototype && comp.prototype.render) {
-      flags = VNodeFlags.COMPONENT_STATEFUL
+      flags = VNodeFlags.COMPONENT_STATEFUL_NORMAL
     } else {
       flags = VNodeFlags.COMPONENT_FUNCTIONAL
     }

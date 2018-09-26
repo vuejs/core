@@ -89,7 +89,7 @@ class InternalComponent {
   public _computedGetters: Record<string, ComputedGetter> | null = null
   public _watchHandles: Set<Autorun> | null = null
   public _mounted: boolean = false
-  public _destroyed: boolean = false
+  public _unmounted: boolean = false
   public _events: { [event: string]: Function[] | null } | null = null
   public _updateHandle: Autorun | null = null
   public _queueJob: ((fn: () => void) => void) | null = null
