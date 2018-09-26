@@ -2,7 +2,7 @@ import { observable } from '@vue/observer'
 import { Component } from '../component'
 import { Slots } from '../vdom'
 
-const contextStore = observable() as Record<string, any>
+const contextStore = observable() as Record<string | symbol, any>
 
 export class Provide extends Component {
   updateValue() {
@@ -40,7 +40,7 @@ if (__DEV__) {
   Provide.options = {
     props: {
       id: {
-        type: String,
+        type: [String, Symbol],
         required: true
       },
       value: {

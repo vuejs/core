@@ -284,7 +284,7 @@ export function createRenderer(options: RendererOptions) {
       const render = tag as FunctionalComponent
       const { props, attrs } = resolveProps(data, render.props, render)
       const subTree = (vnode.children = normalizeComponentRoot(
-        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ, data),
         vnode,
         attrs,
         render.inheritAttrs
@@ -581,7 +581,7 @@ export function createRenderer(options: RendererOptions) {
     if (shouldUpdate) {
       const { props, attrs } = resolveProps(nextData, render.props, render)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ, nextData),
         nextVNode,
         attrs,
         render.inheritAttrs

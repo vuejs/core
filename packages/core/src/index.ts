@@ -17,9 +17,10 @@ export { createComponentInstance } from './componentUtils'
 // these are imported on-demand and can be tree-shaken
 export * from './optional/directive'
 export * from './optional/context'
+export * from './optional/asyncComponent'
 
 // flags & types
-export { ComponentClass, FunctionalComponent } from './component'
+export { ComponentType, ComponentClass, FunctionalComponent } from './component'
 export { ComponentOptions, PropType } from './componentOptions'
 export { VNodeFlags, ChildrenFlags } from './flags'
 export { VNode, VNodeData, VNodeChildren, Key, Ref, Slots, Slot } from './vdom'
