@@ -284,7 +284,7 @@ export function createRenderer(options: RendererOptions) {
       const render = tag as FunctionalComponent
       const { props, attrs } = resolveProps(data, render.props, render)
       const subTree = (vnode.children = normalizeComponentRoot(
-        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ, data),
+        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         vnode,
         attrs,
         render.inheritAttrs
@@ -581,7 +581,7 @@ export function createRenderer(options: RendererOptions) {
     if (shouldUpdate) {
       const { props, attrs } = resolveProps(nextData, render.props, render)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ, nextData),
+        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         nextVNode,
         attrs,
         render.inheritAttrs
@@ -1167,6 +1167,10 @@ export function createRenderer(options: RendererOptions) {
       (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
       createComponentInstance(parentVNode, Component, parentComponent)
 
+    if (instance.beforeMount) {
+      instance.beforeMount.call(instance.$proxy)
+    }
+
     const queueUpdate = (instance.$forceUpdate = () => {
       queueJob(instance._updateHandle, flushHooks)
     })
@@ -1206,9 +1210,6 @@ export function createRenderer(options: RendererOptions) {
     instance: MountedComponent,
     ref: Ref | null
   ) {
-    if (instance.beforeMount) {
-      instance.beforeMount.call(instance.$proxy)
-    }
     if (ref) {
       mountRef(ref, instance)
     }

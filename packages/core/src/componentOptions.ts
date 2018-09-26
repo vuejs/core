@@ -1,10 +1,10 @@
-import { Slots, VNodeData } from './vdom'
+import { Slots } from './vdom'
 import { MountedComponent } from './component'
 
 export type Data = Record<string, any>
 
 export interface RenderFunction<P = Data> {
-  (props: P, slots: Slots, attrs: Data, rawData: VNodeData | null): any
+  (props: P, slots: Slots, attrs: Data): any
 }
 
 export interface ComponentOptions<D = Data, P = Data> {

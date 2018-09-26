@@ -123,7 +123,7 @@ export function createElementVNode(
 export function createComponentVNode(
   comp: any,
   data: VNodeData | null,
-  children: VNodeChildren,
+  children: VNodeChildren | Slots,
   childFlags: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -169,7 +169,9 @@ export function createComponentVNode(
 
   // slots
   let slots: any
-  if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
+  if (childFlags === ChildrenFlags.STABLE_SLOTS) {
+    slots = children
+  } else if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
     childFlags = children
       ? ChildrenFlags.DYNAMIC_SLOTS
       : ChildrenFlags.NO_CHILDREN
@@ -361,9 +363,12 @@ export function normalizeVNodes(
 
 // ensure all slot functions return Arrays
 function normalizeSlots(slots: { [name: string]: any }): Slots {
-  const normalized: Slots = {}
+  if (slots._normalized) {
+    return slots
+  }
+  const normalized = { _normalized: true } as any
   for (const name in slots) {
-    normalized[name] = (...args) => normalizeSlot(slots[name](...args))
+    normalized[name] = (...args: any[]) => normalizeSlot(slots[name](...args))
   }
   return normalized
 }
