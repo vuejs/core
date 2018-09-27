@@ -16,18 +16,11 @@ type Cache = Map<CacheKey, VNode>
 export const KeepAliveSymbol = Symbol()
 
 export class KeepAlive extends Component<{}, KeepAliveProps> {
-  cache: Cache
-  keys: Set<CacheKey>
+  cache: Cache = new Map()
+  keys: Set<CacheKey> = new Set()
 
   // to be set in createRenderer when instance is created
   $unmount: (instance: MountedComponent) => void
-
-  created() {
-    this.cache = new Map()
-    // keys represents the "freshness" of cached components
-    // oldest cached ones will be pruned first when cache count exceeds max
-    this.keys = new Set()
-  }
 
   beforeUnmount() {
     this.cache.forEach(vnode => {
