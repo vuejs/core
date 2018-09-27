@@ -1,5 +1,5 @@
 import { Component, ComponentClass, MountedComponent } from '../component'
-import { VNode, Slots } from '../vdom'
+import { VNode, Slots, cloneVNode } from '../vdom'
 import { VNodeFlags } from '../flags'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
@@ -81,6 +81,11 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     const { cache, keys } = this
     const key = vnode.key == null ? comp : vnode.key
     const cached = cache.get(key)
+
+    // clone vnode if it's reused because we are going to mutate its flags
+    if (vnode.el) {
+      vnode = cloneVNode(vnode)
+    }
     cache.set(key, vnode)
 
     if (cached) {
