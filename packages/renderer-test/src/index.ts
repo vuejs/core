@@ -10,5 +10,6 @@ const { render: _render } = createRenderer({
 type publicRender = (node: VNode | null, container: TestElement) => void
 export const render = _render as publicRender
 
+export { serialize } from './serialize'
 export * from './nodeOps'
 export * from '@vue/core'

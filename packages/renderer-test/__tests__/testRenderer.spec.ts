@@ -10,25 +10,20 @@ import {
   NodeOpTypes,
   nextTick,
   observable,
-  resetOps
+  resetOps,
+  serialize
 } from '../src'
 
 describe('test renderer', () => {
   it('should work', () => {
     class App extends Component {
-      data() {
-        return {
-          id: 'test',
-          text: 'hello'
-        }
-      }
       render() {
         return h(
           'div',
           {
-            id: this.id
+            id: 'test'
           },
-          this.text
+          'hello'
         )
       }
     }
@@ -127,5 +122,29 @@ describe('test renderer', () => {
       targetNode: (root.children[0] as TestElement).children[0],
       text: 'bar'
     })
+  })
+
+  it('should be able to serialize nodes', () => {
+    class App extends Component {
+      render() {
+        return h(
+          'div',
+          {
+            id: 'test'
+          },
+          'hello'
+        )
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serialize(root)).toEqual(
+      `<div>
+  <div id="test">
+    hello
+  </div>
+</div>`
+    )
   })
 })
