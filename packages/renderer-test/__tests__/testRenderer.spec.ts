@@ -138,8 +138,8 @@ describe('test renderer', () => {
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
-
-    expect(serialize(root)).toEqual(
+    expect(serialize(root)).toEqual(`<div><div id="test">hello</div></div>`)
+    expect(serialize(root, 2)).toEqual(
       `<div>
   <div id="test">
     hello
