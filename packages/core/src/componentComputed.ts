@@ -49,7 +49,9 @@ export function initializeComputed(
     {},
     {
       get(_, key: any) {
-        return handles[key]()
+        if (handles.hasOwnProperty(key)) {
+          return handles[key]()
+        }
       }
       // TODO should be readonly
     }

@@ -5,19 +5,30 @@ import {
   nodeOps,
   NodeTypes,
   TestElement,
-  TestText
+  TestText,
+  dumpOps,
+  NodeOpTypes,
+  nextTick,
+  observable,
+  resetOps
 } from '../src'
 
 describe('test renderer', () => {
   it('should work', () => {
     class App extends Component {
+      data() {
+        return {
+          id: 'test',
+          text: 'hello'
+        }
+      }
       render() {
         return h(
           'div',
           {
-            id: 'test'
+            id: this.id
           },
-          'hello'
+          this.text
         )
       }
     }
@@ -36,7 +47,85 @@ describe('test renderer', () => {
     expect(text.text).toBe('hello')
   })
 
-  it('should record ops', () => {
-    // TODO
+  it('should record ops', async () => {
+    const state = observable({
+      id: 'test',
+      text: 'hello'
+    })
+
+    class App extends Component {
+      render() {
+        return h(
+          'div',
+          {
+            id: state.id
+          },
+          state.text
+        )
+      }
+    }
+    const root = nodeOps.createElement('div')
+
+    resetOps()
+    render(h(App), root)
+    const ops = dumpOps()
+
+    expect(ops.length).toBe(5)
+
+    expect(ops[0]).toEqual({
+      type: NodeOpTypes.CREATE,
+      nodeType: NodeTypes.ELEMENT,
+      tag: 'div',
+      targetNode: root.children[0]
+    })
+
+    expect(ops[1]).toEqual({
+      type: NodeOpTypes.PATCH,
+      targetNode: root.children[0],
+      propKey: 'id',
+      propPrevValue: null,
+      propNextValue: 'test'
+    })
+
+    expect(ops[2]).toEqual({
+      type: NodeOpTypes.CREATE,
+      nodeType: NodeTypes.TEXT,
+      text: 'hello',
+      targetNode: (root.children[0] as TestElement).children[0]
+    })
+
+    expect(ops[3]).toEqual({
+      type: NodeOpTypes.APPEND,
+      targetNode: (root.children[0] as TestElement).children[0],
+      parentNode: root.children[0]
+    })
+
+    expect(ops[4]).toEqual({
+      type: NodeOpTypes.APPEND,
+      targetNode: root.children[0],
+      parentNode: root
+    })
+
+    // test update ops
+    state.id = 'foo'
+    state.text = 'bar'
+    await nextTick()
+
+    const updateOps = dumpOps()
+    expect(updateOps.length).toBe(2)
+
+    expect(updateOps[0]).toEqual({
+      type: NodeOpTypes.PATCH,
+      targetNode: root.children[0],
+      propKey: 'id',
+      propPrevValue: 'test',
+      propNextValue: 'foo'
+    })
+
+    expect(updateOps[1]).toEqual({
+      type: NodeOpTypes.SET_TEXT,
+      targetNode: (root.children[0] as TestElement).children[0],
+      text: 'bar'
+    })
   })
 })

@@ -21,57 +21,44 @@ export interface TestText {
 
 export type TestNode = TestElement | TestText
 
-const enum OpTypes {
+export const enum NodeOpTypes {
   CREATE = 'create',
   INSERT = 'insert',
   APPEND = 'append',
   REMOVE = 'remove',
   SET_TEXT = 'setText',
   CLEAR = 'clearContent',
-  NEXT_SIBLING = 'nextSibling',
-  PARENT_NODE = 'parentNode'
+  PATCH = 'patch'
 }
 
-interface Op {
-  type: OpTypes
+export interface NodeOp {
+  type: NodeOpTypes
   nodeType?: NodeTypes
   tag?: string
   text?: string
   targetNode?: TestNode
   parentNode?: TestElement
   refNode?: TestNode
+  propKey?: string
+  propPrevValue?: any
+  propNextValue?: any
 }
 
 let nodeId: number = 0
-let isRecording: boolean = false
-let recordedOps: Op[] = []
+let recordedNodeOps: NodeOp[] = []
 
-function logOp(op: Op) {
-  if (isRecording) {
-    recordedOps.push(op)
-  }
+export function logNodeOp(op: NodeOp) {
+  recordedNodeOps.push(op)
 }
 
-export function startRecordingOps() {
-  if (!isRecording) {
-    isRecording = true
-    recordedOps = []
-  } else {
-    throw new Error(
-      '`startRecordingOps` called when there is already an active session.'
-    )
-  }
+export function resetOps() {
+  recordedNodeOps = []
 }
 
-export function dumpOps(): Op[] {
-  if (!isRecording) {
-    throw new Error(
-      '`dumpOps` called without a recording session. ' +
-        'Call `startRecordingOps` first to start a session.'
-    )
-  }
-  isRecording = false
-  return recordedOps.slice()
+export function dumpOps(): NodeOp[] {
+  const ops = recordedNodeOps.slice()
+  resetOps()
+  return ops
 }
 
 function createElement(tag: string): TestElement {
@@ -83,8 +70,8 @@ function createElement(tag: string): TestElement {
     props: {},
     parentNode: null
   }
-  logOp({
-    type: OpTypes.CREATE,
+  logNodeOp({
+    type: NodeOpTypes.CREATE,
     nodeType: NodeTypes.ELEMENT,
     targetNode: node,
     tag
@@ -99,8 +86,8 @@ function createText(text: string): TestText {
     text,
     parentNode: null
   }
-  logOp({
-    type: OpTypes.CREATE,
+  logNodeOp({
+    type: NodeOpTypes.CREATE,
     nodeType: NodeTypes.TEXT,
     targetNode: node,
     text
@@ -109,8 +96,8 @@ function createText(text: string): TestText {
 }
 
 function setText(node: TestText, text: string) {
-  logOp({
-    type: OpTypes.SET_TEXT,
+  logNodeOp({
+    type: NodeOpTypes.SET_TEXT,
     targetNode: node,
     text
   })
@@ -118,8 +105,8 @@ function setText(node: TestText, text: string) {
 }
 
 function appendChild(parent: TestElement, child: TestNode) {
-  logOp({
-    type: OpTypes.APPEND,
+  logNodeOp({
+    type: NodeOpTypes.APPEND,
     targetNode: child,
     parentNode: parent
   })
@@ -140,8 +127,8 @@ function insertBefore(parent: TestElement, child: TestNode, ref: TestNode) {
     console.error('parent: ', parent)
     throw new Error('ref is not a child of parent')
   }
-  logOp({
-    type: OpTypes.INSERT,
+  logNodeOp({
+    type: NodeOpTypes.INSERT,
     targetNode: child,
     parentNode: parent,
     refNode: ref
@@ -160,8 +147,8 @@ function replaceChild(
 }
 
 function removeChild(parent: TestElement, child: TestNode) {
-  logOp({
-    type: OpTypes.REMOVE,
+  logNodeOp({
+    type: NodeOpTypes.REMOVE,
     targetNode: child,
     parentNode: parent
   })
@@ -177,8 +164,8 @@ function removeChild(parent: TestElement, child: TestNode) {
 }
 
 function clearContent(node: TestNode) {
-  logOp({
-    type: OpTypes.CLEAR,
+  logNodeOp({
+    type: NodeOpTypes.CLEAR,
     targetNode: node
   })
   if (node.type === NodeTypes.ELEMENT) {
@@ -192,18 +179,10 @@ function clearContent(node: TestNode) {
 }
 
 function parentNode(node: TestNode): TestElement | null {
-  logOp({
-    type: OpTypes.PARENT_NODE,
-    targetNode: node
-  })
   return node.parentNode
 }
 
 function nextSibling(node: TestNode): TestNode | null {
-  logOp({
-    type: OpTypes.NEXT_SIBLING,
-    targetNode: node
-  })
   const parent = node.parentNode
   if (!parent) {
     return null
@@ -229,3 +208,5 @@ export const nodeOps = {
   nextSibling,
   querySelector
 }
+
+export function patchData() {}

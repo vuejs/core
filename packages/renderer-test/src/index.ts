@@ -1,14 +1,6 @@
 import { createRenderer, VNode } from '@vue/core'
 import { nodeOps, TestElement } from './nodeOps'
-
-function patchData(
-  el: TestElement,
-  key: string,
-  prevValue: any,
-  nextValue: any
-) {
-  el.props[key] = nextValue
-}
+import { patchData } from './patchData'
 
 const { render: _render } = createRenderer({
   nodeOps,
