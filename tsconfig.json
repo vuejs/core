@@ -23,6 +23,7 @@
       "@vue/scheduler": ["packages/scheduler/src"],
       "@vue/renderer-dom": ["packages/renderer-dom/src"],
       "@vue/renderer-server": ["packages/renderer-server/src"],
+      "@vue/renderer-test": ["packages/renderer-test/src"],
       "@vue/compiler": ["packages/compiler-core/src"]
     }
   },
