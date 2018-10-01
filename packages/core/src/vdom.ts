@@ -10,7 +10,7 @@ import { normalizeClass, normalizeStyle, handlersRE } from './utils'
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
   vnode?: VNode | null
-  // technically this doesn't exist on platforn render nodes,
+  // technically this doesn't exist on platform render nodes,
   // but we list it here so that TS can figure out union types
   $f: false
 }
