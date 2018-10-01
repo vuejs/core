@@ -124,20 +124,36 @@ describe('observer/observable', () => {
   })
 
   test('unobservable values', () => {
-    const msg = 'not observable'
+    const warn = jest.spyOn(console, 'warn')
+    let lastMsg: string
+    warn.mockImplementation(msg => {
+      lastMsg = msg
+    })
+
+    const getMsg = (value: any) => `value is not observable: ${String(value)}`
+    const assertValue = (value: any) => {
+      observable(value)
+      expect(lastMsg).toMatch(getMsg(value))
+    }
+
     // number
-    expect(() => observable(1)).toThrowError(msg)
+    assertValue(1)
     // string
-    expect(() => observable('foo')).toThrowError(msg)
+    assertValue('foo')
     // boolean
-    expect(() => observable(false)).toThrowError(msg)
+    assertValue(false)
     // null
-    expect(() => observable(null)).toThrowError(msg)
+    assertValue(null)
     // undefined should work because it returns empty object observable
-    expect(() => observable(undefined)).not.toThrowError(msg)
+    lastMsg = ''
+    observable(undefined)
+    expect(lastMsg).toBe('')
     // symbol
     const s = Symbol()
-    expect(() => observable(s)).toThrowError(msg)
+    assertValue(s)
+
+    warn.mockRestore()
+
     // built-ins should work and return same value
     const p = Promise.resolve()
     expect(observable(p)).toBe(p)
