@@ -1,3 +1,4 @@
+// using DOM renderer because this case is mostly DOM-specific
 import { h, render, Component, nextTick } from '@vue/renderer-dom'
 
 describe('attribute fallthrough', () => {
