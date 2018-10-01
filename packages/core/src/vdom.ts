@@ -57,6 +57,8 @@ export type VNodeChildren =
   | string // TEXT
   | null
 
+export type RawVNodeChildren = VNodeChildren | unknown[]
+
 export type Key = string | number
 
 export type Ref = (t: RenderNode | MountedComponent | null) => void
@@ -71,7 +73,7 @@ export function createVNode(
   flags: VNodeFlags,
   tag: string | FunctionalComponent | ComponentClass | RenderNode | null,
   data: VNodeData | null,
-  children: VNodeChildren | null,
+  children: RawVNodeChildren | null,
   childFlags: ChildrenFlags,
   key: Key | null | undefined,
   ref: Ref | null | undefined,
@@ -82,7 +84,7 @@ export function createVNode(
     flags,
     tag,
     data,
-    children,
+    children: children as VNodeChildren,
     childFlags,
     key: key === void 0 ? null : key,
     ref: ref === void 0 ? null : ref,
@@ -108,7 +110,7 @@ function normalizeClassAndStyle(data: VNodeData) {
 export function createElementVNode(
   tag: string,
   data: VNodeData | null,
-  children: VNodeChildren,
+  children: RawVNodeChildren | null,
   childFlags: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -123,7 +125,7 @@ export function createElementVNode(
 export function createComponentVNode(
   comp: any,
   data: VNodeData | null,
-  children: VNodeChildren | Slots,
+  children: RawVNodeChildren | Slots,
   childFlags: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -180,7 +182,7 @@ export function createComponentVNode(
       if (childrenType === 'function') {
         // function as children
         slots = { default: children }
-      } else if (Array.isArray(children) || (children as VNode)._isVNode) {
+      } else if (Array.isArray(children) || (children as any)._isVNode) {
         // direct vnode children
         slots = { default: () => children }
       } else if (typeof children === 'object') {
@@ -222,7 +224,7 @@ export function createTextVNode(text: string): VNode {
 }
 
 export function createFragment(
-  children: VNodeChildren,
+  children: RawVNodeChildren,
   childFlags?: ChildrenFlags,
   key?: Key | null
 ) {
@@ -240,7 +242,7 @@ export function createFragment(
 
 export function createPortal(
   target: RenderNode | string,
-  children: VNodeChildren,
+  children: RawVNodeChildren,
   childFlags?: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
