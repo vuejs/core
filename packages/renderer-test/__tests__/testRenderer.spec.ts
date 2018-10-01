@@ -132,16 +132,21 @@ describe('test renderer', () => {
           {
             id: 'test'
           },
-          'hello'
+          [h('span', 'foo'), 'hello']
         )
       }
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serialize(root)).toEqual(`<div><div id="test">hello</div></div>`)
+    expect(serialize(root)).toEqual(
+      `<div><div id="test"><span>foo</span>hello</div></div>`
+    )
     expect(serialize(root, 2)).toEqual(
       `<div>
   <div id="test">
+    <span>
+      foo
+    </span>
     hello
   </div>
 </div>`

@@ -22,10 +22,11 @@ function serializeElement(
       return `${key}=${JSON.stringify(node.props[key])}`
     })
     .join(' ')
+  const newLine = indent ? `\n` : ``
   const children = node.children.length
-    ? (indent ? `\n` : ``) +
-      node.children.map(c => serialize(c, indent, depth + 1)) +
-      (indent ? `\n` : ``)
+    ? newLine +
+      node.children.map(c => serialize(c, indent, depth + 1)).join(newLine) +
+      newLine
     : ``
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
   return (
