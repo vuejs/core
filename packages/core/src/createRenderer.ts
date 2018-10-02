@@ -177,20 +177,18 @@ export function createRenderer(options: RendererOptions) {
     parentComponent: MountedComponent | null,
     isSVG: boolean,
     endNode: RenderNode | RenderFragment | null
-  ): RenderNode | RenderFragment {
+  ) {
     const { flags } = vnode
     if (flags & VNodeFlags.ELEMENT) {
-      return mountElement(vnode, container, parentComponent, isSVG, endNode)
+      mountElement(vnode, container, parentComponent, isSVG, endNode)
     } else if (flags & VNodeFlags.COMPONENT) {
-      return mountComponent(vnode, container, parentComponent, isSVG, endNode)
+      mountComponent(vnode, container, parentComponent, isSVG, endNode)
     } else if (flags & VNodeFlags.TEXT) {
-      return mountText(vnode, container, endNode)
+      mountText(vnode, container, endNode)
     } else if (flags & VNodeFlags.FRAGMENT) {
-      return mountFragment(vnode, container, parentComponent, isSVG, endNode)
+      mountFragment(vnode, container, parentComponent, isSVG, endNode)
     } else if (flags & VNodeFlags.PORTAL) {
-      return mountPortal(vnode, container, parentComponent)
-    } else {
-      return platformCreateText('')
+      mountPortal(vnode, container, parentComponent)
     }
   }
 
@@ -216,7 +214,7 @@ export function createRenderer(options: RendererOptions) {
     parentComponent: MountedComponent | null,
     isSVG: boolean,
     endNode: RenderNode | RenderFragment | null
-  ): RenderNode {
+  ) {
     const { flags, tag, data, children, childFlags, ref } = vnode
     isSVG = isSVG || (flags & VNodeFlags.ELEMENT_SVG) > 0
     const el = (vnode.el = platformCreateElement(tag as string, isSVG))
@@ -253,7 +251,6 @@ export function createRenderer(options: RendererOptions) {
         data.vnodeMounted(vnode)
       })
     }
-    return el
   }
 
   function mountRef(ref: Ref, el: RenderNode | MountedComponent) {
@@ -268,7 +265,7 @@ export function createRenderer(options: RendererOptions) {
     parentComponent: MountedComponent | null,
     isSVG: boolean,
     endNode: RenderNode | RenderFragment | null
-  ): RenderNode | RenderFragment {
+  ) {
     let el: RenderNode | RenderFragment
     const { flags, tag, data, slots } = vnode
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
@@ -295,12 +292,12 @@ export function createRenderer(options: RendererOptions) {
         attrs,
         render.inheritAttrs
       ))
-      el = vnode.el = mount(subTree, null, parentComponent, isSVG, endNode)
+      mount(subTree, null, parentComponent, isSVG, endNode)
+      el = vnode.el = subTree.el as RenderNode
     }
     if (container != null) {
       insertOrAppend(container, el, endNode)
     }
-    return el
   }
 
   function mountText(
@@ -329,9 +326,8 @@ export function createRenderer(options: RendererOptions) {
     })
     const fragmentChildren = fragment.children
     if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-      fragmentChildren.push(
-        mount(children as VNode, container, parentComponent, isSVG, endNode)
-      )
+      mount(children as VNode, container, parentComponent, isSVG, endNode)
+      fragmentChildren.push((children as VNode).el as RenderNode)
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
       mountArrayChildren(
         children as VNode[],
@@ -346,7 +342,9 @@ export function createRenderer(options: RendererOptions) {
     } else {
       // ensure at least one children so that it can be used as a ref node
       // during insertions
-      fragmentChildren.push(mountText(createTextVNode(''), container, endNode))
+      const vnode = createTextVNode('')
+      mountText(vnode, container, endNode)
+      fragmentChildren.push(vnode.el as RenderNode)
     }
     return fragment
   }
@@ -355,7 +353,7 @@ export function createRenderer(options: RendererOptions) {
     vnode: VNode,
     container: RenderNode | null,
     parentComponent: MountedComponent | null
-  ): RenderNode {
+  ) {
     const { tag, children, childFlags, ref } = vnode
     const target = typeof tag === 'string' ? platformQuerySelector(tag) : tag
 
@@ -383,7 +381,7 @@ export function createRenderer(options: RendererOptions) {
     if (ref) {
       mountRef(ref, target as RenderNode)
     }
-    return (vnode.el = mountText(createTextVNode(''), container, null))
+    vnode.el = mountText(createTextVNode(''), container, null)
   }
 
   // patching ------------------------------------------------------------------
@@ -690,10 +688,11 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     unmount(prevVNode)
+    mount(nextVNode, null, parentComponent, isSVG, null)
     replaceChild(
       container,
       prevVNode.el as RenderNode | RenderFragment,
-      mount(nextVNode, null, parentComponent, isSVG, null)
+      nextVNode.el as RenderNode
     )
   }
 
@@ -1200,13 +1199,8 @@ export function createRenderer(options: RendererOptions) {
         } else {
           // this will be executed synchronously right here
           instance.$vnode = renderInstanceRoot(instance)
-          parentVNode.el = mount(
-            instance.$vnode,
-            container,
-            instance,
-            isSVG,
-            endNode
-          )
+          mount(instance.$vnode, container, instance, isSVG, endNode)
+          parentVNode.el = instance.$vnode.el
           instance._mounted = true
           mountComponentInstanceCallbacks(instance, parentVNode.ref)
         }
