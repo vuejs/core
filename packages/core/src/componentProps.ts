@@ -1,9 +1,5 @@
 import { immutable, unwrap, lock, unlock } from '@vue/observer'
-import {
-  ComponentClass,
-  MountedComponent,
-  FunctionalComponent
-} from './component'
+import { MountedComponent } from './component'
 import {
   Data,
   ComponentPropsOptions,
@@ -21,11 +17,7 @@ import {
 } from './utils'
 
 export function initializeProps(instance: MountedComponent, data: Data | null) {
-  const { props, attrs } = resolveProps(
-    data,
-    instance.$options.props,
-    instance.constructor as ComponentClass
-  )
+  const { props, attrs } = resolveProps(data, instance.$options.props)
   instance.$props = immutable(props || {})
   instance.$attrs = immutable(attrs || {})
 }
@@ -37,8 +29,7 @@ export function updateProps(instance: MountedComponent, nextData: Data) {
   if (nextData != null) {
     const { props: nextProps, attrs: nextAttrs } = resolveProps(
       nextData,
-      instance.$options.props,
-      instance.constructor as ComponentClass
+      instance.$options.props
     )
     // unlock to temporarily allow mutatiing props
     unlock()
@@ -79,8 +70,7 @@ const EMPTY_PROPS = { props: EMPTY_OBJ }
 //   - else: everything goes in `props`.
 export function resolveProps(
   rawData: any,
-  rawOptions: ComponentPropsOptions | void,
-  Component: ComponentClass | FunctionalComponent
+  rawOptions: ComponentPropsOptions | void
 ): { props: Data; attrs?: Data } {
   const hasDeclaredProps = rawOptions !== void 0
   if (!rawData && !hasDeclaredProps) {
@@ -141,7 +131,7 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__) {
-        validateProp(key, unwrap(rawData[key]), opt, Component, isAbsent)
+        validateProp(key, unwrap(rawData[key]), opt, isAbsent)
       }
     }
   }
@@ -239,7 +229,6 @@ function validateProp(
   name: string,
   value: any,
   prop: PropOptions<any>,
-  Component: ComponentClass | FunctionalComponent,
   isAbsent: boolean
 ) {
   const { type, required, validator } = prop
