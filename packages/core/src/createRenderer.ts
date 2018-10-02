@@ -118,8 +118,16 @@ export function createRenderer(options: RendererOptions) {
     const { flags } = vnode
     if (flags & VNodeFlags.ELEMENT) {
       mountElement(vnode, container, parentComponent, isSVG, endNode)
-    } else if (flags & VNodeFlags.COMPONENT) {
-      mountComponent(vnode, container, parentComponent, isSVG, endNode)
+    } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
+      mountStatefulComponent(vnode, container, parentComponent, isSVG, endNode)
+    } else if (flags & VNodeFlags.COMPONENT_FUNCTIONAL) {
+      mountFunctionalComponent(
+        vnode,
+        container,
+        parentComponent,
+        isSVG,
+        endNode
+      )
     } else if (flags & VNodeFlags.TEXT) {
       mountText(vnode, container, endNode)
     } else if (flags & VNodeFlags.FRAGMENT) {
@@ -196,41 +204,46 @@ export function createRenderer(options: RendererOptions) {
     })
   }
 
-  function mountComponent(
+  function mountStatefulComponent(
     vnode: VNode,
     container: RenderNode | null,
     parentComponent: MountedComponent | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
-    const { flags, tag, data, slots } = vnode
-    if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-      if (flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
-        // kept-alive
-        activateComponentInstance(vnode)
-      } else {
-        mountComponentInstance(
-          vnode,
-          tag as ComponentClass,
-          container,
-          parentComponent,
-          isSVG,
-          endNode
-        )
-      }
+    if (vnode.flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
+      // kept-alive
+      activateComponentInstance(vnode)
     } else {
-      // functional component
-      const render = tag as FunctionalComponent
-      const { props, attrs } = resolveProps(data, render.props, render)
-      const subTree = (vnode.children = normalizeComponentRoot(
-        render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+      mountComponentInstance(
         vnode,
-        attrs,
-        render.inheritAttrs
-      ))
-      mount(subTree, container, parentComponent, isSVG, endNode)
-      vnode.el = subTree.el as RenderNode
+        vnode.tag as ComponentClass,
+        container,
+        parentComponent,
+        isSVG,
+        endNode
+      )
     }
+  }
+
+  function mountFunctionalComponent(
+    vnode: VNode,
+    container: RenderNode | null,
+    parentComponent: MountedComponent | null,
+    isSVG: boolean,
+    endNode: RenderNode | null
+  ) {
+    const { tag, data, slots } = vnode
+    const render = tag as FunctionalComponent
+    const { props, attrs } = resolveProps(data, render.props, render)
+    const subTree = (vnode.children = normalizeComponentRoot(
+      render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+      vnode,
+      attrs,
+      render.inheritAttrs
+    ))
+    mount(subTree, container, parentComponent, isSVG, endNode)
+    vnode.el = subTree.el as RenderNode
   }
 
   function mountText(
