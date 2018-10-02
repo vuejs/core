@@ -55,6 +55,10 @@ export const hyphenate = (str: string): string => {
   return str.replace(hyphenateRE, '-$1').toLowerCase()
 }
 
+export const capitalize = (str: string): string => {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 export function lis(arr: number[]): number[] {
   const p = arr.slice()

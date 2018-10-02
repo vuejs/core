@@ -8,12 +8,11 @@ import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   Data,
   ComponentPropsOptions,
-  PropValidator,
   PropOptions,
   Prop,
   PropType
 } from './componentOptions'
-import { camelize, hyphenate } from './utils'
+import { camelize, hyphenate, capitalize } from './utils'
 
 export function initializeProps(instance: MountedComponent, data: Data | null) {
   const { props, attrs } = resolveProps(
@@ -136,7 +135,7 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__) {
-        validateProp(key, rawData[key], opt, Component)
+        validateProp(key, rawData[key], opt, Component, isAbsent)
       }
     }
   }
@@ -211,7 +210,7 @@ function isSameType(a: Prop<any>, b: Prop<any>): boolean {
 
 function getTypeIndex(
   type: Prop<any>,
-  expectedTypes: PropType<any> | void
+  expectedTypes: PropType<any> | void | null | true
 ): number {
   if (Array.isArray(expectedTypes)) {
     for (let i = 0, len = expectedTypes.length; i < len; i++) {
@@ -219,17 +218,130 @@ function getTypeIndex(
         return i
       }
     }
-  } else if (expectedTypes != null) {
+  } else if (expectedTypes != null && typeof expectedTypes === 'object') {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
   return -1
 }
 
+type AssertionResult = {
+  valid: boolean
+  expectedType: string
+}
+
 function validateProp(
-  key: string,
+  name: string,
   value: any,
-  validator: PropValidator<any>,
-  Component: ComponentClass | FunctionalComponent
+  prop: PropOptions<any>,
+  Component: ComponentClass | FunctionalComponent,
+  isAbsent: boolean
 ) {
-  // TODO
+  const { type, required, validator } = prop
+  // required!
+  if (required && isAbsent) {
+    console.warn('Missing required prop: "' + name + '"')
+    return
+  }
+  // missing but optional
+  if (value == null && !prop.required) {
+    return
+  }
+  // type check
+  if (type != null && type !== true) {
+    let isValid = false
+    const types = Array.isArray(type) ? type : [type]
+    const expectedTypes = []
+    // value is valid as long as one of the specified types match
+    for (let i = 0; i < types.length && !isValid; i++) {
+      const { valid, expectedType } = assertType(value, types[i])
+      expectedTypes.push(expectedType || '')
+      isValid = valid
+    }
+    if (!isValid) {
+      console.warn(getInvalidTypeMessage(name, value, expectedTypes))
+      return
+    }
+  }
+  // custom validator
+  if (validator && !validator(value)) {
+    console.warn(
+      'Invalid prop: custom validator check failed for prop "' + name + '".'
+    )
+  }
+}
+
+const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
+
+function assertType(value: any, type: Prop<any>): AssertionResult {
+  let valid
+  const expectedType = getType(type)
+  if (simpleCheckRE.test(expectedType)) {
+    const t = typeof value
+    valid = t === expectedType.toLowerCase()
+    // for primitive wrapper objects
+    if (!valid && t === 'object') {
+      valid = value instanceof type
+    }
+  } else if (expectedType === 'Object') {
+    valid = toRawType(value) === 'Object'
+  } else if (expectedType === 'Array') {
+    valid = Array.isArray(value)
+  } else {
+    valid = value instanceof type
+  }
+  return {
+    valid,
+    expectedType
+  }
+}
+
+function getInvalidTypeMessage(
+  name: string,
+  value: any,
+  expectedTypes: string[]
+): string {
+  let message =
+    `Invalid prop: type check failed for prop "${name}".` +
+    ` Expected ${expectedTypes.map(capitalize).join(', ')}`
+  const expectedType = expectedTypes[0]
+  const receivedType = toRawType(value)
+  const expectedValue = styleValue(value, expectedType)
+  const receivedValue = styleValue(value, receivedType)
+  // check if we need to specify expected value
+  if (
+    expectedTypes.length === 1 &&
+    isExplicable(expectedType) &&
+    !isBoolean(expectedType, receivedType)
+  ) {
+    message += ` with value ${expectedValue}`
+  }
+  message += `, got ${receivedType} `
+  // check if we need to specify received value
+  if (isExplicable(receivedType)) {
+    message += `with value ${receivedValue}.`
+  }
+  return message
+}
+
+function styleValue(value: any, type: string): string {
+  if (type === 'String') {
+    return `"${value}"`
+  } else if (type === 'Number') {
+    return `${Number(value)}`
+  } else {
+    return `${value}`
+  }
+}
+
+function toRawType(value: any): string {
+  return Object.prototype.toString.call(value).slice(8, -1)
+}
+
+function isExplicable(type: string): boolean {
+  const explicitTypes = ['string', 'number', 'boolean']
+  return explicitTypes.some(elem => type.toLowerCase() === elem)
+}
+
+function isBoolean(...args: string[]): boolean {
+  return args.some(elem => elem.toLowerCase() === 'boolean')
 }
