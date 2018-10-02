@@ -135,7 +135,7 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__) {
-        validateProp(key, rawData[key], opt, Component, isAbsent)
+        validateProp(key, unwrap(rawData[key]), opt, Component, isAbsent)
       }
     }
   }
