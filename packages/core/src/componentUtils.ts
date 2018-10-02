@@ -1,7 +1,7 @@
 import { VNodeFlags } from './flags'
 import { EMPTY_OBJ } from './utils'
 import { h } from './h'
-import { VNode, createFragment } from './vdom'
+import { VNode, MountedVNode, createFragment } from './vdom'
 import { Component, MountedComponent, ComponentClass } from './component'
 import { createTextVNode, cloneVNode } from './vdom'
 import { initializeState } from './componentState'
@@ -22,7 +22,7 @@ export function createComponentInstance(
   parentComponent: MountedComponent | null
 ): MountedComponent {
   const instance = (vnode.children = new Component()) as MountedComponent
-  instance.$parentVNode = vnode
+  instance.$parentVNode = vnode as MountedVNode
 
   // renderProxy
   const proxy = (instance.$proxy = createRenderProxy(instance))
@@ -53,7 +53,7 @@ export function createComponentInstance(
   return instance as MountedComponent
 }
 
-export function renderInstanceRoot(instance: MountedComponent) {
+export function renderInstanceRoot(instance: MountedComponent): VNode {
   let vnode
   try {
     vnode = instance.render.call(

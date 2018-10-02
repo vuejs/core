@@ -1,5 +1,5 @@
 import { EMPTY_OBJ } from './utils'
-import { VNode, Slots, RenderNode, RenderFragment } from './vdom'
+import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
   RenderFunction,
@@ -30,7 +30,7 @@ export type ComponentType = ComponentClass | FunctionalComponent
 // to represent a mounted component
 export interface MountedComponent<D = Data, P = Data>
   extends InternalComponent {
-  $vnode: VNode
+  $vnode: MountedVNode
   $data: D
   $props: P
   $attrs: Data
@@ -68,7 +68,7 @@ export interface MountedComponent<D = Data, P = Data>
 class InternalComponent {
   public static options?: ComponentOptions
 
-  public get $el(): RenderNode | RenderFragment | null {
+  public get $el(): RenderNode | null {
     return this.$vnode && this.$vnode.el
   }
 

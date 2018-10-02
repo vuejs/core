@@ -15,11 +15,6 @@ export interface RenderNode {
   $f: false
 }
 
-export interface RenderFragment {
-  children: (RenderNode | RenderFragment)[]
-  $f: true
-}
-
 export interface VNode {
   _isVNode: true
   flags: VNodeFlags
@@ -31,17 +26,15 @@ export interface VNode {
   ref: Ref | null
   slots: Slots | null
   // only on mounted nodes
-  el: RenderNode | RenderFragment | null
+  el: RenderNode | null
   // only on mounted component root nodes
   // points to component node in parent tree
   parentVNode: VNode | null
 }
 
 export interface MountedVNode extends VNode {
-  el: RenderNode | RenderFragment
+  el: RenderNode
 }
-
-export type MountedVNodes = MountedVNode[]
 
 export interface VNodeData {
   key?: Key | null
