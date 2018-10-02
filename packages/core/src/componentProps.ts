@@ -1,10 +1,9 @@
-import { EMPTY_OBJ, nativeOnRE, vnodeHookRE } from './utils'
+import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   ComponentClass,
   MountedComponent,
   FunctionalComponent
 } from './component'
-import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   Data,
   ComponentPropsOptions,
@@ -12,7 +11,14 @@ import {
   Prop,
   PropType
 } from './componentOptions'
-import { camelize, hyphenate, capitalize } from './utils'
+import {
+  EMPTY_OBJ,
+  nativeOnRE,
+  vnodeHookRE,
+  camelize,
+  hyphenate,
+  capitalize
+} from './utils'
 
 export function initializeProps(instance: MountedComponent, data: Data | null) {
   const { props, attrs } = resolveProps(
