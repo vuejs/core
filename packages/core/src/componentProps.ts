@@ -9,8 +9,11 @@ import {
   Data,
   ComponentPropsOptions,
   PropValidator,
-  PropOptions
+  PropOptions,
+  Prop,
+  PropType
 } from './componentOptions'
+import { camelize, hyphenate } from './utils'
 
 export function initializeProps(instance: MountedComponent, data: Data | null) {
   const { props, attrs } = resolveProps(
@@ -75,10 +78,10 @@ export function resolveProps(
   Component: ComponentClass | FunctionalComponent
 ): { props: Data; attrs?: Data } {
   const hasDeclaredProps = rawOptions !== void 0
-  const options = rawOptions as ComponentPropsOptions
   if (!rawData && !hasDeclaredProps) {
     return EMPTY_PROPS
   }
+  const options = normalizePropsOptions(rawOptions) as NormalizedPropsOptions
   const props: any = {}
   let attrs: any = void 0
   if (rawData != null) {
@@ -102,27 +105,124 @@ export function resolveProps(
         const newKey = isNativeOn ? 'on' + key.slice(8) : key
         ;(attrs || (attrs = {}))[newKey] = rawData[key]
       } else {
-        if (__DEV__ && hasDeclaredProps && options.hasOwnProperty(key)) {
-          validateProp(key, rawData[key], options[key], Component)
-        }
         props[key] = rawData[key]
       }
     }
   }
-  // set default values
+  // set default values, cast booleans & run validators
   if (hasDeclaredProps) {
     for (const key in options) {
-      if (props[key] === void 0) {
-        const opt = options[key]
-        if (opt != null && opt.hasOwnProperty('default')) {
-          const defaultValue = (opt as PropOptions).default
-          props[key] =
-            typeof defaultValue === 'function' ? defaultValue() : defaultValue
+      let opt = options[key]
+      if (opt == null) continue
+      const isAbsent = !props.hasOwnProperty(key)
+      const hasDefault = opt.hasOwnProperty('default')
+      const currentValue = props[key]
+      // default values
+      if (hasDefault && currentValue === void 0) {
+        const defaultValue = opt.default
+        props[key] =
+          typeof defaultValue === 'function' ? defaultValue() : defaultValue
+      }
+      // boolean casting
+      if (opt[BooleanFlags.shouldCast]) {
+        if (isAbsent && !hasDefault) {
+          props[key] = false
+        } else if (
+          opt[BooleanFlags.shouldCastTrue] &&
+          (currentValue === '' || currentValue === hyphenate(key))
+        ) {
+          props[key] = true
         }
+      }
+      // runtime validation
+      if (__DEV__) {
+        validateProp(key, rawData[key], opt, Component)
       }
     }
   }
   return { props, attrs }
+}
+
+const enum BooleanFlags {
+  shouldCast = '1',
+  shouldCastTrue = '2'
+}
+
+type NormalizedProp = PropOptions & {
+  [BooleanFlags.shouldCast]?: boolean
+  [BooleanFlags.shouldCastTrue]?: boolean
+}
+
+type NormalizedPropsOptions = Record<string, NormalizedProp>
+
+const normalizationCache = new WeakMap<
+  ComponentPropsOptions,
+  NormalizedPropsOptions
+>()
+
+function normalizePropsOptions(
+  raw: ComponentPropsOptions | void
+): NormalizedPropsOptions {
+  if (!raw) {
+    return EMPTY_OBJ
+  }
+  const hit = normalizationCache.get(raw)
+  if (hit) {
+    return hit
+  }
+  const normalized: NormalizedPropsOptions = {}
+  if (Array.isArray(raw)) {
+    for (let i = 0; i < raw.length; i++) {
+      if (__DEV__ && typeof raw !== 'string') {
+        console.warn(`props must be strings when using array syntax.`)
+      }
+      normalized[camelize(raw[i])] = EMPTY_OBJ
+    }
+  } else {
+    if (__DEV__ && typeof raw !== 'object') {
+      console.warn(`invalid props options: `, raw)
+    }
+    for (const key in raw) {
+      const opt = raw[key]
+      const prop = (normalized[camelize(key)] =
+        Array.isArray(opt) || typeof opt === 'function'
+          ? { type: opt }
+          : opt) as NormalizedProp
+      const booleanIndex = getTypeIndex(Boolean, prop.type)
+      const stringIndex = getTypeIndex(String, prop.type)
+      prop[BooleanFlags.shouldCast] = booleanIndex > -1
+      prop[BooleanFlags.shouldCastTrue] = booleanIndex < stringIndex
+    }
+  }
+  normalizationCache.set(raw, normalized)
+  return normalized
+}
+
+// use function string name to check type constructors
+// so that it works across vms / iframes.
+function getType(ctor: Prop<any>): string {
+  const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
+  return match ? match[1] : ''
+}
+
+function isSameType(a: Prop<any>, b: Prop<any>): boolean {
+  return getType(a) === getType(b)
+}
+
+function getTypeIndex(
+  type: Prop<any>,
+  expectedTypes: PropType<any> | void
+): number {
+  if (Array.isArray(expectedTypes)) {
+    for (let i = 0, len = expectedTypes.length; i < len; i++) {
+      if (isSameType(expectedTypes[i], type)) {
+        return i
+      }
+    }
+  } else if (expectedTypes != null) {
+    return isSameType(expectedTypes, type) ? 0 : -1
+  }
+  return -1
 }
 
 function validateProp(

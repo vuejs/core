@@ -45,6 +45,16 @@ export function normalizeClass(value: any): string {
   return res.trim()
 }
 
+const camelizeRE = /-(\w)/g
+export const camelize = (str: string): string => {
+  return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+}
+
+const hyphenateRE = /\B([A-Z])/g
+export const hyphenate = (str: string): string => {
+  return str.replace(hyphenateRE, '-$1').toLowerCase()
+}
+
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 export function lis(arr: number[]): number[] {
   const p = arr.slice()
