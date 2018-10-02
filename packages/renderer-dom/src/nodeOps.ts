@@ -18,10 +18,6 @@ export const nodeOps = {
     parent.insertBefore(child, ref)
   },
 
-  replaceChild: (parent: Node, oldChild: Node, newChild: Node) => {
-    parent.replaceChild(newChild, oldChild)
-  },
-
   removeChild: (parent: Node, child: Node) => {
     parent.removeChild(child)
   },

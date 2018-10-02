@@ -137,15 +137,6 @@ function insertBefore(parent: TestElement, child: TestNode, ref: TestNode) {
   child.parentNode = parent
 }
 
-function replaceChild(
-  parent: TestElement,
-  oldChild: TestNode,
-  newChild: TestNode
-) {
-  insertBefore(parent, newChild, oldChild)
-  removeChild(parent, oldChild)
-}
-
 function removeChild(parent: TestElement, child: TestNode) {
   logNodeOp({
     type: NodeOpTypes.REMOVE,
@@ -201,7 +192,6 @@ export const nodeOps = {
   setText,
   appendChild,
   insertBefore,
-  replaceChild,
   removeChild,
   clearContent,
   parentNode,
