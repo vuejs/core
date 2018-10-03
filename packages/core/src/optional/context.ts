@@ -31,7 +31,7 @@ export class Provide extends Component {
   beforeUpdate() {
     this.updateValue()
   }
-  render(_: any, slots: Slots) {
+  render(_: any, { slots }: { slots: Slots }) {
     return slots.default && slots.default()
   }
 }
@@ -49,7 +49,7 @@ Provide.options = {
 }
 
 export class Inject extends Component {
-  render(props: any, slots: Slots) {
+  render(_: any, { props, slots }: { props: any; slots: Slots }) {
     return slots.default && slots.default(contextStore[props.id])
   }
 }

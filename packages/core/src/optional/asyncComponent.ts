@@ -77,7 +77,7 @@ export function createAsyncComponent(
       }
     }
 
-    render(props: any, slots: Slots) {
+    render(_: any, { props, slots }: { props: any; slots: Slots }) {
       if (this.err || (this.timedOut && !this.comp)) {
         const error =
           this.err || new Error(`Async component timed out after ${timeout}ms.`)

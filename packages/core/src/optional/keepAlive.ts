@@ -49,7 +49,7 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     this.keys.delete(key)
   }
 
-  render(props: any, slots: Slots) {
+  render(_: any, { props, slots }: { props: any; slots: Slots }) {
     if (!slots.default) {
       return
     }
