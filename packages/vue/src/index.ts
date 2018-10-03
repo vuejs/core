@@ -44,3 +44,4 @@ class Vue extends Component {
 }
 
 export default Vue
+export * from '@vue/renderer-dom'
