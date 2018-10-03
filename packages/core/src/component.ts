@@ -177,8 +177,10 @@ class InternalComponent {
     name: string,
     ...payload: any[]
   ): MountedComponent {
+    const parentData =
+      (this.$parentVNode && this.$parentVNode.data) || EMPTY_OBJ
     const parentListener =
-      this.$props['on' + name] || this.$props['on' + name.toLowerCase()]
+      parentData['on' + name] || parentData['on' + name.toLowerCase()]
     if (parentListener) {
       invokeListeners(parentListener, payload)
     }
