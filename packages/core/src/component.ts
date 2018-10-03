@@ -1,11 +1,13 @@
 import { EMPTY_OBJ } from './utils'
+import { createElement } from './h'
 import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
   RenderFunction,
   ComponentOptions,
   ComponentPropsOptions,
-  WatchOptions
+  WatchOptions,
+  RenderContext
 } from './componentOptions'
 import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
@@ -40,7 +42,7 @@ export interface MountedComponent<D = Data, P = Data>
   $children: MountedComponent[]
   $options: ComponentOptions<D, P>
 
-  render(props: P, slots: Slots, attrs: Data): any
+  render(h: createElement, ctx: RenderContext<P>): any
   renderError?(e: Error): any
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void

@@ -1,10 +1,17 @@
+import { createElement } from './h'
 import { Slots } from './vdom'
 import { MountedComponent } from './component'
 
 export type Data = Record<string, any>
 
+export interface RenderContext<P> {
+  props: P
+  slots: Slots
+  attrs: Data
+}
+
 export interface RenderFunction<P = Data> {
-  (props: P, slots: Slots, attrs: Data): any
+  (h: createElement, ctx: RenderContext<P>): any
 }
 
 export interface ComponentOptions<D = Data, P = Data> {

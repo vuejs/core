@@ -56,12 +56,11 @@ export function createComponentInstance(
 export function renderInstanceRoot(instance: MountedComponent): VNode {
   let vnode
   try {
-    vnode = instance.render.call(
-      instance.$proxy,
-      instance.$props,
-      instance.$slots,
-      instance.$attrs
-    )
+    vnode = instance.render.call(instance.$proxy, h, {
+      props: instance.$props,
+      slots: instance.$slots,
+      attrs: instance.$attrs
+    })
   } catch (e1) {
     handleError(e1, instance, ErrorTypes.RENDER)
     if (__DEV__ && instance.renderError) {

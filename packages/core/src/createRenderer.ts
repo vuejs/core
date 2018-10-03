@@ -1,3 +1,4 @@
+import { h } from './h'
 import { autorun, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
@@ -237,7 +238,11 @@ export function createRenderer(options: RendererOptions) {
     const render = tag as FunctionalComponent
     const { props, attrs } = resolveProps(data, render.props)
     const subTree = (vnode.children = normalizeComponentRoot(
-      render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+      render(h, {
+        props,
+        slots: slots || EMPTY_OBJ,
+        attrs: attrs || EMPTY_OBJ
+      }),
       vnode,
       attrs,
       render.inheritAttrs
@@ -525,7 +530,11 @@ export function createRenderer(options: RendererOptions) {
     if (shouldUpdate) {
       const { props, attrs } = resolveProps(nextData, render.props)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
+        render(h, {
+          props,
+          slots: nextSlots || EMPTY_OBJ,
+          attrs: attrs || EMPTY_OBJ
+        }),
         nextVNode,
         attrs,
         render.inheritAttrs

@@ -58,10 +58,8 @@ export function handleError(
 function logError(err: Error, instance: MountedComponent, type: ErrorTypes) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
-    console.warn(
-      `Unhandled error${info ? ` in ${info}` : ``}: "${err.toString()}"`,
-      instance
-    )
+    console.warn(`Unhandled error${info ? ` in ${info}` : ``}:`)
+    console.error(err)
   } else {
     throw err
   }

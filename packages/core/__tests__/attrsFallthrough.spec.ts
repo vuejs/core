@@ -31,14 +31,14 @@ describe('attribute fallthrough', () => {
       updated() {
         childUpdated()
       }
-      render(props: any) {
+      render() {
         return h(
           'div',
           {
             class: 'c2',
             style: { fontWeight: 'bold' }
           },
-          props.foo
+          this.$props.foo
         )
       }
     }
@@ -103,14 +103,14 @@ describe('attribute fallthrough', () => {
       updated() {
         childUpdated()
       }
-      render(props: any) {
+      render() {
         return h(
           'div',
           {
             class: 'c2',
             style: { fontWeight: 'bold' }
           },
-          props.foo
+          this.$props.foo
         )
       }
     }
