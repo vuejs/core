@@ -167,7 +167,6 @@ export function shouldUpdateFunctionalComponent(
   return shouldUpdate
 }
 
-// compat only
 export function createComponentClassFromOptions(
   options: ComponentOptions
 ): ComponentClass {
@@ -180,13 +179,7 @@ export function createComponentClassFromOptions(
   for (const key in options) {
     const value = options[key]
     if (typeof value === 'function') {
-      ;(ObjectComponent.prototype as any)[key] =
-        key === 'render'
-          ? // normalize render for legacy signature
-            function render() {
-              return value.call(this, h)
-            }
-          : value
+      ;(ObjectComponent.prototype as any)[key] = value
     }
     if (key === 'computed') {
       const isGet = typeof value === 'function'
