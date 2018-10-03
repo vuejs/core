@@ -45,17 +45,17 @@ export function handleError(
     const handler = cur.errorCaptured
     if (handler) {
       try {
-        const captured = handler.call(cur, err, type)
+        const captured = handler.call(cur, err, type, instance)
         if (captured) return
       } catch (err2) {
-        logError(err2, cur, ErrorTypes.ERROR_CAPTURED)
+        logError(err2, ErrorTypes.ERROR_CAPTURED)
       }
     }
   }
-  logError(err, instance, type)
+  logError(err, type)
 }
 
-function logError(err: Error, instance: MountedComponent, type: ErrorTypes) {
+function logError(err: Error, type: ErrorTypes) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
     console.warn(`Unhandled error${info ? ` in ${info}` : ``}:`)

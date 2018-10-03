@@ -55,7 +55,11 @@ export interface MountedComponent<D = Data, P = Data>
   updated?(vnode: VNode): void
   beforeUnmount?(): void
   unmounted?(): void
-  errorCaptured?(): (err: Error, type: ErrorTypes) => boolean | void
+  errorCaptured?(): (
+    err: Error,
+    type: ErrorTypes,
+    target: MountedComponent
+  ) => boolean | void
   activated?(): void
   deactivated?(): void
 
