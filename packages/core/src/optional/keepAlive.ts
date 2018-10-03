@@ -49,7 +49,7 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     this.keys.delete(key)
   }
 
-  render(_: any, { props, slots }: { props: any; slots: Slots }) {
+  render(_: any, { props, slots }: { props: KeepAliveProps; slots: Slots }) {
     if (!slots.default) {
       return
     }
@@ -98,7 +98,7 @@ export class KeepAlive extends Component<{}, KeepAliveProps> {
     } else {
       keys.add(key)
       // prune oldest entry
-      if (max && keys.size > parseInt(max, 10)) {
+      if (max && keys.size > parseInt(max as string, 10)) {
         this.pruneCacheEntry(Array.from(this.keys)[0])
       }
     }

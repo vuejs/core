@@ -128,7 +128,7 @@ export function createComponentVNode(
 
   // flags
   const compType = typeof comp
-  if (__COMPAT__ && compType === 'object') {
+  if (compType === 'object') {
     if (comp.functional) {
       // object literal functional
       flags = VNodeFlags.COMPONENT_FUNCTIONAL
