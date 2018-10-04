@@ -1200,6 +1200,10 @@ export function createRenderer(options: RendererOptions) {
           instance.$vnode = renderInstanceRoot(instance) as MountedVNode
           mount(instance.$vnode, container, instance, isSVG, endNode)
           parentVNode.el = instance.$vnode.el
+          if (__DEV__) {
+            // expose __vue__ for devtools
+            ;(parentVNode.el as any).__vue__ = instance
+          }
           instance._mounted = true
           mountComponentInstanceCallbacks(instance, parentVNode.ref)
         }
@@ -1241,6 +1245,11 @@ export function createRenderer(options: RendererOptions) {
     const container = platformParentNode(prevVNode.el) as RenderNode
     patch(prevVNode, nextVNode, container, instance, isSVG)
     const el = nextVNode.el as RenderNode
+
+    if (__DEV__) {
+      // expose __vue__ for devtools
+      ;(el as any).__vue__ = instance
+    }
 
     // recursively update parentVNode el for nested HOCs
     if ((nextVNode.flags & VNodeFlags.PORTAL) === 0) {
