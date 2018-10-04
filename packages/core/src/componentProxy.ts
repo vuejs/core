@@ -15,7 +15,7 @@ function getBoundMethod(fn: Function, target: any, receiver: any): Function {
 }
 
 const renderProxyHandlers = {
-  get(target: MountedComponent, key: string, receiver: any) {
+  get(target: MountedComponent<any, any>, key: string, receiver: any) {
     if (key === '_self') {
       return target
     } else if (
@@ -50,7 +50,7 @@ const renderProxyHandlers = {
     }
   },
   set(
-    target: MountedComponent,
+    target: MountedComponent<any, any>,
     key: string,
     value: any,
     receiver: any
