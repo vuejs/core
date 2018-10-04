@@ -5,7 +5,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 
-export const onRE = /^on/
+export const onRE = /^on|^nativeOn/
 const domPropsRE = /^domProps/
 
 export function patchData(
@@ -28,7 +28,12 @@ export function patchData(
       break
     default:
       if (onRE.test(key)) {
-        patchEvent(el, key.toLowerCase().slice(2), prevValue, nextValue)
+        patchEvent(
+          el,
+          key.replace(onRE, '').toLowerCase(),
+          prevValue,
+          nextValue
+        )
       } else if (domPropsRE.test(key)) {
         patchDOMProp(
           el,

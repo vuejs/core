@@ -89,16 +89,14 @@ export function resolveProps(
       // separate `attrs` object, which can then be merged onto child component
       // root. in addition, if the component has explicitly declared props, then
       // any non-matching props are extracted into `attrs` as well.
-      let isNativeOn
       if (
         key === 'class' ||
         key === 'style' ||
         vnodeHookRE.test(key) ||
-        (isNativeOn = nativeOnRE.test(key)) ||
+        nativeOnRE.test(key) ||
         (hasDeclaredProps && !options.hasOwnProperty(key))
       ) {
-        const newKey = isNativeOn ? 'on' + key.slice(8) : key
-        ;(attrs || (attrs = {}))[newKey] = rawData[key]
+        ;(attrs || (attrs = {}))[key] = rawData[key]
       } else {
         props[key] = rawData[key]
       }
