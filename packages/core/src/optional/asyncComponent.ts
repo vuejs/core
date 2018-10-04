@@ -3,12 +3,12 @@ import { createComponentVNode, Slots } from '../vdom'
 import { Component, ComponentType, ComponentClass } from '../component'
 import { unwrap } from '@vue/observer'
 
-export interface AsyncComponentFactory {
+interface AsyncComponentFactory {
   (): Promise<ComponentType>
   resolved?: ComponentType
 }
 
-export interface AsyncComponentFullOptions {
+interface AsyncComponentFullOptions {
   factory: AsyncComponentFactory
   loading?: ComponentType
   error?: ComponentType
@@ -16,9 +16,7 @@ export interface AsyncComponentFullOptions {
   timeout?: number
 }
 
-export type AsyncComponentOptions =
-  | AsyncComponentFactory
-  | AsyncComponentFullOptions
+type AsyncComponentOptions = AsyncComponentFactory | AsyncComponentFullOptions
 
 interface AsyncContainerData {
   comp: ComponentType | null

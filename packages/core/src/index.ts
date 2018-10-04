@@ -15,13 +15,13 @@ export { createComponentInstance } from './componentUtils'
 
 // Optional APIs
 // these are imported on-demand and can be tree-shaken
-export * from './optional/directive'
-export * from './optional/context'
-export * from './optional/asyncComponent'
-export * from './optional/keepAlive'
+export { applyDirective } from './optional/directive'
+export { Provide, Inject } from './optional/context'
+export { createAsyncComponent } from './optional/asyncComponent'
+export { KeepAlive } from './optional/keepAlive'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'
 export { ComponentOptions, PropType } from './componentOptions'
 export { VNodeFlags, ChildrenFlags } from './flags'
-export { VNode, VNodeData, VNodeChildren, Key, Ref, Slots, Slot } from './vdom'
+export { VNode, Slots } from './vdom'

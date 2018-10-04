@@ -1,7 +1,7 @@
 import { VNode } from '../vdom'
 import { MountedComponent } from '../component'
 
-export interface DirectiveBinding {
+interface DirectiveBinding {
   instance: MountedComponent
   value?: any
   oldValue?: any
@@ -9,14 +9,14 @@ export interface DirectiveBinding {
   modifiers?: DirectiveModifiers
 }
 
-export type DirectiveHook = (
+type DirectiveHook = (
   el: any,
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | void
 ) => void
 
-export interface Directive {
+interface Directive {
   beforeMount: DirectiveHook
   mounted: DirectiveHook
   beforeUpdate: DirectiveHook
@@ -25,7 +25,7 @@ export interface Directive {
   unmounted: DirectiveHook
 }
 
-export type DirectiveModifiers = Record<string, boolean>
+type DirectiveModifiers = Record<string, boolean>
 
 const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 

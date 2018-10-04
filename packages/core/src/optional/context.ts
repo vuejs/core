@@ -1,6 +1,5 @@
 import { observable } from '@vue/observer'
 import { Component } from '../component'
-import { Slots } from '../vdom'
 
 const contextStore = observable() as Record<string | symbol, any>
 
@@ -39,7 +38,7 @@ export class Provide extends Component<{}, ProviderProps> {
   beforeUpdate() {
     this.updateValue()
   }
-  render(props: ProviderProps, slots: Slots) {
+  render(props: any, slots: any) {
     return slots.default && slots.default()
   }
 }
@@ -57,7 +56,7 @@ Provide.options = {
 }
 
 export class Inject extends Component {
-  render(props: any, slots: Slots) {
+  render(props: any, slots: any) {
     return slots.default && slots.default(contextStore[props.id])
   }
 }
