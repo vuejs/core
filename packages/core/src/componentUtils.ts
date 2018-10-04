@@ -179,7 +179,12 @@ export function createComponentClassFromOptions(
   for (const key in options) {
     const value = options[key]
     if (typeof value === 'function') {
-      ;(ObjectComponent.prototype as any)[key] = value
+      ;(ObjectComponent.prototype as any)[key] =
+        key === 'render'
+          ? function() {
+              return value.call(this, h)
+            }
+          : value
     }
     if (key === 'computed') {
       const isGet = typeof value === 'function'

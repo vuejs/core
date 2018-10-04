@@ -1,4 +1,3 @@
-import { h } from './h'
 import { autorun, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
@@ -238,11 +237,7 @@ export function createRenderer(options: RendererOptions) {
     const render = tag as FunctionalComponent
     const { props, attrs } = resolveProps(data, render.props)
     const subTree = (vnode.children = normalizeComponentRoot(
-      render(h, {
-        props,
-        slots: slots || EMPTY_OBJ,
-        attrs: attrs || EMPTY_OBJ
-      }),
+      render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
       vnode,
       attrs,
       render.inheritAttrs
@@ -530,11 +525,7 @@ export function createRenderer(options: RendererOptions) {
     if (shouldUpdate) {
       const { props, attrs } = resolveProps(nextData, render.props)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(h, {
-          props,
-          slots: nextSlots || EMPTY_OBJ,
-          attrs: attrs || EMPTY_OBJ
-        }),
+        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         nextVNode,
         attrs,
         render.inheritAttrs
@@ -1200,10 +1191,12 @@ export function createRenderer(options: RendererOptions) {
           instance.$vnode = renderInstanceRoot(instance) as MountedVNode
           mount(instance.$vnode, container, instance, isSVG, endNode)
           parentVNode.el = instance.$vnode.el
+
           if (__DEV__) {
             // expose __vue__ for devtools
             ;(parentVNode.el as any).__vue__ = instance
           }
+
           instance._mounted = true
           mountComponentInstanceCallbacks(instance, parentVNode.ref)
         }

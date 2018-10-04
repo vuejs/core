@@ -1,13 +1,10 @@
 import { EMPTY_OBJ } from './utils'
-import { createElement } from './h'
 import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
-  RenderFunction,
   ComponentOptions,
   ComponentPropsOptions,
-  WatchOptions,
-  RenderContext
+  WatchOptions
 } from './componentOptions'
 import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
@@ -15,6 +12,12 @@ import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
+
+export type RenderFunction<P = Data> = (
+  props: P,
+  slots: Slots,
+  attrs: Data
+) => any
 
 export interface ComponentClass extends Flatten<typeof InternalComponent> {
   new <D = Data, P = Data>(): D & P & MountedComponent<D, P>
@@ -42,7 +45,7 @@ export interface MountedComponent<D = Data, P = Data>
   $children: MountedComponent[]
   $options: ComponentOptions<D, P>
 
-  render(h: createElement, ctx: RenderContext<P>): any
+  render(props: P, slots: Slots, attrs: Data): any
   renderError?(e: Error): any
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void
