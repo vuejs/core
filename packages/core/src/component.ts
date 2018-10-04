@@ -13,17 +13,17 @@ import { ErrorTypes } from './errorHandling'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
 
-export type RenderFunction<P = Data> = (
+export type RenderFunction<P = {}> = (
   props: P,
   slots: Slots,
   attrs: Data
 ) => any
 
 export interface ComponentClass extends Flatten<typeof InternalComponent> {
-  new <D = Data, P = Data>(): D & P & MountedComponent<D, P>
+  new <D = {}, P = {}>(): D & P & MountedComponent<D, P>
 }
 
-export interface FunctionalComponent<P = Data> extends RenderFunction<P> {
+export interface FunctionalComponent<P = {}> extends RenderFunction<P> {
   pure?: boolean
   props?: ComponentPropsOptions<P>
   inheritAttrs?: boolean
@@ -33,8 +33,7 @@ export type ComponentType = ComponentClass | FunctionalComponent
 
 // this interface is merged with the class type
 // to represent a mounted component
-export interface MountedComponent<D = Data, P = Data>
-  extends InternalComponent {
+export interface MountedComponent<D = {}, P = {}> extends InternalComponent {
   $vnode: MountedVNode
   $data: D
   $props: P

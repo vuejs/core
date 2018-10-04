@@ -4,15 +4,23 @@ import { Slots } from '../vdom'
 
 const contextStore = observable() as Record<string | symbol, any>
 
-export class Provide extends Component {
+interface ProviderProps {
+  id: string | symbol
+  value: any
+}
+
+export class Provide extends Component<{}, ProviderProps> {
   updateValue() {
-    contextStore[this.$props.id] = this.$props.value
+    // TS doesn't allow symbol as index :/
+    // https://github.com/Microsoft/TypeScript/issues/24587
+    contextStore[this.$props.id as string] = this.$props.value
   }
   created() {
     if (__DEV__) {
-      if (contextStore.hasOwnProperty(this.$props.id)) {
+      const { id } = this.$props
+      if (contextStore.hasOwnProperty(id)) {
         console.warn(
-          `A context provider with id ${this.$props.id} already exists.`
+          `A context provider with id ${id.toString()} already exists.`
         )
       }
       this.$watch(
@@ -31,7 +39,7 @@ export class Provide extends Component {
   beforeUpdate() {
     this.updateValue()
   }
-  render(props: any, slots: Slots) {
+  render(props: ProviderProps, slots: Slots) {
     return slots.default && slots.default()
   }
 }

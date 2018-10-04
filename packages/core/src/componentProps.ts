@@ -37,11 +37,11 @@ export function updateProps(instance: MountedComponent, nextData: Data) {
     const rawProps = unwrap(props)
     for (const key in rawProps) {
       if (!nextProps.hasOwnProperty(key)) {
-        delete props[key]
+        delete (props as any)[key]
       }
     }
     for (const key in nextProps) {
-      props[key] = nextProps[key]
+      ;(props as any)[key] = nextProps[key]
     }
     if (nextAttrs) {
       const attrs = instance.$attrs

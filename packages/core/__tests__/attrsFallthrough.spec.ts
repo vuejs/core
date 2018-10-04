@@ -6,7 +6,9 @@ describe('attribute fallthrough', () => {
     const nativeClick = jest.fn()
     const childUpdated = jest.fn()
 
-    class Hello extends Component {
+    class Hello extends Component<{
+      count: number
+    }> {
       data() {
         return {
           count: 0
@@ -27,7 +29,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class Child extends Component {
+    class Child extends Component<{}, { foo: number }> {
       updated() {
         childUpdated()
       }
@@ -73,7 +75,7 @@ describe('attribute fallthrough', () => {
     const nativeClick = jest.fn()
     const childUpdated = jest.fn()
 
-    class Hello extends Component {
+    class Hello extends Component<{ count: number }> {
       data() {
         return {
           count: 0
@@ -94,7 +96,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class Child extends Component {
+    class Child extends Component<{}, { foo: number }> {
       static options = {
         props: {
           foo: Number
@@ -147,7 +149,7 @@ describe('attribute fallthrough', () => {
     const childUpdated = jest.fn()
     const grandChildUpdated = jest.fn()
 
-    class Hello extends Component {
+    class Hello extends Component<{ count: number }> {
       data() {
         return {
           count: 0
@@ -182,7 +184,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class GrandChild extends Component {
+    class GrandChild extends Component<{}, { foo: number }> {
       static options = {
         props: {
           foo: Number

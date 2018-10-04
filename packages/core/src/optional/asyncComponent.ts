@@ -1,6 +1,7 @@
 import { ChildrenFlags } from '../flags'
 import { createComponentVNode, Slots } from '../vdom'
 import { Component, ComponentType, ComponentClass } from '../component'
+import { unwrap } from '@vue/observer'
 
 export interface AsyncComponentFactory {
   (): Promise<ComponentType>
@@ -92,7 +93,7 @@ export function createAsyncComponent(
       } else if (this.comp) {
         return createComponentVNode(
           this.comp,
-          props,
+          unwrap(props),
           slots,
           ChildrenFlags.STABLE_SLOTS
         )
