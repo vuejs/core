@@ -7,7 +7,7 @@ describe('2.x compat build', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
 
-    const instance = new Vue({
+    const instance = new Vue<any>({
       data() {
         return { count: 0 }
       },

@@ -27,8 +27,9 @@ export interface VNode {
   slots: Slots | null
   // only on mounted nodes
   el: RenderNode | null
-  // only on mounted component root nodes
-  // points to component node in parent tree
+  // only on mounted component nodes that is also a root node (HOCs)
+  // points to parent component's placeholder vnode
+  // this is used to update vnode.el for nested HOCs.
   parentVNode: VNode | null
 }
 
@@ -56,11 +57,11 @@ export type Key = string | number
 
 export type Ref = (t: RenderNode | MountedComponent | null) => void
 
-export interface Slots {
-  [name: string]: Slot
-}
-
 export type Slot = (...args: any[]) => VNode[]
+
+export type Slots = Readonly<{
+  [name: string]: Slot
+}>
 
 export function createVNode(
   flags: VNodeFlags,

@@ -6,13 +6,19 @@ import {
   ComponentOptions,
   createComponentInstance
 } from '@vue/renderer-dom'
+import { MergedComponent } from '../../core/src/component'
 
-class Vue extends Component {
+class Vue<
+  P extends object = {},
+  D extends object = {},
+  M extends object = {},
+  C extends object = {}
+> extends Component {
   static h = h
   static render = render
   static nextTick = nextTick
 
-  constructor(options: ComponentOptions & { el?: any }) {
+  constructor(options: ComponentOptions<P, D, M, C> & { el?: any }) {
     super()
     if (!options) {
       return
@@ -41,6 +47,10 @@ class Vue extends Component {
       return instance.$proxy
     }
   }
+}
+
+interface Vue<P, D, M, C> {
+  $mount(el: any): MergedComponent<P, D> & M & C
 }
 
 export default Vue

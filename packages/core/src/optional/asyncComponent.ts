@@ -40,7 +40,7 @@ export function createAsyncComponent(
     error: errorComp
   } = options
 
-  return class AsyncContainer extends Component<AsyncContainerData> {
+  return class AsyncContainer extends Component<{}, AsyncContainerData> {
     data() {
       return {
         comp: null,

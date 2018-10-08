@@ -13,42 +13,40 @@ import { ErrorTypes } from './errorHandling'
 
 type Flatten<T> = { [K in keyof T]: T[K] }
 
-export type RenderFunction<P = {}> = (
-  props: P,
-  slots: Slots,
-  attrs: Data
-) => any
-
 export interface ComponentClass extends Flatten<typeof InternalComponent> {
-  new <D = {}, P = {}>(): D & P & MountedComponent<D, P>
+  new <P extends object = {}, D extends object = {}>(): MergedComponent<P, D>
 }
 
-export interface FunctionalComponent<P = {}> extends RenderFunction<P> {
+export type MergedComponent<P, D> = D & P & MountedComponent<P, D>
+
+export interface FunctionalComponent<P = {}> {
+  (props: Readonly<P>, slots: Slots, attrs: Data): any
   pure?: boolean
   props?: ComponentPropsOptions<P>
   inheritAttrs?: boolean
+  displayName?: string
 }
 
 export type ComponentType = ComponentClass | FunctionalComponent
 
 // this interface is merged with the class type
 // to represent a mounted component
-export interface MountedComponent<D = {}, P = {}> extends InternalComponent {
+export interface MountedComponent<P = {}, D = {}> extends InternalComponent {
   $vnode: MountedVNode
   $data: D
-  $props: P
+  $props: Readonly<P>
   $attrs: Data
   $computed: Data
   $slots: Slots
   $root: MountedComponent
   $children: MountedComponent[]
-  $options: ComponentOptions<D, P>
+  $options: ComponentOptions<P, D>
 
-  render(props: P, slots: Slots, attrs: Data): any
+  data?(): Partial<D>
+  render(props: Readonly<P>, slots: Slots, attrs: Data): any
   renderError?(e: Error): any
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void
-  data?(): Partial<D>
   beforeCreate?(): void
   created?(): void
   beforeMount?(): void
@@ -120,16 +118,15 @@ class InternalComponent {
   }
 
   $watch(
-    this: MountedComponent,
     keyOrFn: string | (() => any),
     cb: (newValue: any, oldValue: any) => void,
     options?: WatchOptions
   ) {
-    return setupWatcher(this, keyOrFn, cb, options)
+    return setupWatcher(this as any, keyOrFn, cb, options)
   }
 
   // eventEmitter interface
-  $on(this: MountedComponent, event: string, fn: Function): MountedComponent {
+  $on(event: string, fn: Function): this {
     if (Array.isArray(event)) {
       for (let i = 0; i < event.length; i++) {
         this.$on(event[i], fn)
@@ -141,7 +138,7 @@ class InternalComponent {
     return this
   }
 
-  $once(this: MountedComponent, event: string, fn: Function): MountedComponent {
+  $once(event: string, fn: Function): this {
     const onceFn = (...args: any[]) => {
       this.$off(event, onceFn)
       fn.apply(this, args)
@@ -150,11 +147,7 @@ class InternalComponent {
     return this.$on(event, onceFn)
   }
 
-  $off(
-    this: MountedComponent,
-    event?: string,
-    fn?: Function
-  ): MountedComponent {
+  $off(event?: string, fn?: Function): this {
     if (this._events) {
       if (!event && !fn) {
         this._events = null
@@ -180,11 +173,7 @@ class InternalComponent {
     return this
   }
 
-  $emit(
-    this: MountedComponent,
-    name: string,
-    ...payload: any[]
-  ): MountedComponent {
+  $emit(name: string, ...payload: any[]): this {
     const parentData =
       (this.$parentVNode && this.$parentVNode.data) || EMPTY_OBJ
     const parentListener =

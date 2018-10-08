@@ -15,7 +15,7 @@ type Cache = Map<CacheKey, VNode>
 
 export const KeepAliveSymbol = Symbol()
 
-export class KeepAlive extends Component<{}, KeepAliveProps> {
+export class KeepAlive extends Component<KeepAliveProps> {
   cache: Cache = new Map()
   keys: Set<CacheKey> = new Set()
 

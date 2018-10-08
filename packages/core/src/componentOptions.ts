@@ -1,14 +1,22 @@
-import { MountedComponent, RenderFunction } from './component'
+import { MergedComponent, MountedComponent } from './component'
+import { Slots } from './vdom'
 
 export type Data = Record<string, any>
 
-export interface ComponentOptions<D = Data, P = Data> {
-  data?: () => Partial<D>
+export interface ComponentOptions<
+  P = {},
+  D = {},
+  M = {},
+  C = {},
+  This = MergedComponent<P, D> & M & C
+> {
+  data?: (this: This) => Partial<D>
   props?: ComponentPropsOptions<P>
-  computed?: ComponentComputedOptions<D, P>
-  watch?: ComponentWatchOptions<D, P>
-  render?: RenderFunction<P>
+  computed?: ComponentComputedOptions<This>
+  watch?: ComponentWatchOptions<This>
+  render?: (this: This, props: Readonly<P>, slots: Slots, attrs: Data) => any
   inheritAttrs?: boolean
+  displayName?: string
   // TODO other options
   readonly [key: string]: any
 }
@@ -30,24 +38,28 @@ export interface PropOptions<T = any> {
   validator?(value: T): boolean
 }
 
-export interface ComponentComputedOptions<D = Data, P = Data> {
-  [key: string]: (this: MountedComponent<D, P> & D & P, c: any) => any
+export interface ComponentComputedOptions<This = MountedComponent> {
+  [key: string]: (this: This, c: any) => any
 }
 
-export interface ComponentWatchOptions<D = Data, P = Data> {
-  [key: string]: ComponentWatchOption<MountedComponent<D, P> & D & P>
+export interface ComponentWatchOptions<This = MountedComponent> {
+  [key: string]: ComponentWatchOption<This>
 }
 
-export type ComponentWatchOption<C = any> =
-  | WatchHandler<C>
-  | WatchHandler<C>[]
-  | WatchOptionsWithHandler<C>
+export type ComponentWatchOption<This = MountedComponent> =
+  | WatchHandler<This>
+  | WatchHandler<This>[]
+  | WatchOptionsWithHandler<This>
   | string
 
-export type WatchHandler<C = any> = (this: C, val: any, oldVal: any) => void
+export type WatchHandler<This = any> = (
+  this: This,
+  val: any,
+  oldVal: any
+) => void
 
-export interface WatchOptionsWithHandler<C = any> extends WatchOptions {
-  handler: WatchHandler<C>
+export interface WatchOptionsWithHandler<This = any> extends WatchOptions {
+  handler: WatchHandler<This>
 }
 
 export interface WatchOptions {

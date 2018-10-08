@@ -8,7 +8,7 @@ interface ProviderProps {
   value: any
 }
 
-export class Provide extends Component<{}, ProviderProps> {
+export class Provide extends Component<ProviderProps> {
   updateValue() {
     // TS doesn't allow symbol as index :/
     // https://github.com/Microsoft/TypeScript/issues/24587
