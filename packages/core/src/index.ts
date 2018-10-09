@@ -15,7 +15,7 @@ export { createComponentInstance } from './componentUtils'
 
 // Optional APIs
 // these are imported on-demand and can be tree-shaken
-export { applyDirective } from './optional/directive'
+export { applyDirectives } from './optional/directive'
 export { Provide, Inject } from './optional/context'
 export { createAsyncComponent } from './optional/asyncComponent'
 export { KeepAlive } from './optional/keepAlive'

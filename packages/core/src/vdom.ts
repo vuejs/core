@@ -5,7 +5,7 @@ import {
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
-import { normalizeClass, normalizeStyle, handlersRE } from './utils'
+import { normalizeClass, normalizeStyle, handlersRE, EMPTY_OBJ } from './utils'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -264,19 +264,27 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
           clonedData[key] = data[key]
         }
       }
-      for (const key in extraData) {
-        if (key === 'class') {
-          clonedData.class = normalizeClass([clonedData.class, extraData.class])
-        } else if (key === 'style') {
-          clonedData.style = normalizeStyle([clonedData.style, extraData.style])
-        } else if (handlersRE.test(key)) {
-          // on*, nativeOn*, vnode*
-          const existing = clonedData[key]
-          clonedData[key] = existing
-            ? [].concat(existing, extraData[key])
-            : extraData[key]
-        } else {
-          clonedData[key] = extraData[key]
+      if (extraData !== EMPTY_OBJ) {
+        for (const key in extraData) {
+          if (key === 'class') {
+            clonedData.class = normalizeClass([
+              clonedData.class,
+              extraData.class
+            ])
+          } else if (key === 'style') {
+            clonedData.style = normalizeStyle([
+              clonedData.style,
+              extraData.style
+            ])
+          } else if (handlersRE.test(key)) {
+            // on*, nativeOn*, vnode*
+            const existing = clonedData[key]
+            clonedData[key] = existing
+              ? [].concat(existing, extraData[key])
+              : extraData[key]
+          } else {
+            clonedData[key] = extraData[key]
+          }
         }
       }
     }

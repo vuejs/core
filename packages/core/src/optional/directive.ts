@@ -1,5 +1,21 @@
-import { VNode } from '../vdom'
+/**
+Runtime helper for applying directives to a vnode. Example usage:
+
+const comp = resolveComponent(this, 'comp')
+const foo = resolveDirective(this, 'foo')
+const bar = resolveDirective(this, 'bar')
+
+return applyDirectives(
+  h(comp),
+  this,
+  [foo, this.x],
+  [bar, this.y]
+)
+*/
+
+import { VNode, cloneVNode, VNodeData } from '../vdom'
 import { ComponentInstance } from '../component'
+import { EMPTY_OBJ } from '../utils'
 
 interface DirectiveBinding {
   instance: ComponentInstance
@@ -30,14 +46,13 @@ type DirectiveModifiers = Record<string, boolean>
 const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 
 export function applyDirective(
-  vnode: VNode,
+  data: VNodeData,
   instance: ComponentInstance,
   directive: Directive,
   value?: any,
   arg?: string,
   modifiers?: DirectiveModifiers
-): VNode {
-  const data = vnode.data || (vnode.data = {})
+) {
   let valueCacheForDir = valueCache.get(directive) as WeakMap<VNode, any>
   if (!valueCacheForDir) {
     valueCacheForDir = new WeakMap<VNode, any>()
@@ -67,9 +82,10 @@ export function applyDirective(
       )
     }
     const existing = data[hookKey]
-    data[hookKey] = existing ? [].concat(existing, vnodeHook as any) : vnodeHook
+    data[hookKey] = existing
+      ? [].concat(existing as any, vnodeHook as any)
+      : vnodeHook
   }
-  return vnode
 }
 
 type DirectiveArguments = [
@@ -84,8 +100,9 @@ export function applyDirectives(
   instance: ComponentInstance,
   ...directives: DirectiveArguments
 ) {
+  vnode = cloneVNode(vnode, EMPTY_OBJ)
   for (let i = 0; i < directives.length; i++) {
-    applyDirective(vnode, instance, ...directives[i])
+    applyDirective(vnode.data as VNodeData, instance, ...directives[i])
   }
   return vnode
 }
