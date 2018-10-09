@@ -71,3 +71,18 @@ export function applyDirective(
   }
   return vnode
 }
+
+type DirectiveArguments = [
+  Directive,
+  ComponentInstance,
+  any,
+  string | undefined,
+  DirectiveModifiers | undefined
+][]
+
+export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
+  for (let i = 0; i < directives.length; i++) {
+    applyDirective(vnode, ...directives[i])
+  }
+  return vnode
+}
