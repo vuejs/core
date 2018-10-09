@@ -80,7 +80,10 @@ type DirectiveArguments = [
   DirectiveModifiers | undefined
 ][]
 
-export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
+export function applyDirectives(
+  vnode: VNode,
+  ...directives: DirectiveArguments
+) {
   for (let i = 0; i < directives.length; i++) {
     applyDirective(vnode, ...directives[i])
   }
