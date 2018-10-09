@@ -31,8 +31,8 @@ const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 
 export function applyDirective(
   vnode: VNode,
-  directive: Directive,
   instance: ComponentInstance,
+  directive: Directive,
   value?: any,
   arg?: string,
   modifiers?: DirectiveModifiers
@@ -74,7 +74,6 @@ export function applyDirective(
 
 type DirectiveArguments = [
   Directive,
-  ComponentInstance,
   any,
   string | undefined,
   DirectiveModifiers | undefined
@@ -82,10 +81,11 @@ type DirectiveArguments = [
 
 export function applyDirectives(
   vnode: VNode,
+  instance: ComponentInstance,
   ...directives: DirectiveArguments
 ) {
   for (let i = 0; i < directives.length; i++) {
-    applyDirective(vnode, ...directives[i])
+    applyDirective(vnode, instance, ...directives[i])
   }
   return vnode
 }
