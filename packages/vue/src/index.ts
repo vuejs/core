@@ -3,22 +3,16 @@ import {
   render,
   nextTick,
   Component,
-  ComponentOptions,
   createComponentInstance
 } from '@vue/renderer-dom'
-import { MergedComponent } from '../../core/src/component'
 
-class Vue<
-  P extends object = {},
-  D extends object = {},
-  M extends object = {},
-  C extends object = {}
-> extends Component {
+// Note: typing for this is intentionally loose, as it will be using 2.x types.
+class Vue extends Component {
   static h = h
   static render = render
   static nextTick = nextTick
 
-  constructor(options: ComponentOptions<P, D, M, C> & { el?: any }) {
+  constructor(options: any) {
     super()
     if (!options) {
       return
@@ -49,8 +43,8 @@ class Vue<
   }
 }
 
-interface Vue<P, D, M, C> {
-  $mount(el: any): MergedComponent<P, D> & M & C
+interface Vue {
+  $mount(el: any): any
 }
 
 export default Vue

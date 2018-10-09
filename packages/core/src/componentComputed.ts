@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, NOOP } from './utils'
 import { computed, stop, ComputedGetter } from '@vue/observer'
 import { ComponentClass, ComponentInstance } from './component'
 import { ComponentComputedOptions } from './componentOptions'
@@ -43,7 +43,9 @@ export function initializeComputed(
   > = (instance._computedGetters = {})
   const proxy = instance.$proxy
   for (const key in computedOptions) {
-    handles[key] = computed(computedOptions[key], proxy)
+    const option = computedOptions[key]
+    const getter = typeof option === 'function' ? option : option.get || NOOP
+    handles[key] = computed(getter, proxy)
   }
   instance.$computed = new Proxy(
     {},

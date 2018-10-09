@@ -1,20 +1,14 @@
-import { MergedComponent, ComponentInstance } from './component'
+import { ComponentInstance } from './component'
 import { Slots } from './vdom'
 
 export type Data = Record<string, any>
 
-export interface ComponentOptions<
-  P = {},
-  D = {},
-  M = {},
-  C = {},
-  This = MergedComponent<P, D> & M & C
-> {
-  data?: (this: This) => Partial<D>
-  props?: ComponentPropsOptions<P>
+export interface ComponentOptions<This = ComponentInstance> {
+  data?(): object
+  props?: ComponentPropsOptions
   computed?: ComponentComputedOptions<This>
   watch?: ComponentWatchOptions<This>
-  render?: (this: This, props: Readonly<P>, slots: Slots, attrs: Data) => any
+  render?: (this: This, props: Readonly<Data>, slots: Slots, attrs: Data) => any
   inheritAttrs?: boolean
   displayName?: string
   // TODO other options
@@ -39,7 +33,13 @@ export interface PropOptions<T = any> {
 }
 
 export interface ComponentComputedOptions<This = ComponentInstance> {
-  [key: string]: (this: This, c: any) => any
+  [key: string]: ((this: This, c: This) => any) | SingleComputedOptions<This>
+}
+
+type SingleComputedOptions<This> = {
+  get: (this: This, c: This) => any
+  set?: (value: any) => void
+  cache?: boolean
 }
 
 export interface ComponentWatchOptions<This = ComponentInstance> {

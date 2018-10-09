@@ -29,8 +29,6 @@ export interface FunctionalComponent<P = {}> {
 
 export type ComponentType = ComponentClass | FunctionalComponent
 
-// this interface is merged with the class type
-// to represent a mounted component
 export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
   $vnode: MountedVNode
   $data: D
@@ -40,7 +38,7 @@ export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
   $slots: Slots
   $root: ComponentInstance
   $children: ComponentInstance[]
-  $options: ComponentOptions<P, D>
+  $options: ComponentOptions<this>
 
   data?(): Partial<D>
   render(props: Readonly<P>, slots: Slots, attrs: Data): any
