@@ -12,7 +12,7 @@ import {
   VNodeChildren
 } from './vdom'
 import {
-  MountedComponent,
+  ComponentInstance,
   FunctionalComponent,
   ComponentClass
 } from './component'
@@ -111,7 +111,7 @@ export function createRenderer(options: RendererOptions) {
   function mount(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -140,7 +140,7 @@ export function createRenderer(options: RendererOptions) {
   function mountArrayChildren(
     children: VNode[],
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -156,7 +156,7 @@ export function createRenderer(options: RendererOptions) {
   function mountElement(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -198,7 +198,7 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function mountRef(ref: Ref, el: RenderNode | MountedComponent) {
+  function mountRef(ref: Ref, el: RenderNode | ComponentInstance) {
     lifecycleHooks.push(() => {
       ref(el)
     })
@@ -207,7 +207,7 @@ export function createRenderer(options: RendererOptions) {
   function mountStatefulComponent(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -229,7 +229,7 @@ export function createRenderer(options: RendererOptions) {
   function mountFunctionalComponent(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -260,7 +260,7 @@ export function createRenderer(options: RendererOptions) {
   function mountFragment(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -290,7 +290,7 @@ export function createRenderer(options: RendererOptions) {
   function mountPortal(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null
+    parentComponent: ComponentInstance | null
   ) {
     const { tag, children, childFlags, ref } = vnode
     const target = typeof tag === 'string' ? platformQuerySelector(tag) : tag
@@ -354,7 +354,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     const nextFlags = nextVNode.flags
@@ -379,7 +379,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     const { flags, tag } = nextVNode
@@ -452,7 +452,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     const { tag, flags } = nextVNode
@@ -480,7 +480,7 @@ export function createRenderer(options: RendererOptions) {
     } = nextVNode
 
     const instance = (nextVNode.children =
-      prevVNode.children) as MountedComponent
+      prevVNode.children) as ComponentInstance
     instance.$slots = nextSlots || EMPTY_OBJ
     instance.$parentVNode = nextVNode as MountedVNode
 
@@ -508,7 +508,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     // functional component tree is stored on the vnode as `children`
@@ -542,7 +542,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     // determine the tail node of the previous fragment,
@@ -599,7 +599,7 @@ export function createRenderer(options: RendererOptions) {
   function patchPortal(
     prevVNode: MountedVNode,
     nextVNode: VNode,
-    parentComponent: MountedComponent | null
+    parentComponent: ComponentInstance | null
   ) {
     const prevContainer = prevVNode.tag as RenderNode
     const nextContainer = nextVNode.tag as RenderNode
@@ -635,7 +635,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     const refNode = platformNextSibling(getVNodeLastEl(prevVNode))
@@ -649,7 +649,7 @@ export function createRenderer(options: RendererOptions) {
     prevChildren: VNodeChildren,
     nextChildren: VNodeChildren,
     container: RenderNode,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -769,7 +769,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode,
     prevLength: number,
     nextLength: number,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -807,7 +807,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode,
     prevLength: number,
     nextLength: number,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -1074,9 +1074,9 @@ export function createRenderer(options: RendererOptions) {
     } else if (flags & VNodeFlags.COMPONENT) {
       if (flags & VNodeFlags.COMPONENT_STATEFUL) {
         if (flags & VNodeFlags.COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE) {
-          deactivateComponentInstance(children as MountedComponent)
+          deactivateComponentInstance(children as ComponentInstance)
         } else {
-          unmountComponentInstance(children as MountedComponent)
+          unmountComponentInstance(children as ComponentInstance)
         }
       } else {
         unmount(children as MountedVNode)
@@ -1156,14 +1156,14 @@ export function createRenderer(options: RendererOptions) {
     parentVNode: VNode,
     Component: ComponentClass,
     container: RenderNode | null,
-    parentComponent: MountedComponent | null,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ): RenderNode {
     // a vnode may already have an instance if this is a compat call with
     // new Vue()
     const instance =
-      (__COMPAT__ && (parentVNode.children as MountedComponent)) ||
+      (__COMPAT__ && (parentVNode.children as ComponentInstance)) ||
       createComponentInstance(parentVNode, Component, parentComponent)
 
     // inject platform-specific unmount to keep-alive container
@@ -1212,7 +1212,7 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function mountComponentInstanceCallbacks(
-    instance: MountedComponent,
+    instance: ComponentInstance,
     ref: Ref | null
   ) {
     if (ref) {
@@ -1225,7 +1225,10 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function updateComponentInstance(instance: MountedComponent, isSVG: boolean) {
+  function updateComponentInstance(
+    instance: ComponentInstance,
+    isSVG: boolean
+  ) {
     const prevVNode = instance.$vnode
 
     if (instance.beforeUpdate) {
@@ -1277,7 +1280,7 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function unmountComponentInstance(instance: MountedComponent) {
+  function unmountComponentInstance(instance: ComponentInstance) {
     if (instance._unmounted) {
       return
     }
@@ -1298,14 +1301,14 @@ export function createRenderer(options: RendererOptions) {
   // Keep Alive ----------------------------------------------------------------
 
   function activateComponentInstance(vnode: VNode) {
-    const instance = vnode.children as MountedComponent
+    const instance = vnode.children as ComponentInstance
     vnode.el = instance.$el
     lifecycleHooks.push(() => {
       callActivatedHook(instance, true)
     })
   }
 
-  function callActivatedHook(instance: MountedComponent, asRoot: boolean) {
+  function callActivatedHook(instance: ComponentInstance, asRoot: boolean) {
     // 1. check if we are inside an inactive parent tree.
     if (asRoot) {
       instance._inactiveRoot = false
@@ -1323,11 +1326,11 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function deactivateComponentInstance(instance: MountedComponent) {
+  function deactivateComponentInstance(instance: ComponentInstance) {
     callDeactivateHook(instance, true)
   }
 
-  function callDeactivateHook(instance: MountedComponent, asRoot: boolean) {
+  function callDeactivateHook(instance: ComponentInstance, asRoot: boolean) {
     if (asRoot) {
       instance._inactiveRoot = true
       if (isInInactiveTree(instance)) return
@@ -1344,7 +1347,7 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function isInInactiveTree(instance: MountedComponent): boolean {
+  function isInInactiveTree(instance: ComponentInstance): boolean {
     while ((instance = instance.$parent as any) !== null) {
       if (instance._inactiveRoot) return true
     }
@@ -1376,7 +1379,7 @@ export function createRenderer(options: RendererOptions) {
     }
     flushHooks()
     return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
-      ? (vnode.children as MountedComponent).$proxy
+      ? (vnode.children as ComponentInstance).$proxy
       : null
   }
 

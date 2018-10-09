@@ -1,4 +1,4 @@
-import { MountedComponent } from './component'
+import { ComponentInstance } from './component'
 
 export const enum ErrorTypes {
   BEFORE_CREATE = 1,
@@ -36,7 +36,7 @@ const ErrorTypeStrings: Record<number, string> = {
 
 export function handleError(
   err: Error,
-  instance: MountedComponent,
+  instance: ComponentInstance,
   type: ErrorTypes
 ) {
   let cur = instance

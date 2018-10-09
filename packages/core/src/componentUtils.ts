@@ -2,7 +2,7 @@ import { VNodeFlags } from './flags'
 import { EMPTY_OBJ } from './utils'
 import { h } from './h'
 import { VNode, MountedVNode, createFragment } from './vdom'
-import { Component, MountedComponent, ComponentClass } from './component'
+import { Component, ComponentInstance, ComponentClass } from './component'
 import { createTextVNode, cloneVNode } from './vdom'
 import { initializeState } from './componentState'
 import { initializeProps } from './componentProps'
@@ -12,16 +12,16 @@ import {
   teardownComputed
 } from './componentComputed'
 import { initializeWatch, teardownWatch } from './componentWatch'
-import { Data, ComponentOptions } from './componentOptions'
+import { ComponentOptions } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
 import { handleError, ErrorTypes } from './errorHandling'
 
 export function createComponentInstance(
   vnode: VNode,
   Component: ComponentClass,
-  parentComponent: MountedComponent | null
-): MountedComponent {
-  const instance = (vnode.children = new Component()) as MountedComponent
+  parentComponent: ComponentInstance | null
+): ComponentInstance {
+  const instance = (vnode.children = new Component()) as ComponentInstance
   instance.$parentVNode = vnode as MountedVNode
 
   // renderProxy
@@ -50,10 +50,10 @@ export function createComponentInstance(
     instance.created.call(proxy)
   }
 
-  return instance as MountedComponent
+  return instance as ComponentInstance
 }
 
-export function renderInstanceRoot(instance: MountedComponent): VNode {
+export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   try {
     vnode = instance.render.call(instance.$proxy, h, {
@@ -79,7 +79,7 @@ export function renderInstanceRoot(instance: MountedComponent): VNode {
   )
 }
 
-export function teardownComponentInstance(instance: MountedComponent) {
+export function teardownComponentInstance(instance: ComponentInstance) {
   if (instance._unmounted) {
     return
   }
@@ -97,7 +97,7 @@ export function teardownComponentInstance(instance: MountedComponent) {
 export function normalizeComponentRoot(
   vnode: any,
   componentVNode: VNode | null,
-  attrs: Data | void,
+  attrs: Record<string, any> | void,
   inheritAttrs: boolean | void
 ): VNode {
   if (vnode == null) {
@@ -141,8 +141,8 @@ export function normalizeComponentRoot(
 }
 
 export function shouldUpdateFunctionalComponent(
-  prevProps: Data | null,
-  nextProps: Data | null
+  prevProps: Record<string, any> | null,
+  nextProps: Record<string, any> | null
 ): boolean {
   if (prevProps === nextProps) {
     return false
@@ -170,25 +170,31 @@ export function shouldUpdateFunctionalComponent(
 export function createComponentClassFromOptions(
   options: ComponentOptions
 ): ComponentClass {
-  class ObjectComponent extends Component {
+  class AnonymousComponent extends Component {
     constructor() {
       super()
       this.$options = options
     }
   }
+  const proto = AnonymousComponent.prototype as any
   for (const key in options) {
     const value = options[key]
+    // name -> displayName
+    if (__COMPAT__ && key === 'name') {
+      options.displayName = options.name
+    }
     if (typeof value === 'function') {
-      ;(ObjectComponent.prototype as any)[key] =
-        key === 'render'
-          ? function() {
-              return value.call(this, h)
-            }
-          : value
+      if (__COMPAT__ && key === 'render') {
+        proto[key] = function() {
+          return value.call(this, h)
+        }
+      } else {
+        proto[key] = value
+      }
     }
     if (key === 'computed') {
       const isGet = typeof value === 'function'
-      Object.defineProperty(ObjectComponent.prototype, key, {
+      Object.defineProperty(proto, key, {
         configurable: true,
         get: isGet ? value : value.get,
         set: isGet ? undefined : value.set
@@ -196,9 +202,15 @@ export function createComponentClassFromOptions(
     }
     if (key === 'methods') {
       for (const method in value) {
-        ;(ObjectComponent.prototype as any)[method] = value[method]
+        if (__DEV__ && proto.hasOwnProperty(method)) {
+          console.warn(
+            `Object syntax contains method name that conflicts with ` +
+              `lifecycle hook: "${method}"`
+          )
+        }
+        proto[method] = value[method]
       }
     }
   }
-  return ObjectComponent as ComponentClass
+  return AnonymousComponent as ComponentClass
 }

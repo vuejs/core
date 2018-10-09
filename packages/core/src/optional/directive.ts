@@ -1,8 +1,8 @@
 import { VNode } from '../vdom'
-import { MountedComponent } from '../component'
+import { ComponentInstance } from '../component'
 
 interface DirectiveBinding {
-  instance: MountedComponent
+  instance: ComponentInstance
   value?: any
   oldValue?: any
   arg?: string
@@ -32,7 +32,7 @@ const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 export function applyDirective(
   vnode: VNode,
   directive: Directive,
-  instance: MountedComponent,
+  instance: ComponentInstance,
   value?: any,
   arg?: string,
   modifiers?: DirectiveModifiers

@@ -1,5 +1,5 @@
 import {
-  MountedComponent,
+  ComponentInstance,
   ComponentClass,
   FunctionalComponent
 } from './component'
@@ -46,7 +46,7 @@ export interface VNodeData {
 
 export type VNodeChildren =
   | VNode[] // ELEMENT | PORTAL
-  | MountedComponent // COMPONENT_STATEFUL
+  | ComponentInstance // COMPONENT_STATEFUL
   | VNode // COMPONENT_FUNCTIONAL
   | string // TEXT
   | null
@@ -55,7 +55,7 @@ export type RawVNodeChildren = VNodeChildren | unknown[]
 
 export type Key = string | number
 
-export type Ref = (t: RenderNode | MountedComponent | null) => void
+export type Ref = (t: RenderNode | ComponentInstance | null) => void
 
 export type Slot = (...args: any[]) => VNode[]
 

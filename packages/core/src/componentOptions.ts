@@ -1,4 +1,4 @@
-import { MergedComponent, MountedComponent } from './component'
+import { MergedComponent, ComponentInstance } from './component'
 import { Slots } from './vdom'
 
 export type Data = Record<string, any>
@@ -38,15 +38,15 @@ export interface PropOptions<T = any> {
   validator?(value: T): boolean
 }
 
-export interface ComponentComputedOptions<This = MountedComponent> {
+export interface ComponentComputedOptions<This = ComponentInstance> {
   [key: string]: (this: This, c: any) => any
 }
 
-export interface ComponentWatchOptions<This = MountedComponent> {
+export interface ComponentWatchOptions<This = ComponentInstance> {
   [key: string]: ComponentWatchOption<This>
 }
 
-export type ComponentWatchOption<This = MountedComponent> =
+export type ComponentWatchOption<This = ComponentInstance> =
   | WatchHandler<This>
   | WatchHandler<This>[]
   | WatchOptionsWithHandler<This>

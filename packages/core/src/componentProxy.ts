@@ -1,4 +1,4 @@
-import { MountedComponent } from './component'
+import { ComponentInstance } from './component'
 
 const bindCache = new WeakMap()
 
@@ -15,7 +15,7 @@ function getBoundMethod(fn: Function, target: any, receiver: any): Function {
 }
 
 const renderProxyHandlers = {
-  get(target: MountedComponent<any, any>, key: string, receiver: any) {
+  get(target: ComponentInstance<any, any>, key: string, receiver: any) {
     if (key === '_self') {
       return target
     } else if (
@@ -50,7 +50,7 @@ const renderProxyHandlers = {
     }
   },
   set(
-    target: MountedComponent<any, any>,
+    target: ComponentInstance<any, any>,
     key: string,
     value: any,
     receiver: any
@@ -77,6 +77,6 @@ const renderProxyHandlers = {
   }
 }
 
-export function createRenderProxy(instance: any): MountedComponent {
-  return new Proxy(instance, renderProxyHandlers) as MountedComponent
+export function createRenderProxy(instance: any): ComponentInstance {
+  return new Proxy(instance, renderProxyHandlers) as ComponentInstance
 }

@@ -1,5 +1,5 @@
 import { immutable, unwrap, lock, unlock } from '@vue/observer'
-import { MountedComponent } from './component'
+import { ComponentInstance } from './component'
 import {
   Data,
   ComponentPropsOptions,
@@ -16,13 +16,16 @@ import {
   capitalize
 } from './utils'
 
-export function initializeProps(instance: MountedComponent, data: Data | null) {
+export function initializeProps(
+  instance: ComponentInstance,
+  data: Data | null
+) {
   const { props, attrs } = resolveProps(data, instance.$options.props)
   instance.$props = immutable(props || {})
   instance.$attrs = immutable(attrs || {})
 }
 
-export function updateProps(instance: MountedComponent, nextData: Data) {
+export function updateProps(instance: ComponentInstance, nextData: Data) {
   // instance.$props and instance.$attrs are observables that should not be
   // replaced. Instead, we mutate them to match latest props, which will trigger
   // updates if any value that's been used in child component has changed.

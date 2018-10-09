@@ -17,7 +17,7 @@ export interface ComponentClass extends Flatten<typeof InternalComponent> {
   new <P extends object = {}, D extends object = {}>(): MergedComponent<P, D>
 }
 
-export type MergedComponent<P, D> = D & P & MountedComponent<P, D>
+export type MergedComponent<P, D> = D & P & ComponentInstance<P, D>
 
 export interface FunctionalComponent<P = {}> {
   (props: Readonly<P>, slots: Slots, attrs: Data): any
@@ -31,15 +31,15 @@ export type ComponentType = ComponentClass | FunctionalComponent
 
 // this interface is merged with the class type
 // to represent a mounted component
-export interface MountedComponent<P = {}, D = {}> extends InternalComponent {
+export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
   $vnode: MountedVNode
   $data: D
   $props: Readonly<P>
   $attrs: Data
   $computed: Data
   $slots: Slots
-  $root: MountedComponent
-  $children: MountedComponent[]
+  $root: ComponentInstance
+  $children: ComponentInstance[]
   $options: ComponentOptions<P, D>
 
   data?(): Partial<D>
@@ -58,7 +58,7 @@ export interface MountedComponent<P = {}, D = {}> extends InternalComponent {
   errorCaptured?(): (
     err: Error,
     type: ErrorTypes,
-    target: MountedComponent
+    target: ComponentInstance
   ) => boolean | void
   activated?(): void
   deactivated?(): void
@@ -68,7 +68,7 @@ export interface MountedComponent<P = {}, D = {}> extends InternalComponent {
   $forceUpdate: () => void
   $nextTick: (fn: () => void) => Promise<any>
 
-  _self: MountedComponent<D, P> // on proxies only
+  _self: ComponentInstance<D, P> // on proxies only
 }
 
 class InternalComponent {
@@ -85,11 +85,11 @@ class InternalComponent {
   public $attrs: Data | null = null
   public $computed: Data | null = null
   public $slots: Slots | null = null
-  public $root: MountedComponent | null = null
-  public $parent: MountedComponent | null = null
-  public $children: MountedComponent[] = []
+  public $root: ComponentInstance | null = null
+  public $parent: ComponentInstance | null = null
+  public $children: ComponentInstance[] = []
   public $options: any
-  public $refs: Record<string, MountedComponent | RenderNode> = {}
+  public $refs: Record<string, ComponentInstance | RenderNode> = {}
   public $proxy: any = null
   public $forceUpdate: (() => void) | null = null
 
@@ -118,10 +118,10 @@ class InternalComponent {
   }
 
   $watch(
-    keyOrFn: string | (() => any),
-    cb: (newValue: any, oldValue: any) => void,
+    keyOrFn: string | ((this: this) => any),
+    cb: (this: this, newValue: any, oldValue: any) => void,
     options?: WatchOptions
-  ) {
+  ): () => void {
     return setupWatcher(this as any, keyOrFn, cb, options)
   }
 

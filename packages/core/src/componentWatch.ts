@@ -1,12 +1,12 @@
 import { EMPTY_OBJ, NOOP } from './utils'
-import { MountedComponent } from './component'
+import { ComponentInstance } from './component'
 import { ComponentWatchOptions, WatchOptions } from './componentOptions'
 import { autorun, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { handleError, ErrorTypes } from './errorHandling'
 
 export function initializeWatch(
-  instance: MountedComponent,
+  instance: ComponentInstance,
   options: ComponentWatchOptions | undefined
 ) {
   if (options !== void 0) {
@@ -26,7 +26,7 @@ export function initializeWatch(
 }
 
 export function setupWatcher(
-  instance: MountedComponent,
+  instance: ComponentInstance,
   keyOrFn: string | Function,
   cb: (newValue: any, oldValue: any) => void,
   options: WatchOptions = EMPTY_OBJ as WatchOptions
@@ -87,7 +87,7 @@ export function setupWatcher(
   }
 }
 
-export function teardownWatch(instance: MountedComponent) {
+export function teardownWatch(instance: ComponentInstance) {
   if (instance._watchHandles !== null) {
     instance._watchHandles.forEach(stop)
   }

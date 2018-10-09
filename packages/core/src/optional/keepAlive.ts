@@ -1,4 +1,4 @@
-import { Component, ComponentClass, MountedComponent } from '../component'
+import { Component, ComponentClass, ComponentInstance } from '../component'
 import { VNode, Slots, cloneVNode } from '../vdom'
 import { VNodeFlags } from '../flags'
 
@@ -20,13 +20,13 @@ export class KeepAlive extends Component<KeepAliveProps> {
   keys: Set<CacheKey> = new Set()
 
   // to be set in createRenderer when instance is created
-  $unmount: (instance: MountedComponent) => void
+  $unmount: (instance: ComponentInstance) => void
 
   beforeUnmount() {
     this.cache.forEach(vnode => {
       // change flag so it can be properly unmounted
       vnode.flags = VNodeFlags.COMPONENT_STATEFUL_NORMAL
-      this.$unmount(vnode.children as MountedComponent)
+      this.$unmount(vnode.children as ComponentInstance)
     })
   }
 
@@ -43,7 +43,7 @@ export class KeepAlive extends Component<KeepAliveProps> {
     const cached = this.cache.get(key) as VNode
     const current = this.$vnode
     if (!current || cached.tag !== current.tag) {
-      this.$unmount(cached.children as MountedComponent)
+      this.$unmount(cached.children as ComponentInstance)
     }
     this.cache.delete(key)
     this.keys.delete(key)
