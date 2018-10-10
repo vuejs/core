@@ -31,6 +31,9 @@ export interface VNode {
   // points to parent component's placeholder vnode
   // this is used to update vnode.el for nested HOCs.
   parentVNode: VNode | null
+  // only on mounted component nodes
+  // points to the parent stateful/functional component's placeholder node
+  contextVNode: VNode | null
 }
 
 export interface MountedVNode extends VNode {
@@ -84,7 +87,8 @@ export function createVNode(
     ref: ref === void 0 ? null : ref,
     slots: slots === void 0 ? null : slots,
     el: null,
-    parentVNode: null
+    parentVNode: null,
+    contextVNode: null
   }
   if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
     normalizeChildren(vnode, children)

@@ -1,4 +1,4 @@
-import { createRenderer, VNode } from '@vue/core'
+import { createRenderer, VNode, ComponentInstance } from '@vue/core'
 import { nodeOps, TestElement } from './nodeOps'
 import { patchData } from './patchData'
 
@@ -7,7 +7,10 @@ const { render: _render } = createRenderer({
   patchData
 })
 
-type publicRender = (node: VNode | null, container: TestElement) => void
+type publicRender = (
+  node: VNode | null,
+  container: TestElement
+) => ComponentInstance | null
 export const render = _render as publicRender
 
 export { serialize } from './serialize'

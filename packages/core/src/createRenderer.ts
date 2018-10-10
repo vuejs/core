@@ -111,36 +111,30 @@ export function createRenderer(options: RendererOptions) {
   function mount(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
     const { flags } = vnode
     if (flags & VNodeFlags.ELEMENT) {
-      mountElement(vnode, container, parentComponent, isSVG, endNode)
+      mountElement(vnode, container, contextVNode, isSVG, endNode)
     } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-      mountStatefulComponent(vnode, container, parentComponent, isSVG, endNode)
+      mountStatefulComponent(vnode, container, contextVNode, isSVG, endNode)
     } else if (flags & VNodeFlags.COMPONENT_FUNCTIONAL) {
-      mountFunctionalComponent(
-        vnode,
-        container,
-        parentComponent,
-        isSVG,
-        endNode
-      )
+      mountFunctionalComponent(vnode, container, contextVNode, isSVG, endNode)
     } else if (flags & VNodeFlags.TEXT) {
       mountText(vnode, container, endNode)
     } else if (flags & VNodeFlags.FRAGMENT) {
-      mountFragment(vnode, container, parentComponent, isSVG, endNode)
+      mountFragment(vnode, container, contextVNode, isSVG, endNode)
     } else if (flags & VNodeFlags.PORTAL) {
-      mountPortal(vnode, container, parentComponent)
+      mountPortal(vnode, container, contextVNode)
     }
   }
 
   function mountArrayChildren(
     children: VNode[],
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -149,14 +143,14 @@ export function createRenderer(options: RendererOptions) {
       if (child.el) {
         children[i] = child = cloneVNode(child)
       }
-      mount(children[i], container, parentComponent, isSVG, endNode)
+      mount(children[i], container, contextVNode, isSVG, endNode)
     }
   }
 
   function mountElement(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -174,12 +168,12 @@ export function createRenderer(options: RendererOptions) {
     if (childFlags !== ChildrenFlags.NO_CHILDREN) {
       const hasSVGChildren = isSVG && tag !== 'foreignObject'
       if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-        mount(children as VNode, el, parentComponent, hasSVGChildren, endNode)
+        mount(children as VNode, el, contextVNode, hasSVGChildren, endNode)
       } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
         mountArrayChildren(
           children as VNode[],
           el,
-          parentComponent,
+          contextVNode,
           hasSVGChildren,
           endNode
         )
@@ -207,10 +201,11 @@ export function createRenderer(options: RendererOptions) {
   function mountStatefulComponent(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
+    vnode.contextVNode = contextVNode
     if (vnode.flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
       // kept-alive
       activateComponentInstance(vnode)
@@ -219,7 +214,7 @@ export function createRenderer(options: RendererOptions) {
         vnode,
         vnode.tag as ComponentClass,
         container,
-        parentComponent,
+        contextVNode,
         isSVG,
         endNode
       )
@@ -229,10 +224,11 @@ export function createRenderer(options: RendererOptions) {
   function mountFunctionalComponent(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
+    vnode.contextVNode = contextVNode
     const { tag, data, slots } = vnode
     const render = tag as FunctionalComponent
     const { props, attrs } = resolveProps(data, render.props)
@@ -240,7 +236,7 @@ export function createRenderer(options: RendererOptions) {
       render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
       vnode
     ))
-    mount(subTree, container, parentComponent, isSVG, endNode)
+    mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
     vnode.el = subTree.el as RenderNode
   }
 
@@ -258,14 +254,14 @@ export function createRenderer(options: RendererOptions) {
   function mountFragment(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
     const { children, childFlags } = vnode
     switch (childFlags) {
       case ChildrenFlags.SINGLE_VNODE:
-        mount(children as VNode, container, parentComponent, isSVG, endNode)
+        mount(children as VNode, container, contextVNode, isSVG, endNode)
         vnode.el = (children as MountedVNode).el
         break
       case ChildrenFlags.NO_CHILDREN:
@@ -277,7 +273,7 @@ export function createRenderer(options: RendererOptions) {
         mountArrayChildren(
           children as VNode[],
           container,
-          parentComponent,
+          contextVNode,
           isSVG,
           endNode
         )
@@ -288,7 +284,7 @@ export function createRenderer(options: RendererOptions) {
   function mountPortal(
     vnode: VNode,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null
+    contextVNode: MountedVNode | null
   ) {
     const { tag, children, childFlags, ref } = vnode
     const target = typeof tag === 'string' ? platformQuerySelector(tag) : tag
@@ -298,18 +294,12 @@ export function createRenderer(options: RendererOptions) {
     }
 
     if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-      mount(
-        children as VNode,
-        target as RenderNode,
-        parentComponent,
-        false,
-        null
-      )
+      mount(children as VNode, target as RenderNode, contextVNode, false, null)
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
       mountArrayChildren(
         children as VNode[],
         target as RenderNode,
-        parentComponent,
+        contextVNode,
         false,
         null
       )
@@ -352,24 +342,24 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
     const nextFlags = nextVNode.flags
     const prevFlags = prevVNode.flags
 
     if (prevFlags !== nextFlags) {
-      replaceVNode(prevVNode, nextVNode, container, parentComponent, isSVG)
+      replaceVNode(prevVNode, nextVNode, container, contextVNode, isSVG)
     } else if (nextFlags & VNodeFlags.ELEMENT) {
-      patchElement(prevVNode, nextVNode, container, parentComponent, isSVG)
+      patchElement(prevVNode, nextVNode, container, contextVNode, isSVG)
     } else if (nextFlags & VNodeFlags.COMPONENT) {
-      patchComponent(prevVNode, nextVNode, container, parentComponent, isSVG)
+      patchComponent(prevVNode, nextVNode, container, contextVNode, isSVG)
     } else if (nextFlags & VNodeFlags.TEXT) {
       patchText(prevVNode, nextVNode)
     } else if (nextFlags & VNodeFlags.FRAGMENT) {
-      patchFragment(prevVNode, nextVNode, container, parentComponent, isSVG)
+      patchFragment(prevVNode, nextVNode, container, contextVNode, isSVG)
     } else if (nextFlags & VNodeFlags.PORTAL) {
-      patchPortal(prevVNode, nextVNode, parentComponent)
+      patchPortal(prevVNode, nextVNode, contextVNode)
     }
   }
 
@@ -377,14 +367,14 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
     const { flags, tag } = nextVNode
     isSVG = isSVG || (flags & VNodeFlags.ELEMENT_SVG) > 0
 
     if (prevVNode.tag !== tag) {
-      replaceVNode(prevVNode, nextVNode, container, parentComponent, isSVG)
+      replaceVNode(prevVNode, nextVNode, container, contextVNode, isSVG)
       return
     }
 
@@ -434,7 +424,7 @@ export function createRenderer(options: RendererOptions) {
       prevVNode.children,
       nextVNode.children,
       el,
-      parentComponent,
+      contextVNode,
       isSVG && nextVNode.tag !== 'foreignObject',
       null
     )
@@ -450,12 +440,13 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
+    nextVNode.contextVNode = contextVNode
     const { tag, flags } = nextVNode
     if (tag !== prevVNode.tag) {
-      replaceVNode(prevVNode, nextVNode, container, parentComponent, isSVG)
+      replaceVNode(prevVNode, nextVNode, container, contextVNode, isSVG)
     } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
       patchStatefulComponent(prevVNode, nextVNode)
     } else {
@@ -463,7 +454,7 @@ export function createRenderer(options: RendererOptions) {
         prevVNode,
         nextVNode,
         container,
-        parentComponent,
+        contextVNode,
         isSVG
       )
     }
@@ -497,7 +488,7 @@ export function createRenderer(options: RendererOptions) {
     if (shouldForceUpdate) {
       instance.$forceUpdate()
     } else if (instance.$vnode.flags & VNodeFlags.COMPONENT) {
-      instance.$vnode.parentVNode = nextVNode
+      instance.$vnode.contextVNode = nextVNode
     }
     nextVNode.el = instance.$vnode.el
   }
@@ -506,7 +497,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
     // functional component tree is stored on the vnode as `children`
@@ -526,11 +517,11 @@ export function createRenderer(options: RendererOptions) {
         render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
         nextVNode
       ))
-      patch(prevTree, nextTree, container, parentComponent, isSVG)
+      patch(prevTree, nextTree, container, nextVNode as MountedVNode, isSVG)
       nextVNode.el = nextTree.el
     } else if (prevTree.flags & VNodeFlags.COMPONENT) {
       // functional component returned another component
-      prevTree.parentVNode = nextVNode
+      prevTree.contextVNode = nextVNode
     }
   }
 
@@ -538,7 +529,7 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
     // determine the tail node of the previous fragment,
@@ -551,7 +542,7 @@ export function createRenderer(options: RendererOptions) {
       prevVNode.children,
       children,
       container,
-      parentComponent,
+      contextVNode,
       isSVG,
       endNode
     )
@@ -595,7 +586,7 @@ export function createRenderer(options: RendererOptions) {
   function patchPortal(
     prevVNode: MountedVNode,
     nextVNode: VNode,
-    parentComponent: ComponentInstance | null
+    contextVNode: MountedVNode | null
   ) {
     const prevContainer = prevVNode.tag as RenderNode
     const nextContainer = nextVNode.tag as RenderNode
@@ -606,7 +597,7 @@ export function createRenderer(options: RendererOptions) {
       prevVNode.children,
       nextChildren,
       prevContainer,
-      parentComponent,
+      contextVNode,
       false,
       null
     )
@@ -631,12 +622,12 @@ export function createRenderer(options: RendererOptions) {
     prevVNode: MountedVNode,
     nextVNode: VNode,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
     const refNode = platformNextSibling(getVNodeLastEl(prevVNode))
     removeVNode(prevVNode, container)
-    mount(nextVNode, container, parentComponent, isSVG, refNode)
+    mount(nextVNode, container, contextVNode, isSVG, refNode)
   }
 
   function patchChildren(
@@ -645,7 +636,7 @@ export function createRenderer(options: RendererOptions) {
     prevChildren: VNodeChildren,
     nextChildren: VNodeChildren,
     container: RenderNode,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -657,7 +648,7 @@ export function createRenderer(options: RendererOptions) {
               prevChildren as MountedVNode,
               nextChildren as VNode,
               container,
-              parentComponent,
+              contextVNode,
               isSVG
             )
             break
@@ -669,7 +660,7 @@ export function createRenderer(options: RendererOptions) {
             mountArrayChildren(
               nextChildren as VNode[],
               container,
-              parentComponent,
+              contextVNode,
               isSVG,
               endNode
             )
@@ -682,7 +673,7 @@ export function createRenderer(options: RendererOptions) {
             mount(
               nextChildren as VNode,
               container,
-              parentComponent,
+              contextVNode,
               isSVG,
               endNode
             )
@@ -693,7 +684,7 @@ export function createRenderer(options: RendererOptions) {
             mountArrayChildren(
               nextChildren as VNode[],
               container,
-              parentComponent,
+              contextVNode,
               isSVG,
               endNode
             )
@@ -704,13 +695,7 @@ export function createRenderer(options: RendererOptions) {
         // MULTIPLE_CHILDREN
         if (nextChildFlags === ChildrenFlags.SINGLE_VNODE) {
           removeChildren(prevChildren as MountedVNode[], container, endNode)
-          mount(
-            nextChildren as VNode,
-            container,
-            parentComponent,
-            isSVG,
-            endNode
-          )
+          mount(nextChildren as VNode, container, contextVNode, isSVG, endNode)
         } else if (nextChildFlags === ChildrenFlags.NO_CHILDREN) {
           removeChildren(prevChildren as MountedVNode[], container, endNode)
         } else {
@@ -721,7 +706,7 @@ export function createRenderer(options: RendererOptions) {
               mountArrayChildren(
                 nextChildren as VNode[],
                 container,
-                parentComponent,
+                contextVNode,
                 isSVG,
                 endNode
               )
@@ -738,7 +723,7 @@ export function createRenderer(options: RendererOptions) {
               container,
               prevLength,
               nextLength,
-              parentComponent,
+              contextVNode,
               isSVG,
               endNode
             )
@@ -749,7 +734,7 @@ export function createRenderer(options: RendererOptions) {
               container,
               prevLength,
               nextLength,
-              parentComponent,
+              contextVNode,
               isSVG,
               endNode
             )
@@ -765,7 +750,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode,
     prevLength: number,
     nextLength: number,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -779,7 +764,7 @@ export function createRenderer(options: RendererOptions) {
       if (nextChild.el) {
         nextChildren[i] = nextChild = cloneVNode(nextChild)
       }
-      patch(prevChild, nextChild, container, parentComponent, isSVG)
+      patch(prevChild, nextChild, container, contextVNode, isSVG)
       prevChildren[i] = nextChild as MountedVNode
     }
     if (prevLength < nextLength) {
@@ -788,7 +773,7 @@ export function createRenderer(options: RendererOptions) {
         if (nextChild.el) {
           nextChildren[i] = nextChild = cloneVNode(nextChild)
         }
-        mount(nextChild, container, parentComponent, isSVG, endNode)
+        mount(nextChild, container, contextVNode, isSVG, endNode)
       }
     } else if (prevLength > nextLength) {
       for (i = commonLength; i < prevLength; i++) {
@@ -803,7 +788,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode,
     prevLength: number,
     nextLength: number,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -821,7 +806,7 @@ export function createRenderer(options: RendererOptions) {
         if (nextVNode.el) {
           nextChildren[j] = nextVNode = cloneVNode(nextVNode)
         }
-        patch(prevVNode, nextVNode, container, parentComponent, isSVG)
+        patch(prevVNode, nextVNode, container, contextVNode, isSVG)
         prevChildren[j] = nextVNode as MountedVNode
         j++
         if (j > prevEnd || j > nextEnd) {
@@ -839,7 +824,7 @@ export function createRenderer(options: RendererOptions) {
         if (nextVNode.el) {
           nextChildren[nextEnd] = nextVNode = cloneVNode(nextVNode)
         }
-        patch(prevVNode, nextVNode, container, parentComponent, isSVG)
+        patch(prevVNode, nextVNode, container, contextVNode, isSVG)
         prevChildren[prevEnd] = nextVNode as MountedVNode
         prevEnd--
         nextEnd--
@@ -862,7 +847,7 @@ export function createRenderer(options: RendererOptions) {
             nextChildren[j] = nextVNode = cloneVNode(nextVNode)
           }
           j++
-          mount(nextVNode, container, parentComponent, isSVG, nextNode)
+          mount(nextVNode, container, contextVNode, isSVG, nextNode)
         }
       }
     } else if (j > nextEnd) {
@@ -907,7 +892,7 @@ export function createRenderer(options: RendererOptions) {
                 if (nextVNode.el) {
                   nextChildren[j] = nextVNode = cloneVNode(nextVNode)
                 }
-                patch(prevVNode, nextVNode, container, parentComponent, isSVG)
+                patch(prevVNode, nextVNode, container, contextVNode, isSVG)
                 patched++
                 break
               }
@@ -951,7 +936,7 @@ export function createRenderer(options: RendererOptions) {
               if (nextVNode.el) {
                 nextChildren[j] = nextVNode = cloneVNode(nextVNode)
               }
-              patch(prevVNode, nextVNode, container, parentComponent, isSVG)
+              patch(prevVNode, nextVNode, container, contextVNode, isSVG)
               patched++
             } else if (!canRemoveWholeContent) {
               removeVNode(prevVNode, container)
@@ -967,7 +952,7 @@ export function createRenderer(options: RendererOptions) {
         mountArrayChildren(
           nextChildren,
           container,
-          parentComponent,
+          contextVNode,
           isSVG,
           endNode
         )
@@ -986,7 +971,7 @@ export function createRenderer(options: RendererOptions) {
               mount(
                 nextVNode,
                 container,
-                parentComponent,
+                contextVNode,
                 isSVG,
                 nextPos < nextLength ? nextChildren[nextPos].el : endNode
               )
@@ -1017,7 +1002,7 @@ export function createRenderer(options: RendererOptions) {
               mount(
                 nextVNode,
                 container,
-                parentComponent,
+                contextVNode,
                 isSVG,
                 nextPos < nextLength ? nextChildren[nextPos].el : endNode
               )
@@ -1149,18 +1134,18 @@ export function createRenderer(options: RendererOptions) {
   // Component lifecycle -------------------------------------------------------
 
   function mountComponentInstance(
-    parentVNode: VNode,
+    vnode: VNode,
     Component: ComponentClass,
     container: RenderNode | null,
-    parentComponent: ComponentInstance | null,
+    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ): RenderNode {
     // a vnode may already have an instance if this is a compat call with
     // new Vue()
     const instance =
-      (__COMPAT__ && (parentVNode.children as ComponentInstance)) ||
-      createComponentInstance(parentVNode, Component, parentComponent)
+      (__COMPAT__ && (vnode.children as ComponentInstance)) ||
+      createComponentInstance(vnode, Component, contextVNode)
 
     // inject platform-specific unmount to keep-alive container
     if ((Component as any)[KeepAliveSymbol] === true) {
@@ -1185,16 +1170,22 @@ export function createRenderer(options: RendererOptions) {
         } else {
           // this will be executed synchronously right here
           instance.$vnode = renderInstanceRoot(instance) as MountedVNode
-          mount(instance.$vnode, container, instance, isSVG, endNode)
-          parentVNode.el = instance.$vnode.el
+          mount(
+            instance.$vnode,
+            container,
+            vnode as MountedVNode,
+            isSVG,
+            endNode
+          )
+          vnode.el = instance.$vnode.el
 
           if (__DEV__) {
             // expose __vue__ for devtools
-            ;(parentVNode.el as any).__vue__ = instance
+            ;(vnode.el as any).__vue__ = instance
           }
 
           instance._mounted = true
-          mountComponentInstanceCallbacks(instance, parentVNode.ref)
+          mountComponentInstanceCallbacks(instance, vnode.ref)
         }
       },
       {
@@ -1204,7 +1195,7 @@ export function createRenderer(options: RendererOptions) {
       }
     )
 
-    return parentVNode.el as RenderNode
+    return vnode.el as RenderNode
   }
 
   function mountComponentInstanceCallbacks(
@@ -1212,7 +1203,7 @@ export function createRenderer(options: RendererOptions) {
     ref: Ref | null
   ) {
     if (ref) {
-      mountRef(ref, instance)
+      mountRef(ref, instance.$proxy)
     }
     if (instance.mounted) {
       lifecycleHooks.push(() => {
@@ -1235,7 +1226,13 @@ export function createRenderer(options: RendererOptions) {
       instance
     ) as MountedVNode)
     const container = platformParentNode(prevVNode.el) as RenderNode
-    patch(prevVNode, nextVNode, container, instance, isSVG)
+    patch(
+      prevVNode,
+      nextVNode,
+      container,
+      instance.$parentVNode as MountedVNode,
+      isSVG
+    )
     const el = nextVNode.el as RenderNode
 
     if (__DEV__) {
@@ -1243,14 +1240,14 @@ export function createRenderer(options: RendererOptions) {
       ;(el as any).__vue__ = instance
     }
 
-    // recursively update parentVNode el for nested HOCs
+    // recursively update contextVNode el for nested HOCs
     if ((nextVNode.flags & VNodeFlags.PORTAL) === 0) {
       let vnode = instance.$parentVNode
       while (vnode !== null) {
         if ((vnode.flags & VNodeFlags.COMPONENT) > 0) {
           vnode.el = el
         }
-        vnode = vnode.parentVNode
+        vnode = vnode.contextVNode
       }
     }
 
@@ -1354,7 +1351,10 @@ export function createRenderer(options: RendererOptions) {
 
   // API -----------------------------------------------------------------------
 
-  function render(vnode: VNode | null, container: any) {
+  function render(
+    vnode: VNode | null,
+    container: any
+  ): ComponentInstance | null {
     const prevVNode = container.vnode
     if (vnode && vnode.el) {
       vnode = cloneVNode(vnode)

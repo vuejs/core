@@ -19,7 +19,7 @@ import { handleError, ErrorTypes } from './errorHandling'
 export function createComponentInstance(
   vnode: VNode,
   Component: ComponentClass,
-  parentComponent: ComponentInstance | null
+  contextVNode: MountedVNode | null
 ): ComponentInstance {
   const instance = (vnode.children = new Component()) as ComponentInstance
   instance.$parentVNode = vnode as MountedVNode
@@ -28,7 +28,17 @@ export function createComponentInstance(
   const proxy = (instance.$proxy = createRenderProxy(instance))
 
   // pointer management
-  if (parentComponent) {
+  if (contextVNode !== null) {
+    // locate first non-functional parent
+    while (
+      contextVNode !== null &&
+      contextVNode.flags & VNodeFlags.COMPONENT_FUNCTIONAL &&
+      contextVNode.contextVNode !== null
+    ) {
+      contextVNode = contextVNode.contextVNode as any
+    }
+    const parentComponent = (contextVNode as VNode)
+      .children as ComponentInstance
     instance.$parent = parentComponent.$proxy
     instance.$root = parentComponent.$root
     parentComponent.$children.push(proxy)
