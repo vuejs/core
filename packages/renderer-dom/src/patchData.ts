@@ -5,7 +5,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 
-export const onRE = /^on|^nativeOn/
+export const onRE = /^on/
 const domPropsRE = /^domProps/
 
 export function patchData(

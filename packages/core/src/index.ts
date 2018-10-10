@@ -11,7 +11,10 @@ export * from '@vue/observer'
 export { nextTick } from '@vue/scheduler'
 
 // Internal API
-export { createComponentInstance } from './componentUtils'
+export {
+  createComponentInstance,
+  createComponentClassFromOptions
+} from './componentUtils'
 
 // Optional APIs
 // these are imported on-demand and can be tree-shaken

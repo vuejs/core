@@ -277,7 +277,7 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
               extraData.style
             ])
           } else if (handlersRE.test(key)) {
-            // on*, nativeOn*, vnode*
+            // on*, vnode*
             const existing = clonedData[key]
             clonedData[key] = existing
               ? [].concat(existing, extraData[key])

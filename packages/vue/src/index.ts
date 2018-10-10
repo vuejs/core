@@ -3,7 +3,8 @@ import {
   render,
   nextTick,
   Component,
-  createComponentInstance
+  createComponentInstance,
+  createComponentClassFromOptions
 } from '@vue/renderer-dom'
 
 // Note: typing for this is intentionally loose, as it will be using 2.x types.
@@ -20,9 +21,10 @@ class Vue extends Component {
 
     // in compat mode, h() can take an options object and will convert it
     // to a 3.x class-based component.
-    const vnode = h(options)
+    const Component = createComponentClassFromOptions(options)
+    const vnode = h(Component)
     // the component class is cached on the options object as ._normalized
-    const instance = createComponentInstance(vnode, options._normalized, null)
+    const instance = createComponentInstance(vnode, Component, null)
     // set the instance on the vnode before mounting.
     // the mount function will skip creating a new instance if it finds an
     // existing one.
@@ -48,4 +50,3 @@ interface Vue {
 }
 
 export default Vue
-export * from '@vue/renderer-dom'

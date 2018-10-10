@@ -24,7 +24,6 @@ export interface FunctionalComponent<P = {}> {
   (props: Readonly<P>, slots: Slots, attrs: Data): any
   pure?: boolean
   props?: ComponentPropsOptions<P>
-  inheritAttrs?: boolean
   displayName?: string
 }
 

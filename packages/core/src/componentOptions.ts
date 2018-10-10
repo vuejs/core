@@ -8,7 +8,6 @@ export interface ComponentClassOptions<This = ComponentInstance> {
   computed?: ComponentComputedOptions<This>
   watch?: ComponentWatchOptions<This>
   displayName?: string
-  inheritAttrs?: boolean
 }
 
 export interface ComponentOptions<This = ComponentInstance>

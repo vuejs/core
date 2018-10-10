@@ -1,9 +1,9 @@
 // using DOM renderer because this case is mostly DOM-specific
-import { h, render, Component, nextTick } from '@vue/renderer-dom'
+import { h, render, Component, nextTick, cloneVNode } from '@vue/renderer-dom'
 
 describe('attribute fallthrough', () => {
-  it('should not fallthrough on components with no declared props', async () => {
-    const nativeClick = jest.fn()
+  it('everything should be in props when component has no declared props', async () => {
+    const click = jest.fn()
     const childUpdated = jest.fn()
 
     class Hello extends Component<{}, { count: number }> {
@@ -14,7 +14,7 @@ describe('attribute fallthrough', () => {
       }
       inc() {
         this.count++
-        nativeClick()
+        click()
       }
       render() {
         return h(Child, {
@@ -22,23 +22,26 @@ describe('attribute fallthrough', () => {
           id: 'test',
           class: 'c' + this.count,
           style: { color: this.count ? 'red' : 'green' },
-          nativeOnClick: this.inc
+          onClick: this.inc
         })
       }
     }
 
-    class Child extends Component<{ foo: number }> {
+    class Child extends Component {
       updated() {
         childUpdated()
       }
-      render() {
-        return h(
-          'div',
-          {
-            class: 'c2',
-            style: { fontWeight: 'bold' }
-          },
-          this.$props.foo
+      render(props: any) {
+        return cloneVNode(
+          h(
+            'div',
+            {
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
+            props.foo
+          ),
+          props
         )
       }
     }
@@ -49,28 +52,25 @@ describe('attribute fallthrough', () => {
 
     const node = root.children[0] as HTMLElement
 
-    // attrs do not fallthrough because no props are declared
-    expect(node.hasAttribute('id')).toBe(false)
-    expect(node.hasAttribute('foo')).toBe(false)
-
-    // class, style and nativeOn* always fallthrough
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('foo')).toBe('1')
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
     node.dispatchEvent(new CustomEvent('click'))
-    expect(nativeClick).toHaveBeenCalled()
+    expect(click).toHaveBeenCalled()
 
     await nextTick()
     expect(childUpdated).toHaveBeenCalled()
-    expect(node.hasAttribute('id')).toBe(false)
-    expect(node.hasAttribute('foo')).toBe(false)
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('foo')).toBe('1')
     expect(node.getAttribute('class')).toBe('c2 c1')
     expect(node.style.color).toBe('red')
     expect(node.style.fontWeight).toBe('bold')
   })
 
-  it('should fallthrough on components with declared props', async () => {
-    const nativeClick = jest.fn()
+  it('should separate in attrs when component has declared props', async () => {
+    const click = jest.fn()
     const childUpdated = jest.fn()
 
     class Hello extends Component<{}, { count: number }> {
@@ -81,7 +81,7 @@ describe('attribute fallthrough', () => {
       }
       inc() {
         this.count++
-        nativeClick()
+        click()
       }
       render() {
         return h(Child, {
@@ -89,7 +89,7 @@ describe('attribute fallthrough', () => {
           id: 'test',
           class: 'c' + this.count,
           style: { color: this.count ? 'red' : 'green' },
-          nativeOnClick: this.inc
+          onClick: this.inc
         })
       }
     }
@@ -102,13 +102,16 @@ describe('attribute fallthrough', () => {
         childUpdated()
       }
       render() {
-        return h(
-          'div',
-          {
-            class: 'c2',
-            style: { fontWeight: 'bold' }
-          },
-          this.$props.foo
+        return cloneVNode(
+          h(
+            'div',
+            {
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
+            this.$props.foo
+          ),
+          this.$attrs
         )
       }
     }
@@ -121,27 +124,27 @@ describe('attribute fallthrough', () => {
 
     // with declared props, any parent attr that isn't a prop falls through
     expect(node.getAttribute('id')).toBe('test')
-    // ...while declared ones remain props
-    expect(node.hasAttribute('foo')).toBe(false)
-
-    // class, style and nativeOn* always fallthrough
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
     node.dispatchEvent(new CustomEvent('click'))
-    expect(nativeClick).toHaveBeenCalled()
+    expect(click).toHaveBeenCalled()
+
+    // ...while declared ones remain props
+    expect(node.hasAttribute('foo')).toBe(false)
 
     await nextTick()
     expect(childUpdated).toHaveBeenCalled()
     expect(node.getAttribute('id')).toBe('test')
-    expect(node.hasAttribute('foo')).toBe(false)
     expect(node.getAttribute('class')).toBe('c2 c1')
     expect(node.style.color).toBe('red')
     expect(node.style.fontWeight).toBe('bold')
+
+    expect(node.hasAttribute('foo')).toBe(false)
   })
 
   it('should fallthrough on multi-nested components', async () => {
-    const nativeClick = jest.fn()
+    const click = jest.fn()
     const childUpdated = jest.fn()
     const grandChildUpdated = jest.fn()
 
@@ -153,7 +156,7 @@ describe('attribute fallthrough', () => {
       }
       inc() {
         this.count++
-        nativeClick()
+        click()
       }
       render() {
         return h(Child, {
@@ -161,20 +164,17 @@ describe('attribute fallthrough', () => {
           id: 'test',
           class: 'c' + this.count,
           style: { color: this.count ? 'red' : 'green' },
-          nativeOnClick: this.inc
+          onClick: this.inc
         })
       }
     }
 
     class Child extends Component {
-      static props = {
-        foo: Number
-      }
       updated() {
         childUpdated()
       }
-      render(props: any) {
-        return h(GrandChild, props)
+      render() {
+        return h(GrandChild, this.$props)
       }
     }
 
@@ -186,13 +186,16 @@ describe('attribute fallthrough', () => {
         grandChildUpdated()
       }
       render(props: any) {
-        return h(
-          'div',
-          {
-            class: 'c2',
-            style: { fontWeight: 'bold' }
-          },
-          props.foo
+        return cloneVNode(
+          h(
+            'div',
+            {
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
+            props.foo
+          ),
+          this.$attrs
         )
       }
     }
@@ -205,23 +208,23 @@ describe('attribute fallthrough', () => {
 
     // with declared props, any parent attr that isn't a prop falls through
     expect(node.getAttribute('id')).toBe('test')
-    // ...while declared ones remain props
-    expect(node.hasAttribute('foo')).toBe(false)
-
-    // class, style and nativeOn* always fallthrough
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
     node.dispatchEvent(new CustomEvent('click'))
-    expect(nativeClick).toHaveBeenCalled()
+    expect(click).toHaveBeenCalled()
+
+    // ...while declared ones remain props
+    expect(node.hasAttribute('foo')).toBe(false)
 
     await nextTick()
     expect(childUpdated).toHaveBeenCalled()
     expect(grandChildUpdated).toHaveBeenCalled()
     expect(node.getAttribute('id')).toBe('test')
-    expect(node.hasAttribute('foo')).toBe(false)
     expect(node.getAttribute('class')).toBe('c2 c1')
     expect(node.style.color).toBe('red')
     expect(node.style.fontWeight).toBe('bold')
+
+    expect(node.hasAttribute('foo')).toBe(false)
   })
 })

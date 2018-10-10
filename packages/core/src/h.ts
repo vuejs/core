@@ -9,7 +9,7 @@ import {
   createFragment,
   createPortal
 } from './vdom'
-import { isObservable, unwrap } from '@vue/observer'
+import { isObservable } from '@vue/observer'
 
 export const Fragment = Symbol()
 export const Portal = Symbol()
@@ -44,9 +44,9 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
   if (children === void 0) children = null
 
   // if value is observable, create a clone of original
-  // so that we can mutate it later on.
+  // so that we can normalize its class/style
   if (isObservable(data)) {
-    data = Object.assign({}, unwrap(data))
+    data = Object.assign({}, data)
   }
 
   let key = null

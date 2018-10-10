@@ -55,11 +55,12 @@ export function createComponentInstance(
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   try {
-    vnode = instance.render.call(instance.$proxy, h, {
-      props: instance.$props,
-      slots: instance.$slots,
-      attrs: instance.$attrs
-    })
+    vnode = instance.render.call(
+      instance.$proxy,
+      instance.$props,
+      instance.$slots,
+      instance.$attrs
+    )
   } catch (e1) {
     handleError(e1, instance, ErrorTypes.RENDER)
     if (__DEV__ && instance.renderError) {
@@ -70,12 +71,7 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
       }
     }
   }
-  return normalizeComponentRoot(
-    vnode,
-    instance.$parentVNode,
-    instance.$attrs,
-    instance.constructor.inheritAttrs
-  )
+  return normalizeComponentRoot(vnode, instance.$parentVNode)
 }
 
 export function teardownComponentInstance(instance: ComponentInstance) {
@@ -95,9 +91,7 @@ export function teardownComponentInstance(instance: ComponentInstance) {
 
 export function normalizeComponentRoot(
   vnode: any,
-  componentVNode: VNode | null,
-  attrs: Record<string, any> | void,
-  inheritAttrs: boolean | void
+  componentVNode: VNode | null
 ): VNode {
   if (vnode == null) {
     vnode = createTextVNode('')
@@ -105,12 +99,7 @@ export function normalizeComponentRoot(
     vnode = createTextVNode(vnode + '')
   } else if (Array.isArray(vnode)) {
     if (vnode.length === 1) {
-      vnode = normalizeComponentRoot(
-        vnode[0],
-        componentVNode,
-        attrs,
-        inheritAttrs
-      )
+      vnode = normalizeComponentRoot(vnode[0], componentVNode)
     } else {
       vnode = createFragment(vnode)
     }
@@ -120,13 +109,7 @@ export function normalizeComponentRoot(
       componentVNode &&
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
-      if (
-        inheritAttrs !== false &&
-        attrs !== void 0 &&
-        Object.keys(attrs).length > 0
-      ) {
-        vnode = cloneVNode(vnode, attrs)
-      } else if (el) {
+      if (el) {
         vnode = cloneVNode(vnode)
       }
       if (flags & VNodeFlags.COMPONENT) {
@@ -188,6 +171,8 @@ export function createComponentClassFromOptions(
           proto.beforeUnmount = value
         } else if (key === 'destroyed') {
           proto.unmounted = value
+        } else {
+          proto[key] = value
         }
       } else {
         proto[key] = value

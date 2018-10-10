@@ -238,9 +238,7 @@ export function createRenderer(options: RendererOptions) {
     const { props, attrs } = resolveProps(data, render.props)
     const subTree = (vnode.children = normalizeComponentRoot(
       render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
-      vnode,
-      attrs,
-      render.inheritAttrs
+      vnode
     ))
     mount(subTree, container, parentComponent, isSVG, endNode)
     vnode.el = subTree.el as RenderNode
@@ -526,9 +524,7 @@ export function createRenderer(options: RendererOptions) {
       const { props, attrs } = resolveProps(nextData, render.props)
       const nextTree = (nextVNode.children = normalizeComponentRoot(
         render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
-        nextVNode,
-        attrs,
-        render.inheritAttrs
+        nextVNode
       ))
       patch(prevTree, nextTree, container, parentComponent, isSVG)
       nextVNode.el = nextTree.el

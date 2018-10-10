@@ -3,9 +3,8 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = Object.freeze({})
 export const NOOP = () => {}
 
 export const onRE = /^on/
-export const nativeOnRE = /^nativeOn/
 export const vnodeHookRE = /^vnode/
-export const handlersRE = /^on|^nativeOn|^vnode/
+export const handlersRE = /^on|^vnode/
 export const reservedPropRE = /^(?:key|ref|slots)$|^vnode/
 
 export function normalizeStyle(

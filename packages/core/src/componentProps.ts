@@ -7,14 +7,7 @@ import {
   Prop,
   PropType
 } from './componentOptions'
-import {
-  EMPTY_OBJ,
-  nativeOnRE,
-  vnodeHookRE,
-  camelize,
-  hyphenate,
-  capitalize
-} from './utils'
+import { EMPTY_OBJ, camelize, hyphenate, capitalize } from './utils'
 
 export function initializeProps(
   instance: ComponentInstance,
@@ -67,7 +60,7 @@ const EMPTY_PROPS = { props: EMPTY_OBJ }
 
 // resolve raw VNode data.
 // - filter out reserved keys (key, ref, slots)
-// - extract class, style and nativeOn* into $attrs (to be merged onto child
+// - extract class and style into $attrs (to be merged onto child
 //   component root)
 // - for the rest:
 //   - if has declared props: put declared ones in `props`, the rest in `attrs`
@@ -89,17 +82,9 @@ export function resolveProps(
       if (key === 'key' || key === 'ref' || key === 'slots') {
         continue
       }
-      // class, style, nativeOn & directive hooks are always extracted into a
-      // separate `attrs` object, which can then be merged onto child component
-      // root. in addition, if the component has explicitly declared props, then
-      // any non-matching props are extracted into `attrs` as well.
-      if (
-        key === 'class' ||
-        key === 'style' ||
-        vnodeHookRE.test(key) ||
-        nativeOnRE.test(key) ||
-        (hasDeclaredProps && !options.hasOwnProperty(key))
-      ) {
+      // any non-declared data are put into a separate `attrs` object
+      // for spreading
+      if (hasDeclaredProps && !options.hasOwnProperty(key)) {
         ;(attrs || (attrs = {}))[key] = rawData[key]
       } else {
         props[key] = rawData[key]
