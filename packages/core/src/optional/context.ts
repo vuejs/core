@@ -9,6 +9,16 @@ interface ProviderProps {
 }
 
 export class Provide extends Component<ProviderProps> {
+  static props = {
+    id: {
+      type: [String, Symbol],
+      required: true
+    },
+    value: {
+      required: true
+    }
+  }
+
   updateValue() {
     // TS doesn't allow symbol as index :/
     // https://github.com/Microsoft/TypeScript/issues/24587
@@ -40,18 +50,6 @@ export class Provide extends Component<ProviderProps> {
   }
   render(props: any, slots: any) {
     return slots.default && slots.default()
-  }
-}
-
-Provide.options = {
-  props: {
-    id: {
-      type: [String, Symbol],
-      required: true
-    },
-    value: {
-      required: true
-    }
   }
 }
 

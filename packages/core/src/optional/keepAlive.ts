@@ -114,7 +114,7 @@ export class KeepAlive extends Component<KeepAliveProps> {
 ;(KeepAlive as any)[KeepAliveSymbol] = true
 
 function getName(comp: ComponentClass): string | void {
-  return comp.options && comp.options.name
+  return comp.displayName || comp.name
 }
 
 function matches(pattern: MatchPattern, name: string): boolean {

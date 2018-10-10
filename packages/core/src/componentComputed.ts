@@ -1,21 +1,12 @@
-import { EMPTY_OBJ, NOOP } from './utils'
+import { NOOP } from './utils'
 import { computed, stop, ComputedGetter } from '@vue/observer'
 import { ComponentClass, ComponentInstance } from './component'
 import { ComponentComputedOptions } from './componentOptions'
 
-const extractionCache: WeakMap<
-  ComponentClass,
-  ComponentComputedOptions
-> = new WeakMap()
-
-export function getComputedOptions(
+export function resolveComputedOptions(
   comp: ComponentClass
 ): ComponentComputedOptions {
-  let computedOptions = extractionCache.get(comp)
-  if (computedOptions) {
-    return computedOptions
-  }
-  computedOptions = {}
+  const computedOptions: ComponentComputedOptions = {}
   const descriptors = Object.getOwnPropertyDescriptors(comp.prototype as any)
   for (const key in descriptors) {
     const d = descriptors[key]
@@ -25,7 +16,6 @@ export function getComputedOptions(
       // as it's already defined on the prototype
     }
   }
-  extractionCache.set(comp, computedOptions)
   return computedOptions
 }
 
@@ -34,7 +24,6 @@ export function initializeComputed(
   computedOptions: ComponentComputedOptions | undefined
 ) {
   if (!computedOptions) {
-    instance.$computed = EMPTY_OBJ
     return
   }
   const handles: Record<
@@ -47,17 +36,6 @@ export function initializeComputed(
     const getter = typeof option === 'function' ? option : option.get || NOOP
     handles[key] = computed(getter, proxy)
   }
-  instance.$computed = new Proxy(
-    {},
-    {
-      get(_, key: any) {
-        if (handles.hasOwnProperty(key)) {
-          return handles[key]()
-        }
-      }
-      // TODO should be readonly
-    }
-  )
 }
 
 export function teardownComputed(instance: ComponentInstance) {

@@ -18,9 +18,10 @@ import {
 
 export function initializeProps(
   instance: ComponentInstance,
+  options: ComponentPropsOptions | undefined,
   data: Data | null
 ) {
-  const { props, attrs } = resolveProps(data, instance.$options.props)
+  const { props, attrs } = resolveProps(data, options)
   instance.$props = immutable(props || {})
   instance.$attrs = immutable(attrs || {})
 }
@@ -32,7 +33,7 @@ export function updateProps(instance: ComponentInstance, nextData: Data) {
   if (nextData != null) {
     const { props: nextProps, attrs: nextAttrs } = resolveProps(
       nextData,
-      instance.$options.props
+      instance.constructor.props
     )
     // unlock to temporarily allow mutatiing props
     unlock()

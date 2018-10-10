@@ -3,14 +3,18 @@ import { Slots } from './vdom'
 
 export type Data = Record<string, any>
 
-export interface ComponentOptions<This = ComponentInstance> {
-  data?(): object
+export interface ComponentClassOptions<This = ComponentInstance> {
   props?: ComponentPropsOptions
   computed?: ComponentComputedOptions<This>
   watch?: ComponentWatchOptions<This>
-  render?: (this: This, props: Readonly<Data>, slots: Slots, attrs: Data) => any
-  inheritAttrs?: boolean
   displayName?: string
+  inheritAttrs?: boolean
+}
+
+export interface ComponentOptions<This = ComponentInstance>
+  extends ComponentClassOptions<This> {
+  data?(): object
+  render?: (this: This, props: Readonly<Data>, slots: Slots, attrs: Data) => any
   // TODO other options
   readonly [key: string]: any
 }

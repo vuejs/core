@@ -95,10 +95,8 @@ describe('attribute fallthrough', () => {
     }
 
     class Child extends Component<{ foo: number }> {
-      static options = {
-        props: {
-          foo: Number
-        }
+      static props = {
+        foo: Number
       }
       updated() {
         childUpdated()
@@ -169,10 +167,8 @@ describe('attribute fallthrough', () => {
     }
 
     class Child extends Component {
-      static options = {
-        props: {
-          foo: Number
-        }
+      static props = {
+        foo: Number
       }
       updated() {
         childUpdated()
@@ -183,10 +179,8 @@ describe('attribute fallthrough', () => {
     }
 
     class GrandChild extends Component<{ foo: number }> {
-      static options = {
-        props: {
-          foo: Number
-        }
+      static props = {
+        foo: Number
       }
       updated() {
         grandChildUpdated()

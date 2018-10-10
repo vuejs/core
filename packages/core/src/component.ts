@@ -3,6 +3,7 @@ import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
   ComponentOptions,
+  ComponentClassOptions,
   ComponentPropsOptions,
   WatchOptions
 } from './componentOptions'
@@ -10,10 +11,10 @@ import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
+import { resolveComponentOptions } from './componentUtils'
 
-type Flatten<T> = { [K in keyof T]: T[K] }
-
-export interface ComponentClass extends Flatten<typeof InternalComponent> {
+export interface ComponentClass extends ComponentClassOptions {
+  options?: ComponentOptions
   new <P extends object = {}, D extends object = {}>(): MergedComponent<P, D>
 }
 
@@ -30,15 +31,15 @@ export interface FunctionalComponent<P = {}> {
 export type ComponentType = ComponentClass | FunctionalComponent
 
 export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
+  constructor: ComponentClass
+
   $vnode: MountedVNode
   $data: D
   $props: Readonly<P>
   $attrs: Data
-  $computed: Data
   $slots: Slots
   $root: ComponentInstance
   $children: ComponentInstance[]
-  $options: ComponentOptions<this>
 
   data?(): Partial<D>
   render(props: Readonly<P>, slots: Slots, attrs: Data): any
@@ -70,8 +71,6 @@ export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
 }
 
 class InternalComponent {
-  public static options?: ComponentOptions
-
   public get $el(): RenderNode | null {
     return this.$vnode && this.$vnode.el
   }
@@ -81,12 +80,11 @@ class InternalComponent {
   public $data: Data | null = null
   public $props: Data | null = null
   public $attrs: Data | null = null
-  public $computed: Data | null = null
   public $slots: Slots | null = null
   public $root: ComponentInstance | null = null
   public $parent: ComponentInstance | null = null
   public $children: ComponentInstance[] = []
-  public $options: any
+  public $options: ComponentOptions
   public $refs: Record<string, ComponentInstance | RenderNode> = {}
   public $proxy: any = null
   public $forceUpdate: (() => void) | null = null
@@ -103,12 +101,10 @@ class InternalComponent {
   public _isVue: boolean = true
   public _inactiveRoot: boolean = false
 
-  constructor(options?: ComponentOptions) {
-    this.$options = options || (this.constructor as any).options || EMPTY_OBJ
-    // root instance
-    if (options !== void 0) {
-      // mount this
-    }
+  constructor() {
+    this.$options =
+      (this.constructor as ComponentClass).options ||
+      resolveComponentOptions(this.constructor as ComponentClass)
   }
 
   $nextTick(fn: () => any): Promise<any> {

@@ -8,7 +8,7 @@ import { initializeState } from './componentState'
 import { initializeProps } from './componentProps'
 import {
   initializeComputed,
-  getComputedOptions,
+  resolveComputedOptions,
   teardownComputed
 } from './componentComputed'
 import { initializeWatch, teardownWatch } from './componentWatch'
@@ -40,11 +40,10 @@ export function createComponentInstance(
   if (instance.beforeCreate) {
     instance.beforeCreate.call(proxy)
   }
-  // TODO provide/inject
-  initializeProps(instance, vnode.data)
+  initializeProps(instance, Component.props, vnode.data)
   initializeState(instance)
-  initializeComputed(instance, getComputedOptions(Component))
-  initializeWatch(instance, instance.$options.watch)
+  initializeComputed(instance, Component.computed)
+  initializeWatch(instance, Component.watch)
   instance.$slots = vnode.slots || EMPTY_OBJ
   if (instance.created) {
     instance.created.call(proxy)
@@ -75,7 +74,7 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
     vnode,
     instance.$parentVNode,
     instance.$attrs,
-    instance.$options.inheritAttrs
+    instance.constructor.inheritAttrs
   )
 }
 
@@ -171,36 +170,40 @@ export function createComponentClassFromOptions(
   options: ComponentOptions
 ): ComponentClass {
   class AnonymousComponent extends Component {
-    constructor() {
-      super()
-      this.$options = options
-    }
+    static options = options
   }
   const proto = AnonymousComponent.prototype as any
   for (const key in options) {
     const value = options[key]
     // name -> displayName
-    if (__COMPAT__ && key === 'name') {
-      options.displayName = options.name
-    }
-    if (typeof value === 'function') {
-      if (__COMPAT__ && key === 'render') {
-        proto[key] = function() {
-          return value.call(this, h)
+    if (key === 'name') {
+      AnonymousComponent.displayName = options.name
+    } else if (typeof value === 'function') {
+      if (__COMPAT__) {
+        if (key === 'render') {
+          proto[key] = function() {
+            return value.call(this, h)
+          }
+        } else if (key === 'beforeDestroy') {
+          proto.beforeUnmount = value
+        } else if (key === 'destroyed') {
+          proto.unmounted = value
         }
       } else {
         proto[key] = value
       }
-    }
-    if (key === 'computed') {
-      const isGet = typeof value === 'function'
-      Object.defineProperty(proto, key, {
-        configurable: true,
-        get: isGet ? value : value.get,
-        set: isGet ? undefined : value.set
-      })
-    }
-    if (key === 'methods') {
+    } else if (key === 'computed') {
+      AnonymousComponent.computed = value
+      for (const computedKey in value) {
+        const computed = value[computedKey]
+        const isGet = typeof computed === 'function'
+        Object.defineProperty(proto, computedKey, {
+          configurable: true,
+          get: isGet ? computed : computed.get,
+          set: isGet ? undefined : computed.set
+        })
+      }
+    } else if (key === 'methods') {
       for (const method in value) {
         if (__DEV__ && proto.hasOwnProperty(method)) {
           console.warn(
@@ -210,7 +213,23 @@ export function createComponentClassFromOptions(
         }
         proto[method] = value[method]
       }
+    } else {
+      ;(AnonymousComponent as any)[key] = value
     }
   }
   return AnonymousComponent as ComponentClass
+}
+
+export function resolveComponentOptions(
+  Component: ComponentClass
+): ComponentOptions {
+  const keys = Object.keys(Component)
+  const options = {} as any
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    options[key] = (Component as any)[key]
+  }
+  Component.computed = options.computed = resolveComputedOptions(Component)
+  Component.options = options
+  return options
 }
