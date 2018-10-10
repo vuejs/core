@@ -22,6 +22,6 @@ export { KeepAlive } from './optional/keepAlive'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'
-export { ComponentOptions, PropType } from './componentOptions'
+export * from './componentOptions'
 export { VNodeFlags, ChildrenFlags } from './flags'
 export { VNode, Slots } from './vdom'
