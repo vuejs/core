@@ -84,6 +84,9 @@ export function resolveProps(
         validateProp(key, unwrap(rawData[key]), opt, isAbsent)
       }
     }
+  } else {
+    // if component has no declared props, $attrs === $props
+    attrs = props
   }
   return { props, attrs }
 }
