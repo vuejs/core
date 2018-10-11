@@ -16,15 +16,16 @@ import {
   FunctionalComponent,
   ComponentClass
 } from './component'
-import { updateProps, resolveProps } from './componentProps'
+import { updateProps } from './componentProps'
 import {
   renderInstanceRoot,
+  renderFunctionalRoot,
   createComponentInstance,
   teardownComponentInstance,
-  normalizeComponentRoot,
   shouldUpdateFunctionalComponent
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
+import { pushContext, popContext } from './warning'
 
 interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -118,10 +119,8 @@ export function createRenderer(options: RendererOptions) {
     const { flags } = vnode
     if (flags & VNodeFlags.ELEMENT) {
       mountElement(vnode, container, contextVNode, isSVG, endNode)
-    } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-      mountStatefulComponent(vnode, container, contextVNode, isSVG, endNode)
-    } else if (flags & VNodeFlags.COMPONENT_FUNCTIONAL) {
-      mountFunctionalComponent(vnode, container, contextVNode, isSVG, endNode)
+    } else if (flags & VNodeFlags.COMPONENT) {
+      mountComponent(vnode, container, contextVNode, isSVG, endNode)
     } else if (flags & VNodeFlags.TEXT) {
       mountText(vnode, container, endNode)
     } else if (flags & VNodeFlags.FRAGMENT) {
@@ -198,7 +197,7 @@ export function createRenderer(options: RendererOptions) {
     })
   }
 
-  function mountStatefulComponent(
+  function mountComponent(
     vnode: VNode,
     container: RenderNode | null,
     contextVNode: MountedVNode | null,
@@ -206,6 +205,27 @@ export function createRenderer(options: RendererOptions) {
     endNode: RenderNode | null
   ) {
     vnode.contextVNode = contextVNode
+    if (__DEV__) {
+      pushContext(vnode)
+    }
+    const { flags } = vnode
+    if (flags & VNodeFlags.COMPONENT_STATEFUL) {
+      mountStatefulComponent(vnode, container, contextVNode, isSVG, endNode)
+    } else {
+      mountFunctionalComponent(vnode, container, contextVNode, isSVG, endNode)
+    }
+    if (__DEV__) {
+      popContext()
+    }
+  }
+
+  function mountStatefulComponent(
+    vnode: VNode,
+    container: RenderNode | null,
+    contextVNode: MountedVNode | null,
+    isSVG: boolean,
+    endNode: RenderNode | null
+  ) {
     if (vnode.flags & VNodeFlags.COMPONENT_STATEFUL_KEPT_ALIVE) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
@@ -228,14 +248,7 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
-    vnode.contextVNode = contextVNode
-    const { tag, data, slots } = vnode
-    const render = tag as FunctionalComponent
-    const { props, attrs } = resolveProps(data, render.props)
-    const subTree = (vnode.children = normalizeComponentRoot(
-      render(props, slots || EMPTY_OBJ, attrs || EMPTY_OBJ),
-      vnode
-    ))
+    const subTree = (vnode.children = renderFunctionalRoot(vnode))
     mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
     vnode.el = subTree.el as RenderNode
   }
@@ -443,6 +456,9 @@ export function createRenderer(options: RendererOptions) {
     contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
+    if (__DEV__) {
+      pushContext(nextVNode)
+    }
     nextVNode.contextVNode = contextVNode
     const { tag, flags } = nextVNode
     if (tag !== prevVNode.tag) {
@@ -457,6 +473,9 @@ export function createRenderer(options: RendererOptions) {
         contextVNode,
         isSVG
       )
+    }
+    if (__DEV__) {
+      popContext()
     }
   }
 
@@ -512,11 +531,7 @@ export function createRenderer(options: RendererOptions) {
     }
 
     if (shouldUpdate) {
-      const { props, attrs } = resolveProps(nextData, render.props)
-      const nextTree = (nextVNode.children = normalizeComponentRoot(
-        render(props, nextSlots || EMPTY_OBJ, attrs || EMPTY_OBJ),
-        nextVNode
-      ))
+      const nextTree = (nextVNode.children = renderFunctionalRoot(nextVNode))
       patch(prevTree, nextTree, container, nextVNode as MountedVNode, isSVG)
       nextVNode.el = nextTree.el
     } else if (prevTree.flags & VNodeFlags.COMPONENT) {
@@ -630,7 +645,7 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     const refNode = platformNextSibling(getVNodeLastEl(prevVNode))
-    reinsertVNode(prevVNode, container)
+    removeVNode(prevVNode, container)
     mount(nextVNode, container, contextVNode, isSVG, refNode)
   }
 
@@ -657,10 +672,10 @@ export function createRenderer(options: RendererOptions) {
             )
             break
           case ChildrenFlags.NO_CHILDREN:
-            reinsertVNode(prevChildren as MountedVNode, container)
+            removeVNode(prevChildren as MountedVNode, container)
             break
           default:
-            reinsertVNode(prevChildren as MountedVNode, container)
+            removeVNode(prevChildren as MountedVNode, container)
             mountArrayChildren(
               nextChildren as VNode[],
               container,
@@ -781,7 +796,7 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (prevLength > nextLength) {
       for (i = commonLength; i < prevLength; i++) {
-        reinsertVNode(prevChildren[i], container)
+        removeVNode(prevChildren[i], container)
       }
     }
   }
@@ -856,7 +871,7 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (j > nextEnd) {
       while (j <= prevEnd) {
-        reinsertVNode(prevChildren[j++], container)
+        removeVNode(prevChildren[j++], container)
       }
     } else {
       let prevStart = j
@@ -885,7 +900,7 @@ export function createRenderer(options: RendererOptions) {
                 if (canRemoveWholeContent) {
                   canRemoveWholeContent = false
                   while (i > prevStart) {
-                    reinsertVNode(prevChildren[prevStart++], container)
+                    removeVNode(prevChildren[prevStart++], container)
                   }
                 }
                 if (pos > j) {
@@ -902,10 +917,10 @@ export function createRenderer(options: RendererOptions) {
               }
             }
             if (!canRemoveWholeContent && j > nextEnd) {
-              reinsertVNode(prevVNode, container)
+              removeVNode(prevVNode, container)
             }
           } else if (!canRemoveWholeContent) {
-            reinsertVNode(prevVNode, container)
+            removeVNode(prevVNode, container)
           }
         }
       } else {
@@ -927,7 +942,7 @@ export function createRenderer(options: RendererOptions) {
               if (canRemoveWholeContent) {
                 canRemoveWholeContent = false
                 while (i > prevStart) {
-                  reinsertVNode(prevChildren[prevStart++], container)
+                  removeVNode(prevChildren[prevStart++], container)
                 }
               }
               nextVNode = nextChildren[j]
@@ -943,10 +958,10 @@ export function createRenderer(options: RendererOptions) {
               patch(prevVNode, nextVNode, container, contextVNode, isSVG)
               patched++
             } else if (!canRemoveWholeContent) {
-              reinsertVNode(prevVNode, container)
+              removeVNode(prevVNode, container)
             }
           } else if (!canRemoveWholeContent) {
-            reinsertVNode(prevVNode, container)
+            removeVNode(prevVNode, container)
           }
         }
       }
@@ -1074,7 +1089,7 @@ export function createRenderer(options: RendererOptions) {
           null
         )
       } else if (childFlags === ChildrenFlags.SINGLE_VNODE) {
-        reinsertVNode(children as MountedVNode, vnode.tag as RenderNode)
+        removeVNode(children as MountedVNode, vnode.tag as RenderNode)
       }
     }
     if (ref) {
@@ -1096,21 +1111,21 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function reinsertVNode(vnode: MountedVNode, container: RenderNode) {
+  function removeVNode(vnode: MountedVNode, container: RenderNode) {
     unmount(vnode)
     const { el, flags, children, childFlags } = vnode
     if (container && el) {
       if (flags & VNodeFlags.FRAGMENT) {
         switch (childFlags) {
           case ChildrenFlags.SINGLE_VNODE:
-            reinsertVNode(children as MountedVNode, container)
+            removeVNode(children as MountedVNode, container)
             break
           case ChildrenFlags.NO_CHILDREN:
             platformRemoveChild(container, el)
             break
           default:
             for (let i = 0; i < (children as MountedVNode[]).length; i++) {
-              reinsertVNode((children as MountedVNode[])[i], container)
+              removeVNode((children as MountedVNode[])[i], container)
             }
         }
       } else {
@@ -1130,7 +1145,7 @@ export function createRenderer(options: RendererOptions) {
       platformClearContent(container)
     } else {
       for (let i = 0; i < children.length; i++) {
-        reinsertVNode(children[i], container)
+        removeVNode(children[i], container)
       }
     }
   }
@@ -1220,6 +1235,9 @@ export function createRenderer(options: RendererOptions) {
     instance: ComponentInstance,
     isSVG: boolean
   ) {
+    if (__DEV__ && instance.$parentVNode) {
+      pushContext(instance.$parentVNode as VNode)
+    }
     const prevVNode = instance.$vnode
 
     if (instance.beforeUpdate) {
@@ -1274,6 +1292,10 @@ export function createRenderer(options: RendererOptions) {
           vnodeUpdatedHooksForCurrentInstance[i]()
         }
       })
+    }
+
+    if (__DEV__ && instance.$parentVNode) {
+      popContext()
     }
   }
 
@@ -1380,7 +1402,7 @@ export function createRenderer(options: RendererOptions) {
         patch(prevVNode, vnode, container, null, false)
         container.vnode = vnode
       } else {
-        reinsertVNode(prevVNode, container)
+        removeVNode(prevVNode, container)
         container.vnode = null
       }
     }

@@ -1,22 +1,14 @@
 import { ComponentType, ComponentClass, FunctionalComponent } from './component'
 import { EMPTY_OBJ } from './utils'
+import { VNode } from './vdom'
 
-// TODO push vnodes instead
-// component vnodes get a new property (contextVNode) which points to the
-// parent component (stateful or functional)
-// this way we can use any component vnode to construct a trace that inludes
-// functional and stateful components.
+let stack: VNode[] = []
 
-// in createRenderer, parentComponent should be replced by ctx
-// $parent logic should also accomodate
-
-let stack: ComponentType[] = []
-
-export function pushComponent(c: ComponentType) {
-  stack.push(c)
+export function pushContext(vnode: VNode) {
+  stack.push(vnode)
 }
 
-export function popComponent() {
+export function popContext() {
   stack.pop()
 }
 
@@ -26,33 +18,42 @@ export function warn(msg: string) {
 }
 
 function getComponentTrace(): string {
-  const current = stack[stack.length - 1]
+  let current: VNode | null | undefined = stack[stack.length - 1]
   if (!current) {
-    return ''
+    return '\nat <Root/>'
   }
-  // we can't just use the stack itself, because it will be incomplete
-  // during updates
-  // check recursive
+
+  // we can't just use the stack because it will be incomplete during updates
+  // that did not start from the root. Re-construct the parent chain using
+  // contextVNode information.
   const normlaizedStack: Array<{
-    type: ComponentType
+    type: VNode
     recurseCount: number
   }> = []
-  stack.forEach(c => {
-    const last = normlaizedStack[normlaizedStack.length - 1]
-    if (last && last.type === c) {
+
+  while (current) {
+    const last = normlaizedStack[0]
+    if (last && last.type === current) {
       last.recurseCount++
     } else {
-      normlaizedStack.push({ type: c, recurseCount: 0 })
+      normlaizedStack.unshift({
+        type: current,
+        recurseCount: 0
+      })
     }
-  })
+    current = current.contextVNode
+  }
+
   return (
-    `\n\nfound in\n\n` +
+    `\nat ` +
     normlaizedStack
       .map(({ type, recurseCount }, i) => {
-        const padding = i === 0 ? '---> ' : ' '.repeat(5 + i * 2)
+        const padding = i === 0 ? '' : '  '.repeat(i + 1)
         const postfix =
           recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-        return padding + formatComponentName(type) + postfix
+        return (
+          padding + formatComponentName(type.tag as ComponentType) + postfix
+        )
       })
       .join('\n')
   )
@@ -66,12 +67,14 @@ function formatComponentName(c: ComponentType, includeFile?: boolean): string {
   let name: string
   let file: string | null = null
 
-  if (c.prototype.render) {
+  if (c.prototype && c.prototype.render) {
+    // stateful
     const cc = c as ComponentClass
     const options = cc.options || EMPTY_OBJ
     name = options.displayName || cc.name
     file = options.__file
   } else {
+    // functional
     const fc = c as FunctionalComponent
     name = fc.displayName || fc.name
   }

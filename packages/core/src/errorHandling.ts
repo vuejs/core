@@ -1,4 +1,7 @@
 import { ComponentInstance } from './component'
+import { warn } from './warning'
+import { VNode } from './vdom'
+import { VNodeFlags } from './flags'
 
 export const enum ErrorTypes {
   BEFORE_CREATE = 1,
@@ -11,7 +14,6 @@ export const enum ErrorTypes {
   DESTROYED,
   ERROR_CAPTURED,
   RENDER,
-  RENDER_ERROR,
   WATCH_CALLBACK,
   NATIVE_EVENT_HANDLER,
   COMPONENT_EVENT_HANDLER
@@ -28,7 +30,6 @@ const ErrorTypeStrings: Record<number, string> = {
   [ErrorTypes.DESTROYED]: 'destroyed lifecycle hook',
   [ErrorTypes.ERROR_CAPTURED]: 'errorCaptured lifecycle hook',
   [ErrorTypes.RENDER]: 'render function',
-  [ErrorTypes.RENDER_ERROR]: 'renderError function',
   [ErrorTypes.WATCH_CALLBACK]: 'watcher callback',
   [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler'
@@ -36,21 +37,39 @@ const ErrorTypeStrings: Record<number, string> = {
 
 export function handleError(
   err: Error,
-  instance: ComponentInstance,
+  instance: ComponentInstance | VNode,
   type: ErrorTypes
 ) {
-  let cur = instance
-  while (cur.$parent) {
-    cur = cur.$parent
+  const isFunctional = (instance as VNode)._isVNode
+  let cur: ComponentInstance | null = null
+  if (isFunctional) {
+    let vnode = instance as VNode | null
+    while (vnode && !(vnode.flags & VNodeFlags.COMPONENT_STATEFUL)) {
+      vnode = vnode.contextVNode
+    }
+    if (vnode) {
+      cur = vnode.children as ComponentInstance
+    }
+  } else {
+    cur = (instance as ComponentInstance).$parent
+  }
+  while (cur) {
     const handler = cur.errorCaptured
     if (handler) {
       try {
-        const captured = handler.call(cur, err, type, instance)
+        const captured = handler.call(
+          cur,
+          err,
+          type,
+          isFunctional ? null : instance,
+          isFunctional ? instance : (instance as ComponentInstance).$parentVNode
+        )
         if (captured) return
       } catch (err2) {
         logError(err2, ErrorTypes.ERROR_CAPTURED)
       }
     }
+    cur = cur.$parent
   }
   logError(err, type)
 }
@@ -58,7 +77,7 @@ export function handleError(
 function logError(err: Error, type: ErrorTypes) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
-    console.warn(`Unhandled error${info ? ` in ${info}` : ``}:`)
+    warn(`Unhandled error${info ? ` in ${info}` : ``}`)
     console.error(err)
   } else {
     throw err

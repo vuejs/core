@@ -42,7 +42,6 @@ export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
 
   data?(): Partial<D>
   render(props: Readonly<P>, slots: Slots, attrs: Data): any
-  renderError?(e: Error): any
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void
   beforeCreate?(): void
@@ -56,7 +55,8 @@ export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
   errorCaptured?(): (
     err: Error,
     type: ErrorTypes,
-    target: ComponentInstance
+    instance: ComponentInstance | null,
+    vnode: VNode
   ) => boolean | void
   activated?(): void
   deactivated?(): void

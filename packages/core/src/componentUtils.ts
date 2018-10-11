@@ -2,10 +2,15 @@ import { VNodeFlags } from './flags'
 import { EMPTY_OBJ } from './utils'
 import { h } from './h'
 import { VNode, MountedVNode, createFragment } from './vdom'
-import { Component, ComponentInstance, ComponentClass } from './component'
+import {
+  Component,
+  ComponentInstance,
+  ComponentClass,
+  FunctionalComponent
+} from './component'
 import { createTextVNode, cloneVNode } from './vdom'
 import { initializeState } from './componentState'
-import { initializeProps } from './componentProps'
+import { initializeProps, resolveProps } from './componentProps'
 import {
   initializeComputed,
   resolveComputedOptions,
@@ -104,17 +109,22 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
       instance.$slots,
       instance.$attrs
     )
-  } catch (e1) {
-    handleError(e1, instance, ErrorTypes.RENDER)
-    if (__DEV__ && instance.renderError) {
-      try {
-        vnode = instance.renderError.call(instance.$proxy, e1)
-      } catch (e2) {
-        handleError(e2, instance, ErrorTypes.RENDER_ERROR)
-      }
-    }
+  } catch (err) {
+    handleError(err, instance, ErrorTypes.RENDER)
   }
   return normalizeComponentRoot(vnode, instance.$parentVNode)
+}
+
+export function renderFunctionalRoot(vnode: VNode): VNode {
+  const render = vnode.tag as FunctionalComponent
+  const { props, attrs } = resolveProps(vnode.data, render.props)
+  let subTree
+  try {
+    subTree = render(props, vnode.slots || EMPTY_OBJ, attrs || EMPTY_OBJ)
+  } catch (err) {
+    handleError(err, vnode, ErrorTypes.RENDER)
+  }
+  return normalizeComponentRoot(subTree, vnode)
 }
 
 export function teardownComponentInstance(instance: ComponentInstance) {
@@ -132,7 +142,7 @@ export function teardownComponentInstance(instance: ComponentInstance) {
   teardownWatch(instance)
 }
 
-export function normalizeComponentRoot(
+function normalizeComponentRoot(
   vnode: any,
   componentVNode: VNode | null
 ): VNode {
