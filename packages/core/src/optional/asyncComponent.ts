@@ -18,13 +18,6 @@ interface AsyncComponentFullOptions {
 
 type AsyncComponentOptions = AsyncComponentFactory | AsyncComponentFullOptions
 
-interface AsyncContainerData {
-  comp: ComponentType | null
-  err: Error | null
-  delayed: boolean
-  timedOut: boolean
-}
-
 export function createAsyncComponent(
   options: AsyncComponentOptions
 ): ComponentClass {
@@ -40,15 +33,11 @@ export function createAsyncComponent(
     error: errorComp
   } = options
 
-  return class AsyncContainer extends Component<{}, AsyncContainerData> {
-    data() {
-      return {
-        comp: null,
-        err: null,
-        delayed: false,
-        timedOut: false
-      }
-    }
+  return class AsyncContainer extends Component {
+    comp: ComponentType | null = null
+    err: Error | null = null
+    delayed: boolean = false
+    timedOut: boolean = false
 
     // doing this in beforeMount so this is non-SSR only
     beforeMount() {

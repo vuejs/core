@@ -9,6 +9,8 @@ import {
 } from './componentOptions'
 import { EMPTY_OBJ, camelize, hyphenate, capitalize } from './utils'
 
+const EMPTY_PROPS = { props: EMPTY_OBJ }
+
 export function initializeProps(
   instance: ComponentInstance,
   options: ComponentPropsOptions | undefined,
@@ -18,45 +20,6 @@ export function initializeProps(
   instance.$props = immutable(props || {})
   instance.$attrs = immutable(attrs || {})
 }
-
-export function updateProps(instance: ComponentInstance, nextData: Data) {
-  // instance.$props and instance.$attrs are observables that should not be
-  // replaced. Instead, we mutate them to match latest props, which will trigger
-  // updates if any value that's been used in child component has changed.
-  if (nextData != null) {
-    const { props: nextProps, attrs: nextAttrs } = resolveProps(
-      nextData,
-      instance.constructor.props
-    )
-    // unlock to temporarily allow mutatiing props
-    unlock()
-    const props = instance.$props
-    const rawProps = unwrap(props)
-    for (const key in rawProps) {
-      if (!nextProps.hasOwnProperty(key)) {
-        delete (props as any)[key]
-      }
-    }
-    for (const key in nextProps) {
-      ;(props as any)[key] = nextProps[key]
-    }
-    if (nextAttrs) {
-      const attrs = instance.$attrs
-      const rawAttrs = unwrap(attrs)
-      for (const key in rawAttrs) {
-        if (!nextAttrs.hasOwnProperty(key)) {
-          delete attrs[key]
-        }
-      }
-      for (const key in nextAttrs) {
-        attrs[key] = nextAttrs[key]
-      }
-    }
-    lock()
-  }
-}
-
-const EMPTY_PROPS = { props: EMPTY_OBJ }
 
 // resolve raw VNode data.
 // - filter out reserved keys (key, ref, slots)
@@ -123,6 +86,43 @@ export function resolveProps(
     }
   }
   return { props, attrs }
+}
+
+export function updateProps(instance: ComponentInstance, nextData: Data) {
+  // instance.$props and instance.$attrs are observables that should not be
+  // replaced. Instead, we mutate them to match latest props, which will trigger
+  // updates if any value that's been used in child component has changed.
+  if (nextData != null) {
+    const { props: nextProps, attrs: nextAttrs } = resolveProps(
+      nextData,
+      instance.constructor.props
+    )
+    // unlock to temporarily allow mutatiing props
+    unlock()
+    const props = instance.$props
+    const rawProps = unwrap(props)
+    for (const key in rawProps) {
+      if (!nextProps.hasOwnProperty(key)) {
+        delete (props as any)[key]
+      }
+    }
+    for (const key in nextProps) {
+      ;(props as any)[key] = nextProps[key]
+    }
+    if (nextAttrs) {
+      const attrs = instance.$attrs
+      const rawAttrs = unwrap(attrs)
+      for (const key in rawAttrs) {
+        if (!nextAttrs.hasOwnProperty(key)) {
+          delete attrs[key]
+        }
+      }
+      for (const key in nextAttrs) {
+        attrs[key] = nextAttrs[key]
+      }
+    }
+    lock()
+  }
 }
 
 const enum BooleanFlags {

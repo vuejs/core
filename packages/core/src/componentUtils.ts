@@ -16,28 +16,62 @@ import { ComponentOptions } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
 import { handleError, ErrorTypes } from './errorHandling'
 
+let currentVNode: VNode | null = null
+let currentContextVNode: MountedVNode | null = null
+
 export function createComponentInstance(
   vnode: VNode,
   Component: ComponentClass,
   contextVNode: MountedVNode | null
 ): ComponentInstance {
+  // component instance creation is done in two steps.
+  // first, `initializeComponentInstance` is called inside base component
+  // constructor as the instance is created so that
+  currentVNode = vnode
+  currentContextVNode = contextVNode
   const instance = (vnode.children = new Component()) as ComponentInstance
-  instance.$parentVNode = vnode as MountedVNode
+  // then we finish the initialization by collecting properties set on the
+  // instance
+  initializeState(instance)
+  initializeComputed(instance, Component.computed)
+  initializeWatch(instance, Component.watch)
+  instance.$slots = currentVNode.slots || EMPTY_OBJ
+  if (instance.created) {
+    instance.created.call(instance.$proxy)
+  }
+  currentVNode = currentContextVNode = null
+  return instance
+}
+
+// this is called inside the base component's constructor
+// it initializes all the way up to props so that they are available
+// inside the extended component's constructor
+export function initializeComponentInstance(instance: ComponentInstance) {
+  if (__DEV__ && currentVNode === null) {
+    throw new Error(
+      `Component classes are not meant to be manually instantiated.`
+    )
+  }
+
+  instance.$options =
+    instance.constructor.options ||
+    resolveComponentOptions(instance.constructor)
+  instance.$parentVNode = currentVNode as MountedVNode
 
   // renderProxy
   const proxy = (instance.$proxy = createRenderProxy(instance))
 
-  // pointer management
-  if (contextVNode !== null) {
+  // parent chain management
+  if (currentContextVNode !== null) {
     // locate first non-functional parent
     while (
-      contextVNode !== null &&
-      contextVNode.flags & VNodeFlags.COMPONENT_FUNCTIONAL &&
-      contextVNode.contextVNode !== null
+      currentContextVNode !== null &&
+      currentContextVNode.flags & VNodeFlags.COMPONENT_FUNCTIONAL &&
+      currentContextVNode.contextVNode !== null
     ) {
-      contextVNode = contextVNode.contextVNode as any
+      currentContextVNode = currentContextVNode.contextVNode as any
     }
-    const parentComponent = (contextVNode as VNode)
+    const parentComponent = (currentContextVNode as VNode)
       .children as ComponentInstance
     instance.$parent = parentComponent.$proxy
     instance.$root = parentComponent.$root
@@ -46,20 +80,15 @@ export function createComponentInstance(
     instance.$root = proxy
   }
 
-  // lifecycle
+  // beforeCreate hook is called right in the constructor
   if (instance.beforeCreate) {
     instance.beforeCreate.call(proxy)
   }
-  initializeProps(instance, Component.props, vnode.data)
-  initializeState(instance)
-  initializeComputed(instance, Component.computed)
-  initializeWatch(instance, Component.watch)
-  instance.$slots = vnode.slots || EMPTY_OBJ
-  if (instance.created) {
-    instance.created.call(proxy)
-  }
-
-  return instance as ComponentInstance
+  initializeProps(
+    instance,
+    instance.constructor.props,
+    (currentVNode as VNode).data
+  )
 }
 
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
@@ -218,11 +247,13 @@ export function createComponentClassFromOptions(
 export function resolveComponentOptions(
   Component: ComponentClass
 ): ComponentOptions {
-  const keys = Object.keys(Component)
+  const descriptors = Object.getOwnPropertyDescriptors(Component)
   const options = {} as any
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]
-    options[key] = (Component as any)[key]
+  for (const key in descriptors) {
+    const descriptor = descriptors[key]
+    if (descriptor.enumerable || descriptor.get) {
+      options[key] = descriptor.get ? descriptor.get() : descriptor.value
+    }
   }
   Component.computed = options.computed = resolveComputedOptions(Component)
   Component.options = options

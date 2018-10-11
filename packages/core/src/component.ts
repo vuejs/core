@@ -11,7 +11,7 @@ import { setupWatcher } from './componentWatch'
 import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
-import { resolveComponentOptions } from './componentUtils'
+import { initializeComponentInstance } from './componentUtils'
 
 export interface ComponentClass extends ComponentClassOptions {
   options?: ComponentOptions
@@ -101,9 +101,7 @@ class InternalComponent {
   public _inactiveRoot: boolean = false
 
   constructor() {
-    this.$options =
-      (this.constructor as ComponentClass).options ||
-      resolveComponentOptions(this.constructor as ComponentClass)
+    initializeComponentInstance(this as any)
   }
 
   $nextTick(fn: () => any): Promise<any> {

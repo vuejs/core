@@ -2,33 +2,21 @@ import {
   h,
   render,
   nextTick,
-  Component,
   createComponentInstance,
   createComponentClassFromOptions
 } from '@vue/renderer-dom'
 
-// Note: typing for this is intentionally loose, as it will be using 2.x types.
-class Vue extends Component {
+class Vue {
   static h = h
   static render = render
   static nextTick = nextTick
 
+  // Note: typing for this is intentionally loose, as it will be using 2.x types.
   constructor(options: any) {
-    super()
-    if (!options) {
-      return
-    }
-
-    // in compat mode, h() can take an options object and will convert it
-    // to a 3.x class-based component.
-    const Component = createComponentClassFromOptions(options)
+    // convert it to a class
+    const Component = createComponentClassFromOptions(options || {})
     const vnode = h(Component)
-    // the component class is cached on the options object as ._normalized
     const instance = createComponentInstance(vnode, Component, null)
-    // set the instance on the vnode before mounting.
-    // the mount function will skip creating a new instance if it finds an
-    // existing one.
-    vnode.children = instance
 
     function mount(el: any) {
       const dom = typeof el === 'string' ? document.querySelector(el) : el
