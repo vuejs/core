@@ -20,6 +20,7 @@ import { initializeWatch, teardownWatch } from './componentWatch'
 import { ComponentOptions } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
 import { handleError, ErrorTypes } from './errorHandling'
+import { warn } from './warning'
 
 let currentVNode: VNode | null = null
 let currentContextVNode: MountedVNode | null = null
@@ -244,7 +245,7 @@ export function createComponentClassFromOptions(
     } else if (key === 'methods') {
       for (const method in value) {
         if (__DEV__ && proto.hasOwnProperty(method)) {
-          console.warn(
+          warn(
             `Object syntax contains method name that conflicts with ` +
               `lifecycle hook: "${method}"`
           )

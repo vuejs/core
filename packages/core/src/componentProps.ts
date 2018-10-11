@@ -8,6 +8,7 @@ import {
   PropType
 } from './componentOptions'
 import { EMPTY_OBJ, camelize, hyphenate, capitalize } from './utils'
+import { warn } from './warning'
 
 const EMPTY_PROPS = { props: EMPTY_OBJ }
 
@@ -159,13 +160,13 @@ function normalizePropsOptions(
   if (Array.isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
       if (__DEV__ && typeof raw !== 'string') {
-        console.warn(`props must be strings when using array syntax.`)
+        warn(`props must be strings when using array syntax.`)
       }
       normalized[camelize(raw[i])] = EMPTY_OBJ
     }
   } else {
     if (__DEV__ && typeof raw !== 'object') {
-      console.warn(`invalid props options: `, raw)
+      warn(`invalid props options`, raw)
     }
     for (const key in raw) {
       const opt = raw[key]
@@ -224,7 +225,7 @@ function validateProp(
   const { type, required, validator } = prop
   // required!
   if (required && isAbsent) {
-    console.warn('Missing required prop: "' + name + '"')
+    warn('Missing required prop: "' + name + '"')
     return
   }
   // missing but optional
@@ -243,15 +244,13 @@ function validateProp(
       isValid = valid
     }
     if (!isValid) {
-      console.warn(getInvalidTypeMessage(name, value, expectedTypes))
+      warn(getInvalidTypeMessage(name, value, expectedTypes))
       return
     }
   }
   // custom validator
   if (validator && !validator(value)) {
-    console.warn(
-      'Invalid prop: custom validator check failed for prop "' + name + '".'
-    )
+    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }
 

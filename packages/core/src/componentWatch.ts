@@ -4,6 +4,7 @@ import { ComponentWatchOptions, WatchOptions } from './componentOptions'
 import { autorun, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { handleError, ErrorTypes } from './errorHandling'
+import { warn } from './warning'
 
 export function initializeWatch(
   instance: ComponentInstance,
@@ -40,7 +41,7 @@ export function setupWatcher(
       : () => keyOrFn.call(proxy)
 
   if (__DEV__ && rawGetter === NOOP) {
-    console.warn(
+    warn(
       `Failed watching expression: "${keyOrFn}". ` +
         `Watch expressions can only be dot-delimited paths. ` +
         `For more complex expressions, use $watch with a function instead.`

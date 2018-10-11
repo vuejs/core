@@ -1,5 +1,6 @@
 import { observable } from '@vue/observer'
 import { Component } from '../component'
+import { warn } from '../warning'
 
 const contextStore = observable() as Record<string | symbol, any>
 
@@ -28,14 +29,12 @@ export class Provide extends Component<ProviderProps> {
     if (__DEV__) {
       const { id } = this.$props
       if (contextStore.hasOwnProperty(id)) {
-        console.warn(
-          `A context provider with id ${id.toString()} already exists.`
-        )
+        warn(`A context provider with id ${id.toString()} already exists.`)
       }
       this.$watch(
         () => this.$props.id,
         (id: string, oldId: string) => {
-          console.warn(
+          warn(
             `Context provider id change detected (from "${oldId}" to "${id}"). ` +
               `This is not supported and should be avoided.`
           )

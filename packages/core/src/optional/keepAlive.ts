@@ -1,6 +1,7 @@
 import { Component, ComponentClass, ComponentInstance } from '../component'
 import { VNode, Slots, cloneVNode } from '../vdom'
 import { VNodeFlags } from '../flags'
+import { warn } from '../warning'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -57,12 +58,12 @@ export class KeepAlive extends Component<KeepAliveProps> {
     let vnode = children[0]
     if (children.length > 1) {
       if (__DEV__) {
-        console.warn(`KeepAlive can only have a single child.`)
+        warn(`KeepAlive can only have a single child.`)
       }
       return children
     } else if ((vnode.flags & VNodeFlags.COMPONENT_STATEFUL) === 0) {
       if (__DEV__) {
-        console.warn(`KeepAlive child must be a stateful component.`)
+        warn(`KeepAlive child must be a stateful component.`)
       }
       return children
     }

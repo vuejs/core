@@ -10,6 +10,7 @@ import {
   createPortal
 } from './vdom'
 import { isObservable } from '@vue/observer'
+import { warn } from './warning'
 
 export const Fragment = Symbol()
 export const Portal = Symbol()
@@ -79,14 +80,12 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
     )
   } else if (tag === Fragment) {
     if (__DEV__ && ref) {
-      console.warn(
-        'Ref cannot be used on Fragments. Use it on inner elements instead.'
-      )
+      warn('Ref cannot be used on Fragments. Use it on inner elements instead.')
     }
     return createFragment(children, ChildrenFlags.UNKNOWN_CHILDREN, key)
   } else if (tag === Portal) {
     if (__DEV__ && !portalTarget) {
-      console.warn('Portal must have a target: ', portalTarget)
+      warn('Portal must have a target: ', portalTarget)
     }
     return createPortal(
       portalTarget,
@@ -100,7 +99,7 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
       __DEV__ &&
       (!tag || (typeof tag !== 'function' && typeof tag !== 'object'))
     ) {
-      console.warn('Invalid component passed to h(): ', tag)
+      warn('Invalid component passed to h(): ', tag)
     }
     // component
     return createComponentVNode(

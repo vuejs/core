@@ -12,15 +12,15 @@ export function popContext() {
   stack.pop()
 }
 
-export function warn(msg: string) {
+export function warn(msg: string, ...args: any[]) {
   // TODO warn handler?
-  console.warn(`[Vue warn]: ${msg}${getComponentTrace()}`)
+  warn(`[Vue warn]: ${msg}${getComponentTrace()}`, ...args)
 }
 
 function getComponentTrace(): string {
   let current: VNode | null | undefined = stack[stack.length - 1]
   if (!current) {
-    return '\nat <Root/>'
+    return ''
   }
 
   // we can't just use the stack because it will be incomplete during updates
