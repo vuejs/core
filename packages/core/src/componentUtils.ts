@@ -26,7 +26,11 @@ export function createComponentInstance(
 ): ComponentInstance {
   // component instance creation is done in two steps.
   // first, `initializeComponentInstance` is called inside base component
-  // constructor as the instance is created so that
+  // constructor as the instance is created so that the extended component's
+  // constructor has access to certain properties and most importantly,
+  // this.$props.
+  // we are storing the vnodes in variables here so that there's no need to
+  // always pass args in super()
   currentVNode = vnode
   currentContextVNode = contextVNode
   const instance = (vnode.children = new Component()) as ComponentInstance
