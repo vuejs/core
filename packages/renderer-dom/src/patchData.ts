@@ -6,7 +6,9 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 
 export const onRE = /^on/
-const domPropsRE = /^domProps/
+
+// value, checked, selected & muted are always patched as properties
+const domPropsRE = /^domProps|^(?:value|checked|selected|muted)$/
 
 export function patchData(
   el: Element,
