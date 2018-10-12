@@ -1,18 +1,18 @@
-import { ComponentInstance } from './component'
+import { ComponentInstance, MergedComponent } from './component'
 import { Slots } from './vdom'
 
 export type Data = Record<string, any>
 
-export interface ComponentClassOptions<This = ComponentInstance> {
-  props?: ComponentPropsOptions
+export interface ComponentClassOptions<P = {}, This = ComponentInstance> {
+  props?: ComponentPropsOptions<P>
   computed?: ComponentComputedOptions<This>
   watch?: ComponentWatchOptions<This>
   displayName?: string
 }
 
-export interface ComponentOptions<This = ComponentInstance>
-  extends ComponentClassOptions<This> {
-  data?(): object
+export interface ComponentOptions<P = {}, D = {}, This = MergedComponent<P, D>>
+  extends ComponentClassOptions<P, This> {
+  data?(): D
   render?: (this: This, props: Readonly<Data>, slots: Slots, attrs: Data) => any
   // TODO other options
   readonly [key: string]: any

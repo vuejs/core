@@ -6,12 +6,8 @@ describe('attribute fallthrough', () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
 
-    class Hello extends Component<{}, { count: number }> {
-      data() {
-        return {
-          count: 0
-        }
-      }
+    class Hello extends Component {
+      count: number = 0
       inc() {
         this.count++
         click()
@@ -27,7 +23,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class Child extends Component {
+    class Child extends Component<{ [key: string]: any }> {
       updated() {
         childUpdated()
       }
@@ -73,19 +69,15 @@ describe('attribute fallthrough', () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
 
-    class Hello extends Component<{}, { count: number }> {
-      data() {
-        return {
-          count: 0
-        }
-      }
+    class Hello extends Component {
+      count = 0
       inc() {
         this.count++
         click()
       }
       render() {
         return h(Child, {
-          foo: 1,
+          foo: 123,
           id: 'test',
           class: 'c' + this.count,
           style: { color: this.count ? 'red' : 'green' },
@@ -94,7 +86,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class Child extends Component<{ foo: number }> {
+    class Child extends Component<{ [key: string]: any; foo: number }> {
       static props = {
         foo: Number
       }
@@ -148,12 +140,8 @@ describe('attribute fallthrough', () => {
     const childUpdated = jest.fn()
     const grandChildUpdated = jest.fn()
 
-    class Hello extends Component<{}, { count: number }> {
-      data() {
-        return {
-          count: 0
-        }
-      }
+    class Hello extends Component {
+      count = 0
       inc() {
         this.count++
         click()
@@ -169,7 +157,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class Child extends Component {
+    class Child extends Component<{ [key: string]: any; foo: number }> {
       updated() {
         childUpdated()
       }
@@ -178,7 +166,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    class GrandChild extends Component<{ foo: number }> {
+    class GrandChild extends Component<{ [key: string]: any; foo: number }> {
       static props = {
         foo: Number
       }

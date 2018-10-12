@@ -13,9 +13,9 @@ import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
 
-export interface ComponentClass extends ComponentClassOptions {
+export interface ComponentClass<P = {}> extends ComponentClassOptions {
   options?: ComponentOptions
-  new <P = {}, D = {}>(): MergedComponent<P, D>
+  new <P = {}, D = {}>(props?: P): MergedComponent<P, D>
 }
 
 export type MergedComponent<P, D> = D & P & ComponentInstance<P, D>

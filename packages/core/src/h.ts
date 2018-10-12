@@ -2,7 +2,6 @@ import { ChildrenFlags } from './flags'
 import {
   ComponentClass,
   FunctionalComponent,
-  Component,
   ComponentInstance
 } from './component'
 import { ComponentOptions } from './componentOptions'
@@ -14,13 +13,22 @@ import {
   createFragment,
   createPortal,
   VNodeData,
-  BuiltInProps
+  BuiltInProps,
+  Key
 } from './vdom'
 import { isObservable } from '@vue/observer'
 import { warn } from './warning'
 
 export const Fragment = Symbol()
 export const Portal = Symbol()
+
+type RawChildType = VNode | string | number | boolean | null | undefined
+
+export type RawSlots = {
+  [name: string]: () => RawChildrenType
+}
+
+export type RawChildrenType = RawChildType | RawChildType[]
 
 export type ElementType =
   | string
@@ -30,10 +38,6 @@ export type ElementType =
   | typeof Fragment
   | typeof Portal
 
-type RawChildType = VNode | string | number | boolean | null | undefined
-
-export type RawChildrenType = RawChildType | RawChildType[]
-
 interface VNodeFactories {
   c: typeof createComponentVNode
   e: typeof createElementVNode
@@ -42,20 +46,60 @@ interface VNodeFactories {
   p: typeof createPortal
 }
 
-interface createElement {
+// This is used to differentiate the data object from
+// vnodes and arrays
+type Differ = { _isVNode?: never; [Symbol.iterator]?: never }
+
+type OptionsComponent<P> =
+  | (ComponentOptions<P> & { template: string })
+  | (ComponentOptions<P> & { render: Function })
+
+interface createElement extends VNodeFactories {
   // element
-  (tag: string, data?: VNodeData, children?: any): VNode
+  (
+    tag: string,
+    // TODO support native element properties
+    data?: VNodeData & Differ | null,
+    children?: RawChildrenType | RawSlots
+  ): VNode
+  (tag: string, children?: RawChildrenType): VNode
+  // fragment
+  (
+    tag: typeof Fragment,
+    data?: ({ key?: Key } & Differ) | null,
+    children?: RawChildrenType | RawSlots
+  ): VNode
+  (tag: typeof Fragment, children?: RawChildrenType): VNode
+  // portal
+  (
+    tag: typeof Portal,
+    data?: ({ target: any } & BuiltInProps & Differ) | null,
+    children?: RawChildrenType | RawSlots
+  ): VNode
+  (tag: typeof Portal, children?: RawChildrenType): VNode
+  // object
+  <P>(
+    tag: OptionsComponent<P>,
+    data?: (P & BuiltInProps & Differ) | null,
+    children?: RawChildrenType | RawSlots
+  ): VNode
+  <P>(tag: OptionsComponent<P>, children?: RawChildrenType): VNode
   // functional
   <P>(
     tag: FunctionalComponent<P>,
-    data?: P & BuiltInProps | null,
-    children?: any
+    data?: (P & BuiltInProps & Differ) | null,
+    children?: RawChildrenType | RawSlots
   ): VNode
-  // stateful
+  <P>(tag: FunctionalComponent<P>, children?: RawChildrenType): VNode
+  // class
   <P, T extends ComponentInstance<P>>(
     tag: new () => T & { $props: P },
-    data?: P & BuiltInProps | null,
-    children?: any
+    data?: (P & BuiltInProps & Differ) | null,
+    children?: RawChildrenType | RawSlots
+  ): VNode
+  <P, T extends ComponentInstance<P>>(
+    tag: new () => T & { $props: P },
+    children?: RawChildrenType
   ): VNode
 }
 
@@ -138,7 +182,7 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
       ref
     )
   }
-}) as createElement & VNodeFactories
+}) as createElement
 
 h.c = createComponentVNode
 h.e = createElementVNode

@@ -6,7 +6,7 @@ import {
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
 import { normalizeClass, normalizeStyle, handlersRE, EMPTY_OBJ } from './utils'
-import { ElementType, RawChildrenType } from './h'
+import { RawChildrenType, RawSlots } from './h'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -47,7 +47,9 @@ export interface BuiltInProps {
   slots?: RawSlots | null
 }
 
-export type VNodeData = Record<string, any> & BuiltInProps
+export type VNodeData = {
+  [key: string]: any
+} & BuiltInProps
 
 export type VNodeChildren =
   | VNode[] // ELEMENT | PORTAL
@@ -64,10 +66,6 @@ export type Slot = (...args: any[]) => VNode[]
 export type Slots = Readonly<{
   [name: string]: Slot
 }>
-
-export type RawSlots = {
-  [name: string]: () => RawChildrenType
-}
 
 export function createVNode(
   flags: VNodeFlags,

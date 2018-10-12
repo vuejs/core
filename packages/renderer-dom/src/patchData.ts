@@ -7,8 +7,9 @@ import { patchEvent } from './modules/events'
 
 export const onRE = /^on/
 
-// value, checked, selected & muted are always patched as properties
-const domPropsRE = /^domProps|^(?:value|checked|selected|muted)$/
+// value, checked, selected & muted
+// plus anything with upperCase letter in it are always patched as properties
+const domPropsRE = /\W|^(?:value|checked|selected|muted)$/
 
 export function patchData(
   el: Element,
