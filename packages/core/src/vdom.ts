@@ -6,6 +6,7 @@ import {
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
 import { normalizeClass, normalizeStyle, handlersRE, EMPTY_OBJ } from './utils'
+import { ElementType, RawChildrenType } from './h'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -40,21 +41,19 @@ export interface MountedVNode extends VNode {
   el: RenderNode
 }
 
-export interface VNodeData {
+export interface BuiltInProps {
   key?: Key | null
   ref?: Ref | null
-  slots?: Slots | null
-  [key: string]: any
+  slots?: RawSlots | null
 }
+
+export type VNodeData = Record<string, any> & BuiltInProps
 
 export type VNodeChildren =
   | VNode[] // ELEMENT | PORTAL
   | ComponentInstance // COMPONENT_STATEFUL
   | VNode // COMPONENT_FUNCTIONAL
   | string // TEXT
-  | null
-
-export type RawVNodeChildren = VNodeChildren | unknown[]
 
 export type Key = string | number
 
@@ -66,11 +65,15 @@ export type Slots = Readonly<{
   [name: string]: Slot
 }>
 
+export type RawSlots = {
+  [name: string]: () => RawChildrenType
+}
+
 export function createVNode(
   flags: VNodeFlags,
   tag: string | FunctionalComponent | ComponentClass | RenderNode | null,
   data: VNodeData | null,
-  children: RawVNodeChildren | null,
+  children: RawChildrenType | null,
   childFlags: ChildrenFlags,
   key: Key | null | undefined,
   ref: Ref | null | undefined,
@@ -108,7 +111,7 @@ function normalizeClassAndStyle(data: VNodeData) {
 export function createElementVNode(
   tag: string,
   data: VNodeData | null,
-  children: RawVNodeChildren | null,
+  children: RawChildrenType | null,
   childFlags: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -123,7 +126,7 @@ export function createElementVNode(
 export function createComponentVNode(
   comp: any,
   data: VNodeData | null,
-  children: RawVNodeChildren | Slots,
+  children: RawChildrenType | Slots,
   childFlags: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -222,7 +225,7 @@ export function createTextVNode(text: string): VNode {
 }
 
 export function createFragment(
-  children: RawVNodeChildren,
+  children: RawChildrenType,
   childFlags?: ChildrenFlags,
   key?: Key | null
 ) {
@@ -240,7 +243,7 @@ export function createFragment(
 
 export function createPortal(
   target: RenderNode | string,
-  children: RawVNodeChildren,
+  children: RawChildrenType,
   childFlags?: ChildrenFlags,
   key?: Key | null,
   ref?: Ref | null
@@ -296,7 +299,7 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
       flags,
       vnode.tag,
       clonedData,
-      vnode.children,
+      vnode.children as RawChildrenType,
       vnode.childFlags,
       vnode.key,
       vnode.ref,

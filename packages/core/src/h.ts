@@ -1,5 +1,10 @@
 import { ChildrenFlags } from './flags'
-import { ComponentClass, FunctionalComponent } from './component'
+import {
+  ComponentClass,
+  FunctionalComponent,
+  Component,
+  ComponentInstance
+} from './component'
 import { ComponentOptions } from './componentOptions'
 import {
   VNode,
@@ -7,7 +12,9 @@ import {
   createComponentVNode,
   createTextVNode,
   createFragment,
-  createPortal
+  createPortal,
+  VNodeData,
+  BuiltInProps
 } from './vdom'
 import { isObservable } from '@vue/observer'
 import { warn } from './warning'
@@ -15,7 +22,7 @@ import { warn } from './warning'
 export const Fragment = Symbol()
 export const Portal = Symbol()
 
-type ElementType =
+export type ElementType =
   | string
   | FunctionalComponent
   | ComponentClass
@@ -23,13 +30,33 @@ type ElementType =
   | typeof Fragment
   | typeof Portal
 
-export interface createElement {
-  (tag: ElementType, data?: any, children?: any): VNode
+type RawChildType = VNode | string | number | boolean | null | undefined
+
+export type RawChildrenType = RawChildType | RawChildType[]
+
+interface VNodeFactories {
   c: typeof createComponentVNode
   e: typeof createElementVNode
   t: typeof createTextVNode
   f: typeof createFragment
   p: typeof createPortal
+}
+
+interface createElement {
+  // element
+  (tag: string, data?: VNodeData, children?: any): VNode
+  // functional
+  <P>(
+    tag: FunctionalComponent<P>,
+    data?: P & BuiltInProps | null,
+    children?: any
+  ): VNode
+  // stateful
+  <P, T extends ComponentInstance<P>>(
+    tag: new () => T & { $props: P },
+    data?: P & BuiltInProps | null,
+    children?: any
+  ): VNode
 }
 
 export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
@@ -111,7 +138,7 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
       ref
     )
   }
-}) as createElement
+}) as createElement & VNodeFactories
 
 h.c = createComponentVNode
 h.e = createElementVNode

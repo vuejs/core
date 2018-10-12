@@ -15,13 +15,13 @@ import { initializeComponentInstance } from './componentUtils'
 
 export interface ComponentClass extends ComponentClassOptions {
   options?: ComponentOptions
-  new <P extends object = {}, D extends object = {}>(): MergedComponent<P, D>
+  new <P = {}, D = {}>(): MergedComponent<P, D>
 }
 
 export type MergedComponent<P, D> = D & P & ComponentInstance<P, D>
 
 export interface FunctionalComponent<P = {}> {
-  (props: Readonly<P>, slots: Slots, attrs: Data): any
+  (props: P, slots: Slots, attrs: Data): any
   pure?: boolean
   props?: ComponentPropsOptions<P>
   displayName?: string
