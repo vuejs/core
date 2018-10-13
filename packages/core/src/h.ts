@@ -54,52 +54,50 @@ type OptionsComponent<P> =
   | (ComponentOptions<P> & { template: string })
   | (ComponentOptions<P> & { render: Function })
 
+// TODO improve return type with props information
 interface createElement extends VNodeFactories {
   // element
+  (tag: string, children?: RawChildrenType): VNode
   (
     tag: string,
     // TODO support native element properties
     data?: VNodeData & Differ | null,
     children?: RawChildrenType | RawSlots
   ): VNode
-  (tag: string, children?: RawChildrenType): VNode
   // fragment
+  (tag: typeof Fragment, children?: RawChildrenType): VNode
   (
     tag: typeof Fragment,
     data?: ({ key?: Key } & Differ) | null,
     children?: RawChildrenType | RawSlots
   ): VNode
-  (tag: typeof Fragment, children?: RawChildrenType): VNode
   // portal
+  (tag: typeof Portal, children?: RawChildrenType): VNode
   (
     tag: typeof Portal,
     data?: ({ target: any } & BuiltInProps & Differ) | null,
     children?: RawChildrenType | RawSlots
   ): VNode
-  (tag: typeof Portal, children?: RawChildrenType): VNode
   // object
+  <P>(tag: OptionsComponent<P>, children?: RawChildrenType): VNode
   <P>(
     tag: OptionsComponent<P>,
     data?: (P & BuiltInProps & Differ) | null,
     children?: RawChildrenType | RawSlots
   ): VNode
-  <P>(tag: OptionsComponent<P>, children?: RawChildrenType): VNode
   // functional
+  <P>(tag: FunctionalComponent<P>, children?: RawChildrenType): VNode
   <P>(
     tag: FunctionalComponent<P>,
     data?: (P & BuiltInProps & Differ) | null,
     children?: RawChildrenType | RawSlots
   ): VNode
-  <P>(tag: FunctionalComponent<P>, children?: RawChildrenType): VNode
   // class
-  <P, T extends ComponentInstance<P>>(
-    tag: new () => T & { $props: P },
+  <P>(tag: new () => ComponentInstance<P>, children?: RawChildrenType): VNode
+  <P>(
+    tag: new () => ComponentInstance<P>,
     data?: (P & BuiltInProps & Differ) | null,
     children?: RawChildrenType | RawSlots
-  ): VNode
-  <P, T extends ComponentInstance<P>>(
-    tag: new () => T & { $props: P },
-    children?: RawChildrenType
   ): VNode
 }
 
