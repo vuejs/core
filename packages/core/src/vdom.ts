@@ -56,6 +56,7 @@ export type VNodeChildren =
   | ComponentInstance // COMPONENT_STATEFUL
   | VNode // COMPONENT_FUNCTIONAL
   | string // TEXT
+  | null
 
 export type Key = string | number
 

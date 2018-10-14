@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, NOOP } from './utils'
 import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
@@ -13,37 +13,43 @@ import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
 
-export interface ComponentClass extends ComponentClassOptions {
-  options?: ComponentOptions
-  new <P = {}, D = {}>(): MergedComponent<P, D>
+// public component instance type
+export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
+  readonly $el: any
+  readonly $vnode: MountedVNode
+  readonly $parentVNode: MountedVNode
+  readonly $data: D
+  readonly $props: Readonly<P>
+  readonly $attrs: Readonly<Data>
+  readonly $slots: Slots
+  readonly $root: Component
+  readonly $parent: Component
+  readonly $children: Component[]
+  readonly $options: ComponentOptions<P, D, this>
+  readonly $refs: Record<string | symbol, any>
+  readonly $proxy: this
 }
 
-export type MergedComponent<P, D> = D & P & ComponentInstance<P, D>
-
-export interface FunctionalComponent<P = {}> {
-  (props: P, slots: Slots, attrs: Data): any
-  pure?: boolean
-  props?: ComponentPropsOptions<P>
-  displayName?: string
+interface PublicInstanceMethods {
+  $forceUpdate(): void
+  $nextTick(fn: () => any): Promise<void>
+  $watch(
+    keyOrFn: string | ((this: this) => any),
+    cb: (this: this, newValue: any, oldValue: any) => void,
+    options?: WatchOptions
+  ): () => void
+  $on(event: string, fn: Function): this
+  $once(event: string, fn: Function): this
+  $off(event?: string, fn?: Function): this
+  $emit(name: string, ...payload: any[]): this
 }
 
-export type ComponentType = ComponentClass | FunctionalComponent
-
-export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
-  constructor: ComponentClass
-
-  $vnode: MountedVNode
-  $data: D
-  $props: Readonly<P>
-  $attrs: Data
-  $slots: Slots
-  $root: ComponentInstance
-  $children: ComponentInstance[]
-
+interface APIMethods<P, D> {
   data?(): Partial<D>
   render(props: Readonly<P>, slots: Slots, attrs: Data): any
-  renderTracked?(e: DebuggerEvent): void
-  renderTriggered?(e: DebuggerEvent): void
+}
+
+interface LifecycleMethods {
   beforeCreate?(): void
   created?(): void
   beforeMount?(): void
@@ -60,50 +66,83 @@ export interface ComponentInstance<P = {}, D = {}> extends InternalComponent {
   ) => boolean | void
   activated?(): void
   deactivated?(): void
+  renderTracked?(e: DebuggerEvent): void
+  renderTriggered?(e: DebuggerEvent): void
+}
+
+export interface ComponentClass extends ComponentClassOptions {
+  options?: ComponentOptions
+  new <P = {}, D = {}>(): Component<P, D> & D & P
+}
+
+export interface FunctionalComponent<P = {}> {
+  (props: P, slots: Slots, attrs: Data): any
+  pure?: boolean
+  props?: ComponentPropsOptions<P>
+  displayName?: string
+}
+
+export type ComponentType = ComponentClass | FunctionalComponent
+
+// Internal type that represents a mounted instance.
+// It extends InternalComponent with mounted instance properties.
+export interface ComponentInstance<P = {}, D = {}>
+  extends InternalComponent,
+    APIMethods<P, D>,
+    LifecycleMethods {
+  constructor: ComponentClass
+
+  $vnode: MountedVNode
+  $data: D
+  $props: P
+  $attrs: Data
+  $slots: Slots
+  $root: ComponentInstance
+  $children: ComponentInstance[]
 
   _updateHandle: Autorun
   _queueJob: ((fn: () => void) => void)
-  $forceUpdate: () => void
-  $nextTick: (fn: () => void) => Promise<any>
-
   _self: ComponentInstance<D, P> // on proxies only
 }
 
-class InternalComponent {
-  public get $el(): RenderNode | null {
+// actual implementation of the component
+class InternalComponent implements PublicInstanceMethods {
+  get $el(): any {
     return this.$vnode && this.$vnode.el
   }
 
-  public $vnode: VNode | null = null
-  public $parentVNode: VNode | null = null
-  public $data: Data | null = null
-  public $props: Data | null = null
-  public $attrs: Data | null = null
-  public $slots: Slots | null = null
-  public $root: ComponentInstance | null = null
-  public $parent: ComponentInstance | null = null
-  public $children: ComponentInstance[] = []
-  public $options: ComponentOptions
-  public $refs: Record<string, ComponentInstance | RenderNode> = {}
-  public $proxy: any = null
-  public $forceUpdate: (() => void) | null = null
+  $vnode: VNode | null = null
+  $parentVNode: VNode | null = null
+  $data: Data | null = null
+  $props: Data | null = null
+  $attrs: Data | null = null
+  $slots: Slots | null = null
+  $root: ComponentInstance | null = null
+  $parent: ComponentInstance | null = null
+  $children: ComponentInstance[] = []
+  $options: ComponentOptions
+  $refs: Record<string, ComponentInstance | RenderNode> = {}
+  $proxy: any = null
 
-  public _rawData: Data | null = null
-  public _computedGetters: Record<string, ComputedGetter> | null = null
-  public _watchHandles: Set<Autorun> | null = null
-  public _mounted: boolean = false
-  public _unmounted: boolean = false
-  public _events: { [event: string]: Function[] | null } | null = null
-  public _updateHandle: Autorun | null = null
-  public _queueJob: ((fn: () => void) => void) | null = null
-  public _isVue: boolean = true
-  public _inactiveRoot: boolean = false
+  _rawData: Data | null = null
+  _computedGetters: Record<string, ComputedGetter> | null = null
+  _watchHandles: Set<Autorun> | null = null
+  _mounted: boolean = false
+  _unmounted: boolean = false
+  _events: { [event: string]: Function[] | null } | null = null
+  _updateHandle: Autorun | null = null
+  _queueJob: ((fn: () => void) => void) | null = null
+  _isVue: boolean = true
+  _inactiveRoot: boolean = false
 
   constructor() {
     initializeComponentInstance(this as any)
   }
 
-  $nextTick(fn: () => any): Promise<any> {
+  // to be set by renderer during mount
+  $forceUpdate: () => void = NOOP
+
+  $nextTick(fn: () => any): Promise<void> {
     return nextTick(fn)
   }
 

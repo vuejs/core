@@ -24,12 +24,7 @@ export { createAsyncComponent } from './optional/asyncComponent'
 export { KeepAlive } from './optional/keepAlive'
 
 // flags & types
-export {
-  ComponentType,
-  ComponentClass,
-  FunctionalComponent,
-  ComponentInstance
-} from './component'
+export { ComponentType, ComponentClass, FunctionalComponent } from './component'
 export * from './componentOptions'
 export { VNodeFlags, ChildrenFlags } from './flags'
 export { VNode, Slots } from './vdom'

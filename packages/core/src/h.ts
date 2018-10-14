@@ -1,9 +1,5 @@
 import { ChildrenFlags } from './flags'
-import {
-  ComponentClass,
-  FunctionalComponent,
-  ComponentInstance
-} from './component'
+import { ComponentClass, FunctionalComponent, Component } from './component'
 import { ComponentOptions } from './componentOptions'
 import {
   VNode,
@@ -93,9 +89,9 @@ interface createElement extends VNodeFactories {
     children?: RawChildrenType | RawSlots
   ): VNode
   // class
-  <P>(tag: new () => ComponentInstance<P>, children?: RawChildrenType): VNode
+  <P>(tag: new () => Component<P>, children?: RawChildrenType): VNode
   <P>(
-    tag: new () => ComponentInstance<P>,
+    tag: new () => Component<P>,
     data?: (P & BuiltInProps & Differ) | null,
     children?: RawChildrenType | RawSlots
   ): VNode

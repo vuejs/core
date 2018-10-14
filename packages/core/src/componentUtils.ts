@@ -39,7 +39,7 @@ export function createComponentInstance(
   // always pass args in super()
   currentVNode = vnode
   currentContextVNode = contextVNode
-  const instance = (vnode.children = new Component()) as ComponentInstance
+  const instance = (vnode.children = new Component() as ComponentInstance)
   // then we finish the initialization by collecting properties set on the
   // instance
   initializeState(instance)
