@@ -102,7 +102,7 @@ export interface ComponentInstance<P = {}, D = {}>
 
   _updateHandle: Autorun
   _queueJob: ((fn: () => void) => void)
-  _self: ComponentInstance<D, P> // on proxies only
+  _self: ComponentInstance<P, D> // on proxies only
 }
 
 // actual implementation of the component
