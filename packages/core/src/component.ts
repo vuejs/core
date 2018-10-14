@@ -13,9 +13,9 @@ import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
 
-export interface ComponentClass<P = {}> extends ComponentClassOptions {
+export interface ComponentClass extends ComponentClassOptions {
   options?: ComponentOptions
-  new <P = {}, D = {}>(props?: P): MergedComponent<P, D>
+  new <P = {}, D = {}>(): MergedComponent<P, D>
 }
 
 export type MergedComponent<P, D> = D & P & ComponentInstance<P, D>
@@ -96,7 +96,6 @@ class InternalComponent {
   public _events: { [event: string]: Function[] | null } | null = null
   public _updateHandle: Autorun | null = null
   public _queueJob: ((fn: () => void) => void) | null = null
-  public _revokeProxy: () => void
   public _isVue: boolean = true
   public _inactiveRoot: boolean = false
 

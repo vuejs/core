@@ -12,6 +12,7 @@
     "noImplicitAny": true,
     "experimentalDecorators": true,
     "removeComments": false,
+    "jsx": "preserve",
     "lib": [
       "esnext",
       "dom"
@@ -29,6 +30,7 @@
   },
   "include": [
     "packages/global.d.ts",
+    "packages/renderer-dom/jsx.d.ts",
     "packages/*/src",
     "packages/*/__tests__"
   ]
