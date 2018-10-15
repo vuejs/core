@@ -1,8 +1,16 @@
 import { ComponentType, ComponentClass, FunctionalComponent } from './component'
 import { EMPTY_OBJ } from './utils'
 import { VNode } from './vdom'
+import { Data } from './componentOptions'
 
 let stack: VNode[] = []
+
+type TraceEntry = {
+  type: VNode
+  recurseCount: number
+}
+
+type ComponentTraceStack = TraceEntry[]
 
 export function pushWarningContext(vnode: VNode) {
   stack.push(vnode)
@@ -13,30 +21,50 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
-  // TODO warn handler?
-  console.warn(`[Vue warn]: ${msg}${getComponentTrace()}`, ...args)
+  // TODO warn handler
+  console.warn(`[Vue warn]: ${msg}`, ...args)
+  const trace = getComponentTrace()
+  if (console.groupCollapsed) {
+    trace.forEach((entry, i) => {
+      const formatted = formatTraceEntry(entry, i)
+      if (i === 0) {
+        console.groupCollapsed('at', ...formatted)
+      } else {
+        console.log(...formatted)
+      }
+    })
+    console.groupEnd()
+  } else {
+    const logs: string[] = []
+    trace.forEach((entry, i) => {
+      const formatted = formatTraceEntry(entry, i)
+      if (i === 0) {
+        logs.push('at', ...formatted)
+      } else {
+        logs.push('\n', ...formatted)
+      }
+    })
+    console.log(...logs)
+  }
 }
 
-function getComponentTrace(): string {
+function getComponentTrace(): ComponentTraceStack {
   let current: VNode | null | undefined = stack[stack.length - 1]
   if (!current) {
-    return ''
+    return []
   }
 
   // we can't just use the stack because it will be incomplete during updates
   // that did not start from the root. Re-construct the parent chain using
   // contextVNode information.
-  const normlaizedStack: Array<{
-    type: VNode
-    recurseCount: number
-  }> = []
+  const normlaizedStack: ComponentTraceStack = []
 
   while (current) {
     const last = normlaizedStack[0]
     if (last && last.type === current) {
       last.recurseCount++
     } else {
-      normlaizedStack.unshift({
+      normlaizedStack.push({
         type: current,
         recurseCount: 0
       })
@@ -44,35 +72,33 @@ function getComponentTrace(): string {
     current = current.contextVNode
   }
 
-  return (
-    `\nat ` +
-    normlaizedStack
-      .map(({ type, recurseCount }, i) => {
-        const padding = i === 0 ? '' : '  '.repeat(i + 1)
-        const postfix =
-          recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-        return (
-          padding + formatComponentName(type.tag as ComponentType) + postfix
-        )
-      })
-      .join('\n')
-  )
+  return normlaizedStack
+}
+
+function formatTraceEntry(
+  { type, recurseCount }: TraceEntry,
+  depth: number = 0
+): string[] {
+  const padding = depth === 0 ? '' : ' '.repeat(depth * 2 + 1)
+  const postfix =
+    recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
+  const open = padding + `<${formatComponentName(type.tag as ComponentType)}`
+  const close = `>` + postfix
+  return type.data ? [open, ...formatProps(type.data), close] : [open + close]
 }
 
 const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
-function formatComponentName(c: ComponentType, includeFile?: boolean): string {
+function formatComponentName(c: ComponentType, file?: string): string {
   let name: string
-  let file: string | null = null
 
   if (c.prototype && c.prototype.render) {
     // stateful
     const cc = c as ComponentClass
     const options = cc.options || EMPTY_OBJ
     name = options.displayName || cc.name
-    file = options.__file
   } else {
     // functional
     const fc = c as FunctionalComponent
@@ -86,6 +112,18 @@ function formatComponentName(c: ComponentType, includeFile?: boolean): string {
     }
   }
 
-  const filePostfix = file && includeFile !== false ? ` at ${file}` : ''
-  return `<${classify(name)}>` + filePostfix
+  return classify(name)
+}
+
+function formatProps(props: Data) {
+  const res = []
+  for (const key in props) {
+    const value = props[key]
+    if (typeof value === 'string') {
+      res.push(`${key}=${JSON.stringify(value)}`)
+    } else {
+      res.push(`${key}=`, value)
+    }
+  }
+  return res
 }
