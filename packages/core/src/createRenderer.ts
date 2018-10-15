@@ -210,9 +210,9 @@ export function createRenderer(options: RendererOptions) {
     }
     const { flags } = vnode
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
-      mountStatefulComponent(vnode, container, contextVNode, isSVG, endNode)
+      mountStatefulComponent(vnode, container, isSVG, endNode)
     } else {
-      mountFunctionalComponent(vnode, container, contextVNode, isSVG, endNode)
+      mountFunctionalComponent(vnode, container, isSVG, endNode)
     }
     if (__DEV__) {
       popContext()
@@ -222,7 +222,6 @@ export function createRenderer(options: RendererOptions) {
   function mountStatefulComponent(
     vnode: VNode,
     container: RenderNode | null,
-    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -234,7 +233,6 @@ export function createRenderer(options: RendererOptions) {
         vnode,
         vnode.tag as ComponentClass,
         container,
-        contextVNode,
         isSVG,
         endNode
       )
@@ -244,7 +242,6 @@ export function createRenderer(options: RendererOptions) {
   function mountFunctionalComponent(
     vnode: VNode,
     container: RenderNode | null,
-    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
@@ -1156,7 +1153,6 @@ export function createRenderer(options: RendererOptions) {
     vnode: VNode,
     Component: ComponentClass,
     container: RenderNode | null,
-    contextVNode: MountedVNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ): RenderNode {
@@ -1164,7 +1160,7 @@ export function createRenderer(options: RendererOptions) {
     // new Vue()
     const instance =
       (__COMPAT__ && (vnode.children as ComponentInstance)) ||
-      createComponentInstance(vnode, Component, contextVNode)
+      createComponentInstance(vnode, Component)
 
     // inject platform-specific unmount to keep-alive container
     if ((Component as any)[KeepAliveSymbol] === true) {

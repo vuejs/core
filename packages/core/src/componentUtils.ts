@@ -23,12 +23,11 @@ import { handleError, ErrorTypes } from './errorHandling'
 import { warn } from './warning'
 
 let currentVNode: VNode | null = null
-let currentContextVNode: MountedVNode | null = null
+let currentContextVNode: VNode | null = null
 
 export function createComponentInstance(
   vnode: VNode,
-  Component: ComponentClass,
-  contextVNode: MountedVNode | null
+  Component: ComponentClass
 ): ComponentInstance {
   // component instance creation is done in two steps.
   // first, `initializeComponentInstance` is called inside base component
@@ -38,7 +37,7 @@ export function createComponentInstance(
   // we are storing the vnodes in variables here so that there's no need to
   // always pass args in super()
   currentVNode = vnode
-  currentContextVNode = contextVNode
+  currentContextVNode = vnode.contextVNode
   const instance = (vnode.children = new Component() as ComponentInstance)
   // then we finish the initialization by collecting properties set on the
   // instance
