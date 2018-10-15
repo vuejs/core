@@ -4,11 +4,11 @@ import { VNode } from './vdom'
 
 let stack: VNode[] = []
 
-export function pushContext(vnode: VNode) {
+export function pushWarningContext(vnode: VNode) {
   stack.push(vnode)
 }
 
-export function popContext() {
+export function popWarningContext() {
   stack.pop()
 }
 

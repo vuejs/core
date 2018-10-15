@@ -25,7 +25,7 @@ import {
   shouldUpdateFunctionalComponent
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
-import { pushContext, popContext } from './warning'
+import { pushWarningContext, popWarningContext } from './warning'
 
 interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -206,7 +206,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     vnode.contextVNode = contextVNode
     if (__DEV__) {
-      pushContext(vnode)
+      pushWarningContext(vnode)
     }
     const { flags } = vnode
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
@@ -215,7 +215,7 @@ export function createRenderer(options: RendererOptions) {
       mountFunctionalComponent(vnode, container, isSVG, endNode)
     }
     if (__DEV__) {
-      popContext()
+      popWarningContext()
     }
   }
 
@@ -454,7 +454,7 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     if (__DEV__) {
-      pushContext(nextVNode)
+      pushWarningContext(nextVNode)
     }
     nextVNode.contextVNode = contextVNode
     const { tag, flags } = nextVNode
@@ -472,7 +472,7 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     if (__DEV__) {
-      popContext()
+      popWarningContext()
     }
   }
 
@@ -1232,7 +1232,7 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     if (__DEV__ && instance.$parentVNode) {
-      pushContext(instance.$parentVNode as VNode)
+      pushWarningContext(instance.$parentVNode as VNode)
     }
     const prevVNode = instance.$vnode
 
@@ -1291,7 +1291,7 @@ export function createRenderer(options: RendererOptions) {
     }
 
     if (__DEV__ && instance.$parentVNode) {
-      popContext()
+      popWarningContext()
     }
   }
 
