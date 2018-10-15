@@ -5,6 +5,7 @@ interface ComponentConstructor<This = Component> {
 }
 
 // mind = blown
+// https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type
 type UnionToIntersection<U> = (U extends any
   ? (k: U) => void
   : never) extends ((k: infer I) => void)
@@ -15,10 +16,11 @@ type ExtractInstance<T> = T extends (infer U)[]
   ? UnionToIntersection<U extends ComponentConstructor<infer V> ? V : never>
   : never
 
-function mixins<T extends ComponentConstructor[], V = ExtractInstance<T>>(
-  ...args: T
-): ComponentConstructor<V>
-function mixins(...args: any[]): any {
+export function mixins<
+  T extends ComponentConstructor[],
+  V = ExtractInstance<T>
+>(...args: T): ComponentConstructor<V>
+export function mixins(...args: any[]): any {
   // TODO
 }
 
