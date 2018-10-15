@@ -14,7 +14,7 @@ export function popWarningContext() {
 
 export function warn(msg: string, ...args: any[]) {
   // TODO warn handler?
-  warn(`[Vue warn]: ${msg}${getComponentTrace()}`, ...args)
+  console.warn(`[Vue warn]: ${msg}${getComponentTrace()}`, ...args)
 }
 
 function getComponentTrace(): string {

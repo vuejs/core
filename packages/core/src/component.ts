@@ -46,7 +46,7 @@ interface PublicInstanceMethods {
 
 interface APIMethods<P, D> {
   data?(): Partial<D>
-  render(props: Readonly<P>, slots: Slots, attrs: Data): any
+  render(props: Readonly<P>, slots: Slots, attrs: Data, parentVNode: VNode): any
 }
 
 interface LifecycleMethods {
@@ -76,7 +76,7 @@ export interface ComponentClass extends ComponentClassOptions {
 }
 
 export interface FunctionalComponent<P = {}> {
-  (props: P, slots: Slots, attrs: Data): any
+  (props: P, slots: Slots, attrs: Data, parentVNode: VNode): any
   pure?: boolean
   props?: ComponentPropsOptions<P>
   displayName?: string

@@ -107,7 +107,8 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
       instance.$proxy,
       instance.$props,
       instance.$slots,
-      instance.$attrs
+      instance.$attrs,
+      instance.$parentVNode
     )
   } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER)
@@ -120,7 +121,7 @@ export function renderFunctionalRoot(vnode: VNode): VNode {
   const { props, attrs } = resolveProps(vnode.data, render.props)
   let subTree
   try {
-    subTree = render(props, vnode.slots || EMPTY_OBJ, attrs || EMPTY_OBJ)
+    subTree = render(props, vnode.slots || EMPTY_OBJ, attrs || EMPTY_OBJ, vnode)
   } catch (err) {
     handleError(err, vnode, ErrorTypes.RENDER)
   }
