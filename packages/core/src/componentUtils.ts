@@ -62,9 +62,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
     )
   }
 
-  instance.$options =
-    instance.constructor.options ||
-    resolveComponentOptions(instance.constructor)
+  instance.$options = resolveComponentOptions(instance.constructor)
   instance.$parentVNode = currentVNode as MountedVNode
 
   // renderProxy
@@ -262,6 +260,9 @@ export function createComponentClassFromOptions(
 export function resolveComponentOptions(
   Component: ComponentClass
 ): ComponentOptions {
+  if (Component.options) {
+    return Component.options
+  }
   const descriptors = Object.getOwnPropertyDescriptors(Component)
   const options = {} as any
   for (const key in descriptors) {
