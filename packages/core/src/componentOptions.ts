@@ -1,4 +1,5 @@
 import {
+  Component,
   ComponentInstance,
   ComponentClass,
   APIMethods,
@@ -104,22 +105,22 @@ export const reservedMethods: ReservedKeys = {
 // This is called in the base component constructor and the return value is
 // set on the instance as $options.
 export function resolveComponentOptionsFromClass(
-  Component: ComponentClass
+  Class: ComponentClass
 ): ComponentOptions {
-  if (Component.options) {
-    return Component.options
+  if (Class.hasOwnProperty('options')) {
+    return Class.options as ComponentOptions
   }
-  const staticDescriptors = Object.getOwnPropertyDescriptors(Component)
-  const options = {} as any
+  let options = {} as any
+
+  const staticDescriptors = Object.getOwnPropertyDescriptors(Class)
   for (const key in staticDescriptors) {
     const { enumerable, get, value } = staticDescriptors[key]
     if (enumerable || get) {
       options[key] = get ? get() : value
     }
   }
-  const instanceDescriptors = Object.getOwnPropertyDescriptors(
-    Component.prototype
-  )
+
+  const instanceDescriptors = Object.getOwnPropertyDescriptors(Class.prototype)
   for (const key in instanceDescriptors) {
     const { get, value } = instanceDescriptors[key]
     if (get) {
@@ -127,7 +128,7 @@ export function resolveComponentOptionsFromClass(
       ;(options.computed || (options.computed = {}))[key] = get
       // there's no need to do anything for the setter
       // as it's already defined on the prototype
-    } else if (isFunction(value)) {
+    } else if (isFunction(value) && key !== 'constructor') {
       if (key in reservedMethods) {
         options[key] = value
       } else {
@@ -135,8 +136,16 @@ export function resolveComponentOptionsFromClass(
       }
     }
   }
+
   options.props = normalizePropsOptions(options.props)
-  Component.options = options
+
+  const ParentClass = Object.getPrototypeOf(Class)
+  if (ParentClass !== Component) {
+    const parentOptions = resolveComponentOptionsFromClass(ParentClass)
+    options = mergeComponentOptions(parentOptions, options)
+  }
+
+  Class.options = options
   return options
 }
 
@@ -154,7 +163,7 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
       if (key === 'data') {
         // for data we need to merge the returned value
         res[key] = function() {
-          return Object.assign(existing(), value())
+          return Object.assign(existing.call(this), value.call(this))
         }
       } else if (/^render|^errorCaptured/.test(key)) {
         // render, renderTracked, renderTriggered & errorCaptured

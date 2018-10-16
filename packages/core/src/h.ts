@@ -99,7 +99,7 @@ interface createElement extends VNodeFactories {
 }
 
 export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
-  if (isArray(data) || !isObject(data) || data._isVNode) {
+  if (data !== null && (isArray(data) || !isObject(data) || data._isVNode)) {
     children = data
     data = null
   }

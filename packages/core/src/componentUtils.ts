@@ -38,15 +38,22 @@ export function createComponentInstance(
   currentVNode = vnode
   currentContextVNode = vnode.contextVNode
   const instance = (vnode.children = new Component() as ComponentInstance)
+
   // then we finish the initialization by collecting properties set on the
   // instance
+  const {
+    $proxy,
+    $options: { created, computed, watch }
+  } = instance
   initializeState(instance)
-  initializeComputed(instance, instance.$options.computed)
-  initializeWatch(instance, instance.$options.watch)
+  initializeComputed(instance, computed)
+  initializeWatch(instance, watch)
   instance.$slots = currentVNode.slots || EMPTY_OBJ
-  if (instance.created) {
-    instance.created.call(instance.$proxy)
+
+  if (created) {
+    created.call($proxy)
   }
+
   currentVNode = currentContextVNode = null
   return instance
 }
@@ -87,14 +94,11 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   }
 
   // beforeCreate hook is called right in the constructor
-  if (instance.beforeCreate) {
-    instance.beforeCreate.call(proxy)
+  const { beforeCreate, props } = instance.$options
+  if (beforeCreate) {
+    beforeCreate.call(proxy)
   }
-  initializeProps(
-    instance,
-    instance.$options.props,
-    (currentVNode as VNode).data
-  )
+  initializeProps(instance, props, (currentVNode as VNode).data)
 }
 
 export function renderInstanceRoot(instance: ComponentInstance): VNode {

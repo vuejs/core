@@ -1167,8 +1167,13 @@ export function createRenderer(options: RendererOptions) {
       ;(instance as any).$unmount = unmountComponentInstance
     }
 
-    if (instance.beforeMount) {
-      instance.beforeMount.call(instance.$proxy)
+    const {
+      $proxy,
+      $options: { beforeMount, mounted, renderTracked, renderTriggered }
+    } = instance
+
+    if (beforeMount) {
+      beforeMount.call($proxy)
     }
 
     const queueUpdate = (instance.$forceUpdate = () => {
@@ -1200,31 +1205,24 @@ export function createRenderer(options: RendererOptions) {
           }
 
           instance._mounted = true
-          mountComponentInstanceCallbacks(instance, vnode.ref)
+          if (vnode.ref) {
+            mountRef(vnode.ref, $proxy)
+          }
+          if (mounted) {
+            lifecycleHooks.push(() => {
+              mounted.call($proxy)
+            })
+          }
         }
       },
       {
         scheduler: queueUpdate,
-        onTrack: instance.renderTracked,
-        onTrigger: instance.renderTriggered
+        onTrack: renderTracked,
+        onTrigger: renderTriggered
       }
     )
 
     return vnode.el as RenderNode
-  }
-
-  function mountComponentInstanceCallbacks(
-    instance: ComponentInstance,
-    ref: Ref | null
-  ) {
-    if (ref) {
-      mountRef(ref, instance.$proxy)
-    }
-    if (instance.mounted) {
-      lifecycleHooks.push(() => {
-        ;(instance as any).mounted.call(instance.$proxy)
-      })
-    }
   }
 
   function updateComponentInstance(
@@ -1234,23 +1232,22 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__ && instance.$parentVNode) {
       pushWarningContext(instance.$parentVNode as VNode)
     }
-    const prevVNode = instance.$vnode
 
-    if (instance.beforeUpdate) {
-      instance.beforeUpdate.call(instance.$proxy, prevVNode)
+    const {
+      $vnode: prevVNode,
+      $parentVNode,
+      $proxy,
+      $options: { beforeUpdate, updated }
+    } = instance
+    if (beforeUpdate) {
+      beforeUpdate.call($proxy, prevVNode)
     }
 
     const nextVNode = (instance.$vnode = renderInstanceRoot(
       instance
     ) as MountedVNode)
     const container = platformParentNode(prevVNode.el) as RenderNode
-    patch(
-      prevVNode,
-      nextVNode,
-      container,
-      instance.$parentVNode as MountedVNode,
-      isSVG
-    )
+    patch(prevVNode, nextVNode, container, $parentVNode as MountedVNode, isSVG)
     const el = nextVNode.el as RenderNode
 
     if (__COMPAT__) {
@@ -1260,7 +1257,7 @@ export function createRenderer(options: RendererOptions) {
 
     // recursively update contextVNode el for nested HOCs
     if ((nextVNode.flags & VNodeFlags.PORTAL) === 0) {
-      let vnode = instance.$parentVNode
+      let vnode = $parentVNode
       while (vnode !== null) {
         if ((vnode.flags & VNodeFlags.COMPONENT) > 0) {
           vnode.el = el
@@ -1269,14 +1266,14 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    if (instance.updated) {
+    if (updated) {
       // Because the child's update is executed by the scheduler and not
       // synchronously within the parent's update call, the child's updated hook
       // will be added to the queue AFTER the parent's, but they should be
       // invoked BEFORE the parent's. Therefore we add them to the head of the
       // queue instead.
       lifecycleHooks.unshift(() => {
-        ;(instance as any).updated.call(instance.$proxy, nextVNode)
+        updated.call($proxy, nextVNode)
       })
     }
 
@@ -1299,17 +1296,23 @@ export function createRenderer(options: RendererOptions) {
     if (instance._unmounted) {
       return
     }
-    if (instance.beforeUnmount) {
-      instance.beforeUnmount.call(instance.$proxy)
+    const {
+      $vnode,
+      $proxy,
+      _updateHandle,
+      $options: { beforeUnmount, unmounted }
+    } = instance
+    if (beforeUnmount) {
+      beforeUnmount.call($proxy)
     }
-    if (instance.$vnode) {
-      unmount(instance.$vnode)
+    if ($vnode) {
+      unmount($vnode)
     }
-    stop(instance._updateHandle)
+    stop(_updateHandle)
     teardownComponentInstance(instance)
     instance._unmounted = true
-    if (instance.unmounted) {
-      instance.unmounted.call(instance.$proxy)
+    if (unmounted) {
+      unmounted.call($proxy)
     }
   }
 
@@ -1338,12 +1341,16 @@ export function createRenderer(options: RendererOptions) {
     }
     if (asRoot || !instance._inactiveRoot) {
       // 2. recursively call activated on child tree, depth-first
-      const { $children } = instance
+      const {
+        $children,
+        $proxy,
+        $options: { activated }
+      } = instance
       for (let i = 0; i < $children.length; i++) {
         callActivatedHook($children[i], false)
       }
-      if (instance.activated) {
-        instance.activated.call(instance.$proxy)
+      if (activated) {
+        activated.call($proxy)
       }
     }
   }
@@ -1359,12 +1366,16 @@ export function createRenderer(options: RendererOptions) {
     }
     if (asRoot || !instance._inactiveRoot) {
       // 2. recursively call deactivated on child tree, depth-first
-      const { $children } = instance
+      const {
+        $children,
+        $proxy,
+        $options: { deactivated }
+      } = instance
       for (let i = 0; i < $children.length; i++) {
         callDeactivateHook($children[i], false)
       }
-      if (instance.deactivated) {
-        instance.deactivated.call(instance.$proxy)
+      if (deactivated) {
+        deactivated.call($proxy)
       }
     }
   }
