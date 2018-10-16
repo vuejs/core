@@ -5,15 +5,10 @@ import {
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
-import {
-  handlersRE,
-  EMPTY_OBJ,
-  isObject,
-  isArray,
-  isFunction,
-  isString
-} from '@vue/shared'
+import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { RawChildrenType, RawSlots } from './h'
+
+const handlersRE = /^on|^vnode/
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {

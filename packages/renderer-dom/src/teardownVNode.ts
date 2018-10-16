@@ -1,6 +1,6 @@
 import { VNode } from '@vue/core'
 import { handleDelegatedEvent } from './modules/events'
-import { onRE } from './patchData'
+import { onRE } from '@vue/shared'
 
 export function teardownVNode(vnode: VNode) {
   const { el, data } = vnode

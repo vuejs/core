@@ -4,8 +4,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-
-export const onRE = /^on/
+import { onRE } from '@vue/shared'
 
 // value, checked, selected & muted
 // plus anything with upperCase letter in it are always patched as properties

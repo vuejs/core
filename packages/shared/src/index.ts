@@ -3,8 +3,6 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = Object.freeze({})
 export const NOOP = () => {}
 
 export const onRE = /^on/
-export const vnodeHookRE = /^vnode/
-export const handlersRE = /^on|^vnode/
 export const reservedPropRE = /^(?:key|ref|slots)$|^vnode/
 
 export const isArray = Array.isArray
