@@ -99,7 +99,7 @@ export function updateProps(instance: ComponentInstance, nextData: Data) {
   if (nextData != null) {
     const { props: nextProps, attrs: nextAttrs } = resolveProps(
       nextData,
-      instance.constructor.props
+      instance.$options.props
     )
     // unlock to temporarily allow mutatiing props
     unlock()

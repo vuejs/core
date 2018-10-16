@@ -11,11 +11,7 @@ import {
 import { createTextVNode, cloneVNode } from './vdom'
 import { initializeState } from './componentState'
 import { initializeProps, resolveProps } from './componentProps'
-import {
-  initializeComputed,
-  resolveComputedOptions,
-  teardownComputed
-} from './componentComputed'
+import { initializeComputed, teardownComputed } from './componentComputed'
 import { initializeWatch, teardownWatch } from './componentWatch'
 import { ComponentOptions } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
@@ -42,8 +38,8 @@ export function createComponentInstance(
   // then we finish the initialization by collecting properties set on the
   // instance
   initializeState(instance)
-  initializeComputed(instance, Component.computed)
-  initializeWatch(instance, Component.watch)
+  initializeComputed(instance, instance.$options.computed)
+  initializeWatch(instance, instance.$options.watch)
   instance.$slots = currentVNode.slots || EMPTY_OBJ
   if (instance.created) {
     instance.created.call(instance.$proxy)
@@ -93,7 +89,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   }
   initializeProps(
     instance,
-    instance.constructor.props,
+    instance.$options.props,
     (currentVNode as VNode).data
   )
 }
@@ -212,8 +208,9 @@ export function createComponentClassFromOptions(
     const value = options[key]
     // name -> displayName
     if (key === 'name') {
-      AnonymousComponent.displayName = options.name
+      options.displayName = options.name
     } else if (typeof value === 'function') {
+      // lifecycle hook / data / render
       if (__COMPAT__) {
         if (key === 'render') {
           proto[key] = function() {
@@ -230,7 +227,6 @@ export function createComponentClassFromOptions(
         proto[key] = value
       }
     } else if (key === 'computed') {
-      AnonymousComponent.computed = value
       for (const computedKey in value) {
         const computed = value[computedKey]
         const isGet = typeof computed === 'function'
@@ -250,28 +246,41 @@ export function createComponentClassFromOptions(
         }
         proto[method] = value[method]
       }
-    } else {
-      ;(AnonymousComponent as any)[key] = value
     }
   }
   return AnonymousComponent as ComponentClass
 }
 
+// This is called in the base component constructor and the return value is
+// set on the instance as $options.
 export function resolveComponentOptions(
   Component: ComponentClass
 ): ComponentOptions {
   if (Component.options) {
     return Component.options
   }
-  const descriptors = Object.getOwnPropertyDescriptors(Component)
+  const staticDescriptors = Object.getOwnPropertyDescriptors(Component)
   const options = {} as any
-  for (const key in descriptors) {
-    const descriptor = descriptors[key]
-    if (descriptor.enumerable || descriptor.get) {
-      options[key] = descriptor.get ? descriptor.get() : descriptor.value
+  for (const key in staticDescriptors) {
+    const { enumerable, get, value } = staticDescriptors[key]
+    if (enumerable || get) {
+      options[key] = get ? get() : value
     }
   }
-  Component.computed = options.computed = resolveComputedOptions(Component)
+  const instanceDescriptors = Object.getOwnPropertyDescriptors(
+    Component.prototype
+  )
+  for (const key in instanceDescriptors) {
+    const { get, value } = instanceDescriptors[key]
+    if (get) {
+      // computed properties
+      ;(options.computed || (options.computed = {}))[key] = get
+      // there's no need to do anything for the setter
+      // as it's already defined on the prototype
+    } else if (typeof value === 'function') {
+      ;(options.methods || (options.methods = {}))[key] = value
+    }
+  }
   Component.options = options
   return options
 }

@@ -1,23 +1,7 @@
 import { NOOP } from './utils'
 import { computed, stop, ComputedGetter } from '@vue/observer'
-import { ComponentClass, ComponentInstance } from './component'
+import { ComponentInstance } from './component'
 import { ComponentComputedOptions } from './componentOptions'
-
-export function resolveComputedOptions(
-  comp: ComponentClass
-): ComponentComputedOptions {
-  const computedOptions: ComponentComputedOptions = {}
-  const descriptors = Object.getOwnPropertyDescriptors(comp.prototype as any)
-  for (const key in descriptors) {
-    const d = descriptors[key]
-    if (d.get) {
-      computedOptions[key] = d.get
-      // there's no need to do anything for the setter
-      // as it's already defined on the prototype
-    }
-  }
-  return computedOptions
-}
 
 export function initializeComputed(
   instance: ComponentInstance,

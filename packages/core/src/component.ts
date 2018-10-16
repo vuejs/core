@@ -99,6 +99,7 @@ export interface ComponentInstance<P = {}, D = {}>
   $slots: Slots
   $root: ComponentInstance
   $children: ComponentInstance[]
+  $options: ComponentOptions<P, D>
 
   _updateHandle: Autorun
   _queueJob: ((fn: () => void) => void)
@@ -120,7 +121,7 @@ class InternalComponent implements PublicInstanceMethods {
   $root: ComponentInstance | null = null
   $parent: ComponentInstance | null = null
   $children: ComponentInstance[] = []
-  $options: ComponentOptions
+  $options: ComponentOptions | null = null
   $refs: Record<string, ComponentInstance | RenderNode> = {}
   $proxy: any = null
 

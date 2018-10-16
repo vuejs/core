@@ -25,8 +25,8 @@ const renderProxyHandlers = {
       // data
       return target.$data[key]
     } else if (
-      target.constructor.props != null &&
-      target.constructor.props.hasOwnProperty(key)
+      target.$options.props != null &&
+      target.$options.props.hasOwnProperty(key)
     ) {
       // props are only proxied if declared
       return target.$props[key]
@@ -61,8 +61,8 @@ const renderProxyHandlers = {
         return false
       }
       if (
-        target.constructor.props != null &&
-        target.constructor.props.hasOwnProperty(key)
+        target.$options.props != null &&
+        target.$options.props.hasOwnProperty(key)
       ) {
         // TODO warn props are immutable
         return false
