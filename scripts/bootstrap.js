@@ -22,7 +22,7 @@ files.forEach(shortName => {
       description: name,
       main: 'index.js',
       module: `dist/${shortName}.esm-bundler.js`,
-      typings: 'dist/index.d.ts',
+      types: 'dist/index.d.ts',
       repository: {
         type: 'git',
         url: 'git+https://github.com/vuejs/vue.git'
