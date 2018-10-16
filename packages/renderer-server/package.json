@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.1",
   "description": "@vue/renderer-server",
   "main": "index.js",
-  "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "buildOptions": {
     "formats": ["cjs"]
   },

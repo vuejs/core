@@ -4,7 +4,6 @@
   "description": "vue",
   "main": "index.js",
   "module": "dist/vue.esm-bundler.js",
-  "typings": "dist/index.d.ts",
   "unpkg": "dist/vue.global.js",
   "sideEffects": false,
   "buildOptions": {

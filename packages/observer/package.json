@@ -4,7 +4,7 @@
   "description": "@vue/observer",
   "main": "index.js",
   "module": "dist/observer.esm-bundler.js",
-  "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "unpkg": "dist/observer.global.js",
   "sideEffects": false,
   "repository": {

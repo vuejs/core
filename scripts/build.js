@@ -43,6 +43,7 @@ async function buildAll(targets) {
 
 async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
+  const pkg = require(`${pkgDir}/package.json`)
 
   await fs.remove(`${pkgDir}/dist`)
 
@@ -58,16 +59,20 @@ async function build(target) {
     { stdio: 'inherit' }
   )
 
-  const dtsOptions = {
-    name: target === 'vue' ? target : `@vue/${target}`,
-    main: `${pkgDir}/dist/packages/${target}/src/index.d.ts`,
-    out: `${pkgDir}/dist/index.d.ts`
-  }
-  dts.bundle(dtsOptions)
-  console.log()
-  console.log(chalk.blue(chalk.bold(`generated typings at ${dtsOptions.out}`)))
+  if (pkg.types) {
+    const dtsOptions = {
+      name: target === 'vue' ? target : `@vue/${target}`,
+      main: `${pkgDir}/dist/packages/${target}/src/index.d.ts`,
+      out: `${pkgDir}/${pkg.types}`
+    }
+    dts.bundle(dtsOptions)
+    console.log()
+    console.log(
+      chalk.blue(chalk.bold(`generated typings at ${dtsOptions.out}`))
+    )
 
-  await fs.remove(`${pkgDir}/dist/packages`)
+    await fs.remove(`${pkgDir}/dist/packages`)
+  }
 }
 
 function checkAllSizes(targets) {

@@ -4,7 +4,7 @@
   "description": "@vue/renderer-dom",
   "main": "index.js",
   "module": "dist/renderer-dom.esm-bundler.js",
-  "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "unpkg": "dist/renderer-dom.global.js",
   "sideEffects": false,
   "buildOptions": {

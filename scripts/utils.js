@@ -1,7 +1,14 @@
 const fs = require('fs')
 
 const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
-  return f !== 'shared' && fs.statSync(`packages/${f}`).isDirectory()
+  if (!fs.statSync(`packages/${f}`).isDirectory()) {
+    return false
+  }
+  const pkg = require(`../packages/${f}/package.json`)
+  if (pkg.private) {
+    return false
+  }
+  return true
 }))
 
 exports.fuzzyMatchTarget = partialTarget => {

@@ -4,7 +4,7 @@
   "description": "@vue/compiler",
   "main": "index.js",
   "module": "dist/compiler.esm-bundler.js",
-  "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "sideEffects": false,
   "repository": {
     "type": "git",

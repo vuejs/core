@@ -6,12 +6,13 @@ import {
   createComponentClassFromOptions
 } from '@vue/renderer-dom'
 
-class Vue {
-  static h = h
-  static render = render
-  static nextTick = nextTick
+// Note: typing for this is intentionally loose, as it will be using 2.x types.
 
-  // Note: typing for this is intentionally loose, as it will be using 2.x types.
+class Vue {
+  static h: any = h
+  static render: any = render
+  static nextTick: any = nextTick
+
   constructor(options: any) {
     // convert it to a class
     const Component = createComponentClassFromOptions(options || {})
