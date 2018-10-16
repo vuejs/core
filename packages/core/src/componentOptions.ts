@@ -137,7 +137,9 @@ export function resolveComponentOptionsFromClass(
     }
   }
 
-  options.props = normalizePropsOptions(options.props)
+  if (options.props) {
+    options.props = normalizePropsOptions(options.props)
+  }
 
   const ParentClass = Object.getPrototypeOf(Class)
   if (ParentClass !== Component) {
