@@ -4,6 +4,10 @@ interface ComponentConstructor<This = Component> {
   new (): This
 }
 
+interface ComponentConstructorWithMixins<This> {
+  new <P = {}, D = {}>(): This & { $data: D } & D & { $props: Readonly<P> } & P
+}
+
 // mind = blown
 // https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type
 type UnionToIntersection<U> = (U extends any
@@ -17,9 +21,9 @@ type ExtractInstance<T> = T extends (infer U)[]
   : never
 
 export function mixins<
-  T extends ComponentConstructor[],
+  T extends ComponentConstructor[] = [],
   V = ExtractInstance<T>
->(...args: T): ComponentConstructor<V>
+>(...args: T): ComponentConstructorWithMixins<V>
 export function mixins(...args: any[]): any {
   // TODO
 }
@@ -38,10 +42,11 @@ class Bar extends Component<{ bar: string }> {
   }
 }
 
-class Baz extends mixins(Foo, Bar) {
+class Baz extends mixins(Foo, Bar)<{ baz: number }> {
   created() {
     this.foo
     this.bar
+    this.baz
     this.test()
     this.ok()
   }
