@@ -1,4 +1,4 @@
-import { EMPTY_OBJ, NOOP } from './utils'
+import { EMPTY_OBJ, NOOP, isArray } from '@vue/shared'
 import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
@@ -44,30 +44,30 @@ interface PublicInstanceMethods {
   $emit(name: string, ...payload: any[]): this
 }
 
-interface APIMethods<P, D> {
-  data?(): Partial<D>
+export interface APIMethods<P = {}, D = {}> {
+  data(): Partial<D>
   render(props: Readonly<P>, slots: Slots, attrs: Data, parentVNode: VNode): any
 }
 
-interface LifecycleMethods {
-  beforeCreate?(): void
-  created?(): void
-  beforeMount?(): void
-  mounted?(): void
-  beforeUpdate?(vnode: VNode): void
-  updated?(vnode: VNode): void
-  beforeUnmount?(): void
-  unmounted?(): void
-  errorCaptured?(): (
+export interface LifecycleMethods {
+  beforeCreate(): void
+  created(): void
+  beforeMount(): void
+  mounted(): void
+  beforeUpdate(vnode: VNode): void
+  updated(vnode: VNode): void
+  beforeUnmount(): void
+  unmounted(): void
+  errorCaptured(): (
     err: Error,
     type: ErrorTypes,
     instance: ComponentInstance | null,
     vnode: VNode
   ) => boolean | void
-  activated?(): void
-  deactivated?(): void
-  renderTracked?(e: DebuggerEvent): void
-  renderTriggered?(e: DebuggerEvent): void
+  activated(): void
+  deactivated(): void
+  renderTracked(e: DebuggerEvent): void
+  renderTriggered(e: DebuggerEvent): void
 }
 
 export interface ComponentClass extends ComponentClassOptions {
@@ -88,9 +88,10 @@ export type ComponentType = ComponentClass | FunctionalComponent
 // It extends InternalComponent with mounted instance properties.
 export interface ComponentInstance<P = {}, D = {}>
   extends InternalComponent,
-    APIMethods<P, D>,
-    LifecycleMethods {
+    Partial<APIMethods<P, D>>,
+    Partial<LifecycleMethods> {
   constructor: ComponentClass
+  render: APIMethods<P, D>['render']
 
   $vnode: MountedVNode
   $data: D
@@ -157,7 +158,7 @@ class InternalComponent implements PublicInstanceMethods {
 
   // eventEmitter interface
   $on(event: string, fn: Function): this {
-    if (Array.isArray(event)) {
+    if (isArray(event)) {
       for (let i = 0; i < event.length; i++) {
         this.$on(event[i], fn)
       }
@@ -181,7 +182,7 @@ class InternalComponent implements PublicInstanceMethods {
     if (this._events) {
       if (!event && !fn) {
         this._events = null
-      } else if (Array.isArray(event)) {
+      } else if (isArray(event)) {
         for (let i = 0; i < event.length; i++) {
           this.$off(event[i], fn)
         }
@@ -223,7 +224,7 @@ class InternalComponent implements PublicInstanceMethods {
 
 function invokeListeners(value: Function | Function[], payload: any[]) {
   // TODO handle error
-  if (Array.isArray(value)) {
+  if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       value[i](...payload)
     }

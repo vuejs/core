@@ -2,6 +2,7 @@ import { Component, ComponentClass, ComponentInstance } from '../component'
 import { VNode, Slots, cloneVNode } from '../vdom'
 import { VNodeFlags } from '../flags'
 import { warn } from '../warning'
+import { isString, isArray } from '@vue/shared'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -119,9 +120,9 @@ function getName(comp: ComponentClass): string | void {
 }
 
 function matches(pattern: MatchPattern, name: string): boolean {
-  if (Array.isArray(pattern)) {
+  if (isArray(pattern)) {
     return (pattern as any).some((p: string | RegExp) => matches(p, name))
-  } else if (typeof pattern === 'string') {
+  } else if (isString(pattern)) {
     return pattern.split(',').indexOf(name) > -1
   } else if (pattern.test) {
     return pattern.test(name)

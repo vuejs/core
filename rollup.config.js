@@ -95,12 +95,13 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
+  const externals = Object.keys(aliasOptions).filter(p => p !== '@vue/shared')
+
   return {
     input: resolve(`src/index.ts`),
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external:
-      isGlobalBuild || isBrowserESMBuild ? [] : Object.keys(aliasOptions),
+    external: isGlobalBuild || isBrowserESMBuild ? [] : externals,
     plugins: [
       tsPlugin,
       aliasPlugin,

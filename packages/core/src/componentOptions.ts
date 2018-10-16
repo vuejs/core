@@ -1,5 +1,12 @@
-import { ComponentInstance } from './component'
+import {
+  ComponentInstance,
+  ComponentClass,
+  APIMethods,
+  LifecycleMethods
+} from './component'
 import { Slots } from './vdom'
+import { isArray, isObject, isFunction } from '@vue/shared'
+import { normalizePropsOptions } from './componentProps'
 
 export type Data = Record<string, any>
 
@@ -72,4 +79,101 @@ export interface WatchOptions {
   sync?: boolean
   deep?: boolean
   immediate?: boolean
+}
+
+type ReservedKeys = { [K in keyof (APIMethods & LifecycleMethods)]: 1 }
+
+export const reservedMethods: ReservedKeys = {
+  data: 1,
+  render: 1,
+  beforeCreate: 1,
+  created: 1,
+  beforeMount: 1,
+  mounted: 1,
+  beforeUpdate: 1,
+  updated: 1,
+  beforeUnmount: 1,
+  unmounted: 1,
+  errorCaptured: 1,
+  activated: 1,
+  deactivated: 1,
+  renderTracked: 1,
+  renderTriggered: 1
+}
+
+// This is called in the base component constructor and the return value is
+// set on the instance as $options.
+export function resolveComponentOptionsFromClass(
+  Component: ComponentClass
+): ComponentOptions {
+  if (Component.options) {
+    return Component.options
+  }
+  const staticDescriptors = Object.getOwnPropertyDescriptors(Component)
+  const options = {} as any
+  for (const key in staticDescriptors) {
+    const { enumerable, get, value } = staticDescriptors[key]
+    if (enumerable || get) {
+      options[key] = get ? get() : value
+    }
+  }
+  const instanceDescriptors = Object.getOwnPropertyDescriptors(
+    Component.prototype
+  )
+  for (const key in instanceDescriptors) {
+    const { get, value } = instanceDescriptors[key]
+    if (get) {
+      // computed properties
+      ;(options.computed || (options.computed = {}))[key] = get
+      // there's no need to do anything for the setter
+      // as it's already defined on the prototype
+    } else if (isFunction(value)) {
+      if (key in reservedMethods) {
+        options[key] = value
+      } else {
+        ;(options.methods || (options.methods = {}))[key] = value
+      }
+    }
+  }
+  options.props = normalizePropsOptions(options.props)
+  Component.options = options
+  return options
+}
+
+export function mergeComponentOptions(to: any, from: any): ComponentOptions {
+  const res: any = Object.assign({}, to)
+  if (from.mixins) {
+    from.mixins.forEach((mixin: any) => {
+      from = mergeComponentOptions(from, mixin)
+    })
+  }
+  for (const key in from) {
+    const value = from[key]
+    const existing = res[key]
+    if (isFunction(value) && isFunction(existing)) {
+      if (key === 'data') {
+        // for data we need to merge the returned value
+        res[key] = function() {
+          return Object.assign(existing(), value())
+        }
+      } else if (/^render|^errorCaptured/.test(key)) {
+        // render, renderTracked, renderTriggered & errorCaptured
+        // are never merged
+        res[key] = value
+      } else {
+        // merge lifecycle hooks
+        res[key] = function(...args: any[]) {
+          existing.call(this, ...args)
+          value.call(this, ...args)
+        }
+      }
+    } else if (isArray(value) && isArray(existing)) {
+      res[key] = existing.concat(value)
+    } else if (isObject(value) && isObject(existing)) {
+      res[key] = Object.assign({}, existing, value)
+    } else {
+      res[key] = value
+    }
+  }
+  return res
 }

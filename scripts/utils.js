@@ -1,8 +1,8 @@
 const fs = require('fs')
 
-const targets = exports.targets = fs.readdirSync('packages').filter(f => {
-  return fs.statSync(`packages/${f}`).isDirectory()
-})
+const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
+  return f !== 'shared' && fs.statSync(`packages/${f}`).isDirectory()
+}))
 
 exports.fuzzyMatchTarget = partialTarget => {
   const matched = []

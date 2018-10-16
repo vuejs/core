@@ -1,5 +1,5 @@
 import { ComponentType, ComponentClass, FunctionalComponent } from './component'
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, isString } from '@vue/shared'
 import { VNode } from './vdom'
 import { Data } from './componentOptions'
 
@@ -119,7 +119,7 @@ function formatProps(props: Data) {
   const res = []
   for (const key in props) {
     const value = props[key]
-    if (typeof value === 'string') {
+    if (isString(value)) {
       res.push(`${key}=${JSON.stringify(value)}`)
     } else {
       res.push(`${key}=`, value)

@@ -1,4 +1,5 @@
 import { ComponentInstance } from './component'
+import { isString, isFunction } from '@vue/shared'
 
 const bindCache = new WeakMap()
 
@@ -41,7 +42,7 @@ const renderProxyHandlers = {
         // TODO warn non-present property
       }
       const value = Reflect.get(target, key, receiver)
-      if (typeof value === 'function') {
+      if (isFunction(value)) {
         // auto bind
         return getBoundMethod(value, target, receiver)
       } else {
@@ -56,7 +57,7 @@ const renderProxyHandlers = {
     receiver: any
   ): boolean {
     if (__DEV__) {
-      if (typeof key === 'string' && key[0] === '$') {
+      if (isString(key) && key[0] === '$') {
         // TODO warn setting immutable properties
         return false
       }

@@ -1,4 +1,4 @@
-import { createRenderer, VNode, ComponentInstance } from '@vue/core'
+import { createRenderer, VNode, Component } from '@vue/core'
 import { nodeOps } from './nodeOps'
 import { patchData } from './patchData'
 import { teardownVNode } from './teardownVNode'
@@ -12,7 +12,7 @@ const { render: _render } = createRenderer({
 type publicRender = (
   node: VNode | null,
   container: HTMLElement
-) => ComponentInstance | null
+) => Component | null
 export const render = _render as publicRender
 
 // re-export everything from core

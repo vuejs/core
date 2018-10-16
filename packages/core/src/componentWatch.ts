@@ -1,4 +1,11 @@
-import { EMPTY_OBJ, NOOP } from './utils'
+import {
+  EMPTY_OBJ,
+  NOOP,
+  isFunction,
+  isArray,
+  isString,
+  isObject
+} from '@vue/shared'
 import { ComponentInstance } from './component'
 import { ComponentWatchOptions, WatchOptions } from './componentOptions'
 import { autorun, stop } from '@vue/observer'
@@ -13,11 +20,11 @@ export function initializeWatch(
   if (options !== void 0) {
     for (const key in options) {
       const opt = options[key]
-      if (Array.isArray(opt)) {
+      if (isArray(opt)) {
         opt.forEach(o => setupWatcher(instance, key, o))
-      } else if (typeof opt === 'function') {
+      } else if (isFunction(opt)) {
         setupWatcher(instance, key, opt)
-      } else if (typeof opt === 'string') {
+      } else if (isString(opt)) {
         setupWatcher(instance, key, (instance as any)[opt])
       } else if (opt.handler) {
         setupWatcher(instance, key, opt.handler, opt)
@@ -35,10 +42,9 @@ export function setupWatcher(
   const handles = instance._watchHandles || (instance._watchHandles = new Set())
   const proxy = instance.$proxy
 
-  const rawGetter =
-    typeof keyOrFn === 'string'
-      ? parseDotPath(keyOrFn, proxy)
-      : () => keyOrFn.call(proxy)
+  const rawGetter = isString(keyOrFn)
+    ? parseDotPath(keyOrFn, proxy)
+    : () => keyOrFn.call(proxy)
 
   if (__DEV__ && rawGetter === NOOP) {
     warn(
@@ -116,11 +122,11 @@ function parseDotPath(path: string, ctx: any): Function {
 }
 
 function traverse(value: any, seen: Set<any> = new Set()) {
-  if (value === null || typeof value !== 'object' || seen.has(value)) {
+  if (!isObject(value) || seen.has(value)) {
     return
   }
   seen.add(value)
-  if (Array.isArray(value)) {
+  if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       traverse(value[i], seen)
     }

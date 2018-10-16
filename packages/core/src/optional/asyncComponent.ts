@@ -2,6 +2,7 @@ import { ChildrenFlags } from '../flags'
 import { createComponentVNode, Slots } from '../vdom'
 import { Component, ComponentType, ComponentClass } from '../component'
 import { unwrap } from '@vue/observer'
+import { isFunction } from '@vue/shared'
 
 interface AsyncComponentFactory {
   (): Promise<ComponentType>
@@ -21,7 +22,7 @@ type AsyncComponentOptions = AsyncComponentFactory | AsyncComponentFullOptions
 export function createAsyncComponent(
   options: AsyncComponentOptions
 ): ComponentClass {
-  if (typeof options === 'function') {
+  if (isFunction(options)) {
     options = { factory: options }
   }
 

@@ -1,5 +1,5 @@
 import { VNodeFlags } from './flags'
-import { EMPTY_OBJ } from './utils'
+import { EMPTY_OBJ, isArray, isFunction, isObject } from '@vue/shared'
 import { h } from './h'
 import { VNode, MountedVNode, createFragment } from './vdom'
 import {
@@ -13,7 +13,10 @@ import { initializeState } from './componentState'
 import { initializeProps, resolveProps } from './componentProps'
 import { initializeComputed, teardownComputed } from './componentComputed'
 import { initializeWatch, teardownWatch } from './componentWatch'
-import { ComponentOptions } from './componentOptions'
+import {
+  ComponentOptions,
+  resolveComponentOptionsFromClass
+} from './componentOptions'
 import { createRenderProxy } from './componentProxy'
 import { handleError, ErrorTypes } from './errorHandling'
 import { warn } from './warning'
@@ -58,7 +61,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
     )
   }
 
-  instance.$options = resolveComponentOptions(instance.constructor)
+  instance.$options = resolveComponentOptionsFromClass(instance.constructor)
   instance.$parentVNode = currentVNode as MountedVNode
 
   // renderProxy
@@ -143,9 +146,9 @@ function normalizeComponentRoot(
 ): VNode {
   if (vnode == null) {
     vnode = createTextVNode('')
-  } else if (typeof vnode !== 'object') {
+  } else if (!isObject(vnode)) {
     vnode = createTextVNode(vnode + '')
-  } else if (Array.isArray(vnode)) {
+  } else if (isArray(vnode)) {
     if (vnode.length === 1) {
       vnode = normalizeComponentRoot(vnode[0], componentVNode)
     } else {
@@ -158,13 +161,13 @@ function normalizeComponentRoot(
       (flags & VNodeFlags.COMPONENT || flags & VNodeFlags.ELEMENT)
     ) {
       if (el) {
-        vnode = cloneVNode(vnode)
+        vnode = cloneVNode(vnode as VNode)
       }
       if (flags & VNodeFlags.COMPONENT) {
         vnode.parentVNode = componentVNode
       }
     } else if (el) {
-      vnode = cloneVNode(vnode)
+      vnode = cloneVNode(vnode as VNode)
     }
   }
   return vnode
@@ -209,7 +212,7 @@ export function createComponentClassFromOptions(
     // name -> displayName
     if (key === 'name') {
       options.displayName = options.name
-    } else if (typeof value === 'function') {
+    } else if (isFunction(value)) {
       // lifecycle hook / data / render
       if (__COMPAT__) {
         if (key === 'render') {
@@ -229,7 +232,7 @@ export function createComponentClassFromOptions(
     } else if (key === 'computed') {
       for (const computedKey in value) {
         const computed = value[computedKey]
-        const isGet = typeof computed === 'function'
+        const isGet = isFunction(computed)
         Object.defineProperty(proto, computedKey, {
           configurable: true,
           get: isGet ? computed : computed.get,
@@ -249,38 +252,4 @@ export function createComponentClassFromOptions(
     }
   }
   return AnonymousComponent as ComponentClass
-}
-
-// This is called in the base component constructor and the return value is
-// set on the instance as $options.
-export function resolveComponentOptions(
-  Component: ComponentClass
-): ComponentOptions {
-  if (Component.options) {
-    return Component.options
-  }
-  const staticDescriptors = Object.getOwnPropertyDescriptors(Component)
-  const options = {} as any
-  for (const key in staticDescriptors) {
-    const { enumerable, get, value } = staticDescriptors[key]
-    if (enumerable || get) {
-      options[key] = get ? get() : value
-    }
-  }
-  const instanceDescriptors = Object.getOwnPropertyDescriptors(
-    Component.prototype
-  )
-  for (const key in instanceDescriptors) {
-    const { get, value } = instanceDescriptors[key]
-    if (get) {
-      // computed properties
-      ;(options.computed || (options.computed = {}))[key] = get
-      // there's no need to do anything for the setter
-      // as it's already defined on the prototype
-    } else if (typeof value === 'function') {
-      ;(options.methods || (options.methods = {}))[key] = value
-    }
-  }
-  Component.options = options
-  return options
 }

@@ -2,8 +2,8 @@ import { unwrap, observable, immutable } from './index'
 import { track, trigger } from './autorun'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
+import { isObject } from '@vue/shared'
 
-const isObject = (value: any) => value !== null && typeof value === 'object'
 const toObservable = (value: any) =>
   isObject(value) ? observable(value) : value
 const toImmutable = (value: any) => (isObject(value) ? immutable(value) : value)

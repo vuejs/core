@@ -1,4 +1,4 @@
-import { NOOP } from './utils'
+import { NOOP, isFunction } from '@vue/shared'
 import { computed, stop, ComputedGetter } from '@vue/observer'
 import { ComponentInstance } from './component'
 import { ComponentComputedOptions } from './componentOptions'
@@ -17,7 +17,7 @@ export function initializeComputed(
   const proxy = instance.$proxy
   for (const key in computedOptions) {
     const option = computedOptions[key]
-    const getter = typeof option === 'function' ? option : option.get || NOOP
+    const getter = isFunction(option) ? option : option.get || NOOP
     handles[key] = computed(getter, proxy)
   }
 }

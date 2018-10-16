@@ -1,4 +1,3 @@
-// import { EMPTY_OBJ } from './utils'
 import { ComponentInstance } from './component'
 import { observable } from '@vue/observer'
 

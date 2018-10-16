@@ -1,3 +1,5 @@
+import { isString } from '@vue/shared'
+
 // style properties that should NOT have "px" added when numeric
 const nonNumericRE = /acit|ex(?:s|g|n|p|$)|rph|ows|mnc|ntw|ine[ch]|zoo|^ord/i
 
@@ -5,7 +7,7 @@ export function patchStyle(el: any, prev: any, next: any, data: any) {
   const { style } = el
   if (!next) {
     el.removeAttribute('style')
-  } else if (typeof next === 'string') {
+  } else if (isString(next)) {
     style.cssText = next
   } else {
     for (const key in next) {
@@ -15,7 +17,7 @@ export function patchStyle(el: any, prev: any, next: any, data: any) {
       }
       style[key] = value
     }
-    if (prev && typeof prev !== 'string') {
+    if (prev && !isString(prev)) {
       for (const key in prev) {
         if (!next[key]) {
           style[key] = ''

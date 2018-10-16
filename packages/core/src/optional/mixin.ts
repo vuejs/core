@@ -1,4 +1,12 @@
 import { Component } from '../component'
+import { createComponentClassFromOptions } from '../componentUtils'
+import {
+  ComponentOptions,
+  resolveComponentOptionsFromClass,
+  mergeComponentOptions
+} from '../componentOptions'
+import { normalizePropsOptions } from '../componentProps'
+import { isFunction } from '@vue/shared'
 
 interface ComponentConstructor<This = Component> {
   new (): This
@@ -25,7 +33,19 @@ export function mixins<
   V = ExtractInstance<T>
 >(...args: T): ComponentConstructorWithMixins<V>
 export function mixins(...args: any[]): any {
-  // TODO
+  let options: ComponentOptions = {}
+  args.forEach(mixin => {
+    if (isFunction(mixin)) {
+      options = mergeComponentOptions(
+        options,
+        resolveComponentOptionsFromClass(mixin)
+      )
+    } else {
+      mixin.props = normalizePropsOptions(mixin.props)
+      options = mergeComponentOptions(options, mixin)
+    }
+  })
+  return createComponentClassFromOptions(options)
 }
 
 /* Example usage

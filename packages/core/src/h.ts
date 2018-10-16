@@ -14,6 +14,7 @@ import {
 } from './vdom'
 import { isObservable } from '@vue/observer'
 import { warn } from './warning'
+import { isString, isArray, isFunction, isObject } from '@vue/shared'
 
 export const Fragment = Symbol()
 export const Portal = Symbol()
@@ -98,10 +99,7 @@ interface createElement extends VNodeFactories {
 }
 
 export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
-  if (
-    Array.isArray(data) ||
-    (data != null && (typeof data !== 'object' || data._isVNode))
-  ) {
+  if (isArray(data) || !isObject(data) || data._isVNode) {
     children = data
     data = null
   }
@@ -133,7 +131,7 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
     }
   }
 
-  if (typeof tag === 'string') {
+  if (isString(tag)) {
     // element
     return createElementVNode(
       tag,
@@ -160,10 +158,7 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
       ref
     )
   } else {
-    if (
-      __DEV__ &&
-      (!tag || (typeof tag !== 'function' && typeof tag !== 'object'))
-    ) {
+    if (__DEV__ && !isFunction(tag) && !isObject(tag)) {
       warn('Invalid component passed to h(): ', tag)
     }
     // component

@@ -3,7 +3,6 @@ import {
   Component,
   render,
   nodeOps,
-  ComponentInstance,
   observable,
   nextTick
 } from '@vue/renderer-test'
@@ -41,7 +40,7 @@ describe('Parent chain management', () => {
     }
 
     const root = nodeOps.createElement('div')
-    const parent = render(h(Parent), root) as ComponentInstance
+    const parent = render(h(Parent), root) as Component
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)
@@ -100,7 +99,7 @@ describe('Parent chain management', () => {
     }
 
     const root = nodeOps.createElement('div')
-    const parent = render(h(Parent), root) as ComponentInstance
+    const parent = render(h(Parent), root) as Component
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)

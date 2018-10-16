@@ -5,7 +5,14 @@ import {
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
-import { normalizeClass, normalizeStyle, handlersRE, EMPTY_OBJ } from './utils'
+import {
+  handlersRE,
+  EMPTY_OBJ,
+  isObject,
+  isArray,
+  isFunction,
+  isString
+} from '@vue/shared'
 import { RawChildrenType, RawSlots } from './h'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
@@ -98,15 +105,6 @@ export function createVNode(
   return vnode
 }
 
-function normalizeClassAndStyle(data: VNodeData) {
-  if (data.class != null) {
-    data.class = normalizeClass(data.class)
-  }
-  if (data.style != null) {
-    data.style = normalizeStyle(data.style)
-  }
-}
-
 export function createElementVNode(
   tag: string,
   data: VNodeData | null,
@@ -122,6 +120,50 @@ export function createElementVNode(
   return createVNode(flags, tag, data, children, childFlags, key, ref, null)
 }
 
+function normalizeClassAndStyle(data: VNodeData) {
+  if (data.class != null) {
+    data.class = normalizeClass(data.class)
+  }
+  if (data.style != null) {
+    data.style = normalizeStyle(data.style)
+  }
+}
+
+function normalizeStyle(value: any): Record<string, string | number> | void {
+  if (isArray(value)) {
+    const res: Record<string, string | number> = {}
+    for (let i = 0; i < value.length; i++) {
+      const normalized = normalizeStyle(value[i])
+      if (normalized) {
+        for (const key in normalized) {
+          res[key] = normalized[key]
+        }
+      }
+    }
+    return res
+  } else if (isObject(value)) {
+    return value
+  }
+}
+
+function normalizeClass(value: any): string {
+  let res = ''
+  if (isString(value)) {
+    res = value
+  } else if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      res += normalizeClass(value[i]) + ' '
+    }
+  } else if (isObject(value)) {
+    for (const name in value) {
+      if (value[name]) {
+        res += name + ' '
+      }
+    }
+  }
+  return res.trim()
+}
+
 export function createComponentVNode(
   comp: any,
   data: VNodeData | null,
@@ -134,8 +176,7 @@ export function createComponentVNode(
   let flags: VNodeFlags
 
   // flags
-  const compType = typeof comp
-  if (compType === 'object') {
+  if (isObject(comp)) {
     if (comp.functional) {
       // object literal functional
       flags = VNodeFlags.COMPONENT_FUNCTIONAL
@@ -155,7 +196,7 @@ export function createComponentVNode(
     }
   } else {
     // assumes comp is function here now
-    if (__DEV__ && compType !== 'function') {
+    if (__DEV__ && !isFunction(comp)) {
       // TODO warn invalid comp value in dev
     }
     if (comp.prototype && comp.prototype.render) {
@@ -178,14 +219,13 @@ export function createComponentVNode(
       ? ChildrenFlags.DYNAMIC_SLOTS
       : ChildrenFlags.NO_CHILDREN
     if (children != null) {
-      const childrenType = typeof children
-      if (childrenType === 'function') {
+      if (isFunction(children)) {
         // function as children
         slots = { default: children }
-      } else if (Array.isArray(children) || (children as any)._isVNode) {
+      } else if (isArray(children) || (children as any)._isVNode) {
         // direct vnode children
         slots = { default: () => children }
-      } else if (typeof children === 'object') {
+      } else if (isObject(children)) {
         // slot object as children
         slots = children
       }
@@ -313,7 +353,7 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
 
 function normalizeChildren(vnode: VNode, children: any) {
   let childFlags
-  if (Array.isArray(children)) {
+  if (isArray(children)) {
     const { length } = children
     if (length === 0) {
       childFlags = ChildrenFlags.NO_CHILDREN
@@ -356,7 +396,7 @@ export function normalizeVNodes(
       newChild = createTextVNode('')
     } else if (child._isVNode) {
       newChild = child.el ? cloneVNode(child) : child
-    } else if (Array.isArray(child)) {
+    } else if (isArray(child)) {
       normalizeVNodes(child, newChildren, currentPrefix + i + '|')
     } else {
       newChild = createTextVNode(child + '')
@@ -386,7 +426,7 @@ function normalizeSlots(slots: { [name: string]: any }): Slots {
 function normalizeSlot(value: any): VNode[] {
   if (value == null) {
     return [createTextVNode('')]
-  } else if (Array.isArray(value)) {
+  } else if (isArray(value)) {
     return normalizeVNodes(value)
   } else if (value._isVNode) {
     return [value]

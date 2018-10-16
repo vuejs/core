@@ -2,6 +2,7 @@ import { observable, immutable, unwrap } from './index'
 import { OperationTypes } from './operations'
 import { track, trigger } from './autorun'
 import { LOCKED } from './lock'
+import { isObject } from '@vue/shared'
 
 const hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -18,7 +19,7 @@ function createGetter(isImmutable: boolean) {
       return res
     }
     track(target, OperationTypes.GET, key)
-    return res !== null && typeof res === 'object'
+    return isObject(res)
       ? isImmutable
         ? // need to lazy access immutable and observable here to avoid
           // circular dependency

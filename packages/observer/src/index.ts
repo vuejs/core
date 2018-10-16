@@ -1,3 +1,4 @@
+import { isObject, EMPTY_OBJ } from '@vue/shared'
 import { mutableHandlers, immutableHandlers } from './baseHandlers'
 
 import {
@@ -28,7 +29,6 @@ export { OperationTypes } from './operations'
 export { computed, ComputedGetter } from './computed'
 export { lock, unlock } from './lock'
 
-const EMPTY_OBJ = {}
 const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
 
@@ -83,7 +83,7 @@ function createObservable(
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>
 ) {
-  if (target === null || typeof target !== 'object') {
+  if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value is not observable: ${String(target)}`)
     }

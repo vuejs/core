@@ -15,7 +15,7 @@ return applyDirectives(
 
 import { VNode, cloneVNode, VNodeData } from '../vdom'
 import { ComponentInstance } from '../component'
-import { EMPTY_OBJ } from '../utils'
+import { EMPTY_OBJ } from '@vue/shared'
 
 interface DirectiveBinding {
   instance: ComponentInstance

@@ -2,19 +2,40 @@ import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import { ComponentInstance } from './component'
 import {
   Data,
-  ComponentPropsOptions,
   PropOptions,
   Prop,
-  PropType
+  PropType,
+  ComponentPropsOptions
 } from './componentOptions'
-import { EMPTY_OBJ, camelize, hyphenate, capitalize } from './utils'
+import {
+  EMPTY_OBJ,
+  camelize,
+  hyphenate,
+  capitalize,
+  isString,
+  isFunction,
+  isArray,
+  isObject
+} from '@vue/shared'
 import { warn } from './warning'
 
 const EMPTY_PROPS = { props: EMPTY_OBJ }
 
+const enum BooleanFlags {
+  shouldCast = '1',
+  shouldCastTrue = '2'
+}
+
+type NormalizedProp = PropOptions & {
+  [BooleanFlags.shouldCast]?: boolean
+  [BooleanFlags.shouldCastTrue]?: boolean
+}
+
+type NormalizedPropsOptions = Record<string, NormalizedProp>
+
 export function initializeProps(
   instance: ComponentInstance,
-  options: ComponentPropsOptions | undefined,
+  options: NormalizedPropsOptions | undefined,
   data: Data | null
 ) {
   const { props, attrs } = resolveProps(data, options)
@@ -31,13 +52,13 @@ export function initializeProps(
 //   - else: everything goes in `props`.
 export function resolveProps(
   rawData: any,
-  rawOptions: ComponentPropsOptions | void
+  _options: NormalizedPropsOptions | void
 ): { props: Data; attrs?: Data } {
-  const hasDeclaredProps = rawOptions !== void 0
+  const hasDeclaredProps = _options !== void 0
+  const options = _options as NormalizedPropsOptions
   if (!rawData && !hasDeclaredProps) {
     return EMPTY_PROPS
   }
-  const options = normalizePropsOptions(rawOptions) as NormalizedPropsOptions
   const props: any = {}
   let attrs: any = void 0
   if (rawData != null) {
@@ -66,8 +87,7 @@ export function resolveProps(
       // default values
       if (hasDefault && currentValue === void 0) {
         const defaultValue = opt.default
-        props[key] =
-          typeof defaultValue === 'function' ? defaultValue() : defaultValue
+        props[key] = isFunction(defaultValue) ? defaultValue() : defaultValue
       }
       // boolean casting
       if (opt[BooleanFlags.shouldCast]) {
@@ -129,58 +149,34 @@ export function updateProps(instance: ComponentInstance, nextData: Data) {
   }
 }
 
-const enum BooleanFlags {
-  shouldCast = '1',
-  shouldCastTrue = '2'
-}
-
-type NormalizedProp = PropOptions & {
-  [BooleanFlags.shouldCast]?: boolean
-  [BooleanFlags.shouldCastTrue]?: boolean
-}
-
-type NormalizedPropsOptions = Record<string, NormalizedProp>
-
-const normalizationCache = new WeakMap<
-  ComponentPropsOptions,
-  NormalizedPropsOptions
->()
-
-function normalizePropsOptions(
+export function normalizePropsOptions(
   raw: ComponentPropsOptions | void
-): NormalizedPropsOptions {
+): NormalizedPropsOptions | void {
   if (!raw) {
-    return EMPTY_OBJ
-  }
-  const hit = normalizationCache.get(raw)
-  if (hit) {
-    return hit
+    return
   }
   const normalized: NormalizedPropsOptions = {}
-  if (Array.isArray(raw)) {
+  if (isArray(raw)) {
     for (let i = 0; i < raw.length; i++) {
-      if (__DEV__ && typeof raw !== 'string') {
-        warn(`props must be strings when using array syntax.`)
+      if (__DEV__ && !isString(raw[i])) {
+        warn(`props must be strings when using array syntax.`, raw[i])
       }
       normalized[camelize(raw[i])] = EMPTY_OBJ
     }
   } else {
-    if (__DEV__ && typeof raw !== 'object') {
+    if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
     for (const key in raw) {
       const opt = raw[key]
       const prop = (normalized[camelize(key)] =
-        Array.isArray(opt) || typeof opt === 'function'
-          ? { type: opt }
-          : opt) as NormalizedProp
+        isArray(opt) || isFunction(opt) ? { type: opt } : opt) as NormalizedProp
       const booleanIndex = getTypeIndex(Boolean, prop.type)
       const stringIndex = getTypeIndex(String, prop.type)
       prop[BooleanFlags.shouldCast] = booleanIndex > -1
       prop[BooleanFlags.shouldCastTrue] = booleanIndex < stringIndex
     }
   }
-  normalizationCache.set(raw, normalized)
   return normalized
 }
 
@@ -199,13 +195,13 @@ function getTypeIndex(
   type: Prop<any>,
   expectedTypes: PropType<any> | void | null | true
 ): number {
-  if (Array.isArray(expectedTypes)) {
+  if (isArray(expectedTypes)) {
     for (let i = 0, len = expectedTypes.length; i < len; i++) {
       if (isSameType(expectedTypes[i], type)) {
         return i
       }
     }
-  } else if (expectedTypes != null && typeof expectedTypes === 'object') {
+  } else if (isObject(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
   return -1
@@ -235,7 +231,7 @@ function validateProp(
   // type check
   if (type != null && type !== true) {
     let isValid = false
-    const types = Array.isArray(type) ? type : [type]
+    const types = isArray(type) ? type : [type]
     const expectedTypes = []
     // value is valid as long as one of the specified types match
     for (let i = 0; i < types.length && !isValid; i++) {
@@ -269,7 +265,7 @@ function assertType(value: any, type: Prop<any>): AssertionResult {
   } else if (expectedType === 'Object') {
     valid = toRawType(value) === 'Object'
   } else if (expectedType === 'Array') {
-    valid = Array.isArray(value)
+    valid = isArray(value)
   } else {
     valid = value instanceof type
   }
