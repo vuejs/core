@@ -24,9 +24,8 @@ import { warn } from './warning'
 let currentVNode: VNode | null = null
 let currentContextVNode: VNode | null = null
 
-export function createComponentInstance(
-  vnode: VNode,
-  Component: ComponentClass
+export function createComponentInstance<T extends Component>(
+  vnode: VNode
 ): ComponentInstance {
   // component instance creation is done in two steps.
   // first, `initializeComponentInstance` is called inside base component
@@ -37,6 +36,7 @@ export function createComponentInstance(
   // always pass args in super()
   currentVNode = vnode
   currentContextVNode = vnode.contextVNode
+  const Component = vnode.tag as ComponentClass
   const instance = (vnode.children = new Component() as ComponentInstance)
 
   // then we finish the initialization by collecting properties set on the

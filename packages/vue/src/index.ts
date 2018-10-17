@@ -17,7 +17,7 @@ class Vue {
     // convert it to a class
     const Component = createComponentClassFromOptions(options || {})
     const vnode = h(Component)
-    const instance = createComponentInstance(vnode, Component)
+    const instance = createComponentInstance(vnode)
 
     function mount(el: any) {
       const dom = typeof el === 'string' ? document.querySelector(el) : el

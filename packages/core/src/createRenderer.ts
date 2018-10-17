@@ -11,11 +11,7 @@ import {
   Ref,
   VNodeChildren
 } from './vdom'
-import {
-  ComponentInstance,
-  FunctionalComponent,
-  ComponentClass
-} from './component'
+import { ComponentInstance, FunctionalComponent } from './component'
 import { updateProps } from './componentProps'
 import {
   renderInstanceRoot,
@@ -229,13 +225,7 @@ export function createRenderer(options: RendererOptions) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
     } else {
-      mountComponentInstance(
-        vnode,
-        vnode.tag as ComponentClass,
-        container,
-        isSVG,
-        endNode
-      )
+      mountComponentInstance(vnode, container, isSVG, endNode)
     }
   }
 
@@ -1151,19 +1141,17 @@ export function createRenderer(options: RendererOptions) {
 
   function mountComponentInstance(
     vnode: VNode,
-    Component: ComponentClass,
     container: RenderNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
   ): RenderNode {
     // a vnode may already have an instance if this is a compat call with
     // new Vue()
-    const instance =
-      (__COMPAT__ && (vnode.children as ComponentInstance)) ||
-      createComponentInstance(vnode, Component)
+    const instance = ((__COMPAT__ && vnode.children) ||
+      createComponentInstance(vnode as any)) as ComponentInstance
 
     // inject platform-specific unmount to keep-alive container
-    if ((Component as any)[KeepAliveSymbol] === true) {
+    if ((vnode.tag as any)[KeepAliveSymbol] === true) {
       ;(instance as any).$unmount = unmountComponentInstance
     }
 
