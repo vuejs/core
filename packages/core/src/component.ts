@@ -12,7 +12,7 @@ import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
-import { EventEmitter, invokeListeners } from './optional/events'
+import { EventEmitter, invokeListeners } from './optional/eventEmitter'
 
 // public component instance type
 export interface Component<P = {}, D = {}> extends PublicInstanceMethods {

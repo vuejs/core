@@ -17,7 +17,7 @@ export { Provide, Inject } from './optional/context'
 export { createAsyncComponent } from './optional/asyncComponent'
 export { KeepAlive } from './optional/keepAlive'
 export { mixins } from './optional/mixins'
-export { EventEmitter } from './optional/events'
+export { EventEmitter } from './optional/eventEmitter'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'
