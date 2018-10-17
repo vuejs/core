@@ -4,7 +4,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { onRE } from '@vue/shared'
+import { isOn } from '@vue/shared'
 
 // value, checked, selected & muted
 // plus anything with upperCase letter in it are always patched as properties
@@ -29,13 +29,8 @@ export function patchData(
       patchStyle(el, prevValue, nextValue, nextVNode.data)
       break
     default:
-      if (onRE.test(key)) {
-        patchEvent(
-          el,
-          key.replace(onRE, '').toLowerCase(),
-          prevValue,
-          nextValue
-        )
+      if (isOn(key)) {
+        patchEvent(el, key.slice(2).toLowerCase(), prevValue, nextValue)
       } else if (domPropsRE.test(key)) {
         patchDOMProp(
           el,

@@ -2,8 +2,10 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = Object.freeze({})
 
 export const NOOP = () => {}
 
-export const onRE = /^on/
 export const reservedPropRE = /^(?:key|ref|slots)$|^vnode/
+
+export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
+export const isReservedKey = (key: string) => key[0] === '_' || key[0] === '$'
 
 export const isArray = Array.isArray
 export const isFunction = (val: any): val is Function =>

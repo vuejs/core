@@ -1,5 +1,5 @@
 import { ComponentInstance } from './component'
-import { isString, isFunction } from '@vue/shared'
+import { isFunction, isReservedKey } from '@vue/shared'
 
 const bindCache = new WeakMap()
 
@@ -37,7 +37,7 @@ const renderProxyHandlers = {
     ) {
       // computed
       return target._computedGetters[key]()
-    } else {
+    } else if (key[0] !== '_') {
       if (__DEV__ && !(key in target)) {
         // TODO warn non-present property
       }
@@ -57,7 +57,7 @@ const renderProxyHandlers = {
     receiver: any
   ): boolean {
     if (__DEV__) {
-      if (isString(key) && key[0] === '$') {
+      if (isReservedKey(key)) {
         // TODO warn setting immutable properties
         return false
       }

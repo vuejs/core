@@ -1,7 +1,6 @@
 import { ComponentInstance } from './component'
 import { observable } from '@vue/observer'
-
-const internalRE = /^_|^\$/
+import { isReservedKey } from '@vue/shared'
 
 export function initializeState(instance: ComponentInstance) {
   const { data } = instance.$options
@@ -18,7 +17,7 @@ export function extractInitializers(
   const keys = Object.keys(instance)
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    if (!internalRE.test(key)) {
+    if (!isReservedKey(key)) {
       data[key] = (instance as any)[key]
     }
   }
