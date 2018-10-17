@@ -13,6 +13,7 @@ import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
 import { EventEmitter, invokeListeners } from './optional/eventEmitter'
+import { warn } from './warning'
 
 // public component instance type
 export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
@@ -147,6 +148,15 @@ class InternalComponent implements PublicInstanceMethods {
     }
     if (__COMPAT__) {
       ;(this as any)._eventEmitter = new EventEmitter(this)
+    }
+  }
+
+  // necessary to tell this apart from a functional
+  render(...args: any[]): any {
+    if (__DEV__) {
+      const name =
+        (this.$options && this.$options.displayName) || this.constructor.name
+      warn(`Class component \`${name}\` is missing render() method.`)
     }
   }
 

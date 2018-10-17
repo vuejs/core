@@ -42,7 +42,7 @@ const renderProxyHandlers = {
         // TODO warn non-present property
       }
       const value = Reflect.get(target, key, receiver)
-      if (isFunction(value)) {
+      if (key !== 'constructor' && isFunction(value)) {
         // auto bind
         return getBoundMethod(value, target, receiver)
       } else {
