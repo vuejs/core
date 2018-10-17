@@ -6,6 +6,7 @@ import {
   mergeComponentOptions
 } from '../componentOptions'
 import { normalizePropsOptions } from '../componentProps'
+import { extractInitializers } from '../componentState'
 import { isFunction } from '@vue/shared'
 
 interface ComponentConstructor<This = Component> {
@@ -36,14 +37,25 @@ export function mixins(...args: any[]): any {
   let options: ComponentOptions = {}
   args.forEach(mixin => {
     if (isFunction(mixin)) {
-      options = mergeComponentOptions(
-        options,
-        resolveComponentOptionsFromClass(mixin)
-      )
+      const Class = mixin
+      mixin = resolveComponentOptionsFromClass(Class)
+      // in order to extract properties initialized in the mixin's constructor,
+      // we create an instance of it and pass in the actual props - this
+      // short-circuits the normal component initialization and allows us to
+      // relatively-cheaply extract the properties added in the constructor.
+      function extractData() {
+        return extractInitializers(new Class(this.$props))
+      }
+      const { data } = mixin
+      mixin.data = data
+        ? function() {
+            return Object.assign(data.call(this), extractData.call(this))
+          }
+        : extractData
     } else {
       mixin.props = normalizePropsOptions(mixin.props)
-      options = mergeComponentOptions(options, mixin)
     }
+    options = mergeComponentOptions(options, mixin)
   })
   return createComponentClassFromOptions(options)
 }

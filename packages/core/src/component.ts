@@ -137,8 +137,16 @@ class InternalComponent implements PublicInstanceMethods {
   _isVue: boolean = true
   _inactiveRoot: boolean = false
 
-  constructor() {
-    initializeComponentInstance(this as any)
+  constructor(props?: object) {
+    if (props === void 0) {
+      initializeComponentInstance(this as any)
+    } else {
+      // the presence of the props argument indicates that this class is being
+      // instantiated as a mixin, and should expose the props on itself
+      // so that the extended class constructor (and property initializers) can
+      // access $props.
+      this.$props = props
+    }
   }
 
   // to be set by renderer during mount
