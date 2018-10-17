@@ -1,4 +1,4 @@
-import { EMPTY_OBJ, NOOP, isArray } from '@vue/shared'
+import { EMPTY_OBJ, NOOP } from '@vue/shared'
 import { VNode, Slots, RenderNode, MountedVNode } from './vdom'
 import {
   Data,
@@ -12,6 +12,7 @@ import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
+import { EventEmitter, invokeListeners } from './optional/events'
 
 // public component instance type
 export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
@@ -38,10 +39,7 @@ interface PublicInstanceMethods {
     cb: (this: this, newValue: any, oldValue: any) => void,
     options?: WatchOptions
   ): () => void
-  $on(event: string, fn: Function): this
-  $once(event: string, fn: Function): this
-  $off(event?: string, fn?: Function): this
-  $emit(name: string, ...payload: any[]): this
+  $emit(name: string, ...payload: any[]): void
 }
 
 export interface APIMethods<P = {}, D = {}> {
@@ -147,6 +145,9 @@ class InternalComponent implements PublicInstanceMethods {
       // access $props.
       this.$props = props
     }
+    if (__COMPAT__) {
+      ;(this as any)._eventEmitter = new EventEmitter(this)
+    }
   }
 
   // to be set by renderer during mount
@@ -164,55 +165,7 @@ class InternalComponent implements PublicInstanceMethods {
     return setupWatcher(this as any, keyOrFn, cb, options)
   }
 
-  // eventEmitter interface
-  $on(event: string, fn: Function): this {
-    if (isArray(event)) {
-      for (let i = 0; i < event.length; i++) {
-        this.$on(event[i], fn)
-      }
-    } else {
-      const events = this._events || (this._events = Object.create(null))
-      ;(events[event] || (events[event] = [])).push(fn)
-    }
-    return this
-  }
-
-  $once(event: string, fn: Function): this {
-    const onceFn = (...args: any[]) => {
-      this.$off(event, onceFn)
-      fn.apply(this, args)
-    }
-    ;(onceFn as any).fn = fn
-    return this.$on(event, onceFn)
-  }
-
-  $off(event?: string, fn?: Function): this {
-    if (this._events) {
-      if (!event && !fn) {
-        this._events = null
-      } else if (isArray(event)) {
-        for (let i = 0; i < event.length; i++) {
-          this.$off(event[i], fn)
-        }
-      } else if (!fn) {
-        this._events[event as string] = null
-      } else {
-        const fns = this._events[event as string]
-        if (fns) {
-          for (let i = 0; i < fns.length; i++) {
-            const f = fns[i]
-            if (fn === f || fn === (f as any).fn) {
-              fns.splice(i, 1)
-              break
-            }
-          }
-        }
-      }
-    }
-    return this
-  }
-
-  $emit(name: string, ...payload: any[]): this {
+  $emit(name: string, ...payload: any[]) {
     const parentData =
       (this.$parentVNode && this.$parentVNode.data) || EMPTY_OBJ
     const parentListener =
@@ -220,24 +173,23 @@ class InternalComponent implements PublicInstanceMethods {
     if (parentListener) {
       invokeListeners(parentListener, payload)
     }
-    if (this._events) {
-      const handlers = this._events[name]
-      if (handlers) {
-        invokeListeners(handlers, payload)
-      }
-    }
-    return this
   }
 }
 
-function invokeListeners(value: Function | Function[], payload: any[]) {
-  // TODO handle error
-  if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      value[i](...payload)
+// legacy event emitter interface exposed on component instances
+if (__COMPAT__) {
+  const p = InternalComponent.prototype as any
+  ;['on', 'off', 'once'].forEach(key => {
+    p['$' + key] = function(...args: any[]) {
+      this._eventEmitter[key](...args)
+      return this
     }
-  } else {
-    value(...payload)
+  })
+  const emit = p.$emit
+  p.$emit = function(...args: any[]) {
+    emit.call(this, ...args)
+    this._eventEmitter.emit(...args)
+    return this
   }
 }
 
