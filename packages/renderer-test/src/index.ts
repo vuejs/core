@@ -1,4 +1,10 @@
-import { createRenderer, VNode, Component } from '@vue/core'
+import {
+  h,
+  createRenderer,
+  VNode,
+  Component,
+  createComponentInstance
+} from '@vue/core'
 import { nodeOps, TestElement } from './nodeOps'
 import { patchData } from './patchData'
 
@@ -12,6 +18,20 @@ type publicRender = (
   container: TestElement
 ) => Component | null
 export const render = _render as publicRender
+
+export function createInstance<T extends Component>(
+  Class: new () => T,
+  props?: any
+): T {
+  return createComponentInstance(h(Class, props)).$proxy as any
+}
+
+export function renderIntsance<T extends Component>(
+  Class: new () => T,
+  props?: any
+): T {
+  return render(h(Class, props), nodeOps.createElement('div')) as any
+}
 
 export { serialize } from './serialize'
 export * from './nodeOps'
