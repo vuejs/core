@@ -25,11 +25,7 @@ export { VNodeFlags, ChildrenFlags } from './flags'
 export { VNode, Slots } from './vdom'
 
 // Internal API, for libraries or renderers that need to perform low level work
-export {
-  reservedMethods,
-  resolveComponentOptionsFromClass,
-  mergeComponentOptions
-} from './componentOptions'
+export * from './componentOptions'
 export {
   createComponentInstance,
   createComponentClassFromOptions
