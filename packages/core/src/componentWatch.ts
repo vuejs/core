@@ -61,12 +61,12 @@ export function setupWatcher(
   const applyCb = () => {
     const newValue = runner()
     if (options.deep || newValue !== oldValue) {
-      oldValue = newValue
       try {
         cb.call(instance.$proxy, newValue, oldValue)
       } catch (e) {
         handleError(e, instance, ErrorTypes.WATCH_CALLBACK)
       }
+      oldValue = newValue
     }
   }
 
