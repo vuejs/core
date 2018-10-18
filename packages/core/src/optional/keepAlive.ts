@@ -18,8 +18,13 @@ type Cache = Map<CacheKey, VNode>
 export const KeepAliveSymbol = Symbol()
 
 export class KeepAlive extends Component<KeepAliveProps> {
-  cache: Cache = new Map()
-  keys: Set<CacheKey> = new Set()
+  private cache: Cache
+  private keys: Set<CacheKey>
+
+  created() {
+    this.cache = new Map()
+    this.keys = new Set()
+  }
 
   // to be set in createRenderer when instance is created
   $unmount: (instance: ComponentInstance) => void
@@ -63,9 +68,6 @@ export class KeepAlive extends Component<KeepAliveProps> {
       }
       return children
     } else if ((vnode.flags & VNodeFlags.COMPONENT_STATEFUL) === 0) {
-      if (__DEV__) {
-        warn(`KeepAlive child must be a stateful component.`)
-      }
       return children
     }
 
