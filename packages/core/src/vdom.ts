@@ -217,12 +217,11 @@ export function createComponentVNode(
       if (isFunction(children)) {
         // function as children
         slots = { default: children }
-      } else if (isArray(children) || (children as any)._isVNode) {
-        // direct vnode children
-        slots = { default: () => children }
-      } else if (isObject(children)) {
+      } else if (isObject(children) && !(children as any)._isVNode) {
         // slot object as children
         slots = children
+      } else {
+        slots = { default: () => children }
       }
       slots = normalizeSlots(slots)
     }

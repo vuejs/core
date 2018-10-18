@@ -109,6 +109,8 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
 
   // if value is observable, create a clone of original
   // so that we can normalize its class/style
+  // since this guard is only placed here, this means any direct createXXXVnode
+  // functions only accept fresh data objects.
   if (isObservable(data)) {
     data = Object.assign({}, data)
   }
