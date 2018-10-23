@@ -11,11 +11,14 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
   return true
 }))
 
-exports.fuzzyMatchTarget = partialTarget => {
+exports.fuzzyMatchTarget = (partialTarget, includeAllMatching) => {
   const matched = []
   for (const target of targets) {
     if (target.match(partialTarget)) {
       matched.push(target)
+      if (!includeAllMatching) {
+        return matched
+      }
     }
   }
   if (matched.length) {

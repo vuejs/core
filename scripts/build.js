@@ -25,13 +25,14 @@ const { targets, fuzzyMatchTarget } = require('./utils')
 const args = require('minimist')(process.argv.slice(2))
 const target = args._[0]
 const formats = args.formats || args.f
+const buildAllMatching = args.all || args.a
 ;(async () => {
   if (!target) {
     await buildAll(targets)
     checkAllSizes(targets)
   } else {
-    await buildAll(fuzzyMatchTarget(target))
-    checkAllSizes(fuzzyMatchTarget(target))
+    await buildAll(fuzzyMatchTarget(target, buildAllMatching))
+    checkAllSizes(fuzzyMatchTarget(target, buildAllMatching))
   }
 })()
 

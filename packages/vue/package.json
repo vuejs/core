@@ -1,14 +1,13 @@
 {
-  "name": "vue-compat",
+  "name": "vue",
   "version": "3.0.0-alpha.1",
-  "description": "Vue 2.x compat build",
+  "description": "vue",
   "main": "index.js",
   "module": "dist/vue.esm-bundler.js",
+  "types": "dist/index.d.ts",
   "unpkg": "dist/vue.global.js",
-  "sideEffects": false,
   "buildOptions": {
     "name": "Vue",
-    "compat": true,
     "formats": ["esm", "cjs", "global", "esm-browser"]
   },
   "repository": {

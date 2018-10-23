@@ -19,7 +19,7 @@ const packageOptions = pkg.buildOptions || {}
 const aliasOptions = { resolve: ['.ts'] }
 fs.readdirSync(packagesDir).forEach(dir => {
   if (
-    dir !== 'vue' &&
+    !dir.startsWith('vue') &&
     fs.statSync(path.resolve(packagesDir, dir)).isDirectory()
   ) {
     aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)

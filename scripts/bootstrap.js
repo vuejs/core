@@ -9,6 +9,9 @@ const packagesDir = path.resolve(__dirname, '../packages')
 const files = fs.readdirSync(packagesDir)
 
 files.forEach(shortName => {
+  if (shortName === 'shared') {
+    return
+  }
   if (!fs.statSync(path.join(packagesDir, shortName)).isDirectory()) {
     return
   }
