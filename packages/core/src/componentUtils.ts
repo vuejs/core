@@ -1,5 +1,5 @@
 import { VNodeFlags } from './flags'
-import { EMPTY_OBJ, isArray, isFunction, isObject } from '@vue/shared'
+import { EMPTY_OBJ, isArray, isObject } from '@vue/shared'
 import { h } from './h'
 import { VNode, MountedVNode, createFragment } from './vdom'
 import {
@@ -104,7 +104,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   try {
-    vnode = instance.render.call(
+    vnode = instance.$options.render.call(
       instance.$proxy,
       instance.$props,
       instance.$slots,
@@ -213,35 +213,26 @@ export function createComponentClassFromOptions(
   const proto = AnonymousComponent.prototype as any
   for (const key in options) {
     const value = options[key]
-    // name -> displayName
-    if (key === 'name') {
-      options.displayName = options.name
-    } else if (isFunction(value)) {
-      // lifecycle hook / data / render
+    if (key === 'render') {
       if (__COMPAT__) {
-        if (key === 'render') {
-          proto[key] = function() {
-            return value.call(this, h)
-          }
-        } else if (key === 'beforeDestroy') {
-          proto.beforeUnmount = value
-        } else if (key === 'destroyed') {
-          proto.unmounted = value
-        } else {
-          proto[key] = value
+        options.render = function() {
+          return value.call(this, h)
         }
-      } else {
-        proto[key] = value
       }
+      // so that we can call instance.render directly
+      proto.render = options.render
     } else if (key === 'computed') {
+      // create computed setters on prototype
+      // (getters are handled by the render proxy)
       for (const computedKey in value) {
         const computed = value[computedKey]
-        const isGet = isFunction(computed)
-        Object.defineProperty(proto, computedKey, {
-          configurable: true,
-          get: isGet ? computed : computed.get,
-          set: isGet ? undefined : computed.set
-        })
+        const set = isObject(computed) && computed.set
+        if (set) {
+          Object.defineProperty(proto, computedKey, {
+            configurable: true,
+            set
+          })
+        }
       }
     } else if (key === 'methods') {
       for (const method in value) {
@@ -252,6 +243,18 @@ export function createComponentClassFromOptions(
           )
         }
         proto[method] = value[method]
+      }
+    } else if (__COMPAT__) {
+      if (key === 'name') {
+        options.displayName = value
+      } else if (key === 'render') {
+        options.render = function() {
+          return value.call(this, h)
+        }
+      } else if (key === 'beforeDestroy') {
+        options.beforeUnmount = value
+      } else if (key === 'destroyed') {
+        options.unmounted = value
       }
     }
   }

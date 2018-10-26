@@ -5,7 +5,6 @@ import {
   APIMethods,
   LifecycleMethods
 } from './component'
-import { Slots } from './vdom'
 import { isArray, isObject, isFunction } from '@vue/shared'
 import { normalizePropsOptions } from './componentProps'
 
@@ -22,9 +21,7 @@ export interface ComponentOptions<
   P = {},
   D = {},
   This = ComponentInstance<P, D>
-> extends ComponentClassOptions<P, This> {
-  data?(): D
-  render?: (this: This, props: Readonly<Data>, slots: Slots, attrs: Data) => any
+> extends ComponentClassOptions<P, This>, APIMethods<P, D>, LifecycleMethods {
   // TODO other options
   readonly [key: string]: any
 }
@@ -164,6 +161,7 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
     if (isFunction(value) && isFunction(existing)) {
       if (key === 'data') {
         // for data we need to merge the returned value
+        // TODO: backwards compat requires recursive merge
         res[key] = function() {
           return Object.assign(existing.call(this), value.call(this))
         }
