@@ -3,7 +3,8 @@ import { createComponentClassFromOptions } from '../componentUtils'
 import {
   ComponentOptions,
   resolveComponentOptionsFromClass,
-  mergeComponentOptions
+  mergeComponentOptions,
+  mergeDataFn
 } from '../componentOptions'
 import { normalizePropsOptions } from '../componentProps'
 import { extractInitializers } from '../componentState'
@@ -47,11 +48,7 @@ export function mixins(...args: any[]): any {
         return extractInitializers(new Class(this.$props))
       }
       const { data } = mixin
-      mixin.data = data
-        ? function() {
-            return Object.assign(data.call(this), extractData.call(this))
-          }
-        : extractData
+      mixin.data = data ? mergeDataFn(data, extractData) : extractData
     } else {
       mixin.props = normalizePropsOptions(mixin.props)
     }

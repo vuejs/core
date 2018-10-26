@@ -15,13 +15,17 @@ export interface ComponentClassOptions<P = {}, This = ComponentInstance> {
   computed?: ComponentComputedOptions<This>
   watch?: ComponentWatchOptions<This>
   displayName?: string
+  fromOptions?: boolean
 }
 
 export interface ComponentOptions<
   P = {},
   D = {},
   This = ComponentInstance<P, D>
-> extends ComponentClassOptions<P, This>, APIMethods<P, D>, LifecycleMethods {
+>
+  extends ComponentClassOptions<P, This>,
+    Partial<APIMethods<P, D>>,
+    Partial<LifecycleMethods> {
   // TODO other options
   readonly [key: string]: any
 }
@@ -161,10 +165,7 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
     if (isFunction(value) && isFunction(existing)) {
       if (key === 'data') {
         // for data we need to merge the returned value
-        // TODO: backwards compat requires recursive merge
-        res[key] = function() {
-          return Object.assign(existing.call(this), value.call(this))
-        }
+        res[key] = mergeDataFn(existing, value)
       } else if (/^render|^errorCaptured/.test(key)) {
         // render, renderTracked, renderTriggered & errorCaptured
         // are never merged
@@ -185,4 +186,12 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
     }
   }
   return res
+}
+
+export function mergeDataFn(a: Function, b: Function): Function {
+  // TODO: backwards compat requires recursive merge,
+  // but maybe we should just warn if we detect clashing keys
+  return function() {
+    return Object.assign(a.call(this), b.call(this))
+  }
 }

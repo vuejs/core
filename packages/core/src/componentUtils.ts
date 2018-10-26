@@ -45,7 +45,7 @@ export function createComponentInstance<T extends Component>(
     $proxy,
     $options: { created, computed, watch }
   } = instance
-  initializeState(instance)
+  initializeState(instance, !Component.fromOptions)
   initializeComputed(instance, computed)
   initializeWatch(instance, watch)
   instance.$slots = currentVNode.slots || EMPTY_OBJ
@@ -104,7 +104,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   try {
-    vnode = instance.$options.render.call(
+    vnode = instance.render.call(
       instance.$proxy,
       instance.$props,
       instance.$slots,
@@ -209,6 +209,8 @@ export function createComponentClassFromOptions(
 ): ComponentClass {
   class AnonymousComponent extends Component {
     static options = options
+    // indicate this component was created from options
+    static fromOptions = true
   }
   const proto = AnonymousComponent.prototype as any
   for (const key in options) {

@@ -2,10 +2,15 @@ import { ComponentInstance } from './component'
 import { observable } from '@vue/observer'
 import { isReservedKey } from '@vue/shared'
 
-export function initializeState(instance: ComponentInstance) {
+export function initializeState(
+  instance: ComponentInstance,
+  shouldExtractInitializers: boolean
+) {
   const { data } = instance.$options
   const rawData = (instance._rawData = (data ? data.call(instance) : {}) as any)
-  extractInitializers(instance, rawData)
+  if (shouldExtractInitializers) {
+    extractInitializers(instance, rawData)
+  }
   instance.$data = observable(rawData || {})
 }
 
