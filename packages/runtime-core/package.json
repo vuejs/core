@@ -1,15 +1,11 @@
 {
-  "name": "vue",
+  "name": "@vue/runtime-core",
   "version": "3.0.0-alpha.1",
-  "description": "vue",
+  "description": "@vue/runtime-core",
   "main": "index.js",
-  "module": "dist/vue.esm-bundler.js",
+  "module": "dist/runtime-core.esm-bundler.js",
   "types": "dist/index.d.ts",
-  "unpkg": "dist/vue.global.js",
-  "buildOptions": {
-    "name": "Vue",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
-  },
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"
@@ -22,8 +18,9 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/runtime-dom": "3.0.0-alpha.1"
+    "@vue/observer": "3.0.0-alpha.1",
+    "@vue/scheduler": "3.0.0-alpha.1"
   }
 }

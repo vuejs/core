@@ -20,18 +20,18 @@
     "rootDir": ".",
     "paths": {
       "@vue/shared": ["packages/shared/src"],
-      "@vue/core": ["packages/core/src"],
+      "@vue/runtime-core": ["packages/runtime-core/src"],
+      "@vue/runtime-dom": ["packages/runtime-dom/src"],
+      "@vue/runtime-test": ["packages/runtime-test/src"],
       "@vue/observer": ["packages/observer/src"],
       "@vue/scheduler": ["packages/scheduler/src"],
-      "@vue/renderer-dom": ["packages/renderer-dom/src"],
-      "@vue/renderer-server": ["packages/renderer-server/src"],
-      "@vue/renderer-test": ["packages/renderer-test/src"],
-      "@vue/compiler": ["packages/compiler-core/src"]
+      "@vue/compiler-core": ["packages/compiler-core/src"],
+      "@vue/server-renderer": ["packages/server-renderer/src"]
     }
   },
   "include": [
     "packages/global.d.ts",
-    "packages/renderer-dom/jsx.d.ts",
+    "packages/runtime-dom/jsx.d.ts",
     "packages/*/src",
     "packages/*/__tests__"
   ]

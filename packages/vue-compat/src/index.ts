@@ -4,7 +4,7 @@ import {
   nextTick,
   createComponentInstance,
   createComponentClassFromOptions
-} from '@vue/renderer-dom'
+} from '@vue/runtime-dom'
 
 // Note: typing for this is intentionally loose, as it will be using 2.x types.
 

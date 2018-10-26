@@ -1,14 +1,11 @@
 {
-  "name": "vue",
+  "name": "@vue/server-renderer",
   "version": "3.0.0-alpha.1",
-  "description": "vue",
+  "description": "@vue/server-renderer",
   "main": "index.js",
-  "module": "dist/vue.esm-bundler.js",
   "types": "dist/index.d.ts",
-  "unpkg": "dist/vue.global.js",
   "buildOptions": {
-    "name": "Vue",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": ["cjs"]
   },
   "repository": {
     "type": "git",
@@ -22,8 +19,5 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
-  "dependencies": {
-    "@vue/runtime-dom": "3.0.0-alpha.1"
-  }
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/server-renderer#readme"
 }
