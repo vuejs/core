@@ -19,8 +19,6 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 
-const EMPTY_PROPS = { props: EMPTY_OBJ }
-
 const enum BooleanFlags {
   shouldCast = '1',
   shouldCastTrue = '2'
@@ -38,9 +36,11 @@ export function initializeProps(
   options: NormalizedPropsOptions | undefined,
   data: Data | null
 ) {
-  const { props, attrs } = resolveProps(data, options)
-  instance.$props = immutable(props || {})
-  instance.$attrs = immutable(attrs || {})
+  const [props, attrs] = resolveProps(data, options)
+  instance.$props = immutable(props === EMPTY_OBJ ? {} : props)
+  instance.$attrs = options
+    ? immutable(attrs === EMPTY_OBJ ? {} : attrs)
+    : instance.$props
 }
 
 // resolve raw VNode data.
@@ -50,10 +50,13 @@ export function initializeProps(
 // - for the rest:
 //   - if has declared props: put declared ones in `props`, the rest in `attrs`
 //   - else: everything goes in `props`.
+
+const EMPTY_PROPS = [EMPTY_OBJ, EMPTY_OBJ] as [Data, Data]
+
 export function resolveProps(
   rawData: any,
   _options: NormalizedPropsOptions | void
-): { props: Data; attrs?: Data } {
+): [Data, Data] {
   const hasDeclaredProps = _options !== void 0
   const options = _options as NormalizedPropsOptions
   if (!rawData && !hasDeclaredProps) {
@@ -109,44 +112,48 @@ export function resolveProps(
     // if component has no declared props, $attrs === $props
     attrs = props
   }
-  return { props, attrs }
+  return [props, attrs]
 }
 
-export function updateProps(instance: ComponentInstance, nextData: Data) {
+export function updateProps(
+  instance: ComponentInstance,
+  nextData: Data | null
+) {
   // instance.$props and instance.$attrs are observables that should not be
   // replaced. Instead, we mutate them to match latest props, which will trigger
   // updates if any value that's been used in child component has changed.
-  if (nextData != null) {
-    const { props: nextProps, attrs: nextAttrs } = resolveProps(
-      nextData,
-      instance.$options.props
-    )
-    // unlock to temporarily allow mutatiing props
-    unlock()
-    const props = instance.$props
-    const rawProps = unwrap(props)
-    for (const key in rawProps) {
-      if (!nextProps.hasOwnProperty(key)) {
-        delete (props as any)[key]
-      }
+  const [nextProps, nextAttrs] = resolveProps(nextData, instance.$options.props)
+  // unlock to temporarily allow mutatiing props
+  unlock()
+  const props = instance.$props
+  const rawProps = unwrap(props)
+  const hasEmptyProps = nextProps === EMPTY_OBJ
+  for (const key in rawProps) {
+    if (hasEmptyProps || !nextProps.hasOwnProperty(key)) {
+      delete (props as any)[key]
     }
+  }
+  if (!hasEmptyProps) {
     for (const key in nextProps) {
       ;(props as any)[key] = nextProps[key]
     }
-    if (nextAttrs) {
-      const attrs = instance.$attrs
-      const rawAttrs = unwrap(attrs)
-      for (const key in rawAttrs) {
-        if (!nextAttrs.hasOwnProperty(key)) {
-          delete attrs[key]
-        }
+  }
+  const attrs = instance.$attrs
+  if (attrs !== props) {
+    const rawAttrs = unwrap(attrs)
+    const hasEmptyAttrs = nextAttrs === EMPTY_OBJ
+    for (const key in rawAttrs) {
+      if (hasEmptyAttrs || !nextAttrs.hasOwnProperty(key)) {
+        delete attrs[key]
       }
+    }
+    if (!hasEmptyAttrs) {
       for (const key in nextAttrs) {
         attrs[key] = nextAttrs[key]
       }
     }
-    lock()
   }
+  lock()
 }
 
 export function normalizePropsOptions(

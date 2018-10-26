@@ -480,9 +480,7 @@ export function createRenderer(options: RendererOptions) {
     instance.$parentVNode = nextVNode as MountedVNode
 
     // Update props. This will trigger child update if necessary.
-    if (nextData !== null) {
-      updateProps(instance, nextData)
-    }
+    updateProps(instance, nextData)
 
     // If has different slots content, or has non-compiled slots,
     // the child needs to be force updated. It's ok to call $forceUpdate

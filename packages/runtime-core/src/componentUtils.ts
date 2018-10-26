@@ -119,10 +119,10 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
 
 export function renderFunctionalRoot(vnode: VNode): VNode {
   const render = vnode.tag as FunctionalComponent
-  const { props, attrs } = resolveProps(vnode.data, render.props)
+  const [props, attrs] = resolveProps(vnode.data, render.props)
   let subTree
   try {
-    subTree = render(props, vnode.slots || EMPTY_OBJ, attrs || EMPTY_OBJ, vnode)
+    subTree = render(props, vnode.slots || EMPTY_OBJ, attrs, vnode)
   } catch (err) {
     handleError(err, vnode, ErrorTypes.RENDER)
   }
