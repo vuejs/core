@@ -8,7 +8,7 @@
   "unpkg": "dist/runtime-dom.global.js",
   "sideEffects": false,
   "buildOptions": {
-    "name": "VueDOMRenderer",
+    "name": "VueDOMRuntime",
     "formats": ["esm", "cjs", "global", "esm-browser"]
   },
   "repository": {
