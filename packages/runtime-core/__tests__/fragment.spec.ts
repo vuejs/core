@@ -80,7 +80,7 @@ describe('Fragments', () => {
       render() {
         return state.ok
           ? [h('div', 'one'), 'two']
-          : [h('div', 'foo'), 'bar', 'baz']
+          : [h('pre', 'foo'), 'bar', 'baz']
       }
     }
     const root = nodeOps.createElement('div')
@@ -90,7 +90,7 @@ describe('Fragments', () => {
 
     state.ok = false
     await nextTick()
-    expect(serialize(root)).toBe(`<div><div>foo</div>barbaz</div>`)
+    expect(serialize(root)).toBe(`<div><pre>foo</pre>barbaz</div>`)
   })
 
   it('should be able to patch fragment children (explcitly keyed)', async () => {

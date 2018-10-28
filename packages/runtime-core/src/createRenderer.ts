@@ -164,14 +164,14 @@ export function createRenderer(options: RendererOptions) {
     if (childFlags !== ChildrenFlags.NO_CHILDREN) {
       const hasSVGChildren = isSVG && tag !== 'foreignObject'
       if (childFlags & ChildrenFlags.SINGLE_VNODE) {
-        mount(children as VNode, el, contextVNode, hasSVGChildren, endNode)
+        mount(children as VNode, el, contextVNode, hasSVGChildren, null)
       } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
         mountArrayChildren(
           children as VNode[],
           el,
           contextVNode,
           hasSVGChildren,
-          endNode
+          null
         )
       }
     }
