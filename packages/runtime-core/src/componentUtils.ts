@@ -77,18 +77,17 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   // parent chain management
   if (currentContextVNode !== null) {
     // locate first non-functional parent
-    while (
-      currentContextVNode !== null &&
-      currentContextVNode.flags & VNodeFlags.COMPONENT_FUNCTIONAL &&
-      currentContextVNode.contextVNode !== null
-    ) {
-      currentContextVNode = currentContextVNode.contextVNode as any
+    while (currentContextVNode !== null) {
+      if ((currentContextVNode.flags & VNodeFlags.COMPONENT_STATEFUL) > 0) {
+        const parentComponent = (currentContextVNode as VNode)
+          .children as ComponentInstance
+        instance.$parent = parentComponent.$proxy
+        instance.$root = parentComponent.$root
+        parentComponent.$children.push(proxy)
+        break
+      }
+      currentContextVNode = currentContextVNode.contextVNode
     }
-    const parentComponent = (currentContextVNode as VNode)
-      .children as ComponentInstance
-    instance.$parent = parentComponent.$proxy
-    instance.$root = parentComponent.$root
-    parentComponent.$children.push(proxy)
   } else {
     instance.$root = proxy
   }
