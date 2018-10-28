@@ -1,4 +1,4 @@
-const delegateRE = /^(?:click|dblclick|submit|(?:key|mouse|touch).*)$/
+const delegateRE = /^(?:click|dblclick|submit|(?:key|mouse|touch|pointer).*)$/
 
 type EventValue = Function | Function[]
 type TargetRef = { el: Element | Document }
