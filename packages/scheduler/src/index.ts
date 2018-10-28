@@ -1,10 +1,8 @@
 const queue: Array<() => void> = []
 const postFlushCbs: Array<() => void> = []
-const postFlushCbsForNextTick: Array<() => void> = []
 const p = Promise.resolve()
 
 let isFlushing = false
-let isFlushingPostCbs = false
 
 export function nextTick(fn?: () => void): Promise<void> {
   return p.then(fn)
@@ -17,58 +15,54 @@ export function queueJob(
 ) {
   if (queue.indexOf(job) === -1) {
     queue.push(job)
-    if (!isFlushing || isFlushingPostCbs) {
+    if (!isFlushing) {
       const p = nextTick(flushJobs)
       if (onError) p.catch(onError)
     }
   }
-  if (postFlushCb) {
-    if (isFlushingPostCbs) {
-      // it's possible for a postFlushCb to queue another job/cb combo,
-      // e.g. triggering a state update inside the updated hook.
-      if (postFlushCbsForNextTick.indexOf(postFlushCb) === -1) {
-        postFlushCbsForNextTick.push(postFlushCb)
-      }
-    } else if (postFlushCbs.indexOf(postFlushCb) === -1) {
-      postFlushCbs.push(postFlushCb)
-    }
+  if (postFlushCb && postFlushCbs.indexOf(postFlushCb) === -1) {
+    postFlushCbs.push(postFlushCb)
   }
 }
 
-const seenJobs = new Map()
 const RECURSION_LIMIT = 100
+type JobCountMap = Map<Function, number>
 
-function flushJobs() {
-  seenJobs.clear()
+function flushJobs(seenJobs?: JobCountMap) {
   isFlushing = true
   let job
+  if (__DEV__) {
+    seenJobs = seenJobs || new Map()
+  }
   while ((job = queue.shift())) {
     if (__DEV__) {
-      if (!seenJobs.has(job)) {
-        seenJobs.set(job, 1)
+      const seen = seenJobs as JobCountMap
+      if (!seen.has(job)) {
+        seen.set(job, 1)
       } else {
-        const count = seenJobs.get(job)
+        const count = seen.get(job) as number
         if (count > RECURSION_LIMIT) {
-          throw new Error('Maximum recursive updates exceeded')
+          throw new Error(
+            'Maximum recursive updates exceeded. ' +
+              "You may have code that is mutating state in your component's " +
+              'render function or updated hook.'
+          )
         } else {
-          seenJobs.set(job, count + 1)
+          seen.set(job, count + 1)
         }
       }
     }
     job()
   }
-  isFlushingPostCbs = true
-  if (postFlushCbsForNextTick.length > 0) {
-    const postFlushCbsFromPrevTick = postFlushCbsForNextTick.slice()
-    postFlushCbsForNextTick.length = 0
-    for (let i = 0; i < postFlushCbsFromPrevTick.length; i++) {
-      postFlushCbsFromPrevTick[i]()
-    }
-  }
-  for (let i = 0; i < postFlushCbs.length; i++) {
-    postFlushCbs[i]()
-  }
+  const cbs = postFlushCbs.slice()
   postFlushCbs.length = 0
-  isFlushingPostCbs = false
+  for (let i = 0; i < cbs.length; i++) {
+    cbs[i]()
+  }
   isFlushing = false
+  // some postFlushCb queued jobs!
+  // keep flushing until it drains.
+  if (queue.length) {
+    flushJobs(seenJobs)
+  }
 }
