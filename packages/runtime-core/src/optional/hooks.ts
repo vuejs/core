@@ -1,4 +1,4 @@
-import { ComponentInstance, FunctionalComponent } from '../component'
+import { ComponentInstance, FunctionalComponent, Component } from '../component'
 import { mergeLifecycleHooks, Data } from '../componentOptions'
 import { VNode, Slots } from '../vdom'
 import { observable } from '@vue/observer'
@@ -36,7 +36,7 @@ export function unsetCurrentInstance() {
   currentInstance = null
 }
 
-export function useState(initial: any) {
+export function useState<T>(initial: T): [T, (newValue: T) => void] {
   if (!currentInstance) {
     throw new Error(
       `useState must be called in a function passed to withHooks.`
@@ -107,20 +107,20 @@ function injectEffect(
     : effect
 }
 
-export function withHooks<T extends FunctionalComponent>(render: T): T {
-  return {
-    displayName: render.name,
+export function withHooks(render: FunctionalComponent): new () => Component {
+  return class ComponentWithHooks extends Component {
+    static displayName = render.name
     created() {
-      hooksState.set(this._self, {
+      hooksState.set((this as any)._self, {
         state: observable({}),
         effects: []
       })
-    },
+    }
     render(props: Data, slots: Slots, attrs: Data, parentVNode: VNode) {
-      setCurrentInstance(this._self)
+      setCurrentInstance((this as any)._self)
       const ret = render(props, slots, attrs, parentVNode)
       unsetCurrentInstance()
       return ret
     }
-  } as any
+  }
 }
