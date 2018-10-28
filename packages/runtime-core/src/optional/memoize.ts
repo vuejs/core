@@ -17,13 +17,13 @@ import { warn } from '../warning'
 
 const memoizeMap = new WeakMap()
 
-export function memoize(
-  getter: () => any,
+export function memoize<T>(
+  getter: () => T,
   instance: Component,
   id: number,
   keys?: any[]
-): any {
-  if (__DEV__ && !Array.isArray(keys)) {
+): T {
+  if (__DEV__ && arguments.length > 3 && !Array.isArray(keys)) {
     warn(
       `keys passed to v-memo or memoize must be an array. Got ${String(keys)}`
     )
