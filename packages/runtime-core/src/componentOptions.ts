@@ -172,10 +172,7 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
         res[key] = value
       } else {
         // merge lifecycle hooks
-        res[key] = function(...args: any[]) {
-          existing.call(this, ...args)
-          value.call(this, ...args)
-        }
+        res[key] = mergeLifecycleHooks(existing, value)
       }
     } else if (isArray(value) && isArray(existing)) {
       res[key] = existing.concat(value)
@@ -186,6 +183,13 @@ export function mergeComponentOptions(to: any, from: any): ComponentOptions {
     }
   }
   return res
+}
+
+export function mergeLifecycleHooks(a: Function, b: Function): Function {
+  return function(...args: any[]) {
+    a.call(this, ...args)
+    b.call(this, ...args)
+  }
 }
 
 export function mergeDataFn(a: Function, b: Function): Function {

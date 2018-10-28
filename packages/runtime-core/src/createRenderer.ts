@@ -1155,7 +1155,7 @@ export function createRenderer(options: RendererOptions) {
 
     const {
       $proxy,
-      $options: { beforeMount, mounted, renderTracked, renderTriggered }
+      $options: { beforeMount, renderTracked, renderTriggered }
     } = instance
 
     if (beforeMount) {
@@ -1194,6 +1194,10 @@ export function createRenderer(options: RendererOptions) {
           if (vnode.ref) {
             mountRef(vnode.ref, $proxy)
           }
+
+          // retrieve mounted value right before calling it so that we get
+          // to inject effects in first render
+          const { mounted } = instance.$options
           if (mounted) {
             lifecycleHooks.push(() => {
               mounted.call($proxy)

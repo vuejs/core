@@ -57,7 +57,7 @@ const renderProxyHandlers = {
     receiver: any
   ): boolean {
     if (__DEV__) {
-      if (isReservedKey(key)) {
+      if (isReservedKey(key) && key in target) {
         // TODO warn setting immutable properties
         return false
       }
