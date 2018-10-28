@@ -21,20 +21,21 @@ export const enum ErrorTypes {
 }
 
 const ErrorTypeStrings: Record<number, string> = {
-  [ErrorTypes.BEFORE_CREATE]: 'beforeCreate lifecycle hook',
-  [ErrorTypes.CREATED]: 'created lifecycle hook',
-  [ErrorTypes.BEFORE_MOUNT]: 'beforeMount lifecycle hook',
-  [ErrorTypes.MOUNTED]: 'mounted lifecycle hook',
-  [ErrorTypes.BEFORE_UPDATE]: 'beforeUpdate lifecycle hook',
-  [ErrorTypes.UPDATED]: 'updated lifecycle hook',
-  [ErrorTypes.BEFORE_DESTROY]: 'beforeDestroy lifecycle hook',
-  [ErrorTypes.DESTROYED]: 'destroyed lifecycle hook',
-  [ErrorTypes.ERROR_CAPTURED]: 'errorCaptured lifecycle hook',
-  [ErrorTypes.RENDER]: 'render function',
-  [ErrorTypes.WATCH_CALLBACK]: 'watcher callback',
-  [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
-  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler',
-  [ErrorTypes.SCHEDULER]: 'scheduler'
+  [ErrorTypes.BEFORE_CREATE]: 'in beforeCreate lifecycle hook',
+  [ErrorTypes.CREATED]: 'in created lifecycle hook',
+  [ErrorTypes.BEFORE_MOUNT]: 'in beforeMount lifecycle hook',
+  [ErrorTypes.MOUNTED]: 'in mounted lifecycle hook',
+  [ErrorTypes.BEFORE_UPDATE]: 'in beforeUpdate lifecycle hook',
+  [ErrorTypes.UPDATED]: 'in updated lifecycle hook',
+  [ErrorTypes.BEFORE_DESTROY]: 'in beforeDestroy lifecycle hook',
+  [ErrorTypes.DESTROYED]: 'in destroyed lifecycle hook',
+  [ErrorTypes.ERROR_CAPTURED]: 'in errorCaptured lifecycle hook',
+  [ErrorTypes.RENDER]: 'in render function',
+  [ErrorTypes.WATCH_CALLBACK]: 'in watcher callback',
+  [ErrorTypes.NATIVE_EVENT_HANDLER]: 'in native event handler',
+  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'in component event handler',
+  [ErrorTypes.SCHEDULER]:
+    'when flushing updates. This may be a Vue internals bug.'
 }
 
 export function handleError(
@@ -84,7 +85,7 @@ function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
     if (contextVNode) {
       pushWarningContext(contextVNode)
     }
-    warn(`Unhandled error${info ? ` in ${info}` : ``}`)
+    warn(`Unhandled error${info ? ` ${info}` : ``}`)
     if (contextVNode) {
       popWarningContext()
     }
