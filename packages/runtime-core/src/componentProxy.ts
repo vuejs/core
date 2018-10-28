@@ -1,5 +1,7 @@
 import { ComponentInstance } from './component'
 import { isFunction, isReservedKey } from '@vue/shared'
+import { warn } from './warning'
+import { isRendering } from './componentUtils'
 
 const bindCache = new WeakMap()
 
@@ -17,29 +19,31 @@ function getBoundMethod(fn: Function, target: any, receiver: any): Function {
 
 const renderProxyHandlers = {
   get(target: ComponentInstance<any, any>, key: string, receiver: any) {
+    let i: any
     if (key === '_self') {
       return target
-    } else if (
-      target._rawData !== null &&
-      target._rawData.hasOwnProperty(key)
-    ) {
+    } else if ((i = target._rawData) !== null && i.hasOwnProperty(key)) {
       // data
+      // make sure to return from $data to register dependency
       return target.$data[key]
-    } else if (
-      target.$options.props != null &&
-      target.$options.props.hasOwnProperty(key)
-    ) {
+    } else if ((i = target.$options.props) != null && i.hasOwnProperty(key)) {
       // props are only proxied if declared
+      // make sure to return from $props to register dependency
       return target.$props[key]
     } else if (
-      target._computedGetters !== null &&
-      target._computedGetters.hasOwnProperty(key)
+      (i = target._computedGetters) !== null &&
+      i.hasOwnProperty(key)
     ) {
       // computed
-      return target._computedGetters[key]()
+      return i[key]()
+    } else if ((i = target._hookProps) !== null && i.hasOwnProperty(key)) {
+      // hooks injections
+      return i[key]
     } else if (key[0] !== '_') {
-      if (__DEV__ && !(key in target)) {
-        // TODO warn non-present property
+      if (__DEV__ && isRendering && !(key in target)) {
+        warn(
+          `property "${key}" was accessed during render but does not exist on instance.`
+        )
       }
       const value = Reflect.get(target, key, receiver)
       if (key !== 'constructor' && isFunction(value)) {
@@ -56,20 +60,18 @@ const renderProxyHandlers = {
     value: any,
     receiver: any
   ): boolean {
+    let i: any
     if (__DEV__) {
       if (isReservedKey(key) && key in target) {
-        // TODO warn setting immutable properties
+        warn(`failed setting property "${key}": reserved fields are immutable.`)
         return false
       }
-      if (
-        target.$options.props != null &&
-        target.$options.props.hasOwnProperty(key)
-      ) {
-        // TODO warn props are immutable
+      if ((i = target.$options.props) != null && i.hasOwnProperty(key)) {
+        warn(`failed setting property "${key}": props are immutable.`)
         return false
       }
     }
-    if (target._rawData !== null && target._rawData.hasOwnProperty(key)) {
+    if ((i = target._rawData) !== null && i.hasOwnProperty(key)) {
       target.$data[key] = value
       return true
     } else {

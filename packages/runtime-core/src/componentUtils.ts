@@ -20,6 +20,7 @@ import {
 import { createRenderProxy } from './componentProxy'
 import { handleError, ErrorTypes } from './errorHandling'
 import { warn } from './warning'
+import { setCurrentInstance, unsetCurrentInstance } from './experimental/hooks'
 
 let currentVNode: VNode | null = null
 let currentContextVNode: VNode | null = null
@@ -100,9 +101,19 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   initializeProps(instance, props, (currentVNode as VNode).data)
 }
 
+export let isRendering = false
+
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   try {
+    setCurrentInstance(instance)
+    if (instance.hooks) {
+      instance._hookProps =
+        instance.hooks.call(instance.$proxy, instance.$props) || null
+    }
+    if (__DEV__) {
+      isRendering = true
+    }
     vnode = instance.render.call(
       instance.$proxy,
       instance.$props,
@@ -110,6 +121,10 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
       instance.$attrs,
       instance.$parentVNode
     )
+    if (__DEV__) {
+      isRendering = false
+    }
+    unsetCurrentInstance()
   } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER)
   }

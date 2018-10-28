@@ -45,6 +45,7 @@ interface PublicInstanceMethods {
 
 export interface APIMethods<P = {}, D = {}> {
   data(): Partial<D>
+  hooks(): any
   render(props: Readonly<P>, slots: Slots, attrs: Data, parentVNode: VNode): any
 }
 
@@ -135,6 +136,7 @@ class InternalComponent implements PublicInstanceMethods {
   _queueJob: ((fn: () => void) => void) | null = null
   _isVue: boolean = true
   _inactiveRoot: boolean = false
+  _hookProps: any = null
 
   constructor(props?: object) {
     if (props === void 0) {

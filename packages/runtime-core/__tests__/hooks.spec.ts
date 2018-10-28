@@ -1,4 +1,4 @@
-import { withHooks, useState, h, nextTick, useEffect } from '../src'
+import { withHooks, useState, h, nextTick, useEffect, Component } from '../src'
 import { renderIntsance, serialize, triggerEvent } from '@vue/runtime-test'
 
 describe('hooks', () => {
@@ -48,6 +48,61 @@ describe('hooks', () => {
     triggerEvent(counter.$el, 'click')
     await nextTick()
     expect(effect).toBe(1)
+  })
+
+  it('should be usable inside class', async () => {
+    class Counter extends Component {
+      render() {
+        const [count, setCount] = useState(0)
+        return h(
+          'div',
+          {
+            onClick: () => {
+              setCount(count + 1)
+            }
+          },
+          count
+        )
+      }
+    }
+
+    const counter = renderIntsance(Counter)
+    expect(serialize(counter.$el)).toBe(`<div>0</div>`)
+
+    triggerEvent(counter.$el, 'click')
+    await nextTick()
+    expect(serialize(counter.$el)).toBe(`<div>1</div>`)
+  })
+
+  it('should be usable via hooks() method', async () => {
+    class Counter extends Component {
+      hooks() {
+        const [count, setCount] = useState(0)
+        return {
+          count,
+          setCount
+        }
+      }
+      render() {
+        const { count, setCount } = this as any
+        return h(
+          'div',
+          {
+            onClick: () => {
+              setCount(count + 1)
+            }
+          },
+          count
+        )
+      }
+    }
+
+    const counter = renderIntsance(Counter)
+    expect(serialize(counter.$el)).toBe(`<div>0</div>`)
+
+    triggerEvent(counter.$el, 'click')
+    await nextTick()
+    expect(serialize(counter.$el)).toBe(`<div>1</div>`)
   })
 
   it('useEffect with empty keys', async () => {

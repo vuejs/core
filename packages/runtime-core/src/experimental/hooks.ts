@@ -24,7 +24,7 @@ let currentInstance: ComponentInstance | null = null
 let isMounting: boolean = false
 let callIndex: number = 0
 
-const hooksState = new WeakMap<ComponentInstance, HookState>()
+const hooksStateMap = new WeakMap<ComponentInstance, HookState>()
 
 export function setCurrentInstance(instance: ComponentInstance) {
   currentInstance = instance
@@ -36,6 +36,18 @@ export function unsetCurrentInstance() {
   currentInstance = null
 }
 
+function getHookStateForInstance(instance: ComponentInstance): HookState {
+  let hookState = hooksStateMap.get(instance)
+  if (!hookState) {
+    hookState = {
+      state: observable({}),
+      effects: []
+    }
+    hooksStateMap.set(instance, hookState)
+  }
+  return hookState
+}
+
 export function useState<T>(initial: T): [T, (newValue: T) => void] {
   if (!currentInstance) {
     throw new Error(
@@ -43,7 +55,7 @@ export function useState<T>(initial: T): [T, (newValue: T) => void] {
     )
   }
   const id = ++callIndex
-  const { state } = hooksState.get(currentInstance) as HookState
+  const { state } = getHookStateForInstance(currentInstance)
   const set = (newValue: any) => {
     state[id] = newValue
   }
@@ -76,7 +88,7 @@ export function useEffect(rawEffect: Effect, deps?: any[]) {
       }
     }
     effect.current = rawEffect
-    ;(hooksState.get(currentInstance) as HookState).effects[id] = {
+    getHookStateForInstance(currentInstance).effects[id] = {
       effect,
       cleanup,
       deps
@@ -86,7 +98,7 @@ export function useEffect(rawEffect: Effect, deps?: any[]) {
     injectEffect(currentInstance, 'unmounted', cleanup)
     injectEffect(currentInstance, 'updated', effect)
   } else {
-    const record = (hooksState.get(currentInstance) as HookState).effects[id]
+    const record = getHookStateForInstance(currentInstance).effects[id]
     const { effect, cleanup, deps: prevDeps = [] } = record
     record.deps = deps
     if (!deps || deps.some((d, i) => d !== prevDeps[i])) {
@@ -110,12 +122,6 @@ function injectEffect(
 export function withHooks(render: FunctionalComponent): new () => Component {
   return class ComponentWithHooks extends Component {
     static displayName = render.name
-    created() {
-      hooksState.set((this as any)._self, {
-        state: observable({}),
-        effects: []
-      })
-    }
     render(props: Data, slots: Slots, attrs: Data, parentVNode: VNode) {
       setCurrentInstance((this as any)._self)
       const ret = render(props, slots, attrs, parentVNode)
