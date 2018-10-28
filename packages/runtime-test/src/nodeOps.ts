@@ -10,6 +10,7 @@ export interface TestElement {
   tag: string
   children: TestNode[]
   props: Record<string, any>
+  eventListeners: Record<string, Function | Function[]> | null
 }
 
 export interface TestText {
@@ -68,7 +69,8 @@ function createElement(tag: string): TestElement {
     tag,
     children: [],
     props: {},
-    parentNode: null
+    parentNode: null,
+    eventListeners: null
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,

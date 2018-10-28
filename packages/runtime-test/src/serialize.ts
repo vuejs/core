@@ -1,4 +1,5 @@
 import { TestElement, TestNode, NodeTypes, TestText } from './nodeOps'
+import { isOn } from '@vue/shared'
 
 export function serialize(
   node: TestNode,
@@ -19,7 +20,7 @@ function serializeElement(
 ): string {
   const props = Object.keys(node.props)
     .map(key => {
-      return `${key}=${JSON.stringify(node.props[key])}`
+      return isOn(key) ? `` : `${key}=${JSON.stringify(node.props[key])}`
     })
     .join(' ')
   const newLine = indent ? `\n` : ``

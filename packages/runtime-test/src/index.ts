@@ -34,5 +34,6 @@ export function renderIntsance<T extends Component>(
 }
 
 export { serialize } from './serialize'
+export { triggerEvent } from './triggerEvent'
 export * from './nodeOps'
 export * from '@vue/runtime-core'

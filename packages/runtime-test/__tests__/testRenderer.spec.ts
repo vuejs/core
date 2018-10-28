@@ -11,7 +11,9 @@ import {
   nextTick,
   observable,
   resetOps,
-  serialize
+  serialize,
+  renderIntsance,
+  triggerEvent
 } from '../src'
 
 describe('test renderer', () => {
@@ -151,5 +153,28 @@ describe('test renderer', () => {
   </div>
 </div>`
     )
+  })
+
+  it('should be able to trigger events', async () => {
+    class App extends Component {
+      count = 0
+      inc() {
+        this.count++
+      }
+      render() {
+        return h(
+          'div',
+          {
+            onClick: this.inc
+          },
+          this.count
+        )
+      }
+    }
+    const app = renderIntsance(App)
+    triggerEvent(app.$el, 'click')
+    expect(app.count).toBe(1)
+    await nextTick()
+    expect(serialize(app.$el)).toBe(`<div>1</div>`)
   })
 })
