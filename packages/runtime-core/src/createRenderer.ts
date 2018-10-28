@@ -468,7 +468,7 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function patchStatefulComponent(prevVNode: MountedVNode, nextVNode: VNode) {
-    const { childFlags: prevChildFlags } = prevVNode
+    const { data: prevData, childFlags: prevChildFlags } = prevVNode
     const {
       data: nextData,
       slots: nextSlots,
@@ -481,7 +481,9 @@ export function createRenderer(options: RendererOptions) {
     instance.$parentVNode = nextVNode as MountedVNode
 
     // Update props. This will trigger child update if necessary.
-    updateProps(instance, nextData)
+    if (nextData !== prevData) {
+      updateProps(instance, nextData)
+    }
 
     // If has different slots content, or has non-compiled slots,
     // the child needs to be force updated. It's ok to call $forceUpdate
