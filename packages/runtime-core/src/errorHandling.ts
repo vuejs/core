@@ -1,5 +1,5 @@
 import { ComponentInstance } from './component'
-import { warn } from './warning'
+import { warn, pushWarningContext, popWarningContext } from './warning'
 import { VNode } from './vdom'
 import { VNodeFlags } from './flags'
 
@@ -16,7 +16,8 @@ export const enum ErrorTypes {
   RENDER,
   WATCH_CALLBACK,
   NATIVE_EVENT_HANDLER,
-  COMPONENT_EVENT_HANDLER
+  COMPONENT_EVENT_HANDLER,
+  SCHEDULER
 }
 
 const ErrorTypeStrings: Record<number, string> = {
@@ -32,7 +33,8 @@ const ErrorTypeStrings: Record<number, string> = {
   [ErrorTypes.RENDER]: 'render function',
   [ErrorTypes.WATCH_CALLBACK]: 'watcher callback',
   [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
-  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler'
+  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler',
+  [ErrorTypes.SCHEDULER]: 'scheduler'
 }
 
 export function handleError(
@@ -41,6 +43,9 @@ export function handleError(
   type: ErrorTypes
 ) {
   const isFunctional = (instance as VNode)._isVNode
+  const contextVNode = (isFunctional
+    ? instance
+    : (instance as ComponentInstance).$parentVNode) as VNode | null
   let cur: ComponentInstance | null = null
   if (isFunctional) {
     let vnode = instance as VNode | null
@@ -61,23 +66,28 @@ export function handleError(
           cur,
           err,
           type,
-          isFunctional ? null : instance,
-          isFunctional ? instance : (instance as ComponentInstance).$parentVNode
+          isFunctional ? null : instance
         )
         if (captured) return
       } catch (err2) {
-        logError(err2, ErrorTypes.ERROR_CAPTURED)
+        logError(err2, ErrorTypes.ERROR_CAPTURED, contextVNode)
       }
     }
     cur = cur.$parent
   }
-  logError(err, type)
+  logError(err, type, contextVNode)
 }
 
-function logError(err: Error, type: ErrorTypes) {
+function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
+    if (contextVNode) {
+      pushWarningContext(contextVNode)
+    }
     warn(`Unhandled error${info ? ` in ${info}` : ``}`)
+    if (contextVNode) {
+      popWarningContext()
+    }
     console.error(err)
   } else {
     throw err

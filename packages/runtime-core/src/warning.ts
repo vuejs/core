@@ -24,15 +24,16 @@ export function warn(msg: string, ...args: any[]) {
   // TODO warn handler
   console.warn(`[Vue warn]: ${msg}`, ...args)
   const trace = getComponentTrace()
+  if (!trace.length) {
+    return
+  }
   if (console.groupCollapsed) {
-    trace.forEach((entry, i) => {
-      const formatted = formatTraceEntry(entry, i)
-      if (i === 0) {
-        console.groupCollapsed('at', ...formatted)
-      } else {
-        console.log(...formatted)
-      }
+    console.groupCollapsed('at', ...formatTraceEntry(trace[0]))
+    const logs: string[] = []
+    trace.slice(1).forEach((entry, i) => {
+      logs.push(...formatTraceEntry(entry, i + 1))
     })
+    console.log(...logs)
     console.groupEnd()
   } else {
     const logs: string[] = []
