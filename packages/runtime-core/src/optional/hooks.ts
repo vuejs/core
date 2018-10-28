@@ -1,4 +1,4 @@
-import { ComponentInstance, APIMethods } from '../component'
+import { ComponentInstance, FunctionalComponent } from '../component'
 import { mergeLifecycleHooks, Data } from '../componentOptions'
 import { VNode, Slots } from '../vdom'
 import { observable } from '@vue/observer'
@@ -11,17 +11,30 @@ type Effect = RawEffect & {
 
 type EffectRecord = {
   effect: Effect
+  cleanup: Effect
   deps: any[] | void
 }
 
-type ComponentInstanceWithHook = ComponentInstance & {
-  _state: Record<number, any>
-  _effects: EffectRecord[]
+type HookState = {
+  state: any
+  effects: EffectRecord[]
 }
 
-let currentInstance: ComponentInstanceWithHook | null = null
+let currentInstance: ComponentInstance | null = null
 let isMounting: boolean = false
 let callIndex: number = 0
+
+const hooksState = new WeakMap<ComponentInstance, HookState>()
+
+export function setCurrentInstance(instance: ComponentInstance) {
+  currentInstance = instance
+  isMounting = !currentInstance._mounted
+  callIndex = 0
+}
+
+export function unsetCurrentInstance() {
+  currentInstance = null
+}
 
 export function useState(initial: any) {
   if (!currentInstance) {
@@ -30,7 +43,7 @@ export function useState(initial: any) {
     )
   }
   const id = ++callIndex
-  const state = currentInstance._state
+  const { state } = hooksState.get(currentInstance) as HookState
   const set = (newValue: any) => {
     state[id] = newValue
   }
@@ -56,36 +69,35 @@ export function useEffect(rawEffect: Effect, deps?: any[]) {
       }
     }
     const effect: Effect = () => {
-      cleanup()
       const { current } = effect
       if (current) {
-        effect.current = current()
+        cleanup.current = current()
+        effect.current = null
       }
     }
     effect.current = rawEffect
-
-    currentInstance._effects[id] = {
+    ;(hooksState.get(currentInstance) as HookState).effects[id] = {
       effect,
+      cleanup,
       deps
     }
 
     injectEffect(currentInstance, 'mounted', effect)
     injectEffect(currentInstance, 'unmounted', cleanup)
-    if (!deps) {
-      injectEffect(currentInstance, 'updated', effect)
-    }
+    injectEffect(currentInstance, 'updated', effect)
   } else {
-    const { effect, deps: prevDeps = [] } = currentInstance._effects[id]
+    const record = (hooksState.get(currentInstance) as HookState).effects[id]
+    const { effect, cleanup, deps: prevDeps = [] } = record
+    record.deps = deps
     if (!deps || deps.some((d, i) => d !== prevDeps[i])) {
+      cleanup()
       effect.current = rawEffect
-    } else {
-      effect.current = null
     }
   }
 }
 
 function injectEffect(
-  instance: ComponentInstanceWithHook,
+  instance: ComponentInstance,
   key: string,
   effect: Effect
 ) {
@@ -95,21 +107,19 @@ function injectEffect(
     : effect
 }
 
-export function withHooks<T extends APIMethods['render']>(render: T): T {
+export function withHooks<T extends FunctionalComponent>(render: T): T {
   return {
     displayName: render.name,
     created() {
-      const { _self } = this
-      _self._state = observable({})
-      _self._effects = []
+      hooksState.set(this._self, {
+        state: observable({}),
+        effects: []
+      })
     },
     render(props: Data, slots: Slots, attrs: Data, parentVNode: VNode) {
-      const { _self } = this
-      callIndex = 0
-      currentInstance = _self
-      isMounting = !_self._mounted
+      setCurrentInstance(this._self)
       const ret = render(props, slots, attrs, parentVNode)
-      currentInstance = null
+      unsetCurrentInstance()
       return ret
     }
   } as any

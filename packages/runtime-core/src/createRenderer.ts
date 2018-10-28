@@ -22,6 +22,7 @@ import {
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
 import { pushWarningContext, popWarningContext } from './warning'
+import { handleError, ErrorTypes } from './errorHandling'
 
 interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -1162,8 +1163,12 @@ export function createRenderer(options: RendererOptions) {
       beforeMount.call($proxy)
     }
 
+    const errorSchedulerHandler = (err: Error) => {
+      handleError(err, instance, ErrorTypes.SCHEDULER)
+    }
+
     const queueUpdate = (instance.$forceUpdate = () => {
-      queueJob(instance._updateHandle, flushHooks)
+      queueJob(instance._updateHandle, flushHooks, errorSchedulerHandler)
     })
 
     instance._updateHandle = autorun(
@@ -1227,7 +1232,7 @@ export function createRenderer(options: RendererOptions) {
       $vnode: prevVNode,
       $parentVNode,
       $proxy,
-      $options: { beforeUpdate, updated }
+      $options: { beforeUpdate }
     } = instance
     if (beforeUpdate) {
       beforeUpdate.call($proxy, prevVNode)
@@ -1256,6 +1261,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
+    const { updated } = instance.$options
     if (updated) {
       // Because the child's update is executed by the scheduler and not
       // synchronously within the parent's update call, the child's updated hook
