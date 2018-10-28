@@ -19,7 +19,9 @@ export { KeepAlive } from './optional/keepAlive'
 export { mixins } from './optional/mixins'
 export { EventEmitter } from './optional/eventEmitter'
 export { memoize } from './optional/memoize'
-export { withHooks, useState, useEffect } from './optional/hooks'
+
+// Experimental APIs
+export { withHooks, useState, useEffect } from './experimental/hooks'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'
