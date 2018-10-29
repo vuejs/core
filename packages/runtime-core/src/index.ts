@@ -21,7 +21,18 @@ export { EventEmitter } from './optional/eventEmitter'
 export { memoize } from './optional/memoize'
 
 // Experimental APIs
-export { withHooks, useState, useEffect } from './experimental/hooks'
+export {
+  withHooks,
+  useState,
+  useEffect,
+  useRef,
+  useData,
+  useWatch,
+  useComputed,
+  useMounted,
+  useUnmounted,
+  useUpdated
+} from './experimental/hooks'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'

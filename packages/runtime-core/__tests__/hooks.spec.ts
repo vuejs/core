@@ -24,32 +24,6 @@ describe('hooks', () => {
     expect(serialize(counter.$el)).toBe(`<div>1</div>`)
   })
 
-  it('useEffect', async () => {
-    let effect = -1
-
-    const Counter = withHooks(() => {
-      const [count, setCount] = useState(0)
-      useEffect(() => {
-        effect = count
-      })
-      return h(
-        'div',
-        {
-          onClick: () => {
-            setCount(count + 1)
-          }
-        },
-        count
-      )
-    })
-
-    const counter = renderIntsance(Counter)
-    expect(effect).toBe(0)
-    triggerEvent(counter.$el, 'click')
-    await nextTick()
-    expect(effect).toBe(1)
-  })
-
   it('should be usable inside class', async () => {
     class Counter extends Component {
       render() {
@@ -105,11 +79,53 @@ describe('hooks', () => {
     expect(serialize(counter.$el)).toBe(`<div>1</div>`)
   })
 
+  it('useEffect', async () => {
+    let effect = -1
+
+    const Counter = withHooks(() => {
+      const [count, setCount] = useState(0)
+      useEffect(() => {
+        effect = count
+      })
+      return h(
+        'div',
+        {
+          onClick: () => {
+            setCount(count + 1)
+          }
+        },
+        count
+      )
+    })
+
+    const counter = renderIntsance(Counter)
+    expect(effect).toBe(0)
+    triggerEvent(counter.$el, 'click')
+    await nextTick()
+    expect(effect).toBe(1)
+  })
+
   it('useEffect with empty keys', async () => {
     // TODO
   })
 
   it('useEffect with keys', async () => {
+    // TODO
+  })
+
+  it('useData', () => {
+    // TODO
+  })
+
+  it('useMounted/useUnmounted/useUpdated', () => {
+    // TODO
+  })
+
+  it('useWatch', () => {
+    // TODO
+  })
+
+  it('useComputed', () => {
     // TODO
   })
 })

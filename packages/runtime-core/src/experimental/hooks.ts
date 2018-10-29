@@ -1,7 +1,8 @@
 import { ComponentInstance, FunctionalComponent, Component } from '../component'
-import { mergeLifecycleHooks, Data } from '../componentOptions'
+import { mergeLifecycleHooks, Data, WatchOptions } from '../componentOptions'
 import { VNode, Slots } from '../vdom'
-import { observable } from '@vue/observer'
+import { observable, computed, stop, ComputedGetter } from '@vue/observer'
+import { setupWatcher } from '../componentWatch'
 
 type RawEffect = () => (() => void) | void
 
@@ -15,9 +16,12 @@ type EffectRecord = {
   deps: any[] | void
 }
 
+type Ref<T> = { current: T }
+
 type HookState = {
   state: any
-  effects: EffectRecord[]
+  effects: Record<number, EffectRecord>
+  refs: Record<number, Ref<any>>
 }
 
 let currentInstance: ComponentInstance | null = null
@@ -36,26 +40,37 @@ export function unsetCurrentInstance() {
   currentInstance = null
 }
 
-function getHookStateForInstance(instance: ComponentInstance): HookState {
-  let hookState = hooksStateMap.get(instance)
+function ensureCurrentInstance() {
+  if (!currentInstance) {
+    throw new Error(
+      `invalid hooks call` +
+        (__DEV__
+          ? `. Hooks can only be called in one of the following: ` +
+            `render(), hooks(), or withHooks().`
+          : ``)
+    )
+  }
+}
+
+function getCurrentHookState(): HookState {
+  ensureCurrentInstance()
+  let hookState = hooksStateMap.get(currentInstance as ComponentInstance)
   if (!hookState) {
     hookState = {
       state: observable({}),
-      effects: []
+      effects: {},
+      refs: {}
     }
-    hooksStateMap.set(instance, hookState)
+    hooksStateMap.set(currentInstance as ComponentInstance, hookState)
   }
   return hookState
 }
 
+// React compatible hooks ------------------------------------------------------
+
 export function useState<T>(initial: T): [T, (newValue: T) => void] {
-  if (!currentInstance) {
-    throw new Error(
-      `useState must be called in a function passed to withHooks.`
-    )
-  }
   const id = ++callIndex
-  const { state } = getHookStateForInstance(currentInstance)
+  const { state } = getCurrentHookState()
   const set = (newValue: any) => {
     state[id] = newValue
   }
@@ -66,11 +81,6 @@ export function useState<T>(initial: T): [T, (newValue: T) => void] {
 }
 
 export function useEffect(rawEffect: Effect, deps?: any[]) {
-  if (!currentInstance) {
-    throw new Error(
-      `useEffect must be called in a function passed to withHooks.`
-    )
-  }
   const id = ++callIndex
   if (isMounting) {
     const cleanup: Effect = () => {
@@ -88,24 +98,38 @@ export function useEffect(rawEffect: Effect, deps?: any[]) {
       }
     }
     effect.current = rawEffect
-    getHookStateForInstance(currentInstance).effects[id] = {
+    getCurrentHookState().effects[id] = {
       effect,
       cleanup,
       deps
     }
 
-    injectEffect(currentInstance, 'mounted', effect)
-    injectEffect(currentInstance, 'unmounted', cleanup)
-    injectEffect(currentInstance, 'updated', effect)
+    injectEffect(currentInstance as ComponentInstance, 'mounted', effect)
+    injectEffect(currentInstance as ComponentInstance, 'unmounted', cleanup)
+    if (!deps || deps.length !== 0) {
+      injectEffect(currentInstance as ComponentInstance, 'updated', effect)
+    }
   } else {
-    const record = getHookStateForInstance(currentInstance).effects[id]
+    const record = getCurrentHookState().effects[id]
     const { effect, cleanup, deps: prevDeps = [] } = record
     record.deps = deps
-    if (!deps || deps.some((d, i) => d !== prevDeps[i])) {
+    if (!deps || hasDepsChanged(deps, prevDeps)) {
       cleanup()
       effect.current = rawEffect
     }
   }
+}
+
+function hasDepsChanged(deps: any[], prevDeps: any[]): boolean {
+  if (deps.length !== prevDeps.length) {
+    return true
+  }
+  for (let i = 0; i < deps.length; i++) {
+    if (deps[i] !== prevDeps[i]) {
+      return true
+    }
+  }
+  return false
 }
 
 function injectEffect(
@@ -117,6 +141,64 @@ function injectEffect(
   ;(instance.$options as any)[key] = existing
     ? mergeLifecycleHooks(existing, effect)
     : effect
+}
+
+export function useRef<T>(initial?: T): Ref<T> {
+  const id = ++callIndex
+  const { refs } = getCurrentHookState()
+  return isMounting ? (refs[id] = { current: initial }) : refs[id]
+}
+
+// Vue API hooks ---------------------------------------------------------------
+
+export function useData<T>(initial: T): T {
+  const id = ++callIndex
+  const { state } = getCurrentHookState()
+  if (isMounting) {
+    state[id] = initial
+  }
+  return state[id]
+}
+
+export function useMounted(fn: () => void) {
+  useEffect(fn, [])
+}
+
+export function useUnmounted(fn: () => void) {
+  useEffect(() => fn, [])
+}
+
+export function useUpdated(fn: () => void, deps?: any[]) {
+  const isMount = useRef(true)
+  useEffect(() => {
+    if (isMount.current) {
+      isMount.current = false
+    } else {
+      return fn()
+    }
+  }, deps)
+}
+
+export function useWatch<T>(
+  getter: () => T,
+  cb: (val: T, oldVal: T) => void,
+  options?: WatchOptions
+) {
+  ensureCurrentInstance()
+  if (isMounting) {
+    setupWatcher(currentInstance as ComponentInstance, getter, cb, options)
+  }
+}
+
+export function useComputed<T>(getter: () => T): T {
+  const computedRef = useRef()
+  useUnmounted(() => {
+    stop((computedRef.current as ComputedGetter).runner)
+  })
+  if (isMounting) {
+    computedRef.current = computed(getter)
+  }
+  return (computedRef.current as ComputedGetter)()
 }
 
 export function withHooks(render: FunctionalComponent): new () => Component {
