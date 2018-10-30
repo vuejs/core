@@ -1,12 +1,15 @@
 import { autorun } from './index'
 import { Autorun, activeAutorunStack } from './autorun'
 
-export interface ComputedGetter {
-  (): any
+export interface ComputedGetter<T = any> {
+  (): T
   runner: Autorun
 }
 
-export function computed(getter: Function, context?: any): ComputedGetter {
+export function computed<T, C = null>(
+  getter: (this: C, ctx: C) => T,
+  context?: C
+): ComputedGetter<T> {
   let dirty: boolean = true
   let value: any = undefined
   const runner = autorun(() => getter.call(context, context), {

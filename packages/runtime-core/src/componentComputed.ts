@@ -3,6 +3,8 @@ import { computed, stop, ComputedGetter } from '@vue/observer'
 import { ComponentInstance } from './component'
 import { ComponentComputedOptions } from './componentOptions'
 
+export type ComputedHandles = Record<string, ComputedGetter>
+
 export function initializeComputed(
   instance: ComponentInstance,
   computedOptions: ComponentComputedOptions | undefined
@@ -10,10 +12,7 @@ export function initializeComputed(
   if (!computedOptions) {
     return
   }
-  const handles: Record<
-    string,
-    ComputedGetter
-  > = (instance._computedGetters = {})
+  const handles: ComputedHandles = (instance._computedGetters = {})
   const proxy = instance.$proxy
   for (const key in computedOptions) {
     const option = computedOptions[key]

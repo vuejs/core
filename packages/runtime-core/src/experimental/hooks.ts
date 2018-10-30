@@ -1,7 +1,7 @@
 import { ComponentInstance, FunctionalComponent, Component } from '../component'
 import { mergeLifecycleHooks, Data, WatchOptions } from '../componentOptions'
 import { VNode, Slots } from '../vdom'
-import { observable, computed, stop, ComputedGetter } from '@vue/observer'
+import { observable, computed } from '@vue/observer'
 import { setupWatcher } from '../componentWatch'
 
 type RawEffect = () => (() => void) | void
@@ -191,14 +191,14 @@ export function useWatch<T>(
 }
 
 export function useComputed<T>(getter: () => T): T {
-  const computedRef = useRef()
-  useUnmounted(() => {
-    stop((computedRef.current as ComputedGetter).runner)
-  })
+  ensureCurrentInstance()
+  const id = `__hooksComputed${++callIndex}`
+  const instance = currentInstance as ComponentInstance
+  const handles = instance._computedGetters || (instance._computedGetters = {})
   if (isMounting) {
-    computedRef.current = computed(getter)
+    handles[id] = computed(getter)
   }
-  return (computedRef.current as ComputedGetter)()
+  return handles[id]()
 }
 
 export function withHooks(render: FunctionalComponent): new () => Component {

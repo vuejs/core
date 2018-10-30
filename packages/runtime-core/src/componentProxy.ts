@@ -43,7 +43,8 @@ const renderProxyHandlers = {
     } else if (key[0] !== '_') {
       if (__DEV__ && isRendering && !(key in target)) {
         warn(
-          `property "${key}" was accessed during render but does not exist on instance.`
+          `property "${key}" was accessed during render but does not exist ` +
+            `on instance.`
         )
       }
       const value = Reflect.get(target, key, receiver)
