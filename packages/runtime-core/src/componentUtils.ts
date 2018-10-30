@@ -105,22 +105,24 @@ export let isRendering = false
 
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
+  const {
+    $options: { hooks },
+    render,
+    $proxy,
+    $props,
+    $slots,
+    $attrs,
+    $parentVNode
+  } = instance
   try {
     setCurrentInstance(instance)
-    if (instance.hooks) {
-      instance._hookProps =
-        instance.hooks.call(instance.$proxy, instance.$props) || null
+    if (hooks) {
+      instance._hookProps = hooks.call($proxy, $props) || null
     }
     if (__DEV__) {
       isRendering = true
     }
-    vnode = instance.render.call(
-      instance.$proxy,
-      instance.$props,
-      instance.$slots,
-      instance.$attrs,
-      instance.$parentVNode
-    )
+    vnode = render.call($proxy, $props, $slots, $attrs, $parentVNode)
     if (__DEV__) {
       isRendering = false
     }
@@ -128,7 +130,7 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
   } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER)
   }
-  return normalizeComponentRoot(vnode, instance.$parentVNode)
+  return normalizeComponentRoot(vnode, $parentVNode)
 }
 
 export function renderFunctionalRoot(vnode: VNode): VNode {

@@ -74,6 +74,10 @@ const renderProxyHandlers = {
     if ((i = target._rawData) !== null && i.hasOwnProperty(key)) {
       target.$data[key] = value
       return true
+    } else if ((i = target._hookProps) !== null && i.hasOwnProperty(key)) {
+      // this enables returning observable objects from hooks()
+      i[key] = value
+      return true
     } else {
       return Reflect.set(target, key, value, receiver)
     }
