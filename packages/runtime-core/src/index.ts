@@ -2,7 +2,12 @@
 export { h, Fragment, Portal } from './h'
 export { Component } from './component'
 export { cloneVNode, createPortal, createFragment } from './vdom'
-export { createRenderer } from './createRenderer'
+export {
+  createRenderer,
+  NodeOps,
+  PatchDataFunction,
+  RendererOptions
+} from './createRenderer'
 
 // Observer API
 export * from '@vue/observer'

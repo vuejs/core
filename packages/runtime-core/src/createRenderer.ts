@@ -23,7 +23,7 @@ import { KeepAliveSymbol } from './optional/keepAlive'
 import { pushWarningContext, popWarningContext } from './warning'
 import { handleError, ErrorTypes } from './errorHandling'
 
-interface NodeOps {
+export interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
   createText: (text: string) => any
   setText: (node: any, text: string) => void
@@ -36,7 +36,7 @@ interface NodeOps {
   querySelector: (selector: string) => any
 }
 
-interface PatchDataFunction {
+export interface PatchDataFunction {
   (
     el: any,
     key: string,
@@ -51,7 +51,7 @@ interface PatchDataFunction {
   ): void
 }
 
-interface RendererOptions {
+export interface RendererOptions {
   nodeOps: NodeOps
   patchData: PatchDataFunction
   teardownVNode?: (vnode: VNode) => void
@@ -221,7 +221,15 @@ export function createRenderer(options: RendererOptions) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
     } else {
-      mountComponentInstance(vnode, container, isSVG, endNode)
+      queueJob(
+        () => {
+          mountComponentInstance(vnode, container, isSVG, endNode)
+        },
+        flushHooks,
+        err => {
+          handleError(err, vnode.contextVNode as VNode, ErrorTypes.SCHEDULER)
+        }
+      )
     }
   }
 
@@ -311,7 +319,7 @@ export function createRenderer(options: RendererOptions) {
   // patching ------------------------------------------------------------------
 
   function patchData(
-    el: RenderNode,
+    el: RenderNode | (() => RenderNode),
     key: string,
     prevValue: any,
     nextValue: any,
@@ -323,7 +331,7 @@ export function createRenderer(options: RendererOptions) {
       return
     }
     platformPatchData(
-      el,
+      typeof el === 'function' ? el() : el,
       key,
       prevValue,
       nextValue,
@@ -1360,10 +1368,7 @@ export function createRenderer(options: RendererOptions) {
 
   // API -----------------------------------------------------------------------
 
-  function render(
-    vnode: VNode | null,
-    container: any
-  ): ComponentInstance | null {
+  function render(vnode: VNode | null, container: any) {
     const prevVNode = container.vnode
     if (prevVNode == null) {
       if (vnode) {
@@ -1379,10 +1384,10 @@ export function createRenderer(options: RendererOptions) {
         container.vnode = null
       }
     }
-    flushHooks()
-    return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
-      ? (vnode.children as ComponentInstance).$proxy
-      : null
+    // flushHooks()
+    // return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
+    // ? (vnode.children as ComponentInstance).$proxy
+    // : null
   }
 
   return { render }

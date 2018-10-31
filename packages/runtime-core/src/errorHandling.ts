@@ -40,13 +40,15 @@ const ErrorTypeStrings: Record<number, string> = {
 
 export function handleError(
   err: Error,
-  instance: ComponentInstance | VNode,
+  instance: ComponentInstance | VNode | null,
   type: ErrorTypes
 ) {
-  const isFunctional = (instance as VNode)._isVNode
-  const contextVNode = (isFunctional
-    ? instance
-    : (instance as ComponentInstance).$parentVNode) as VNode | null
+  const isFunctional = instance && (instance as VNode)._isVNode
+  const contextVNode =
+    instance &&
+    ((isFunctional
+      ? instance
+      : (instance as ComponentInstance).$parentVNode) as VNode | null)
   let cur: ComponentInstance | null = null
   if (isFunctional) {
     let vnode = instance as VNode | null
@@ -56,10 +58,11 @@ export function handleError(
     if (vnode) {
       cur = vnode.children as ComponentInstance
     }
-  } else {
+  } else if (instance) {
     cur = (instance as ComponentInstance).$parent
   }
   while (cur) {
+    cur = cur._self
     const handler = cur.errorCaptured
     if (handler) {
       try {

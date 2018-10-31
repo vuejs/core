@@ -1,6 +1,8 @@
+import { NodeOps } from '@vue/runtime-core'
+
 const svgNS = 'http://www.w3.org/2000/svg'
 
-export const nodeOps = {
+export const nodeOps: NodeOps = {
   createElement: (tag: string, isSVG?: boolean): Element =>
     isSVG ? document.createElementNS(svgNS, tag) : document.createElement(tag),
 
