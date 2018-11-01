@@ -228,13 +228,9 @@ export function createRenderer(options: RendererOptions) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
     } else {
-      if (__JSDOM__) {
+      queueJob(() => {
         mountComponentInstance(vnode, container, isSVG, endNode)
-      } else {
-        queueJob(() => {
-          mountComponentInstance(vnode, container, isSVG, endNode)
-        }, flushHooks)
-      }
+      }, flushHooks)
     }
   }
 
@@ -1441,7 +1437,6 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     return nextTick(() => {
-      debugger
       return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
         ? (vnode.children as ComponentInstance).$proxy
         : null

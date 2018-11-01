@@ -1,5 +1,6 @@
 import { NodeOps } from '@vue/runtime-core'
 import { nodeOps } from '../../runtime-dom/src/nodeOps'
+import { nodeOps as testNodeOps } from '../../runtime-test/src/nodeOps'
 
 export type Op = [Function, ...any[]]
 
@@ -14,27 +15,32 @@ const evaluate = (v: any) => {
 }
 
 // patch nodeOps to record operations without touching the DOM
-Object.keys(nodeOps).forEach((key: keyof NodeOps) => {
-  const original = nodeOps[key] as Function
-  if (key === 'querySelector') {
-    return
-  }
-  if (/create/.test(key)) {
-    nodeOps[key] = (...args: any[]) => {
-      let res: any
-      if (currentOps) {
-        return () => res || (res = original(...args))
-      } else {
-        return original(...args)
+function patchOps(nodeOps: NodeOps) {
+  Object.keys(nodeOps).forEach((key: keyof NodeOps) => {
+    const original = nodeOps[key] as Function
+    if (key === 'querySelector') {
+      return
+    }
+    if (/create/.test(key)) {
+      nodeOps[key] = (...args: any[]) => {
+        let res: any
+        if (currentOps) {
+          return () => res || (res = original(...args))
+        } else {
+          return original(...args)
+        }
+      }
+    } else {
+      nodeOps[key] = (...args: any[]) => {
+        if (currentOps) {
+          currentOps.push([original, ...args.map(evaluate)])
+        } else {
+          original(...args)
+        }
       }
     }
-  } else {
-    nodeOps[key] = (...args: any[]) => {
-      if (currentOps) {
-        currentOps.push([original, ...args.map(evaluate)])
-      } else {
-        original(...args)
-      }
-    }
-  }
-})
+  })
+}
+
+patchOps(nodeOps)
+patchOps(testNodeOps)

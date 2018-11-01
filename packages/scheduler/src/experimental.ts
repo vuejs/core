@@ -61,7 +61,10 @@ export function nextTick<T>(fn?: () => T): Promise<T> {
         nextTickQueue.push(() => {
           resolve(fn ? fn() : undefined)
         })
-        pendingRejectors.push(reject)
+        pendingRejectors.push(err => {
+          if (fn) fn()
+          reject(err)
+        })
       } else {
         resolve(fn ? fn() : undefined)
       }

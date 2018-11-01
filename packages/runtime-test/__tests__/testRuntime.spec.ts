@@ -17,7 +17,7 @@ import {
 } from '../src'
 
 describe('test renderer', () => {
-  it('should work', () => {
+  it('should work', async () => {
     class App extends Component {
       render() {
         return h(
@@ -30,7 +30,7 @@ describe('test renderer', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
 
     expect(root.children.length).toBe(1)
 
@@ -64,7 +64,7 @@ describe('test renderer', () => {
     const root = nodeOps.createElement('div')
 
     resetOps()
-    render(h(App), root)
+    await render(h(App), root)
     const ops = dumpOps()
 
     expect(ops.length).toBe(5)
@@ -126,7 +126,7 @@ describe('test renderer', () => {
     })
   })
 
-  it('should be able to serialize nodes', () => {
+  it('should be able to serialize nodes', async () => {
     class App extends Component {
       render() {
         return h(
@@ -139,7 +139,7 @@ describe('test renderer', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
     expect(serialize(root)).toEqual(
       `<div><div id="test"><span>foo</span>hello</div></div>`
     )

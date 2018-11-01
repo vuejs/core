@@ -16,14 +16,14 @@ import {
 } from '@vue/runtime-test'
 
 describe('Fragments', () => {
-  it('should allow returning multiple component root nodes', () => {
+  it('should allow returning multiple component root nodes', async () => {
     class App extends Component {
       render() {
         return [h('div', 'one'), 'two']
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
     expect(root.children.length).toBe(2)
     expect(root.children[0]).toMatchObject({
@@ -40,14 +40,14 @@ describe('Fragments', () => {
     })
   })
 
-  it('should be able to explicitly create fragments', () => {
+  it('should be able to explicitly create fragments', async () => {
     class App extends Component {
       render() {
         return h('div', [h(Fragment, [h('div', 'one'), 'two'])])
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
     const parent = root.children[0] as TestElement
     expect(serialize(parent)).toBe(`<div><div>one</div>two</div>`)
   })
@@ -65,7 +65,7 @@ describe('Fragments', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
 
     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
 
@@ -84,7 +84,7 @@ describe('Fragments', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await await render(h(App), root)
 
     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
 
@@ -103,7 +103,7 @@ describe('Fragments', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
 
     expect(serialize(root)).toBe(`<div><div>one</div><div>two</div></div>`)
 
@@ -138,7 +138,7 @@ describe('Fragments', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
     const parent = root.children[0] as TestElement
 
     expect(serialize(parent)).toBe(
@@ -179,7 +179,7 @@ describe('Fragments', () => {
     }
 
     const root = nodeOps.createElement('div')
-    render(h(App), root)
+    await render(h(App), root)
 
     expect(serialize(root)).toBe(
       `<div><div>outer</div><div>one</div><div>two</div></div>`

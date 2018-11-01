@@ -109,7 +109,8 @@ export interface ComponentInstance<P = {}, D = {}>
 // actual implementation of the component
 class InternalComponent implements PublicInstanceMethods {
   get $el(): any {
-    return this.$vnode && this.$vnode.el
+    const el = this.$vnode && this.$vnode.el
+    return typeof el === 'function' ? (el as any)() : el
   }
 
   $vnode: VNode | null = null
