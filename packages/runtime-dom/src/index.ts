@@ -12,7 +12,7 @@ const { render: _render } = createRenderer({
 type publicRender = (
   node: {} | null,
   container: HTMLElement
-) => Component | null
+) => Promise<Component | null>
 export const render = _render as publicRender
 
 // re-export everything from core

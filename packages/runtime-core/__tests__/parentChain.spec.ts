@@ -40,7 +40,7 @@ describe('Parent chain management', () => {
     }
 
     const root = nodeOps.createElement('div')
-    const parent = render(h(Parent), root) as Component
+    const parent = (await render(h(Parent), root)) as Component
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)
@@ -99,7 +99,7 @@ describe('Parent chain management', () => {
     }
 
     const root = nodeOps.createElement('div')
-    const parent = render(h(Parent), root) as Component
+    const parent = (await render(h(Parent), root)) as Component
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)

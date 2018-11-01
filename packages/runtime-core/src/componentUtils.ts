@@ -18,7 +18,11 @@ import {
   resolveComponentOptionsFromClass
 } from './componentOptions'
 import { createRenderProxy } from './componentProxy'
-import { handleError, ErrorTypes } from './errorHandling'
+import {
+  handleError,
+  ErrorTypes,
+  callLifecycleHookWithHandle
+} from './errorHandling'
 import { warn } from './warning'
 import { setCurrentInstance, unsetCurrentInstance } from './experimental/hooks'
 
@@ -52,7 +56,7 @@ export function createComponentInstance<T extends Component>(
   instance.$slots = currentVNode.slots || EMPTY_OBJ
 
   if (created) {
-    created.call($proxy)
+    callLifecycleHookWithHandle(created, $proxy, ErrorTypes.CREATED)
   }
 
   currentVNode = currentContextVNode = null
@@ -96,7 +100,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   // beforeCreate hook is called right in the constructor
   const { beforeCreate, props } = instance.$options
   if (beforeCreate) {
-    beforeCreate.call(proxy)
+    callLifecycleHookWithHandle(beforeCreate, proxy, ErrorTypes.BEFORE_CREATE)
   }
   initializeProps(instance, props, (currentVNode as VNode).data)
 }

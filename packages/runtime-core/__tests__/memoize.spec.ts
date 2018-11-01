@@ -1,5 +1,5 @@
 import { h, Component, memoize, nextTick } from '../src'
-import { renderIntsance, serialize } from '@vue/runtime-test'
+import { renderInstance, serialize } from '@vue/runtime-test'
 
 describe('memoize', () => {
   it('should work', async () => {
@@ -16,7 +16,7 @@ describe('memoize', () => {
       }
     }
 
-    const app = renderIntsance(App)
+    const app = await renderInstance(App)
     expect(serialize(app.$el)).toBe(`<div>1<div>A1</div><div>B1</div></div>`)
 
     app.count++
@@ -38,7 +38,7 @@ describe('memoize', () => {
       }
     }
 
-    const app = renderIntsance(App)
+    const app = await renderInstance(App)
     expect(serialize(app.$el)).toBe(`<div>2</div>`)
 
     app.foo++

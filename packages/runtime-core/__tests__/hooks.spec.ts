@@ -1,5 +1,5 @@
 import { withHooks, useState, h, nextTick, useEffect, Component } from '../src'
-import { renderIntsance, serialize, triggerEvent } from '@vue/runtime-test'
+import { renderInstance, serialize, triggerEvent } from '@vue/runtime-test'
 
 describe('hooks', () => {
   it('useState', async () => {
@@ -16,7 +16,7 @@ describe('hooks', () => {
       )
     })
 
-    const counter = renderIntsance(Counter)
+    const counter = await renderInstance(Counter)
     expect(serialize(counter.$el)).toBe(`<div>0</div>`)
 
     triggerEvent(counter.$el, 'click')
@@ -40,7 +40,7 @@ describe('hooks', () => {
       }
     }
 
-    const counter = renderIntsance(Counter)
+    const counter = await renderInstance(Counter)
     expect(serialize(counter.$el)).toBe(`<div>0</div>`)
 
     triggerEvent(counter.$el, 'click')
@@ -71,7 +71,7 @@ describe('hooks', () => {
       }
     }
 
-    const counter = renderIntsance(Counter)
+    const counter = await renderInstance(Counter)
     expect(serialize(counter.$el)).toBe(`<div>0</div>`)
 
     triggerEvent(counter.$el, 'click')
@@ -98,7 +98,7 @@ describe('hooks', () => {
       )
     })
 
-    const counter = renderIntsance(Counter)
+    const counter = await renderInstance(Counter)
     expect(effect).toBe(0)
     triggerEvent(counter.$el, 'click')
     await nextTick()

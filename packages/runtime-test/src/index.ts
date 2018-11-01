@@ -15,7 +15,7 @@ const { render: _render } = createRenderer({
 type publicRender = (
   node: {} | null,
   container: TestElement
-) => Component | null
+) => Promise<Component | null>
 export const render = _render as publicRender
 
 export function createInstance<T extends Component>(
@@ -25,10 +25,10 @@ export function createInstance<T extends Component>(
   return createComponentInstance(h(Class, props)).$proxy as any
 }
 
-export function renderIntsance<T extends Component>(
+export function renderInstance<T extends Component>(
   Class: new () => T,
   props?: any
-): T {
+): Promise<T> {
   return render(h(Class, props), nodeOps.createElement('div')) as any
 }
 

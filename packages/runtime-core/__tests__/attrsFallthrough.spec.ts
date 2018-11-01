@@ -44,7 +44,7 @@ describe('attribute fallthrough', () => {
 
     const root = document.createElement('div')
     document.body.appendChild(root)
-    render(h(Hello), root)
+    await render(h(Hello), root)
 
     const node = root.children[0] as HTMLElement
 
@@ -110,7 +110,7 @@ describe('attribute fallthrough', () => {
 
     const root = document.createElement('div')
     document.body.appendChild(root)
-    render(h(Hello), root)
+    await render(h(Hello), root)
 
     const node = root.children[0] as HTMLElement
 
@@ -190,7 +190,7 @@ describe('attribute fallthrough', () => {
 
     const root = document.createElement('div')
     document.body.appendChild(root)
-    render(h(Hello), root)
+    await render(h(Hello), root)
 
     const node = root.children[0] as HTMLElement
 

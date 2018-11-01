@@ -1,48 +1,4 @@
-import { NodeOps } from '@vue/runtime-core'
-import { nodeOps } from '../../runtime-dom/src/nodeOps'
-
-const enum Priorities {
-  NORMAL = 500
-}
-
-const frameBudget = 1000 / 60
-
-let start: number = 0
-let currentOps: Op[]
-
-const getNow = () => window.performance.now()
-
-const evaluate = (v: any) => {
-  return typeof v === 'function' ? v() : v
-}
-
-// patch nodeOps to record operations without touching the DOM
-Object.keys(nodeOps).forEach((key: keyof NodeOps) => {
-  const original = nodeOps[key] as Function
-  if (key === 'querySelector') {
-    return
-  }
-  if (/create/.test(key)) {
-    nodeOps[key] = (...args: any[]) => {
-      let res: any
-      if (currentOps) {
-        return () => res || (res = original(...args))
-      } else {
-        return original(...args)
-      }
-    }
-  } else {
-    nodeOps[key] = (...args: any[]) => {
-      if (currentOps) {
-        currentOps.push([original, ...args.map(evaluate)])
-      } else {
-        original(...args)
-      }
-    }
-  }
-})
-
-type Op = [Function, ...any[]]
+import { Op, setCurrentOps } from './patchNodeOps'
 
 interface Job extends Function {
   ops: Op[]
@@ -50,11 +6,29 @@ interface Job extends Function {
   expiration: number
 }
 
+const enum Priorities {
+  NORMAL = 500
+}
+
+type ErrorHandler = (err: Error) => any
+
+let start: number = 0
+const getNow = () => window.performance.now()
+const frameBudget = __JSDOM__ ? Infinity : 1000 / 60
+
+const patchQueue: Job[] = []
+const commitQueue: Job[] = []
+const postCommitQueue: Function[] = []
+const nextTickQueue: Function[] = []
+
+let globalHandler: ErrorHandler
+const pendingRejectors: ErrorHandler[] = []
+
 // Microtask for batching state mutations
 const p = Promise.resolve()
 
-export function nextTick(fn?: () => void): Promise<void> {
-  return p.then(fn)
+function flushAfterMicroTask() {
+  return p.then(flush).catch(handleError)
 }
 
 // Macrotask for time slicing
@@ -67,46 +41,48 @@ window.addEventListener(
       return
     }
     start = getNow()
-    flush()
+    try {
+      flush()
+    } catch (e) {
+      handleError(e)
+    }
   },
   false
 )
 
-function flushAfterYield() {
+function flushAfterMacroTask() {
   window.postMessage(key, `*`)
 }
 
-const patchQueue: Job[] = []
-const commitQueue: Job[] = []
-
-function patch(job: Job) {
-  // job with existing ops means it's already been patched in a low priority queue
-  if (job.ops.length === 0) {
-    currentOps = job.ops
-    job()
-    commitQueue.push(job)
-  }
+export function nextTick<T>(fn?: () => T): Promise<T> {
+  return new Promise((resolve, reject) => {
+    p.then(() => {
+      if (hasPendingFlush) {
+        nextTickQueue.push(() => {
+          resolve(fn ? fn() : undefined)
+        })
+        pendingRejectors.push(reject)
+      } else {
+        resolve(fn ? fn() : undefined)
+      }
+    }).catch(reject)
+  })
 }
 
-function commit({ ops }: Job) {
-  for (let i = 0; i < ops.length; i++) {
-    const [fn, ...args] = ops[i]
-    fn(...args)
-  }
-  ops.length = 0
+function handleError(err: Error) {
+  if (globalHandler) globalHandler(err)
+  pendingRejectors.forEach(handler => {
+    handler(err)
+  })
 }
 
-function invalidate(job: Job) {
-  job.ops.length = 0
+export function handleSchedulerError(handler: ErrorHandler) {
+  globalHandler = handler
 }
 
 let hasPendingFlush = false
 
-export function queueJob(
-  rawJob: Function,
-  postJob?: Function | null,
-  onError?: (reason: any) => void
-) {
+export function queueJob(rawJob: Function, postJob?: Function | null) {
   const job = rawJob as Job
   job.post = postJob || null
   job.ops = job.ops || []
@@ -117,7 +93,7 @@ export function queueJob(
     // invalidated. remove from commit queue
     // and move it back to the patch queue
     commitQueue.splice(commitIndex, 1)
-    invalidate(job)
+    invalidateJob(job)
     // With varying priorities we should insert job at correct position
     // based on expiration time.
     for (let i = 0; i < patchQueue.length; i++) {
@@ -135,17 +111,16 @@ export function queueJob(
   if (!hasPendingFlush) {
     hasPendingFlush = true
     start = getNow()
-    const p = nextTick(flush)
-    if (onError) p.catch(onError)
+    flushAfterMicroTask()
   }
 }
 
-function flush() {
+function flush(): void {
   let job
   while (true) {
     job = patchQueue.shift()
     if (job) {
-      patch(job)
+      patchJob(job)
     } else {
       break
     }
@@ -156,23 +131,55 @@ function flush() {
   }
 
   if (patchQueue.length === 0) {
-    const postQueue: Function[] = []
     // all done, time to commit!
     while ((job = commitQueue.shift())) {
-      commit(job)
-      if (job.post && postQueue.indexOf(job.post) < 0) {
-        postQueue.push(job.post)
+      commitJob(job)
+      if (job.post && postCommitQueue.indexOf(job.post) < 0) {
+        postCommitQueue.push(job.post)
       }
     }
-    while ((job = postQueue.shift())) {
+    // post commit hooks (updated, mounted)
+    while ((job = postCommitQueue.shift())) {
       job()
     }
+    // some post commit hook triggered more updates...
     if (patchQueue.length > 0) {
-      return flushAfterYield()
+      if (getNow() - start > frameBudget) {
+        return flushAfterMacroTask()
+      } else {
+        // not out of budget yet, flush sync
+        return flush()
+      }
     }
+    // now we are really done
     hasPendingFlush = false
+    pendingRejectors.length = 0
+    while ((job = nextTickQueue.shift())) {
+      job()
+    }
   } else {
     // got more job to do
-    flushAfterYield()
+    flushAfterMacroTask()
   }
+}
+
+function patchJob(job: Job) {
+  // job with existing ops means it's already been patched in a low priority queue
+  if (job.ops.length === 0) {
+    setCurrentOps(job.ops)
+    job()
+    commitQueue.push(job)
+  }
+}
+
+function commitJob({ ops }: Job) {
+  for (let i = 0; i < ops.length; i++) {
+    const [fn, ...args] = ops[i]
+    fn(...args)
+  }
+  ops.length = 0
+}
+
+function invalidateJob(job: Job) {
+  job.ops.length = 0
 }

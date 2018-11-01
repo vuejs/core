@@ -1,5 +1,5 @@
 import { autorun, stop, Autorun, immutable } from '@vue/observer'
-import { queueJob } from '@vue/scheduler'
+import { queueJob, handleSchedulerError, nextTick } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, reservedPropRE, isString } from '@vue/shared'
 import {
@@ -20,8 +20,12 @@ import {
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
 import { pushWarningContext, popWarningContext, warn } from './warning'
-import { handleError, ErrorTypes } from './errorHandling'
 import { resolveProps } from './componentProps'
+import {
+  handleError,
+  ErrorTypes,
+  callLifecycleHookWithHandle
+} from './errorHandling'
 
 export interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -63,6 +67,8 @@ export interface FunctionalHandle {
   runner: Autorun
   forceUpdate: () => void
 }
+
+handleSchedulerError(err => handleError(err, null, ErrorTypes.SCHEDULER))
 
 // The whole mounting / patching / unmouting logic is placed inside this
 // single function so that we can create multiple renderes with different
@@ -184,7 +190,7 @@ export function createRenderer(options: RendererOptions) {
       mountRef(ref, el)
     }
     if (data != null && data.vnodeMounted) {
-      lifecycleHooks.push(() => {
+      lifecycleHooks.unshift(() => {
         data.vnodeMounted(vnode)
       })
     }
@@ -204,17 +210,11 @@ export function createRenderer(options: RendererOptions) {
     endNode: RenderNode | null
   ) {
     vnode.contextVNode = contextVNode
-    if (__DEV__) {
-      pushWarningContext(vnode)
-    }
     const { flags } = vnode
     if (flags & VNodeFlags.COMPONENT_STATEFUL) {
       mountStatefulComponent(vnode, container, isSVG, endNode)
     } else {
       mountFunctionalComponent(vnode, container, isSVG, endNode)
-    }
-    if (__DEV__) {
-      popWarningContext()
     }
   }
 
@@ -228,15 +228,13 @@ export function createRenderer(options: RendererOptions) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
     } else {
-      queueJob(
-        () => {
+      if (__JSDOM__) {
+        mountComponentInstance(vnode, container, isSVG, endNode)
+      } else {
+        queueJob(() => {
           mountComponentInstance(vnode, container, isSVG, endNode)
-        },
-        flushHooks,
-        err => {
-          handleError(err, vnode.contextVNode as VNode, ErrorTypes.SCHEDULER)
-        }
-      )
+        }, flushHooks)
+      }
     }
   }
 
@@ -260,50 +258,54 @@ export function createRenderer(options: RendererOptions) {
       forceUpdate: null as any
     })
 
-    const handleSchedulerError = (err: Error) => {
-      handleError(err, handle.current as VNode, ErrorTypes.SCHEDULER)
-    }
-
     const queueUpdate = (handle.forceUpdate = () => {
-      queueJob(handle.runner, null, handleSchedulerError)
+      queueJob(handle.runner)
     })
 
     // we are using vnode.ref to store the functional component's update job
-    queueJob(
-      () => {
-        handle.runner = autorun(
-          () => {
-            if (handle.prevTree) {
-              // mounted
-              const { prevTree, current } = handle
-              const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
-                current
-              ))
-              patch(
-                prevTree as MountedVNode,
-                nextTree,
-                platformParentNode(current.el),
-                current as MountedVNode,
-                isSVG
-              )
-              current.el = nextTree.el
-            } else {
-              // initial mount
-              const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
-                vnode
-              ))
-              mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
-              vnode.el = subTree.el as RenderNode
+    queueJob(() => {
+      handle.runner = autorun(
+        () => {
+          if (handle.prevTree) {
+            // mounted
+            const { prevTree, current } = handle
+            if (__DEV__) {
+              pushWarningContext(current)
             }
-          },
-          {
-            scheduler: queueUpdate
+            const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
+              current
+            ))
+            patch(
+              prevTree as MountedVNode,
+              nextTree,
+              platformParentNode(current.el),
+              current as MountedVNode,
+              isSVG
+            )
+            current.el = nextTree.el
+            if (__DEV__) {
+              popWarningContext()
+            }
+          } else {
+            // initial mount
+            if (__DEV__) {
+              pushWarningContext(vnode)
+            }
+            const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
+              vnode
+            ))
+            mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
+            vnode.el = subTree.el as RenderNode
+            if (__DEV__) {
+              popWarningContext()
+            }
           }
-        )
-      },
-      null,
-      handleSchedulerError
-    )
+        },
+        {
+          scheduler: queueUpdate
+        }
+      )
+    })
   }
 
   function mountText(
@@ -514,9 +516,6 @@ export function createRenderer(options: RendererOptions) {
     contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
-    if (__DEV__) {
-      pushWarningContext(nextVNode)
-    }
     nextVNode.contextVNode = contextVNode
     const { tag, flags } = nextVNode
     if (tag !== prevVNode.tag) {
@@ -525,9 +524,6 @@ export function createRenderer(options: RendererOptions) {
       patchStatefulComponent(prevVNode, nextVNode)
     } else {
       patchFunctionalComponent(prevVNode, nextVNode)
-    }
-    if (__DEV__) {
-      popWarningContext()
     }
   }
 
@@ -1161,6 +1157,10 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     endNode: RenderNode | null
   ): RenderNode {
+    if (__DEV__) {
+      pushWarningContext(vnode)
+    }
+
     // a vnode may already have an instance if this is a compat call with
     // new Vue()
     const instance = ((__COMPAT__ && vnode.children) ||
@@ -1177,15 +1177,11 @@ export function createRenderer(options: RendererOptions) {
     } = instance
 
     if (beforeMount) {
-      beforeMount.call($proxy)
-    }
-
-    const handleSchedulerError = (err: Error) => {
-      handleError(err, instance, ErrorTypes.SCHEDULER)
+      callLifecycleHookWithHandle(beforeMount, $proxy, ErrorTypes.BEFORE_MOUNT)
     }
 
     const queueUpdate = (instance.$forceUpdate = () => {
-      queueJob(instance._updateHandle, flushHooks, handleSchedulerError)
+      queueJob(instance._updateHandle, flushHooks)
     })
 
     instance._updateHandle = autorun(
@@ -1222,7 +1218,7 @@ export function createRenderer(options: RendererOptions) {
           const { mounted } = instance.$options
           if (mounted) {
             lifecycleHooks.unshift(() => {
-              mounted.call($proxy)
+              callLifecycleHookWithHandle(mounted, $proxy, ErrorTypes.MOUNTED)
             })
           }
         }
@@ -1233,6 +1229,10 @@ export function createRenderer(options: RendererOptions) {
         onTrigger: renderTriggered
       }
     )
+
+    if (__DEV__) {
+      popWarningContext()
+    }
 
     return vnode.el as RenderNode
   }
@@ -1252,7 +1252,12 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeUpdate }
     } = instance
     if (beforeUpdate) {
-      beforeUpdate.call($proxy, prevVNode)
+      callLifecycleHookWithHandle(
+        beforeUpdate,
+        $proxy,
+        ErrorTypes.BEFORE_UPDATE,
+        prevVNode
+      )
     }
 
     const nextVNode = (instance.$vnode = renderInstanceRoot(
@@ -1286,7 +1291,12 @@ export function createRenderer(options: RendererOptions) {
       // invoked BEFORE the parent's. Therefore we add them to the head of the
       // queue instead.
       lifecycleHooks.unshift(() => {
-        updated.call($proxy, nextVNode)
+        callLifecycleHookWithHandle(
+          updated,
+          $proxy,
+          ErrorTypes.UPDATED,
+          nextVNode
+        )
       })
     }
 
@@ -1316,7 +1326,11 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeUnmount, unmounted }
     } = instance
     if (beforeUnmount) {
-      beforeUnmount.call($proxy)
+      callLifecycleHookWithHandle(
+        beforeUnmount,
+        $proxy,
+        ErrorTypes.BEFORE_UNMOUNT
+      )
     }
     if ($vnode) {
       unmount($vnode)
@@ -1325,7 +1339,7 @@ export function createRenderer(options: RendererOptions) {
     teardownComponentInstance(instance)
     instance._unmounted = true
     if (unmounted) {
-      unmounted.call($proxy)
+      callLifecycleHookWithHandle(unmounted, $proxy, ErrorTypes.UNMOUNTED)
     }
   }
 
@@ -1336,10 +1350,16 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     endNode: RenderNode | null
   ) {
+    if (__DEV__) {
+      pushWarningContext(vnode)
+    }
     const instance = vnode.children as ComponentInstance
     vnode.el = instance.$el as RenderNode
     if (container != null) {
       insertVNode(instance.$vnode, container, endNode)
+    }
+    if (__DEV__) {
+      popWarningContext()
     }
     lifecycleHooks.push(() => {
       callActivatedHook(instance, true)
@@ -1363,7 +1383,7 @@ export function createRenderer(options: RendererOptions) {
         callActivatedHook($children[i], false)
       }
       if (activated) {
-        activated.call($proxy)
+        callLifecycleHookWithHandle(activated, $proxy, ErrorTypes.ACTIVATED)
       }
     }
   }
@@ -1388,7 +1408,7 @@ export function createRenderer(options: RendererOptions) {
         callDeactivateHook($children[i], false)
       }
       if (deactivated) {
-        deactivated.call($proxy)
+        callLifecycleHookWithHandle(deactivated, $proxy, ErrorTypes.DEACTIVATED)
       }
     }
   }
@@ -1420,10 +1440,12 @@ export function createRenderer(options: RendererOptions) {
         container.vnode = null
       }
     }
-    // flushHooks()
-    // return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
-    // ? (vnode.children as ComponentInstance).$proxy
-    // : null
+    return nextTick(() => {
+      debugger
+      return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
+        ? (vnode.children as ComponentInstance).$proxy
+        : null
+    })
   }
 
   return { render }

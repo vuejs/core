@@ -12,7 +12,7 @@ import {
   observable,
   resetOps,
   serialize,
-  renderIntsance,
+  renderInstance,
   triggerEvent
 } from '../src'
 
@@ -171,7 +171,7 @@ describe('test renderer', () => {
         )
       }
     }
-    const app = renderIntsance(App)
+    const app = await renderInstance(App)
     triggerEvent(app.$el, 'click')
     expect(app.count).toBe(1)
     await nextTick()

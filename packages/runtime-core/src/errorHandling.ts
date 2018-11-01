@@ -10,8 +10,10 @@ export const enum ErrorTypes {
   MOUNTED,
   BEFORE_UPDATE,
   UPDATED,
-  BEFORE_DESTROY,
-  DESTROYED,
+  BEFORE_UNMOUNT,
+  UNMOUNTED,
+  ACTIVATED,
+  DEACTIVATED,
   ERROR_CAPTURED,
   RENDER,
   WATCH_CALLBACK,
@@ -27,8 +29,10 @@ const ErrorTypeStrings: Record<number, string> = {
   [ErrorTypes.MOUNTED]: 'in mounted lifecycle hook',
   [ErrorTypes.BEFORE_UPDATE]: 'in beforeUpdate lifecycle hook',
   [ErrorTypes.UPDATED]: 'in updated lifecycle hook',
-  [ErrorTypes.BEFORE_DESTROY]: 'in beforeDestroy lifecycle hook',
-  [ErrorTypes.DESTROYED]: 'in destroyed lifecycle hook',
+  [ErrorTypes.BEFORE_UNMOUNT]: 'in beforeUnmount lifecycle hook',
+  [ErrorTypes.UNMOUNTED]: 'in unmounted lifecycle hook',
+  [ErrorTypes.ACTIVATED]: 'in activated lifecycle hook',
+  [ErrorTypes.DEACTIVATED]: 'in deactivated lifecycle hook',
   [ErrorTypes.ERROR_CAPTURED]: 'in errorCaptured lifecycle hook',
   [ErrorTypes.RENDER]: 'in render function',
   [ErrorTypes.WATCH_CALLBACK]: 'in watcher callback',
@@ -36,6 +40,24 @@ const ErrorTypeStrings: Record<number, string> = {
   [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'in component event handler',
   [ErrorTypes.SCHEDULER]:
     'when flushing updates. This may be a Vue internals bug.'
+}
+
+export function callLifecycleHookWithHandle(
+  hook: Function,
+  instanceProxy: ComponentInstance,
+  type: ErrorTypes,
+  arg?: any
+) {
+  try {
+    const res = hook.call(instanceProxy, arg)
+    if (res && typeof res.then === 'function') {
+      ;(res as Promise<any>).catch(err => {
+        handleError(err, instanceProxy._self, type)
+      })
+    }
+  } catch (err) {
+    handleError(err, instanceProxy._self, type)
+  }
 }
 
 export function handleError(

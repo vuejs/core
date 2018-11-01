@@ -7,7 +7,7 @@ import {
   ComponentPropsOptions,
   ComponentWatchOptions
 } from '@vue/runtime-core'
-import { createInstance, renderIntsance } from '@vue/runtime-test'
+import { createInstance, renderInstance } from '@vue/runtime-test'
 
 describe('class inheritance', () => {
   it('should merge data', () => {
@@ -136,7 +136,7 @@ describe('class inheritance', () => {
       }
     }
 
-    const container = renderIntsance(Container)
+    const container = await renderInstance(Container)
     expect(calls).toEqual([
       'base beforeCreate',
       'child beforeCreate',
@@ -200,7 +200,7 @@ describe('class inheritance', () => {
       }
     }
 
-    const container = renderIntsance(Container)
+    const container = await renderInstance(Container)
     expect(container.$el.text).toBe('foo')
 
     container.ok = false
