@@ -1,4 +1,4 @@
-import { immutable, unwrap, lock, unlock } from '@vue/observer'
+import { immutable, unwrap } from '@vue/observer'
 import { ComponentInstance } from './component'
 import {
   Data,
@@ -36,10 +36,12 @@ export function initializeProps(
   options: NormalizedPropsOptions | undefined,
   data: Data | null
 ) {
-  const [props, attrs] = resolveProps(data, options)
-  instance.$props = immutable(props === EMPTY_OBJ ? {} : props)
+  const { 0: props, 1: attrs } = resolveProps(data, options)
+  instance.$props = __DEV__ ? immutable(props) : props
   instance.$attrs = options
-    ? immutable(attrs === EMPTY_OBJ ? {} : attrs)
+    ? __DEV__
+      ? immutable(attrs)
+      : attrs
     : instance.$props
 }
 
@@ -113,47 +115,6 @@ export function resolveProps(
     attrs = props
   }
   return [props, attrs]
-}
-
-export function updateProps(
-  instance: ComponentInstance,
-  nextData: Data | null
-) {
-  // instance.$props and instance.$attrs are observables that should not be
-  // replaced. Instead, we mutate them to match latest props, which will trigger
-  // updates if any value that's been used in child component has changed.
-  const [nextProps, nextAttrs] = resolveProps(nextData, instance.$options.props)
-  // unlock to temporarily allow mutatiing props
-  unlock()
-  const props = instance.$props
-  const rawProps = unwrap(props)
-  const hasEmptyProps = nextProps === EMPTY_OBJ
-  for (const key in rawProps) {
-    if (hasEmptyProps || !nextProps.hasOwnProperty(key)) {
-      delete (props as any)[key]
-    }
-  }
-  if (!hasEmptyProps) {
-    for (const key in nextProps) {
-      ;(props as any)[key] = nextProps[key]
-    }
-  }
-  const attrs = instance.$attrs
-  if (attrs !== props) {
-    const rawAttrs = unwrap(attrs)
-    const hasEmptyAttrs = nextAttrs === EMPTY_OBJ
-    for (const key in rawAttrs) {
-      if (hasEmptyAttrs || !nextAttrs.hasOwnProperty(key)) {
-        delete attrs[key]
-      }
-    }
-    if (!hasEmptyAttrs) {
-      for (const key in nextAttrs) {
-        attrs[key] = nextAttrs[key]
-      }
-    }
-  }
-  lock()
 }
 
 export function normalizePropsOptions(

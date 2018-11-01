@@ -77,7 +77,6 @@ export interface ComponentClass extends ComponentClassOptions {
 
 export interface FunctionalComponent<P = {}> {
   (props: P, slots: Slots, attrs: Data, parentVNode: VNode): any
-  pure?: boolean
   props?: ComponentPropsOptions<P>
   displayName?: string
 }

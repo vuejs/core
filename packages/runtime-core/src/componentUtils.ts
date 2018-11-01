@@ -1,4 +1,4 @@
-import { VNodeFlags } from './flags'
+import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, isArray, isObject } from '@vue/shared'
 import { h } from './h'
 import { VNode, MountedVNode, createFragment } from './vdom'
@@ -193,10 +193,22 @@ function normalizeComponentRoot(
   return vnode
 }
 
-export function shouldUpdateFunctionalComponent(
-  prevProps: Record<string, any> | null,
-  nextProps: Record<string, any> | null
+export function shouldUpdateComponent(
+  prevVNode: VNode,
+  nextVNode: VNode
 ): boolean {
+  const { data: prevProps, childFlags: prevChildFlags } = prevVNode
+  const { data: nextProps, childFlags: nextChildFlags } = nextVNode
+  // If has different slots content, or has non-compiled slots,
+  // the child needs to be force updated. It's ok to call $forceUpdate
+  // again even if props update has already queued an update, as the
+  // scheduler will not queue the same update twice.
+  if (
+    prevChildFlags !== nextChildFlags ||
+    (nextChildFlags & ChildrenFlags.DYNAMIC_SLOTS) > 0
+  ) {
+    return true
+  }
   if (prevProps === nextProps) {
     return false
   }

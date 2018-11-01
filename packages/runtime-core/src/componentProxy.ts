@@ -30,7 +30,6 @@ const renderProxyHandlers = {
       return target.$data[key]
     } else if ((i = target.$options.props) != null && i.hasOwnProperty(key)) {
       // props are only proxied if declared
-      // make sure to return from $props to register dependency
       return target.$props[key]
     } else if (
       (i = target._computedGetters) !== null &&

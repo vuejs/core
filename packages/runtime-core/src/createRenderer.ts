@@ -1,4 +1,4 @@
-import { autorun, stop } from '@vue/observer'
+import { autorun, stop, Autorun, immutable } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, reservedPropRE, isString } from '@vue/shared'
@@ -10,18 +10,18 @@ import {
   Ref,
   VNodeChildren
 } from './vdom'
-import { ComponentInstance, FunctionalComponent } from './component'
-import { updateProps } from './componentProps'
+import { ComponentInstance } from './component'
 import {
   renderInstanceRoot,
   renderFunctionalRoot,
   createComponentInstance,
   teardownComponentInstance,
-  shouldUpdateFunctionalComponent
+  shouldUpdateComponent
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
-import { pushWarningContext, popWarningContext } from './warning'
+import { pushWarningContext, popWarningContext, warn } from './warning'
 import { handleError, ErrorTypes } from './errorHandling'
+import { resolveProps } from './componentProps'
 
 export interface NodeOps {
   createElement: (tag: string, isSVG?: boolean) => any
@@ -55,6 +55,13 @@ export interface RendererOptions {
   nodeOps: NodeOps
   patchData: PatchDataFunction
   teardownVNode?: (vnode: VNode) => void
+}
+
+export interface FunctionalHandle {
+  current: VNode
+  prevTree: VNode
+  runner: Autorun
+  forceUpdate: () => void
 }
 
 // The whole mounting / patching / unmouting logic is placed inside this
@@ -239,9 +246,64 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     endNode: RenderNode | null
   ) {
-    const subTree = (vnode.children = renderFunctionalRoot(vnode))
-    mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
-    vnode.el = subTree.el as RenderNode
+    if (__DEV__ && vnode.ref) {
+      warn(
+        `cannot use ref on a functional component because there is no ` +
+          `instance to reference to.`
+      )
+    }
+
+    const handle: FunctionalHandle = (vnode.handle = {
+      current: vnode,
+      prevTree: null as any,
+      runner: null as any,
+      forceUpdate: null as any
+    })
+
+    const handleSchedulerError = (err: Error) => {
+      handleError(err, handle.current as VNode, ErrorTypes.SCHEDULER)
+    }
+
+    const queueUpdate = (handle.forceUpdate = () => {
+      queueJob(handle.runner, null, handleSchedulerError)
+    })
+
+    // we are using vnode.ref to store the functional component's update job
+    queueJob(
+      () => {
+        handle.runner = autorun(
+          () => {
+            if (handle.prevTree) {
+              // mounted
+              const { prevTree, current } = handle
+              const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
+                current
+              ))
+              patch(
+                prevTree as MountedVNode,
+                nextTree,
+                platformParentNode(current.el),
+                current as MountedVNode,
+                isSVG
+              )
+              current.el = nextTree.el
+            } else {
+              // initial mount
+              const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
+                vnode
+              ))
+              mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
+              vnode.el = subTree.el as RenderNode
+            }
+          },
+          {
+            scheduler: queueUpdate
+          }
+        )
+      },
+      null,
+      handleSchedulerError
+    )
   }
 
   function mountText(
@@ -462,13 +524,7 @@ export function createRenderer(options: RendererOptions) {
     } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
       patchStatefulComponent(prevVNode, nextVNode)
     } else {
-      patchFunctionalComponent(
-        prevVNode,
-        nextVNode,
-        container,
-        contextVNode,
-        isSVG
-      )
+      patchFunctionalComponent(prevVNode, nextVNode)
     }
     if (__DEV__) {
       popWarningContext()
@@ -476,31 +532,24 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function patchStatefulComponent(prevVNode: MountedVNode, nextVNode: VNode) {
-    const { data: prevData, childFlags: prevChildFlags } = prevVNode
-    const {
-      data: nextData,
-      slots: nextSlots,
-      childFlags: nextChildFlags
-    } = nextVNode
+    const { data: prevData } = prevVNode
+    const { data: nextData, slots: nextSlots } = nextVNode
 
     const instance = (nextVNode.children =
       prevVNode.children) as ComponentInstance
+
+    if (nextData !== prevData) {
+      const { 0: props, 1: attrs } = resolveProps(
+        nextData,
+        instance.$options.props
+      )
+      instance.$props = __DEV__ ? immutable(props) : props
+      instance.$attrs = __DEV__ ? immutable(attrs) : attrs
+    }
     instance.$slots = nextSlots || EMPTY_OBJ
     instance.$parentVNode = nextVNode as MountedVNode
 
-    // Update props. This will trigger child update if necessary.
-    if (nextData !== prevData) {
-      updateProps(instance, nextData)
-    }
-
-    // If has different slots content, or has non-compiled slots,
-    // the child needs to be force updated. It's ok to call $forceUpdate
-    // again even if props update has already queued an update, as the
-    // scheduler will not queue the same update twice.
-    const shouldForceUpdate =
-      prevChildFlags !== nextChildFlags ||
-      (nextChildFlags & ChildrenFlags.DYNAMIC_SLOTS) > 0
-    if (shouldForceUpdate) {
+    if (shouldUpdateComponent(prevVNode, nextVNode)) {
       instance.$forceUpdate()
     } else if (instance.$vnode.flags & VNodeFlags.COMPONENT) {
       instance.$vnode.contextVNode = nextVNode
@@ -508,28 +557,13 @@ export function createRenderer(options: RendererOptions) {
     nextVNode.el = instance.$vnode.el
   }
 
-  function patchFunctionalComponent(
-    prevVNode: MountedVNode,
-    nextVNode: VNode,
-    container: RenderNode,
-    contextVNode: MountedVNode | null,
-    isSVG: boolean
-  ) {
-    // functional component tree is stored on the vnode as `children`
-    const { data: prevData, slots: prevSlots } = prevVNode
-    const { data: nextData, slots: nextSlots } = nextVNode
-    const render = nextVNode.tag as FunctionalComponent
-    const prevTree = prevVNode.children as MountedVNode
+  function patchFunctionalComponent(prevVNode: MountedVNode, nextVNode: VNode) {
+    const prevTree = prevVNode.children as VNode
+    const handle = (nextVNode.handle = prevVNode.handle as FunctionalHandle)
+    handle.current = nextVNode
 
-    let shouldUpdate = true
-    if (render.pure && prevSlots == null && nextSlots == null) {
-      shouldUpdate = shouldUpdateFunctionalComponent(prevData, nextData)
-    }
-
-    if (shouldUpdate) {
-      const nextTree = (nextVNode.children = renderFunctionalRoot(nextVNode))
-      patch(prevTree, nextTree, container, nextVNode as MountedVNode, isSVG)
-      nextVNode.el = nextTree.el
+    if (shouldUpdateComponent(prevVNode, nextVNode)) {
+      handle.forceUpdate()
     } else if (prevTree.flags & VNodeFlags.COMPONENT) {
       // functional component returned another component
       prevTree.contextVNode = nextVNode
@@ -1025,7 +1059,7 @@ export function createRenderer(options: RendererOptions) {
   // unmounting ----------------------------------------------------------------
 
   function unmount(vnode: MountedVNode) {
-    const { flags, data, children, childFlags, ref } = vnode
+    const { flags, data, children, childFlags, ref, handle } = vnode
     const isElement = flags & VNodeFlags.ELEMENT
     if (isElement || flags & VNodeFlags.FRAGMENT) {
       if (isElement && data != null && data.vnodeBeforeUnmount) {
@@ -1046,6 +1080,8 @@ export function createRenderer(options: RendererOptions) {
           unmountComponentInstance(children as ComponentInstance)
         }
       } else {
+        // functional
+        stop((handle as FunctionalHandle).runner)
         unmount(children as MountedVNode)
       }
     } else if (flags & VNodeFlags.PORTAL) {
@@ -1144,12 +1180,12 @@ export function createRenderer(options: RendererOptions) {
       beforeMount.call($proxy)
     }
 
-    const errorSchedulerHandler = (err: Error) => {
+    const handleSchedulerError = (err: Error) => {
       handleError(err, instance, ErrorTypes.SCHEDULER)
     }
 
     const queueUpdate = (instance.$forceUpdate = () => {
-      queueJob(instance._updateHandle, flushHooks, errorSchedulerHandler)
+      queueJob(instance._updateHandle, flushHooks, handleSchedulerError)
     })
 
     instance._updateHandle = autorun(
@@ -1185,7 +1221,7 @@ export function createRenderer(options: RendererOptions) {
           // to inject effects in first render
           const { mounted } = instance.$options
           if (mounted) {
-            lifecycleHooks.push(() => {
+            lifecycleHooks.unshift(() => {
               mounted.call($proxy)
             })
           }

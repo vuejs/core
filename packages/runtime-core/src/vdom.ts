@@ -7,6 +7,7 @@ import { VNodeFlags, ChildrenFlags } from './flags'
 import { createComponentClassFromOptions } from './componentUtils'
 import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { RawChildrenType, RawSlots } from './h'
+import { FunctionalHandle } from './createRenderer'
 
 const handlersRE = /^on|^vnode/
 
@@ -37,6 +38,10 @@ export interface VNode {
   // only on mounted component nodes
   // points to the parent stateful/functional component's placeholder node
   contextVNode: VNode | null
+  // only on mounted functional component nodes
+  // a consistent handle so that a functional component can be identified
+  // by the scheduler
+  handle: FunctionalHandle | null
 }
 
 export interface MountedVNode extends VNode {
@@ -92,7 +97,8 @@ export function createVNode(
     slots: slots === void 0 ? null : slots,
     el: null,
     parentVNode: null,
-    contextVNode: null
+    contextVNode: null,
+    handle: null
   }
   if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
     normalizeChildren(vnode, children)

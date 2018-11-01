@@ -7,7 +7,10 @@ const enum Priorities {
 
 const frameBudget = 1000 / 60
 
+let start: number = 0
 let currentOps: Op[]
+
+const getNow = () => window.performance.now()
 
 const evaluate = (v: any) => {
   return typeof v === 'function' ? v() : v
@@ -21,11 +24,9 @@ Object.keys(nodeOps).forEach((key: keyof NodeOps) => {
   }
   if (/create/.test(key)) {
     nodeOps[key] = (...args: any[]) => {
+      let res: any
       if (currentOps) {
-        let res: any
-        return () => {
-          return res || (res = original(...args))
-        }
+        return () => res || (res = original(...args))
       } else {
         return original(...args)
       }
@@ -45,7 +46,7 @@ type Op = [Function, ...any[]]
 
 interface Job extends Function {
   ops: Op[]
-  post: Function
+  post: Function | null
   expiration: number
 }
 
@@ -65,6 +66,7 @@ window.addEventListener(
     if (event.source !== window || event.data !== key) {
       return
     }
+    start = getNow()
     flush()
   },
   false
@@ -102,11 +104,11 @@ let hasPendingFlush = false
 
 export function queueJob(
   rawJob: Function,
-  postJob: Function,
+  postJob?: Function | null,
   onError?: (reason: any) => void
 ) {
   const job = rawJob as Job
-  job.post = postJob
+  job.post = postJob || null
   job.ops = job.ops || []
   // 1. let's see if this invalidates any work that
   // has already been done.
@@ -126,12 +128,13 @@ export function queueJob(
     }
   } else if (patchQueue.indexOf(job) === -1) {
     // a new job
-    job.expiration = performance.now() + Priorities.NORMAL
+    job.expiration = getNow() + Priorities.NORMAL
     patchQueue.push(job)
   }
 
   if (!hasPendingFlush) {
     hasPendingFlush = true
+    start = getNow()
     const p = nextTick(flush)
     if (onError) p.catch(onError)
   }
@@ -139,7 +142,6 @@ export function queueJob(
 
 function flush() {
   let job
-  let start = window.performance.now()
   while (true) {
     job = patchQueue.shift()
     if (job) {
@@ -147,7 +149,7 @@ function flush() {
     } else {
       break
     }
-    const now = performance.now()
+    const now = getNow()
     if (now - start > frameBudget && job.expiration > now) {
       break
     }
