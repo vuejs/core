@@ -227,9 +227,13 @@ export function createRenderer(options: RendererOptions) {
       // kept-alive
       activateComponentInstance(vnode, container, endNode)
     } else {
-      queueJob(() => {
+      if (__COMPAT__) {
         mountComponentInstance(vnode, container, isSVG, endNode)
-      }, flushHooks)
+      } else {
+        queueJob(() => {
+          mountComponentInstance(vnode, container, isSVG, endNode)
+        }, flushHooks)
+      }
     }
   }
 
@@ -257,8 +261,7 @@ export function createRenderer(options: RendererOptions) {
       queueJob(handle.runner)
     })
 
-    // we are using vnode.ref to store the functional component's update job
-    queueJob(() => {
+    const doMount = () => {
       handle.runner = autorun(
         () => {
           if (handle.prevTree) {
@@ -270,6 +273,9 @@ export function createRenderer(options: RendererOptions) {
             const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
               current
             ))
+            queuePostCommitHook(() => {
+              current.el = nextTree.el
+            })
             patch(
               prevTree as MountedVNode,
               nextTree,
@@ -277,7 +283,6 @@ export function createRenderer(options: RendererOptions) {
               current as MountedVNode,
               isSVG
             )
-            current.el = nextTree.el
             if (__DEV__) {
               popWarningContext()
             }
@@ -289,8 +294,10 @@ export function createRenderer(options: RendererOptions) {
             const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
               vnode
             ))
+            queuePostCommitHook(() => {
+              vnode.el = subTree.el as RenderNode
+            })
             mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
-            vnode.el = subTree.el as RenderNode
             if (__DEV__) {
               popWarningContext()
             }
@@ -300,7 +307,14 @@ export function createRenderer(options: RendererOptions) {
           scheduler: queueUpdate
         }
       )
-    })
+    }
+
+    // we are using vnode.ref to store the functional component's update job
+    if (__COMPAT__) {
+      doMount()
+    } else {
+      queueJob(doMount)
+    }
   }
 
   function mountText(
@@ -1200,6 +1214,10 @@ export function createRenderer(options: RendererOptions) {
 
           queuePostCommitHook(() => {
             vnode.el = instance.$vnode.el
+            if (__COMPAT__) {
+              // expose __vue__ for devtools
+              ;(vnode.el as any).__vue__ = instance
+            }
             if (vnode.ref) {
               vnode.ref($proxy)
             }
@@ -1218,11 +1236,6 @@ export function createRenderer(options: RendererOptions) {
             isSVG,
             endNode
           )
-
-          if (__COMPAT__) {
-            // expose __vue__ for devtools
-            ;(vnode.el as any).__vue__ = instance
-          }
 
           instance._mounted = true
         }
@@ -1435,11 +1448,18 @@ export function createRenderer(options: RendererOptions) {
         container.vnode = null
       }
     }
-    return nextTick(() => {
+    if (__COMPAT__) {
+      flushHooks()
       return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
         ? (vnode.children as ComponentInstance).$proxy
         : null
-    })
+    } else {
+      return nextTick(() => {
+        return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
+          ? (vnode.children as ComponentInstance).$proxy
+          : null
+      })
+    }
   }
 
   return { render }

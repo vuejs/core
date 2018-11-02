@@ -63,9 +63,6 @@ export function dumpOps(): NodeOp[] {
 }
 
 function createElement(tag: string): TestElement {
-  if (nodeId === 5) {
-    throw new Error('foo')
-  }
   const node: TestElement = {
     id: nodeId++,
     type: NodeTypes.ELEMENT,

@@ -1,6 +1,6 @@
 ;(global as any).__COMPAT__ = true
 
-import Vue from '../src/index-compat'
+import Vue from '../src/index'
 
 describe('2.x compat build', async () => {
   test('should work', async () => {

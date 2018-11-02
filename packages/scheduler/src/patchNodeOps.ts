@@ -1,3 +1,4 @@
+// temporary hack to wrap nodeOps so it works with time-slicing
 import { NodeOps } from '@vue/runtime-core'
 import { nodeOps } from '../../runtime-dom/src/nodeOps'
 import { nodeOps as testNodeOps } from '../../runtime-test/src/nodeOps'
