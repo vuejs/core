@@ -1,7 +1,6 @@
 import {
   h,
   createRenderer,
-  VNode,
   Component,
   createComponentInstance
 } from '@vue/runtime-core'
@@ -14,7 +13,7 @@ const { render: _render } = createRenderer({
 })
 
 type publicRender = (
-  node: VNode | null,
+  node: {} | null,
   container: TestElement
 ) => Component | null
 export const render = _render as publicRender
