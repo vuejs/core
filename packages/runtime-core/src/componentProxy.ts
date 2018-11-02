@@ -3,6 +3,7 @@ import { isFunction, isReservedKey } from '@vue/shared'
 import { warn } from './warning'
 import { isRendering } from './componentUtils'
 import { isObservable } from '@vue/observer'
+import { reservedMethods } from '@vue/runtime-dom'
 
 const bindCache = new WeakMap()
 
@@ -41,7 +42,12 @@ const renderProxyHandlers = {
       // hooks injections
       return i[key]
     } else if (key[0] !== '_') {
-      if (__DEV__ && isRendering && !(key in target)) {
+      if (
+        __DEV__ &&
+        isRendering &&
+        !(key in target) &&
+        !(key in reservedMethods)
+      ) {
         warn(
           `property "${key}" was accessed during render but does not exist ` +
             `on instance.`
