@@ -22,7 +22,6 @@ export { memoize } from './optional/memoize'
 
 // Experimental APIs
 export {
-  withHooks,
   useState,
   useEffect,
   useRef,

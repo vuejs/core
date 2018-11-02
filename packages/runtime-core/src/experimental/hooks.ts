@@ -1,6 +1,5 @@
-import { ComponentInstance, FunctionalComponent, Component } from '../component'
-import { mergeLifecycleHooks, Data, WatchOptions } from '../componentOptions'
-import { VNode, Slots } from '../vdom'
+import { ComponentInstance } from '../component'
+import { mergeLifecycleHooks, WatchOptions } from '../componentOptions'
 import { observable, computed } from '@vue/observer'
 import { setupWatcher } from '../componentWatch'
 
@@ -199,16 +198,4 @@ export function useComputed<T>(getter: () => T): T {
     handles[id] = computed(getter)
   }
   return handles[id]()
-}
-
-export function withHooks(render: FunctionalComponent): new () => Component {
-  return class ComponentWithHooks extends Component {
-    static displayName = render.name
-    render(props: Data, slots: Slots, attrs: Data, parentVNode: VNode) {
-      setCurrentInstance((this as any)._self)
-      const ret = render(props, slots, attrs, parentVNode)
-      unsetCurrentInstance()
-      return ret
-    }
-  }
 }
