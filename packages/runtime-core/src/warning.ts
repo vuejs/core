@@ -31,7 +31,8 @@ export function warn(msg: string, ...args: any[]) {
     console.groupCollapsed('at', ...formatTraceEntry(trace[0]))
     const logs: string[] = []
     trace.slice(1).forEach((entry, i) => {
-      logs.push('\n', ...formatTraceEntry(entry, i + 1))
+      if (i !== 0) logs.push('\n')
+      logs.push(...formatTraceEntry(entry, i + 1))
     })
     console.log(...logs)
     console.groupEnd()
