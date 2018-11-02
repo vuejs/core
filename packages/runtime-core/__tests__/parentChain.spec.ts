@@ -1,10 +1,9 @@
 import {
   h,
   Component,
-  render,
-  nodeOps,
   observable,
-  nextTick
+  nextTick,
+  renderInstance
 } from '@vue/runtime-test'
 
 describe('Parent chain management', () => {
@@ -36,11 +35,12 @@ describe('Parent chain management', () => {
       unmounted() {
         grandChildren.splice(grandChildren.indexOf(this), 1)
       }
-      render() {}
+      render() {
+        return h('div')
+      }
     }
 
-    const root = nodeOps.createElement('div')
-    const parent = (await render(h(Parent), root)) as Component
+    const parent = await renderInstance(Parent)
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)
@@ -98,8 +98,7 @@ describe('Parent chain management', () => {
       render() {}
     }
 
-    const root = nodeOps.createElement('div')
-    const parent = (await render(h(Parent), root)) as Component
+    const parent = await renderInstance(Parent)
 
     expect(child.$parent).toBe(parent)
     expect(child.$root).toBe(parent)

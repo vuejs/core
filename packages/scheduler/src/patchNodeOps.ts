@@ -30,13 +30,17 @@ function patchOps(nodeOps: NodeOps) {
           return original(...args)
         }
       }
-    } else {
+    } else if (!/parent|next|query/.test(key)) {
       nodeOps[key] = (...args: any[]) => {
         if (currentOps) {
           currentOps.push([original, ...args.map(evaluate)])
         } else {
-          original(...args)
+          return original(...args)
         }
+      }
+    } else {
+      nodeOps[key] = (node: any) => {
+        return original(evaluate(node))
       }
     }
   })

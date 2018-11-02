@@ -7,7 +7,6 @@ import {
   MountedVNode,
   RenderNode,
   createTextVNode,
-  Ref,
   VNodeChildren
 } from './vdom'
 import { ComponentInstance } from './component'
@@ -109,9 +108,13 @@ export function createRenderer(options: RendererOptions) {
   const lifecycleHooks: Function[] = []
   const vnodeUpdatedHooks: Function[] = []
 
+  function queuePostCommitHook(fn: Function) {
+    lifecycleHooks.push(fn)
+  }
+
   function flushHooks() {
     let fn
-    while ((fn = lifecycleHooks.shift())) {
+    while ((fn = lifecycleHooks.pop())) {
       fn()
     }
   }
@@ -187,19 +190,15 @@ export function createRenderer(options: RendererOptions) {
       insertOrAppend(container, el, endNode)
     }
     if (ref) {
-      mountRef(ref, el)
+      queuePostCommitHook(() => {
+        ref(el)
+      })
     }
     if (data != null && data.vnodeMounted) {
-      lifecycleHooks.unshift(() => {
+      queuePostCommitHook(() => {
         data.vnodeMounted(vnode)
       })
     }
-  }
-
-  function mountRef(ref: Ref, el: RenderNode | ComponentInstance) {
-    lifecycleHooks.push(() => {
-      ref(el)
-    })
   }
 
   function mountComponent(
@@ -325,8 +324,10 @@ export function createRenderer(options: RendererOptions) {
     const { children, childFlags } = vnode
     switch (childFlags) {
       case ChildrenFlags.SINGLE_VNODE:
+        queuePostCommitHook(() => {
+          vnode.el = (children as MountedVNode).el
+        })
         mount(children as VNode, container, contextVNode, isSVG, endNode)
-        vnode.el = (children as MountedVNode).el
         break
       case ChildrenFlags.NO_CHILDREN:
         const placeholder = createTextVNode('')
@@ -334,6 +335,9 @@ export function createRenderer(options: RendererOptions) {
         vnode.el = placeholder.el
         break
       default:
+        queuePostCommitHook(() => {
+          vnode.el = (children as MountedVNode[])[0].el
+        })
         mountArrayChildren(
           children as VNode[],
           container,
@@ -341,7 +345,6 @@ export function createRenderer(options: RendererOptions) {
           isSVG,
           endNode
         )
-        vnode.el = (children as MountedVNode[])[0].el
     }
   }
 
@@ -369,7 +372,9 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     if (ref) {
-      mountRef(ref, target as RenderNode)
+      queuePostCommitHook(() => {
+        ref(target)
+      })
     }
     const placeholder = createTextVNode('')
     mountText(placeholder, container, null)
@@ -573,6 +578,18 @@ export function createRenderer(options: RendererOptions) {
     // then retrieve its next sibling to use as the end node for patchChildren.
     const endNode = platformNextSibling(getVNodeLastEl(prevVNode))
     const { childFlags, children } = nextVNode
+    queuePostCommitHook(() => {
+      switch (childFlags) {
+        case ChildrenFlags.SINGLE_VNODE:
+          nextVNode.el = (children as MountedVNode).el
+          break
+        case ChildrenFlags.NO_CHILDREN:
+          nextVNode.el = prevVNode.el
+          break
+        default:
+          nextVNode.el = (children as MountedVNode[])[0].el
+      }
+    })
     patchChildren(
       prevVNode.childFlags,
       childFlags,
@@ -583,16 +600,6 @@ export function createRenderer(options: RendererOptions) {
       isSVG,
       endNode
     )
-    switch (childFlags) {
-      case ChildrenFlags.SINGLE_VNODE:
-        nextVNode.el = (children as MountedVNode).el
-        break
-      case ChildrenFlags.NO_CHILDREN:
-        nextVNode.el = prevVNode.el
-        break
-      default:
-        nextVNode.el = (children as MountedVNode[])[0].el
-    }
   }
 
   function getVNodeLastEl(vnode: MountedVNode): RenderNode {
@@ -1152,7 +1159,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
-  ): RenderNode {
+  ) {
     if (__DEV__) {
       pushWarningContext(vnode)
     }
@@ -1190,6 +1197,20 @@ export function createRenderer(options: RendererOptions) {
         } else {
           // this will be executed synchronously right here
           instance.$vnode = renderInstanceRoot(instance) as MountedVNode
+
+          queuePostCommitHook(() => {
+            vnode.el = instance.$vnode.el
+            if (vnode.ref) {
+              vnode.ref($proxy)
+            }
+            // retrieve mounted value after initial render so that we get
+            // to inject effects in hooks
+            const { mounted } = instance.$options
+            if (mounted) {
+              callLifecycleHookWithHandle(mounted, $proxy, ErrorTypes.MOUNTED)
+            }
+          })
+
           mount(
             instance.$vnode,
             container,
@@ -1197,7 +1218,6 @@ export function createRenderer(options: RendererOptions) {
             isSVG,
             endNode
           )
-          vnode.el = instance.$vnode.el
 
           if (__COMPAT__) {
             // expose __vue__ for devtools
@@ -1205,18 +1225,6 @@ export function createRenderer(options: RendererOptions) {
           }
 
           instance._mounted = true
-          if (vnode.ref) {
-            mountRef(vnode.ref, $proxy)
-          }
-
-          // retrieve mounted value right before calling it so that we get
-          // to inject effects in first render
-          const { mounted } = instance.$options
-          if (mounted) {
-            lifecycleHooks.unshift(() => {
-              callLifecycleHookWithHandle(mounted, $proxy, ErrorTypes.MOUNTED)
-            })
-          }
         }
       },
       {
@@ -1229,8 +1237,6 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
-
-    return vnode.el as RenderNode
   }
 
   function updateComponentInstance(
@@ -1259,52 +1265,45 @@ export function createRenderer(options: RendererOptions) {
     const nextVNode = (instance.$vnode = renderInstanceRoot(
       instance
     ) as MountedVNode)
-    const container = platformParentNode(prevVNode.el) as RenderNode
-    patch(prevVNode, nextVNode, container, $parentVNode as MountedVNode, isSVG)
-    const el = nextVNode.el as RenderNode
 
-    if (__COMPAT__) {
-      // expose __vue__ for devtools
-      ;(el as any).__vue__ = instance
-    }
-
-    // recursively update contextVNode el for nested HOCs
-    if ((nextVNode.flags & VNodeFlags.PORTAL) === 0) {
-      let vnode = $parentVNode
-      while (vnode !== null) {
-        if ((vnode.flags & VNodeFlags.COMPONENT) > 0) {
-          vnode.el = el
-        }
-        vnode = vnode.contextVNode
+    queuePostCommitHook(() => {
+      const el = nextVNode.el as RenderNode
+      if (__COMPAT__) {
+        // expose __vue__ for devtools
+        ;(el as any).__vue__ = instance
       }
-    }
-
-    const { updated } = instance.$options
-    if (updated) {
-      // Because the child's update is executed by the scheduler and not
-      // synchronously within the parent's update call, the child's updated hook
-      // will be added to the queue AFTER the parent's, but they should be
-      // invoked BEFORE the parent's. Therefore we add them to the head of the
-      // queue instead.
-      lifecycleHooks.unshift(() => {
+      // recursively update contextVNode el for nested HOCs
+      if ((nextVNode.flags & VNodeFlags.PORTAL) === 0) {
+        let vnode = $parentVNode
+        while (vnode !== null) {
+          if ((vnode.flags & VNodeFlags.COMPONENT) > 0) {
+            vnode.el = el
+          }
+          vnode = vnode.contextVNode
+        }
+      }
+      const { updated } = instance.$options
+      if (updated) {
         callLifecycleHookWithHandle(
           updated,
           $proxy,
           ErrorTypes.UPDATED,
           nextVNode
         )
-      })
-    }
+      }
+      if (vnodeUpdatedHooks.length > 0) {
+        const vnodeUpdatedHooksForCurrentInstance = vnodeUpdatedHooks.slice()
+        vnodeUpdatedHooks.length = 0
+        queuePostCommitHook(() => {
+          for (let i = 0; i < vnodeUpdatedHooksForCurrentInstance.length; i++) {
+            vnodeUpdatedHooksForCurrentInstance[i]()
+          }
+        })
+      }
+    })
 
-    if (vnodeUpdatedHooks.length > 0) {
-      const vnodeUpdatedHooksForCurrentInstance = vnodeUpdatedHooks.slice()
-      vnodeUpdatedHooks.length = 0
-      lifecycleHooks.unshift(() => {
-        for (let i = 0; i < vnodeUpdatedHooksForCurrentInstance.length; i++) {
-          vnodeUpdatedHooksForCurrentInstance[i]()
-        }
-      })
-    }
+    const container = platformParentNode(prevVNode.el) as RenderNode
+    patch(prevVNode, nextVNode, container, $parentVNode as MountedVNode, isSVG)
 
     if (__DEV__ && instance.$parentVNode) {
       popWarningContext()
@@ -1357,7 +1356,7 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
-    lifecycleHooks.push(() => {
+    queuePostCommitHook(() => {
       callActivatedHook(instance, true)
     })
   }

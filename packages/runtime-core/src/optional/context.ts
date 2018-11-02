@@ -92,5 +92,3 @@ export const Inject: FunctionalComponent<InjectProps> = (
   }
   return slots.default && slots.default(resolvedValue)
 }
-
-Inject.pure = true

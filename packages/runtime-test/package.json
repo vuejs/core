@@ -9,6 +9,10 @@
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"
   },
+  "buildOptions": {
+    "name": "VueTestRuntime",
+    "formats": ["esm", "cjs", "global"]
+  },
   "keywords": [
     "vue"
   ],
