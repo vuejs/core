@@ -1,26 +1,8 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "cSpell.enabledLanguageIds": [
-    "asciidoc",
-    "c",
-    "cpp",
-    "csharp",
-    "css",
-    "go",
-    "handlebars",
-    "jade",
-    "javascriptreact",
-    "json",
-    "latex",
-    "less",
     "markdown",
-    "php",
     "plaintext",
-    "pub",
-    "python",
-    "restructuredtext",
-    "rust",
-    "scss",
     "text",
     "yml"
   ]
