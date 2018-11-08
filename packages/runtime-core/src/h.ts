@@ -22,7 +22,8 @@ export const Portal = Symbol()
 type RawChildType = VNode | string | number | boolean | null | undefined
 
 export type RawSlots = {
-  [name: string]: () => RawChildrenType
+  $stable?: boolean
+  [name: string]: RawChildType | (() => RawChildrenType)
 }
 
 export type RawChildrenType = RawChildType | RawChildType[]

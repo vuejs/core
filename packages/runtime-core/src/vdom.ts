@@ -10,6 +10,7 @@ import { RawChildrenType, RawSlots } from './h'
 import { FunctionalHandle } from './createRenderer'
 
 const handlersRE = /^on|^vnode/
+const STABLE_SLOTS_HINT = '$stable'
 
 // Vue core is platform agnostic, so we are not using Element for "DOM" nodes.
 export interface RenderNode {
@@ -226,6 +227,10 @@ export function createComponentVNode(
       } else if (isObject(children) && !(children as any)._isVNode) {
         // slot object as children
         slots = children
+        // special manual optimization hint for raw render fn users
+        if (slots[STABLE_SLOTS_HINT]) {
+          childFlags = ChildrenFlags.STABLE_SLOTS
+        }
       } else {
         slots = { default: () => children }
       }
@@ -418,6 +423,9 @@ function normalizeSlots(slots: { [name: string]: any }): Slots {
   }
   const normalized = { _normalized: true } as any
   for (const name in slots) {
+    if (name === STABLE_SLOTS_HINT) {
+      continue
+    }
     normalized[name] = (...args: any[]) => normalizeSlot(slots[name](...args))
   }
   return normalized

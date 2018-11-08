@@ -204,9 +204,7 @@ export function shouldUpdateComponent(
   const { data: prevProps, childFlags: prevChildFlags } = prevVNode
   const { data: nextProps, childFlags: nextChildFlags } = nextVNode
   // If has different slots content, or has non-compiled slots,
-  // the child needs to be force updated. It's ok to call $forceUpdate
-  // again even if props update has already queued an update, as the
-  // scheduler will not queue the same update twice.
+  // the child needs to be force updated.
   if (
     prevChildFlags !== nextChildFlags ||
     (nextChildFlags & ChildrenFlags.DYNAMIC_SLOTS) > 0
@@ -235,11 +233,49 @@ export function shouldUpdateComponent(
   return false
 }
 
+// DEV only
 export function getReasonForComponentUpdate(
   prevVNode: VNode,
   nextVNode: VNode
 ): any {
-  // TODO: extract more detailed information on why the component is updating
+  const reasons = []
+  const { childFlags: prevChildFlags } = prevVNode
+  const { childFlags: nextChildFlags } = nextVNode
+  if (
+    prevChildFlags !== nextChildFlags ||
+    (nextChildFlags & ChildrenFlags.DYNAMIC_SLOTS) > 0
+  ) {
+    reasons.push({
+      type: `slots may have changed`,
+      tip: `use function slots + $stable: true to avoid slot-triggered child updates.`
+    })
+  }
+  const prevProps = prevVNode.data || EMPTY_OBJ
+  const nextProps = nextVNode.data || EMPTY_OBJ
+  for (const key in nextProps) {
+    if (nextProps[key] !== prevProps[key]) {
+      reasons.push({
+        type: 'prop changed',
+        key,
+        value: nextProps[key],
+        oldValue: prevProps[key]
+      })
+    }
+  }
+  for (const key in prevProps) {
+    if (!(key in nextProps)) {
+      reasons.push({
+        type: 'prop changed',
+        key,
+        value: undefined,
+        oldValue: prevProps[key]
+      })
+    }
+  }
+  return {
+    type: 'triggered by parent',
+    reasons
+  }
 }
 
 export function createComponentClassFromOptions(
