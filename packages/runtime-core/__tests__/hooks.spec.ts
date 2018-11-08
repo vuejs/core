@@ -1,30 +1,8 @@
-import { withHooks, useState, h, nextTick, useEffect, Component } from '../src'
+import { useState, h, nextTick, useEffect, Component } from '../src'
 import { renderInstance, serialize, triggerEvent } from '@vue/runtime-test'
 
 describe('hooks', () => {
   it('useState', async () => {
-    const Counter = withHooks(() => {
-      const [count, setCount] = useState(0)
-      return h(
-        'div',
-        {
-          onClick: () => {
-            setCount(count + 1)
-          }
-        },
-        count
-      )
-    })
-
-    const counter = await renderInstance(Counter)
-    expect(serialize(counter.$el)).toBe(`<div>0</div>`)
-
-    triggerEvent(counter.$el, 'click')
-    await nextTick()
-    expect(serialize(counter.$el)).toBe(`<div>1</div>`)
-  })
-
-  it('should be usable inside class', async () => {
     class Counter extends Component {
       render() {
         const [count, setCount] = useState(0)
@@ -82,21 +60,23 @@ describe('hooks', () => {
   it('useEffect', async () => {
     let effect = -1
 
-    const Counter = withHooks(() => {
-      const [count, setCount] = useState(0)
-      useEffect(() => {
-        effect = count
-      })
-      return h(
-        'div',
-        {
-          onClick: () => {
-            setCount(count + 1)
-          }
-        },
-        count
-      )
-    })
+    class Counter extends Component {
+      render() {
+        const [count, setCount] = useState(0)
+        useEffect(() => {
+          effect = count
+        })
+        return h(
+          'div',
+          {
+            onClick: () => {
+              setCount(count + 1)
+            }
+          },
+          count
+        )
+      }
+    }
 
     const counter = await renderInstance(Counter)
     expect(effect).toBe(0)

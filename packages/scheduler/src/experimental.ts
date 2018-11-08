@@ -171,6 +171,7 @@ function patchJob(job: Job) {
   if (job.ops.length === 0) {
     setCurrentOps(job.ops)
     job()
+    setCurrentOps(null)
     commitQueue.push(job)
   }
 }

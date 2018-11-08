@@ -12,7 +12,8 @@ import {
   nextTick,
   resetOps,
   dumpOps,
-  NodeOpTypes
+  NodeOpTypes,
+  renderInstance
 } from '@vue/runtime-test'
 
 describe('Fragments', () => {
@@ -23,7 +24,7 @@ describe('Fragments', () => {
       }
     }
     const root = nodeOps.createElement('div')
-    await render(h(App), root)
+    await renderInstance(App)
     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
     expect(root.children.length).toBe(2)
     expect(root.children[0]).toMatchObject({

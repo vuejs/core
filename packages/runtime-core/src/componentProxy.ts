@@ -3,7 +3,7 @@ import { isFunction, isReservedKey } from '@vue/shared'
 import { warn } from './warning'
 import { isRendering } from './componentUtils'
 import { isObservable } from '@vue/observer'
-import { reservedMethods } from '@vue/runtime-dom'
+import { reservedMethods } from './componentOptions'
 
 const bindCache = new WeakMap()
 

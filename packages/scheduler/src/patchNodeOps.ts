@@ -5,9 +5,9 @@ import { nodeOps as testNodeOps } from '../../runtime-test/src/nodeOps'
 
 export type Op = [Function, ...any[]]
 
-let currentOps: Op[]
+let currentOps: Op[] | null = null
 
-export function setCurrentOps(ops: Op[]) {
+export function setCurrentOps(ops: Op[] | null) {
   currentOps = ops
 }
 
