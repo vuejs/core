@@ -271,29 +271,7 @@ export function createRenderer(options: RendererOptions) {
     const doMount = () => {
       handle.runner = autorun(
         () => {
-          if (handle.prevTree) {
-            // mounted
-            const { prevTree, current } = handle
-            if (__DEV__) {
-              pushWarningContext(current)
-            }
-            const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
-              current
-            ))
-            queuePostCommitHook(() => {
-              current.el = nextTree.el
-            })
-            patch(
-              prevTree as MountedVNode,
-              nextTree,
-              platformParentNode(current.el),
-              current as MountedVNode,
-              isSVG
-            )
-            if (__DEV__) {
-              popWarningContext()
-            }
-          } else {
+          if (!handle.prevTree) {
             // initial mount
             if (__DEV__) {
               pushWarningContext(vnode)
@@ -308,6 +286,8 @@ export function createRenderer(options: RendererOptions) {
             if (__DEV__) {
               popWarningContext()
             }
+          } else {
+            updateFunctionalComponent(handle, isSVG)
           }
         },
         {
@@ -321,6 +301,30 @@ export function createRenderer(options: RendererOptions) {
       doMount()
     } else {
       queueJob(doMount)
+    }
+  }
+
+  function updateFunctionalComponent(handle: FunctionalHandle, isSVG: boolean) {
+    // mounted
+    const { prevTree, current } = handle
+    if (__DEV__) {
+      pushWarningContext(current)
+    }
+    const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
+      current
+    ))
+    queuePostCommitHook(() => {
+      current.el = nextTree.el
+    })
+    patch(
+      prevTree as MountedVNode,
+      nextTree,
+      platformParentNode(current.el),
+      current as MountedVNode,
+      isSVG
+    )
+    if (__DEV__) {
+      popWarningContext()
     }
   }
 

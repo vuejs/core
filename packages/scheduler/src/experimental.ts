@@ -32,7 +32,7 @@ function flushAfterMicroTask() {
 }
 
 // Macrotask for time slicing
-const key = `__vueSchedulerTick`
+const key = `$vueTick`
 
 window.addEventListener(
   'message',
@@ -127,9 +127,11 @@ function flush(): void {
     } else {
       break
     }
-    const now = getNow()
-    if (now - start > frameBudget && job.expiration > now) {
-      break
+    if (!__COMPAT__) {
+      const now = getNow()
+      if (now - start > frameBudget && job.expiration > now) {
+        break
+      }
     }
   }
 
@@ -147,7 +149,7 @@ function flush(): void {
     }
     // some post commit hook triggered more updates...
     if (patchQueue.length > 0) {
-      if (getNow() - start > frameBudget) {
+      if (!__COMPAT__ && getNow() - start > frameBudget) {
         return flushAfterMacroTask()
       } else {
         // not out of budget yet, flush sync
@@ -162,6 +164,8 @@ function flush(): void {
     }
   } else {
     // got more job to do
+    // shouldn't reach here in compat mode, because the patchQueue is
+    // guarunteed to be drained
     flushAfterMacroTask()
   }
 }
