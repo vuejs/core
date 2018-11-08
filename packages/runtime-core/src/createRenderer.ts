@@ -1,4 +1,10 @@
-import { autorun, stop, Autorun, immutable } from '@vue/observer'
+import {
+  autorun,
+  stop,
+  Autorun,
+  immutable,
+  AutorunOptions
+} from '@vue/observer'
 import { queueJob, handleSchedulerError, nextTick } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, reservedPropRE, isString } from '@vue/shared'
@@ -15,7 +21,8 @@ import {
   renderFunctionalRoot,
   createComponentInstance,
   teardownComponentInstance,
-  shouldUpdateComponent
+  shouldUpdateComponent,
+  getReasonForComponentUpdate
 } from './componentUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -23,7 +30,7 @@ import { resolveProps } from './componentProps'
 import {
   handleError,
   ErrorTypes,
-  callLifecycleHookWithHandle
+  callLifecycleHookWithHandler
 } from './errorHandling'
 
 export interface NodeOps {
@@ -561,6 +568,14 @@ export function createRenderer(options: RendererOptions) {
     instance.$parentVNode = nextVNode as MountedVNode
 
     if (shouldUpdateComponent(prevVNode, nextVNode)) {
+      if (__DEV__ && instance.$options.renderTriggered) {
+        callLifecycleHookWithHandler(
+          instance.$options.renderTriggered,
+          instance.$proxy,
+          ErrorTypes.RENDER_TRIGGERED,
+          getReasonForComponentUpdate(prevVNode, nextVNode)
+        )
+      }
       instance.$forceUpdate()
     } else if (instance.$vnode.flags & VNodeFlags.COMPONENT) {
       instance.$vnode.contextVNode = nextVNode
@@ -1194,58 +1209,72 @@ export function createRenderer(options: RendererOptions) {
     } = instance
 
     if (beforeMount) {
-      callLifecycleHookWithHandle(beforeMount, $proxy, ErrorTypes.BEFORE_MOUNT)
+      callLifecycleHookWithHandler(beforeMount, $proxy, ErrorTypes.BEFORE_MOUNT)
     }
 
     const queueUpdate = (instance.$forceUpdate = () => {
       queueJob(instance._updateHandle, flushHooks)
     })
 
-    instance._updateHandle = autorun(
-      () => {
-        if (instance._unmounted) {
-          return
-        }
-        if (instance._mounted) {
-          updateComponentInstance(instance, isSVG)
-        } else {
-          // this will be executed synchronously right here
-          instance.$vnode = renderInstanceRoot(instance) as MountedVNode
+    const autorunOptions: AutorunOptions = {
+      scheduler: queueUpdate
+    }
 
-          queuePostCommitHook(() => {
-            vnode.el = instance.$vnode.el
-            if (__COMPAT__) {
-              // expose __vue__ for devtools
-              ;(vnode.el as any).__vue__ = instance
-            }
-            if (vnode.ref) {
-              vnode.ref($proxy)
-            }
-            // retrieve mounted value after initial render so that we get
-            // to inject effects in hooks
-            const { mounted } = instance.$options
-            if (mounted) {
-              callLifecycleHookWithHandle(mounted, $proxy, ErrorTypes.MOUNTED)
-            }
-          })
-
-          mount(
-            instance.$vnode,
-            container,
-            vnode as MountedVNode,
-            isSVG,
-            endNode
+    if (__DEV__) {
+      if (renderTracked) {
+        autorunOptions.onTrack = event => {
+          callLifecycleHookWithHandler(
+            renderTracked,
+            $proxy,
+            ErrorTypes.RENDER_TRACKED,
+            event
           )
-
-          instance._mounted = true
         }
-      },
-      {
-        scheduler: queueUpdate,
-        onTrack: renderTracked,
-        onTrigger: renderTriggered
       }
-    )
+      if (renderTriggered) {
+        autorunOptions.onTrigger = event => {
+          callLifecycleHookWithHandler(
+            renderTriggered,
+            $proxy,
+            ErrorTypes.RENDER_TRIGGERED,
+            event
+          )
+        }
+      }
+    }
+
+    instance._updateHandle = autorun(() => {
+      if (instance._unmounted) {
+        return
+      }
+      if (instance._mounted) {
+        updateComponentInstance(instance, isSVG)
+      } else {
+        // this will be executed synchronously right here
+        instance.$vnode = renderInstanceRoot(instance) as MountedVNode
+
+        queuePostCommitHook(() => {
+          vnode.el = instance.$vnode.el
+          if (__COMPAT__) {
+            // expose __vue__ for devtools
+            ;(vnode.el as any).__vue__ = instance
+          }
+          if (vnode.ref) {
+            vnode.ref($proxy)
+          }
+          // retrieve mounted value after initial render so that we get
+          // to inject effects in hooks
+          const { mounted } = instance.$options
+          if (mounted) {
+            callLifecycleHookWithHandler(mounted, $proxy, ErrorTypes.MOUNTED)
+          }
+        })
+
+        mount(instance.$vnode, container, vnode as MountedVNode, isSVG, endNode)
+
+        instance._mounted = true
+      }
+    }, autorunOptions)
 
     if (__DEV__) {
       popWarningContext()
@@ -1267,7 +1296,7 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeUpdate }
     } = instance
     if (beforeUpdate) {
-      callLifecycleHookWithHandle(
+      callLifecycleHookWithHandler(
         beforeUpdate,
         $proxy,
         ErrorTypes.BEFORE_UPDATE,
@@ -1297,7 +1326,7 @@ export function createRenderer(options: RendererOptions) {
       }
       const { updated } = instance.$options
       if (updated) {
-        callLifecycleHookWithHandle(
+        callLifecycleHookWithHandler(
           updated,
           $proxy,
           ErrorTypes.UPDATED,
@@ -1334,7 +1363,7 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeUnmount, unmounted }
     } = instance
     if (beforeUnmount) {
-      callLifecycleHookWithHandle(
+      callLifecycleHookWithHandler(
         beforeUnmount,
         $proxy,
         ErrorTypes.BEFORE_UNMOUNT
@@ -1347,7 +1376,7 @@ export function createRenderer(options: RendererOptions) {
     teardownComponentInstance(instance)
     instance._unmounted = true
     if (unmounted) {
-      callLifecycleHookWithHandle(unmounted, $proxy, ErrorTypes.UNMOUNTED)
+      callLifecycleHookWithHandler(unmounted, $proxy, ErrorTypes.UNMOUNTED)
     }
   }
 
@@ -1391,7 +1420,7 @@ export function createRenderer(options: RendererOptions) {
         callActivatedHook($children[i], false)
       }
       if (activated) {
-        callLifecycleHookWithHandle(activated, $proxy, ErrorTypes.ACTIVATED)
+        callLifecycleHookWithHandler(activated, $proxy, ErrorTypes.ACTIVATED)
       }
     }
   }
@@ -1416,7 +1445,11 @@ export function createRenderer(options: RendererOptions) {
         callDeactivateHook($children[i], false)
       }
       if (deactivated) {
-        callLifecycleHookWithHandle(deactivated, $proxy, ErrorTypes.DEACTIVATED)
+        callLifecycleHookWithHandler(
+          deactivated,
+          $proxy,
+          ErrorTypes.DEACTIVATED
+        )
       }
     }
   }

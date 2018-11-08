@@ -24,7 +24,7 @@ import {
   DebuggerEvent
 } from './autorun'
 
-export { Autorun, DebuggerEvent }
+export { Autorun, AutorunOptions, DebuggerEvent }
 export { OperationTypes } from './operations'
 export { computed, ComputedGetter } from './computed'
 export { lock, unlock } from './lock'

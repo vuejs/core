@@ -21,7 +21,7 @@ import { createRenderProxy } from './componentProxy'
 import {
   handleError,
   ErrorTypes,
-  callLifecycleHookWithHandle
+  callLifecycleHookWithHandler
 } from './errorHandling'
 import { warn } from './warning'
 import { setCurrentInstance, unsetCurrentInstance } from './experimental/hooks'
@@ -56,7 +56,7 @@ export function createComponentInstance<T extends Component>(
   instance.$slots = currentVNode.slots || EMPTY_OBJ
 
   if (created) {
-    callLifecycleHookWithHandle(created, $proxy, ErrorTypes.CREATED)
+    callLifecycleHookWithHandler(created, $proxy, ErrorTypes.CREATED)
   }
 
   currentVNode = currentContextVNode = null
@@ -100,7 +100,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
   // beforeCreate hook is called right in the constructor
   const { beforeCreate, props } = instance.$options
   if (beforeCreate) {
-    callLifecycleHookWithHandle(beforeCreate, proxy, ErrorTypes.BEFORE_CREATE)
+    callLifecycleHookWithHandler(beforeCreate, proxy, ErrorTypes.BEFORE_CREATE)
   }
   initializeProps(instance, props, (currentVNode as VNode).data)
 }
@@ -222,18 +222,24 @@ export function shouldUpdateComponent(
   if (nextProps === null) {
     return prevProps !== null
   }
-  let shouldUpdate = true
   const nextKeys = Object.keys(nextProps)
-  if (nextKeys.length === Object.keys(prevProps).length) {
-    shouldUpdate = false
-    for (let i = 0; i < nextKeys.length; i++) {
-      const key = nextKeys[i]
-      if (nextProps[key] !== prevProps[key]) {
-        shouldUpdate = true
-      }
+  if (nextKeys.length !== Object.keys(prevProps).length) {
+    return true
+  }
+  for (let i = 0; i < nextKeys.length; i++) {
+    const key = nextKeys[i]
+    if (nextProps[key] !== prevProps[key]) {
+      return true
     }
   }
-  return shouldUpdate
+  return false
+}
+
+export function getReasonForComponentUpdate(
+  prevVNode: VNode,
+  nextVNode: VNode
+): any {
+  // TODO: extract more detailed information on why the component is updating
 }
 
 export function createComponentClassFromOptions(

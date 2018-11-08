@@ -16,6 +16,8 @@ export const enum ErrorTypes {
   DEACTIVATED,
   ERROR_CAPTURED,
   RENDER,
+  RENDER_TRACKED,
+  RENDER_TRIGGERED,
   WATCH_CALLBACK,
   NATIVE_EVENT_HANDLER,
   COMPONENT_EVENT_HANDLER,
@@ -35,6 +37,8 @@ const ErrorTypeStrings: Record<number, string> = {
   [ErrorTypes.DEACTIVATED]: 'in deactivated lifecycle hook',
   [ErrorTypes.ERROR_CAPTURED]: 'in errorCaptured lifecycle hook',
   [ErrorTypes.RENDER]: 'in render function',
+  [ErrorTypes.RENDER_TRACKED]: 'in renderTracked debug hook',
+  [ErrorTypes.RENDER_TRIGGERED]: 'in renderTriggered debug hook',
   [ErrorTypes.WATCH_CALLBACK]: 'in watcher callback',
   [ErrorTypes.NATIVE_EVENT_HANDLER]: 'in native event handler',
   [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'in component event handler',
@@ -42,7 +46,7 @@ const ErrorTypeStrings: Record<number, string> = {
     'when flushing updates. This may be a Vue internals bug.'
 }
 
-export function callLifecycleHookWithHandle(
+export function callLifecycleHookWithHandler(
   hook: Function,
   instanceProxy: ComponentInstance,
   type: ErrorTypes,
