@@ -5,7 +5,13 @@ import {
   immutable,
   AutorunOptions
 } from '@vue/observer'
-import { queueJob, handleSchedulerError, nextTick } from '@vue/scheduler'
+import {
+  queueJob,
+  handleSchedulerError,
+  nextTick,
+  queuePostCommitCb,
+  flushPostCommitCbs
+} from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, reservedPropRE, isString } from '@vue/shared'
 import {
@@ -110,22 +116,6 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  // Lifecycle Hooks -----------------------------------------------------------
-
-  const lifecycleHooks: Function[] = []
-  const vnodeUpdatedHooks: Function[] = []
-
-  function queuePostCommitHook(fn: Function) {
-    lifecycleHooks.push(fn)
-  }
-
-  function flushHooks() {
-    let fn
-    while ((fn = lifecycleHooks.pop())) {
-      fn()
-    }
-  }
-
   // mounting ------------------------------------------------------------------
 
   function mount(
@@ -197,12 +187,12 @@ export function createRenderer(options: RendererOptions) {
       insertOrAppend(container, el, endNode)
     }
     if (ref) {
-      queuePostCommitHook(() => {
+      queuePostCommitCb(() => {
         ref(el)
       })
     }
     if (data != null && data.vnodeMounted) {
-      queuePostCommitHook(() => {
+      queuePostCommitCb(() => {
         data.vnodeMounted(vnode)
       })
     }
@@ -238,8 +228,17 @@ export function createRenderer(options: RendererOptions) {
         mountComponentInstance(vnode, container, isSVG, endNode)
       } else {
         queueJob(() => {
-          mountComponentInstance(vnode, container, isSVG, endNode)
-        }, flushHooks)
+          const instance = mountComponentInstance(
+            vnode,
+            container,
+            isSVG,
+            endNode
+          )
+          // cleanup if mount is invalidated before committed
+          return () => {
+            teardownComponentInstance(instance)
+          }
+        })
       }
     }
   }
@@ -279,7 +278,7 @@ export function createRenderer(options: RendererOptions) {
             const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
               vnode
             ))
-            queuePostCommitHook(() => {
+            queuePostCommitCb(() => {
               vnode.el = subTree.el as RenderNode
             })
             mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
@@ -300,7 +299,13 @@ export function createRenderer(options: RendererOptions) {
     if (__COMPAT__) {
       doMount()
     } else {
-      queueJob(doMount)
+      queueJob(() => {
+        doMount()
+        // cleanup if mount is invalidated before committed
+        return () => {
+          stop(handle.runner)
+        }
+      })
     }
   }
 
@@ -313,7 +318,7 @@ export function createRenderer(options: RendererOptions) {
     const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
       current
     ))
-    queuePostCommitHook(() => {
+    queuePostCommitCb(() => {
       current.el = nextTree.el
     })
     patch(
@@ -349,7 +354,7 @@ export function createRenderer(options: RendererOptions) {
     const { children, childFlags } = vnode
     switch (childFlags) {
       case ChildrenFlags.SINGLE_VNODE:
-        queuePostCommitHook(() => {
+        queuePostCommitCb(() => {
           vnode.el = (children as MountedVNode).el
         })
         mount(children as VNode, container, contextVNode, isSVG, endNode)
@@ -360,7 +365,7 @@ export function createRenderer(options: RendererOptions) {
         vnode.el = placeholder.el
         break
       default:
-        queuePostCommitHook(() => {
+        queuePostCommitCb(() => {
           vnode.el = (children as MountedVNode[])[0].el
         })
         mountArrayChildren(
@@ -397,7 +402,7 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     if (ref) {
-      queuePostCommitHook(() => {
+      queuePostCommitCb(() => {
         ref(target)
       })
     }
@@ -529,9 +534,10 @@ export function createRenderer(options: RendererOptions) {
     )
 
     if (nextData != null && nextData.vnodeUpdated) {
-      vnodeUpdatedHooks.push(() => {
-        nextData.vnodeUpdated(nextVNode, prevVNode)
-      })
+      // TODO fix me
+      // vnodeUpdatedHooks.push(() => {
+      //   nextData.vnodeUpdated(nextVNode, prevVNode)
+      // })
     }
   }
 
@@ -611,7 +617,7 @@ export function createRenderer(options: RendererOptions) {
     // then retrieve its next sibling to use as the end node for patchChildren.
     const endNode = platformNextSibling(getVNodeLastEl(prevVNode))
     const { childFlags, children } = nextVNode
-    queuePostCommitHook(() => {
+    queuePostCommitCb(() => {
       switch (childFlags) {
         case ChildrenFlags.SINGLE_VNODE:
           nextVNode.el = (children as MountedVNode).el
@@ -1192,7 +1198,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
-  ) {
+  ): ComponentInstance {
     if (__DEV__) {
       pushWarningContext(vnode)
     }
@@ -1212,12 +1218,8 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeMount, renderTracked, renderTriggered }
     } = instance
 
-    if (beforeMount) {
-      callLifecycleHookWithHandler(beforeMount, $proxy, ErrorTypes.BEFORE_MOUNT)
-    }
-
     const queueUpdate = (instance.$forceUpdate = () => {
-      queueJob(instance._updateHandle, flushHooks)
+      queueJob(instance._updateHandle)
     })
 
     const autorunOptions: AutorunOptions = {
@@ -1254,10 +1256,18 @@ export function createRenderer(options: RendererOptions) {
       if (instance._mounted) {
         updateComponentInstance(instance, isSVG)
       } else {
+        if (beforeMount) {
+          callLifecycleHookWithHandler(
+            beforeMount,
+            $proxy,
+            ErrorTypes.BEFORE_MOUNT
+          )
+        }
+
         // this will be executed synchronously right here
         instance.$vnode = renderInstanceRoot(instance) as MountedVNode
 
-        queuePostCommitHook(() => {
+        queuePostCommitCb(() => {
           vnode.el = instance.$vnode.el
           if (__COMPAT__) {
             // expose __vue__ for devtools
@@ -1283,6 +1293,8 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
+
+    return instance
   }
 
   function updateComponentInstance(
@@ -1312,7 +1324,7 @@ export function createRenderer(options: RendererOptions) {
       instance
     ) as MountedVNode)
 
-    queuePostCommitHook(() => {
+    queuePostCommitCb(() => {
       const el = nextVNode.el as RenderNode
       if (__COMPAT__) {
         // expose __vue__ for devtools
@@ -1337,15 +1349,15 @@ export function createRenderer(options: RendererOptions) {
           nextVNode
         )
       }
-      if (vnodeUpdatedHooks.length > 0) {
-        const vnodeUpdatedHooksForCurrentInstance = vnodeUpdatedHooks.slice()
-        vnodeUpdatedHooks.length = 0
-        queuePostCommitHook(() => {
-          for (let i = 0; i < vnodeUpdatedHooksForCurrentInstance.length; i++) {
-            vnodeUpdatedHooksForCurrentInstance[i]()
-          }
-        })
-      }
+
+      // TODO fix me
+      // if (vnodeUpdatedHooks.length > 0) {
+      //   const vnodeUpdatedHooksForCurrentInstance = vnodeUpdatedHooks.slice()
+      //   vnodeUpdatedHooks.length = 0
+      //   for (let i = 0; i < vnodeUpdatedHooksForCurrentInstance.length; i++) {
+      //     vnodeUpdatedHooksForCurrentInstance[i]()
+      //   }
+      // }
     })
 
     const container = platformParentNode(prevVNode.el) as RenderNode
@@ -1363,7 +1375,6 @@ export function createRenderer(options: RendererOptions) {
     const {
       $vnode,
       $proxy,
-      _updateHandle,
       $options: { beforeUnmount, unmounted }
     } = instance
     if (beforeUnmount) {
@@ -1376,7 +1387,6 @@ export function createRenderer(options: RendererOptions) {
     if ($vnode) {
       unmount($vnode)
     }
-    stop(_updateHandle)
     teardownComponentInstance(instance)
     instance._unmounted = true
     if (unmounted) {
@@ -1402,7 +1412,7 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
-    queuePostCommitHook(() => {
+    queuePostCommitCb(() => {
       callActivatedHook(instance, true)
     })
   }
@@ -1486,7 +1496,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     if (__COMPAT__) {
-      flushHooks()
+      flushPostCommitCbs()
       return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
         ? (vnode.children as ComponentInstance).$proxy
         : null

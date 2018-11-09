@@ -7,6 +7,9 @@ describe('2.x compat build', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
 
+    const mounted = jest.fn()
+    const updated = jest.fn()
+
     const instance = new Vue({
       data() {
         return { count: 0 }
@@ -18,15 +21,19 @@ describe('2.x compat build', async () => {
       },
       render(h: any) {
         return h('div', this.count)
-      }
+      },
+      mounted,
+      updated
     }).$mount(root)
 
     expect(instance.count).toBe(0)
     expect(root.textContent).toBe('0')
+    expect(mounted).toHaveBeenCalled()
 
     instance.change()
     expect(instance.count).toBe(1)
     await Vue.nextTick()
     expect(root.textContent).toBe('1')
+    expect(updated).toHaveBeenCalled()
   })
 })

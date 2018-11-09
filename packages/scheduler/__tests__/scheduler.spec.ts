@@ -1,4 +1,4 @@
-import { queueJob, nextTick } from '../src/index'
+import { queueJob, queuePostCommitCb, nextTick } from '../src/index'
 
 describe('scheduler', () => {
   it('queueJob', async () => {
@@ -32,13 +32,15 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2'])
   })
 
-  it('queueJob w/ postFlushCb', async () => {
+  it('queueJob w/ postCommitCb', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
+      queuePostCommitCb(cb1)
     }
     const job2 = () => {
       calls.push('job2')
+      queuePostCommitCb(cb2)
     }
     const cb1 = () => {
       calls.push('cb1')
@@ -46,21 +48,24 @@ describe('scheduler', () => {
     const cb2 = () => {
       calls.push('cb2')
     }
-    queueJob(job1, cb1)
-    queueJob(job2, cb2)
+    queueJob(job1)
+    queueJob(job2)
     await nextTick()
-    expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
+    // post commit cbs are called in reverse!
+    expect(calls).toEqual(['job1', 'job2', 'cb2', 'cb1'])
   })
 
   it('queueJob w/ postFlushCb while flushing', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
+      queuePostCommitCb(cb1)
       // job1 queues job2
-      queueJob(job2, cb2)
+      queueJob(job2)
     }
     const job2 = () => {
       calls.push('job2')
+      queuePostCommitCb(cb2)
     }
     const cb1 = () => {
       calls.push('cb1')
@@ -68,10 +73,10 @@ describe('scheduler', () => {
     const cb2 = () => {
       calls.push('cb2')
     }
-    queueJob(job1, cb1)
+    queueJob(job1)
     expect(calls).toEqual([])
     await nextTick()
-    expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
+    expect(calls).toEqual(['job1', 'job2', 'cb2', 'cb1'])
   })
 
   it('should dedupe queued tasks', async () => {
@@ -91,26 +96,28 @@ describe('scheduler', () => {
     expect(calls).toEqual(['job1', 'job2'])
   })
 
-  it('queueJob inside postFlushCb', async () => {
+  it('queueJob inside postCommitCb', async () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
+      queuePostCommitCb(cb1)
     }
     const cb1 = () => {
       // queue another job in postFlushCb
       calls.push('cb1')
-      queueJob(job2, cb2)
+      queueJob(job2)
     }
     const job2 = () => {
       calls.push('job2')
+      queuePostCommitCb(cb2)
     }
     const cb2 = () => {
       calls.push('cb2')
     }
 
-    queueJob(job1, cb1)
-    queueJob(job2, cb2)
+    queueJob(job1)
+    queueJob(job2)
     await nextTick()
-    expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2', 'job2', 'cb2'])
+    expect(calls).toEqual(['job1', 'job2', 'cb2', 'cb1', 'job2', 'cb2'])
   })
 })

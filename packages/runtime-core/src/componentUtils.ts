@@ -25,6 +25,7 @@ import {
 } from './errorHandling'
 import { warn } from './warning'
 import { setCurrentInstance, unsetCurrentInstance } from './experimental/hooks'
+import { stop } from '@vue/observer'
 
 let currentVNode: VNode | null = null
 let currentContextVNode: VNode | null = null
@@ -150,9 +151,6 @@ export function renderFunctionalRoot(vnode: VNode): VNode {
 }
 
 export function teardownComponentInstance(instance: ComponentInstance) {
-  if (instance._unmounted) {
-    return
-  }
   const parentComponent = instance.$parent && instance.$parent._self
   if (parentComponent && !parentComponent._unmounted) {
     parentComponent.$children.splice(
@@ -160,6 +158,7 @@ export function teardownComponentInstance(instance: ComponentInstance) {
       1
     )
   }
+  stop(instance._updateHandle)
   teardownComputed(instance)
   teardownWatch(instance)
 }
