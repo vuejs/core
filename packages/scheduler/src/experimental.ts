@@ -1,7 +1,5 @@
 // TODO infinite updates detection
 
-// import { Op } from './patchNodeOps'
-
 type Op = [Function, ...any[]]
 
 const enum Priorities {
@@ -180,9 +178,10 @@ function flush(): void {
     // now we are really done
     hasPendingFlush = false
     pendingRejectors.length = 0
-    while ((job = nextTickQueue.shift())) {
-      job()
+    for (let i = 0; i < nextTickQueue.length; i++) {
+      nextTickQueue[i]()
     }
+    nextTickQueue.length = 0
   } else {
     // got more job to do
     // shouldn't reach here in compat mode, because the patchQueue is

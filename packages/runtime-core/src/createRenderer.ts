@@ -113,7 +113,7 @@ export function createRenderer(options: RendererOptions) {
     if (refNode === null) {
       queueNodeOp([platformAppendChild, container, newNode])
     } else {
-      queueNodeOp([platformInsertBefore, newNode, refNode])
+      queueNodeOp([platformInsertBefore, container, newNode, refNode])
     }
   }
 
