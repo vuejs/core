@@ -1,16 +1,25 @@
 // TODO infinite updates detection
 
-import { Op, setCurrentOps } from './patchNodeOps'
+// import { Op } from './patchNodeOps'
+
+type Op = [Function, ...any[]]
+
+const enum Priorities {
+  NORMAL = 500
+}
+
+const enum JobStatus {
+  PENDING_PATCH = 1,
+  PENDING_COMMIT,
+  COMMITED
+}
 
 interface Job extends Function {
+  status: JobStatus
   ops: Op[]
   post: Function[]
   cleanup: Function | null
   expiration: number
-}
-
-const enum Priorities {
-  NORMAL = 500
 }
 
 type ErrorHandler = (err: Error) => any
@@ -93,30 +102,15 @@ let hasPendingFlush = false
 
 export function queueJob(rawJob: Function) {
   const job = rawJob as Job
-  job.ops = job.ops || []
-  job.post = job.post || []
   // 1. let's see if this invalidates any work that
   // has already been done.
-  const commitIndex = commitQueue.indexOf(job)
-  if (commitIndex > -1) {
-    // invalidated. remove from commit queue
-    // and move it back to the patch queue
-    commitQueue.splice(commitIndex, 1)
+  if (job.status === JobStatus.PENDING_COMMIT) {
+    // pending commit job invalidated
     invalidateJob(job)
-    // With varying priorities we should insert job at correct position
-    // based on expiration time.
-    for (let i = 0; i < patchQueue.length; i++) {
-      if (job.expiration < patchQueue[i].expiration) {
-        patchQueue.splice(i, 0, job)
-        break
-      }
-    }
-  } else if (patchQueue.indexOf(job) === -1) {
+  } else if (job.status !== JobStatus.PENDING_PATCH) {
     // a new job
-    job.expiration = getNow() + Priorities.NORMAL
-    patchQueue.push(job)
+    insertNewJob(job)
   }
-
   if (!hasPendingFlush) {
     hasPendingFlush = true
     flushAfterMicroTask()
@@ -135,9 +129,18 @@ export function flushPostCommitCbs() {
   // post commit hooks (updated, mounted)
   // this queue is flushed in reverse becuase these hooks should be invoked
   // child first
-  let job
-  while ((job = postCommitQueue.pop())) {
-    job()
+  let i = postCommitQueue.length
+  while (i--) {
+    postCommitQueue[i]()
+  }
+  postCommitQueue.length = 0
+}
+
+export function queueNodeOp(op: Op) {
+  if (currentJob) {
+    currentJob.ops.push(op)
+  } else {
+    applyOp(op)
   }
 }
 
@@ -160,13 +163,10 @@ function flush(): void {
 
   if (patchQueue.length === 0) {
     // all done, time to commit!
-    while ((job = commitQueue.shift())) {
-      commitJob(job)
-      if (job.post) {
-        postCommitQueue.push(...job.post)
-        job.post.length = 0
-      }
+    for (let i = 0; i < commitQueue.length; i++) {
+      commitJob(commitQueue[i])
     }
+    commitQueue.length = 0
     flushPostCommitCbs()
     // some post commit hook triggered more updates...
     if (patchQueue.length > 0) {
@@ -191,24 +191,12 @@ function flush(): void {
   }
 }
 
-function patchJob(job: Job) {
-  // job with existing ops means it's already been patched in a low priority queue
-  if (job.ops.length === 0) {
-    setCurrentOps(job.ops)
-    currentJob = job
-    job.cleanup = job()
-    currentJob = null
-    setCurrentOps(null)
-    commitQueue.push(job)
-  }
-}
-
-function commitJob({ ops }: Job) {
-  for (let i = 0; i < ops.length; i++) {
-    const [fn, ...args] = ops[i]
-    fn(...args)
-  }
-  ops.length = 0
+function insertNewJob(job: Job) {
+  job.ops = job.ops || []
+  job.post = job.post || []
+  job.expiration = getNow() + Priorities.NORMAL
+  patchQueue.push(job)
+  job.status = JobStatus.PENDING_PATCH
 }
 
 function invalidateJob(job: Job) {
@@ -218,4 +206,46 @@ function invalidateJob(job: Job) {
     job.cleanup()
     job.cleanup = null
   }
+  // remove from commit queue
+  // and move it back to the patch queue
+  commitQueue.splice(commitQueue.indexOf(job), 1)
+  // With varying priorities we should insert job at correct position
+  // based on expiration time.
+  for (let i = 0; i < patchQueue.length; i++) {
+    if (job.expiration < patchQueue[i].expiration) {
+      patchQueue.splice(i, 0, job)
+      break
+    }
+  }
+  job.status = JobStatus.PENDING_PATCH
+}
+
+function patchJob(job: Job) {
+  // job with existing ops means it's already been patched in a low priority queue
+  if (job.ops.length === 0) {
+    currentJob = job
+    job.cleanup = job()
+    currentJob = null
+    commitQueue.push(job)
+    job.status = JobStatus.PENDING_COMMIT
+  }
+}
+
+function commitJob(job: Job) {
+  const { ops, post } = job
+  for (let i = 0; i < ops.length; i++) {
+    applyOp(ops[i])
+  }
+  ops.length = 0
+  // queue post commit cbs
+  if (post) {
+    postCommitQueue.push(...post)
+    post.length = 0
+  }
+  job.status = JobStatus.COMMITED
+}
+
+function applyOp(op: Op) {
+  const fn = op[0]
+  fn(op[1], op[2], op[3])
 }

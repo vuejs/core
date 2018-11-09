@@ -10,7 +10,8 @@ import {
   handleSchedulerError,
   nextTick,
   queuePostCommitCb,
-  flushPostCommitCbs
+  flushPostCommitCbs,
+  queueNodeOp
 } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, reservedPropRE, isString } from '@vue/shared'
@@ -110,9 +111,9 @@ export function createRenderer(options: RendererOptions) {
     refNode: RenderNode | null
   ) {
     if (refNode === null) {
-      platformAppendChild(container, newNode)
+      queueNodeOp([platformAppendChild, container, newNode])
     } else {
-      platformInsertBefore(container, newNode, refNode)
+      queueNodeOp([platformInsertBefore, newNode, refNode])
     }
   }
 
@@ -662,7 +663,7 @@ export function createRenderer(options: RendererOptions) {
     const el = (nextVNode.el = prevVNode.el) as RenderNode
     const nextText = nextVNode.children
     if (nextText !== prevVNode.children) {
-      platformSetText(el, nextText as string)
+      queueNodeOp([platformSetText, el, nextText])
     }
   }
 
@@ -1162,7 +1163,7 @@ export function createRenderer(options: RendererOptions) {
             removeVNode(children as MountedVNode, container)
             break
           case ChildrenFlags.NO_CHILDREN:
-            platformRemoveChild(container, el)
+            queueNodeOp([platformRemoveChild, container, el])
             break
           default:
             for (let i = 0; i < (children as MountedVNode[]).length; i++) {
@@ -1170,7 +1171,7 @@ export function createRenderer(options: RendererOptions) {
             }
         }
       } else {
-        platformRemoveChild(container, el)
+        queueNodeOp([platformRemoveChild, container, el])
       }
     }
     ;(vnode as any).el = null
@@ -1183,7 +1184,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     unmountArrayChildren(children)
     if (refNode === null) {
-      platformClearContent(container)
+      queueNodeOp([platformClearContent, container])
     } else {
       for (let i = 0; i < children.length; i++) {
         removeVNode(children[i], container)
