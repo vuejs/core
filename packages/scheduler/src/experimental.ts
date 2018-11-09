@@ -18,7 +18,7 @@ type ErrorHandler = (err: Error) => any
 let currentJob: Job | null = null
 
 let start: number = 0
-const getNow = () => window.performance.now()
+const getNow = () => performance.now()
 const frameBudget = __JSDOM__ ? Infinity : 1000 / 60
 
 const patchQueue: Job[] = []
@@ -33,6 +33,7 @@ const pendingRejectors: ErrorHandler[] = []
 const p = Promise.resolve()
 
 function flushAfterMicroTask() {
+  start = getNow()
   return p.then(flush).catch(handleError)
 }
 
@@ -118,7 +119,6 @@ export function queueJob(rawJob: Function) {
 
   if (!hasPendingFlush) {
     hasPendingFlush = true
-    start = getNow()
     flushAfterMicroTask()
   }
 }
