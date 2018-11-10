@@ -7,15 +7,16 @@ const enum Priorities {
 }
 
 const enum JobStatus {
-  PENDING_PATCH = 1,
-  PENDING_COMMIT,
-  COMMITED
+  IDLE = 0,
+  PENDING_PATCH,
+  PENDING_COMMIT
 }
 
 interface Job extends Function {
   status: JobStatus
   ops: Op[]
   post: Function[]
+  children: Job[]
   cleanup: Function | null
   expiration: number
 }
@@ -100,11 +101,15 @@ let hasPendingFlush = false
 
 export function queueJob(rawJob: Function) {
   const job = rawJob as Job
+  if (currentJob) {
+    currentJob.children.push(job)
+  }
   // 1. let's see if this invalidates any work that
   // has already been done.
   if (job.status === JobStatus.PENDING_COMMIT) {
     // pending commit job invalidated
     invalidateJob(job)
+    requeueInvalidatedJob(job)
   } else if (job.status !== JobStatus.PENDING_PATCH) {
     // a new job
     insertNewJob(job)
@@ -113,6 +118,20 @@ export function queueJob(rawJob: Function) {
     hasPendingFlush = true
     flushAfterMicroTask()
   }
+}
+
+function requeueInvalidatedJob(job: Job) {
+  // With varying priorities we should insert job at correct position
+  // based on expiration time.
+  for (let i = 0; i < patchQueue.length; i++) {
+    if (job.expiration < patchQueue[i].expiration) {
+      patchQueue.splice(i, 0, job)
+      job.status = JobStatus.PENDING_PATCH
+      return
+    }
+  }
+  patchQueue.push(job)
+  job.status = JobStatus.PENDING_PATCH
 }
 
 export function queuePostCommitCb(fn: Function) {
@@ -190,33 +209,45 @@ function flush(): void {
   }
 }
 
+function resetJob(job: Job) {
+  job.ops.length = 0
+  job.post.length = 0
+  job.children.length = 0
+}
+
 function insertNewJob(job: Job) {
   job.ops = job.ops || []
   job.post = job.post || []
-  job.expiration = getNow() + Priorities.NORMAL
+  job.children = job.children || []
+  resetJob(job)
+  // inherit parent job's expiration deadline
+  job.expiration = currentJob
+    ? currentJob.expiration
+    : getNow() + Priorities.NORMAL
   patchQueue.push(job)
   job.status = JobStatus.PENDING_PATCH
 }
 
 function invalidateJob(job: Job) {
-  job.ops.length = 0
-  job.post.length = 0
+  // recursively invalidate all child jobs
+  const { children } = job
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.status === JobStatus.PENDING_COMMIT) {
+      invalidateJob(child)
+    } else if (child.status === JobStatus.PENDING_PATCH) {
+      patchQueue.splice(patchQueue.indexOf(child), 1)
+      child.status = JobStatus.IDLE
+    }
+  }
   if (job.cleanup) {
     job.cleanup()
     job.cleanup = null
   }
+  resetJob(job)
   // remove from commit queue
-  // and move it back to the patch queue
   commitQueue.splice(commitQueue.indexOf(job), 1)
-  // With varying priorities we should insert job at correct position
-  // based on expiration time.
-  for (let i = 0; i < patchQueue.length; i++) {
-    if (job.expiration < patchQueue[i].expiration) {
-      patchQueue.splice(i, 0, job)
-      break
-    }
-  }
-  job.status = JobStatus.PENDING_PATCH
+  job.status = JobStatus.IDLE
 }
 
 function patchJob(job: Job) {
@@ -235,13 +266,12 @@ function commitJob(job: Job) {
   for (let i = 0; i < ops.length; i++) {
     applyOp(ops[i])
   }
-  ops.length = 0
   // queue post commit cbs
   if (post) {
     postCommitQueue.push(...post)
-    post.length = 0
   }
-  job.status = JobStatus.COMMITED
+  resetJob(job)
+  job.status = JobStatus.IDLE
 }
 
 function applyOp(op: Op) {

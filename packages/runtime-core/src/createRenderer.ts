@@ -228,18 +228,7 @@ export function createRenderer(options: RendererOptions) {
       if (__COMPAT__) {
         mountComponentInstance(vnode, container, isSVG, endNode)
       } else {
-        queueJob(() => {
-          const instance = mountComponentInstance(
-            vnode,
-            container,
-            isSVG,
-            endNode
-          )
-          // cleanup if mount is invalidated before committed
-          return () => {
-            teardownComponentInstance(instance)
-          }
-        })
+        queueJob(() => mountComponentInstance(vnode, container, isSVG, endNode))
       }
     }
   }
@@ -714,7 +703,7 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean
   ) {
     const refNode = platformNextSibling(getVNodeLastEl(prevVNode))
-    removeVNode(prevVNode, container)
+    queueRemoveVNode(prevVNode, container)
     mount(nextVNode, container, contextVNode, isSVG, refNode)
   }
 
@@ -741,10 +730,10 @@ export function createRenderer(options: RendererOptions) {
             )
             break
           case ChildrenFlags.NO_CHILDREN:
-            removeVNode(prevChildren as MountedVNode, container)
+            queueRemoveVNode(prevChildren as MountedVNode, container)
             break
           default:
-            removeVNode(prevChildren as MountedVNode, container)
+            queueRemoveVNode(prevChildren as MountedVNode, container)
             mountArrayChildren(
               nextChildren as VNode[],
               container,
@@ -782,10 +771,18 @@ export function createRenderer(options: RendererOptions) {
       default:
         // MULTIPLE_CHILDREN
         if (nextChildFlags === ChildrenFlags.SINGLE_VNODE) {
-          removeChildren(prevChildren as MountedVNode[], container, endNode)
+          queueRemoveChildren(
+            prevChildren as MountedVNode[],
+            container,
+            endNode
+          )
           mount(nextChildren as VNode, container, contextVNode, isSVG, endNode)
         } else if (nextChildFlags === ChildrenFlags.NO_CHILDREN) {
-          removeChildren(prevChildren as MountedVNode[], container, endNode)
+          queueRemoveChildren(
+            prevChildren as MountedVNode[],
+            container,
+            endNode
+          )
         } else {
           const prevLength = (prevChildren as VNode[]).length
           const nextLength = (nextChildren as VNode[]).length
@@ -800,7 +797,11 @@ export function createRenderer(options: RendererOptions) {
               )
             }
           } else if (nextLength === 0) {
-            removeChildren(prevChildren as MountedVNode[], container, endNode)
+            queueRemoveChildren(
+              prevChildren as MountedVNode[],
+              container,
+              endNode
+            )
           } else if (
             prevChildFlags === ChildrenFlags.KEYED_VNODES &&
             nextChildFlags === ChildrenFlags.KEYED_VNODES
@@ -858,7 +859,7 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (prevLength > nextLength) {
       for (i = commonLength; i < prevLength; i++) {
-        removeVNode(prevChildren[i], container)
+        queueRemoveVNode(prevChildren[i], container)
       }
     }
   }
@@ -923,7 +924,7 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (j > nextEnd) {
       while (j <= prevEnd) {
-        removeVNode(prevChildren[j++], container)
+        queueRemoveVNode(prevChildren[j++], container)
       }
     } else {
       let prevStart = j
@@ -952,7 +953,7 @@ export function createRenderer(options: RendererOptions) {
                 if (canRemoveWholeContent) {
                   canRemoveWholeContent = false
                   while (i > prevStart) {
-                    removeVNode(prevChildren[prevStart++], container)
+                    queueRemoveVNode(prevChildren[prevStart++], container)
                   }
                 }
                 if (pos > j) {
@@ -966,10 +967,10 @@ export function createRenderer(options: RendererOptions) {
               }
             }
             if (!canRemoveWholeContent && j > nextEnd) {
-              removeVNode(prevVNode, container)
+              queueRemoveVNode(prevVNode, container)
             }
           } else if (!canRemoveWholeContent) {
-            removeVNode(prevVNode, container)
+            queueRemoveVNode(prevVNode, container)
           }
         }
       } else {
@@ -991,7 +992,7 @@ export function createRenderer(options: RendererOptions) {
               if (canRemoveWholeContent) {
                 canRemoveWholeContent = false
                 while (i > prevStart) {
-                  removeVNode(prevChildren[prevStart++], container)
+                  queueRemoveVNode(prevChildren[prevStart++], container)
                 }
               }
               nextVNode = nextChildren[j]
@@ -1004,16 +1005,16 @@ export function createRenderer(options: RendererOptions) {
               patch(prevVNode, nextVNode, container, contextVNode, isSVG)
               patched++
             } else if (!canRemoveWholeContent) {
-              removeVNode(prevVNode, container)
+              queueRemoveVNode(prevVNode, container)
             }
           } else if (!canRemoveWholeContent) {
-            removeVNode(prevVNode, container)
+            queueRemoveVNode(prevVNode, container)
           }
         }
       }
       // fast-path: if nothing patched remove all old and add all new
       if (canRemoveWholeContent) {
-        removeChildren(prevChildren as MountedVNode[], container, endNode)
+        queueRemoveChildren(prevChildren as MountedVNode[], container, endNode)
         mountArrayChildren(
           nextChildren,
           container,
@@ -1125,13 +1126,13 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (flags & VNodeFlags.PORTAL) {
       if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
-        removeChildren(
+        queueRemoveChildren(
           children as MountedVNode[],
           vnode.tag as RenderNode,
           null
         )
       } else if (childFlags === ChildrenFlags.SINGLE_VNODE) {
-        removeVNode(children as MountedVNode, vnode.tag as RenderNode)
+        queueRemoveVNode(children as MountedVNode, vnode.tag as RenderNode)
       }
     }
     if (ref) {
@@ -1153,6 +1154,10 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
+  function queueRemoveVNode(vnode: MountedVNode, container: RenderNode) {
+    queueNodeOp([removeVNode, vnode, container])
+  }
+
   function removeVNode(vnode: MountedVNode, container: RenderNode) {
     unmount(vnode)
     const { el, flags, children, childFlags } = vnode
@@ -1163,7 +1168,7 @@ export function createRenderer(options: RendererOptions) {
             removeVNode(children as MountedVNode, container)
             break
           case ChildrenFlags.NO_CHILDREN:
-            queueNodeOp([platformRemoveChild, container, el])
+            platformRemoveChild(container, el)
             break
           default:
             for (let i = 0; i < (children as MountedVNode[]).length; i++) {
@@ -1171,10 +1176,18 @@ export function createRenderer(options: RendererOptions) {
             }
         }
       } else {
-        queueNodeOp([platformRemoveChild, container, el])
+        platformRemoveChild(container, el)
       }
     }
     ;(vnode as any).el = null
+  }
+
+  function queueRemoveChildren(
+    children: MountedVNode[],
+    container: RenderNode,
+    refNode: RenderNode | null
+  ) {
+    queueNodeOp([removeChildren, children, container, refNode])
   }
 
   function removeChildren(
@@ -1184,7 +1197,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     unmountArrayChildren(children)
     if (refNode === null) {
-      queueNodeOp([platformClearContent, container])
+      platformClearContent(container)
     } else {
       for (let i = 0; i < children.length; i++) {
         removeVNode(children[i], container)
@@ -1199,7 +1212,7 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     isSVG: boolean,
     endNode: RenderNode | null
-  ): ComponentInstance {
+  ): Function {
     if (__DEV__) {
       pushWarningContext(vnode)
     }
@@ -1265,7 +1278,6 @@ export function createRenderer(options: RendererOptions) {
           )
         }
 
-        // this will be executed synchronously right here
         instance.$vnode = renderInstanceRoot(instance) as MountedVNode
 
         queuePostCommitCb(() => {
@@ -1283,11 +1295,10 @@ export function createRenderer(options: RendererOptions) {
           if (mounted) {
             callLifecycleHookWithHandler(mounted, $proxy, ErrorTypes.MOUNTED)
           }
+          instance._mounted = true
         })
 
         mount(instance.$vnode, container, vnode as MountedVNode, isSVG, endNode)
-
-        instance._mounted = true
       }
     }, autorunOptions)
 
@@ -1295,7 +1306,10 @@ export function createRenderer(options: RendererOptions) {
       popWarningContext()
     }
 
-    return instance
+    // cleanup if mount is invalidated before committed
+    return () => {
+      teardownComponentInstance(instance)
+    }
   }
 
   function updateComponentInstance(
@@ -1321,11 +1335,10 @@ export function createRenderer(options: RendererOptions) {
       )
     }
 
-    const nextVNode = (instance.$vnode = renderInstanceRoot(
-      instance
-    ) as MountedVNode)
+    const nextVNode = renderInstanceRoot(instance) as MountedVNode
 
     queuePostCommitCb(() => {
+      instance.$vnode = nextVNode
       const el = nextVNode.el as RenderNode
       if (__COMPAT__) {
         // expose __vue__ for devtools
@@ -1492,7 +1505,7 @@ export function createRenderer(options: RendererOptions) {
         patch(prevVNode, vnode, container, null, false)
         container.vnode = vnode
       } else {
-        removeVNode(prevVNode, container)
+        queueRemoveVNode(prevVNode, container)
         container.vnode = null
       }
     }
