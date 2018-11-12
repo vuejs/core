@@ -9,8 +9,8 @@ import {
   queueJob,
   handleSchedulerError,
   nextTick,
-  queuePostCommitCb,
-  flushPostCommitCbs,
+  queueEffect,
+  flushEffects,
   queueNodeOp
 } from '@vue/scheduler'
 import { VNodeFlags, ChildrenFlags } from './flags'
@@ -188,12 +188,12 @@ export function createRenderer(options: RendererOptions) {
       insertOrAppend(container, el, endNode)
     }
     if (ref) {
-      queuePostCommitCb(() => {
+      queueEffect(() => {
         ref(el)
       })
     }
     if (data != null && data.vnodeMounted) {
-      queuePostCommitCb(() => {
+      queueEffect(() => {
         data.vnodeMounted(vnode)
       })
     }
@@ -268,7 +268,7 @@ export function createRenderer(options: RendererOptions) {
             const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
               vnode
             ))
-            queuePostCommitCb(() => {
+            queueEffect(() => {
               vnode.el = subTree.el as RenderNode
             })
             mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
@@ -308,7 +308,7 @@ export function createRenderer(options: RendererOptions) {
     const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
       current
     ))
-    queuePostCommitCb(() => {
+    queueEffect(() => {
       current.el = nextTree.el
     })
     patch(
@@ -344,7 +344,7 @@ export function createRenderer(options: RendererOptions) {
     const { children, childFlags } = vnode
     switch (childFlags) {
       case ChildrenFlags.SINGLE_VNODE:
-        queuePostCommitCb(() => {
+        queueEffect(() => {
           vnode.el = (children as MountedVNode).el
         })
         mount(children as VNode, container, contextVNode, isSVG, endNode)
@@ -355,7 +355,7 @@ export function createRenderer(options: RendererOptions) {
         vnode.el = placeholder.el
         break
       default:
-        queuePostCommitCb(() => {
+        queueEffect(() => {
           vnode.el = (children as MountedVNode[])[0].el
         })
         mountArrayChildren(
@@ -392,7 +392,7 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     if (ref) {
-      queuePostCommitCb(() => {
+      queueEffect(() => {
         ref(target)
       })
     }
@@ -607,7 +607,7 @@ export function createRenderer(options: RendererOptions) {
     // then retrieve its next sibling to use as the end node for patchChildren.
     const endNode = platformNextSibling(getVNodeLastEl(prevVNode))
     const { childFlags, children } = nextVNode
-    queuePostCommitCb(() => {
+    queueEffect(() => {
       switch (childFlags) {
         case ChildrenFlags.SINGLE_VNODE:
           nextVNode.el = (children as MountedVNode).el
@@ -1280,7 +1280,7 @@ export function createRenderer(options: RendererOptions) {
 
         instance.$vnode = renderInstanceRoot(instance) as MountedVNode
 
-        queuePostCommitCb(() => {
+        queueEffect(() => {
           vnode.el = instance.$vnode.el
           if (__COMPAT__) {
             // expose __vue__ for devtools
@@ -1337,7 +1337,7 @@ export function createRenderer(options: RendererOptions) {
 
     const nextVNode = renderInstanceRoot(instance) as MountedVNode
 
-    queuePostCommitCb(() => {
+    queueEffect(() => {
       instance.$vnode = nextVNode
       const el = nextVNode.el as RenderNode
       if (__COMPAT__) {
@@ -1426,7 +1426,7 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
-    queuePostCommitCb(() => {
+    queueEffect(() => {
       callActivatedHook(instance, true)
     })
   }
@@ -1510,7 +1510,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     if (__COMPAT__) {
-      flushPostCommitCbs()
+      flushEffects()
       return vnode && vnode.flags & VNodeFlags.COMPONENT_STATEFUL
         ? (vnode.children as ComponentInstance).$proxy
         : null

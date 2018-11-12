@@ -1,4 +1,4 @@
-import { queueJob, queuePostCommitCb, nextTick } from '../src/index'
+import { queueJob, queueEffect, nextTick } from '../src/index'
 
 describe('scheduler', () => {
   it('queueJob', async () => {
@@ -36,11 +36,11 @@ describe('scheduler', () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
-      queuePostCommitCb(cb1)
+      queueEffect(cb1)
     }
     const job2 = () => {
       calls.push('job2')
-      queuePostCommitCb(cb2)
+      queueEffect(cb2)
     }
     const cb1 = () => {
       calls.push('cb1')
@@ -59,13 +59,13 @@ describe('scheduler', () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
-      queuePostCommitCb(cb1)
+      queueEffect(cb1)
       // job1 queues job2
       queueJob(job2)
     }
     const job2 = () => {
       calls.push('job2')
-      queuePostCommitCb(cb2)
+      queueEffect(cb2)
     }
     const cb1 = () => {
       calls.push('cb1')
@@ -100,7 +100,7 @@ describe('scheduler', () => {
     const calls: any = []
     const job1 = () => {
       calls.push('job1')
-      queuePostCommitCb(cb1)
+      queueEffect(cb1)
     }
     const cb1 = () => {
       // queue another job in postFlushCb
@@ -109,7 +109,7 @@ describe('scheduler', () => {
     }
     const job2 = () => {
       calls.push('job2')
-      queuePostCommitCb(cb2)
+      queueEffect(cb2)
     }
     const cb2 = () => {
       calls.push('cb2')
