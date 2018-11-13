@@ -17,14 +17,14 @@ import {
 } from './state'
 
 import {
-  createAutorun,
+  createReactiveEffect,
   cleanup,
-  Autorun,
-  AutorunOptions,
+  ReactiveEffect,
+  ReactiveEffectOptions,
   DebuggerEvent
-} from './autorun'
+} from './effect'
 
-export { Autorun, AutorunOptions, DebuggerEvent }
+export { ReactiveEffect, ReactiveEffectOptions, DebuggerEvent }
 export { OperationTypes } from './operations'
 export { computed, ComputedGetter } from './computed'
 export { lock, unlock } from './lock'
@@ -114,24 +114,24 @@ function createObservable(
   return observed
 }
 
-export function autorun(
+export function effect(
   fn: Function,
-  options: AutorunOptions = EMPTY_OBJ
-): Autorun {
-  if ((fn as Autorun).isAutorun) {
-    fn = (fn as Autorun).raw
+  options: ReactiveEffectOptions = EMPTY_OBJ
+): ReactiveEffect {
+  if ((fn as ReactiveEffect).isEffect) {
+    fn = (fn as ReactiveEffect).raw
   }
-  const runner = createAutorun(fn, options)
+  const effect = createReactiveEffect(fn, options)
   if (!options.lazy) {
-    runner()
+    effect()
   }
-  return runner
+  return effect
 }
 
-export function stop(runner: Autorun) {
-  if (runner.active) {
-    cleanup(runner)
-    runner.active = false
+export function stop(effect: ReactiveEffect) {
+  if (effect.active) {
+    cleanup(effect)
+    effect.active = false
   }
 }
 

@@ -1,25 +1,25 @@
 import {
   observable,
-  autorun,
+  effect,
   stop,
   unwrap,
   OperationTypes,
   DebuggerEvent,
   markNonReactive
 } from '../src/index'
-import { ITERATE_KEY } from '../src/autorun'
+import { ITERATE_KEY } from '../src/effect'
 
-describe('observer/autorun', () => {
-  it('should run the passed function once (wrapped by a autorun)', () => {
+describe('observer/effect', () => {
+  it('should run the passed function once (wrapped by a effect)', () => {
     const fnSpy = jest.fn(() => {})
-    autorun(fnSpy)
+    effect(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
   it('should observe basic properties', () => {
     let dummy
     const counter = observable({ num: 0 })
-    autorun(() => (dummy = counter.num))
+    effect(() => (dummy = counter.num))
 
     expect(dummy).toBe(0)
     counter.num = 7
@@ -29,18 +29,18 @@ describe('observer/autorun', () => {
   it('should observe multiple properties', () => {
     let dummy
     const counter = observable({ num1: 0, num2: 0 })
-    autorun(() => (dummy = counter.num1 + counter.num1 + counter.num2))
+    effect(() => (dummy = counter.num1 + counter.num1 + counter.num2))
 
     expect(dummy).toBe(0)
     counter.num1 = counter.num2 = 7
     expect(dummy).toBe(21)
   })
 
-  it('should handle multiple autoruns', () => {
+  it('should handle multiple effects', () => {
     let dummy1, dummy2
     const counter = observable({ num: 0 })
-    autorun(() => (dummy1 = counter.num))
-    autorun(() => (dummy2 = counter.num))
+    effect(() => (dummy1 = counter.num))
+    effect(() => (dummy2 = counter.num))
 
     expect(dummy1).toBe(0)
     expect(dummy2).toBe(0)
@@ -52,7 +52,7 @@ describe('observer/autorun', () => {
   it('should observe nested properties', () => {
     let dummy
     const counter = observable({ nested: { num: 0 } })
-    autorun(() => (dummy = counter.nested.num))
+    effect(() => (dummy = counter.nested.num))
 
     expect(dummy).toBe(0)
     counter.nested.num = 8
@@ -62,7 +62,7 @@ describe('observer/autorun', () => {
   it('should observe delete operations', () => {
     let dummy
     const obj = observable({ prop: 'value' })
-    autorun(() => (dummy = obj.prop))
+    effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe('value')
     delete obj.prop
@@ -72,7 +72,7 @@ describe('observer/autorun', () => {
   it('should observe has operations', () => {
     let dummy
     const obj: any = observable({ prop: 'value' })
-    autorun(() => (dummy = 'prop' in obj))
+    effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
     delete obj.prop
@@ -86,7 +86,7 @@ describe('observer/autorun', () => {
     const counter = observable({ num: 0 })
     const parentCounter = observable({ num: 2 })
     Object.setPrototypeOf(counter, parentCounter)
-    autorun(() => (dummy = counter.num))
+    effect(() => (dummy = counter.num))
 
     expect(dummy).toBe(0)
     delete counter.num
@@ -102,7 +102,7 @@ describe('observer/autorun', () => {
     const counter = observable({ num: 0 })
     const parentCounter = observable({ num: 2 })
     Object.setPrototypeOf(counter, parentCounter)
-    autorun(() => (dummy = 'num' in counter))
+    effect(() => (dummy = 'num' in counter))
 
     expect(dummy).toBe(true)
     delete counter.num
@@ -125,8 +125,8 @@ describe('observer/autorun', () => {
       }
     })
     Object.setPrototypeOf(obj, parent)
-    autorun(() => (dummy = obj.prop))
-    autorun(() => (parentDummy = parent.prop))
+    effect(() => (dummy = obj.prop))
+    effect(() => (parentDummy = parent.prop))
 
     expect(dummy).toBe(undefined)
     expect(parentDummy).toBe(undefined)
@@ -142,7 +142,7 @@ describe('observer/autorun', () => {
   it('should observe function call chains', () => {
     let dummy
     const counter = observable({ num: 0 })
-    autorun(() => (dummy = getNum()))
+    effect(() => (dummy = getNum()))
 
     function getNum() {
       return counter.num
@@ -156,7 +156,7 @@ describe('observer/autorun', () => {
   it('should observe iteration', () => {
     let dummy
     const list = observable(['Hello'])
-    autorun(() => (dummy = list.join(' ')))
+    effect(() => (dummy = list.join(' ')))
 
     expect(dummy).toBe('Hello')
     list.push('World!')
@@ -168,7 +168,7 @@ describe('observer/autorun', () => {
   it('should observe implicit array length changes', () => {
     let dummy
     const list = observable(['Hello'])
-    autorun(() => (dummy = list.join(' ')))
+    effect(() => (dummy = list.join(' ')))
 
     expect(dummy).toBe('Hello')
     list[1] = 'World!'
@@ -181,7 +181,7 @@ describe('observer/autorun', () => {
     let dummy
     const list: any[] = observable([])
     list[1] = 'World!'
-    autorun(() => (dummy = list.join(' ')))
+    effect(() => (dummy = list.join(' ')))
 
     expect(dummy).toBe(' World!')
     list[0] = 'Hello'
@@ -193,7 +193,7 @@ describe('observer/autorun', () => {
   it('should observe enumeration', () => {
     let dummy = 0
     const numbers: any = observable({ num1: 3 })
-    autorun(() => {
+    effect(() => {
       dummy = 0
       for (let key in numbers) {
         dummy += numbers[key]
@@ -211,8 +211,8 @@ describe('observer/autorun', () => {
     const key = Symbol('symbol keyed prop')
     let dummy, hasDummy
     const obj = observable({ [key]: 'value' })
-    autorun(() => (dummy = obj[key]))
-    autorun(() => (hasDummy = key in obj))
+    effect(() => (dummy = obj[key]))
+    effect(() => (hasDummy = key in obj))
 
     expect(dummy).toBe('value')
     expect(hasDummy).toBe(true)
@@ -227,7 +227,7 @@ describe('observer/autorun', () => {
     const key = Symbol.isConcatSpreadable
     let dummy
     const array: any = observable([])
-    autorun(() => (dummy = array[key]))
+    effect(() => (dummy = array[key]))
 
     expect(array[key]).toBe(undefined)
     expect(dummy).toBe(undefined)
@@ -242,7 +242,7 @@ describe('observer/autorun', () => {
 
     let dummy
     const obj = observable({ func: oldFunc })
-    autorun(() => (dummy = obj.func))
+    effect(() => (dummy = obj.func))
 
     expect(dummy).toBe(oldFunc)
     obj.func = newFunc
@@ -255,8 +255,8 @@ describe('observer/autorun', () => {
 
     const getSpy = jest.fn(() => (getDummy = obj.prop))
     const hasSpy = jest.fn(() => (hasDummy = 'prop' in obj))
-    autorun(getSpy)
-    autorun(hasSpy)
+    effect(getSpy)
+    effect(hasSpy)
 
     expect(getDummy).toBe('value')
     expect(hasDummy).toBe(true)
@@ -270,7 +270,7 @@ describe('observer/autorun', () => {
   it('should not observe raw mutations', () => {
     let dummy
     const obj: any = observable()
-    autorun(() => (dummy = unwrap(obj).prop))
+    effect(() => (dummy = unwrap(obj).prop))
 
     expect(dummy).toBe(undefined)
     obj.prop = 'value'
@@ -280,7 +280,7 @@ describe('observer/autorun', () => {
   it('should not be triggered by raw mutations', () => {
     let dummy
     const obj: any = observable()
-    autorun(() => (dummy = obj.prop))
+    effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe(undefined)
     unwrap(obj).prop = 'value'
@@ -299,8 +299,8 @@ describe('observer/autorun', () => {
       }
     })
     Object.setPrototypeOf(obj, parent)
-    autorun(() => (dummy = obj.prop))
-    autorun(() => (parentDummy = parent.prop))
+    effect(() => (dummy = obj.prop))
+    effect(() => (parentDummy = parent.prop))
 
     expect(dummy).toBe(undefined)
     expect(parentDummy).toBe(undefined)
@@ -313,7 +313,7 @@ describe('observer/autorun', () => {
     const counter = observable({ num: 0 })
 
     const counterSpy = jest.fn(() => counter.num++)
-    autorun(counterSpy)
+    effect(counterSpy)
     expect(counter.num).toBe(1)
     expect(counterSpy).toHaveBeenCalledTimes(1)
     counter.num = 4
@@ -329,18 +329,18 @@ describe('observer/autorun', () => {
         numSpy()
       }
     })
-    autorun(numSpy)
+    effect(numSpy)
     expect(counter.num).toEqual(10)
     expect(numSpy).toHaveBeenCalledTimes(10)
   })
 
-  it('should avoid infinite loops with other autoruns', () => {
+  it('should avoid infinite loops with other effects', () => {
     const nums = observable({ num1: 0, num2: 1 })
 
     const spy1 = jest.fn(() => (nums.num1 = nums.num2))
     const spy2 = jest.fn(() => (nums.num2 = nums.num1))
-    autorun(spy1)
-    autorun(spy2)
+    effect(spy1)
+    effect(spy2)
     expect(nums.num1).toBe(1)
     expect(nums.num2).toBe(1)
     expect(spy1).toHaveBeenCalledTimes(1)
@@ -361,12 +361,12 @@ describe('observer/autorun', () => {
     function greet() {
       return 'Hello World'
     }
-    const autorun1 = autorun(greet)
-    const autorun2 = autorun(greet)
-    expect(typeof autorun1).toBe('function')
-    expect(typeof autorun2).toBe('function')
-    expect(autorun1).not.toBe(greet)
-    expect(autorun1).not.toBe(autorun2)
+    const effect1 = effect(greet)
+    const effect2 = effect(greet)
+    expect(typeof effect1).toBe('function')
+    expect(typeof effect2).toBe('function')
+    expect(effect1).not.toBe(greet)
+    expect(effect1).not.toBe(effect2)
   })
 
   it('should discover new branches while running automatically', () => {
@@ -376,7 +376,7 @@ describe('observer/autorun', () => {
     const conditionalSpy = jest.fn(() => {
       dummy = obj.run ? obj.prop : 'other'
     })
-    autorun(conditionalSpy)
+    effect(conditionalSpy)
 
     expect(dummy).toBe('other')
     expect(conditionalSpy).toHaveBeenCalledTimes(1)
@@ -395,7 +395,7 @@ describe('observer/autorun', () => {
     let dummy
     let run = false
     const obj = observable({ prop: 'value' })
-    const runner = autorun(() => {
+    const runner = effect(() => {
       dummy = run ? obj.prop : 'other'
     })
 
@@ -416,7 +416,7 @@ describe('observer/autorun', () => {
     const conditionalSpy = jest.fn(() => {
       dummy = obj.run ? obj.prop : 'other'
     })
-    autorun(conditionalSpy)
+    effect(conditionalSpy)
 
     expect(dummy).toBe('value')
     expect(conditionalSpy).toHaveBeenCalledTimes(1)
@@ -428,9 +428,9 @@ describe('observer/autorun', () => {
     expect(conditionalSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('should not double wrap if the passed function is a autorun', () => {
-    const runner = autorun(() => {})
-    const otherRunner = autorun(runner)
+  it('should not double wrap if the passed function is a effect', () => {
+    const runner = effect(() => {})
+    const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
     expect(runner.raw).toBe(otherRunner.raw)
   })
@@ -444,7 +444,7 @@ describe('observer/autorun', () => {
       }
       dummy = obj.prop
     })
-    autorun(fnSpy)
+    effect(fnSpy)
 
     expect(fnSpy).toHaveBeenCalledTimes(1)
     obj.prop = 16
@@ -452,33 +452,33 @@ describe('observer/autorun', () => {
     expect(fnSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('should allow nested autoruns', () => {
+  it('should allow nested effects', () => {
     const nums = observable({ num1: 0, num2: 1, num3: 2 })
     const dummy: any = {}
 
     const childSpy = jest.fn(() => (dummy.num1 = nums.num1))
-    const childautorun = autorun(childSpy)
+    const childeffect = effect(childSpy)
     const parentSpy = jest.fn(() => {
       dummy.num2 = nums.num2
-      childautorun()
+      childeffect()
       dummy.num3 = nums.num3
     })
-    autorun(parentSpy)
+    effect(parentSpy)
 
     expect(dummy).toEqual({ num1: 0, num2: 1, num3: 2 })
     expect(parentSpy).toHaveBeenCalledTimes(1)
     expect(childSpy).toHaveBeenCalledTimes(2)
-    // this should only call the childautorun
+    // this should only call the childeffect
     nums.num1 = 4
     expect(dummy).toEqual({ num1: 4, num2: 1, num3: 2 })
     expect(parentSpy).toHaveBeenCalledTimes(1)
     expect(childSpy).toHaveBeenCalledTimes(3)
-    // this calls the parentautorun, which calls the childautorun once
+    // this calls the parenteffect, which calls the childeffect once
     nums.num2 = 10
     expect(dummy).toEqual({ num1: 4, num2: 10, num3: 2 })
     expect(parentSpy).toHaveBeenCalledTimes(2)
     expect(childSpy).toHaveBeenCalledTimes(4)
-    // this calls the parentautorun, which calls the childautorun once
+    // this calls the parenteffect, which calls the childeffect once
     nums.num3 = 7
     expect(dummy).toEqual({ num1: 4, num2: 10, num3: 7 })
     expect(parentSpy).toHaveBeenCalledTimes(3)
@@ -497,7 +497,7 @@ describe('observer/autorun', () => {
     }
     const model = observable(new Model())
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = model.count
     })
     expect(dummy).toBe(0)
@@ -511,7 +511,7 @@ describe('observer/autorun', () => {
       runner = _runner
     })
     const obj = observable({ foo: 1 })
-    autorun(
+    effect(
       () => {
         dummy = obj.foo
       },
@@ -537,7 +537,7 @@ describe('observer/autorun', () => {
       events.push(e)
     })
     const obj = observable({ foo: 1, bar: 2 })
-    const runner = autorun(
+    const runner = effect(
       () => {
         dummy = obj.foo
         dummy = 'bar' in obj
@@ -549,19 +549,19 @@ describe('observer/autorun', () => {
     expect(onTrack).toHaveBeenCalledTimes(3)
     expect(events).toEqual([
       {
-        runner,
+        effect: runner,
         target: unwrap(obj),
         type: OperationTypes.GET,
         key: 'foo'
       },
       {
-        runner,
+        effect: runner,
         target: unwrap(obj),
         type: OperationTypes.HAS,
         key: 'bar'
       },
       {
-        runner,
+        effect: runner,
         target: unwrap(obj),
         type: OperationTypes.ITERATE,
         key: ITERATE_KEY
@@ -576,7 +576,7 @@ describe('observer/autorun', () => {
       events.push(e)
     })
     const obj = observable({ foo: 1 })
-    const runner = autorun(
+    const runner = effect(
       () => {
         dummy = obj.foo
       },
@@ -587,7 +587,7 @@ describe('observer/autorun', () => {
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
-      runner,
+      effect: runner,
       target: unwrap(obj),
       type: OperationTypes.SET,
       key: 'foo',
@@ -599,7 +599,7 @@ describe('observer/autorun', () => {
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toEqual({
-      runner,
+      effect: runner,
       target: unwrap(obj),
       type: OperationTypes.DELETE,
       key: 'foo',
@@ -610,7 +610,7 @@ describe('observer/autorun', () => {
   it('stop', () => {
     let dummy
     const obj = observable({ prop: 1 })
-    const runner = autorun(() => {
+    const runner = effect(() => {
       dummy = obj.prop
     })
     obj.prop = 2
@@ -619,7 +619,7 @@ describe('observer/autorun', () => {
     obj.prop = 3
     expect(dummy).toBe(2)
 
-    // stopped runner should still be manually callable
+    // stopped effect should still be manually callable
     runner()
     expect(dummy).toBe(3)
   })
@@ -631,7 +631,7 @@ describe('observer/autorun', () => {
       })
     })
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = obj.foo.prop
     })
     expect(dummy).toBe(0)

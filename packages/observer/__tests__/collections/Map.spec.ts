@@ -1,4 +1,4 @@
-import { observable, autorun, unwrap, isObservable } from '../../src'
+import { observable, effect, unwrap, isObservable } from '../../src'
 
 describe('observer/collections', () => {
   describe('Map', () => {
@@ -13,7 +13,7 @@ describe('observer/collections', () => {
     it('should observe mutations', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = map.get('key')
       })
 
@@ -29,7 +29,7 @@ describe('observer/collections', () => {
     it('should observe size mutations', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => (dummy = map.size))
+      effect(() => (dummy = map.size))
 
       expect(dummy).toBe(0)
       map.set('key1', 'value')
@@ -44,7 +44,7 @@ describe('observer/collections', () => {
     it('should observe for of iteration', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map) {
@@ -67,7 +67,7 @@ describe('observer/collections', () => {
     it('should observe forEach iteration', () => {
       let dummy: any
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         map.forEach((num: any) => (dummy += num))
       })
@@ -86,7 +86,7 @@ describe('observer/collections', () => {
     it('should observe keys iteration', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let key of map.keys()) {
           dummy += key
@@ -107,7 +107,7 @@ describe('observer/collections', () => {
     it('should observe values iteration', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let num of map.values()) {
           dummy += num
@@ -128,7 +128,7 @@ describe('observer/collections', () => {
     it('should observe entries iteration', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map.entries()) {
@@ -151,7 +151,7 @@ describe('observer/collections', () => {
     it('should be triggered by clearing', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => (dummy = map.get('key')))
+      effect(() => (dummy = map.get('key')))
 
       expect(dummy).toBe(undefined)
       map.set('key', 3)
@@ -163,7 +163,7 @@ describe('observer/collections', () => {
     it('should not observe custom property mutations', () => {
       let dummy
       const map: any = observable(new Map())
-      autorun(() => (dummy = map.customProp))
+      effect(() => (dummy = map.customProp))
 
       expect(dummy).toBe(undefined)
       map.customProp = 'Hello World'
@@ -174,7 +174,7 @@ describe('observer/collections', () => {
       let dummy
       const map = observable(new Map())
       const mapSpy = jest.fn(() => (dummy = map.get('key')))
-      autorun(mapSpy)
+      effect(mapSpy)
 
       expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(1)
@@ -198,7 +198,7 @@ describe('observer/collections', () => {
     it('should not observe raw data', () => {
       let dummy
       const map = observable(new Map())
-      autorun(() => (dummy = unwrap(map).get('key')))
+      effect(() => (dummy = unwrap(map).get('key')))
 
       expect(dummy).toBe(undefined)
       map.set('key', 'Hello')
@@ -229,7 +229,7 @@ describe('observer/collections', () => {
       const observed = observable(new Map())
       observed.set('key', { a: 1 })
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed.get('key').a
       })
       observed.get('key').a = 2
@@ -239,7 +239,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (forEach)', () => {
       const map = observable(new Map([[1, { foo: 1 }]]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         map.forEach(value => {
           expect(isObservable(value)).toBe(true)
@@ -254,7 +254,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (values)', () => {
       const map = observable(new Map([[1, { foo: 1 }]]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const value of map.values()) {
           expect(isObservable(value)).toBe(true)
@@ -270,7 +270,7 @@ describe('observer/collections', () => {
       const key = {}
       const map = observable(new Map([[key, { foo: 1 }]]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const [key, value] of map.entries()) {
           key
@@ -288,7 +288,7 @@ describe('observer/collections', () => {
       const key = {}
       const map = observable(new Map([[key, { foo: 1 }]]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const [key, value] of map) {
           key

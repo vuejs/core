@@ -25,7 +25,7 @@ export function teardownComputed(instance: ComponentInstance) {
   const handles = instance._computedGetters
   if (handles !== null) {
     for (const key in handles) {
-      stop(handles[key].runner)
+      stop(handles[key].effect)
     }
   }
 }

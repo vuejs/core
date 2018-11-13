@@ -1,4 +1,4 @@
-import { observable, autorun, unwrap, isObservable } from '../../src'
+import { observable, effect, unwrap, isObservable } from '../../src'
 
 describe('observer/collections', () => {
   describe('WeakMap', () => {
@@ -14,7 +14,7 @@ describe('observer/collections', () => {
       let dummy
       const key = {}
       const map = observable(new WeakMap())
-      autorun(() => {
+      effect(() => {
         dummy = map.get(key)
       })
 
@@ -30,7 +30,7 @@ describe('observer/collections', () => {
     it('should not observe custom property mutations', () => {
       let dummy
       const map: any = observable(new WeakMap())
-      autorun(() => (dummy = map.customProp))
+      effect(() => (dummy = map.customProp))
 
       expect(dummy).toBe(undefined)
       map.customProp = 'Hello World'
@@ -42,7 +42,7 @@ describe('observer/collections', () => {
       const key = {}
       const map = observable(new WeakMap())
       const mapSpy = jest.fn(() => (dummy = map.get(key)))
-      autorun(mapSpy)
+      effect(mapSpy)
 
       expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(1)
@@ -64,7 +64,7 @@ describe('observer/collections', () => {
       let dummy
       const key = {}
       const map = observable(new WeakMap())
-      autorun(() => (dummy = unwrap(map).get(key)))
+      effect(() => (dummy = unwrap(map).get(key)))
 
       expect(dummy).toBe(undefined)
       map.set(key, 'Hello')
@@ -98,7 +98,7 @@ describe('observer/collections', () => {
       const key = {}
       observed.set(key, { a: 1 })
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed.get(key).a
       })
       observed.get(key).a = 2

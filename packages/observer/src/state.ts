@@ -1,10 +1,10 @@
-import { Autorun } from './autorun'
+import { ReactiveEffect } from './effect'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
-export type Dep = Set<Autorun>
+export type Dep = Set<ReactiveEffect>
 export type KeyToDepMap = Map<string | symbol, Dep>
 export const targetMap: WeakMap<any, KeyToDepMap> = new WeakMap()
 

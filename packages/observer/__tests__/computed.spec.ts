@@ -1,4 +1,4 @@
-import { computed, observable, autorun, stop } from '../src'
+import { computed, observable, effect, stop } from '../src'
 
 describe('observer/computed', () => {
   it('should return updated value', () => {
@@ -52,11 +52,11 @@ describe('observer/computed', () => {
     expect(callArg).toBe(ctx)
   })
 
-  it('should trigger autorun', () => {
+  it('should trigger effect', () => {
     const value: any = observable({})
     const cValue = computed(() => value.foo)
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = cValue()
     })
     expect(dummy).toBe(undefined)
@@ -75,7 +75,7 @@ describe('observer/computed', () => {
     expect(c1()).toBe(1)
   })
 
-  it('should trigger autorun when chained', () => {
+  it('should trigger effect when chained', () => {
     const value: any = observable({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
@@ -85,7 +85,7 @@ describe('observer/computed', () => {
     const c2 = computed(getter2)
 
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = c2()
     })
     expect(dummy).toBe(1)
@@ -98,7 +98,7 @@ describe('observer/computed', () => {
     expect(getter2).toHaveBeenCalledTimes(2)
   })
 
-  it('should trigger autorun when chained (mixed invocations)', () => {
+  it('should trigger effect when chained (mixed invocations)', () => {
     const value: any = observable({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
@@ -108,7 +108,7 @@ describe('observer/computed', () => {
     const c2 = computed(getter2)
 
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = c1() + c2()
     })
     expect(dummy).toBe(1)
@@ -126,13 +126,13 @@ describe('observer/computed', () => {
     const value: any = observable({})
     const cValue = computed(() => value.foo)
     let dummy
-    autorun(() => {
+    effect(() => {
       dummy = cValue()
     })
     expect(dummy).toBe(undefined)
     value.foo = 1
     expect(dummy).toBe(1)
-    stop(cValue.runner)
+    stop(cValue.effect)
     value.foo = 2
     expect(dummy).toBe(1)
   })

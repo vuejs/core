@@ -1,4 +1,4 @@
-import { observable, autorun, isObservable, unwrap } from '../../src'
+import { observable, effect, isObservable, unwrap } from '../../src'
 
 describe('observer/collections', () => {
   describe('Set', () => {
@@ -13,7 +13,7 @@ describe('observer/collections', () => {
     it('should observe mutations', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = set.has('value')))
+      effect(() => (dummy = set.has('value')))
 
       expect(dummy).toBe(false)
       set.add('value')
@@ -25,7 +25,7 @@ describe('observer/collections', () => {
     it('should observe for of iteration', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let num of set) {
           dummy += num
@@ -45,7 +45,7 @@ describe('observer/collections', () => {
     it('should observe forEach iteration', () => {
       let dummy: any
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         set.forEach(num => (dummy += num))
       })
@@ -63,7 +63,7 @@ describe('observer/collections', () => {
     it('should observe values iteration', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let num of set.values()) {
           dummy += num
@@ -83,7 +83,7 @@ describe('observer/collections', () => {
     it('should observe keys iteration', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let num of set.keys()) {
           dummy += num
@@ -103,7 +103,7 @@ describe('observer/collections', () => {
     it('should observe entries iteration', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
         for (let [key, num] of set.entries()) {
@@ -125,7 +125,7 @@ describe('observer/collections', () => {
     it('should be triggered by clearing', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = set.has('key')))
+      effect(() => (dummy = set.has('key')))
 
       expect(dummy).toBe(false)
       set.add('key')
@@ -137,7 +137,7 @@ describe('observer/collections', () => {
     it('should not observe custom property mutations', () => {
       let dummy
       const set: any = observable(new Set())
-      autorun(() => (dummy = set.customProp))
+      effect(() => (dummy = set.customProp))
 
       expect(dummy).toBe(undefined)
       set.customProp = 'Hello World'
@@ -147,7 +147,7 @@ describe('observer/collections', () => {
     it('should observe size mutations', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = set.size))
+      effect(() => (dummy = set.size))
 
       expect(dummy).toBe(0)
       set.add('value')
@@ -163,7 +163,7 @@ describe('observer/collections', () => {
       let dummy
       const set = observable(new Set())
       const setSpy = jest.fn(() => (dummy = set.has('value')))
-      autorun(setSpy)
+      effect(setSpy)
 
       expect(dummy).toBe(false)
       expect(setSpy).toHaveBeenCalledTimes(1)
@@ -187,7 +187,7 @@ describe('observer/collections', () => {
     it('should not observe raw data', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = unwrap(set).has('value')))
+      effect(() => (dummy = unwrap(set).has('value')))
 
       expect(dummy).toBe(false)
       set.add('value')
@@ -197,7 +197,7 @@ describe('observer/collections', () => {
     it('should not observe raw iterations', () => {
       let dummy = 0
       const set = observable(new Set())
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (let [num] of unwrap(set).entries()) {
           dummy += num
@@ -227,7 +227,7 @@ describe('observer/collections', () => {
     it('should not be triggered by raw mutations', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = set.has('value')))
+      effect(() => (dummy = set.has('value')))
 
       expect(dummy).toBe(false)
       unwrap(set).add('value')
@@ -242,7 +242,7 @@ describe('observer/collections', () => {
     it('should not observe raw size mutations', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = unwrap(set).size))
+      effect(() => (dummy = unwrap(set).size))
 
       expect(dummy).toBe(0)
       set.add('value')
@@ -252,7 +252,7 @@ describe('observer/collections', () => {
     it('should not be triggered by raw size mutations', () => {
       let dummy
       const set = observable(new Set())
-      autorun(() => (dummy = set.size))
+      effect(() => (dummy = set.size))
 
       expect(dummy).toBe(0)
       unwrap(set).add('value')
@@ -264,7 +264,7 @@ describe('observer/collections', () => {
       const key = {}
       const set = observable(new Set())
       const setSpy = jest.fn(() => (dummy = set.has(key)))
-      autorun(setSpy)
+      effect(setSpy)
 
       expect(dummy).toBe(false)
       expect(setSpy).toHaveBeenCalledTimes(1)
@@ -290,7 +290,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (forEach)', () => {
       const set = observable(new Set([{ foo: 1 }]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         set.forEach(value => {
           expect(isObservable(value)).toBe(true)
@@ -307,7 +307,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (values)', () => {
       const set = observable(new Set([{ foo: 1 }]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const value of set.values()) {
           expect(isObservable(value)).toBe(true)
@@ -324,7 +324,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (entries)', () => {
       const set = observable(new Set([{ foo: 1 }]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const [key, value] of set.entries()) {
           expect(isObservable(key)).toBe(true)
@@ -342,7 +342,7 @@ describe('observer/collections', () => {
     it('should observe nested values in iterations (for...of)', () => {
       const set = observable(new Set([{ foo: 1 }]))
       let dummy: any
-      autorun(() => {
+      effect(() => {
         dummy = 0
         for (const value of set) {
           expect(isObservable(value)).toBe(true)

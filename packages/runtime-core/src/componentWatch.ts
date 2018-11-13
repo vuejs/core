@@ -8,7 +8,7 @@ import {
 } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { ComponentWatchOptions, WatchOptions } from './componentOptions'
-import { autorun, stop } from '@vue/observer'
+import { effect, stop } from '@vue/observer'
 import { queueJob } from '@vue/scheduler'
 import { handleError, ErrorTypes } from './errorHandling'
 import { warn } from './warning'
@@ -70,7 +70,7 @@ export function setupWatcher(
     }
   }
 
-  const runner = autorun(getter, {
+  const runner = effect(getter, {
     lazy: true,
     scheduler: options.sync
       ? applyCb

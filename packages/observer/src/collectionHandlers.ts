@@ -1,5 +1,5 @@
 import { unwrap, observable, immutable } from './index'
-import { track, trigger } from './autorun'
+import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'

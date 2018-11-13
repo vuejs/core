@@ -31,15 +31,15 @@ interface Job<T extends Function = () => void> {
   ops: Op[]
   // Any post DOM mutation side-effects (updated / mounted hooks, refs) are
   // buffered inside the job's effects queue.
-  // Effects are queued by calling `queueEffect` inside the job function.
-  effects: Function[]
+  // Effects are queued by calling `queuePostEffect` inside the job function.
+  postEffects: Function[]
   // A job may queue other jobs (e.g. a parent component update triggers the
   // update of a child component). Jobs queued by another job is kept in the
   // parent's children array, so that in case the parent job is invalidated,
   // all its children can be invalidated as well (recursively).
   children: Job[]
   // Sometimes it's inevitable for a stage fn to produce some side effects
-  // (e.g. a component instance sets up an Autorun). In those cases the stage fn
+  // (e.g. a component instance sets up an ReactiveEffect). In those cases the stage fn
   // can return a cleanup function which will be called when the job is
   // invalidated.
   cleanup: T | null
@@ -172,8 +172,8 @@ function flushAfterMacroTask() {
 // This is the main API of the scheduler. The raw job can actually be any
 // function, but since they are invalidated by identity, it is important that
 // a component's update job is a consistent function across its lifecycle -
-// in the renderer, it's actually instance._updateHandle which is in turn
-// an Autorun function.
+// in the renderer, it's actually instance._update which is in turn
+// an ReactiveEffect function.
 export function queueJob(rawJob: Function) {
   const job = rawJob as Job
   if (currentJob) {
@@ -196,9 +196,9 @@ export function queueJob(rawJob: Function) {
   }
 }
 
-export function queueEffect(fn: Function) {
+export function queuePostEffect(fn: Function) {
   if (currentJob) {
-    currentJob.effects.push(fn)
+    currentJob.postEffects.push(fn)
   } else {
     postEffectsQueue.push(fn)
   }
@@ -296,13 +296,13 @@ function flush(): void {
 
 function resetJob(job: Job) {
   job.ops.length = 0
-  job.effects.length = 0
+  job.postEffects.length = 0
   job.children.length = 0
 }
 
 function queueJobForStaging(job: Job) {
   job.ops = job.ops || []
-  job.effects = job.effects || []
+  job.postEffects = job.postEffects || []
   job.children = job.children || []
   resetJob(job)
   // inherit parent job's expiration deadline
@@ -361,13 +361,13 @@ function stageJob(job: Job) {
 }
 
 function commitJob(job: Job) {
-  const { ops, effects } = job
+  const { ops, postEffects } = job
   for (let i = 0; i < ops.length; i++) {
     applyOp(ops[i])
   }
   // queue post commit cbs
-  if (effects) {
-    postEffectsQueue.push(...effects)
+  if (postEffects) {
+    postEffectsQueue.push(...postEffects)
   }
   resetJob(job)
   job.status = JobStatus.IDLE

@@ -8,7 +8,7 @@ import {
   WatchOptions
 } from './componentOptions'
 import { setupWatcher } from './componentWatch'
-import { Autorun, DebuggerEvent, ComputedGetter } from '@vue/observer'
+import { ReactiveEffect, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentUtils'
@@ -101,7 +101,7 @@ export interface ComponentInstance<P = {}, D = {}>
   $children: ComponentInstance[]
   $options: ComponentOptions<P, D>
 
-  _updateHandle: Autorun
+  _update: ReactiveEffect
   _queueJob: ((fn: () => void) => void)
   _self: ComponentInstance<P, D> // on proxies only
 }
@@ -128,11 +128,11 @@ class InternalComponent implements PublicInstanceMethods {
 
   _rawData: Data | null = null
   _computedGetters: Record<string, ComputedGetter> | null = null
-  _watchHandles: Set<Autorun> | null = null
+  _watchHandles: Set<ReactiveEffect> | null = null
   _mounted: boolean = false
   _unmounted: boolean = false
   _events: { [event: string]: Function[] | null } | null = null
-  _updateHandle: Autorun | null = null
+  _update: ReactiveEffect | null = null
   _queueJob: ((fn: () => void) => void) | null = null
   _isVue: boolean = true
   _inactiveRoot: boolean = false

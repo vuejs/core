@@ -1,4 +1,4 @@
-import { observable, isObservable, autorun, unwrap } from '../../src'
+import { observable, isObservable, effect, unwrap } from '../../src'
 
 describe('observer/collections', () => {
   describe('WeakSet', () => {
@@ -14,7 +14,7 @@ describe('observer/collections', () => {
       let dummy
       const value = {}
       const set = observable(new WeakSet())
-      autorun(() => (dummy = set.has(value)))
+      effect(() => (dummy = set.has(value)))
 
       expect(dummy).toBe(false)
       set.add(value)
@@ -26,7 +26,7 @@ describe('observer/collections', () => {
     it('should not observe custom property mutations', () => {
       let dummy
       const set: any = observable(new WeakSet())
-      autorun(() => (dummy = set.customProp))
+      effect(() => (dummy = set.customProp))
 
       expect(dummy).toBe(undefined)
       set.customProp = 'Hello World'
@@ -38,7 +38,7 @@ describe('observer/collections', () => {
       const value = {}
       const set = observable(new WeakSet())
       const setSpy = jest.fn(() => (dummy = set.has(value)))
-      autorun(setSpy)
+      effect(setSpy)
 
       expect(dummy).toBe(false)
       expect(setSpy).toHaveBeenCalledTimes(1)
@@ -60,7 +60,7 @@ describe('observer/collections', () => {
       const value = {}
       let dummy
       const set = observable(new WeakSet())
-      autorun(() => (dummy = unwrap(set).has(value)))
+      effect(() => (dummy = unwrap(set).has(value)))
 
       expect(dummy).toBe(false)
       set.add(value)
@@ -71,7 +71,7 @@ describe('observer/collections', () => {
       const value = {}
       let dummy
       const set = observable(new WeakSet())
-      autorun(() => (dummy = set.has(value)))
+      effect(() => (dummy = set.has(value)))
 
       expect(dummy).toBe(false)
       unwrap(set).add(value)

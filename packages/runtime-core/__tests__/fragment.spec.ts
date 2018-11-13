@@ -12,7 +12,9 @@ import {
   nextTick,
   resetOps,
   dumpOps,
-  NodeOpTypes
+  NodeOpTypes,
+  createFragment,
+  createTextVNode
 } from '@vue/runtime-test'
 
 describe('Fragments', () => {
@@ -57,9 +59,12 @@ describe('Fragments', () => {
     class App extends Component {
       render() {
         return state.ok
-          ? h.f([h('div', 'one'), h.t('two')], ChildrenFlags.NONE_KEYED_VNODES)
-          : h.f(
-              [h('div', 'foo'), h.t('bar'), h.t('baz')],
+          ? createFragment(
+              [h('div', 'one'), createTextVNode('two')],
+              ChildrenFlags.NONE_KEYED_VNODES
+            )
+          : createFragment(
+              [h('div', 'foo'), createTextVNode('bar'), createTextVNode('baz')],
               ChildrenFlags.NONE_KEYED_VNODES
             )
       }

@@ -8,7 +8,7 @@ import {
   markImmutable,
   lock,
   unlock,
-  autorun
+  effect
 } from '../src'
 
 describe('observer/immutable', () => {
@@ -75,10 +75,10 @@ describe('observer/immutable', () => {
       expect(warn).not.toHaveBeenCalled()
     })
 
-    it('should not trigger autoruns when locked', () => {
+    it('should not trigger effects when locked', () => {
       const observed = immutable({ a: 1 })
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed.a
       })
       expect(dummy).toBe(1)
@@ -87,10 +87,10 @@ describe('observer/immutable', () => {
       expect(dummy).toBe(1)
     })
 
-    it('should trigger autoruns when unlocked', () => {
+    it('should trigger effects when unlocked', () => {
       const observed = immutable({ a: 1 })
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed.a
       })
       expect(dummy).toBe(1)
@@ -161,10 +161,10 @@ describe('observer/immutable', () => {
       expect(warn).not.toHaveBeenCalled()
     })
 
-    it('should not trigger autoruns when locked', () => {
+    it('should not trigger effects when locked', () => {
       const observed = immutable([{ a: 1 }])
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed[0].a
       })
       expect(dummy).toBe(1)
@@ -176,10 +176,10 @@ describe('observer/immutable', () => {
       expect(dummy).toBe(1)
     })
 
-    it('should trigger autoruns when unlocked', () => {
+    it('should trigger effects when unlocked', () => {
       const observed = immutable([{ a: 1 }])
       let dummy
-      autorun(() => {
+      effect(() => {
         dummy = observed[0].a
       })
       expect(dummy).toBe(1)
@@ -220,11 +220,11 @@ describe('observer/immutable', () => {
         expect(isImmutable(original.get(key1))).toBe(false)
       })
 
-      test('should not allow mutation & not trigger autorun', () => {
+      test('should not allow mutation & not trigger effect', () => {
         const map = immutable(new Collection())
         const key = {}
         let dummy
-        autorun(() => {
+        effect(() => {
           dummy = map.get(key)
         })
         expect(dummy).toBeUndefined()
@@ -234,12 +234,12 @@ describe('observer/immutable', () => {
         expect(warn).toHaveBeenCalledTimes(1)
       })
 
-      test('should allow mutation & trigger autorun when unlocked', () => {
+      test('should allow mutation & trigger effect when unlocked', () => {
         const map = immutable(new Collection())
         const isWeak = Collection === WeakMap
         const key = {}
         let dummy
-        autorun(() => {
+        effect(() => {
           dummy = map.get(key) + (isWeak ? 0 : map.size)
         })
         expect(dummy).toBeNaN()
@@ -289,11 +289,11 @@ describe('observer/immutable', () => {
         expect(original.has(observable(key1))).toBe(false)
       })
 
-      test('should not allow mutation & not trigger autorun', () => {
+      test('should not allow mutation & not trigger effect', () => {
         const set = immutable(new Collection())
         const key = {}
         let dummy
-        autorun(() => {
+        effect(() => {
           dummy = set.has(key)
         })
         expect(dummy).toBe(false)
@@ -303,11 +303,11 @@ describe('observer/immutable', () => {
         expect(warn).toHaveBeenCalledTimes(1)
       })
 
-      test('should allow mutation & trigger autorun when unlocked', () => {
+      test('should allow mutation & trigger effect when unlocked', () => {
         const set = immutable(new Collection())
         const key = {}
         let dummy
-        autorun(() => {
+        effect(() => {
           dummy = set.has(key)
         })
         expect(dummy).toBe(false)

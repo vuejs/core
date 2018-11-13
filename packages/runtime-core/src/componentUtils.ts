@@ -158,7 +158,7 @@ export function teardownComponentInstance(instance: ComponentInstance) {
       1
     )
   }
-  stop(instance._updateHandle)
+  stop(instance._update)
   teardownComputed(instance)
   teardownWatch(instance)
 }

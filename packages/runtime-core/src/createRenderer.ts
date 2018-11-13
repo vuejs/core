@@ -1,15 +1,15 @@
 import {
-  autorun,
-  stop,
-  Autorun,
+  effect as createReactiveEffect,
+  stop as stopReactiveEffect,
+  ReactiveEffect,
   immutable,
-  AutorunOptions
+  ReactiveEffectOptions
 } from '@vue/observer'
 import {
   queueJob,
   handleSchedulerError,
   nextTick,
-  queueEffect,
+  queuePostEffect,
   flushEffects,
   queueNodeOp
 } from '@vue/scheduler'
@@ -78,7 +78,7 @@ export interface RendererOptions {
 export interface FunctionalHandle {
   prev: VNode
   next: VNode
-  update: Autorun
+  update: ReactiveEffect
   container: RenderNode | null
 }
 
@@ -206,12 +206,12 @@ export function createRenderer(options: RendererOptions) {
       queueInsertOrAppend(container, el, endNode)
     }
     if (ref) {
-      queueEffect(() => {
+      queuePostEffect(() => {
         ref(el)
       })
     }
     if (data != null && data.vnodeMounted) {
-      queueEffect(() => {
+      queuePostEffect(() => {
         data.vnodeMounted(vnode)
       })
     }
@@ -272,7 +272,7 @@ export function createRenderer(options: RendererOptions) {
     })
 
     const doMount = () => {
-      handle.update = autorun(
+      handle.update = createReactiveEffect(
         () => {
           if (!handle.next) {
             // initial mount
@@ -280,7 +280,7 @@ export function createRenderer(options: RendererOptions) {
               pushWarningContext(vnode)
             }
             const subTree = (vnode.children = renderFunctionalRoot(vnode))
-            queueEffect(() => {
+            queuePostEffect(() => {
               vnode.el = subTree.el as RenderNode
             })
             mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
@@ -306,7 +306,7 @@ export function createRenderer(options: RendererOptions) {
         doMount()
         // cleanup if mount is invalidated before committed
         return () => {
-          stop(handle.update)
+          stopReactiveEffect(handle.update)
         }
       })
     }
@@ -319,7 +319,7 @@ export function createRenderer(options: RendererOptions) {
     }
     const prevTree = prev.children as MountedVNode
     const nextTree = (next.children = renderFunctionalRoot(next))
-    queueEffect(() => {
+    queuePostEffect(() => {
       next.el = nextTree.el
     })
     patch(
@@ -355,7 +355,7 @@ export function createRenderer(options: RendererOptions) {
     const { children, childFlags } = vnode
     switch (childFlags) {
       case ChildrenFlags.SINGLE_VNODE:
-        queueEffect(() => {
+        queuePostEffect(() => {
           vnode.el = (children as MountedVNode).el
         })
         mount(children as VNode, container, contextVNode, isSVG, endNode)
@@ -366,7 +366,7 @@ export function createRenderer(options: RendererOptions) {
         vnode.el = placeholder.el
         break
       default:
-        queueEffect(() => {
+        queuePostEffect(() => {
           vnode.el = (children as MountedVNode[])[0].el
         })
         mountArrayChildren(
@@ -403,7 +403,7 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     if (ref) {
-      queueEffect(() => {
+      queuePostEffect(() => {
         ref(target)
       })
     }
@@ -638,7 +638,7 @@ export function createRenderer(options: RendererOptions) {
     // then retrieve its next sibling to use as the end node for patchChildren.
     const endNode = platformNextSibling(getVNodeLastEl(prevVNode))
     const { childFlags, children } = nextVNode
-    queueEffect(() => {
+    queuePostEffect(() => {
       switch (childFlags) {
         case ChildrenFlags.SINGLE_VNODE:
           nextVNode.el = (children as MountedVNode).el
@@ -1181,7 +1181,7 @@ export function createRenderer(options: RendererOptions) {
         }
       } else {
         // functional
-        stop((handle as FunctionalHandle).update)
+        stopReactiveEffect((handle as FunctionalHandle).update)
         unmount(children as MountedVNode)
       }
     } else if (flags & VNodeFlags.PORTAL) {
@@ -1293,16 +1293,16 @@ export function createRenderer(options: RendererOptions) {
     } = instance
 
     instance.$forceUpdate = () => {
-      queueJob(instance._updateHandle)
+      queueJob(instance._update)
     }
 
-    const autorunOptions: AutorunOptions = {
+    const effectOptions: ReactiveEffectOptions = {
       scheduler: queueJob
     }
 
     if (__DEV__) {
       if (renderTracked) {
-        autorunOptions.onTrack = event => {
+        effectOptions.onTrack = event => {
           callLifecycleHookWithHandler(
             renderTracked,
             $proxy,
@@ -1312,7 +1312,7 @@ export function createRenderer(options: RendererOptions) {
         }
       }
       if (renderTriggered) {
-        autorunOptions.onTrigger = event => {
+        effectOptions.onTrigger = event => {
           callLifecycleHookWithHandler(
             renderTriggered,
             $proxy,
@@ -1323,7 +1323,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    instance._updateHandle = autorun(() => {
+    instance._update = createReactiveEffect(() => {
       if (instance._unmounted) {
         return
       }
@@ -1340,7 +1340,7 @@ export function createRenderer(options: RendererOptions) {
 
         instance.$vnode = renderInstanceRoot(instance) as MountedVNode
 
-        queueEffect(() => {
+        queuePostEffect(() => {
           vnode.el = instance.$vnode.el
           if (__COMPAT__) {
             // expose __vue__ for devtools
@@ -1360,7 +1360,7 @@ export function createRenderer(options: RendererOptions) {
 
         mount(instance.$vnode, container, vnode as MountedVNode, isSVG, endNode)
       }
-    }, autorunOptions)
+    }, effectOptions)
 
     if (__DEV__) {
       popWarningContext()
@@ -1397,7 +1397,7 @@ export function createRenderer(options: RendererOptions) {
 
     const nextVNode = renderInstanceRoot(instance) as MountedVNode
 
-    queueEffect(() => {
+    queuePostEffect(() => {
       instance.$vnode = nextVNode
       const el = nextVNode.el as RenderNode
       if (__COMPAT__) {
@@ -1486,7 +1486,7 @@ export function createRenderer(options: RendererOptions) {
     if (__DEV__) {
       popWarningContext()
     }
-    queueEffect(() => {
+    queuePostEffect(() => {
       callActivatedHook(instance, true)
     })
   }
