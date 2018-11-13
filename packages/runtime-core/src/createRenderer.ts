@@ -477,7 +477,18 @@ export function createRenderer(options: RendererOptions) {
     contextVNode: MountedVNode | null,
     isSVG: boolean
   ) {
-    const { flags, tag } = nextVNode
+    const { flags, tag, clonedFrom } = nextVNode
+
+    // cloned vnodes pointing to the same original.
+    // these are hoisted static trees so just skip entirely
+    if (
+      clonedFrom !== null &&
+      (clonedFrom === prevVNode || clonedFrom === prevVNode.clonedFrom)
+    ) {
+      nextVNode.el = prevVNode.el
+      return
+    }
+
     isSVG = isSVG || (flags & VNodeFlags.ELEMENT_SVG) > 0
 
     if (prevVNode.tag !== tag) {

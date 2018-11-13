@@ -43,6 +43,8 @@ export interface VNode {
   // a consistent handle so that a functional component can be identified
   // by the scheduler
   handle: FunctionalHandle | null
+  // only on cloned vnodes, points to the original cloned vnode
+  clonedFrom: VNode | null
 }
 
 export interface MountedVNode extends VNode {
@@ -99,7 +101,8 @@ export function createVNode(
     el: null,
     parentVNode: null,
     contextVNode: null,
-    handle: null
+    handle: null,
+    clonedFrom: null
   }
   if (childFlags === ChildrenFlags.UNKNOWN_CHILDREN) {
     normalizeChildren(vnode, children)
@@ -339,7 +342,7 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
         }
       }
     }
-    return createVNode(
+    const cloned = createVNode(
       flags,
       vnode.tag,
       clonedData,
@@ -349,6 +352,8 @@ export function cloneVNode(vnode: VNode, extraData?: VNodeData): VNode {
       vnode.ref,
       vnode.slots
     )
+    cloned.clonedFrom = vnode.clonedFrom || vnode
+    return cloned
   } else if (flags & VNodeFlags.TEXT) {
     return createTextVNode(vnode.children as string)
   } else {
