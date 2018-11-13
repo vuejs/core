@@ -76,10 +76,9 @@ export interface RendererOptions {
 }
 
 export interface FunctionalHandle {
-  current: VNode
-  prevTree: VNode
-  runner: Autorun
-  forceUpdate: () => void
+  prev: VNode
+  next: VNode
+  update: Autorun
 }
 
 handleSchedulerError(err => handleError(err, null, ErrorTypes.SCHEDULER))
@@ -265,27 +264,20 @@ export function createRenderer(options: RendererOptions) {
     }
 
     const handle: FunctionalHandle = (vnode.handle = {
-      current: vnode,
-      prevTree: null as any,
-      runner: null as any,
-      forceUpdate: null as any
-    })
-
-    const queueUpdate = (handle.forceUpdate = () => {
-      queueJob(handle.runner)
+      prev: vnode,
+      next: null as any,
+      update: null as any
     })
 
     const doMount = () => {
-      handle.runner = autorun(
+      handle.update = autorun(
         () => {
-          if (!handle.prevTree) {
+          if (!handle.next) {
             // initial mount
             if (__DEV__) {
               pushWarningContext(vnode)
             }
-            const subTree = (handle.prevTree = vnode.children = renderFunctionalRoot(
-              vnode
-            ))
+            const subTree = (vnode.children = renderFunctionalRoot(vnode))
             queueEffect(() => {
               vnode.el = subTree.el as RenderNode
             })
@@ -298,7 +290,7 @@ export function createRenderer(options: RendererOptions) {
           }
         },
         {
-          scheduler: queueUpdate
+          scheduler: queueJob
         }
       )
     }
@@ -311,7 +303,7 @@ export function createRenderer(options: RendererOptions) {
         doMount()
         // cleanup if mount is invalidated before committed
         return () => {
-          stop(handle.runner)
+          stop(handle.update)
         }
       })
     }
@@ -319,21 +311,19 @@ export function createRenderer(options: RendererOptions) {
 
   function updateFunctionalComponent(handle: FunctionalHandle, isSVG: boolean) {
     // mounted
-    const { prevTree, current } = handle
+    const { prev, next } = handle
     if (__DEV__) {
-      pushWarningContext(current)
+      pushWarningContext(next)
     }
-    const nextTree = (handle.prevTree = current.children = renderFunctionalRoot(
-      current
-    ))
+    const nextTree = (next.children = renderFunctionalRoot(next))
     queueEffect(() => {
-      current.el = nextTree.el
+      next.el = nextTree.el
     })
     patch(
-      prevTree as MountedVNode,
+      prev.children as MountedVNode,
       nextTree,
-      platformParentNode(current.el),
-      current as MountedVNode,
+      platformParentNode(prev.el),
+      next as MountedVNode,
       isSVG
     )
     if (__DEV__) {
@@ -618,10 +608,11 @@ export function createRenderer(options: RendererOptions) {
   function patchFunctionalComponent(prevVNode: MountedVNode, nextVNode: VNode) {
     const prevTree = prevVNode.children as VNode
     const handle = (nextVNode.handle = prevVNode.handle as FunctionalHandle)
-    handle.current = nextVNode
+    handle.prev = prevVNode
+    handle.next = nextVNode
 
     if (shouldUpdateComponent(prevVNode, nextVNode)) {
-      handle.forceUpdate()
+      queueJob(handle.update)
     } else if (prevTree.flags & VNodeFlags.COMPONENT) {
       // functional component returned another component
       prevTree.contextVNode = nextVNode
@@ -1182,7 +1173,7 @@ export function createRenderer(options: RendererOptions) {
         }
       } else {
         // functional
-        stop((handle as FunctionalHandle).runner)
+        stop((handle as FunctionalHandle).update)
         unmount(children as MountedVNode)
       }
     } else if (flags & VNodeFlags.PORTAL) {
@@ -1293,12 +1284,12 @@ export function createRenderer(options: RendererOptions) {
       $options: { beforeMount, renderTracked, renderTriggered }
     } = instance
 
-    const queueUpdate = (instance.$forceUpdate = () => {
+    instance.$forceUpdate = () => {
       queueJob(instance._updateHandle)
-    })
+    }
 
     const autorunOptions: AutorunOptions = {
-      scheduler: queueUpdate
+      scheduler: queueJob
     }
 
     if (__DEV__) {
