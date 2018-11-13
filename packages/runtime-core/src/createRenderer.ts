@@ -79,6 +79,7 @@ export interface FunctionalHandle {
   prev: VNode
   next: VNode
   update: Autorun
+  container: RenderNode | null
 }
 
 handleSchedulerError(err => handleError(err, null, ErrorTypes.SCHEDULER))
@@ -266,7 +267,8 @@ export function createRenderer(options: RendererOptions) {
     const handle: FunctionalHandle = (vnode.handle = {
       prev: vnode,
       next: null as any,
-      update: null as any
+      update: null as any,
+      container
     })
 
     const doMount = () => {
@@ -282,6 +284,7 @@ export function createRenderer(options: RendererOptions) {
               vnode.el = subTree.el as RenderNode
             })
             mount(subTree, container, vnode as MountedVNode, isSVG, endNode)
+            handle.next = vnode
             if (__DEV__) {
               popWarningContext()
             }
@@ -310,19 +313,19 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function updateFunctionalComponent(handle: FunctionalHandle, isSVG: boolean) {
-    // mounted
     const { prev, next } = handle
     if (__DEV__) {
       pushWarningContext(next)
     }
+    const prevTree = prev.children as MountedVNode
     const nextTree = (next.children = renderFunctionalRoot(next))
     queueEffect(() => {
       next.el = nextTree.el
     })
     patch(
-      prev.children as MountedVNode,
+      prevTree,
       nextTree,
-      platformParentNode(prev.el),
+      handle.container as RenderNode,
       next as MountedVNode,
       isSVG
     )
@@ -567,7 +570,7 @@ export function createRenderer(options: RendererOptions) {
     } else if (flags & VNodeFlags.COMPONENT_STATEFUL) {
       patchStatefulComponent(prevVNode, nextVNode)
     } else {
-      patchFunctionalComponent(prevVNode, nextVNode)
+      patchFunctionalComponent(prevVNode, nextVNode, container)
     }
   }
 
@@ -605,11 +608,16 @@ export function createRenderer(options: RendererOptions) {
     nextVNode.el = instance.$vnode.el
   }
 
-  function patchFunctionalComponent(prevVNode: MountedVNode, nextVNode: VNode) {
+  function patchFunctionalComponent(
+    prevVNode: MountedVNode,
+    nextVNode: VNode,
+    container: RenderNode
+  ) {
     const prevTree = prevVNode.children as VNode
     const handle = (nextVNode.handle = prevVNode.handle as FunctionalHandle)
     handle.prev = prevVNode
     handle.next = nextVNode
+    handle.container = container
 
     if (shouldUpdateComponent(prevVNode, nextVNode)) {
       queueJob(handle.update)
