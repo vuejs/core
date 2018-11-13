@@ -105,7 +105,7 @@ export function createRenderer(options: RendererOptions) {
     teardownVNode
   } = options
 
-  function insertOrAppend(
+  function queueInsertOrAppend(
     container: RenderNode,
     newNode: RenderNode,
     refNode: RenderNode | null
@@ -161,10 +161,23 @@ export function createRenderer(options: RendererOptions) {
   ) {
     const { flags, tag, data, children, childFlags, ref } = vnode
     isSVG = isSVG || (flags & VNodeFlags.ELEMENT_SVG) > 0
+    // element creation is not deferred since it doesn't produce
+    // user-affecting side effects until inserted into the DOM
     const el = (vnode.el = platformCreateElement(tag as string, isSVG))
     if (data != null) {
       for (const key in data) {
-        patchData(el, key, null, data[key], null, vnode, isSVG)
+        if (!reservedPropRE.test(key)) {
+          platformPatchData(
+            el,
+            key,
+            null,
+            data[key],
+            null,
+            vnode,
+            isSVG,
+            unmountChildren
+          )
+        }
       }
       if (data.vnodeBeforeMount) {
         data.vnodeBeforeMount(vnode)
@@ -185,7 +198,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     if (container != null) {
-      insertOrAppend(container, el, endNode)
+      queueInsertOrAppend(container, el, endNode)
     }
     if (ref) {
       queueEffect(() => {
@@ -330,7 +343,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     const el = (vnode.el = platformCreateText(vnode.children as string))
     if (container != null) {
-      insertOrAppend(container, el, endNode)
+      queueInsertOrAppend(container, el, endNode)
     }
   }
 
@@ -403,7 +416,7 @@ export function createRenderer(options: RendererOptions) {
 
   // patching ------------------------------------------------------------------
 
-  function patchData(
+  function queuePatchData(
     el: RenderNode | (() => RenderNode),
     key: string,
     prevValue: any,
@@ -412,19 +425,19 @@ export function createRenderer(options: RendererOptions) {
     nextVNode: VNode,
     isSVG: boolean
   ) {
-    if (reservedPropRE.test(key)) {
-      return
+    if (!reservedPropRE.test(key)) {
+      queueNodeOp([
+        platformPatchData,
+        el,
+        key,
+        prevValue,
+        nextValue,
+        preVNode,
+        nextVNode,
+        isSVG,
+        unmountChildren
+      ])
     }
-    platformPatchData(
-      typeof el === 'function' ? el() : el,
-      key,
-      prevValue,
-      nextValue,
-      preVNode,
-      nextVNode,
-      isSVG,
-      unmountChildren
-    )
   }
 
   function patch(
@@ -489,7 +502,7 @@ export function createRenderer(options: RendererOptions) {
           const prevValue = prevDataOrEmpty[key]
           const nextValue = nextDataOrEmpty[key]
           if (prevValue !== nextValue) {
-            patchData(
+            queuePatchData(
               el,
               key,
               prevValue,
@@ -505,7 +518,15 @@ export function createRenderer(options: RendererOptions) {
         for (const key in prevDataOrEmpty) {
           const prevValue = prevDataOrEmpty[key]
           if (prevValue != null && !nextDataOrEmpty.hasOwnProperty(key)) {
-            patchData(el, key, prevValue, null, prevVNode, nextVNode, isSVG)
+            queuePatchData(
+              el,
+              key,
+              prevValue,
+              null,
+              prevVNode,
+              nextVNode,
+              isSVG
+            )
           }
         }
       }
@@ -1092,7 +1113,7 @@ export function createRenderer(options: RendererOptions) {
           }
       }
     } else {
-      insertOrAppend(container, vnode.el as RenderNode, refNode)
+      queueInsertOrAppend(container, vnode.el as RenderNode, refNode)
     }
   }
 

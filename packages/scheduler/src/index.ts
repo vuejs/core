@@ -2,7 +2,7 @@
 
 // A data structure that stores a deferred DOM operation.
 // the first element is the function to call, and the rest of the array
-// stores up to 3 arguments.
+// stores up to 8 arguments.
 type Op = [Function, ...any[]]
 
 // A "job" stands for a unit of work that needs to be performed.
@@ -375,5 +375,11 @@ function commitJob(job: Job) {
 
 function applyOp(op: Op) {
   const fn = op[0]
-  fn(op[1], op[2], op[3])
+  // optimize for more common cases
+  // only patchData needs 8 arguments
+  if (op.length <= 3) {
+    fn(op[1], op[2], op[3])
+  } else {
+    fn(op[1], op[2], op[3], op[4], op[5], op[6], op[7], op[8])
+  }
 }
