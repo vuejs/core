@@ -1,7 +1,14 @@
 // Core API
 export { h, Fragment, Portal } from './h'
 export { Component } from './component'
-export { cloneVNode, createPortal, createFragment } from './vdom'
+export {
+  cloneVNode,
+  createElementVNode,
+  createComponentVNode,
+  createTextVNode,
+  createFragment,
+  createPortal
+} from './vdom'
 export {
   createRenderer,
   NodeOps,

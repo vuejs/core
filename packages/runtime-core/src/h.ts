@@ -5,7 +5,6 @@ import {
   VNode,
   createElementVNode,
   createComponentVNode,
-  createTextVNode,
   createFragment,
   createPortal,
   VNodeData,
@@ -36,14 +35,6 @@ export type ElementType =
   | typeof Fragment
   | typeof Portal
 
-interface VNodeFactories {
-  c: typeof createComponentVNode
-  e: typeof createElementVNode
-  t: typeof createTextVNode
-  f: typeof createFragment
-  p: typeof createPortal
-}
-
 // This is used to differentiate the data object from
 // vnodes and arrays
 type Differ = { _isVNode?: never; [Symbol.iterator]?: never }
@@ -53,7 +44,7 @@ type OptionsComponent<P> =
   | (ComponentOptions<P> & { render: Function })
 
 // TODO improve return type with props information
-interface createElement extends VNodeFactories {
+interface createElement {
   // element
   (tag: string, children?: RawChildrenType): VNode
   (
@@ -175,9 +166,3 @@ export const h = ((tag: ElementType, data?: any, children?: any): VNode => {
     )
   }
 }) as createElement
-
-h.c = createComponentVNode
-h.e = createElementVNode
-h.t = createTextVNode
-h.f = createFragment
-h.p = createPortal
