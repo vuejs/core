@@ -125,7 +125,9 @@ export function createRenderer(options: RendererOptions) {
     container: RenderNode | null,
     contextVNode: MountedVNode | null,
     isSVG: boolean,
-    endNode: RenderNode | null
+    endNode: RenderNode | null,
+    ownerArray?: VNode[],
+    index?: number
   ) {
     const { flags } = vnode
     if (flags & VNodeFlags.ELEMENT) {
@@ -149,11 +151,8 @@ export function createRenderer(options: RendererOptions) {
     endNode: RenderNode | null
   ) {
     for (let i = 0; i < children.length; i++) {
-      let child = children[i]
-      if (child.el) {
-        children[i] = child = cloneVNode(child)
-      }
-      mount(children[i], container, contextVNode, isSVG, endNode)
+      const child = getNextVNode(children, i)
+      mount(child, container, contextVNode, isSVG, endNode)
     }
   }
 
@@ -879,20 +878,14 @@ export function createRenderer(options: RendererOptions) {
     let nextChild
     let prevChild
     for (i; i < commonLength; i++) {
-      nextChild = nextChildren[i]
+      nextChild = getNextVNode(nextChildren, i)
       prevChild = prevChildren[i]
-      if (nextChild.el) {
-        nextChildren[i] = nextChild = cloneVNode(nextChild)
-      }
       patch(prevChild, nextChild, container, contextVNode, isSVG)
       prevChildren[i] = nextChild as MountedVNode
     }
     if (prevLength < nextLength) {
       for (i = commonLength; i < nextLength; i++) {
-        nextChild = nextChildren[i]
-        if (nextChild.el) {
-          nextChildren[i] = nextChild = cloneVNode(nextChild)
-        }
+        nextChild = getNextVNode(nextChildren, i)
         mount(nextChild, container, contextVNode, isSVG, endNode)
       }
     } else if (prevLength > nextLength) {
@@ -917,15 +910,12 @@ export function createRenderer(options: RendererOptions) {
     let i
     let j = 0
     let prevVNode = prevChildren[j]
-    let nextVNode = nextChildren[j]
+    let nextVNode = getNextVNode(nextChildren, j)
     let nextPos
 
     outer: {
       // Sync nodes with the same key at the beginning.
       while (prevVNode.key === nextVNode.key) {
-        if (nextVNode.el) {
-          nextChildren[j] = nextVNode = cloneVNode(nextVNode)
-        }
         patch(prevVNode, nextVNode, container, contextVNode, isSVG)
         prevChildren[j] = nextVNode as MountedVNode
         j++
@@ -933,17 +923,14 @@ export function createRenderer(options: RendererOptions) {
           break outer
         }
         prevVNode = prevChildren[j]
-        nextVNode = nextChildren[j]
+        nextVNode = getNextVNode(nextChildren, j)
       }
 
       prevVNode = prevChildren[prevEnd]
-      nextVNode = nextChildren[nextEnd]
+      nextVNode = getNextVNode(nextChildren, nextEnd)
 
       // Sync nodes with the same key at the end.
       while (prevVNode.key === nextVNode.key) {
-        if (nextVNode.el) {
-          nextChildren[nextEnd] = nextVNode = cloneVNode(nextVNode)
-        }
         patch(prevVNode, nextVNode, container, contextVNode, isSVG)
         prevChildren[prevEnd] = nextVNode as MountedVNode
         prevEnd--
@@ -952,7 +939,7 @@ export function createRenderer(options: RendererOptions) {
           break outer
         }
         prevVNode = prevChildren[prevEnd]
-        nextVNode = nextChildren[nextEnd]
+        nextVNode = getNextVNode(nextChildren, nextEnd)
       }
     }
 
@@ -962,10 +949,7 @@ export function createRenderer(options: RendererOptions) {
         const nextNode =
           nextPos < nextLength ? nextChildren[nextPos].el : endNode
         while (j <= nextEnd) {
-          nextVNode = nextChildren[j]
-          if (nextVNode.el) {
-            nextChildren[j] = nextVNode = cloneVNode(nextVNode)
-          }
+          nextVNode = getNextVNode(nextChildren, j)
           j++
           mount(nextVNode, container, contextVNode, isSVG, nextNode)
         }
@@ -995,7 +979,7 @@ export function createRenderer(options: RendererOptions) {
           prevVNode = prevChildren[i]
           if (patched < nextLeft) {
             for (j = nextStart; j <= nextEnd; j++) {
-              nextVNode = nextChildren[j]
+              nextVNode = getNextVNode(nextChildren, j)
               if (prevVNode.key === nextVNode.key) {
                 sources[j - nextStart] = i + 1
                 if (canRemoveWholeContent) {
@@ -1008,9 +992,6 @@ export function createRenderer(options: RendererOptions) {
                   moved = true
                 } else {
                   pos = j
-                }
-                if (nextVNode.el) {
-                  nextChildren[j] = nextVNode = cloneVNode(nextVNode)
                 }
                 patch(prevVNode, nextVNode, container, contextVNode, isSVG)
                 patched++
@@ -1046,15 +1027,12 @@ export function createRenderer(options: RendererOptions) {
                   queueRemoveVNode(prevChildren[prevStart++], container)
                 }
               }
-              nextVNode = nextChildren[j]
+              nextVNode = getNextVNode(nextChildren, j)
               sources[j - nextStart] = i + 1
               if (pos > j) {
                 moved = true
               } else {
                 pos = j
-              }
-              if (nextVNode.el) {
-                nextChildren[j] = nextVNode = cloneVNode(nextVNode)
               }
               patch(prevVNode, nextVNode, container, contextVNode, isSVG)
               patched++
@@ -1083,10 +1061,7 @@ export function createRenderer(options: RendererOptions) {
           for (i = nextLeft - 1; i >= 0; i--) {
             if (sources[i] === 0) {
               pos = i + nextStart
-              nextVNode = nextChildren[pos]
-              if (nextVNode.el) {
-                nextChildren[pos] = nextVNode = cloneVNode(nextVNode)
-              }
+              nextVNode = getNextVNode(nextChildren, pos)
               nextPos = pos + 1
               mount(
                 nextVNode,
@@ -1114,10 +1089,7 @@ export function createRenderer(options: RendererOptions) {
           for (i = nextLeft - 1; i >= 0; i--) {
             if (sources[i] === 0) {
               pos = i + nextStart
-              nextVNode = nextChildren[pos]
-              if (nextVNode.el) {
-                nextChildren[pos] = nextVNode = cloneVNode(nextVNode)
-              }
+              nextVNode = getNextVNode(nextChildren, pos)
               nextPos = pos + 1
               mount(
                 nextVNode,
@@ -1589,8 +1561,17 @@ export function createRenderer(options: RendererOptions) {
   return { render }
 }
 
+// Utils -----------------------------------------------------------------------
+
+// retrieves a vnode from a children array, making sure to clone it if the
+// vnode is already mounted.
+function getNextVNode(ownerArray: VNode[], index: number): VNode {
+  const vnode = ownerArray[index]
+  return vnode.el === null ? vnode : (ownerArray[index] = cloneVNode(vnode))
+}
+
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-export function lis(arr: number[]): number[] {
+function lis(arr: number[]): number[] {
   const p = arr.slice()
   const result = [0]
   let i
