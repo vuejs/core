@@ -12,6 +12,9 @@
 //     return memoize(h('div', this.msg + this.count), this, 0, [this.msg])
 //   }
 
+// TODO how does this work in v-for?
+// probably need to take vnode key into consideration
+
 import { Component } from '../component'
 import { warn } from '../warning'
 
