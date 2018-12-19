@@ -17,7 +17,7 @@ export function patchEvent(
 }
 
 const eventCounts: Record<string, number> = {}
-const attachedGlobalHandlers: Record<string, Function> = {}
+const attachedGlobalHandlers: Record<string, Function | null> = {}
 
 export function handleDelegatedEvent(
   el: any,
@@ -38,18 +38,16 @@ export function handleDelegatedEvent(
     }
     store[name] = value
   } else if (store && store[name]) {
-    eventCounts[name]--
-    store[name] = null
-    if (count === 1) {
+    if (--eventCounts[name] === 0) {
       removeGlobalHandler(name)
     }
+    store[name] = null
   }
 }
 
 function attachGlobalHandler(name: string) {
   const handler = (attachedGlobalHandlers[name] = (e: Event) => {
-    const { type } = e
-    const isClick = type === 'click' || type === 'dblclick'
+    const isClick = e.type === 'click' || e.type === 'dblclick'
     if (isClick && (e as MouseEvent).button !== 0) {
       e.stopPropagation()
       return false
@@ -114,7 +112,7 @@ function invokeEvents(e: Event, value: EventValue) {
 
 function removeGlobalHandler(name: string) {
   document.removeEventListener(name, attachedGlobalHandlers[name] as any)
-  eventCounts[name] = 0
+  attachedGlobalHandlers[name] = null
 }
 
 function handleNormalEvent(el: Element, name: string, prev: any, next: any) {
