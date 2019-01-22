@@ -72,7 +72,6 @@ export interface PatchDataFunction {
 export interface RendererOptions {
   nodeOps: NodeOps
   patchData: PatchDataFunction
-  teardownVNode?: (vnode: VNode) => void
 }
 
 export interface FunctionalHandle {
@@ -102,8 +101,7 @@ export function createRenderer(options: RendererOptions) {
       nextSibling: platformNextSibling,
       querySelector: platformQuerySelector
     },
-    patchData: platformPatchData,
-    teardownVNode
+    patchData: platformPatchData
   } = options
 
   function queueInsertOrAppend(
@@ -1138,9 +1136,6 @@ export function createRenderer(options: RendererOptions) {
         data.vnodeBeforeUnmount(vnode)
       }
       unmountChildren(children as VNodeChildren, childFlags)
-      if (teardownVNode !== void 0) {
-        teardownVNode(vnode)
-      }
       if (isElement && data != null && data.vnodeUnmounted) {
         data.vnodeUnmounted(vnode)
       }

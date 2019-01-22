@@ -1,12 +1,10 @@
 import { createRenderer, Component } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchData } from './patchData'
-import { teardownVNode } from './teardownVNode'
 
 const { render: _render } = createRenderer({
   nodeOps,
-  patchData,
-  teardownVNode
+  patchData
 })
 
 type publicRender = (

@@ -1,7 +1,13 @@
-const delegateRE = /^(?:click|dblclick|submit|(?:key|mouse|touch|pointer).*)$/
+import { isChrome } from '../ua'
 
-type EventValue = Function | Function[]
-type TargetRef = { el: Element | Document }
+interface Invoker extends Function {
+  value: EventValue
+  lastUpdated?: number
+}
+
+type EventValue = (Function | Function[]) & {
+  invoker?: Invoker | null
+}
 
 export function patchEvent(
   el: Element,
@@ -9,98 +15,46 @@ export function patchEvent(
   prevValue: EventValue | null,
   nextValue: EventValue | null
 ) {
-  if (delegateRE.test(name) && !__JSDOM__) {
-    handleDelegatedEvent(el, name, nextValue)
-  } else {
-    handleNormalEvent(el, name, prevValue, nextValue)
-  }
-}
-
-const eventCounts: Record<string, number> = {}
-const attachedGlobalHandlers: Record<string, Function | null> = {}
-
-export function handleDelegatedEvent(
-  el: any,
-  name: string,
-  value: EventValue | null
-) {
-  const count = eventCounts[name]
-  let store = el.__events
-  if (value) {
-    if (!count) {
-      attachGlobalHandler(name)
-    }
-    if (!store) {
-      store = el.__events = {}
-    }
-    if (!store[name]) {
-      eventCounts[name]++
-    }
-    store[name] = value
-  } else if (store && store[name]) {
-    if (--eventCounts[name] === 0) {
-      removeGlobalHandler(name)
-    }
-    store[name] = null
-  }
-}
-
-function attachGlobalHandler(name: string) {
-  const handler = (attachedGlobalHandlers[name] = (e: Event) => {
-    const isClick = e.type === 'click' || e.type === 'dblclick'
-    if (isClick && (e as MouseEvent).button !== 0) {
-      e.stopPropagation()
-      return false
-    }
-    e.stopPropagation = stopPropagation
-    const targetRef: TargetRef = { el: document }
-    Object.defineProperty(e, 'currentTarget', {
-      configurable: true,
-      get() {
-        return targetRef.el
+  const invoker = prevValue && prevValue.invoker
+  if (nextValue) {
+    if (invoker) {
+      ;(prevValue as EventValue).invoker = null
+      invoker.value = nextValue
+      nextValue.invoker = invoker
+      if (isChrome) {
+        invoker.lastUpdated = performance.now()
       }
-    })
-    dispatchEvent(e, name, isClick, targetRef)
-  })
-  document.addEventListener(name, handler)
-  eventCounts[name] = 0
-}
-
-function stopPropagation() {
-  this.cancelBubble = true
-  if (!this.immediatePropagationStopped) {
-    this.stopImmediatePropagation()
+    } else {
+      el.addEventListener(name, createInvoker(nextValue))
+    }
+  } else if (invoker) {
+    el.removeEventListener(name, invoker as any)
   }
 }
 
-function dispatchEvent(
-  e: Event,
-  name: string,
-  isClick: boolean,
-  targetRef: TargetRef
-) {
-  let el = e.target as any
-  while (el != null) {
-    // Don't process clicks on disabled elements
-    if (isClick && el.disabled) {
-      break
-    }
-    const store = el.__events
-    if (store) {
-      const value = store[name]
-      if (value) {
-        targetRef.el = el
-        invokeEvents(e, value)
-        if (e.cancelBubble) {
-          break
-        }
-      }
-    }
-    el = el.parentNode
+function createInvoker(value: any) {
+  const invoker = ((e: Event) => {
+    invokeEvents(e, invoker.value, invoker.lastUpdated)
+  }) as any
+  invoker.value = value
+  value.invoker = invoker
+  if (isChrome) {
+    invoker.lastUpdated = performance.now()
   }
+  return invoker
 }
 
-function invokeEvents(e: Event, value: EventValue) {
+function invokeEvents(e: Event, value: EventValue, lastUpdated: number) {
+  // async edge case #6566: inner click event triggers patch, event handler
+  // attached to outer element during patch, and triggered again. This only
+  // happens in Chrome as it fires microtask ticks between event propagation.
+  // the solution is simple: we save the timestamp when a handler is attached,
+  // and the handler would only fire if the event passed to it was fired
+  // AFTER it was attached.
+  if (isChrome && e.timeStamp < lastUpdated) {
+    return
+  }
+
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       value[i](e)
@@ -108,33 +62,4 @@ function invokeEvents(e: Event, value: EventValue) {
   } else {
     value(e)
   }
-}
-
-function removeGlobalHandler(name: string) {
-  document.removeEventListener(name, attachedGlobalHandlers[name] as any)
-  attachedGlobalHandlers[name] = null
-}
-
-function handleNormalEvent(el: Element, name: string, prev: any, next: any) {
-  const invoker = prev && prev.invoker
-  if (next) {
-    if (invoker) {
-      prev.invoker = null
-      invoker.value = next
-      next.invoker = invoker
-    } else {
-      el.addEventListener(name, createInvoker(next))
-    }
-  } else if (invoker) {
-    el.removeEventListener(name, invoker)
-  }
-}
-
-function createInvoker(value: any) {
-  const invoker = ((e: Event) => {
-    invokeEvents(e, invoker.value)
-  }) as any
-  invoker.value = value
-  value.invoker = invoker
-  return invoker
 }
