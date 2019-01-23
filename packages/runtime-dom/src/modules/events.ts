@@ -1,5 +1,3 @@
-import { isChrome } from '../ua'
-
 interface Invoker extends Function {
   value: EventValue
   lastUpdated?: number
@@ -7,6 +5,23 @@ interface Invoker extends Function {
 
 type EventValue = (Function | Function[]) & {
   invoker?: Invoker | null
+}
+
+// async edge case fix requires storing an event listener's attach timestamp
+// to avoid the overhead of repeatedly calling performance.now(), we cache
+// and use the same timestamp for all event listners attached in the same tick.
+let cachedNow: number = 0
+const p = Promise.resolve()
+
+function getNow() {
+  if (cachedNow) {
+    return cachedNow
+  } else {
+    p.then(() => {
+      cachedNow = 0
+    })
+    return (cachedNow = performance.now())
+  }
 }
 
 export function patchEvent(
@@ -21,9 +36,7 @@ export function patchEvent(
       ;(prevValue as EventValue).invoker = null
       invoker.value = nextValue
       nextValue.invoker = invoker
-      if (isChrome) {
-        invoker.lastUpdated = performance.now()
-      }
+      invoker.lastUpdated = getNow()
     } else {
       el.addEventListener(name, createInvoker(nextValue))
     }
@@ -38,20 +51,18 @@ function createInvoker(value: any) {
   }) as any
   invoker.value = value
   value.invoker = invoker
-  if (isChrome) {
-    invoker.lastUpdated = performance.now()
-  }
+  invoker.lastUpdated = getNow()
   return invoker
 }
 
 function invokeEvents(e: Event, value: EventValue, lastUpdated: number) {
   // async edge case #6566: inner click event triggers patch, event handler
-  // attached to outer element during patch, and triggered again. This only
-  // happens in Chrome as it fires microtask ticks between event propagation.
+  // attached to outer element during patch, and triggered again. This
+  // happens because browsers fire microtask ticks between event propagation.
   // the solution is simple: we save the timestamp when a handler is attached,
   // and the handler would only fire if the event passed to it was fired
   // AFTER it was attached.
-  if (isChrome && e.timeStamp < lastUpdated) {
+  if (e.timeStamp < lastUpdated) {
     return
   }
 
