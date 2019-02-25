@@ -140,7 +140,7 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
 
 export function renderFunctionalRoot(vnode: VNode): VNode {
   const render = vnode.tag as FunctionalComponent
-  const [props, attrs] = resolveProps(vnode.data, render.props)
+  const { 0: props, 1: attrs } = resolveProps(vnode.data, render.props)
   let subTree
   try {
     subTree = render(props, vnode.slots || EMPTY_OBJ, attrs, vnode)

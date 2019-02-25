@@ -104,6 +104,10 @@ export const reservedMethods: ReservedKeys = {
   renderTriggered: 1
 }
 
+// This is a special marker from the @prop decorator.
+// The decorator stores prop options on the Class' prototype as __prop_xxx
+const propPrefixRE = /^__prop_/
+
 // This is called in the base component constructor and the return value is
 // set on the instance as $options.
 export function resolveComponentOptionsFromClass(
@@ -122,6 +126,12 @@ export function resolveComponentOptionsFromClass(
     }
   }
 
+  // pre-normalize array props options into object.
+  // we may need to attach more props to it (declared by decorators)
+  if (Array.isArray(options.props)) {
+    options.props = normalizePropsOptions(options.props)
+  }
+
   const instanceDescriptors = Object.getOwnPropertyDescriptors(Class.prototype)
   for (const key in instanceDescriptors) {
     const { get, value } = instanceDescriptors[key]
@@ -132,13 +142,20 @@ export function resolveComponentOptionsFromClass(
       // as it's already defined on the prototype
     } else if (isFunction(value) && key !== 'constructor') {
       if (key in reservedMethods) {
+        // lifecycle hooks / reserved methods
         options[key] = value
       } else {
+        // normal methods
         ;(options.methods || (options.methods = {}))[key] = value
       }
+    } else if (propPrefixRE.test(key)) {
+      // decorator-declared props
+      const propName = key.replace(propPrefixRE, '')
+      ;(options.props || (options.props = {}))[propName] = value
     }
   }
 
+  // post-normalize all prop options into same object format
   if (options.props) {
     options.props = normalizePropsOptions(options.props)
   }

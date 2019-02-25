@@ -90,7 +90,7 @@ export function resolveProps(
       const hasDefault = opt.hasOwnProperty('default')
       const currentValue = props[key]
       // default values
-      if (hasDefault && currentValue === void 0) {
+      if (hasDefault && currentValue === undefined) {
         const defaultValue = opt.default
         props[key] = isFunction(defaultValue) ? defaultValue() : defaultValue
       }
@@ -106,7 +106,7 @@ export function resolveProps(
         }
       }
       // runtime validation
-      if (__DEV__) {
+      if (__DEV__ && rawData) {
         validateProp(key, unwrap(rawData[key]), opt, isAbsent)
       }
     }
@@ -138,11 +138,14 @@ export function normalizePropsOptions(
     for (const key in raw) {
       const opt = raw[key]
       const prop = (normalized[camelize(key)] =
-        isArray(opt) || isFunction(opt) ? { type: opt } : opt) as NormalizedProp
-      const booleanIndex = getTypeIndex(Boolean, prop.type)
-      const stringIndex = getTypeIndex(String, prop.type)
-      prop[BooleanFlags.shouldCast] = booleanIndex > -1
-      prop[BooleanFlags.shouldCastTrue] = booleanIndex < stringIndex
+        isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+      if (prop) {
+        const booleanIndex = getTypeIndex(Boolean, prop.type)
+        const stringIndex = getTypeIndex(String, prop.type)
+        ;(prop as NormalizedProp)[BooleanFlags.shouldCast] = booleanIndex > -1
+        ;(prop as NormalizedProp)[BooleanFlags.shouldCastTrue] =
+          booleanIndex < stringIndex
+      }
     }
   }
   return normalized
