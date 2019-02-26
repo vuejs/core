@@ -1258,7 +1258,7 @@ export function createRenderer(options: RendererOptions) {
 
     const {
       $proxy,
-      $options: { beforeMount, renderTracked, renderTriggered }
+      $options: { beforeMount, mounted, renderTracked, renderTriggered }
     } = instance
 
     instance.$forceUpdate = () => {
@@ -1318,9 +1318,6 @@ export function createRenderer(options: RendererOptions) {
           if (vnode.ref) {
             vnode.ref($proxy)
           }
-          // retrieve mounted value after initial render so that we get
-          // to inject effects in hooks
-          const { mounted } = instance.$options
           if (mounted) {
             callLifecycleHookWithHandler(mounted, $proxy, ErrorTypes.MOUNTED)
           }

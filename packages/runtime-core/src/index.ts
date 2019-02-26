@@ -32,19 +32,6 @@ export { mixins } from './optional/mixins'
 export { EventEmitter } from './optional/eventEmitter'
 export { memoize } from './optional/memoize'
 
-// Experimental APIs
-export {
-  useState,
-  useEffect,
-  useRef,
-  useData,
-  useWatch,
-  useComputed,
-  useMounted,
-  useUnmounted,
-  useUpdated
-} from './experimental/hooks'
-
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'
 export { VNodeFlags, ChildrenFlags } from './flags'

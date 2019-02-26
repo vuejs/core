@@ -4,26 +4,13 @@ import { resolveProps } from './componentProps'
 import { handleError, ErrorTypes } from './errorHandling'
 import { VNodeFlags, ChildrenFlags } from './flags'
 import { EMPTY_OBJ, isArray, isObject } from '@vue/shared'
-import { setCurrentInstance, unsetCurrentInstance } from './experimental/hooks'
 
 export let isRendering = false
 
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
-  const {
-    $options: { hooks },
-    render,
-    $proxy,
-    $props,
-    $slots,
-    $attrs,
-    $parentVNode
-  } = instance
+  const { render, $proxy, $props, $slots, $attrs, $parentVNode } = instance
   try {
-    setCurrentInstance(instance)
-    if (hooks) {
-      instance._hookProps = hooks.call($proxy, $props) || null
-    }
     if (__DEV__) {
       isRendering = true
     }
@@ -31,7 +18,6 @@ export function renderInstanceRoot(instance: ComponentInstance): VNode {
     if (__DEV__) {
       isRendering = false
     }
-    unsetCurrentInstance()
   } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER)
   }

@@ -90,7 +90,6 @@ type ReservedKeys = { [K in keyof (APIMethods & LifecycleMethods)]: 1 }
 export const reservedMethods: ReservedKeys = {
   data: 1,
   render: 1,
-  hooks: 1,
   beforeCreate: 1,
   created: 1,
   beforeMount: 1,

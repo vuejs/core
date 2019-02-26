@@ -1,9 +1,8 @@
 import { ComponentInstance } from './component'
 import { isFunction, isReservedKey } from '@vue/shared'
-import { warn } from './warning'
 import { isRendering } from './componentRenderUtils'
-import { isObservable } from '@vue/observer'
 import { reservedMethods } from './componentOptions'
+import { warn } from './warning'
 
 const bindCache = new WeakMap()
 
@@ -37,9 +36,6 @@ const renderProxyHandlers = {
     ) {
       // computed
       return i[key]()
-    } else if ((i = target._hookProps) !== null && i.hasOwnProperty(key)) {
-      // hooks injections
-      return i[key]
     } else if (key[0] !== '_') {
       if (
         __DEV__ &&
@@ -80,16 +76,6 @@ const renderProxyHandlers = {
     }
     if ((i = target._rawData) !== null && i.hasOwnProperty(key)) {
       target.$data[key] = value
-      return true
-    } else if ((i = target._hookProps) !== null && i.hasOwnProperty(key)) {
-      if (__DEV__ && !isObservable(i)) {
-        warn(
-          `attempting to mutate a property returned from hooks(), but the ` +
-            `value is not observable.`
-        )
-      }
-      // this enables returning observable objects from hooks()
-      i[key] = value
       return true
     } else {
       return Reflect.set(target, key, value, receiver)
