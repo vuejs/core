@@ -11,7 +11,7 @@ import { setupWatcher } from './componentWatch'
 import { ReactiveEffect, DebuggerEvent, ComputedGetter } from '@vue/observer'
 import { nextTick } from '@vue/scheduler'
 import { ErrorTypes } from './errorHandling'
-import { initializeComponentInstance } from './componentUtils'
+import { initializeComponentInstance } from './componentInstance'
 import { EventEmitter, invokeListeners } from './optional/eventEmitter'
 import { warn } from './warning'
 

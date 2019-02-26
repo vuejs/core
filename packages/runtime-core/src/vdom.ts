@@ -4,7 +4,7 @@ import {
   FunctionalComponent
 } from './component'
 import { VNodeFlags, ChildrenFlags } from './flags'
-import { createComponentClassFromOptions } from './componentUtils'
+import { createComponentClassFromOptions } from './componentOptions'
 import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { RawChildrenType, RawSlots } from './h'
 import { FunctionalHandle } from './createRenderer'

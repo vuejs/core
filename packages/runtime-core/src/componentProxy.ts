@@ -1,7 +1,7 @@
 import { ComponentInstance } from './component'
 import { isFunction, isReservedKey } from '@vue/shared'
 import { warn } from './warning'
-import { isRendering } from './componentUtils'
+import { isRendering } from './componentRenderUtils'
 import { isObservable } from '@vue/observer'
 import { reservedMethods } from './componentOptions'
 

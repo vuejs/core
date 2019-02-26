@@ -25,13 +25,15 @@ import {
 } from './vdom'
 import { ComponentInstance } from './component'
 import {
+  createComponentInstance,
+  teardownComponentInstance
+} from './componentInstance'
+import {
   renderInstanceRoot,
   renderFunctionalRoot,
-  createComponentInstance,
-  teardownComponentInstance,
   shouldUpdateComponent,
   getReasonForComponentUpdate
-} from './componentUtils'
+} from './componentRenderUtils'
 import { KeepAliveSymbol } from './optional/keepAlive'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { resolveProps } from './componentProps'

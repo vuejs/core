@@ -52,7 +52,4 @@ export { VNode, Slots } from './vdom'
 
 // Internal API, for libraries or renderers that need to perform low level work
 export * from './componentOptions'
-export {
-  createComponentInstance,
-  createComponentClassFromOptions
-} from './componentUtils'
+export { createComponentInstance } from './componentInstance'

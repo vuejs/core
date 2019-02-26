@@ -7,6 +7,8 @@ import {
 } from './component'
 import { isArray, isObject, isFunction } from '@vue/shared'
 import { normalizePropsOptions } from './componentProps'
+import { warn } from './warning'
+import { h } from './h'
 
 export type Data = Record<string, any>
 
@@ -168,6 +170,65 @@ export function resolveComponentOptionsFromClass(
 
   Class.options = options
   return options
+}
+
+export function createComponentClassFromOptions(
+  options: ComponentOptions
+): ComponentClass {
+  class AnonymousComponent extends Component {
+    static options = options
+    // indicate this component was created from options
+    static fromOptions = true
+  }
+  const proto = AnonymousComponent.prototype as any
+  for (const key in options) {
+    const value = options[key]
+    if (key === 'render') {
+      if (__COMPAT__) {
+        options.render = function() {
+          return value.call(this, h)
+        }
+      }
+      // so that we can call instance.render directly
+      proto.render = options.render
+    } else if (key === 'computed') {
+      // create computed setters on prototype
+      // (getters are handled by the render proxy)
+      for (const computedKey in value) {
+        const computed = value[computedKey]
+        const set = isObject(computed) && computed.set
+        if (set) {
+          Object.defineProperty(proto, computedKey, {
+            configurable: true,
+            set
+          })
+        }
+      }
+    } else if (key === 'methods') {
+      for (const method in value) {
+        if (__DEV__ && proto.hasOwnProperty(method)) {
+          warn(
+            `Object syntax contains method name that conflicts with ` +
+              `lifecycle hook: "${method}"`
+          )
+        }
+        proto[method] = value[method]
+      }
+    } else if (__COMPAT__) {
+      if (key === 'name') {
+        options.displayName = value
+      } else if (key === 'render') {
+        options.render = function() {
+          return value.call(this, h)
+        }
+      } else if (key === 'beforeDestroy') {
+        options.beforeUnmount = value
+      } else if (key === 'destroyed') {
+        options.unmounted = value
+      }
+    }
+  }
+  return AnonymousComponent as ComponentClass
 }
 
 export function mergeComponentOptions(to: any, from: any): ComponentOptions {

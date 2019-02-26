@@ -1,5 +1,5 @@
 import { Component } from '../component'
-import { createComponentClassFromOptions } from '../componentUtils'
+import { createComponentClassFromOptions } from '../componentOptions'
 import {
   ComponentOptions,
   resolveComponentOptionsFromClass,
