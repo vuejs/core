@@ -23,10 +23,8 @@ export function extractInitializers(
   const props = instance.$props
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
-    if (!isReservedKey(key)) {
-      if (!props.hasOwnProperty(key)) {
-        data[key] = (instance as any)[key]
-      }
+    if (!isReservedKey(key) && !props.hasOwnProperty(key)) {
+      data[key] = (instance as any)[key]
     }
   }
   return data
