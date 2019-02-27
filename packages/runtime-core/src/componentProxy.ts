@@ -1,7 +1,7 @@
 import { ComponentInstance } from './component'
-import { isFunction, isReservedKey } from '@vue/shared'
+import { isFunction } from '@vue/shared'
 import { isRendering } from './componentRenderUtils'
-import { reservedMethods } from './componentOptions'
+import { isReservedKey, reservedMethods } from './componentOptions'
 import { warn } from './warning'
 
 const bindCache = new WeakMap()

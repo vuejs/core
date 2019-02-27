@@ -5,7 +5,8 @@ import {
   PropOptions,
   Prop,
   PropType,
-  ComponentPropsOptions
+  ComponentPropsOptions,
+  isReservedKey
 } from './componentOptions'
 import {
   EMPTY_OBJ,
@@ -43,6 +44,15 @@ export function initializeProps(
       ? immutable(attrs)
       : attrs
     : instance.$props
+  // expose initial props on the raw instance so that they can be accessed
+  // in the child class constructor by class field initializers.
+  if (options != null) {
+    for (const key in props) {
+      // it's okay to just set it here because props options are normalized
+      // and reserved keys should have been filtered away
+      ;(instance as any)[key] = props[key]
+    }
+  }
 }
 
 // resolve raw VNode data.
@@ -59,7 +69,7 @@ export function resolveProps(
   rawData: any,
   _options: NormalizedPropsOptions | void
 ): [Data, Data] {
-  const hasDeclaredProps = _options !== void 0
+  const hasDeclaredProps = _options != null
   const options = _options as NormalizedPropsOptions
   if (!rawData && !hasDeclaredProps) {
     return EMPTY_PROPS
@@ -129,22 +139,32 @@ export function normalizePropsOptions(
       if (__DEV__ && !isString(raw[i])) {
         warn(`props must be strings when using array syntax.`, raw[i])
       }
-      normalized[camelize(raw[i])] = EMPTY_OBJ
+      const normalizedKey = camelize(raw[i])
+      if (!isReservedKey(normalizedKey)) {
+        normalized[normalizedKey] = EMPTY_OBJ
+      } else if (__DEV__) {
+        warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
+      }
     }
   } else {
     if (__DEV__ && !isObject(raw)) {
       warn(`invalid props options`, raw)
     }
     for (const key in raw) {
-      const opt = raw[key]
-      const prop = (normalized[camelize(key)] =
-        isArray(opt) || isFunction(opt) ? { type: opt } : opt)
-      if (prop) {
-        const booleanIndex = getTypeIndex(Boolean, prop.type)
-        const stringIndex = getTypeIndex(String, prop.type)
-        ;(prop as NormalizedProp)[BooleanFlags.shouldCast] = booleanIndex > -1
-        ;(prop as NormalizedProp)[BooleanFlags.shouldCastTrue] =
-          booleanIndex < stringIndex
+      const normalizedKey = camelize(key)
+      if (!isReservedKey(normalizedKey)) {
+        const opt = raw[key]
+        const prop = (normalized[normalizedKey] =
+          isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+        if (prop) {
+          const booleanIndex = getTypeIndex(Boolean, prop.type)
+          const stringIndex = getTypeIndex(String, prop.type)
+          ;(prop as NormalizedProp)[BooleanFlags.shouldCast] = booleanIndex > -1
+          ;(prop as NormalizedProp)[BooleanFlags.shouldCastTrue] =
+            booleanIndex < stringIndex
+        }
+      } else if (__DEV__) {
+        warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
       }
     }
   }

@@ -1,4 +1,6 @@
-import { PropValidator, Component } from '@vue/runtime-core'
+import { Component } from '../component'
+import { PropValidator } from '../componentOptions'
+import { camelize } from '@vue/shared'
 
 export function prop(
   target: Component | PropValidator<any>,
@@ -16,7 +18,7 @@ export function prop(
 
 function applyProp(target: any, key: string, options: PropValidator<any> = {}) {
   // here `target` is the prototype of the component class
-  Object.defineProperty(target, `__prop_${key}`, {
+  Object.defineProperty(target, `__prop_${camelize(key)}`, {
     value: options
   })
 }

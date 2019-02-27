@@ -105,6 +105,10 @@ export const reservedMethods: ReservedKeys = {
   renderTriggered: 1
 }
 
+export function isReservedKey(key: string): boolean {
+  return key[0] === '_' || key[0] === '$' || reservedMethods.hasOwnProperty(key)
+}
+
 // This is a special marker from the @prop decorator.
 // The decorator stores prop options on the Class' prototype as __prop_xxx
 const propPrefixRE = /^__prop_/
