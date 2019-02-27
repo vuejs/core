@@ -145,6 +145,7 @@ class InternalComponent implements PublicInstanceMethods {
       // so that the extended class constructor (and property initializers) can
       // access $props.
       this.$props = props
+      Object.assign(this, props)
     }
     if (__COMPAT__) {
       ;(this as any)._eventEmitter = new EventEmitter(this)

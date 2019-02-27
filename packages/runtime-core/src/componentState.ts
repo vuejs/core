@@ -20,12 +20,11 @@ export function extractInitializers(
   data: any = {}
 ): any {
   const keys = Object.keys(instance)
-  const props = instance.$options.props
+  const props = instance.$props
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]
     if (!isReservedKey(key)) {
-      // it's possible for a prop to be present here when it's declared
-      if (!props || !props.hasOwnProperty(key)) {
+      if (!props.hasOwnProperty(key)) {
         data[key] = (instance as any)[key]
       }
     }

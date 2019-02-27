@@ -47,11 +47,9 @@ export function initializeProps(
   // expose initial props on the raw instance so that they can be accessed
   // in the child class constructor by class field initializers.
   if (options != null) {
-    for (const key in props) {
-      // it's okay to just set it here because props options are normalized
-      // and reserved keys should have been filtered away
-      ;(instance as any)[key] = props[key]
-    }
+    // it's okay to just set it here because props options are normalized
+    // and reserved keys should have been filtered away
+    Object.assign(instance, props)
   }
 }
 
