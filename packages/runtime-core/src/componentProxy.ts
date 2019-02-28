@@ -37,16 +37,18 @@ const renderProxyHandlers = {
       // computed
       return i[key]()
     } else if (key[0] !== '_') {
-      if (
-        __DEV__ &&
-        isRendering &&
-        !(key in target) &&
-        !(key in reservedMethods)
-      ) {
-        warn(
-          `property "${key}" was accessed during render but does not exist ` +
-            `on instance.`
-        )
+      if (__DEV__ && isRendering) {
+        if (key in reservedMethods) {
+          warn(
+            `"${key}" is a reserved method / lifecycle hook and should not be ` +
+              `used as a normal method during render.`
+          )
+        } else if (!(key in target)) {
+          warn(
+            `property "${key}" was accessed during render but does not exist ` +
+              `on instance.`
+          )
+        }
       }
       const value = Reflect.get(target, key, receiver)
       if (key !== 'constructor' && isFunction(value)) {
