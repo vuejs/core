@@ -30,6 +30,7 @@ export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
   readonly $options: ComponentOptions<P, D, this>
   readonly $refs: Record<string | symbol, any>
   readonly $proxy: this
+  readonly $self: this
 }
 
 interface PublicInstanceMethods {
@@ -99,10 +100,10 @@ export interface ComponentInstance<P = {}, D = {}>
   $root: ComponentInstance
   $children: ComponentInstance[]
   $options: ComponentOptions<P, D>
+  $self: ComponentInstance<P, D> // on proxies only
 
   _update: ReactiveEffect
   _queueJob: ((fn: () => void) => void)
-  _self: ComponentInstance<P, D> // on proxies only
 }
 
 // actual implementation of the component

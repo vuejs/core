@@ -56,11 +56,11 @@ export function callLifecycleHookWithHandler(
     const res = hook.call(instanceProxy, arg)
     if (res && !res._isVue && typeof res.then === 'function') {
       ;(res as Promise<any>).catch(err => {
-        handleError(err, instanceProxy._self, type)
+        handleError(err, instanceProxy.$self, type)
       })
     }
   } catch (err) {
-    handleError(err, instanceProxy._self, type)
+    handleError(err, instanceProxy.$self, type)
   }
 }
 
@@ -88,7 +88,7 @@ export function handleError(
     cur = (instance as ComponentInstance).$parent
   }
   while (cur) {
-    cur = cur._self
+    cur = cur.$self
     const handler = cur.errorCaptured
     if (handler) {
       try {
@@ -116,8 +116,9 @@ function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
     }
     if (/private field/.test(err.message)) {
       warn(
-        `Private fields are not supported in component classes because they ` +
-          `cannot be tunneled through Proxies.`
+        `Private fields cannot be accessed directly on \`this\` in a component ` +
+          `class because they cannot be tunneled through Proxies. ` +
+          `Use \`this.$self.#field\` instead.`
       )
     } else {
       warn(`Unhandled error${info ? ` ${info}` : ``}`)

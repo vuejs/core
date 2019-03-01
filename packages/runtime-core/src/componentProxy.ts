@@ -22,7 +22,7 @@ function getBoundMethod(fn: Function, target: any, receiver: any): Function {
 const renderProxyHandlers = {
   get(target: ComponentInstance<any, any>, key: string, receiver: any) {
     let i: any
-    if (key === '_self') {
+    if (key === '$self') {
       return target
     } else if ((i = target._rawData) !== null && i.hasOwnProperty(key)) {
       // data

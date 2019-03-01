@@ -91,7 +91,7 @@ export function initializeComponentInstance(instance: ComponentInstance) {
 }
 
 export function teardownComponentInstance(instance: ComponentInstance) {
-  const parentComponent = instance.$parent && instance.$parent._self
+  const parentComponent = instance.$parent && instance.$parent.$self
   if (parentComponent && !parentComponent._unmounted) {
     parentComponent.$children.splice(
       parentComponent.$children.indexOf(instance.$proxy),
