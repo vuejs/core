@@ -24,13 +24,12 @@ export { nextTick } from '@vue/scheduler'
 
 // Optional APIs
 // these are imported on-demand and can be tree-shaken
-export { applyDirectives } from './optional/directives'
 export { createAsyncComponent } from './optional/asyncComponent'
 export { KeepAlive } from './optional/keepAlive'
+export { applyDirectives } from './optional/directives'
 export { mixins } from './optional/mixins'
 export { EventEmitter } from './optional/eventEmitter'
 export { memoize } from './optional/memoize'
-export { prop } from './optional/propDecorator'
 
 // flags & types
 export { ComponentType, ComponentClass, FunctionalComponent } from './component'

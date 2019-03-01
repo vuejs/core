@@ -1,4 +1,4 @@
-import { prop } from '../src/optional/propDecorator'
+import { prop } from '../src/prop'
 import { Component, createInstance } from '@vue/runtime-test'
 
 test('without options', () => {

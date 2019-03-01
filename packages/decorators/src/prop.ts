@@ -1,5 +1,4 @@
-import { Component } from '../component'
-import { PropValidator } from '../componentOptions'
+import { Component, PropValidator } from '@vue/runtime-core'
 import { camelize } from '@vue/shared'
 
 export function prop(
