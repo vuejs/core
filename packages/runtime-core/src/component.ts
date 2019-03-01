@@ -72,7 +72,7 @@ export interface LifecycleMethods {
 
 export interface ComponentClass extends ComponentClassOptions {
   options?: ComponentOptions
-  new <P = {}, D = {}>(): Component<P, D> & D & P
+  new <P = {}, D = {}>(): Component<P, D>
 }
 
 export interface FunctionalComponent<P = {}> {
@@ -84,9 +84,9 @@ export interface FunctionalComponent<P = {}> {
 export type ComponentType = ComponentClass | FunctionalComponent
 
 // Internal type that represents a mounted instance.
-// It extends InternalComponent with mounted instance properties.
+// It extends ComponentImplementation with mounted instance properties.
 export interface ComponentInstance<P = {}, D = {}>
-  extends InternalComponent,
+  extends ComponentImplementation,
     Partial<APIMethods<P, D>>,
     Partial<LifecycleMethods> {
   constructor: ComponentClass
@@ -107,7 +107,7 @@ export interface ComponentInstance<P = {}, D = {}>
 }
 
 // actual implementation of the component
-class InternalComponent implements PublicInstanceMethods {
+class ComponentImplementation implements PublicInstanceMethods {
   get $el(): any {
     const el = this.$vnode && this.$vnode.el
     return typeof el === 'function' ? (el as any)() : el
@@ -125,6 +125,7 @@ class InternalComponent implements PublicInstanceMethods {
   $options: ComponentOptions | null = null
   $refs: Record<string, ComponentInstance | RenderNode> = {}
   $proxy: any = null
+  $self: any
 
   _rawData: Data | null = null
   _computedGetters: Record<string, ComputedGetter> | null = null
@@ -190,7 +191,7 @@ class InternalComponent implements PublicInstanceMethods {
 
 // legacy event emitter interface exposed on component instances
 if (__COMPAT__) {
-  const p = InternalComponent.prototype as any
+  const p = ComponentImplementation.prototype as any
   ;['on', 'off', 'once'].forEach(key => {
     p['$' + key] = function(...args: any[]) {
       this._eventEmitter[key](...args)
@@ -206,5 +207,5 @@ if (__COMPAT__) {
 }
 
 // the exported Component has the implementation details of the actual
-// InternalComponent class but with proper type inference of ComponentClass.
-export const Component = InternalComponent as ComponentClass
+// ComponentImplementation class but with proper type inference of ComponentClass.
+export const Component = ComponentImplementation as ComponentClass
