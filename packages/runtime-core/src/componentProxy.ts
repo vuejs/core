@@ -6,6 +6,7 @@ import { warn } from './warning'
 
 const bindCache = new WeakMap()
 
+// TODO: bound methods should also capture/handle errors
 function getBoundMethod(fn: Function, target: any, receiver: any): Function {
   let boundMethodsForTarget = bindCache.get(target)
   if (boundMethodsForTarget === void 0) {

@@ -10,16 +10,19 @@ export let isRendering = false
 export function renderInstanceRoot(instance: ComponentInstance): VNode {
   let vnode
   const { render, $proxy, $props, $slots, $attrs, $parentVNode } = instance
+  if (__DEV__) {
+    isRendering = true
+  }
   try {
-    if (__DEV__) {
-      isRendering = true
-    }
     vnode = render.call($proxy, $props, $slots, $attrs, $parentVNode)
+  } catch (err) {
     if (__DEV__) {
       isRendering = false
     }
-  } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER)
+  }
+  if (__DEV__) {
+    isRendering = false
   }
   return normalizeComponentRoot(vnode, $parentVNode)
 }
