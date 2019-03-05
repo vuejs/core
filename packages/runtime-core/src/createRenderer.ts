@@ -1249,7 +1249,9 @@ export function createRenderer(options: RendererOptions) {
     // a vnode may already have an instance if this is a compat call with
     // new Vue()
     const instance = ((__COMPAT__ && vnode.children) ||
-      createComponentInstance(vnode as any)) as ComponentInstance
+      (vnode.children = createComponentInstance(
+        vnode as any
+      ))) as ComponentInstance
 
     // inject platform-specific unmount to keep-alive container
     if ((vnode.tag as any)[KeepAliveSymbol] === true) {

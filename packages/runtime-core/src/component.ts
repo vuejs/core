@@ -14,6 +14,7 @@ import { ErrorTypes } from './errorHandling'
 import { initializeComponentInstance } from './componentInstance'
 import { EventEmitter, invokeListeners } from './optional/eventEmitter'
 import { warn } from './warning'
+import { ComponentProxy } from './componentProxy'
 
 // public component instance type
 export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
@@ -30,7 +31,6 @@ export interface Component<P = {}, D = {}> extends PublicInstanceMethods {
   readonly $options: ComponentOptions<P, D, this>
   readonly $refs: Record<string | symbol, any>
   readonly $proxy: this
-  readonly $self: this
 }
 
 interface PublicInstanceMethods {
@@ -97,10 +97,10 @@ export interface ComponentInstance<P = {}, D = {}>
   $props: P
   $attrs: Data
   $slots: Slots
-  $root: ComponentInstance
-  $children: ComponentInstance[]
+  $root: ComponentProxy
+  $children: ComponentProxy[]
   $options: ComponentOptions<P, D>
-  $self: ComponentInstance<P, D> // on proxies only
+  $proxy: ComponentProxy<this>
 
   _update: ReactiveEffect
   _queueJob: ((fn: () => void) => void)
@@ -119,13 +119,12 @@ class ComponentImplementation implements PublicInstanceMethods {
   $props: Data | null = null
   $attrs: Data | null = null
   $slots: Slots | null = null
-  $root: ComponentInstance | null = null
-  $parent: ComponentInstance | null = null
-  $children: ComponentInstance[] = []
+  $root: ComponentProxy | null = null
+  $parent: ComponentProxy | null = null
+  $children: ComponentProxy[] = []
   $options: ComponentOptions | null = null
   $refs: Record<string, ComponentInstance | RenderNode> = {}
-  $proxy: any = null
-  $self: any
+  $proxy: ComponentProxy<this> | null = null
 
   _rawData: Data | null = null
   _computedGetters: Record<string, ComputedGetter> | null = null
@@ -140,7 +139,11 @@ class ComponentImplementation implements PublicInstanceMethods {
 
   constructor(props?: object) {
     if (props === void 0) {
-      initializeComponentInstance(this as any)
+      // When invoked without any arguments, this is the default path where
+      // we initiailize a proper component instance. Note the returned value
+      // here is actually a proxy of the raw instance (and will be the `this`
+      // context) in all sub-class methods, including the constructor!
+      return initializeComponentInstance(this as any) as any
     } else {
       // the presence of the props argument indicates that this class is being
       // instantiated as a mixin, and should expose the props on itself

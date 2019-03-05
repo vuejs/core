@@ -17,7 +17,7 @@ class Vue {
     // convert it to a class
     const Component = createComponentClassFromOptions(options || {})
     const vnode = h(Component)
-    const instance = createComponentInstance(vnode)
+    const instance = (vnode.children = createComponentInstance(vnode))
 
     function mount(el: any) {
       const dom = typeof el === 'string' ? document.querySelector(el) : el
@@ -26,10 +26,10 @@ class Vue {
     }
 
     if (options.el) {
-      return mount(options.el)
+      return mount(options.el) as any
     } else {
       ;(instance as any).$mount = mount
-      return instance.$proxy
+      return instance.$proxy as any
     }
   }
 }

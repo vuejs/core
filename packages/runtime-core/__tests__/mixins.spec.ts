@@ -1,5 +1,6 @@
 import { Component, ComponentClass, mixins } from '@vue/runtime-core'
 import { createInstance } from '@vue/runtime-test'
+import { prop } from '@vue/decorators'
 
 const calls: string[] = []
 
@@ -9,10 +10,8 @@ beforeEach(() => {
 
 class ClassMixinA extends Component<{ p1: string }, { d11: number }> {
   // props
-  static props = {
-    p1: String
-  }
-
+  @prop
+  p1: string
   // data
   d1 = 1
   data() {
@@ -23,7 +22,7 @@ class ClassMixinA extends Component<{ p1: string }, { d11: number }> {
 
   // computed
   get c1() {
-    return this.d1 + this.d11
+    return this.d1 + this.$data.d11
   }
 
   // lifecycle
@@ -52,7 +51,7 @@ class ClassMixinB extends Component<{ p2: string }, { d21: number }> {
   }
 
   get c2() {
-    return this.d2 + this.d21
+    return this.d2 + this.$data.d21
   }
 
   // lifecycle
@@ -197,15 +196,15 @@ describe('mixins', () => {
 
     // data
     expect(instance.d1).toBe(1)
-    expect(instance.d11).toBe(2)
+    expect(instance.$data.d11).toBe(2)
     expect(instance.d2).toBe(1)
-    expect(instance.d21).toBe(2)
+    expect(instance.$data.d21).toBe(2)
     expect(instance.d3).toBe(1)
     expect(instance.d31).toBe(2)
 
     // props
     expect(instance.p1).toBe('1')
-    expect(instance.p2).toBe('2')
+    expect(instance.$props.p2).toBe('2')
     expect(instance.p3).toBe('3')
     expect(instance.$props.p1).toBe('1')
     expect(instance.$props.p2).toBe('2')
@@ -246,7 +245,7 @@ describe('mixins', () => {
       }
 
       get c3() {
-        return this.d3 + this.d31
+        return this.d3 + this.$data.d31
       }
 
       created() {
@@ -278,7 +277,7 @@ describe('mixins', () => {
       }
 
       get c3() {
-        return this.d3 + this.d31
+        return this.d3 + this.$data.d31
       }
 
       created() {

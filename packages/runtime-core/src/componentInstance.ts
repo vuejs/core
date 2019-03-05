@@ -1,10 +1,10 @@
 import { VNode, MountedVNode } from './vdom'
-import { Component, ComponentInstance, ComponentClass } from './component'
+import { ComponentInstance, ComponentClass } from './component'
 import { initializeState } from './componentState'
 import { initializeProps } from './componentProps'
 import { initializeWatch, teardownWatch } from './componentWatch'
 import { initializeComputed, teardownComputed } from './componentComputed'
-import { createRenderProxy } from './componentProxy'
+import { ComponentProxy, createRenderProxy } from './componentProxy'
 import { resolveComponentOptionsFromClass } from './componentOptions'
 import { VNodeFlags } from './flags'
 import { ErrorTypes, callLifecycleHookWithHandler } from './errorHandling'
@@ -14,25 +14,22 @@ import { EMPTY_OBJ } from '@vue/shared'
 let currentVNode: VNode | null = null
 let currentContextVNode: VNode | null = null
 
-export function createComponentInstance<T extends Component>(
-  vnode: VNode
-): ComponentInstance {
+export function createComponentInstance(vnode: VNode): ComponentInstance {
   // component instance creation is done in two steps.
   // first, `initializeComponentInstance` is called inside base component
   // constructor as the instance is created so that the extended component's
-  // constructor has access to certain properties and most importantly,
-  // this.$props.
+  // constructor has access to public properties and most importantly props.
   // we are storing the vnodes in variables here so that there's no need to
   // always pass args in super()
   currentVNode = vnode
   currentContextVNode = vnode.contextVNode
   const Component = vnode.tag as ComponentClass
-  const instance = (vnode.children = new Component() as ComponentInstance)
+  const instanceProxy = new Component() as ComponentProxy
+  const instance = instanceProxy._self
 
   // then we finish the initialization by collecting properties set on the
   // instance
   const {
-    $proxy,
     $options: { created, computed, watch }
   } = instance
   initializeState(instance, !Component.fromOptions)
@@ -41,7 +38,7 @@ export function createComponentInstance<T extends Component>(
   instance.$slots = currentVNode.slots || EMPTY_OBJ
 
   if (created) {
-    callLifecycleHookWithHandler(created, $proxy, ErrorTypes.CREATED)
+    callLifecycleHookWithHandler(created, instanceProxy, ErrorTypes.CREATED)
   }
 
   currentVNode = currentContextVNode = null
@@ -50,8 +47,11 @@ export function createComponentInstance<T extends Component>(
 
 // this is called inside the base component's constructor
 // it initializes all the way up to props so that they are available
-// inside the extended component's constructor
-export function initializeComponentInstance(instance: ComponentInstance) {
+// inside the extended component's constructor, and returns the proxy of the
+// raw instance.
+export function initializeComponentInstance<T extends ComponentInstance>(
+  instance: T
+): ComponentProxy<T> {
   if (__DEV__ && currentVNode === null) {
     throw new Error(
       `Component classes are not meant to be manually instantiated.`
@@ -88,10 +88,12 @@ export function initializeComponentInstance(instance: ComponentInstance) {
     callLifecycleHookWithHandler(beforeCreate, proxy, ErrorTypes.BEFORE_CREATE)
   }
   initializeProps(instance, props, (currentVNode as VNode).data)
+
+  return proxy
 }
 
 export function teardownComponentInstance(instance: ComponentInstance) {
-  const parentComponent = instance.$parent && instance.$parent.$self
+  const parentComponent = instance.$parent && instance.$parent._self
   if (parentComponent && !parentComponent._unmounted) {
     parentComponent.$children.splice(
       parentComponent.$children.indexOf(instance.$proxy),

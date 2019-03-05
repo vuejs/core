@@ -44,13 +44,6 @@ export function initializeProps(
       ? immutable(attrs)
       : attrs
     : instance.$props
-  // expose initial props on the raw instance so that they can be accessed
-  // in the child class constructor by class field initializers.
-  if (options != null) {
-    // it's okay to just set it here because props options are normalized
-    // and reserved keys should have been filtered away
-    Object.assign(instance, props)
-  }
 }
 
 // resolve raw VNode data.

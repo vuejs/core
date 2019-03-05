@@ -2,6 +2,7 @@ import { ComponentInstance } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
 import { VNode } from './vdom'
 import { VNodeFlags } from './flags'
+import { ComponentProxy } from './componentProxy'
 
 export const enum ErrorTypes {
   BEFORE_CREATE = 1,
@@ -48,7 +49,7 @@ const ErrorTypeStrings: Record<number, string> = {
 
 export function callLifecycleHookWithHandler(
   hook: Function,
-  instanceProxy: ComponentInstance,
+  instanceProxy: ComponentProxy,
   type: ErrorTypes,
   arg?: any
 ) {
@@ -56,11 +57,11 @@ export function callLifecycleHookWithHandler(
     const res = hook.call(instanceProxy, arg)
     if (res && !res._isVue && typeof res.then === 'function') {
       ;(res as Promise<any>).catch(err => {
-        handleError(err, instanceProxy.$self, type)
+        handleError(err, instanceProxy._self, type)
       })
     }
   } catch (err) {
-    handleError(err, instanceProxy.$self, type)
+    handleError(err, instanceProxy._self, type)
   }
 }
 
@@ -85,10 +86,10 @@ export function handleError(
       cur = vnode.children as ComponentInstance
     }
   } else if (instance) {
-    cur = (instance as ComponentInstance).$parent
+    const parent = (instance as ComponentInstance).$parent
+    cur = parent && parent._self
   }
   while (cur) {
-    cur = cur.$self
     const handler = cur.errorCaptured
     if (handler) {
       try {
@@ -103,7 +104,7 @@ export function handleError(
         logError(err2, ErrorTypes.ERROR_CAPTURED, contextVNode)
       }
     }
-    cur = cur.$parent
+    cur = cur.$parent && cur.$parent._self
   }
   logError(err, type, contextVNode)
 }
@@ -118,7 +119,7 @@ function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
       warn(
         `Private fields cannot be accessed directly on \`this\` in a component ` +
           `class because they cannot be tunneled through Proxies. ` +
-          `Use \`this.$self.#field\` instead.`
+          `Use \`this._self.#field\` instead.`
       )
     } else {
       warn(`Unhandled error${info ? ` ${info}` : ``}`)
