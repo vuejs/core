@@ -8,7 +8,6 @@ import { isOn } from '@vue/shared'
 
 // value, checked, selected & muted
 // plus anything with upperCase letter in it are always patched as properties
-const domPropsRE = /\W|^(?:value|checked|selected|muted)$/
 const domPropsReplaceRE = /^domProps/
 
 export function patchData(
@@ -32,7 +31,7 @@ export function patchData(
     default:
       if (isOn(key)) {
         patchEvent(el, key.slice(2).toLowerCase(), prevValue, nextValue)
-      } else if (domPropsRE.test(key)) {
+      } else if (key in el) {
         patchDOMProp(
           el,
           key.replace(domPropsReplaceRE, '').toLowerCase(),
