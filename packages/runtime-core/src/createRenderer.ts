@@ -1,21 +1,54 @@
 // TODO:
-// - app context
 // - component
 // - lifecycle
+// - app context
+// - svg
 // - refs
-// - reused nodes
 // - hydration
+// - warning context
+// - parent chain
+// - reused nodes (warning)
 
-import { Text, Fragment, Empty, createVNode } from './h.js'
-
+import {
+  Text,
+  Fragment,
+  Empty,
+  createVNode,
+  VNode,
+  VNodeChildren
+} from './h.js'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 
 const emptyArr: any[] = []
-const emptyObj = {}
+const emptyObj: { [key: string]: any } = {}
 
-const isSameType = (n1, n2) => n1.type === n2.type && n1.key === n2.key
+function isSameType(n1: VNode, n2: VNode): boolean {
+  return n1.type === n2.type && n1.key === n2.key
+}
 
-export function createRenderer(hostConfig) {
+export type HostNode = any
+
+export interface RendererOptions {
+  patchProp(
+    el: HostNode,
+    key: string,
+    value: any,
+    oldValue: any,
+    isSVG: boolean,
+    prevChildren?: VNode[],
+    unmountChildren?: (children: VNode[]) => void
+  ): void
+  insert(el: HostNode, parent: HostNode, anchor?: HostNode): void
+  remove(el: HostNode): void
+  createElement(type: string): HostNode
+  createText(text: string): HostNode
+  createComment(text: string): HostNode
+  setText(node: HostNode, text: string): void
+  setElementText(node: HostNode, text: string): void
+  nextSibling(node: HostNode): HostNode | null
+}
+
+export function createRenderer(options: RendererOptions) {
   const {
     insert,
     remove,
@@ -26,9 +59,15 @@ export function createRenderer(hostConfig) {
     setText: hostSetText,
     setElementText: hostSetElementText,
     nextSibling: hostNextSibling
-  } = hostConfig
+  } = options
 
-  function patch(n1, n2, container, anchor, optimized) {
+  function patch(
+    n1: VNode | null, // null means this is a mount
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
       anchor = hostNextSibling(n1.el)
@@ -50,18 +89,28 @@ export function createRenderer(hostConfig) {
     }
   }
 
-  function processText(n1, n2, container, anchor) {
+  function processText(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode
+  ) {
     if (n1 == null) {
-      insert((n2.el = hostCreateText(n2.children)), container, anchor)
+      insert((n2.el = hostCreateText(n2.children as string)), container, anchor)
     } else {
       const el = (n2.el = n1.el)
       if (n2.children !== n1.children) {
-        hostSetText(el, n2, children)
+        hostSetText(el, n2.children as string)
       }
     }
   }
 
-  function processEmptyNode(n1, n2, container, anchor) {
+  function processEmptyNode(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode
+  ) {
     if (n1 == null) {
       insert((n2.el = hostCreateComment('')), container, anchor)
     } else {
@@ -69,51 +118,65 @@ export function createRenderer(hostConfig) {
     }
   }
 
-  function processElement(n1, n2, container, anchor, optimized) {
+  function processElement(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     // mount
     if (n1 == null) {
       mountElement(n2, container, anchor)
     } else {
-      patchElement(n1, n2, container, optimized)
+      patchElement(n1, n2, optimized)
     }
   }
 
-  function mountElement(vnode, container, anchor) {
-    const el = (vnode.el = hostCreateElement(vnode.type))
+  function mountElement(vnode: VNode, container: HostNode, anchor?: HostNode) {
+    const el = (vnode.el = hostCreateElement(vnode.type as string))
     if (vnode.props != null) {
       for (const key in vnode.props) {
-        hostPatchProp(el, key, vnode.props[key], null)
+        hostPatchProp(el, key, vnode.props[key], null, false)
       }
     }
     if (typeof vnode.children === 'string') {
       hostSetElementText(el, vnode.children)
-    } else {
+    } else if (vnode.children != null) {
       mountChildren(vnode.children, el)
     }
     insert(el, container, anchor)
   }
 
-  function mountChildren(children, container, anchor, start = 0) {
+  function mountChildren(
+    children: VNodeChildren,
+    container: HostNode,
+    anchor?: HostNode,
+    start: number = 0
+  ) {
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = normalizeChild(children[i]))
       patch(null, child, container, anchor)
     }
   }
 
-  function normalizeChild(child) {
-    // empty placeholder
+  function normalizeChild(child: any): VNode {
     if (child == null) {
+      // empty placeholder
       return createVNode(Empty)
-    } else if (typeof child === 'string' || typeof child === 'number') {
-      return createVNode(Text, null, child + '')
     } else if (Array.isArray(child)) {
+      // fragment
       return createVNode(Fragment, null, child)
+    } else if (typeof child === 'object') {
+      // already vnode
+      return child as VNode
     } else {
-      return child
+      // primitive types
+      return createVNode(Text, null, child + '')
     }
   }
 
-  function patchElement(n1, n2, container, optimized) {
+  function patchElement(n1: VNode, n2: VNode, optimized?: boolean) {
     const el = (n2.el = n1.el)
     const { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || emptyObj
@@ -138,7 +201,7 @@ export function createRenderer(hostConfig) {
       // this flag is matched when the element has dynamic style bindings
       // TODO separate static and dynamic styles?
       if (patchFlag & STYLE) {
-        setStyles(el.style, oldProps.style, newProps.style)
+        hostPatchProp(el, 'style', oldProps.style, newProps.style, false)
       }
 
       // props
@@ -148,13 +211,22 @@ export function createRenderer(hostConfig) {
       // Note dynamic keys like :[foo]="bar" will cause this optimization to
       // bail out and go through a full diff because we need to unset the old key
       if (patchFlag & PROPS) {
-        const propsToUpdate = n2.dynamicProps
+        // if the flag is present then dynamicProps must be non-null
+        const propsToUpdate = n2.dynamicProps as string[]
         for (let i = 0; i < propsToUpdate.length; i++) {
           const key = propsToUpdate[i]
           const prev = oldProps[key]
           const next = newProps[key]
           if (prev !== next) {
-            hostPatchProp(el, key, next, prev)
+            hostPatchProp(
+              el,
+              key,
+              next,
+              prev,
+              false,
+              n1.children as VNode[],
+              unmountChildren
+            )
           }
         }
       }
@@ -164,18 +236,18 @@ export function createRenderer(hostConfig) {
       // this flag is terminal (i.e. skips children diffing).
       if (patchFlag & TEXT) {
         if (n1.children !== n2.children) {
-          hostSetElementText(el, n2.children)
+          hostSetElementText(el, n2.children as string)
         }
         return // terminal
       }
     } else if (!optimized) {
       // unoptimized, full diff
-      patchProps(el, oldProps, newProps)
+      patchProps(el, n2, oldProps, newProps)
     }
 
     if (dynamicChildren != null) {
       // children fast path
-      const olddynamicChildren = n1.dynamicChildren
+      const olddynamicChildren = n1.dynamicChildren as VNode[]
       for (let i = 0; i < dynamicChildren.length; i++) {
         patch(olddynamicChildren[i], dynamicChildren[i], el, null, true)
       }
@@ -185,36 +257,70 @@ export function createRenderer(hostConfig) {
     }
   }
 
-  function patchProps(el, oldProps, newProps) {
+  function patchProps(
+    el: HostNode,
+    vnode: VNode,
+    oldProps: any,
+    newProps: any
+  ) {
     if (oldProps !== newProps) {
       for (const key in newProps) {
         const next = newProps[key]
         const prev = oldProps[key]
         if (next !== prev) {
-          hostPatchProp(el, key, next, prev)
+          hostPatchProp(
+            el,
+            key,
+            next,
+            prev,
+            false,
+            vnode.children as VNode[],
+            unmountChildren
+          )
         }
       }
       if (oldProps !== emptyObj) {
         for (const key in oldProps) {
           if (!(key in newProps)) {
-            hostPatchProp(el, key, null, null)
+            hostPatchProp(
+              el,
+              key,
+              null,
+              null,
+              false,
+              vnode.children as VNode[],
+              unmountChildren
+            )
           }
         }
       }
     }
   }
 
-  function processFragment(n1, n2, container, anchor, optimized) {
+  function processFragment(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     const fragmentAnchor = (n2.el = n1 ? n1.el : document.createComment(''))
     if (n1 == null) {
       insert(fragmentAnchor, container, anchor)
-      mountChildren(n2.children, container, fragmentAnchor)
+      // a fragment can only have array children
+      mountChildren(n2.children as VNodeChildren, container, fragmentAnchor)
     } else {
       patchChildren(n1, n2, container, fragmentAnchor, optimized)
     }
   }
 
-  function patchChildren(n1, n2, container, anchor, optimized) {
+  function patchChildren(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     const c1 = n1 && n1.children
     const c2 = n2.children
 
@@ -223,11 +329,24 @@ export function createRenderer(hostConfig) {
     if (patchFlag != null) {
       if (patchFlag & KEYED) {
         // this could be either fully-keyed or mixed (some keyed some not)
-        patchKeyedChildren(c1, c2, container, anchor, optimized)
+        // presence of patchFlag means children are guaranteed to be arrays
+        patchKeyedChildren(
+          c1 as VNode[],
+          c2 as VNodeChildren,
+          container,
+          anchor,
+          optimized
+        )
         return
       } else if (patchFlag & UNKEYED) {
         // unkeyed
-        patchUnkeyedChildren(c1, c2, container, anchor, optimized)
+        patchUnkeyedChildren(
+          c1 as VNode[],
+          c2 as VNodeChildren,
+          container,
+          anchor,
+          optimized
+        )
         return
       }
     }
@@ -235,21 +354,34 @@ export function createRenderer(hostConfig) {
     if (typeof c2 === 'string') {
       // text children fast path
       if (Array.isArray(c1)) {
-        unmountChildren(c1, false)
+        unmountChildren(c1 as VNode[])
       }
       hostSetElementText(container, c2)
     } else {
       if (typeof c1 === 'string') {
-        hostSetElementText('')
-        mountChildren(c2, container, anchor)
-      } else {
-        // two arrays, cannot assume anything, do full diff
-        patchKeyedChildren(c1, c2, container, anchor, optimized)
+        hostSetElementText(container, '')
+        if (c2 != null) {
+          mountChildren(c2, container, anchor)
+        }
+      } else if (Array.isArray(c1)) {
+        if (Array.isArray(c2)) {
+          // two arrays, cannot assume anything, do full diff
+          patchKeyedChildren(c1 as VNode[], c2, container, anchor, optimized)
+        } else {
+          // c2 is null in this case
+          unmountChildren(c1 as VNode[], 0, true)
+        }
       }
     }
   }
 
-  function patchUnkeyedChildren(c1, c2, container, anchor, optimized) {
+  function patchUnkeyedChildren(
+    c1: VNode[],
+    c2: VNodeChildren,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     c1 = c1 || emptyArr
     c2 = c2 || emptyArr
     const oldLength = c1.length
@@ -270,30 +402,43 @@ export function createRenderer(hostConfig) {
   }
 
   // can be all-keyed or mixed
-  function patchKeyedChildren(c1, c2, container, anchor, optimized) {
+  function patchKeyedChildren(
+    c1: VNode[],
+    c2: VNodeChildren,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
     // TODO
     patchUnkeyedChildren(c1, c2, container, anchor, optimized)
   }
 
-  function unmount(vnode, doRemove) {
+  function unmount(vnode: VNode, doRemove?: boolean) {
+    if (vnode.dynamicChildren != null) {
+      unmountChildren(vnode.dynamicChildren)
+    } else if (Array.isArray(vnode.children)) {
+      unmountChildren(vnode.children as VNode[])
+    }
     if (doRemove) {
       if (vnode.type === Fragment) {
-        unmountChildren(vnode.children, 0, doRemove)
+        // raw VNodeChildren is normalized to VNode[] when the VNode is patched
+        unmountChildren(vnode.children as VNode[], 0, doRemove)
       }
       remove(vnode.el)
     }
-    if (Array.isArray(vnode.children)) {
-      unmountChildren(vnode.children)
-    }
   }
 
-  function unmountChildren(children, start = 0, doRemove) {
+  function unmountChildren(
+    children: VNode[],
+    start: number = 0,
+    doRemove?: boolean
+  ) {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], doRemove)
     }
   }
 
-  return function render(vnode, dom) {
+  return function render(vnode: VNode, dom: HostNode): VNode {
     patch(dom._vnode, vnode, dom)
     return (dom._vnode = vnode)
   }

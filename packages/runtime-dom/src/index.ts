@@ -1,17 +1,10 @@
-import { createRenderer, Component } from '@vue/runtime-core'
-import { nodeOps } from './nodeOps'
-import { patchData } from './patchData'
+import { createRenderer, VNode } from '@vue/runtime-core'
+import { DOMRendererOptions } from './rendererOptions'
 
-const { render: _render } = createRenderer({
-  nodeOps,
-  patchData
-})
-
-type publicRender = (
-  node: {} | null,
+export const render = createRenderer(DOMRendererOptions) as (
+  vnode: VNode | null,
   container: HTMLElement
-) => Promise<Component | null>
-export const render = _render as publicRender
+) => VNode
 
 // re-export everything from core
 // h, Component, observer API, nextTick, flags & types

@@ -1,18 +1,12 @@
-import { VNode, ChildrenFlags } from '@vue/runtime-core'
-
 export function patchDOMProp(
   el: any,
   key: string,
   value: any,
-  prevVNode: VNode,
+  prevChildren: any,
   unmountChildren: any
 ) {
-  if (key === 'innerHTML' || key === 'textContent') {
-    if (prevVNode && prevVNode.children) {
-      unmountChildren(prevVNode.children, prevVNode.childFlags)
-      prevVNode.children = null
-      prevVNode.childFlags = ChildrenFlags.NO_CHILDREN
-    }
+  if ((key === 'innerHTML' || key === 'textContent') && prevChildren != null) {
+    unmountChildren(prevChildren)
   }
   el[key] = value
 }

@@ -1,24 +1,19 @@
-import { VNode } from '@vue/runtime-core'
 import { patchClass } from './modules/class'
 import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn } from '@vue/shared'
+import { VNode } from '@vue/runtime-core'
 
-// value, checked, selected & muted
-// plus anything with upperCase letter in it are always patched as properties
-const domPropsReplaceRE = /^domProps/
-
-export function patchData(
+export function patchProp(
   el: Element,
   key: string,
   prevValue: any,
   nextValue: any,
-  prevVNode: VNode,
-  nextVNode: VNode,
   isSVG: boolean,
-  unmountChildren: any
+  prevChildren?: VNode[],
+  unmountChildren?: any
 ) {
   switch (key) {
     // special
@@ -26,19 +21,13 @@ export function patchData(
       patchClass(el, nextValue, isSVG)
       break
     case 'style':
-      patchStyle(el, prevValue, nextValue, nextVNode.data)
+      patchStyle(el, prevValue, nextValue)
       break
     default:
       if (isOn(key)) {
         patchEvent(el, key.slice(2).toLowerCase(), prevValue, nextValue)
       } else if (key in el) {
-        patchDOMProp(
-          el,
-          key.replace(domPropsReplaceRE, '').toLowerCase(),
-          nextValue,
-          prevVNode,
-          unmountChildren
-        )
+        patchDOMProp(el, key, nextValue, prevChildren, unmountChildren)
       } else {
         patchAttr(el, key, nextValue, isSVG)
       }

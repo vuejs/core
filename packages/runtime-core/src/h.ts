@@ -13,6 +13,7 @@ export type VNodeChild = VNode | string | number | null
 export interface VNodeChildren extends Array<VNodeChildren | VNodeChild> {}
 
 export interface VNode {
+  el: any
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
@@ -58,6 +59,7 @@ export function createVNode(
   dynamicProps: string[] | null = null
 ): VNode {
   const vnode: VNode = {
+    el: null,
     type,
     props,
     key: props && props.key,
@@ -81,4 +83,5 @@ function trackDynamicNode(vnode: VNode) {
 
 export function cloneVNode(vnode: VNode): VNode {
   // TODO
+  return vnode
 }

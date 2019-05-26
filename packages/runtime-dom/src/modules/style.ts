@@ -1,6 +1,6 @@
 import { isString } from '@vue/shared'
 
-export function patchStyle(el: any, prev: any, next: any, data: any) {
+export function patchStyle(el: any, prev: any, next: any) {
   const { style } = el
   if (!next) {
     el.removeAttribute('style')
