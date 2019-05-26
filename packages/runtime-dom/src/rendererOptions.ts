@@ -6,7 +6,7 @@ const svgNS = 'http://www.w3.org/2000/svg'
 export const DOMRendererOptions: RendererOptions = {
   patchProp,
 
-  insert: (parent: Node, child: Node, anchor?: Node) => {
+  insert: (child: Node, parent: Node, anchor?: Node) => {
     if (anchor != null) {
       parent.insertBefore(child, anchor)
     } else {

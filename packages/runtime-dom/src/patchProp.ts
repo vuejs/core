@@ -9,8 +9,8 @@ import { VNode } from '@vue/runtime-core'
 export function patchProp(
   el: Element,
   key: string,
-  prevValue: any,
   nextValue: any,
+  prevValue: any,
   isSVG: boolean,
   prevChildren?: VNode[],
   unmountChildren?: any

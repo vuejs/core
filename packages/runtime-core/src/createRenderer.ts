@@ -193,7 +193,7 @@ export function createRenderer(options: RendererOptions) {
       if (patchFlag & CLASS) {
         // TODO handle full class API, potentially optimize at compilation stage?
         if (oldProps.class !== newProps.class) {
-          el.className = newProps.class
+          hostPatchProp(el, 'class', newProps.class, null, false)
         }
       }
 
@@ -201,7 +201,7 @@ export function createRenderer(options: RendererOptions) {
       // this flag is matched when the element has dynamic style bindings
       // TODO separate static and dynamic styles?
       if (patchFlag & STYLE) {
-        hostPatchProp(el, 'style', oldProps.style, newProps.style, false)
+        hostPatchProp(el, 'style', newProps.style, oldProps.style, false)
       }
 
       // props
