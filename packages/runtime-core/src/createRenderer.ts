@@ -50,8 +50,8 @@ export interface RendererOptions {
 
 export function createRenderer(options: RendererOptions) {
   const {
-    insert,
-    remove,
+    insert: hostInsert,
+    remove: hostRemove,
     patchProp: hostPatchProp,
     createElement: hostCreateElement,
     createText: hostCreateText,
@@ -96,7 +96,11 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode
   ) {
     if (n1 == null) {
-      insert((n2.el = hostCreateText(n2.children as string)), container, anchor)
+      hostInsert(
+        (n2.el = hostCreateText(n2.children as string)),
+        container,
+        anchor
+      )
     } else {
       const el = (n2.el = n1.el)
       if (n2.children !== n1.children) {
@@ -112,7 +116,7 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode
   ) {
     if (n1 == null) {
-      insert((n2.el = hostCreateComment('')), container, anchor)
+      hostInsert((n2.el = hostCreateComment('')), container, anchor)
     } else {
       n2.el = n1.el
     }
@@ -145,7 +149,7 @@ export function createRenderer(options: RendererOptions) {
     } else if (vnode.children != null) {
       mountChildren(vnode.children, el)
     }
-    insert(el, container, anchor)
+    hostInsert(el, container, anchor)
   }
 
   function mountChildren(
@@ -309,8 +313,8 @@ export function createRenderer(options: RendererOptions) {
       ? n1.anchor
       : hostCreateComment(''))
     if (n1 == null) {
-      insert(fragmentStartAnchor, container, anchor)
-      insert(fragmentEndAnchor, container, anchor)
+      hostInsert(fragmentStartAnchor, container, anchor)
+      hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
       mountChildren(n2.children as VNodeChildren, container, fragmentEndAnchor)
     } else {
@@ -410,12 +414,13 @@ export function createRenderer(options: RendererOptions) {
     c1: VNode[],
     c2: VNodeChildren,
     container: HostNode,
-    anchor?: HostNode,
+    parentAnchor?: HostNode,
     optimized?: boolean
   ) {
     let i = 0
-    let e1 = c1.length - 1
-    let e2 = c2.length - 1
+    const l2 = c2.length
+    let e1 = c1.length - 1 // prev ending index
+    let e2 = l2 - 1 // next ending index
 
     // 1. sync from start
     // (a b) c
@@ -424,7 +429,7 @@ export function createRenderer(options: RendererOptions) {
       const n1 = c1[i]
       const n2 = (c2[i] = normalizeChild(c2[i]))
       if (isSameType(n1, n2)) {
-        patch(n1, n2, container, anchor, optimized)
+        patch(n1, n2, container, parentAnchor, optimized)
       } else {
         break
       }
@@ -438,7 +443,7 @@ export function createRenderer(options: RendererOptions) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = normalizeChild(c2[e2]))
       if (isSameType(n1, n2)) {
-        patch(n1, n2, container, anchor, optimized)
+        patch(n1, n2, container, parentAnchor, optimized)
       } else {
         break
       }
@@ -456,10 +461,9 @@ export function createRenderer(options: RendererOptions) {
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1
-        const nextAnchor =
-          nextPos < c2.length ? (c2[nextPos] as VNode).el : anchor
+        const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
-          patch(null, (c2[i] = normalizeChild(c2[i])), container, nextAnchor)
+          patch(null, (c2[i] = normalizeChild(c2[i])), container, anchor)
           i++
         }
       }
@@ -479,12 +483,98 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    // 5. inner diff
-    //  - build key:index map
-    //  - loop through old and try to patch / remove
-    //  - if moved: apply minimal move w/ levenshtein distance
-    //  - no move: mount and insert new ones
+    // 5. unknown sequence
     else {
+      let s1 = i // prev starting index
+      let s2 = i // next starting index
+
+      // 5.1 build key:index map for newChildren
+      const keyToNewIndexMap: Map<any, number> = new Map()
+      for (i = s2; i <= e2; i++) {
+        const nextChild = (c2[i] = normalizeChild(c2[i]))
+        if (nextChild.key != null) {
+          // TODO warn duplicate keys
+          keyToNewIndexMap.set(nextChild.key, i)
+        }
+      }
+
+      // 5.2 loop through old children left to be patched and try to patch
+      // matching nodes & remove nodes that are no longer present
+      let j
+      let patched = 0
+      const toBePatched = e2 - s2 + 1
+      let moved = false
+      let maxNewIndexSoFar = 0
+      const newIndexToOldIndexMap = [] // works as Map<newIndex, oldIndex>
+      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap.push(0)
+
+      for (i = s1; i <= e1; i++) {
+        const prevChild = c1[i]
+        if (patched >= toBePatched) {
+          unmount(prevChild, true)
+          continue
+        }
+        let newIndex
+        if (prevChild.key != null) {
+          newIndex = keyToNewIndexMap.get(prevChild.key)
+        } else {
+          // key-less node, try to locate a key-less node of the same type
+          for (j = s2; j < e2; j++) {
+            if (isSameType(prevChild, c2[j] as VNode)) {
+              newIndex = j
+              break
+            }
+          }
+        }
+        if (newIndex === undefined) {
+          unmount(prevChild, true)
+        } else {
+          newIndexToOldIndexMap[newIndex - s2] = i + 1
+          if (newIndex >= maxNewIndexSoFar) {
+            maxNewIndexSoFar = newIndex
+          } else {
+            moved = true
+          }
+          patch(prevChild, c2[newIndex] as VNode, container, null, optimized)
+          patched++
+        }
+      }
+
+      // 5.3 apply minimal move w/ longest increasing subsequence
+      const increasingNewIndexSequence = moved
+        ? getSequence(newIndexToOldIndexMap)
+        : emptyArr
+      j = increasingNewIndexSequence.length - 1
+      for (i = toBePatched - 1; i >= 0; i--) {
+        const nextIndex = s2 + i
+        const nextChild = c2[nextIndex] as VNode
+        const anchor =
+          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+        if (newIndexToOldIndexMap[i] === 0) {
+          // mount new
+          patch(null, nextChild, container, anchor)
+        } else if (moved) {
+          // move
+          if (j < 0 || i !== increasingNewIndexSequence[j]) {
+            move(nextChild, container, anchor)
+          } else {
+            j--
+          }
+        }
+      }
+    }
+  }
+
+  function move(vnode: VNode, container: HostNode, anchor: HostNode) {
+    if (vnode.type === Fragment) {
+      hostInsert(vnode.el, container, anchor)
+      const children = vnode.children as VNode[]
+      for (let i = 0; i < children.length; i++) {
+        hostInsert(children[i].el, container, anchor)
+      }
+      hostInsert(vnode.anchor, container, anchor)
+    } else {
+      hostInsert(vnode.el, container, anchor)
     }
   }
 
@@ -496,8 +586,8 @@ export function createRenderer(options: RendererOptions) {
       unmountChildren(vnode.children as VNode[], shouldRemoveChildren)
     }
     if (doRemove) {
-      remove(vnode.el)
-      if (vnode.anchor != null) remove(vnode.anchor)
+      hostRemove(vnode.el)
+      if (vnode.anchor != null) hostRemove(vnode.anchor)
     }
   }
 
@@ -515,4 +605,50 @@ export function createRenderer(options: RendererOptions) {
     patch(dom._vnode, vnode, dom)
     return (dom._vnode = vnode)
   }
+}
+
+// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+function getSequence(arr: number[]): number[] {
+  const p = arr.slice()
+  const result = [0]
+  let i
+  let j
+  let u
+  let v
+  let c
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      if (arr[j] < arrI) {
+        p[i] = j
+        result.push(i)
+        continue
+      }
+      u = 0
+      v = result.length - 1
+      while (u < v) {
+        c = ((u + v) / 2) | 0
+        if (arr[result[c]] < arrI) {
+          u = c + 1
+        } else {
+          v = c
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1]
+        }
+        result[u] = i
+      }
+    }
+  }
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
 }
