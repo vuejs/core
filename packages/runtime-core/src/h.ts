@@ -14,6 +14,7 @@ export interface VNodeChildren extends Array<VNodeChildren | VNodeChild> {}
 
 export interface VNode {
   el: any
+  anchor: any // fragment anchor
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
@@ -23,11 +24,11 @@ export interface VNode {
   dynamicChildren: VNode[] | null
 }
 
-const blockStack: (VNode[])[] = []
+const blockStack: (VNode[] | null)[] = []
 
 // open block
-export function openBlock() {
-  blockStack.push([])
+export function openBlock(disableTrackng?: boolean) {
+  blockStack.push(disableTrackng ? null : [])
 }
 
 let shouldTrack = true
@@ -44,7 +45,9 @@ export function createBlock(
   shouldTrack = false
   const vnode = createVNode(type, props, children, patchFlag, dynamicProps)
   shouldTrack = true
-  vnode.dynamicChildren = blockStack.pop() || null
+  const trackedNodes = blockStack.pop()
+  vnode.dynamicChildren =
+    trackedNodes && trackedNodes.length ? trackedNodes : null
   // a block is always going to be patched
   trackDynamicNode(vnode)
   return vnode
@@ -59,11 +62,12 @@ export function createVNode(
   dynamicProps: string[] | null = null
 ): VNode {
   const vnode: VNode = {
-    el: null,
     type,
     props,
     key: props && props.key,
     children,
+    el: null,
+    anchor: null,
     patchFlag,
     dynamicProps,
     dynamicChildren: null
@@ -76,7 +80,7 @@ export function createVNode(
 
 function trackDynamicNode(vnode: VNode) {
   const currentBlockDynamicNodes = blockStack[blockStack.length - 1]
-  if (currentBlockDynamicNodes) {
+  if (currentBlockDynamicNodes != null) {
     currentBlockDynamicNodes.push(vnode)
   }
 }

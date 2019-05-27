@@ -70,7 +70,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
-      anchor = hostNextSibling(n1.el)
+      anchor = hostNextSibling(n1.anchor || n1.el)
       unmount(n1, true)
       n1 = null
     }
@@ -304,13 +304,17 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode,
     optimized?: boolean
   ) {
-    const fragmentAnchor = (n2.el = n1 ? n1.el : document.createComment(''))
+    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))
+    const fragmentEndAnchor = (n2.anchor = n1
+      ? n1.anchor
+      : hostCreateComment(''))
     if (n1 == null) {
-      insert(fragmentAnchor, container, anchor)
+      insert(fragmentStartAnchor, container, anchor)
+      insert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
-      mountChildren(n2.children as VNodeChildren, container, fragmentAnchor)
+      mountChildren(n2.children as VNodeChildren, container, fragmentEndAnchor)
     } else {
-      patchChildren(n1, n2, container, fragmentAnchor, optimized)
+      patchChildren(n1, n2, container, fragmentEndAnchor, optimized)
     }
   }
 
@@ -369,7 +373,7 @@ export function createRenderer(options: RendererOptions) {
           patchKeyedChildren(c1 as VNode[], c2, container, anchor, optimized)
         } else {
           // c2 is null in this case
-          unmountChildren(c1 as VNode[], 0, true)
+          unmountChildren(c1 as VNode[], true)
         }
       }
     }
@@ -394,7 +398,7 @@ export function createRenderer(options: RendererOptions) {
     }
     if (oldLength > newLength) {
       // remove old
-      unmountChildren(c1, commonLength, true)
+      unmountChildren(c1, true, commonLength)
     } else {
       // mount new
       mountChildren(c2, container, anchor, commonLength)
@@ -409,29 +413,98 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode,
     optimized?: boolean
   ) {
-    // TODO
-    patchUnkeyedChildren(c1, c2, container, anchor, optimized)
+    let i = 0
+    let e1 = c1.length - 1
+    let e2 = c2.length - 1
+
+    // 1. sync from start
+    // (a b) c
+    // (a b) d e
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[i]
+      const n2 = (c2[i] = normalizeChild(c2[i]))
+      if (isSameType(n1, n2)) {
+        patch(n1, n2, container, anchor, optimized)
+      } else {
+        break
+      }
+      i++
+    }
+
+    // 2. sync from end
+    // a (b c)
+    // d e (b c)
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[e1]
+      const n2 = (c2[e2] = normalizeChild(c2[e2]))
+      if (isSameType(n1, n2)) {
+        patch(n1, n2, container, anchor, optimized)
+      } else {
+        break
+      }
+      e1--
+      e2--
+    }
+
+    // 3. common sequence + mount
+    // (a b)
+    // (a b) c
+    // i = 2, e1 = 1, e2 = 2
+    // (a b)
+    // c (a b)
+    // i = 0, e1 = -1, e2 = 0
+    if (i > e1) {
+      if (i <= e2) {
+        const nextPos = e2 + 1
+        const nextAnchor =
+          nextPos < c2.length ? (c2[nextPos] as VNode).el : anchor
+        while (i <= e2) {
+          patch(null, (c2[i] = normalizeChild(c2[i])), container, nextAnchor)
+          i++
+        }
+      }
+    }
+
+    // 4. common sequence + unmount
+    // (a b) c
+    // (a b)
+    // i = 2, e1 = 2, e2 = 1
+    // a (b c)
+    // (b c)
+    // i = 0, e1 = 0, e2 = -1
+    else if (i > e2) {
+      while (i <= e1) {
+        unmount(c1[i], true)
+        i++
+      }
+    }
+
+    // 5. inner diff
+    //  - build key:index map
+    //  - loop through old and try to patch / remove
+    //  - if moved: apply minimal move w/ levenshtein distance
+    //  - no move: mount and insert new ones
+    else {
+    }
   }
 
   function unmount(vnode: VNode, doRemove?: boolean) {
+    const shouldRemoveChildren = vnode.type === Fragment && doRemove
     if (vnode.dynamicChildren != null) {
-      unmountChildren(vnode.dynamicChildren)
+      unmountChildren(vnode.dynamicChildren, shouldRemoveChildren)
     } else if (Array.isArray(vnode.children)) {
-      unmountChildren(vnode.children as VNode[])
+      unmountChildren(vnode.children as VNode[], shouldRemoveChildren)
     }
     if (doRemove) {
-      if (vnode.type === Fragment) {
-        // raw VNodeChildren is normalized to VNode[] when the VNode is patched
-        unmountChildren(vnode.children as VNode[], 0, doRemove)
-      }
       remove(vnode.el)
+      if (vnode.anchor != null) remove(vnode.anchor)
     }
   }
 
   function unmountChildren(
     children: VNode[],
-    start: number = 0,
-    doRemove?: boolean
+    doRemove?: boolean,
+    start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], doRemove)

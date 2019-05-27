@@ -15,6 +15,7 @@ export const DOMRendererOptions: RendererOptions = {
   },
 
   remove: (child: Node) => {
+    if (!child) debugger
     const parent = child.parentNode
     if (parent != null) {
       parent.removeChild(child)
