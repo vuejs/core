@@ -484,9 +484,12 @@ export function createRenderer(options: RendererOptions) {
     }
 
     // 5. unknown sequence
+    // [i ... e1 + 1]: a b [c d e] f g
+    // [i ... e2 + 1]: a b [e d c h] f g
+    // i = 2, e1 = 4, e2 = 5
     else {
-      let s1 = i // prev starting index
-      let s2 = i // next starting index
+      const s1 = i // prev starting index
+      const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<any, number> = new Map()
@@ -504,13 +507,20 @@ export function createRenderer(options: RendererOptions) {
       let patched = 0
       const toBePatched = e2 - s2 + 1
       let moved = false
+      // used to track whether any node has moved
       let maxNewIndexSoFar = 0
-      const newIndexToOldIndexMap = [] // works as Map<newIndex, oldIndex>
+      // works as Map<newIndex, oldIndex>
+      // Note that oldIndex is offset by +1
+      // and oldIndex = 0 is a special value indicating the new node has
+      // no corresponding old node.
+      // used for determining longest stable subsequence
+      const newIndexToOldIndexMap = []
       for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap.push(0)
 
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
         if (patched >= toBePatched) {
+          // all new children have been patched so this can only be a removal
           unmount(prevChild, true)
           continue
         }
@@ -519,7 +529,7 @@ export function createRenderer(options: RendererOptions) {
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
           // key-less node, try to locate a key-less node of the same type
-          for (j = s2; j < e2; j++) {
+          for (j = s2; j <= e2; j++) {
             if (isSameType(prevChild, c2[j] as VNode)) {
               newIndex = j
               break
@@ -540,11 +550,13 @@ export function createRenderer(options: RendererOptions) {
         }
       }
 
-      // 5.3 apply minimal move w/ longest increasing subsequence
+      // 5.3 move and mount
+      // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
         : emptyArr
       j = increasingNewIndexSequence.length - 1
+      // looping backwards so that we can use last patched node as anchor
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
         const nextChild = c2[nextIndex] as VNode
@@ -554,7 +566,9 @@ export function createRenderer(options: RendererOptions) {
           // mount new
           patch(null, nextChild, container, anchor)
         } else if (moved) {
-          // move
+          // move if:
+          // There is no stable subsequence (e.g. a reverse)
+          // OR current node is not among the stable sequence
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
             move(nextChild, container, anchor)
           } else {
