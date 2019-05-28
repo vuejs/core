@@ -1,29 +1,34 @@
 import { isArray, isFunction } from '@vue/shared'
+import { ComponentHandle } from './component'
+import { HostNode } from './createRenderer'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
 export const Empty = Symbol('Empty')
+export const Portal = Symbol('Portal')
 
 type VNodeTypes =
   | string
   | Function
+  | Object
   | typeof Fragment
   | typeof Text
   | typeof Empty
 
-export type VNodeChild = VNode | string | number | null
-export interface VNodeChildren extends Array<VNodeChildren | VNodeChild> {}
+type VNodeChildAtom = VNode | string | number | null | void
+export interface VNodeChildren extends Array<VNodeChildren | VNodeChildAtom> {}
+export type VNodeChild = VNodeChildAtom | VNodeChildren
 
 export interface VNode {
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
   children: string | VNodeChildren | null
-  component: any
+  component: ComponentHandle | null
 
   // DOM
-  el: any
-  anchor: any // fragment anchor
+  el: HostNode | null
+  anchor: HostNode | null // fragment anchor
 
   // optimization only
   patchFlag: number | null
@@ -98,7 +103,7 @@ export function cloneVNode(vnode: VNode): VNode {
   return vnode
 }
 
-export function normalizeVNode(child: any): VNode {
+export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null) {
     // empty placeholder
     return createVNode(Empty)

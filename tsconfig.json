@@ -24,7 +24,6 @@
       "@vue/runtime-dom": ["packages/runtime-dom/src"],
       "@vue/runtime-test": ["packages/runtime-test/src"],
       "@vue/observer": ["packages/observer/src"],
-      "@vue/scheduler": ["packages/scheduler/src"],
       "@vue/compiler-core": ["packages/compiler-core/src"],
       "@vue/server-renderer": ["packages/server-renderer/src"]
     }

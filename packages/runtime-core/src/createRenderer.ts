@@ -1,9 +1,9 @@
 // TODO:
 // - component
-// - lifecycle
+// - lifecycle / refs
+// - keep alive
 // - app context
 // - svg
-// - refs
 // - hydration
 // - warning context
 // - parent chain
@@ -13,17 +13,20 @@ import {
   Text,
   Fragment,
   Empty,
+  Portal,
   normalizeVNode,
   VNode,
   VNodeChildren
-} from './vnode.js'
+} from './vnode'
+import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
-import { effect } from '@vue/observer'
-import { isString, isFunction, isArray } from '@vue/shared'
-import { renderComponentRoot, shouldUpdateComponent } from './component.js'
-
-const emptyArr: any[] = []
-const emptyObj: { [key: string]: any } = {}
+import { effect, stop } from '@vue/observer'
+import {
+  ComponentHandle,
+  renderComponentRoot,
+  shouldUpdateComponent
+} from './component'
+import { queueJob } from './scheduler'
 
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
@@ -81,16 +84,26 @@ export function createRenderer(options: RendererOptions) {
     }
 
     const { type } = n2
-    if (type === Text) {
-      processText(n1, n2, container, anchor)
-    } else if (type === Empty) {
-      processEmptyNode(n1, n2, container, anchor)
-    } else if (type === Fragment) {
-      processFragment(n1, n2, container, anchor, optimized)
-    } else if (isFunction(type)) {
-      processComponent(n1, n2, container, anchor)
-    } else {
-      processElement(n1, n2, container, anchor, optimized)
+    switch (type) {
+      case Text:
+        processText(n1, n2, container, anchor)
+        break
+      case Empty:
+        processEmptyNode(n1, n2, container, anchor)
+        break
+      case Fragment:
+        processFragment(n1, n2, container, anchor, optimized)
+        break
+      case Portal:
+        // TODO
+        break
+      default:
+        if (isString(type)) {
+          processElement(n1, n2, container, anchor, optimized)
+        } else {
+          processComponent(n1, n2, container, anchor)
+        }
+        break
     }
   }
 
@@ -172,8 +185,8 @@ export function createRenderer(options: RendererOptions) {
   function patchElement(n1: VNode, n2: VNode, optimized?: boolean) {
     const el = (n2.el = n1.el)
     const { patchFlag, dynamicChildren } = n2
-    const oldProps = (n1 && n1.props) || emptyObj
-    const newProps = n2.props || emptyObj
+    const oldProps = (n1 && n1.props) || EMPTY_OBJ
+    const newProps = n2.props || EMPTY_OBJ
 
     if (patchFlag != null) {
       // the presence of a patchFlag means this element's render code was
@@ -272,7 +285,7 @@ export function createRenderer(options: RendererOptions) {
           )
         }
       }
-      if (oldProps !== emptyObj) {
+      if (oldProps !== EMPTY_OBJ) {
         for (const key in oldProps) {
           if (!(key in newProps)) {
             hostPatchProp(
@@ -320,10 +333,10 @@ export function createRenderer(options: RendererOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor)
     } else {
-      const instance = (n2.component = n1.component)
+      const instance = (n2.component = n1.component) as ComponentHandle
       if (shouldUpdateComponent(n1, n2)) {
         instance.next = n2
-        instance.forceUpdate()
+        instance.update()
       } else {
         n2.el = n1.el
       }
@@ -335,15 +348,17 @@ export function createRenderer(options: RendererOptions) {
     container: HostNode,
     anchor?: HostNode
   ) {
-    const instance = (vnode.component = {
+    const instance: ComponentHandle = (vnode.component = {
+      type: vnode.type as Function,
       vnode: null,
       next: null,
       subTree: null,
-      forceUpdate: null,
-      render: vnode.type
-    } as any)
+      update: null as any
+    })
 
-    instance.forceUpdate = effect(
+    // TODO call setup, handle bindings and render context
+
+    instance.update = effect(
       () => {
         if (!instance.vnode) {
           // initial mount
@@ -357,9 +372,9 @@ export function createRenderer(options: RendererOptions) {
         }
       },
       {
-        scheduler: e => e() // TODO use proper scheduler
+        scheduler: queueJob
       }
-    ) as any
+    )
   }
 
   function updateComponent(
@@ -454,8 +469,8 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode,
     optimized?: boolean
   ) {
-    c1 = c1 || emptyArr
-    c2 = c2 || emptyArr
+    c1 = c1 || EMPTY_ARR
+    c2 = c2 || EMPTY_ARR
     const oldLength = c1.length
     const newLength = c2.length
     const commonLength = Math.min(oldLength, newLength)
@@ -618,7 +633,7 @@ export function createRenderer(options: RendererOptions) {
       // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
-        : emptyArr
+        : EMPTY_ARR
       j = increasingNewIndexSequence.length - 1
       // looping backwards so that we can use last patched node as anchor
       for (i = toBePatched - 1; i >= 0; i--) {
@@ -645,7 +660,7 @@ export function createRenderer(options: RendererOptions) {
 
   function move(vnode: VNode, container: HostNode, anchor: HostNode) {
     if (vnode.component != null) {
-      move(vnode.component.subTree, container, anchor)
+      move(vnode.component.subTree as VNode, container, anchor)
       return
     }
     if (vnode.type === Fragment) {
@@ -663,7 +678,8 @@ export function createRenderer(options: RendererOptions) {
   function unmount(vnode: VNode, doRemove?: boolean) {
     if (vnode.component != null) {
       // TODO teardown component
-      unmount(vnode.component.subTree, doRemove)
+      stop(vnode.component.update)
+      unmount(vnode.component.subTree as VNode, doRemove)
       return
     }
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
@@ -691,7 +707,7 @@ export function createRenderer(options: RendererOptions) {
   function getNextHostNode(vnode: VNode): HostNode {
     return vnode.component === null
       ? hostNextSibling(vnode.anchor || vnode.el)
-      : getNextHostNode(vnode.component.subTree)
+      : getNextHostNode(vnode.component.subTree as VNode)
   }
 
   return function render(vnode: VNode, dom: HostNode): VNode {
