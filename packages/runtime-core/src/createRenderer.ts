@@ -16,8 +16,9 @@ import {
   createVNode,
   VNode,
   VNodeChildren
-} from './h.js'
+} from './vnode.js'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
+import { isString, isFunction, isArray } from '@vue/shared'
 
 const emptyArr: any[] = []
 const emptyObj: { [key: string]: any } = {}
@@ -82,8 +83,8 @@ export function createRenderer(options: RendererOptions) {
       processEmptyNode(n1, n2, container, anchor)
     } else if (type === Fragment) {
       processFragment(n1, n2, container, anchor, optimized)
-    } else if (typeof type === 'function') {
-      // TODO Component
+    } else if (isFunction(type)) {
+      processComponent(n1, n2, container, anchor)
     } else {
       processElement(n1, n2, container, anchor, optimized)
     }
@@ -144,7 +145,7 @@ export function createRenderer(options: RendererOptions) {
         hostPatchProp(el, key, vnode.props[key], null, false)
       }
     }
-    if (typeof vnode.children === 'string') {
+    if (isString(vnode.children)) {
       hostSetElementText(el, vnode.children)
     } else if (vnode.children != null) {
       mountChildren(vnode.children, el)
@@ -168,7 +169,7 @@ export function createRenderer(options: RendererOptions) {
     if (child == null) {
       // empty placeholder
       return createVNode(Empty)
-    } else if (Array.isArray(child)) {
+    } else if (isArray(child)) {
       // fragment
       return createVNode(Fragment, null, child)
     } else if (typeof child === 'object') {
@@ -322,6 +323,13 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
+  function processComponent(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode
+  ) {}
+
   function patchChildren(
     n1: VNode | null,
     n2: VNode,
@@ -359,20 +367,20 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    if (typeof c2 === 'string') {
+    if (isString(c2)) {
       // text children fast path
-      if (Array.isArray(c1)) {
+      if (isArray(c1)) {
         unmountChildren(c1 as VNode[])
       }
       hostSetElementText(container, c2)
     } else {
-      if (typeof c1 === 'string') {
+      if (isString(c1)) {
         hostSetElementText(container, '')
         if (c2 != null) {
           mountChildren(c2, container, anchor)
         }
-      } else if (Array.isArray(c1)) {
-        if (Array.isArray(c2)) {
+      } else if (isArray(c1)) {
+        if (isArray(c2)) {
           // two arrays, cannot assume anything, do full diff
           patchKeyedChildren(c1 as VNode[], c2, container, anchor, optimized)
         } else {
@@ -596,7 +604,7 @@ export function createRenderer(options: RendererOptions) {
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
     if (vnode.dynamicChildren != null) {
       unmountChildren(vnode.dynamicChildren, shouldRemoveChildren)
-    } else if (Array.isArray(vnode.children)) {
+    } else if (isArray(vnode.children)) {
       unmountChildren(vnode.children as VNode[], shouldRemoveChildren)
     }
     if (doRemove) {

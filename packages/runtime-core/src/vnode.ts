@@ -1,3 +1,5 @@
+import { isFunction } from '@vue/shared'
+
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
 export const Empty = Symbol('Empty')
@@ -72,7 +74,7 @@ export function createVNode(
     dynamicProps,
     dynamicChildren: null
   }
-  if (patchFlag != null && shouldTrack) {
+  if (shouldTrack && (patchFlag != null || isFunction(type))) {
     trackDynamicNode(vnode)
   }
   return vnode
