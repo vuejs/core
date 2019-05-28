@@ -1,5 +1,5 @@
 // TODO:
-// - lifecycle / refs
+// - refs
 // - slots
 // - keep alive
 // - app context
@@ -28,15 +28,16 @@ import {
   shouldUpdateComponent,
   createComponentInstance
 } from './component'
-import {
-  queueJob,
-  queuePostFlushCb,
-  flushPostFlushCbs,
-  queueReversePostFlushCb
-} from './scheduler'
+import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
+}
+
+function invokeHooks(hooks: Function[]) {
+  for (let i = 0; i < hooks.length; i++) {
+    hooks[i]()
+  }
 }
 
 export type HostNode = any
@@ -364,6 +365,9 @@ export function createRenderer(options: RendererOptions) {
           // initial mount
           instance.vnode = vnode
           const subTree = (instance.subTree = renderComponentRoot(instance))
+          if (instance.bm !== null) {
+            invokeHooks(instance.bm)
+          }
           patch(null, subTree, container, anchor)
           vnode.el = subTree.el
           // mounted hook
@@ -391,8 +395,7 @@ export function createRenderer(options: RendererOptions) {
           }
           // upated hook
           if (instance.u !== null) {
-            // updated hooks are queued top-down, but should be fired bottom up
-            queueReversePostFlushCb(instance.u)
+            queuePostFlushCb(instance.u)
           }
         }
       },

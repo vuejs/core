@@ -7,6 +7,7 @@ function injectHook(
 ) {
   if (target) {
     const existing = target[name]
+    // TODO inject a error-handling wrapped version of the hook
     if (existing !== null) {
       existing.push(hook)
     } else {
