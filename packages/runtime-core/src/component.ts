@@ -160,14 +160,14 @@ export function setupStatefulComponent(instance: ComponentInstance) {
 }
 
 export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const { type, vnode, proxy, $state, $slots } = instance
+  const { type, vnode, proxy, bindings, $slots } = instance
   if (!type) debugger
   const { 0: props, 1: attrs } = resolveProps(
     (vnode as VNode).props,
     type.props
   )
   const renderArg = {
-    state: $state,
+    state: bindings || EMPTY_OBJ,
     slots: $slots,
     props,
     attrs
