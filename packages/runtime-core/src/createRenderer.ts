@@ -1,15 +1,3 @@
-// TODO:
-// - refs
-// - slots
-// - keep alive
-// - app context
-// - svg
-// - hydration
-// - error handling
-// - warning context
-// - parent chain
-// - reused nodes (warning)
-
 import {
   Text,
   Fragment,
@@ -19,16 +7,16 @@ import {
   VNode,
   VNodeChildren
 } from './vnode'
-import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
-import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
-import { effect, stop } from '@vue/observer'
 import {
   ComponentInstance,
   renderComponentRoot,
   shouldUpdateComponent,
   createComponentInstance
 } from './component'
+import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
+import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
+import { effect, stop } from '@vue/observer'
 
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
