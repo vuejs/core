@@ -320,7 +320,13 @@ export function createRenderer(options: RendererOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor)
     } else {
-      updateComponent(n1.component, n2, container, anchor)
+      const instance = (n2.component = n1.component)
+      if (shouldUpdateComponent(n1, n2)) {
+        instance.next = n2
+        instance.forceUpdate()
+      } else {
+        n2.el = n1.el
+      }
     }
   }
 
@@ -331,12 +337,13 @@ export function createRenderer(options: RendererOptions) {
   ) {
     const instance = (vnode.component = {
       vnode: null,
+      next: null,
       subTree: null,
-      updateHandle: null,
+      forceUpdate: null,
       render: vnode.type
     } as any)
 
-    instance.updateHandle = effect(
+    instance.forceUpdate = effect(
       () => {
         if (!instance.vnode) {
           // initial mount
@@ -345,7 +352,8 @@ export function createRenderer(options: RendererOptions) {
           patch(null, subTree, container, anchor)
           vnode.el = subTree.el
         } else {
-          updateComponent(instance, vnode)
+          // this is triggered by processComponent with `next` already set
+          updateComponent(instance)
         }
       },
       {
@@ -356,23 +364,25 @@ export function createRenderer(options: RendererOptions) {
 
   function updateComponent(
     instance: any,
-    next: VNode,
     container?: HostNode,
     anchor?: HostNode
   ) {
-    const prev = instance.vnode
-    instance.vnode = next
-    next.component = instance
-    if (shouldUpdateComponent(prev, next)) {
-      const prevTree = instance.subTree
-      const nextTree = (instance.subTree = renderComponentRoot(instance))
-      patch(
-        prevTree,
-        nextTree,
-        container || hostParentNode(prevTree.el),
-        anchor || getNextHostNode(prevTree)
-      )
-      next.el = nextTree.el
+    const { next: vnode } = instance
+    if (vnode != null) {
+      vnode.component = instance
+      instance.vnode = vnode
+      instance.next = null
+    }
+    const prevTree = instance.subTree
+    const nextTree = (instance.subTree = renderComponentRoot(instance))
+    patch(
+      prevTree,
+      nextTree,
+      container || hostParentNode(prevTree.el),
+      anchor || getNextHostNode(prevTree)
+    )
+    if (vnode != null) {
+      vnode.el = nextTree.el
     }
   }
 
