@@ -13,12 +13,14 @@ import {
   Text,
   Fragment,
   Empty,
-  createVNode,
+  normalizeVNode,
   VNode,
   VNodeChildren
 } from './vnode.js'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
+import { effect } from '@vue/observer'
 import { isString, isFunction, isArray } from '@vue/shared'
+import { renderComponentRoot, shouldUpdateComponent } from './component.js'
 
 const emptyArr: any[] = []
 const emptyObj: { [key: string]: any } = {}
@@ -46,6 +48,7 @@ export interface RendererOptions {
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
   setElementText(node: HostNode, text: string): void
+  parentNode(node: HostNode): HostNode | null
   nextSibling(node: HostNode): HostNode | null
 }
 
@@ -59,6 +62,7 @@ export function createRenderer(options: RendererOptions) {
     createComment: hostCreateComment,
     setText: hostSetText,
     setElementText: hostSetElementText,
+    parentNode: hostParentNode,
     nextSibling: hostNextSibling
   } = options
 
@@ -71,7 +75,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
-      anchor = hostNextSibling(n1.anchor || n1.el)
+      anchor = getNextHostNode(n1)
       unmount(n1, true)
       n1 = null
     }
@@ -160,24 +164,8 @@ export function createRenderer(options: RendererOptions) {
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
-      const child = (children[i] = normalizeChild(children[i]))
+      const child = (children[i] = normalizeVNode(children[i]))
       patch(null, child, container, anchor)
-    }
-  }
-
-  function normalizeChild(child: any): VNode {
-    if (child == null) {
-      // empty placeholder
-      return createVNode(Empty)
-    } else if (isArray(child)) {
-      // fragment
-      return createVNode(Fragment, null, child)
-    } else if (typeof child === 'object') {
-      // already vnode
-      return child as VNode
-    } else {
-      // primitive types
-      return createVNode(Text, null, child + '')
     }
   }
 
@@ -328,7 +316,65 @@ export function createRenderer(options: RendererOptions) {
     n2: VNode,
     container: HostNode,
     anchor?: HostNode
-  ) {}
+  ) {
+    if (n1 == null) {
+      mountComponent(n2, container, anchor)
+    } else {
+      updateComponent(n1.component, n2, container, anchor)
+    }
+  }
+
+  function mountComponent(
+    vnode: VNode,
+    container: HostNode,
+    anchor?: HostNode
+  ) {
+    const instance = (vnode.component = {
+      vnode: null,
+      subTree: null,
+      updateHandle: null,
+      render: vnode.type
+    } as any)
+
+    instance.updateHandle = effect(
+      () => {
+        if (!instance.vnode) {
+          // initial mount
+          instance.vnode = vnode
+          const subTree = (instance.subTree = renderComponentRoot(instance))
+          patch(null, subTree, container, anchor)
+          vnode.el = subTree.el
+        } else {
+          updateComponent(instance, vnode)
+        }
+      },
+      {
+        scheduler: e => e() // TODO use proper scheduler
+      }
+    ) as any
+  }
+
+  function updateComponent(
+    instance: any,
+    next: VNode,
+    container?: HostNode,
+    anchor?: HostNode
+  ) {
+    const prev = instance.vnode
+    instance.vnode = next
+    next.component = instance
+    if (shouldUpdateComponent(prev, next)) {
+      const prevTree = instance.subTree
+      const nextTree = (instance.subTree = renderComponentRoot(instance))
+      patch(
+        prevTree,
+        nextTree,
+        container || hostParentNode(prevTree.el),
+        anchor || getNextHostNode(prevTree)
+      )
+      next.el = nextTree.el
+    }
+  }
 
   function patchChildren(
     n1: VNode | null,
@@ -405,7 +451,7 @@ export function createRenderer(options: RendererOptions) {
     const commonLength = Math.min(oldLength, newLength)
     let i
     for (i = 0; i < commonLength; i++) {
-      const nextChild = (c2[i] = normalizeChild(c2[i]))
+      const nextChild = (c2[i] = normalizeVNode(c2[i]))
       patch(c1[i], nextChild, container, null, optimized)
     }
     if (oldLength > newLength) {
@@ -435,7 +481,7 @@ export function createRenderer(options: RendererOptions) {
     // (a b) d e
     while (i <= e1 && i <= e2) {
       const n1 = c1[i]
-      const n2 = (c2[i] = normalizeChild(c2[i]))
+      const n2 = (c2[i] = normalizeVNode(c2[i]))
       if (isSameType(n1, n2)) {
         patch(n1, n2, container, parentAnchor, optimized)
       } else {
@@ -449,7 +495,7 @@ export function createRenderer(options: RendererOptions) {
     // d e (b c)
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
-      const n2 = (c2[e2] = normalizeChild(c2[e2]))
+      const n2 = (c2[e2] = normalizeVNode(c2[e2]))
       if (isSameType(n1, n2)) {
         patch(n1, n2, container, parentAnchor, optimized)
       } else {
@@ -471,7 +517,7 @@ export function createRenderer(options: RendererOptions) {
         const nextPos = e2 + 1
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
-          patch(null, (c2[i] = normalizeChild(c2[i])), container, anchor)
+          patch(null, (c2[i] = normalizeVNode(c2[i])), container, anchor)
           i++
         }
       }
@@ -502,7 +548,7 @@ export function createRenderer(options: RendererOptions) {
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<any, number> = new Map()
       for (i = s2; i <= e2; i++) {
-        const nextChild = (c2[i] = normalizeChild(c2[i]))
+        const nextChild = (c2[i] = normalizeVNode(c2[i]))
         if (nextChild.key != null) {
           // TODO warn duplicate keys
           keyToNewIndexMap.set(nextChild.key, i)
@@ -588,6 +634,10 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function move(vnode: VNode, container: HostNode, anchor: HostNode) {
+    if (vnode.component != null) {
+      move(vnode.component.subTree, container, anchor)
+      return
+    }
     if (vnode.type === Fragment) {
       hostInsert(vnode.el, container, anchor)
       const children = vnode.children as VNode[]
@@ -601,6 +651,11 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function unmount(vnode: VNode, doRemove?: boolean) {
+    if (vnode.component != null) {
+      // TODO teardown component
+      unmount(vnode.component.subTree, doRemove)
+      return
+    }
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
     if (vnode.dynamicChildren != null) {
       unmountChildren(vnode.dynamicChildren, shouldRemoveChildren)
@@ -621,6 +676,12 @@ export function createRenderer(options: RendererOptions) {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], doRemove)
     }
+  }
+
+  function getNextHostNode(vnode: VNode): HostNode {
+    return vnode.component === null
+      ? hostNextSibling(vnode.anchor || vnode.el)
+      : getNextHostNode(vnode.component.subTree)
   }
 
   return function render(vnode: VNode, dom: HostNode): VNode {

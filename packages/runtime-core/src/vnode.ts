@@ -1,4 +1,4 @@
-import { isFunction } from '@vue/shared'
+import { isArray, isFunction } from '@vue/shared'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -15,12 +15,17 @@ export type VNodeChild = VNode | string | number | null
 export interface VNodeChildren extends Array<VNodeChildren | VNodeChild> {}
 
 export interface VNode {
-  el: any
-  anchor: any // fragment anchor
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
   children: string | VNodeChildren | null
+  component: any
+
+  // DOM
+  el: any
+  anchor: any // fragment anchor
+
+  // optimization only
   patchFlag: number | null
   dynamicProps: string[] | null
   dynamicChildren: VNode[] | null
@@ -68,6 +73,7 @@ export function createVNode(
     props,
     key: props && props.key,
     children,
+    component: null,
     el: null,
     anchor: null,
     patchFlag,
@@ -90,4 +96,20 @@ function trackDynamicNode(vnode: VNode) {
 export function cloneVNode(vnode: VNode): VNode {
   // TODO
   return vnode
+}
+
+export function normalizeVNode(child: any): VNode {
+  if (child == null) {
+    // empty placeholder
+    return createVNode(Empty)
+  } else if (isArray(child)) {
+    // fragment
+    return createVNode(Fragment, null, child)
+  } else if (typeof child === 'object') {
+    // already vnode
+    return child as VNode
+  } else {
+    // primitive types
+    return createVNode(Text, null, child + '')
+  }
 }

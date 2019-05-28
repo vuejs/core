@@ -37,5 +37,7 @@ export const DOMRendererOptions: RendererOptions = {
     el.textContent = text
   },
 
+  parentNode: (node: Node): Node | null => node.parentNode,
+
   nextSibling: (node: Node): Node | null => node.nextSibling
 }
