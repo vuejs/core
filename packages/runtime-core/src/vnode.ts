@@ -1,5 +1,5 @@
 import { isArray, isFunction } from '@vue/shared'
-import { ComponentHandle } from './component'
+import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 
 export const Fragment = Symbol('Fragment')
@@ -24,7 +24,7 @@ export interface VNode {
   props: { [key: string]: any } | null
   key: string | number | null
   children: string | VNodeChildren | null
-  component: ComponentHandle | null
+  component: ComponentInstance | null
 
   // DOM
   el: HostNode | null

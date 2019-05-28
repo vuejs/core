@@ -10,7 +10,7 @@ import {
   isObject
 } from '@vue/shared'
 import { warn } from './warning'
-import { Data, ComponentHandle } from './component'
+import { Data, ComponentInstance } from './component'
 
 export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: PropValidator<P[K]>
@@ -44,7 +44,7 @@ type NormalizedPropsOptions = Record<string, NormalizedProp>
 const isReservedKey = (key: string): boolean => key[0] === '_' || key[0] === '$'
 
 export function initializeProps(
-  instance: ComponentHandle,
+  instance: ComponentInstance,
   options: NormalizedPropsOptions | undefined,
   data: Data | null
 ) {

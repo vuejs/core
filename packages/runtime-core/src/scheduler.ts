@@ -1,5 +1,6 @@
-const queue: Array<() => void> = []
-const postFlushCbs: Array<() => void> = []
+const queue: Function[] = []
+const postFlushCbs: Function[] = []
+const reversePostFlushCbs: Function[] = []
 const p = Promise.resolve()
 
 let isFlushing = false
@@ -18,20 +19,39 @@ export function queueJob(job: () => void, onError?: (err: Error) => void) {
   }
 }
 
-export function queuePostFlushCb(cb: () => void) {
-  if (postFlushCbs.indexOf(cb) === -1) {
-    postFlushCbs.push(cb)
+export function queuePostFlushCb(cb: Function | Function[]) {
+  queuePostCb(cb, postFlushCbs)
+}
+
+export function queueReversePostFlushCb(cb: Function | Function[]) {
+  queuePostCb(cb, reversePostFlushCbs)
+}
+
+function queuePostCb(cb: Function | Function[], queue: Function[]) {
+  if (Array.isArray(cb)) {
+    queue.push.apply(postFlushCbs, cb)
+  } else {
+    queue.push(cb)
   }
 }
 
+const dedupe = (cbs: Function[]): Function[] => Array.from(new Set(cbs))
+
 export function flushPostFlushCbs() {
-  const cbs = postFlushCbs.slice()
-  let i = cbs.length
-  postFlushCbs.length = 0
-  // post flush cbs are flushed in reverse since they are queued top-down
-  // but should fire bottom-up
-  while (i--) {
-    cbs[i]()
+  if (reversePostFlushCbs.length) {
+    const cbs = dedupe(reversePostFlushCbs)
+    reversePostFlushCbs.length = 0
+    let i = cbs.length
+    while (i--) {
+      cbs[i]()
+    }
+  }
+  if (postFlushCbs.length) {
+    const cbs = dedupe(postFlushCbs)
+    postFlushCbs.length = 0
+    for (let i = 0; i < cbs.length; i++) {
+      cbs[i]()
+    }
   }
 }
 

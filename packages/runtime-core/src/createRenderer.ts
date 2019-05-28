@@ -1,10 +1,11 @@
 // TODO:
-// - component
 // - lifecycle / refs
+// - slots
 // - keep alive
 // - app context
 // - svg
 // - hydration
+// - error handling
 // - warning context
 // - parent chain
 // - reused nodes (warning)
@@ -22,11 +23,17 @@ import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { effect, stop } from '@vue/observer'
 import {
-  ComponentHandle,
+  ComponentInstance,
   renderComponentRoot,
-  shouldUpdateComponent
+  shouldUpdateComponent,
+  createComponentInstance
 } from './component'
-import { queueJob } from './scheduler'
+import {
+  queueJob,
+  queuePostFlushCb,
+  flushPostFlushCbs,
+  queueReversePostFlushCb
+} from './scheduler'
 
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
@@ -333,7 +340,7 @@ export function createRenderer(options: RendererOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor)
     } else {
-      const instance = (n2.component = n1.component) as ComponentHandle
+      const instance = (n2.component = n1.component) as ComponentInstance
       if (shouldUpdateComponent(n1, n2)) {
         instance.next = n2
         instance.update()
@@ -348,21 +355,9 @@ export function createRenderer(options: RendererOptions) {
     container: HostNode,
     anchor?: HostNode
   ) {
-    const instance: ComponentHandle = (vnode.component = {
-      type: vnode.type as any,
-      vnode: null,
-      next: null,
-      subTree: null,
-      update: null as any,
-      $attrs: EMPTY_OBJ,
-      $props: EMPTY_OBJ,
-      $refs: EMPTY_OBJ,
-      $slots: EMPTY_OBJ,
-      $state: EMPTY_OBJ
-    })
-
-    // TODO call setup, handle bindings and render context
-
+    const instance: ComponentInstance = (vnode.component = createComponentInstance(
+      vnode
+    ))
     instance.update = effect(
       () => {
         if (!instance.vnode) {
@@ -371,39 +366,40 @@ export function createRenderer(options: RendererOptions) {
           const subTree = (instance.subTree = renderComponentRoot(instance))
           patch(null, subTree, container, anchor)
           vnode.el = subTree.el
+          // mounted hook
+          if (instance.m !== null) {
+            queuePostFlushCb(instance.m)
+          }
         } else {
           // this is triggered by processComponent with `next` already set
-          updateComponent(instance)
+          const { next } = instance
+          if (next != null) {
+            next.component = instance
+            instance.vnode = next
+            instance.next = null
+          }
+          const prevTree = instance.subTree as VNode
+          const nextTree = (instance.subTree = renderComponentRoot(instance))
+          patch(
+            prevTree,
+            nextTree,
+            container || hostParentNode(prevTree.el),
+            anchor || getNextHostNode(prevTree)
+          )
+          if (next != null) {
+            next.el = nextTree.el
+          }
+          // upated hook
+          if (instance.u !== null) {
+            // updated hooks are queued top-down, but should be fired bottom up
+            queueReversePostFlushCb(instance.u)
+          }
         }
       },
       {
         scheduler: queueJob
       }
     )
-  }
-
-  function updateComponent(
-    instance: any,
-    container?: HostNode,
-    anchor?: HostNode
-  ) {
-    const { next: vnode } = instance
-    if (vnode != null) {
-      vnode.component = instance
-      instance.vnode = vnode
-      instance.next = null
-    }
-    const prevTree = instance.subTree
-    const nextTree = (instance.subTree = renderComponentRoot(instance))
-    patch(
-      prevTree,
-      nextTree,
-      container || hostParentNode(prevTree.el),
-      anchor || getNextHostNode(prevTree)
-    )
-    if (vnode != null) {
-      vnode.el = nextTree.el
-    }
   }
 
   function patchChildren(
@@ -681,10 +677,14 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function unmount(vnode: VNode, doRemove?: boolean) {
-    if (vnode.component != null) {
+    const instance = vnode.component
+    if (instance != null) {
       // TODO teardown component
-      stop(vnode.component.update)
-      unmount(vnode.component.subTree as VNode, doRemove)
+      stop(instance.update)
+      unmount(instance.subTree as VNode, doRemove)
+      if (instance.um !== null) {
+        queuePostFlushCb(instance.um)
+      }
       return
     }
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
@@ -717,6 +717,7 @@ export function createRenderer(options: RendererOptions) {
 
   return function render(vnode: VNode, dom: HostNode): VNode {
     patch(dom._vnode, vnode, dom)
+    flushPostFlushCbs()
     return (dom._vnode = vnode)
   }
 }

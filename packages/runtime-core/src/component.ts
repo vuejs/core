@@ -1,6 +1,6 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import { ReactiveEffect } from '@vue/observer'
-import { isFunction } from '@vue/shared'
+import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { resolveProps, ComponentPropsOptions } from './componentProps'
 
 interface Value<T> {
@@ -79,23 +79,96 @@ export function createComponent<
   return options as any
 }
 
-export type ComponentHandle = {
+type LifecycleHook = Function[] | null
+
+export interface LifecycleHooks {
+  bm: LifecycleHook // beforeMount
+  m: LifecycleHook // mounted
+  bu: LifecycleHook // beforeUpdate
+  u: LifecycleHook // updated
+  bum: LifecycleHook // beforeUnmount
+  um: LifecycleHook // unmounted
+  da: LifecycleHook // deactivated
+  a: LifecycleHook // activated
+  rtg: LifecycleHook // renderTriggered
+  rtc: LifecycleHook // renderTracked
+  ec: LifecycleHook // errorCaptured
+}
+
+export type ComponentInstance = {
   type: FunctionalComponent | ComponentOptions
   vnode: VNode | null
   next: VNode | null
   subTree: VNode | null
   update: ReactiveEffect
-} & ComponentPublicProperties
+  bindings: Data | null
+  proxy: Data | null
+} & LifecycleHooks &
+  ComponentPublicProperties
 
-export function renderComponentRoot(handle: ComponentHandle): VNode {
-  const { type, vnode } = handle
+export function createComponentInstance(vnode: VNode): ComponentInstance {
+  const type = vnode.type as any
+  const instance = {
+    type,
+    vnode: null,
+    next: null,
+    subTree: null,
+    update: null as any,
+    bindings: null,
+    proxy: null,
+
+    bm: null,
+    m: null,
+    bu: null,
+    u: null,
+    um: null,
+    bum: null,
+    da: null,
+    a: null,
+    rtg: null,
+    rtc: null,
+    ec: null,
+
+    // public properties
+    $attrs: EMPTY_OBJ,
+    $props: EMPTY_OBJ,
+    $refs: EMPTY_OBJ,
+    $slots: EMPTY_OBJ,
+    $state: EMPTY_OBJ
+  }
+  if (typeof type === 'object' && type.setup) {
+    setupStatefulComponent(instance)
+  }
+  return instance
+}
+
+export let currentInstance: ComponentInstance | null = null
+
+const RenderProxyHandlers = {}
+
+export function setupStatefulComponent(instance: ComponentInstance) {
+  // 1. create render proxy
+  const proxy = (instance.proxy = new Proxy(instance, RenderProxyHandlers))
+  // 2. resolve initial props
+  // 3. call setup()
+  const type = instance.type as ComponentOptions
+  if (type.setup) {
+    currentInstance = instance
+    instance.bindings = type.setup.call(proxy, proxy)
+    currentInstance = null
+  }
+}
+
+export function renderComponentRoot(instance: ComponentInstance): VNode {
+  const { type, vnode, proxy, $state, $slots } = instance
+  if (!type) debugger
   const { 0: props, 1: attrs } = resolveProps(
     (vnode as VNode).props,
     type.props
   )
   const renderArg = {
-    state: handle.$state,
-    slots: handle.$slots,
+    state: $state,
+    slots: $slots,
     props,
     attrs
   }
@@ -105,7 +178,7 @@ export function renderComponentRoot(handle: ComponentHandle): VNode {
     if (__DEV__ && !type.render) {
       // TODO warn missing render
     }
-    return normalizeVNode((type.render as Function)(renderArg))
+    return normalizeVNode((type.render as Function).call(proxy, renderArg))
   }
 }
 

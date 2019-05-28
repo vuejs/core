@@ -16,6 +16,8 @@ export {
   createComponent
 } from './component'
 
+export * from './componentLifecycle'
+
 export { createRenderer, RendererOptions } from './createRenderer'
 export { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 export * from '@vue/observer'
