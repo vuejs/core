@@ -349,11 +349,16 @@ export function createRenderer(options: RendererOptions) {
     anchor?: HostNode
   ) {
     const instance: ComponentHandle = (vnode.component = {
-      type: vnode.type as Function,
+      type: vnode.type as any,
       vnode: null,
       next: null,
       subTree: null,
-      update: null as any
+      update: null as any,
+      $attrs: EMPTY_OBJ,
+      $props: EMPTY_OBJ,
+      $refs: EMPTY_OBJ,
+      $slots: EMPTY_OBJ,
+      $state: EMPTY_OBJ
     })
 
     // TODO call setup, handle bindings and render context

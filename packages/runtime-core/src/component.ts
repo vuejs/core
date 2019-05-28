@@ -1,6 +1,7 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import { ReactiveEffect } from '@vue/observer'
-import { isFunction, EMPTY_OBJ } from '@vue/shared'
+import { isFunction } from '@vue/shared'
+import { resolveProps, ComponentPropsOptions } from './componentProps'
 
 interface Value<T> {
   value: T
@@ -18,14 +19,28 @@ type ExtractPropTypes<PropOptions> = {
     : PropOptions[key] extends null | undefined ? any : PropOptions[key]
 }
 
-interface ComponentPublicProperties<P, S> {
-  $props: P
+export type Data = { [key: string]: any }
+
+export interface ComponentPublicProperties<P = Data, S = Data> {
   $state: S
+  $props: P
+  $attrs: Data
+
+  // TODO
+  $refs: Data
+  $slots: Data
+}
+
+interface RenderFunctionArg<B = Data, P = Data> {
+  state: B
+  props: P
+  attrs: Data
+  slots: Slots
 }
 
 export interface ComponentOptions<
-  RawProps = { [key: string]: Prop<any> },
-  RawBindings = { [key: string]: any } | void,
+  RawProps = ComponentPropsOptions,
+  RawBindings = Data | void,
   Props = ExtractPropTypes<RawProps>,
   Bindings = UnwrapBindings<RawBindings>
 > {
@@ -33,12 +48,21 @@ export interface ComponentOptions<
   setup?: (props: Props) => RawBindings
   render?: <B extends Bindings>(
     this: ComponentPublicProperties<Props, B>,
-    ctx: {
-      state: B
-      props: Props
-    }
+    ctx: RenderFunctionArg<B, Props>
   ) => VNodeChild
 }
+
+export interface FunctionalComponent<P = {}> {
+  (ctx: RenderFunctionArg): any
+  props?: ComponentPropsOptions<P>
+  displayName?: string
+}
+
+export type Slot = (...args: any[]) => VNode[]
+
+export type Slots = Readonly<{
+  [name: string]: Slot
+}>
 
 // no-op, for type inference only
 export function createComponent<
@@ -55,19 +79,25 @@ export function createComponent<
   return options as any
 }
 
-export interface ComponentHandle {
-  type: Function | ComponentOptions
+export type ComponentHandle = {
+  type: FunctionalComponent | ComponentOptions
   vnode: VNode | null
   next: VNode | null
   subTree: VNode | null
   update: ReactiveEffect
-}
+} & ComponentPublicProperties
 
 export function renderComponentRoot(handle: ComponentHandle): VNode {
   const { type, vnode } = handle
-  // TODO actually resolve props
+  const { 0: props, 1: attrs } = resolveProps(
+    (vnode as VNode).props,
+    type.props
+  )
   const renderArg = {
-    props: (vnode as VNode).props || EMPTY_OBJ
+    state: handle.$state,
+    slots: handle.$slots,
+    props,
+    attrs
   }
   if (isFunction(type)) {
     return normalizeVNode(type(renderArg))
