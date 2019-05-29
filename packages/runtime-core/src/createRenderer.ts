@@ -17,19 +17,33 @@ import {
 import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
-import { effect, stop } from '@vue/observer'
+import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
 
-const sharedEffectOptions = {
+const prodEffectOptions = {
   scheduler: queueJob
+}
+
+function createDevEffectOptions(
+  instance: ComponentInstance
+): ReactiveEffectOptions {
+  return {
+    scheduler: queueJob,
+    onTrack: instance.rtc
+      ? e => invokeHooks(instance.rtc as Function[], e)
+      : void 0,
+    onTrigger: instance.rtg
+      ? e => invokeHooks(instance.rtg as Function[], e)
+      : void 0
+  }
 }
 
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
-function invokeHooks(hooks: Function[]) {
+function invokeHooks(hooks: Function[], arg?: any) {
   for (let i = 0; i < hooks.length; i++) {
-    hooks[i]()
+    hooks[i](arg)
   }
 }
 
@@ -349,11 +363,11 @@ export function createRenderer(options: RendererOptions) {
     container: HostNode,
     anchor?: HostNode
   ) {
-    const Component = vnode.type
+    const Component = vnode.type as any
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
       Component
     ))
-    const needsSetup = typeof Component === 'object' && (Component as any).setup
+    const needsSetup = typeof Component === 'object' && Component.setup
     if (needsSetup) {
       setupStatefulComponent(instance, vnode.props)
     }
@@ -403,7 +417,7 @@ export function createRenderer(options: RendererOptions) {
           queuePostFlushCb(instance.u)
         }
       }
-    }, sharedEffectOptions)
+    }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
   }
 
   function patchChildren(
