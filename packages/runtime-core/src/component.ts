@@ -2,12 +2,7 @@ import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import { ReactiveEffect } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
-import {
-  resolveProps,
-  ComponentPropsOptions,
-  initializeProps,
-  PropValidator
-} from './componentProps'
+import { ComponentPropsOptions, PropValidator } from './componentProps'
 
 interface Value<T> {
   value: T
@@ -37,13 +32,6 @@ export interface ComponentPublicProperties<P = Data, S = Data> {
   $slots: Data
 }
 
-interface RenderFunctionArg<B = Data, P = Data> {
-  state: B
-  props: P
-  attrs: Data
-  slots: Slots
-}
-
 export interface ComponentOptions<
   RawProps = ComponentPropsOptions,
   RawBindings = Data | void,
@@ -54,21 +42,15 @@ export interface ComponentOptions<
   setup?: (props: Props) => RawBindings
   render?: <B extends Bindings>(
     this: ComponentPublicProperties<Props, B>,
-    ctx: RenderFunctionArg<B, Props>
+    ctx: ComponentInstance<Props, B>
   ) => VNodeChild
 }
 
 export interface FunctionalComponent<P = {}> {
-  (ctx: RenderFunctionArg): any
+  (ctx: ComponentInstance<P>): any
   props?: ComponentPropsOptions<P>
   displayName?: string
 }
-
-export type Slot = (...args: any[]) => VNode[]
-
-export type Slots = Readonly<{
-  [name: string]: Slot
-}>
 
 type LifecycleHook = Function[] | null
 
@@ -86,18 +68,26 @@ export interface LifecycleHooks {
   ec: LifecycleHook // errorCaptured
 }
 
-export type ComponentInstance = {
+export type Slot = (...args: any[]) => VNode[]
+
+export type Slots = Readonly<{
+  [name: string]: Slot
+}>
+
+export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions
   vnode: VNode
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
-
   // the rest are only for stateful components
-  bindings: Data | null
-  proxy: Data | null
-} & LifecycleHooks &
-  ComponentPublicProperties
+  proxy: ComponentPublicProperties | null
+  state: S
+  props: P
+  attrs: Data
+  slots: Slots
+  refs: Data
+} & LifecycleHooks
 
 // no-op, for type inference only
 export function createComponent<
@@ -121,7 +111,6 @@ export function createComponentInstance(type: any): ComponentInstance {
     next: null,
     subTree: null as any,
     update: null as any,
-    bindings: null,
     proxy: null,
 
     bm: null,
@@ -137,64 +126,41 @@ export function createComponentInstance(type: any): ComponentInstance {
     ec: null,
 
     // public properties
-    $attrs: EMPTY_OBJ,
-    $props: EMPTY_OBJ,
-    $refs: EMPTY_OBJ,
-    $slots: EMPTY_OBJ,
-    $state: EMPTY_OBJ
+    state: EMPTY_OBJ,
+    props: EMPTY_OBJ,
+    attrs: EMPTY_OBJ,
+    slots: EMPTY_OBJ,
+    refs: EMPTY_OBJ
   }
 }
 
 export let currentInstance: ComponentInstance | null = null
 
-export function setupStatefulComponent(
-  instance: ComponentInstance,
-  props: Data | null
-) {
+export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  const proxy = (instance.proxy = new Proxy(instance, RenderProxyHandlers))
-  // 2. resolve initial props
-  initializeProps(instance, Component.props, props)
-  // 3. call setup()
+  const proxy = (instance.proxy = new Proxy(
+    instance,
+    RenderProxyHandlers
+  ) as any)
+  // 2. call setup()
   if (Component.setup) {
     currentInstance = instance
-    instance.bindings = Component.setup.call(proxy, proxy)
+    // TODO should pass reactive props here
+    instance.state = Component.setup.call(proxy, instance.props)
     currentInstance = null
   }
 }
 
-export function renderComponentRoot(
-  instance: ComponentInstance,
-  useAlreadyResolvedProps?: boolean
-): VNode {
-  const { type, vnode, proxy, bindings, $slots } = instance
-  const renderArg: RenderFunctionArg = {
-    state: bindings || EMPTY_OBJ,
-    slots: $slots,
-    props: null as any,
-    attrs: null as any
-  }
-  if (useAlreadyResolvedProps) {
-    // initial render for stateful components with setup()
-    // props are already resolved
-    renderArg.props = instance.$props
-    renderArg.attrs = instance.$attrs
+export function renderComponentRoot(instance: ComponentInstance): VNode {
+  const { type: Component, proxy } = instance
+  if (isFunction(Component)) {
+    return normalizeVNode(Component(instance))
   } else {
-    const { 0: props, 1: attrs } = resolveProps(
-      (vnode as VNode).props,
-      type.props
-    )
-    instance.$props = renderArg.props = props
-    instance.$attrs = renderArg.attrs = attrs
-  }
-  if (isFunction(type)) {
-    return normalizeVNode(type(renderArg))
-  } else {
-    if (__DEV__ && !type.render) {
+    if (__DEV__ && !Component.render) {
       // TODO warn missing render
     }
-    return normalizeVNode((type.render as Function).call(proxy, renderArg))
+    return normalizeVNode((Component.render as Function).call(proxy, instance))
   }
 }
 

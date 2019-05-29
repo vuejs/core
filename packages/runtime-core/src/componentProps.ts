@@ -43,20 +43,6 @@ type NormalizedPropsOptions = Record<string, NormalizedProp>
 
 const isReservedKey = (key: string): boolean => key[0] === '_' || key[0] === '$'
 
-export function initializeProps(
-  instance: ComponentInstance,
-  options: ComponentPropsOptions | undefined,
-  rawProps: Data | null
-) {
-  const { 0: props, 1: attrs } = resolveProps(rawProps, options)
-  instance.$props = __DEV__ ? immutable(props) : props
-  instance.$attrs = options
-    ? __DEV__
-      ? immutable(attrs)
-      : attrs
-    : instance.$props
-}
-
 // resolve raw VNode data.
 // - filter out reserved keys (key, ref, slots)
 // - extract class and style into $attrs (to be merged onto child
@@ -65,16 +51,15 @@ export function initializeProps(
 //   - if has declared props: put declared ones in `props`, the rest in `attrs`
 //   - else: everything goes in `props`.
 
-const EMPTY_PROPS = [EMPTY_OBJ, EMPTY_OBJ] as [Data, Data]
-
 export function resolveProps(
+  instance: ComponentInstance,
   rawProps: any,
   _options: ComponentPropsOptions | void
-): [Data, Data] {
+) {
   const hasDeclaredProps = _options != null
   const options = normalizePropsOptions(_options) as NormalizedPropsOptions
   if (!rawProps && !hasDeclaredProps) {
-    return EMPTY_PROPS
+    return
   }
   const props: any = {}
   let attrs: any = void 0
@@ -126,7 +111,13 @@ export function resolveProps(
     // if component has no declared props, $attrs === $props
     attrs = props
   }
-  return [props, attrs]
+
+  instance.props = __DEV__ ? immutable(props) : props
+  instance.attrs = options
+    ? __DEV__
+      ? immutable(attrs)
+      : attrs
+    : instance.props
 }
 
 const normalizationMap = new WeakMap()

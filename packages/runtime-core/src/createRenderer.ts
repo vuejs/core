@@ -18,6 +18,7 @@ import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
+import { resolveProps } from './componentProps'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -367,18 +368,16 @@ export function createRenderer(options: RendererOptions) {
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
       Component
     ))
-    const needsSetup = typeof Component === 'object' && Component.setup
-    if (needsSetup) {
-      setupStatefulComponent(instance, vnode.props)
-    }
     instance.update = effect(() => {
       if (!instance.vnode) {
         // initial mount
         instance.vnode = vnode
-        const subTree = (instance.subTree = renderComponentRoot(
-          instance,
-          needsSetup
-        ))
+        resolveProps(instance, vnode.props, Component.props)
+        // setup stateful
+        if (typeof Component === 'object' && Component.setup) {
+          setupStatefulComponent(instance)
+        }
+        const subTree = (instance.subTree = renderComponentRoot(instance))
         // beforeMount hook
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
@@ -396,6 +395,7 @@ export function createRenderer(options: RendererOptions) {
           next.component = instance
           instance.vnode = next
           instance.next = null
+          resolveProps(instance, next.props, Component.props)
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
