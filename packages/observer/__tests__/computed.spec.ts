@@ -4,9 +4,9 @@ describe('observer/computed', () => {
   it('should return updated value', () => {
     const value: any = observable({})
     const cValue = computed(() => value.foo)
-    expect(cValue()).toBe(undefined)
+    expect(cValue.value).toBe(undefined)
     value.foo = 1
-    expect(cValue()).toBe(1)
+    expect(cValue.value).toBe(1)
   })
 
   it('should compute lazily', () => {
@@ -17,11 +17,11 @@ describe('observer/computed', () => {
     // lazy
     expect(getter).not.toHaveBeenCalled()
 
-    expect(cValue()).toBe(undefined)
+    expect(cValue.value).toBe(undefined)
     expect(getter).toHaveBeenCalledTimes(1)
 
     // should not compute again
-    cValue()
+    cValue.value
     expect(getter).toHaveBeenCalledTimes(1)
 
     // should not compute until needed
@@ -29,11 +29,11 @@ describe('observer/computed', () => {
     expect(getter).toHaveBeenCalledTimes(1)
 
     // now it should compute
-    expect(cValue()).toBe(1)
+    expect(cValue.value).toBe(1)
     expect(getter).toHaveBeenCalledTimes(2)
 
     // should not compute again
-    cValue()
+    cValue.value
     expect(getter).toHaveBeenCalledTimes(2)
   })
 
@@ -47,7 +47,7 @@ describe('observer/computed', () => {
     }
     const ctx = {}
     const cValue = computed(getter, ctx)
-    cValue()
+    cValue.value
     expect(callCtx).toBe(ctx)
     expect(callArg).toBe(ctx)
   })
@@ -57,7 +57,7 @@ describe('observer/computed', () => {
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {
-      dummy = cValue()
+      dummy = cValue.value
     })
     expect(dummy).toBe(undefined)
     value.foo = 1
@@ -67,26 +67,26 @@ describe('observer/computed', () => {
   it('should work when chained', () => {
     const value: any = observable({ foo: 0 })
     const c1 = computed(() => value.foo)
-    const c2 = computed(() => c1() + 1)
-    expect(c2()).toBe(1)
-    expect(c1()).toBe(0)
+    const c2 = computed(() => c1.value + 1)
+    expect(c2.value).toBe(1)
+    expect(c1.value).toBe(0)
     value.foo++
-    expect(c2()).toBe(2)
-    expect(c1()).toBe(1)
+    expect(c2.value).toBe(2)
+    expect(c1.value).toBe(1)
   })
 
   it('should trigger effect when chained', () => {
     const value: any = observable({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
-      return c1() + 1
+      return c1.value + 1
     })
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
     let dummy
     effect(() => {
-      dummy = c2()
+      dummy = c2.value
     })
     expect(dummy).toBe(1)
     expect(getter1).toHaveBeenCalledTimes(1)
@@ -102,14 +102,14 @@ describe('observer/computed', () => {
     const value: any = observable({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
-      return c1() + 1
+      return c1.value + 1
     })
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
     let dummy
     effect(() => {
-      dummy = c1() + c2()
+      dummy = c1.value + c2.value
     })
     expect(dummy).toBe(1)
 
@@ -127,7 +127,7 @@ describe('observer/computed', () => {
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {
-      dummy = cValue()
+      dummy = cValue.value
     })
     expect(dummy).toBe(undefined)
     value.foo = 1
