@@ -15,6 +15,7 @@ export interface ReactiveEffect {
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
+  computed?: boolean
   scheduler?: Scheduler
   onTrack?: Debugger
   onTrigger?: Debugger
@@ -48,6 +49,7 @@ export function createReactiveEffect(
   effect.scheduler = options.scheduler
   effect.onTrack = options.onTrack
   effect.onTrigger = options.onTrigger
+  effect.computed = options.computed
   effect.deps = []
   return effect
 }

@@ -1,5 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect, UnwrapBindings, observable } from '@vue/observer'
+import { ReactiveEffect, UnwrapValues, observable } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
@@ -31,7 +31,7 @@ export interface ComponentOptions<
   RawProps = ComponentPropsOptions,
   RawBindings = Data | void,
   Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapBindings<RawBindings>
+  Bindings = UnwrapValues<RawBindings>
 > {
   props?: RawProps
   setup?: (props: Props) => RawBindings
@@ -75,6 +75,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
+  effects: ReactiveEffect[] | null
   // the rest are only for stateful components
   proxy: ComponentPublicProperties | null
   state: S
@@ -89,7 +90,7 @@ export function createComponent<
   RawProps,
   RawBindings,
   Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapBindings<RawBindings>
+  Bindings = UnwrapValues<RawBindings>
 >(
   options: ComponentOptions<RawProps, RawBindings, Props, Bindings>
 ): {
@@ -119,6 +120,7 @@ export function createComponentInstance(type: any): ComponentInstance {
     rtg: null,
     rtc: null,
     ec: null,
+    effects: null,
 
     // public properties
     state: EMPTY_OBJ,

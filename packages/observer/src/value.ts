@@ -9,12 +9,34 @@ export interface Value<T> {
   value: T
 }
 
+const convert = (val: any): any => (isObject(val) ? observable(val) : val)
+
+export function value<T>(raw: T): Value<T> {
+  raw = convert(raw)
+  const v = {
+    get value() {
+      track(v, OperationTypes.GET, '')
+      return raw
+    },
+    set value(newVal) {
+      raw = convert(newVal)
+      trigger(v, OperationTypes.SET, '')
+    }
+  }
+  knownValues.add(v)
+  return v
+}
+
+export function isValue(v: any): v is Value<any> {
+  return knownValues.has(v)
+}
+
 type UnwrapValue<T, U = T> = T extends Value<infer V> ? V : T extends {} ? U : T
 
 // A utility type that recursively unwraps value bindings nested inside an
 // observable object. Unfortunately TS cannot do recursive types, but this
 // should be enough for practical use cases...
-export type UnwrapBindings<T> = {
+export type UnwrapValues<T> = {
   [key in keyof T]: UnwrapValue<
     T[key],
     {
@@ -63,26 +85,4 @@ export type UnwrapBindings<T> = {
       >
     }
   >
-}
-
-const convert = (val: any): any => (isObject(val) ? observable(val) : val)
-
-export function value<T>(raw: T): Value<T> {
-  raw = convert(raw)
-  const v = {
-    get value() {
-      track(v, OperationTypes.GET, '')
-      return raw
-    },
-    set value(newVal) {
-      raw = convert(newVal)
-      trigger(v, OperationTypes.SET, '')
-    }
-  }
-  knownValues.add(v)
-  return v
-}
-
-export function isValue(v: any): boolean {
-  return knownValues.has(v)
 }

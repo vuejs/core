@@ -78,7 +78,7 @@ export function createVNode(
     type,
     props,
     key: props && props.key,
-    children,
+    children: typeof children === 'number' ? children + '' : children,
     component: null,
     el: null,
     anchor: null,

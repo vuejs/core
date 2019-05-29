@@ -15,12 +15,12 @@ export function computed<T, C = null>(
   let value: any = undefined
   const runner = effect(() => getter.call(context, context), {
     lazy: true,
+    // mark effect as computed so that it gets priority during trigger
+    computed: true,
     scheduler: () => {
       dirty = true
     }
   })
-  // mark effect as computed so that it gets priority during trigger
-  runner.computed = true
   const computedValue = {
     // expose effect so computed can be stopped
     effect: runner,

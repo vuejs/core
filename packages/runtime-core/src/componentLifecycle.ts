@@ -6,13 +6,8 @@ function injectHook(
   target: ComponentInstance | null | void = currentInstance
 ) {
   if (target) {
-    const existing = target[name]
     // TODO inject a error-handling wrapped version of the hook
-    if (existing !== null) {
-      existing.push(hook)
-    } else {
-      target[name] = [hook]
-    }
+    ;(target[name] || (target[name] = [])).push(hook)
   } else {
     // TODO warn
   }

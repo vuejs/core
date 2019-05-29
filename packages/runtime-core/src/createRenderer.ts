@@ -769,17 +769,7 @@ export function createRenderer(options: RendererOptions) {
   function unmount(vnode: VNode, doRemove?: boolean) {
     const instance = vnode.component
     if (instance != null) {
-      // beforeUnmount hook
-      if (instance.bum !== null) {
-        invokeHooks(instance.bum)
-      }
-      // TODO teardown component
-      stop(instance.update)
-      unmount(instance.subTree, doRemove)
-      // unmounted hook
-      if (instance.um !== null) {
-        queuePostFlushCb(instance.um)
-      }
+      unmountComponent(instance, doRemove)
       return
     }
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
@@ -791,6 +781,27 @@ export function createRenderer(options: RendererOptions) {
     if (doRemove) {
       hostRemove(vnode.el)
       if (vnode.anchor != null) hostRemove(vnode.anchor)
+    }
+  }
+
+  function unmountComponent(
+    { bum, effects, update, subTree, um }: ComponentInstance,
+    doRemove?: boolean
+  ) {
+    // beforeUnmount hook
+    if (bum !== null) {
+      invokeHooks(bum)
+    }
+    if (effects !== null) {
+      for (let i = 0; i < effects.length; i++) {
+        stop(effects[i])
+      }
+    }
+    stop(update)
+    unmount(subTree, doRemove)
+    // unmounted hook
+    if (um !== null) {
+      queuePostFlushCb(um)
     }
   }
 
