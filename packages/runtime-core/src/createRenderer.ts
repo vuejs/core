@@ -14,7 +14,14 @@ import {
   createComponentInstance,
   setupStatefulComponent
 } from './component'
-import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
+import {
+  isString,
+  isArray,
+  isFunction,
+  isObject,
+  EMPTY_OBJ,
+  EMPTY_ARR
+} from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
@@ -69,6 +76,7 @@ export interface RendererOptions {
   setElementText(node: HostNode, text: string): void
   parentNode(node: HostNode): HostNode | null
   nextSibling(node: HostNode): HostNode | null
+  querySelector(selector: string): HostNode | null
 }
 
 export function createRenderer(options: RendererOptions) {
@@ -82,7 +90,8 @@ export function createRenderer(options: RendererOptions) {
     setText: hostSetText,
     setElementText: hostSetElementText,
     parentNode: hostParentNode,
-    nextSibling: hostNextSibling
+    nextSibling: hostNextSibling,
+    querySelector: hostQuerySelector
   } = options
 
   function patch(
@@ -111,12 +120,15 @@ export function createRenderer(options: RendererOptions) {
         processFragment(n1, n2, container, anchor, optimized)
         break
       case Portal:
-        // TODO
+        processPortal(n1, n2, container, anchor, optimized)
         break
       default:
         if (isString(type)) {
           processElement(n1, n2, container, anchor, optimized)
         } else {
+          if (__DEV__ && !isFunction(type) && !isObject(type)) {
+            // TODO warn invalid node type
+          }
           processComponent(n1, n2, container, anchor)
         }
         break
@@ -340,6 +352,61 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
+  function processPortal(
+    n1: VNode | null,
+    n2: VNode,
+    container: HostNode,
+    anchor?: HostNode,
+    optimized?: boolean
+  ) {
+    const targetSelector = n2.props && n2.props.target
+    if (n1 == null) {
+      const children = n2.children
+      const target = (n2.target = isString(targetSelector)
+        ? hostQuerySelector(targetSelector)
+        : null)
+      if (target != null) {
+        if (isString(children)) {
+          hostSetElementText(target, children)
+        } else if (children != null) {
+          mountChildren(children, target)
+        }
+      } else {
+        // TODO warn missing or invalid target
+      }
+    } else {
+      // update content
+      const target = (n2.target = n1.target)
+      if (n2.patchFlag === TEXT) {
+        hostSetElementText(target, n2.children as string)
+      } else if (!optimized) {
+        patchChildren(n1, n2, target)
+      }
+      // target changed
+      if (targetSelector !== (n1.props && n1.props.target)) {
+        const nextTarget = (n2.target = isString(targetSelector)
+          ? hostQuerySelector(targetSelector)
+          : null)
+        if (nextTarget != null) {
+          // move content
+          const children = n2.children
+          if (isString(children)) {
+            hostSetElementText(target, '')
+            hostSetElementText(nextTarget, children)
+          } else if (children != null) {
+            for (let i = 0; i < children.length; i++) {
+              move(children[i] as VNode, nextTarget, null)
+            }
+          }
+        } else {
+          // TODO warn missing or invalid target
+        }
+      }
+    }
+    // insert an empty node as the placeholder for the portal
+    processEmptyNode(n1, n2, container, anchor)
+  }
+
   function processComponent(
     n1: VNode | null,
     n2: VNode,
@@ -409,8 +476,9 @@ export function createRenderer(options: RendererOptions) {
         patch(
           prevTree,
           nextTree,
-          container || hostParentNode(prevTree.el),
-          anchor || getNextHostNode(prevTree)
+          // may have moved
+          hostParentNode(prevTree.el),
+          getNextHostNode(prevTree)
         )
         if (next != null) {
           next.el = nextTree.el

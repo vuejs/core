@@ -4,8 +4,7 @@ export {
   createBlock,
   createVNode,
   Fragment,
-  Text,
-  Empty
+  Portal
 } from './vnode'
 
 export {

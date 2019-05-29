@@ -1,4 +1,4 @@
-import { isArray, isFunction } from '@vue/shared'
+import { isArray, isFunction, EMPTY_ARR } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 
@@ -29,6 +29,7 @@ export interface VNode {
   // DOM
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
+  target: HostNode | null // portal target
 
   // optimization only
   patchFlag: number | null
@@ -59,7 +60,7 @@ export function createBlock(
   shouldTrack = true
   const trackedNodes = blockStack.pop()
   vnode.dynamicChildren =
-    trackedNodes && trackedNodes.length ? trackedNodes : null
+    trackedNodes && trackedNodes.length ? trackedNodes : EMPTY_ARR
   // a block is always going to be patched
   trackDynamicNode(vnode)
   return vnode
@@ -81,6 +82,7 @@ export function createVNode(
     component: null,
     el: null,
     anchor: null,
+    target: null,
     patchFlag,
     dynamicProps,
     dynamicChildren: null
