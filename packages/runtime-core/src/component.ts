@@ -1,5 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect } from '@vue/observer'
+import { ReactiveEffect, observable } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
@@ -30,6 +30,9 @@ export interface ComponentPublicProperties<P = Data, S = Data> {
   // TODO
   $refs: Data
   $slots: Data
+
+  $root: ComponentInstance | null
+  $parent: ComponentInstance | null
 }
 
 export interface ComponentOptions<
@@ -147,7 +150,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   if (Component.setup) {
     currentInstance = instance
     // TODO should pass reactive props here
-    instance.state = Component.setup.call(proxy, instance.props)
+    instance.state = observable(Component.setup.call(proxy, instance.props))
     currentInstance = null
   }
 }

@@ -389,13 +389,16 @@ export function createRenderer(options: RendererOptions) {
           queuePostFlushCb(instance.m)
         }
       } else {
-        // this is triggered by processComponent with `next` already set
+        // component update
+        // This is triggered by mutation of component's own state (next: null)
+        // OR parent calling processComponent (next: VNode)
         const { next } = instance
         if (next != null) {
           next.component = instance
           instance.vnode = next
           instance.next = null
           resolveProps(instance, next.props, Component.props)
+          // TODO slots
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
@@ -738,8 +741,14 @@ export function createRenderer(options: RendererOptions) {
       : getNextHostNode(vnode.component.subTree)
   }
 
-  return function render(vnode: VNode, dom: HostNode): VNode {
-    patch(dom._vnode, vnode, dom)
+  return function render(vnode: VNode | null, dom: HostNode): VNode | null {
+    if (vnode == null) {
+      if (dom._vnode) {
+        unmount(dom._vnode, true)
+      }
+    } else {
+      patch(dom._vnode, vnode, dom)
+    }
     flushPostFlushCbs()
     return (dom._vnode = vnode)
   }
