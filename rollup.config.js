@@ -70,7 +70,8 @@ if (process.env.NODE_ENV === 'production') {
 module.exports = packageConfigs
 
 function createConfig(output, plugins = []) {
-  const isProductionBuild = /\.prod\.js$/.test(output.file)
+  const isProductionBuild =
+    process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)

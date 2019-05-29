@@ -10,6 +10,9 @@ yarn dev dom
 
 # specify the format to output
 yarn dev core --formats cjs
+
+# Can also drop all __DEV__ blocks with:
+__DEV__=false yarn dev
 ```
 */
 
