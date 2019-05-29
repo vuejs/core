@@ -1,5 +1,5 @@
 import { OperationTypes } from './operations'
-import { Dep, KeyToDepMap, targetMap } from './state'
+import { Dep, targetMap } from './state'
 
 export interface ReactiveEffect {
   (): any
@@ -84,8 +84,10 @@ export function track(
     if (type === OperationTypes.ITERATE) {
       key = ITERATE_KEY
     }
-    // keyMap must exist because only an observed target can call this function
-    const depsMap = targetMap.get(target) as KeyToDepMap
+    let depsMap = targetMap.get(target)
+    if (depsMap === void 0) {
+      targetMap.set(target, (depsMap = new Map()))
+    }
     let dep = depsMap.get(key as string | symbol)
     if (!dep) {
       depsMap.set(key as string | symbol, (dep = new Set()))
@@ -111,7 +113,11 @@ export function trigger(
   key?: string | symbol,
   extraInfo?: any
 ) {
-  const depsMap = targetMap.get(target) as KeyToDepMap
+  const depsMap = targetMap.get(target)
+  if (depsMap === void 0) {
+    // never been tracked
+    return
+  }
   const effects = new Set()
   const computedRunners = new Set()
   if (type === OperationTypes.CLEAR) {

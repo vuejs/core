@@ -128,6 +128,7 @@ export function createRenderer(options: RendererOptions) {
         } else {
           if (__DEV__ && !isFunction(type) && !isObject(type)) {
             // TODO warn invalid node type
+            debugger
           }
           processComponent(n1, n2, container, anchor)
         }

@@ -3,6 +3,7 @@ import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'
+import { isValue } from './value'
 
 const hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -17,6 +18,9 @@ function createGetter(isImmutable: boolean) {
     const res = Reflect.get(target, key, receiver)
     if (typeof key === 'symbol' && builtInSymbols.has(key)) {
       return res
+    }
+    if (isValue(res)) {
+      return res.value
     }
     track(target, OperationTypes.GET, key)
     return isObject(res)
@@ -38,6 +42,10 @@ function set(
   value = unwrap(value)
   const hadKey = hasOwnProperty.call(target, key)
   const oldValue = target[key]
+  if (isValue(oldValue)) {
+    oldValue.value = value
+    return true
+  }
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === unwrap(receiver)) {

@@ -1,17 +1,10 @@
 import { ComponentInstance } from './component'
-import { isObservable, unwrap } from '@vue/observer'
-
-// TODO use proper implementation
-function isValue(binding: any) {
-  return isObservable(binding) && unwrap(binding).hasOwnProperty('value')
-}
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
     const { state, props } = target
     if (state.hasOwnProperty(key)) {
-      const value = state[key]
-      return isValue(value) ? value.value : value
+      return state[key]
     } else if (props.hasOwnProperty(key)) {
       return props[key]
     } else {
@@ -34,12 +27,7 @@ export const RenderProxyHandlers = {
   set(target: ComponentInstance, key: string, value: any): boolean {
     const { state } = target
     if (state.hasOwnProperty(key)) {
-      const binding = state[key]
-      if (isValue(binding)) {
-        binding.value = value
-      } else {
-        state[key] = value
-      }
+      state[key] = value
       return true
     } else {
       if (__DEV__) {
