@@ -26,9 +26,9 @@ import {
 
 export { ReactiveEffect, ReactiveEffectOptions, DebuggerEvent }
 export { OperationTypes } from './operations'
-export { computed, ComputedGetter } from './computed'
+export { computed, ComputedValue } from './computed'
 export { lock, unlock } from './lock'
-export { value, isValue } from './value'
+export { value, isValue, Value } from './value'
 
 const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
