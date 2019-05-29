@@ -1,25 +1,31 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import { ReactiveEffect } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
-import { resolveProps, ComponentPropsOptions } from './componentProps'
+import { RenderProxyHandlers } from './componentProxy'
+import {
+  resolveProps,
+  ComponentPropsOptions,
+  initializeProps,
+  PropValidator
+} from './componentProps'
 
 interface Value<T> {
   value: T
 }
 
+export type Data = { [key: string]: any }
+
 type UnwrapBindings<T> = {
   [key in keyof T]: T[key] extends Value<infer V> ? V : T[key]
 }
 
-type Prop<T> = { (): T } | { new (...args: any[]): T & object }
-
 type ExtractPropTypes<PropOptions> = {
-  readonly [key in keyof PropOptions]: PropOptions[key] extends Prop<infer V>
+  readonly [key in keyof PropOptions]: PropOptions[key] extends PropValidator<
+    infer V
+  >
     ? V
     : PropOptions[key] extends null | undefined ? any : PropOptions[key]
 }
-
-export type Data = { [key: string]: any }
 
 export interface ComponentPublicProperties<P = Data, S = Data> {
   $state: S
@@ -64,21 +70,6 @@ export type Slots = Readonly<{
   [name: string]: Slot
 }>
 
-// no-op, for type inference only
-export function createComponent<
-  RawProps,
-  RawBindings,
-  Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapBindings<RawBindings>
->(
-  options: ComponentOptions<RawProps, RawBindings, Props, Bindings>
-): {
-  // for TSX
-  new (): { $props: Props }
-} {
-  return options as any
-}
-
 type LifecycleHook = Function[] | null
 
 export interface LifecycleHooks {
@@ -97,22 +88,38 @@ export interface LifecycleHooks {
 
 export type ComponentInstance = {
   type: FunctionalComponent | ComponentOptions
-  vnode: VNode | null
+  vnode: VNode
   next: VNode | null
-  subTree: VNode | null
+  subTree: VNode
   update: ReactiveEffect
+
+  // the rest are only for stateful components
   bindings: Data | null
   proxy: Data | null
 } & LifecycleHooks &
   ComponentPublicProperties
 
-export function createComponentInstance(vnode: VNode): ComponentInstance {
-  const type = vnode.type as any
-  const instance = {
+// no-op, for type inference only
+export function createComponent<
+  RawProps,
+  RawBindings,
+  Props = ExtractPropTypes<RawProps>,
+  Bindings = UnwrapBindings<RawBindings>
+>(
+  options: ComponentOptions<RawProps, RawBindings, Props, Bindings>
+): {
+  // for TSX
+  new (): { $props: Props }
+} {
+  return options as any
+}
+
+export function createComponentInstance(type: any): ComponentInstance {
+  return {
     type,
-    vnode: null,
+    vnode: null as any,
     next: null,
-    subTree: null,
+    subTree: null as any,
     update: null as any,
     bindings: null,
     proxy: null,
@@ -136,41 +143,50 @@ export function createComponentInstance(vnode: VNode): ComponentInstance {
     $slots: EMPTY_OBJ,
     $state: EMPTY_OBJ
   }
-  if (typeof type === 'object' && type.setup) {
-    setupStatefulComponent(instance)
-  }
-  return instance
 }
 
 export let currentInstance: ComponentInstance | null = null
 
-const RenderProxyHandlers = {}
-
-export function setupStatefulComponent(instance: ComponentInstance) {
+export function setupStatefulComponent(
+  instance: ComponentInstance,
+  props: Data | null
+) {
+  const Component = instance.type as ComponentOptions
   // 1. create render proxy
   const proxy = (instance.proxy = new Proxy(instance, RenderProxyHandlers))
   // 2. resolve initial props
+  initializeProps(instance, Component.props, props)
   // 3. call setup()
-  const type = instance.type as ComponentOptions
-  if (type.setup) {
+  if (Component.setup) {
     currentInstance = instance
-    instance.bindings = type.setup.call(proxy, proxy)
+    instance.bindings = Component.setup.call(proxy, proxy)
     currentInstance = null
   }
 }
 
-export function renderComponentRoot(instance: ComponentInstance): VNode {
+export function renderComponentRoot(
+  instance: ComponentInstance,
+  useAlreadyResolvedProps?: boolean
+): VNode {
   const { type, vnode, proxy, bindings, $slots } = instance
-  if (!type) debugger
-  const { 0: props, 1: attrs } = resolveProps(
-    (vnode as VNode).props,
-    type.props
-  )
-  const renderArg = {
+  const renderArg: RenderFunctionArg = {
     state: bindings || EMPTY_OBJ,
     slots: $slots,
-    props,
-    attrs
+    props: null as any,
+    attrs: null as any
+  }
+  if (useAlreadyResolvedProps) {
+    // initial render for stateful components with setup()
+    // props are already resolved
+    renderArg.props = instance.$props
+    renderArg.attrs = instance.$attrs
+  } else {
+    const { 0: props, 1: attrs } = resolveProps(
+      (vnode as VNode).props,
+      type.props
+    )
+    instance.$props = renderArg.props = props
+    instance.$attrs = renderArg.attrs = attrs
   }
   if (isFunction(type)) {
     return normalizeVNode(type(renderArg))

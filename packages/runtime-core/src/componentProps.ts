@@ -45,7 +45,7 @@ const isReservedKey = (key: string): boolean => key[0] === '_' || key[0] === '$'
 
 export function initializeProps(
   instance: ComponentInstance,
-  options: NormalizedPropsOptions | undefined,
+  options: ComponentPropsOptions | undefined,
   rawProps: Data | null
 ) {
   const { 0: props, 1: attrs } = resolveProps(rawProps, options)

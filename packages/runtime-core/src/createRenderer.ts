@@ -11,7 +11,8 @@ import {
   ComponentInstance,
   renderComponentRoot,
   shouldUpdateComponent,
-  createComponentInstance
+  createComponentInstance,
+  setupStatefulComponent
 } from './component'
 import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
@@ -348,14 +349,22 @@ export function createRenderer(options: RendererOptions) {
     container: HostNode,
     anchor?: HostNode
   ) {
+    const Component = vnode.type
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
-      vnode
+      Component
     ))
+    const needsSetup = typeof Component === 'object' && (Component as any).setup
+    if (needsSetup) {
+      setupStatefulComponent(instance, vnode.props)
+    }
     instance.update = effect(() => {
       if (!instance.vnode) {
         // initial mount
         instance.vnode = vnode
-        const subTree = (instance.subTree = renderComponentRoot(instance))
+        const subTree = (instance.subTree = renderComponentRoot(
+          instance,
+          needsSetup
+        ))
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
@@ -373,7 +382,7 @@ export function createRenderer(options: RendererOptions) {
           instance.vnode = next
           instance.next = null
         }
-        const prevTree = instance.subTree as VNode
+        const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
         patch(
           prevTree,
@@ -651,7 +660,7 @@ export function createRenderer(options: RendererOptions) {
 
   function move(vnode: VNode, container: HostNode, anchor: HostNode) {
     if (vnode.component != null) {
-      move(vnode.component.subTree as VNode, container, anchor)
+      move(vnode.component.subTree, container, anchor)
       return
     }
     if (vnode.type === Fragment) {
@@ -671,7 +680,7 @@ export function createRenderer(options: RendererOptions) {
     if (instance != null) {
       // TODO teardown component
       stop(instance.update)
-      unmount(instance.subTree as VNode, doRemove)
+      unmount(instance.subTree, doRemove)
       if (instance.um !== null) {
         queuePostFlushCb(instance.um)
       }
@@ -702,7 +711,7 @@ export function createRenderer(options: RendererOptions) {
   function getNextHostNode(vnode: VNode): HostNode {
     return vnode.component === null
       ? hostNextSibling(vnode.anchor || vnode.el)
-      : getNextHostNode(vnode.component.subTree as VNode)
+      : getNextHostNode(vnode.component.subTree)
   }
 
   return function render(vnode: VNode, dom: HostNode): VNode {
