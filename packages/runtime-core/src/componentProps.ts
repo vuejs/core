@@ -46,9 +46,9 @@ const isReservedKey = (key: string): boolean => key[0] === '_' || key[0] === '$'
 export function initializeProps(
   instance: ComponentInstance,
   options: NormalizedPropsOptions | undefined,
-  data: Data | null
+  rawProps: Data | null
 ) {
-  const { 0: props, 1: attrs } = resolveProps(data, options)
+  const { 0: props, 1: attrs } = resolveProps(rawProps, options)
   instance.$props = __DEV__ ? immutable(props) : props
   instance.$attrs = options
     ? __DEV__
@@ -68,18 +68,18 @@ export function initializeProps(
 const EMPTY_PROPS = [EMPTY_OBJ, EMPTY_OBJ] as [Data, Data]
 
 export function resolveProps(
-  rawData: any,
+  rawProps: any,
   _options: ComponentPropsOptions | void
 ): [Data, Data] {
   const hasDeclaredProps = _options != null
   const options = normalizePropsOptions(_options) as NormalizedPropsOptions
-  if (!rawData && !hasDeclaredProps) {
+  if (!rawProps && !hasDeclaredProps) {
     return EMPTY_PROPS
   }
   const props: any = {}
   let attrs: any = void 0
-  if (rawData != null) {
-    for (const key in rawData) {
+  if (rawProps != null) {
+    for (const key in rawProps) {
       // key, ref, slots are reserved
       if (key === 'key' || key === 'ref' || key === 'slots') {
         continue
@@ -87,9 +87,9 @@ export function resolveProps(
       // any non-declared data are put into a separate `attrs` object
       // for spreading
       if (hasDeclaredProps && !options.hasOwnProperty(key)) {
-        ;(attrs || (attrs = {}))[key] = rawData[key]
+        ;(attrs || (attrs = {}))[key] = rawProps[key]
       } else {
-        props[key] = rawData[key]
+        props[key] = rawProps[key]
       }
     }
   }
@@ -118,8 +118,8 @@ export function resolveProps(
         }
       }
       // runtime validation
-      if (__DEV__ && rawData) {
-        validateProp(key, unwrap(rawData[key]), opt, isAbsent)
+      if (__DEV__ && rawProps) {
+        validateProp(key, unwrap(rawProps[key]), opt, isAbsent)
       }
     }
   } else {
