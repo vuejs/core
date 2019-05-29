@@ -1,18 +1,10 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect, observable } from '@vue/observer'
+import { ReactiveEffect, UnwrapBindings, observable } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
 
-interface Value<T> {
-  value: T
-}
-
 export type Data = { [key: string]: any }
-
-type UnwrapBindings<T> = {
-  [key in keyof T]: T[key] extends Value<infer V> ? V : T[key]
-}
 
 type ExtractPropTypes<PropOptions> = {
   readonly [key in keyof PropOptions]: PropOptions[key] extends PropValidator<
