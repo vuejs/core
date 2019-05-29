@@ -365,6 +365,7 @@ export function createRenderer(options: RendererOptions) {
           instance,
           needsSetup
         ))
+        // beforeMount hook
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
@@ -384,6 +385,10 @@ export function createRenderer(options: RendererOptions) {
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
+        // beforeUpdate hook
+        if (instance.bu !== null) {
+          invokeHooks(instance.bu)
+        }
         patch(
           prevTree,
           nextTree,
@@ -678,9 +683,14 @@ export function createRenderer(options: RendererOptions) {
   function unmount(vnode: VNode, doRemove?: boolean) {
     const instance = vnode.component
     if (instance != null) {
+      // beforeUnmount hook
+      if (instance.bum !== null) {
+        invokeHooks(instance.bum)
+      }
       // TODO teardown component
       stop(instance.update)
       unmount(instance.subTree, doRemove)
+      // unmounted hook
       if (instance.um !== null) {
         queuePostFlushCb(instance.um)
       }
