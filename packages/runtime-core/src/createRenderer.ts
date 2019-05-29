@@ -18,6 +18,10 @@ import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop } from '@vue/observer'
 
+const sharedEffectOptions = {
+  scheduler: queueJob
+}
+
 function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
@@ -347,50 +351,45 @@ export function createRenderer(options: RendererOptions) {
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
       vnode
     ))
-    instance.update = effect(
-      () => {
-        if (!instance.vnode) {
-          // initial mount
-          instance.vnode = vnode
-          const subTree = (instance.subTree = renderComponentRoot(instance))
-          if (instance.bm !== null) {
-            invokeHooks(instance.bm)
-          }
-          patch(null, subTree, container, anchor)
-          vnode.el = subTree.el
-          // mounted hook
-          if (instance.m !== null) {
-            queuePostFlushCb(instance.m)
-          }
-        } else {
-          // this is triggered by processComponent with `next` already set
-          const { next } = instance
-          if (next != null) {
-            next.component = instance
-            instance.vnode = next
-            instance.next = null
-          }
-          const prevTree = instance.subTree as VNode
-          const nextTree = (instance.subTree = renderComponentRoot(instance))
-          patch(
-            prevTree,
-            nextTree,
-            container || hostParentNode(prevTree.el),
-            anchor || getNextHostNode(prevTree)
-          )
-          if (next != null) {
-            next.el = nextTree.el
-          }
-          // upated hook
-          if (instance.u !== null) {
-            queuePostFlushCb(instance.u)
-          }
+    instance.update = effect(() => {
+      if (!instance.vnode) {
+        // initial mount
+        instance.vnode = vnode
+        const subTree = (instance.subTree = renderComponentRoot(instance))
+        if (instance.bm !== null) {
+          invokeHooks(instance.bm)
         }
-      },
-      {
-        scheduler: queueJob
+        patch(null, subTree, container, anchor)
+        vnode.el = subTree.el
+        // mounted hook
+        if (instance.m !== null) {
+          queuePostFlushCb(instance.m)
+        }
+      } else {
+        // this is triggered by processComponent with `next` already set
+        const { next } = instance
+        if (next != null) {
+          next.component = instance
+          instance.vnode = next
+          instance.next = null
+        }
+        const prevTree = instance.subTree as VNode
+        const nextTree = (instance.subTree = renderComponentRoot(instance))
+        patch(
+          prevTree,
+          nextTree,
+          container || hostParentNode(prevTree.el),
+          anchor || getNextHostNode(prevTree)
+        )
+        if (next != null) {
+          next.el = nextTree.el
+        }
+        // upated hook
+        if (instance.u !== null) {
+          queuePostFlushCb(instance.u)
+        }
       }
-    )
+    }, sharedEffectOptions)
   }
 
   function patchChildren(
