@@ -120,8 +120,8 @@ export function trigger(
     // never been tracked
     return
   }
-  const effects = new Set()
-  const computedRunners = new Set()
+  const effects: Set<ReactiveEffect> = new Set()
+  const computedRunners: Set<ReactiveEffect> = new Set()
   if (type === OperationTypes.CLEAR) {
     // collection being cleared, trigger all effects for target
     depsMap.forEach(dep => {

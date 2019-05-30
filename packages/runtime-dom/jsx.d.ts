@@ -751,7 +751,7 @@ type NativeElements = {
 declare namespace JSX {
   interface Element {}
   interface ElementClass {
-    render(props: any, slots: any, attrs: any): any
+    $props: {}
   }
   interface ElementAttributesProperty {
     $props: {}
