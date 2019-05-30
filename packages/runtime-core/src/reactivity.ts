@@ -33,6 +33,8 @@ import { currentInstance } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
 
+// record effects created during a component's setup() so that they can be
+// stopped when the component unmounts
 function recordEffect(effect: ReactiveEffect) {
   if (currentInstance) {
     ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
@@ -71,11 +73,8 @@ export function watch<T>(
         ? queueJob
         : queuePostFlushCb
 
-  const traverseIfDeep = (getter: Function) =>
-    options.deep ? () => traverse(getter()) : getter
-  const getter = isValue(source)
-    ? traverseIfDeep(() => source.value)
-    : traverseIfDeep(source)
+  const baseGetter = isValue(source) ? () => source.value : source
+  const getter = options.deep ? () => traverse(baseGetter()) : baseGetter
 
   let oldValue: any
   const applyCb = cb
