@@ -9,6 +9,9 @@
 //
 //   const flag = TEXT | CLASS
 //   if (flag & TEXT) { ... }
+//
+// Check the `patchElement` function in './createRednerer.ts' to see how the
+// flags are handled during diff.
 
 // Indicates an element with dynamic textContent (children fast path)
 export const TEXT = 1
