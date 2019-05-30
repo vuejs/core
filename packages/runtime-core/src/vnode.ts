@@ -1,4 +1,4 @@
-import { isArray, isFunction, EMPTY_ARR } from '@vue/shared'
+import { isArray, EMPTY_ARR } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 
@@ -87,7 +87,7 @@ export function createVNode(
     dynamicProps,
     dynamicChildren: null
   }
-  if (shouldTrack && (patchFlag != null || isFunction(type))) {
+  if (shouldTrack && patchFlag != null) {
     trackDynamicNode(vnode)
   }
   return vnode

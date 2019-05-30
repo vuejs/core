@@ -3,6 +3,7 @@ import { ReactiveEffect, UnwrapValue, observable } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
+import { PROPS, SLOTS } from './patchFlags'
 
 export type Data = { [key: string]: any }
 
@@ -167,35 +168,42 @@ export function shouldUpdateComponent(
   nextVNode: VNode
 ): boolean {
   const { props: prevProps } = prevVNode
-  const { props: nextProps } = nextVNode
-
-  // TODO handle slots
-  // If has different slots content, or has non-compiled slots,
-  // the child needs to be force updated.
-  // if (
-  //   prevChildFlags !== nextChildFlags ||
-  //   (nextChildFlags & ChildrenFlags.DYNAMIC_SLOTS) > 0
-  // ) {
-  //   return true
-  // }
-
-  if (prevProps === nextProps) {
-    return false
-  }
-  if (prevProps === null) {
-    return nextProps !== null
-  }
-  if (nextProps === null) {
-    return prevProps !== null
-  }
-  const nextKeys = Object.keys(nextProps)
-  if (nextKeys.length !== Object.keys(prevProps).length) {
-    return true
-  }
-  for (let i = 0; i < nextKeys.length; i++) {
-    const key = nextKeys[i]
-    if (nextProps[key] !== prevProps[key]) {
+  const { props: nextProps, patchFlag } = nextVNode
+  if (patchFlag !== null) {
+    if (patchFlag & SLOTS) {
+      // slot content that references values that might have changed,
+      // e.g. in a v-for
       return true
+    }
+    if (patchFlag & PROPS) {
+      const dynamicProps = nextVNode.dynamicProps as string[]
+      for (let i = 0; i < dynamicProps.length; i++) {
+        const key = dynamicProps[i]
+        if ((nextProps as any)[key] !== (prevProps as any)[key]) {
+          return true
+        }
+      }
+    }
+  } else {
+    // TODO handle slots
+    if (prevProps === nextProps) {
+      return false
+    }
+    if (prevProps === null) {
+      return nextProps !== null
+    }
+    if (nextProps === null) {
+      return prevProps !== null
+    }
+    const nextKeys = Object.keys(nextProps)
+    if (nextKeys.length !== Object.keys(prevProps).length) {
+      return true
+    }
+    for (let i = 0; i < nextKeys.length; i++) {
+      const key = nextKeys[i]
+      if (nextProps[key] !== prevProps[key]) {
+        return true
+      }
     }
   }
   return false
