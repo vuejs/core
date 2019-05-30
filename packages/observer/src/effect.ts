@@ -73,7 +73,7 @@ export function cleanup(effect: ReactiveEffect) {
   for (let i = 0; i < effect.deps.length; i++) {
     effect.deps[i].delete(effect)
   }
-  effect.deps = []
+  effect.deps.length = 0
 }
 
 export function track(

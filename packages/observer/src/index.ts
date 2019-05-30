@@ -24,13 +24,13 @@ import {
   DebuggerEvent
 } from './effect'
 
-import { UnwrapValues } from './value'
+import { UnwrapValue } from './value'
 
 export { ReactiveEffect, ReactiveEffectOptions, DebuggerEvent }
 export { OperationTypes } from './operations'
 export { computed, ComputedValue } from './computed'
 export { lock, unlock } from './lock'
-export { value, isValue, Value, UnwrapValues } from './value'
+export { value, isValue, Value, UnwrapValue } from './value'
 
 const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
@@ -44,7 +44,7 @@ const canObserve = (value: any): boolean => {
   )
 }
 
-type ObservableFactory = <T>(target?: T) => UnwrapValues<T>
+type ObservableFactory = <T>(target?: T) => UnwrapValue<T>
 
 export const observable = ((target: any = {}): any => {
   // if trying to observe an immutable proxy, return the immutable version.

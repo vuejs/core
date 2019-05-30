@@ -38,17 +38,28 @@ describe('observer/value', () => {
     const obj = observable({
       a,
       b: {
-        c: a
+        c: a,
+        d: [a]
       }
     })
-    let dummy
+    let dummy1
+    let dummy2
+    let dummy3
     effect(() => {
-      dummy = obj.a
+      dummy1 = obj.a
+      dummy2 = obj.b.c
+      dummy3 = obj.b.d[0]
     })
-    expect(dummy).toBe(1)
+    expect(dummy1).toBe(1)
+    expect(dummy2).toBe(1)
+    expect(dummy3).toBe(1)
     a.value++
-    expect(dummy).toBe(2)
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(2)
+    expect(dummy3).toBe(2)
     obj.a++
-    expect(dummy).toBe(3)
+    expect(dummy1).toBe(3)
+    expect(dummy2).toBe(3)
+    expect(dummy3).toBe(3)
   })
 })

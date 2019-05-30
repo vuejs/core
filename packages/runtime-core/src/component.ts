@@ -1,5 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect, UnwrapValues, observable } from '@vue/observer'
+import { ReactiveEffect, UnwrapValue, observable } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
@@ -14,7 +14,7 @@ type ExtractPropTypes<PropOptions> = {
     : PropOptions[key] extends null | undefined ? any : PropOptions[key]
 }
 
-export interface ComponentPublicProperties<P = Data, S = Data> {
+export type ComponentPublicProperties<P = Data, S = Data> = {
   $state: S
   $props: P
   $attrs: Data
@@ -25,19 +25,20 @@ export interface ComponentPublicProperties<P = Data, S = Data> {
 
   $root: ComponentInstance | null
   $parent: ComponentInstance | null
-}
+} & P &
+  S
 
 export interface ComponentOptions<
   RawProps = ComponentPropsOptions,
   RawBindings = Data | void,
   Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapValues<RawBindings>
+  Bindings = UnwrapValue<RawBindings>
 > {
   props?: RawProps
   setup?: (props: Props) => RawBindings
-  render?: <B extends Bindings>(
-    this: ComponentPublicProperties<Props, B>,
-    ctx: ComponentInstance<Props, B>
+  render?: <State extends Bindings>(
+    this: ComponentPublicProperties<Props, State>,
+    ctx: ComponentInstance<Props, State>
   ) => VNodeChild
 }
 
@@ -90,7 +91,7 @@ export function createComponent<
   RawProps,
   RawBindings,
   Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapValues<RawBindings>
+  Bindings = UnwrapValue<RawBindings>
 >(
   options: ComponentOptions<RawProps, RawBindings, Props, Bindings>
 ): {
