@@ -16,7 +16,7 @@ export {
   OperationTypes,
   Value,
   ComputedValue,
-  UnwrapValues
+  UnwrapValue
 } from '@vue/observer'
 
 import {

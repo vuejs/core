@@ -37,16 +37,30 @@ export interface VNode {
   dynamicChildren: VNode[] | null
 }
 
+// Since v-if and v-for are the two possible ways node structure can dynamically
+// change, once we consider v-if branches and each v-for fragment a block, we
+// can divide a template into nested blocks, and within each block the node
+// structure would be stable. This allows us to skip most children diffing
+// and only worry about the dynamic nodes (indicated by patch flags).
 const blockStack: (VNode[] | null)[] = []
 
-// open block
+// Open a block.
+// This must be called before `createBlock`. It cannot be part of `createBlock`
+// because the children of the block are evaluated before `createBlock` itself
+// is called. The generated code typically looks like this:
+//
+//   function render() {
+//     return (openBlock(),createBlock('div', null, [...]))
+//   }
 export function openBlock(disableTrackng?: boolean) {
   blockStack.push(disableTrackng ? null : [])
 }
 
 let shouldTrack = true
 
-// block
+// Create a block root vnode. Takes the same exact arguments as `createVNode`.
+// A block root keeps track of dynamic nodes within the block in the
+// `dynamicChildren` array.
 export function createBlock(
   type: VNodeTypes,
   props?: { [key: string]: any } | null,
@@ -66,7 +80,6 @@ export function createBlock(
   return vnode
 }
 
-// element
 export function createVNode(
   type: VNodeTypes,
   props: { [key: string]: any } | null = null,
@@ -87,6 +100,7 @@ export function createVNode(
     dynamicProps,
     dynamicChildren: null
   }
+  // presence of a patch flag indicates this node is dynamic
   if (shouldTrack && patchFlag != null) {
     trackDynamicNode(vnode)
   }
