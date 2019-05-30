@@ -442,7 +442,7 @@ export function createRenderer(options: RendererOptions) {
         instance.vnode = vnode
         resolveProps(instance, vnode.props, Component.props)
         // setup stateful
-        if (typeof Component === 'object' && Component.setup) {
+        if (typeof Component === 'object') {
           setupStatefulComponent(instance)
         }
         const subTree = (instance.subTree = renderComponentRoot(instance))

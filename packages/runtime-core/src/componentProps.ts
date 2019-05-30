@@ -1,4 +1,4 @@
-import { immutable, unwrap } from '@vue/observer'
+import { immutable, unwrap, lock, unlock } from '@vue/observer'
 import {
   EMPTY_OBJ,
   camelize,
@@ -61,8 +61,25 @@ export function resolveProps(
   if (!rawProps && !hasDeclaredProps) {
     return
   }
+
   const props: any = {}
   let attrs: any = void 0
+
+  // update the instance propsProxy (passed to setup()) to trigger potential
+  // changes
+  const propsProxy = instance.propsProxy
+  const setProp = propsProxy
+    ? (key: string, val: any) => {
+        props[key] = val
+        propsProxy[key] = val
+      }
+    : (key: string, val: any) => {
+        props[key] = val
+      }
+
+  // allow mutation of propsProxy (which is immutable by default)
+  unlock()
+
   if (rawProps != null) {
     for (const key in rawProps) {
       // key, ref, slots are reserved
@@ -74,7 +91,7 @@ export function resolveProps(
       if (hasDeclaredProps && !options.hasOwnProperty(key)) {
         ;(attrs || (attrs = {}))[key] = rawProps[key]
       } else {
-        props[key] = rawProps[key]
+        setProp(key, rawProps[key])
       }
     }
   }
@@ -89,17 +106,17 @@ export function resolveProps(
       // default values
       if (hasDefault && currentValue === undefined) {
         const defaultValue = opt.default
-        props[key] = isFunction(defaultValue) ? defaultValue() : defaultValue
+        setProp(key, isFunction(defaultValue) ? defaultValue() : defaultValue)
       }
       // boolean casting
       if (opt[BooleanFlags.shouldCast]) {
         if (isAbsent && !hasDefault) {
-          props[key] = false
+          setProp(key, false)
         } else if (
           opt[BooleanFlags.shouldCastTrue] &&
           (currentValue === '' || currentValue === hyphenate(key))
         ) {
-          props[key] = true
+          setProp(key, true)
         }
       }
       // runtime validation
@@ -111,6 +128,9 @@ export function resolveProps(
     // if component has no declared props, $attrs === $props
     attrs = props
   }
+
+  // lock immutable
+  lock()
 
   instance.props = __DEV__ ? immutable(props) : props
   instance.attrs = options

@@ -1,5 +1,10 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect, UnwrapValue, observable } from '@vue/observer'
+import {
+  ReactiveEffect,
+  UnwrapValue,
+  observable,
+  immutable
+} from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
@@ -79,7 +84,8 @@ export type ComponentInstance<P = Data, S = Data> = {
   update: ReactiveEffect
   effects: ReactiveEffect[] | null
   // the rest are only for stateful components
-  proxy: ComponentPublicProperties | null
+  renderProxy: ComponentPublicProperties | null
+  propsProxy: Data | null
   state: S
   props: P
   attrs: Data
@@ -109,7 +115,8 @@ export function createComponentInstance(type: any): ComponentInstance {
     next: null,
     subTree: null as any,
     update: null as any,
-    proxy: null,
+    renderProxy: null,
+    propsProxy: null,
 
     bm: null,
     m: null,
@@ -138,28 +145,37 @@ export let currentInstance: ComponentInstance | null = null
 export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  const proxy = (instance.proxy = new Proxy(
+  const proxy = (instance.renderProxy = new Proxy(
     instance,
     RenderProxyHandlers
   ) as any)
   // 2. call setup()
-  if (Component.setup) {
+  const { setup } = Component
+  if (setup) {
     currentInstance = instance
-    // TODO should pass reactive props here
-    instance.state = observable(Component.setup.call(proxy, instance.props))
+    // the props proxy makes the props object passed to setup() reactive
+    // so props change can be tracked by watchers
+    // only need to create it if setup() actually expects it
+    // it will be updated in resolveProps() on updates before render
+    const propsProxy = (instance.propsProxy = setup.length
+      ? immutable(instance.props)
+      : null)
+    instance.state = observable(setup.call(proxy, propsProxy))
     currentInstance = null
   }
 }
 
 export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const { type: Component, proxy } = instance
+  const { type: Component, renderProxy } = instance
   if (isFunction(Component)) {
     return normalizeVNode(Component(instance))
   } else {
     if (__DEV__ && !Component.render) {
       // TODO warn missing render
     }
-    return normalizeVNode((Component.render as Function).call(proxy, instance))
+    return normalizeVNode(
+      (Component.render as Function).call(renderProxy, instance)
+    )
   }
 }
 
