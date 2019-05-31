@@ -163,7 +163,8 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
 
 export function shouldUpdateComponent(
   prevVNode: VNode,
-  nextVNode: VNode
+  nextVNode: VNode,
+  optimized?: boolean
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
@@ -185,7 +186,7 @@ export function shouldUpdateComponent(
         }
       }
     }
-  } else {
+  } else if (!optimized) {
     // this path is only taken by manually written render functions
     // so presence of any children leads to a forced update
     if (prevChildren != null || nextChildren != null) {

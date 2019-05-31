@@ -3,15 +3,13 @@ export {
   openBlock,
   createBlock,
   createVNode,
+  Text,
+  Empty,
   Fragment,
   Portal
 } from './vnode'
 
-export {
-  ComponentOptions,
-  FunctionalComponent,
-  createComponent
-} from './component'
+export { FunctionalComponent, createComponent } from './component'
 
 export { Slot, Slots } from './componentSlots'
 

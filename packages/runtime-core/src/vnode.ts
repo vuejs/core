@@ -1,4 +1,4 @@
-import { isArray, isFunction, isString, EMPTY_ARR } from '@vue/shared'
+import { isArray, isFunction, isString, isObject, EMPTY_ARR } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
@@ -85,14 +85,14 @@ export function createBlock(
 
 export function createVNode(
   type: VNodeTypes,
-  props: { [key: string]: any } | null = null,
+  props: { [key: string]: any } | null | 0 = null,
   children: any = null,
   patchFlag: number | null = null,
   dynamicProps: string[] | null = null
 ): VNode {
   const vnode: VNode = {
     type,
-    props,
+    props: props || null,
     key: props && props.key,
     children: normalizeChildren(children),
     component: null,
@@ -104,7 +104,13 @@ export function createVNode(
     dynamicChildren: null
   }
   // presence of a patch flag indicates this node is dynamic
-  if (shouldTrack && patchFlag != null) {
+  // component nodes also should always be tracked, because even if the
+  // component doesn't need to update, it needs to persist the instance on to
+  // the next vnode so that it can be properly unmounted later.
+  if (
+    shouldTrack &&
+    (patchFlag != null || isObject(type) || isFunction(type))
+  ) {
     trackDynamicNode(vnode)
   }
   return vnode

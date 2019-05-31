@@ -139,7 +139,7 @@ export function createRenderer(options: RendererOptions) {
             // TODO warn invalid node type
             debugger
           }
-          processComponent(n1, n2, container, anchor)
+          processComponent(n1, n2, container, anchor, optimized)
         }
         break
     }
@@ -426,16 +426,18 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode
+    anchor?: HostNode,
+    optimized?: boolean
   ) {
     if (n1 == null) {
       mountComponent(n2, container, anchor)
     } else {
       const instance = (n2.component = n1.component) as ComponentInstance
-      if (shouldUpdateComponent(n1, n2)) {
+      if (shouldUpdateComponent(n1, n2, optimized)) {
         instance.next = n2
         instance.update()
       } else {
+        n2.component = n1.component
         n2.el = n1.el
       }
     }
