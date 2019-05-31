@@ -15,7 +15,7 @@ export {
 
 export { Slot, Slots } from './componentSlots'
 
-export { ComponentPropsOptions } from './componentProps'
+export { PropType, ComponentPropsOptions } from './componentProps'
 
 export * from './reactivity'
 export * from './componentLifecycle'

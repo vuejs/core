@@ -13,14 +13,10 @@ import { warn } from './warning'
 import { Data, ComponentInstance } from './component'
 
 export type ComponentPropsOptions<P = Data> = {
-  [K in keyof P]: PropValidator<P[K]>
+  [K in keyof P]: Prop<P[K]> | null
 }
 
-type Prop<T> = { (): T } | { new (...args: any[]): T & object }
-
-type PropType<T> = Prop<T> | Prop<T>[]
-
-type PropValidator<T> = PropOptions<T> | PropType<T>
+type Prop<T> = PropOptions<T> | PropType<T>
 
 interface PropOptions<T = any> {
   type?: PropType<T> | true | null
@@ -29,23 +25,42 @@ interface PropOptions<T = any> {
   validator?(value: any): boolean
 }
 
-export type ExtractPropTypes<PropOptions> = {
-  readonly [key in keyof PropOptions]: PropOptions[key] extends PropValidator<
-    infer V
-  >
-    ? V
-    : PropOptions[key] extends null | true ? any : PropOptions[key]
-}
+export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+
+type PropConstructor<T> = { new (...args: any[]): T & object } | { (): T }
+
+type RequiredKeys<T> = {
+  [K in keyof T]: T[K] extends { required: true } | { default: any } ? K : never
+}[keyof T]
+
+type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
+
+type InferPropType<T> = T extends null
+  ? any
+  : // null & true would fail to infer
+    T extends { type: null | true }
+    ? any
+    : // somehow `ObjectContructor` when inferred from { (): T } becomes `any`
+      T extends ObjectConstructor | { type: ObjectConstructor }
+      ? { [key: string]: any }
+      : T extends Prop<infer V> ? V : T
+
+export type ExtractPropTypes<O> = O extends object
+  ? { readonly [K in RequiredKeys<O>]: InferPropType<O[K]> } &
+      { readonly [K in OptionalKeys<O>]?: InferPropType<O[K]> }
+  : { [K in string]: any }
 
 const enum BooleanFlags {
   shouldCast = '1',
   shouldCastTrue = '2'
 }
 
-type NormalizedProp = PropOptions & {
-  [BooleanFlags.shouldCast]?: boolean
-  [BooleanFlags.shouldCastTrue]?: boolean
-}
+type NormalizedProp =
+  | null
+  | (PropOptions & {
+      [BooleanFlags.shouldCast]?: boolean
+      [BooleanFlags.shouldCastTrue]?: boolean
+    })
 
 type NormalizedPropsOptions = Record<string, NormalizedProp>
 
@@ -181,14 +196,13 @@ function normalizePropsOptions(
       const normalizedKey = camelize(key)
       if (!isReservedKey(normalizedKey)) {
         const opt = raw[key]
-        const prop = (normalized[normalizedKey] =
+        const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
-        if (prop) {
+        if (prop != null) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
-          ;(prop as NormalizedProp)[BooleanFlags.shouldCast] = booleanIndex > -1
-          ;(prop as NormalizedProp)[BooleanFlags.shouldCastTrue] =
-            booleanIndex < stringIndex
+          prop[BooleanFlags.shouldCast] = booleanIndex > -1
+          prop[BooleanFlags.shouldCastTrue] = booleanIndex < stringIndex
         }
       } else if (__DEV__) {
         warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
@@ -270,7 +284,7 @@ function validateProp(
 
 const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
 
-function assertType(value: any, type: Prop<any>): AssertionResult {
+function assertType(value: any, type: PropConstructor<any>): AssertionResult {
   let valid
   const expectedType = getType(type)
   if (simpleCheckRE.test(expectedType)) {

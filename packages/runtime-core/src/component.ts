@@ -13,7 +13,7 @@ import { Slots } from './componentSlots'
 
 export type Data = { [key: string]: any }
 
-export type ComponentPublicProperties<P = Data, S = Data> = {
+export type ComponentPublicProperties<P = {}, S = {}> = {
   $state: S
   $props: P
   $attrs: Data
@@ -27,16 +27,16 @@ export type ComponentPublicProperties<P = Data, S = Data> = {
 } & P &
   S
 
-export interface ComponentOptions<
+interface ComponentOptions<
   RawProps = ComponentPropsOptions,
-  RawBindings = Data | void,
+  RawBindings = Data,
   Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapValue<RawBindings>
+  ExposedProps = RawProps extends object ? Props : {}
 > {
   props?: RawProps
-  setup?: (props: Props) => RawBindings
-  render?: <State extends Bindings>(
-    this: ComponentPublicProperties<Props, State>,
+  setup?: (this: ComponentPublicProperties, props: Props) => RawBindings
+  render?: <State extends UnwrapValue<RawBindings>>(
+    this: ComponentPublicProperties<ExposedProps, State>,
     ctx: ComponentInstance<Props, State>
   ) => VNodeChild
 }
@@ -81,16 +81,11 @@ export type ComponentInstance<P = Data, S = Data> = {
 } & LifecycleHooks
 
 // no-op, for type inference only
-export function createComponent<
-  RawProps,
-  RawBindings,
-  Props = ExtractPropTypes<RawProps>,
-  Bindings = UnwrapValue<RawBindings>
->(
-  options: ComponentOptions<RawProps, RawBindings, Props, Bindings>
+export function createComponent<RawProps, RawBindings>(
+  options: ComponentOptions<RawProps, RawBindings>
 ): {
   // for TSX
-  new (): { $props: Props }
+  new (): { $props: ExtractPropTypes<RawProps> }
 } {
   return options as any
 }
