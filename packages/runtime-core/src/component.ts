@@ -8,7 +8,7 @@ import {
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, PropValidator } from './componentProps'
-import { PROPS, SLOTS } from './patchFlags'
+import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
 
 export type Data = { [key: string]: any }
 
@@ -183,15 +183,18 @@ export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode
 ): boolean {
-  const { props: prevProps } = prevVNode
-  const { props: nextProps, patchFlag } = nextVNode
+  const { props: prevProps, children: prevChildren } = prevVNode
+  const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
   if (patchFlag !== null) {
-    if (patchFlag & SLOTS) {
+    if (patchFlag & DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for
       return true
     }
-    if (patchFlag & PROPS) {
+    if (patchFlag & FULL_PROPS) {
+      // presence of this flag indicates props are always non-null
+      return hasPropsChanged(prevProps as Data, nextProps as Data)
+    } else if (patchFlag & PROPS) {
       const dynamicProps = nextVNode.dynamicProps as string[]
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
@@ -201,7 +204,11 @@ export function shouldUpdateComponent(
       }
     }
   } else {
-    // TODO handle slots
+    // this path is only taken by manually written render functions
+    // so presence of any children leads to a forced update
+    if (prevChildren != null || nextChildren != null) {
+      return true
+    }
     if (prevProps === nextProps) {
       return false
     }
@@ -211,15 +218,20 @@ export function shouldUpdateComponent(
     if (nextProps === null) {
       return prevProps !== null
     }
-    const nextKeys = Object.keys(nextProps)
-    if (nextKeys.length !== Object.keys(prevProps).length) {
+    return hasPropsChanged(prevProps, nextProps)
+  }
+  return false
+}
+
+function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
+  const nextKeys = Object.keys(nextProps)
+  if (nextKeys.length !== Object.keys(prevProps).length) {
+    return true
+  }
+  for (let i = 0; i < nextKeys.length; i++) {
+    const key = nextKeys[i]
+    if (nextProps[key] !== prevProps[key]) {
       return true
-    }
-    for (let i = 0; i < nextKeys.length; i++) {
-      const key = nextKeys[i]
-      if (nextProps[key] !== prevProps[key]) {
-        return true
-      }
     }
   }
   return false

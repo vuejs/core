@@ -22,7 +22,15 @@ import {
   EMPTY_OBJ,
   EMPTY_ARR
 } from '@vue/shared'
-import { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
+import {
+  TEXT,
+  CLASS,
+  STYLE,
+  PROPS,
+  KEYED,
+  UNKEYED,
+  FULL_PROPS
+} from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
 import { resolveProps } from './componentProps'
@@ -223,45 +231,50 @@ export function createRenderer(options: RendererOptions) {
       // in this path old node and new node are guaranteed to have the same shape
       // (i.e. at the exact same position in the source template)
 
-      // class
-      // this flag is matched when the element has dynamic class bindings.
-      if (patchFlag & CLASS) {
-        // TODO handle full class API, potentially optimize at compilation stage?
-        if (oldProps.class !== newProps.class) {
-          hostPatchProp(el, 'class', newProps.class, null, false)
+      if (patchFlag & FULL_PROPS) {
+        // element props contain dynamic keys, full diff needed
+        patchProps(el, n2, oldProps, newProps)
+      } else {
+        // class
+        // this flag is matched when the element has dynamic class bindings.
+        if (patchFlag & CLASS) {
+          // TODO handle full class API, potentially optimize at compilation stage?
+          if (oldProps.class !== newProps.class) {
+            hostPatchProp(el, 'class', newProps.class, null, false)
+          }
         }
-      }
 
-      // style
-      // this flag is matched when the element has dynamic style bindings
-      // TODO separate static and dynamic styles?
-      if (patchFlag & STYLE) {
-        hostPatchProp(el, 'style', newProps.style, oldProps.style, false)
-      }
+        // style
+        // this flag is matched when the element has dynamic style bindings
+        // TODO separate static and dynamic styles?
+        if (patchFlag & STYLE) {
+          hostPatchProp(el, 'style', newProps.style, oldProps.style, false)
+        }
 
-      // props
-      // This flag is matched when the element has dynamic prop/attr bindings
-      // other than class and style. The keys of dynamic prop/attrs are saved for
-      // faster iteration.
-      // Note dynamic keys like :[foo]="bar" will cause this optimization to
-      // bail out and go through a full diff because we need to unset the old key
-      if (patchFlag & PROPS) {
-        // if the flag is present then dynamicProps must be non-null
-        const propsToUpdate = n2.dynamicProps as string[]
-        for (let i = 0; i < propsToUpdate.length; i++) {
-          const key = propsToUpdate[i]
-          const prev = oldProps[key]
-          const next = newProps[key]
-          if (prev !== next) {
-            hostPatchProp(
-              el,
-              key,
-              next,
-              prev,
-              false,
-              n1.children as VNode[],
-              unmountChildren
-            )
+        // props
+        // This flag is matched when the element has dynamic prop/attr bindings
+        // other than class and style. The keys of dynamic prop/attrs are saved for
+        // faster iteration.
+        // Note dynamic keys like :[foo]="bar" will cause this optimization to
+        // bail out and go through a full diff because we need to unset the old key
+        if (patchFlag & PROPS) {
+          // if the flag is present then dynamicProps must be non-null
+          const propsToUpdate = n2.dynamicProps as string[]
+          for (let i = 0; i < propsToUpdate.length; i++) {
+            const key = propsToUpdate[i]
+            const prev = oldProps[key]
+            const next = newProps[key]
+            if (prev !== next) {
+              hostPatchProp(
+                el,
+                key,
+                next,
+                prev,
+                false,
+                n1.children as VNode[],
+                unmountChildren
+              )
+            }
           }
         }
       }

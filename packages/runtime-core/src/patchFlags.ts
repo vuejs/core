@@ -29,12 +29,18 @@ export const STYLE = 1 << 2
 // them faster (without having to worry about removed props)
 export const PROPS = 1 << 3
 
+// Indicates an element with props with dynamic keys. When keys change, a full
+// diff is always needed to remove the old key. This flag is mutually exclusive
+// with CLASS, STYLE and PROPS.
+export const FULL_PROPS = 1 << 4
+
 // Indicates a fragment or element with keyed or partially-keyed v-for children
-export const KEYED = 1 << 4
+export const KEYED = 1 << 5
 
 // Indicates a fragment or element that contains unkeyed v-for children
-export const UNKEYED = 1 << 5
+export const UNKEYED = 1 << 6
 
-// Indicates a component with dynamic slot (e.g. slot that references a v-for
-// iterated value). Components with this flag are always force updated.
-export const SLOTS = 1 << 6
+// Indicates a component with dynamic slots (e.g. slot that references a v-for
+// iterated value, or dynamic slot names).
+// Components with this flag are always force updated.
+export const DYNAMIC_SLOTS = 1 << 7
