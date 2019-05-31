@@ -16,17 +16,25 @@ export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: PropValidator<P[K]>
 }
 
-export type Prop<T> = { (): T } | { new (...args: any[]): T & object }
+type Prop<T> = { (): T } | { new (...args: any[]): T & object }
 
-export type PropType<T> = Prop<T> | Prop<T>[]
+type PropType<T> = Prop<T> | Prop<T>[]
 
-export type PropValidator<T> = PropOptions<T> | PropType<T>
+type PropValidator<T> = PropOptions<T> | PropType<T>
 
-export interface PropOptions<T = any> {
+interface PropOptions<T = any> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: T | null | undefined | (() => T | null | undefined)
-  validator?(value: T): boolean
+  validator?(value: any): boolean
+}
+
+export type ExtractPropTypes<PropOptions> = {
+  readonly [key in keyof PropOptions]: PropOptions[key] extends PropValidator<
+    infer V
+  >
+    ? V
+    : PropOptions[key] extends null | true ? any : PropOptions[key]
 }
 
 const enum BooleanFlags {

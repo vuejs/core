@@ -10,13 +10,15 @@ export {
 export {
   ComponentOptions,
   FunctionalComponent,
-  Slots,
-  Slot,
   createComponent
 } from './component'
 
-export * from './componentLifecycle'
+export { Slot, Slots } from './componentSlots'
 
-export { createRenderer, RendererOptions } from './createRenderer'
-export { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
+export { ComponentPropsOptions } from './componentProps'
+
 export * from './reactivity'
+export * from './componentLifecycle'
+export { createRenderer, RendererOptions } from './createRenderer'
+
+export { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'

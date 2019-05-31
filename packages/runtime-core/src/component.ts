@@ -7,18 +7,11 @@ import {
 } from '@vue/observer'
 import { isFunction, EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
-import { ComponentPropsOptions, PropValidator } from './componentProps'
+import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
+import { Slots } from './componentSlots'
 
 export type Data = { [key: string]: any }
-
-type ExtractPropTypes<PropOptions> = {
-  readonly [key in keyof PropOptions]: PropOptions[key] extends PropValidator<
-    infer V
-  >
-    ? V
-    : PropOptions[key] extends null | undefined ? any : PropOptions[key]
-}
 
 export type ComponentPublicProperties<P = Data, S = Data> = {
   $state: S
@@ -69,12 +62,6 @@ export interface LifecycleHooks {
   rtc: LifecycleHook // renderTracked
   ec: LifecycleHook // errorCaptured
 }
-
-export type Slot = (...args: any[]) => VNode[]
-
-export type Slots = Readonly<{
-  [name: string]: Slot
-}>
 
 export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions

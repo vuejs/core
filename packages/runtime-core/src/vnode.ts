@@ -1,6 +1,7 @@
-import { isArray, EMPTY_ARR } from '@vue/shared'
+import { isArray, isFunction, isString, EMPTY_ARR } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
+import { RawSlots } from './componentSlots'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -19,11 +20,13 @@ type VNodeChildAtom = VNode | string | number | null | void
 export interface VNodeChildren extends Array<VNodeChildren | VNodeChildAtom> {}
 export type VNodeChild = VNodeChildAtom | VNodeChildren
 
+export type NormalizedChildren = string | VNodeChildren | RawSlots | null
+
 export interface VNode {
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
-  children: string | VNodeChildren | null
+  children: NormalizedChildren
   component: ComponentInstance | null
 
   // DOM
@@ -91,7 +94,7 @@ export function createVNode(
     type,
     props,
     key: props && props.key,
-    children: typeof children === 'number' ? children + '' : children,
+    children: normalizeChildren(children),
     component: null,
     el: null,
     anchor: null,
@@ -127,10 +130,25 @@ export function normalizeVNode(child: VNodeChild): VNode {
     // fragment
     return createVNode(Fragment, null, child)
   } else if (typeof child === 'object') {
-    // already vnode
+    // already vnode, this should be the most common since compiled templates
+    // always produce all-vnode children arrays
     return child as VNode
   } else {
     // primitive types
     return createVNode(Text, null, child + '')
+  }
+}
+
+export function normalizeChildren(children: unknown): NormalizedChildren {
+  if (children == null) {
+    return null
+  } else if (isArray(children)) {
+    return children
+  } else if (typeof children === 'object') {
+    return children as RawSlots
+  } else if (isFunction(children)) {
+    return { default: children }
+  } else {
+    return isString(children) ? children : children + ''
   }
 }

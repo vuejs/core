@@ -34,6 +34,7 @@ import {
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
 import { resolveProps } from './componentProps'
+import { resolveSlots } from './componentSlots'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -201,7 +202,7 @@ export function createRenderer(options: RendererOptions) {
     }
     if (isString(vnode.children)) {
       hostSetElementText(el, vnode.children)
-    } else if (vnode.children != null) {
+    } else if (isArray(vnode.children)) {
       mountChildren(vnode.children, el)
     }
     hostInsert(el, container, anchor)
@@ -382,7 +383,7 @@ export function createRenderer(options: RendererOptions) {
       if (target != null) {
         if (isString(children)) {
           hostSetElementText(target, children)
-        } else if (children != null) {
+        } else if (isArray(children)) {
           mountChildren(children, target)
         }
       } else {
@@ -407,7 +408,7 @@ export function createRenderer(options: RendererOptions) {
           if (isString(children)) {
             hostSetElementText(target, '')
             hostSetElementText(nextTarget, children)
-          } else if (children != null) {
+          } else if (isArray(children)) {
             for (let i = 0; i < children.length; i++) {
               move(children[i] as VNode, nextTarget, null)
             }
@@ -454,6 +455,7 @@ export function createRenderer(options: RendererOptions) {
         // initial mount
         instance.vnode = vnode
         resolveProps(instance, vnode.props, Component.props)
+        resolveSlots(instance, vnode.children)
         // setup stateful
         if (typeof Component === 'object') {
           setupStatefulComponent(instance)
@@ -479,7 +481,7 @@ export function createRenderer(options: RendererOptions) {
           instance.vnode = next
           instance.next = null
           resolveProps(instance, next.props, Component.props)
-          // TODO slots
+          resolveSlots(instance, next.children)
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
@@ -551,7 +553,7 @@ export function createRenderer(options: RendererOptions) {
     } else {
       if (isString(c1)) {
         hostSetElementText(container, '')
-        if (c2 != null) {
+        if (isArray(c2)) {
           mountChildren(c2, container, anchor)
         }
       } else if (isArray(c1)) {
