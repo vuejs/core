@@ -36,12 +36,10 @@ type RequiredKeys<T> = {
 type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
 
 type InferPropType<T> = T extends null
-  ? any
-  : // null & true would fail to infer
-    T extends { type: null | true }
-    ? any
-    : // somehow `ObjectContructor` when inferred from { (): T } becomes `any`
-      T extends ObjectConstructor | { type: ObjectConstructor }
+  ? any // null & true would fail to infer
+  : T extends { type: null | true }
+    ? any // somehow `ObjectContructor` when inferred from { (): T } becomes `any`
+    : T extends ObjectConstructor | { type: ObjectConstructor }
       ? { [key: string]: any }
       : T extends Prop<infer V> ? V : T
 
@@ -63,8 +61,6 @@ type NormalizedProp =
     })
 
 type NormalizedPropsOptions = Record<string, NormalizedProp>
-
-const isReservedKey = (key: string): boolean => key[0] === '_' || key[0] === '$'
 
 // resolve raw VNode data.
 // - filter out reserved keys (key, ref, slots)
@@ -182,7 +178,7 @@ function normalizePropsOptions(
         warn(`props must be strings when using array syntax.`, raw[i])
       }
       const normalizedKey = camelize(raw[i])
-      if (!isReservedKey(normalizedKey)) {
+      if (normalizedKey[0] !== '$') {
         normalized[normalizedKey] = EMPTY_OBJ
       } else if (__DEV__) {
         warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
@@ -194,7 +190,7 @@ function normalizePropsOptions(
     }
     for (const key in raw) {
       const normalizedKey = camelize(key)
-      if (!isReservedKey(normalizedKey)) {
+      if (normalizedKey[0] !== '$') {
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
