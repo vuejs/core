@@ -16,7 +16,12 @@
 // Indicates an element with dynamic textContent (children fast path)
 export const TEXT = 1
 
-// Indicates an element with dynamic class
+// Indicates an element with dynamic class.
+// The compiler also pre-normalizes the :class binding:
+// - b -> normalize(b)
+// - ['foo', b] -> 'foo' + normalize(b)
+// - { a, b: c } -> (a ? a : '') + (b ? c : '')
+// - ['a', b, { c }] -> 'a' + normalize(b) + (c ? c : '')
 export const CLASS = 1 << 1
 
 // Indicates an element with dynamic style

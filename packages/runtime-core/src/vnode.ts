@@ -192,7 +192,7 @@ function normalizeStyle(
   }
 }
 
-function normalizeClass(value: unknown): string {
+export function normalizeClass(value: unknown): string {
   let res = ''
   if (isString(value)) {
     res = value
