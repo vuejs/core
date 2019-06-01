@@ -2,7 +2,7 @@ import { isArray, isFunction, isString, isObject, EMPTY_ARR } from '@vue/shared'
 import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
-import { CLASS, STYLE } from './patchFlags'
+import { CLASS } from './patchFlags'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
