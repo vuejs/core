@@ -10,7 +10,7 @@ import {
   TEXT_CHILDREN,
   ARRAY_CHILDREN,
   SLOTS_CHILDREN
-} from './shapeFlags'
+} from './typeFlags'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -102,39 +102,32 @@ export function createVNode(
 ): VNode {
   // Allow passing 0 for props, this can save bytes on generated code.
   props = props || null
-  // normalize children
-  children = normalizeChildren(children) as NormalizedChildren
 
+  // encode the vnode type information into a bitmap
   const typeFlag = isString(type)
     ? ELEMENT
-    : isFunction(type)
-      ? FUNCTIONAL_COMPONENT
-      : isObject(type)
-        ? STATEFUL_COMPONENT
-        : 0
-
-  const childFlag = isString(children)
-    ? TEXT_CHILDREN
-    : isArray(children)
-      ? ARRAY_CHILDREN
-      : isObject(children)
-        ? SLOTS_CHILDREN
+    : isObject(type)
+      ? STATEFUL_COMPONENT
+      : isFunction(type)
+        ? FUNCTIONAL_COMPONENT
         : 0
 
   const vnode: VNode = {
     type,
     props,
     key: props && props.key,
-    children,
+    children: null,
     component: null,
     el: null,
     anchor: null,
     target: null,
-    shapeFlag: typeFlag | childFlag,
+    shapeFlag: typeFlag,
     patchFlag,
     dynamicProps,
     dynamicChildren: null
   }
+
+  normalizeChildren(vnode, children)
 
   // class & style normalization.
   if (props !== null) {
@@ -193,18 +186,23 @@ export function normalizeVNode(child: VNodeChild): VNode {
   }
 }
 
-export function normalizeChildren(children: unknown): NormalizedChildren {
+export function normalizeChildren(vnode: VNode, children: unknown) {
+  let type = 0
   if (children == null) {
-    return null
+    children = null
   } else if (isArray(children)) {
-    return children
+    type = ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    return children as RawSlots
+    type = SLOTS_CHILDREN
   } else if (isFunction(children)) {
-    return { default: children }
+    children = { default: children }
+    type = SLOTS_CHILDREN
   } else {
-    return isString(children) ? children : children + ''
+    children = isString(children) ? children : children + ''
+    type = TEXT_CHILDREN
   }
+  vnode.children = children as NormalizedChildren
+  vnode.shapeFlag |= type
 }
 
 function normalizeStyle(

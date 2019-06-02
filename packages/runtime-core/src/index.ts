@@ -9,14 +9,12 @@ export {
   Portal
 } from './vnode'
 
-export { FunctionalComponent, createComponent } from './component'
-
+export { createComponent, FunctionalComponent } from './component'
+export { createRenderer, RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
-
 export { PropType, ComponentPropsOptions } from './componentProps'
 
 export * from './reactivity'
 export * from './componentLifecycle'
-export { createRenderer, RendererOptions } from './createRenderer'
-
-export { TEXT, CLASS, STYLE, PROPS, KEYED, UNKEYED } from './patchFlags'
+export * from './patchFlags'
+export * from './typeFlags'

@@ -10,7 +10,7 @@ import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
 import { Slots } from './componentSlots'
-import { STATEFUL_COMPONENT } from './shapeFlags'
+import { STATEFUL_COMPONENT } from './typeFlags'
 
 export type Data = { [key: string]: any }
 

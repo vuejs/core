@@ -34,7 +34,7 @@ import {
   FUNCTIONAL_COMPONENT,
   TEXT_CHILDREN,
   ARRAY_CHILDREN
-} from './shapeFlags'
+} from './typeFlags'
 
 const prodEffectOptions = {
   scheduler: queueJob
