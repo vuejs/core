@@ -5,11 +5,12 @@ import {
   observable,
   immutable
 } from '@vue/observer'
-import { isFunction, EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
 import { Slots } from './componentSlots'
+import { STATEFUL_COMPONENT } from './shapeFlags'
 
 export type Data = { [key: string]: any }
 
@@ -148,16 +149,17 @@ export function setupStatefulComponent(instance: ComponentInstance) {
 }
 
 export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const { type: Component, renderProxy } = instance
-  if (isFunction(Component)) {
-    return normalizeVNode(Component(instance))
-  } else {
-    if (__DEV__ && !Component.render) {
+  const { type: Component, vnode } = instance
+  if (vnode.shapeFlag & STATEFUL_COMPONENT) {
+    if (__DEV__ && !(Component as any).render) {
       // TODO warn missing render
     }
     return normalizeVNode(
-      (Component.render as Function).call(renderProxy, instance)
+      (Component as any).render.call(instance.renderProxy, instance)
     )
+  } else {
+    // functional
+    return normalizeVNode((Component as FunctionalComponent)(instance))
   }
 }
 

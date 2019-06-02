@@ -14,14 +14,7 @@ import {
   createComponentInstance,
   setupStatefulComponent
 } from './component'
-import {
-  isString,
-  isArray,
-  isFunction,
-  isObject,
-  EMPTY_OBJ,
-  EMPTY_ARR
-} from '@vue/shared'
+import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import {
   TEXT,
   CLASS,
@@ -35,6 +28,7 @@ import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
+import { ELEMENT, STATEFUL_COMPONENT, FUNCTIONAL_COMPONENT } from './shapeFlags'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -108,7 +102,7 @@ export function createRenderer(options: RendererOptions) {
     n2: VNode,
     container: HostNode,
     anchor?: HostNode,
-    optimized?: boolean
+    optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
@@ -117,7 +111,7 @@ export function createRenderer(options: RendererOptions) {
       n1 = null
     }
 
-    const { type } = n2
+    const { type, shapeFlag } = n2
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -132,10 +126,14 @@ export function createRenderer(options: RendererOptions) {
         processPortal(n1, n2, container, anchor, optimized)
         break
       default:
-        if (isString(type)) {
+        if (shapeFlag & ELEMENT) {
           processElement(n1, n2, container, anchor, optimized)
         } else {
-          if (__DEV__ && !isFunction(type) && !isObject(type)) {
+          if (
+            __DEV__ &&
+            !(shapeFlag & STATEFUL_COMPONENT) &&
+            !(shapeFlag & FUNCTIONAL_COMPONENT)
+          ) {
             // TODO warn invalid node type
             debugger
           }
@@ -453,14 +451,14 @@ export function createRenderer(options: RendererOptions) {
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
       Component
     ))
-    instance.update = effect(() => {
-      if (!instance.vnode) {
+    instance.update = effect(function updateComponent() {
+      if (instance.vnode === null) {
         // initial mount
         instance.vnode = vnode
         resolveProps(instance, vnode.props, Component.props)
         resolveSlots(instance, vnode.children)
         // setup stateful
-        if (typeof Component === 'object') {
+        if (vnode.shapeFlag & STATEFUL_COMPONENT) {
           setupStatefulComponent(instance)
         }
         const subTree = (instance.subTree = renderComponentRoot(instance))

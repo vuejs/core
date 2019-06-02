@@ -70,10 +70,13 @@ function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
 }
 
 export function cleanup(effect: ReactiveEffect) {
-  for (let i = 0; i < effect.deps.length; i++) {
-    effect.deps[i].delete(effect)
+  const { deps } = effect
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect)
+    }
+    deps.length = 0
   }
-  effect.deps.length = 0
 }
 
 export function track(

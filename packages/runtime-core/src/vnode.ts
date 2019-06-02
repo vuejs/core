@@ -3,6 +3,7 @@ import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
 import { CLASS } from './patchFlags'
+import { ELEMENT, FUNCTIONAL_COMPONENT, STATEFUL_COMPONENT } from './shapeFlags'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -36,6 +37,7 @@ export interface VNode {
   target: HostNode | null // portal target
 
   // optimization only
+  shapeFlag: number
   patchFlag: number
   dynamicProps: string[] | null
   dynamicChildren: VNode[] | null
@@ -93,6 +95,15 @@ export function createVNode(
 ): VNode {
   // Allow passing 0 for props, this can save bytes on generated code.
   props = props || null
+
+  const shapeFlag = isString(type)
+    ? ELEMENT
+    : isFunction(type)
+      ? FUNCTIONAL_COMPONENT
+      : isObject(type)
+        ? STATEFUL_COMPONENT
+        : 0
+
   const vnode: VNode = {
     type,
     props,
@@ -102,6 +113,7 @@ export function createVNode(
     el: null,
     anchor: null,
     target: null,
+    shapeFlag,
     patchFlag,
     dynamicProps,
     dynamicChildren: null
@@ -123,7 +135,12 @@ export function createVNode(
   // component nodes also should always be tracked, because even if the
   // component doesn't need to update, it needs to persist the instance on to
   // the next vnode so that it can be properly unmounted later.
-  if (shouldTrack && (patchFlag || isObject(type) || isFunction(type))) {
+  if (
+    shouldTrack &&
+    (patchFlag ||
+      shapeFlag & STATEFUL_COMPONENT ||
+      shapeFlag & FUNCTIONAL_COMPONENT)
+  ) {
     trackDynamicNode(vnode)
   }
 
