@@ -14,7 +14,7 @@ import {
   createComponentInstance,
   setupStatefulComponent
 } from './component'
-import { isString, isArray, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
+import { isString, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
 import {
   TEXT,
   CLASS,
@@ -28,7 +28,13 @@ import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
-import { ELEMENT, STATEFUL_COMPONENT, FUNCTIONAL_COMPONENT } from './shapeFlags'
+import {
+  ELEMENT,
+  STATEFUL_COMPONENT,
+  FUNCTIONAL_COMPONENT,
+  TEXT_CHILDREN,
+  ARRAY_CHILDREN
+} from './shapeFlags'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -193,15 +199,16 @@ export function createRenderer(options: RendererOptions) {
 
   function mountElement(vnode: VNode, container: HostNode, anchor?: HostNode) {
     const el = (vnode.el = hostCreateElement(vnode.type as string))
-    if (vnode.props != null) {
-      for (const key in vnode.props) {
-        hostPatchProp(el, key, vnode.props[key], null, false)
+    const { props, shapeFlag } = vnode
+    if (props != null) {
+      for (const key in props) {
+        hostPatchProp(el, key, props[key], null, false)
       }
     }
-    if (isString(vnode.children)) {
-      hostSetElementText(el, vnode.children)
-    } else if (isArray(vnode.children)) {
-      mountChildren(vnode.children, el)
+    if (shapeFlag & TEXT_CHILDREN) {
+      hostSetElementText(el, vnode.children as string)
+    } else if (shapeFlag & ARRAY_CHILDREN) {
+      mountChildren(vnode.children as VNodeChildren, el)
     }
     hostInsert(el, container, anchor)
   }
@@ -374,16 +381,16 @@ export function createRenderer(options: RendererOptions) {
     optimized?: boolean
   ) {
     const targetSelector = n2.props && n2.props.target
+    const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
-      const children = n2.children
       const target = (n2.target = isString(targetSelector)
         ? hostQuerySelector(targetSelector)
         : null)
       if (target != null) {
-        if (isString(children)) {
-          hostSetElementText(target, children)
-        } else if (isArray(children)) {
-          mountChildren(children, target)
+        if (shapeFlag & TEXT_CHILDREN) {
+          hostSetElementText(target, children as string)
+        } else if (shapeFlag & ARRAY_CHILDREN) {
+          mountChildren(children as VNodeChildren, target)
         }
       } else {
         // TODO warn missing or invalid target
@@ -391,8 +398,8 @@ export function createRenderer(options: RendererOptions) {
     } else {
       // update content
       const target = (n2.target = n1.target)
-      if (n2.patchFlag === TEXT) {
-        hostSetElementText(target, n2.children as string)
+      if (patchFlag === TEXT) {
+        hostSetElementText(target, children as string)
       } else if (!optimized) {
         patchChildren(n1, n2, target)
       }
@@ -403,13 +410,12 @@ export function createRenderer(options: RendererOptions) {
           : null)
         if (nextTarget != null) {
           // move content
-          const children = n2.children
-          if (isString(children)) {
+          if (shapeFlag & TEXT_CHILDREN) {
             hostSetElementText(target, '')
-            hostSetElementText(nextTarget, children)
-          } else if (isArray(children)) {
-            for (let i = 0; i < children.length; i++) {
-              move(children[i] as VNode, nextTarget, null)
+            hostSetElementText(nextTarget, children as string)
+          } else if (shapeFlag & ARRAY_CHILDREN) {
+            for (let i = 0; i < (children as VNode[]).length; i++) {
+              move((children as VNode[])[i], nextTarget, null)
             }
           }
         } else {
@@ -516,10 +522,11 @@ export function createRenderer(options: RendererOptions) {
     optimized?: boolean
   ) {
     const c1 = n1 && n1.children
+    const prevShapeFlag = n1 ? n1.shapeFlag : 0
     const c2 = n2.children
 
     // fast path
-    const { patchFlag } = n2
+    const { patchFlag, shapeFlag } = n2
     if (patchFlag) {
       if (patchFlag & KEYED) {
         // this could be either fully-keyed or mixed (some keyed some not)
@@ -545,22 +552,28 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    if (isString(c2)) {
+    if (shapeFlag & TEXT_CHILDREN) {
       // text children fast path
-      if (isArray(c1)) {
+      if (prevShapeFlag & ARRAY_CHILDREN) {
         unmountChildren(c1 as VNode[])
       }
-      hostSetElementText(container, c2)
+      hostSetElementText(container, c2 as string)
     } else {
-      if (isString(c1)) {
+      if (prevShapeFlag & TEXT_CHILDREN) {
         hostSetElementText(container, '')
-        if (isArray(c2)) {
-          mountChildren(c2, container, anchor)
+        if (shapeFlag & ARRAY_CHILDREN) {
+          mountChildren(c2 as VNodeChildren, container, anchor)
         }
-      } else if (isArray(c1)) {
-        if (isArray(c2)) {
+      } else if (prevShapeFlag & ARRAY_CHILDREN) {
+        if (shapeFlag & ARRAY_CHILDREN) {
           // two arrays, cannot assume anything, do full diff
-          patchKeyedChildren(c1 as VNode[], c2, container, anchor, optimized)
+          patchKeyedChildren(
+            c1 as VNode[],
+            c2 as VNodeChildren,
+            container,
+            anchor,
+            optimized
+          )
         } else {
           // c2 is null in this case
           unmountChildren(c1 as VNode[], true)
@@ -791,7 +804,7 @@ export function createRenderer(options: RendererOptions) {
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
     if (vnode.dynamicChildren != null) {
       unmountChildren(vnode.dynamicChildren, shouldRemoveChildren)
-    } else if (isArray(vnode.children)) {
+    } else if (vnode.shapeFlag & ARRAY_CHILDREN) {
       unmountChildren(vnode.children as VNode[], shouldRemoveChildren)
     }
     if (doRemove) {

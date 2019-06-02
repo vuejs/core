@@ -3,7 +3,14 @@ import { ComponentInstance } from './component'
 import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
 import { CLASS } from './patchFlags'
-import { ELEMENT, FUNCTIONAL_COMPONENT, STATEFUL_COMPONENT } from './shapeFlags'
+import {
+  ELEMENT,
+  FUNCTIONAL_COMPONENT,
+  STATEFUL_COMPONENT,
+  TEXT_CHILDREN,
+  ARRAY_CHILDREN,
+  SLOTS_CHILDREN
+} from './shapeFlags'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -95,8 +102,10 @@ export function createVNode(
 ): VNode {
   // Allow passing 0 for props, this can save bytes on generated code.
   props = props || null
+  // normalize children
+  children = normalizeChildren(children) as NormalizedChildren
 
-  const shapeFlag = isString(type)
+  const typeFlag = isString(type)
     ? ELEMENT
     : isFunction(type)
       ? FUNCTIONAL_COMPONENT
@@ -104,16 +113,24 @@ export function createVNode(
         ? STATEFUL_COMPONENT
         : 0
 
+  const childFlag = isString(children)
+    ? TEXT_CHILDREN
+    : isArray(children)
+      ? ARRAY_CHILDREN
+      : isObject(children)
+        ? SLOTS_CHILDREN
+        : 0
+
   const vnode: VNode = {
     type,
     props,
     key: props && props.key,
-    children: normalizeChildren(children),
+    children,
     component: null,
     el: null,
     anchor: null,
     target: null,
-    shapeFlag,
+    shapeFlag: typeFlag | childFlag,
     patchFlag,
     dynamicProps,
     dynamicChildren: null
@@ -138,8 +155,8 @@ export function createVNode(
   if (
     shouldTrack &&
     (patchFlag ||
-      shapeFlag & STATEFUL_COMPONENT ||
-      shapeFlag & FUNCTIONAL_COMPONENT)
+      typeFlag & STATEFUL_COMPONENT ||
+      typeFlag & FUNCTIONAL_COMPONENT)
   ) {
     trackDynamicNode(vnode)
   }
