@@ -318,7 +318,6 @@ export function createRenderer(options: RendererOptions) {
 
         // style
         // this flag is matched when the element has dynamic style bindings
-        // TODO separate static and dynamic styles?
         if (patchFlag & STYLE) {
           hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
         }

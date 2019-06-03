@@ -25,6 +25,11 @@ export const TEXT = 1
 export const CLASS = 1 << 1
 
 // Indicates an element with dynamic style
+// The compiler pre-compiles static string styles into static objects
+// + detects and hoists inline static objects
+// e.g. style="color: red" and :style="{ color: 'red' }" both get hoisted as
+//   const style = { color: 'red' }
+//   render() { return e('div', { style }) }
 export const STYLE = 1 << 2
 
 // Indicates an element that has non-class/style dynamic props.
