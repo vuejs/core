@@ -19,6 +19,12 @@ export const RenderProxyHandlers = {
           return target.slots
         case '$refs':
           return target.refs
+        case '$parent':
+          return target.parent
+        case '$root':
+          return target.root
+        case '$el':
+          return target.vnode && target.vnode.el
         default:
           break
       }

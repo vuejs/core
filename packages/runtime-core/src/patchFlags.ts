@@ -49,3 +49,7 @@ export const UNKEYED = 1 << 6
 // iterated value, or dynamic slot names).
 // Components with this flag are always force updated.
 export const DYNAMIC_SLOTS = 1 << 7
+
+// Indicates an element with ref. This includes static string refs because the
+// refs object is refreshed on each update and all refs need to set again.
+export const REF = 1 << 8

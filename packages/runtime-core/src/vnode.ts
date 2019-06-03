@@ -35,6 +35,7 @@ export interface VNode {
   type: VNodeTypes
   props: { [key: string]: any } | null
   key: string | number | null
+  ref: string | Function | null
   children: NormalizedChildren
   component: ComponentInstance | null
 
@@ -65,6 +66,9 @@ const blockStack: (VNode[] | null)[] = []
 //   function render() {
 //     return (openBlock(),createBlock('div', null, [...]))
 //   }
+//
+// disableTracking is true when creating a fragment block, since a fragment
+// always diffs its children.
 export function openBlock(disableTrackng?: boolean) {
   blockStack.push(disableTrackng ? null : [])
 }
@@ -116,6 +120,7 @@ export function createVNode(
     type,
     props,
     key: props && props.key,
+    ref: props && props.ref,
     children: null,
     component: null,
     el: null,

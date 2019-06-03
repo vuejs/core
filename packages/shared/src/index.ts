@@ -14,6 +14,9 @@ export const isString = (val: any): val is string => typeof val === 'string'
 export const isObject = (val: any): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
+export const isReservedProp = (key: string): boolean =>
+  key === 'key' || key === 'ref'
+
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {
   return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))

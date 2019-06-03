@@ -7,7 +7,8 @@ import {
   isString,
   isFunction,
   isArray,
-  isObject
+  isObject,
+  isReservedProp
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInstance } from './component'
@@ -101,10 +102,8 @@ export function resolveProps(
 
   if (rawProps != null) {
     for (const key in rawProps) {
-      // key, ref, slots are reserved
-      if (key === 'key' || key === 'ref' || key === 'slots') {
-        continue
-      }
+      // key, ref are reserved
+      if (isReservedProp(key)) continue
       // any non-declared data are put into a separate `attrs` object
       // for spreading
       if (hasDeclaredProps && !options.hasOwnProperty(key)) {

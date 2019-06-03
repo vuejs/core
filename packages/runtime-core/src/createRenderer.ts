@@ -14,7 +14,13 @@ import {
   createComponentInstance,
   setupStatefulComponent
 } from './component'
-import { isString, EMPTY_OBJ, EMPTY_ARR } from '@vue/shared'
+import {
+  isString,
+  EMPTY_OBJ,
+  EMPTY_ARR,
+  isReservedProp,
+  isFunction
+} from '@vue/shared'
 import {
   TEXT,
   CLASS,
@@ -225,11 +231,13 @@ export function createRenderer(options: RendererOptions) {
     isSVG: boolean,
     optimized: boolean
   ) {
-    // mount
     if (n1 == null) {
       mountElement(n2, container, anchor, parentComponent, isSVG)
     } else {
       patchElement(n1, n2, parentComponent, isSVG, optimized)
+    }
+    if (n2.ref !== null && parentComponent !== null) {
+      setRef(n2.ref, parentComponent, n2.el)
     }
   }
 
@@ -246,6 +254,7 @@ export function createRenderer(options: RendererOptions) {
     const { props, shapeFlag } = vnode
     if (props != null) {
       for (const key in props) {
+        if (isReservedProp(key)) continue
         hostPatchProp(el, key, props[key], null, isSVG)
       }
     }
@@ -385,7 +394,7 @@ export function createRenderer(options: RendererOptions) {
   ) {
     if (oldProps !== newProps) {
       for (const key in newProps) {
-        if (key === 'key' || key === 'ref') continue
+        if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
         if (next !== prev) {
@@ -402,7 +411,7 @@ export function createRenderer(options: RendererOptions) {
       }
       if (oldProps !== EMPTY_OBJ) {
         for (const key in oldProps) {
-          if (key === 'key' || key === 'ref') continue
+          if (isReservedProp(key)) continue
           if (!(key in newProps)) {
             hostPatchProp(
               el,
@@ -539,6 +548,13 @@ export function createRenderer(options: RendererOptions) {
         n2.el = n1.el
       }
     }
+    if (n2.ref !== null && parentComponent !== null) {
+      setRef(
+        n2.ref,
+        parentComponent,
+        (n2.component as ComponentInstance).renderProxy
+      )
+    }
   }
 
   function mountComponent(
@@ -553,9 +569,9 @@ export function createRenderer(options: RendererOptions) {
       Component,
       parentComponent
     ))
-    instance.update = effect(function updateComponent() {
+    instance.update = effect(function componentEffect() {
       if (instance.vnode === null) {
-        // initial mount
+        // mountComponent
         instance.vnode = initialVNode
         resolveProps(instance, initialVNode.props, Component.props)
         resolveSlots(instance, initialVNode.children)
@@ -575,7 +591,7 @@ export function createRenderer(options: RendererOptions) {
           queuePostFlushCb(instance.m)
         }
       } else {
-        // component update
+        // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
         const { next } = instance
@@ -593,11 +609,17 @@ export function createRenderer(options: RendererOptions) {
         if (instance.bu !== null) {
           invokeHooks(instance.bu)
         }
+        // reset refs
+        // only needed if previous patch had refs
+        if (instance.refs !== EMPTY_OBJ) {
+          instance.refs = {}
+        }
         patch(
           prevTree,
           nextTree,
-          // may have moved
+          // parent may have changed if it's in a portal
           hostParentNode(prevTree.el),
+          // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
           isSVG
@@ -944,7 +966,7 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function move(vnode: VNode, container: HostNode, anchor: HostNode) {
-    if (vnode.component != null) {
+    if (vnode.component !== null) {
       move(vnode.component.subTree, container, anchor)
       return
     }
@@ -1013,6 +1035,22 @@ export function createRenderer(options: RendererOptions) {
     return vnode.component === null
       ? hostNextSibling(vnode.anchor || vnode.el)
       : getNextHostNode(vnode.component.subTree)
+  }
+
+  function setRef(
+    ref: string | Function,
+    parent: ComponentInstance,
+    value: HostNode | ComponentInstance
+  ) {
+    const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
+    if (isString(ref)) {
+      refs[ref] = value
+    } else {
+      if (__DEV__ && !isFunction(ref)) {
+        // TODO warn invalid ref type
+      }
+      ref(value, refs)
+    }
   }
 
   return function render(vnode: VNode | null, dom: HostNode): VNode | null {
