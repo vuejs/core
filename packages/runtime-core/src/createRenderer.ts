@@ -542,25 +542,25 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function mountComponent(
-    vnode: VNode,
+    initialVNode: VNode,
     container: HostNode,
     anchor: HostNode,
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
-    const Component = vnode.type as any
-    const instance: ComponentInstance = (vnode.component = createComponentInstance(
+    const Component = initialVNode.type as any
+    const instance: ComponentInstance = (initialVNode.component = createComponentInstance(
       Component,
       parentComponent
     ))
     instance.update = effect(function updateComponent() {
       if (instance.vnode === null) {
         // initial mount
-        instance.vnode = vnode
-        resolveProps(instance, vnode.props, Component.props)
-        resolveSlots(instance, vnode.children)
+        instance.vnode = initialVNode
+        resolveProps(instance, initialVNode.props, Component.props)
+        resolveSlots(instance, initialVNode.children)
         // setup stateful
-        if (vnode.shapeFlag & STATEFUL_COMPONENT) {
+        if (initialVNode.shapeFlag & STATEFUL_COMPONENT) {
           setupStatefulComponent(instance)
         }
         const subTree = (instance.subTree = renderComponentRoot(instance))
@@ -569,7 +569,7 @@ export function createRenderer(options: RendererOptions) {
           invokeHooks(instance.bm)
         }
         patch(null, subTree, container, anchor, instance, isSVG)
-        vnode.el = subTree.el
+        initialVNode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
           queuePostFlushCb(instance.m)
@@ -580,6 +580,7 @@ export function createRenderer(options: RendererOptions) {
         // OR parent calling processComponent (next: VNode)
         const { next } = instance
         if (next !== null) {
+          // update from parent
           next.component = instance
           instance.vnode = next
           instance.next = null
@@ -601,10 +602,17 @@ export function createRenderer(options: RendererOptions) {
           instance,
           isSVG
         )
-        if (next !== null) {
-          next.el = nextTree.el
-        } else {
-          // TODO in case of HOC, update parent component vnode el
+        let current = instance.vnode
+        current.el = nextTree.el
+        if (next === null) {
+          // self-triggered update. In case of HOC, update parent component
+          // vnode el. HOC is indicated by parent instance's subTree pointing
+          // to child component's vnode
+          let parent = instance.parent
+          while (parent && parent.subTree === current) {
+            ;(current = parent.vnode).el = nextTree.el
+            parent = parent.parent
+          }
         }
         // upated hook
         if (instance.u !== null) {
