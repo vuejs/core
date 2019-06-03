@@ -66,6 +66,8 @@ export interface LifecycleHooks {
 
 export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions
+  parent: ComponentInstance | null
+  root: ComponentInstance
   vnode: VNode
   next: VNode | null
   subTree: VNode
@@ -91,9 +93,14 @@ export function createComponent<RawProps, RawBindings>(
   return options as any
 }
 
-export function createComponentInstance(type: any): ComponentInstance {
-  return {
+export function createComponentInstance(
+  type: any,
+  parent: ComponentInstance | null
+): ComponentInstance {
+  const instance = {
     type,
+    parent,
+    root: null as any, // set later so it can point to itself
     vnode: null as any,
     next: null,
     subTree: null as any,
@@ -121,6 +128,9 @@ export function createComponentInstance(type: any): ComponentInstance {
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ
   }
+
+  instance.root = parent ? parent.root : instance
+  return instance
 }
 
 export let currentInstance: ComponentInstance | null = null
@@ -170,7 +180,7 @@ export function shouldUpdateComponent(
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
-  if (patchFlag !== null) {
+  if (patchFlag) {
     if (patchFlag & DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for

@@ -78,7 +78,7 @@ export interface RendererOptions {
   ): void
   insert(el: HostNode, parent: HostNode, anchor?: HostNode): void
   remove(el: HostNode): void
-  createElement(type: string): HostNode
+  createElement(type: string, isSVG?: boolean): HostNode
   createText(text: string): HostNode
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
@@ -107,7 +107,9 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null, // null means this is a mount
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
+    anchor: HostNode = null,
+    parentComponent: ComponentInstance | null = null,
+    isSVG: boolean = false,
     optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
@@ -126,14 +128,38 @@ export function createRenderer(options: RendererOptions) {
         processEmptyNode(n1, n2, container, anchor)
         break
       case Fragment:
-        processFragment(n1, n2, container, anchor, optimized)
+        processFragment(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
         break
       case Portal:
-        processPortal(n1, n2, container, anchor, optimized)
+        processPortal(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
         break
       default:
         if (shapeFlag & ELEMENT) {
-          processElement(n1, n2, container, anchor, optimized)
+          processElement(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            isSVG,
+            optimized
+          )
         } else {
           if (
             __DEV__ &&
@@ -143,7 +169,15 @@ export function createRenderer(options: RendererOptions) {
             // TODO warn invalid node type
             debugger
           }
-          processComponent(n1, n2, container, anchor, optimized)
+          processComponent(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            isSVG,
+            optimized
+          )
         }
         break
     }
@@ -153,7 +187,7 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode
+    anchor: HostNode
   ) {
     if (n1 == null) {
       hostInsert(
@@ -173,7 +207,7 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode
+    anchor: HostNode
   ) {
     if (n1 == null) {
       hostInsert((n2.el = hostCreateComment('')), container, anchor)
@@ -186,29 +220,45 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     // mount
     if (n1 == null) {
-      mountElement(n2, container, anchor)
+      mountElement(n2, container, anchor, parentComponent, isSVG)
     } else {
-      patchElement(n1, n2, optimized)
+      patchElement(n1, n2, parentComponent, isSVG, optimized)
     }
   }
 
-  function mountElement(vnode: VNode, container: HostNode, anchor?: HostNode) {
-    const el = (vnode.el = hostCreateElement(vnode.type as string))
+  function mountElement(
+    vnode: VNode,
+    container: HostNode,
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean
+  ) {
+    const tag = vnode.type as string
+    isSVG = isSVG || tag === 'svg'
+    const el = (vnode.el = hostCreateElement(tag, isSVG))
     const { props, shapeFlag } = vnode
     if (props != null) {
       for (const key in props) {
-        hostPatchProp(el, key, props[key], null, false)
+        hostPatchProp(el, key, props[key], null, isSVG)
       }
     }
     if (shapeFlag & TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ARRAY_CHILDREN) {
-      mountChildren(vnode.children as VNodeChildren, el)
+      mountChildren(
+        vnode.children as VNodeChildren,
+        el,
+        null,
+        parentComponent,
+        isSVG
+      )
     }
     hostInsert(el, container, anchor)
   }
@@ -216,16 +266,24 @@ export function createRenderer(options: RendererOptions) {
   function mountChildren(
     children: VNodeChildren,
     container: HostNode,
-    anchor?: HostNode,
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = normalizeVNode(children[i]))
-      patch(null, child, container, anchor)
+      patch(null, child, container, anchor, parentComponent, isSVG)
     }
   }
 
-  function patchElement(n1: VNode, n2: VNode, optimized?: boolean) {
+  function patchElement(
+    n1: VNode,
+    n2: VNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
+  ) {
     const el = (n2.el = n1.el)
     const { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
@@ -239,13 +297,13 @@ export function createRenderer(options: RendererOptions) {
 
       if (patchFlag & FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(el, n2, oldProps, newProps)
+        patchProps(el, n2, oldProps, newProps, isSVG)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
         if (patchFlag & CLASS) {
           if (oldProps.class !== newProps.class) {
-            hostPatchProp(el, 'class', newProps.class, null, false)
+            hostPatchProp(el, 'class', newProps.class, null, isSVG)
           }
         }
 
@@ -253,7 +311,7 @@ export function createRenderer(options: RendererOptions) {
         // this flag is matched when the element has dynamic style bindings
         // TODO separate static and dynamic styles?
         if (patchFlag & STYLE) {
-          hostPatchProp(el, 'style', newProps.style, oldProps.style, false)
+          hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
         }
 
         // props
@@ -275,7 +333,7 @@ export function createRenderer(options: RendererOptions) {
                 key,
                 next,
                 prev,
-                false,
+                isSVG,
                 n1.children as VNode[],
                 unmountChildren
               )
@@ -295,18 +353,26 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (!optimized) {
       // unoptimized, full diff
-      patchProps(el, n2, oldProps, newProps)
+      patchProps(el, n2, oldProps, newProps, isSVG)
     }
 
     if (dynamicChildren != null) {
       // children fast path
       const olddynamicChildren = n1.dynamicChildren as VNode[]
       for (let i = 0; i < dynamicChildren.length; i++) {
-        patch(olddynamicChildren[i], dynamicChildren[i], el, null, true)
+        patch(
+          olddynamicChildren[i],
+          dynamicChildren[i],
+          el,
+          null,
+          parentComponent,
+          isSVG,
+          true
+        )
       }
     } else if (!optimized) {
       // full diff
-      patchChildren(n1, n2, el)
+      patchChildren(n1, n2, el, null, parentComponent, isSVG)
     }
   }
 
@@ -314,7 +380,8 @@ export function createRenderer(options: RendererOptions) {
     el: HostNode,
     vnode: VNode,
     oldProps: any,
-    newProps: any
+    newProps: any,
+    isSVG: boolean
   ) {
     if (oldProps !== newProps) {
       for (const key in newProps) {
@@ -327,7 +394,7 @@ export function createRenderer(options: RendererOptions) {
             key,
             next,
             prev,
-            false,
+            isSVG,
             vnode.children as VNode[],
             unmountChildren
           )
@@ -342,7 +409,7 @@ export function createRenderer(options: RendererOptions) {
               key,
               null,
               null,
-              false,
+              isSVG,
               vnode.children as VNode[],
               unmountChildren
             )
@@ -356,8 +423,10 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))
     const fragmentEndAnchor = (n2.anchor = n1
@@ -367,9 +436,23 @@ export function createRenderer(options: RendererOptions) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
-      mountChildren(n2.children as VNodeChildren, container, fragmentEndAnchor)
+      mountChildren(
+        n2.children as VNodeChildren,
+        container,
+        fragmentEndAnchor,
+        parentComponent,
+        isSVG
+      )
     } else {
-      patchChildren(n1, n2, container, fragmentEndAnchor, optimized)
+      patchChildren(
+        n1,
+        n2,
+        container,
+        fragmentEndAnchor,
+        parentComponent,
+        isSVG,
+        optimized
+      )
     }
   }
 
@@ -377,8 +460,10 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     const targetSelector = n2.props && n2.props.target
     const { patchFlag, shapeFlag, children } = n2
@@ -390,7 +475,13 @@ export function createRenderer(options: RendererOptions) {
         if (shapeFlag & TEXT_CHILDREN) {
           hostSetElementText(target, children as string)
         } else if (shapeFlag & ARRAY_CHILDREN) {
-          mountChildren(children as VNodeChildren, target)
+          mountChildren(
+            children as VNodeChildren,
+            target,
+            null,
+            parentComponent,
+            isSVG
+          )
         }
       } else {
         // TODO warn missing or invalid target
@@ -401,7 +492,7 @@ export function createRenderer(options: RendererOptions) {
       if (patchFlag === TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
-        patchChildren(n1, n2, target)
+        patchChildren(n1, n2, target, null, parentComponent, isSVG)
       }
       // target changed
       if (targetSelector !== (n1.props && n1.props.target)) {
@@ -431,11 +522,13 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     if (n1 == null) {
-      mountComponent(n2, container, anchor)
+      mountComponent(n2, container, anchor, parentComponent, isSVG)
     } else {
       const instance = (n2.component = n1.component) as ComponentInstance
       if (shouldUpdateComponent(n1, n2, optimized)) {
@@ -451,11 +544,14 @@ export function createRenderer(options: RendererOptions) {
   function mountComponent(
     vnode: VNode,
     container: HostNode,
-    anchor?: HostNode
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean
   ) {
     const Component = vnode.type as any
     const instance: ComponentInstance = (vnode.component = createComponentInstance(
-      Component
+      Component,
+      parentComponent
     ))
     instance.update = effect(function updateComponent() {
       if (instance.vnode === null) {
@@ -472,7 +568,7 @@ export function createRenderer(options: RendererOptions) {
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
-        patch(null, subTree, container, anchor)
+        patch(null, subTree, container, anchor, instance, isSVG)
         vnode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
@@ -483,7 +579,7 @@ export function createRenderer(options: RendererOptions) {
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
         const { next } = instance
-        if (next != null) {
+        if (next !== null) {
           next.component = instance
           instance.vnode = next
           instance.next = null
@@ -501,10 +597,14 @@ export function createRenderer(options: RendererOptions) {
           nextTree,
           // may have moved
           hostParentNode(prevTree.el),
-          getNextHostNode(prevTree)
+          getNextHostNode(prevTree),
+          instance,
+          isSVG
         )
-        if (next != null) {
+        if (next !== null) {
           next.el = nextTree.el
+        } else {
+          // TODO in case of HOC, update parent component vnode el
         }
         // upated hook
         if (instance.u !== null) {
@@ -518,8 +618,10 @@ export function createRenderer(options: RendererOptions) {
     n1: VNode | null,
     n2: VNode,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean = false
   ) {
     const c1 = n1 && n1.children
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
@@ -536,6 +638,8 @@ export function createRenderer(options: RendererOptions) {
           c2 as VNodeChildren,
           container,
           anchor,
+          parentComponent,
+          isSVG,
           optimized
         )
         return
@@ -546,6 +650,8 @@ export function createRenderer(options: RendererOptions) {
           c2 as VNodeChildren,
           container,
           anchor,
+          parentComponent,
+          isSVG,
           optimized
         )
         return
@@ -562,7 +668,13 @@ export function createRenderer(options: RendererOptions) {
       if (prevShapeFlag & TEXT_CHILDREN) {
         hostSetElementText(container, '')
         if (shapeFlag & ARRAY_CHILDREN) {
-          mountChildren(c2 as VNodeChildren, container, anchor)
+          mountChildren(
+            c2 as VNodeChildren,
+            container,
+            anchor,
+            parentComponent,
+            isSVG
+          )
         }
       } else if (prevShapeFlag & ARRAY_CHILDREN) {
         if (shapeFlag & ARRAY_CHILDREN) {
@@ -572,6 +684,8 @@ export function createRenderer(options: RendererOptions) {
             c2 as VNodeChildren,
             container,
             anchor,
+            parentComponent,
+            isSVG,
             optimized
           )
         } else {
@@ -586,8 +700,10 @@ export function createRenderer(options: RendererOptions) {
     c1: VNode[],
     c2: VNodeChildren,
     container: HostNode,
-    anchor?: HostNode,
-    optimized?: boolean
+    anchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     c1 = c1 || EMPTY_ARR
     c2 = c2 || EMPTY_ARR
@@ -597,14 +713,22 @@ export function createRenderer(options: RendererOptions) {
     let i
     for (i = 0; i < commonLength; i++) {
       const nextChild = (c2[i] = normalizeVNode(c2[i]))
-      patch(c1[i], nextChild, container, null, optimized)
+      patch(
+        c1[i],
+        nextChild,
+        container,
+        null,
+        parentComponent,
+        isSVG,
+        optimized
+      )
     }
     if (oldLength > newLength) {
       // remove old
       unmountChildren(c1, true, commonLength)
     } else {
       // mount new
-      mountChildren(c2, container, anchor, commonLength)
+      mountChildren(c2, container, anchor, parentComponent, isSVG, commonLength)
     }
   }
 
@@ -613,8 +737,10 @@ export function createRenderer(options: RendererOptions) {
     c1: VNode[],
     c2: VNodeChildren,
     container: HostNode,
-    parentAnchor?: HostNode,
-    optimized?: boolean
+    parentAnchor: HostNode,
+    parentComponent: ComponentInstance | null,
+    isSVG: boolean,
+    optimized: boolean
   ) {
     let i = 0
     const l2 = c2.length
@@ -628,7 +754,15 @@ export function createRenderer(options: RendererOptions) {
       const n1 = c1[i]
       const n2 = (c2[i] = normalizeVNode(c2[i]))
       if (isSameType(n1, n2)) {
-        patch(n1, n2, container, parentAnchor, optimized)
+        patch(
+          n1,
+          n2,
+          container,
+          parentAnchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
       } else {
         break
       }
@@ -642,7 +776,15 @@ export function createRenderer(options: RendererOptions) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = normalizeVNode(c2[e2]))
       if (isSameType(n1, n2)) {
-        patch(n1, n2, container, parentAnchor, optimized)
+        patch(
+          n1,
+          n2,
+          container,
+          parentAnchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
       } else {
         break
       }
@@ -662,7 +804,14 @@ export function createRenderer(options: RendererOptions) {
         const nextPos = e2 + 1
         const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
         while (i <= e2) {
-          patch(null, (c2[i] = normalizeVNode(c2[i])), container, anchor)
+          patch(
+            null,
+            (c2[i] = normalizeVNode(c2[i])),
+            container,
+            anchor,
+            parentComponent,
+            isSVG
+          )
           i++
         }
       }
@@ -744,7 +893,15 @@ export function createRenderer(options: RendererOptions) {
           } else {
             moved = true
           }
-          patch(prevChild, c2[newIndex] as VNode, container, null, optimized)
+          patch(
+            prevChild,
+            c2[newIndex] as VNode,
+            container,
+            null,
+            parentComponent,
+            isSVG,
+            optimized
+          )
           patched++
         }
       }
@@ -763,7 +920,7 @@ export function createRenderer(options: RendererOptions) {
           nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
-          patch(null, nextChild, container, anchor)
+          patch(null, nextChild, container, anchor, parentComponent, isSVG)
         } else if (moved) {
           // move if:
           // There is no stable subsequence (e.g. a reverse)
