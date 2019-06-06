@@ -7,6 +7,7 @@ function injectHook(
 ) {
   if (target) {
     // TODO inject a error-handling wrapped version of the hook
+    // TODO also set currentInstance when calling the hook
     ;(target[name] || (target[name] = [])).push(hook)
   } else {
     // TODO warn

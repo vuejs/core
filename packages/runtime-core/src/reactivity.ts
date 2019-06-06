@@ -31,7 +31,7 @@ import {
 } from '@vue/observer'
 import { currentInstance } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
+import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
@@ -43,10 +43,10 @@ function recordEffect(effect: ReactiveEffect) {
 
 // a wrapped version of raw computed to tear it down at component unmount
 export function computed<T, C = null>(
-  getter: (this: C, ctx: C) => T,
-  context?: C
+  getter: () => T,
+  setter?: (v: T) => void
 ): ComputedValue<T> {
-  const c = _computed(getter, context)
+  const c = _computed(getter, setter)
   recordEffect(c.effect)
   return c
 }
@@ -77,12 +77,16 @@ export function watch<T>(
   const getter = options.deep ? () => traverse(baseGetter()) : baseGetter
 
   let oldValue: any
+  let cleanup: any
   const applyCb = cb
     ? () => {
         const newValue = runner()
         if (options.deep || newValue !== oldValue) {
           try {
-            cb(newValue, oldValue)
+            if (isFunction(cleanup)) {
+              cleanup()
+            }
+            cleanup = cb(newValue, oldValue)
           } catch (e) {
             // TODO handle error
             // handleError(e, instance, ErrorTypes.WATCH_CALLBACK)
