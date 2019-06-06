@@ -11,6 +11,7 @@ export interface ReactiveEffect {
   scheduler?: Scheduler
   onTrack?: Debugger
   onTrigger?: Debugger
+  onStop?: () => void
 }
 
 export interface ReactiveEffectOptions {
@@ -19,6 +20,7 @@ export interface ReactiveEffectOptions {
   scheduler?: Scheduler
   onTrack?: Debugger
   onTrigger?: Debugger
+  onStop?: () => void
 }
 
 export type Scheduler = (run: () => any) => void
@@ -49,6 +51,7 @@ export function createReactiveEffect(
   effect.scheduler = options.scheduler
   effect.onTrack = options.onTrack
   effect.onTrigger = options.onTrigger
+  effect.onStop = options.onStop
   effect.computed = options.computed
   effect.deps = []
   return effect

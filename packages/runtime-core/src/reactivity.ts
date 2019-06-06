@@ -83,10 +83,15 @@ export function watch<T>(
         const newValue = runner()
         if (options.deep || newValue !== oldValue) {
           try {
-            if (isFunction(cleanup)) {
+            // cleanup before running cb again
+            if (cleanup) {
               cleanup()
             }
-            cleanup = cb(newValue, oldValue)
+            const _cleanup = cb(newValue, oldValue)
+            if (isFunction(_cleanup)) {
+              // save cleanup so it is also called when effect is stopped
+              cleanup = runner.onStop = _cleanup
+            }
           } catch (e) {
             // TODO handle error
             // handleError(e, instance, ErrorTypes.WATCH_CALLBACK)

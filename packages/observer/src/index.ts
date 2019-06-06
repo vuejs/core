@@ -134,6 +134,9 @@ export function effect(
 export function stop(effect: ReactiveEffect) {
   if (effect.active) {
     cleanup(effect)
+    if (effect.onStop) {
+      effect.onStop()
+    }
     effect.active = false
   }
 }
