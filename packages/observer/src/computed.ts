@@ -7,13 +7,13 @@ export interface ComputedValue<T> {
   readonly effect: ReactiveEffect
 }
 
-export function computed<T, C = null>(
-  getter: (this: C, ctx: C) => T,
-  context?: C
+export function computed<T>(
+  getter: () => T,
+  setter?: (v: T) => void
 ): ComputedValue<T> {
   let dirty: boolean = true
   let value: any = undefined
-  const runner = effect(() => getter.call(context, context), {
+  const runner = effect(getter, {
     lazy: true,
     // mark effect as computed so that it gets priority during trigger
     computed: true,
@@ -34,6 +34,13 @@ export function computed<T, C = null>(
       // This should also apply for chained computed properties.
       trackChildRun(runner)
       return value
+    },
+    set value(newValue) {
+      if (setter) {
+        setter(newValue)
+      } else {
+        // TODO warn attempting to mutate readonly computed value
+      }
     }
   }
   knownValues.add(computedValue)
