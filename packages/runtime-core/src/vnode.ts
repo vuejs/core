@@ -119,8 +119,8 @@ export function createVNode(
   const vnode: VNode = {
     type,
     props,
-    key: props && props.key,
-    ref: props && props.ref,
+    key: (props && props.key) || null,
+    ref: (props && props.ref) || null,
     children: null,
     component: null,
     el: null,
