@@ -31,7 +31,7 @@ import {
 } from '@vue/observer'
 import { currentInstance } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
 
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
@@ -63,39 +63,38 @@ const invoke = (fn: Function) => fn()
 
 export function watch<T>(
   source: Value<T> | (() => T),
-  cb?: <V extends T>(newValue: V, oldValue: V) => (() => void) | void,
-  options: WatchOptions = EMPTY_OBJ
+  cb?: <V extends T>(
+    newValue: V,
+    oldValue: V,
+    onInvalidate: (fn: () => void) => void
+  ) => any | void,
+  { lazy, flush, deep, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): () => void {
   const scheduler =
-    options.flush === 'sync'
-      ? invoke
-      : options.flush === 'pre'
-        ? queueJob
-        : queuePostFlushCb
+    flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
 
   const baseGetter = isValue(source) ? () => source.value : source
-  const getter = options.deep ? () => traverse(baseGetter()) : baseGetter
+  const getter = deep ? () => traverse(baseGetter()) : baseGetter
+
+  let cleanup: any
+  const registerCleanup = (fn: () => void) => {
+    // TODO wrap the cleanup fn for error handling
+    cleanup = runner.onStop = fn
+  }
 
   let oldValue: any
-  let cleanup: any
   const applyCb = cb
     ? () => {
         const newValue = runner()
-        if (options.deep || newValue !== oldValue) {
-          try {
-            // cleanup before running cb again
-            if (cleanup) {
-              cleanup()
-            }
-            const _cleanup = cb(newValue, oldValue)
-            if (isFunction(_cleanup)) {
-              // save cleanup so it is also called when effect is stopped
-              cleanup = runner.onStop = _cleanup
-            }
-          } catch (e) {
-            // TODO handle error
-            // handleError(e, instance, ErrorTypes.WATCH_CALLBACK)
+        if (deep || newValue !== oldValue) {
+          // cleanup before running cb again
+          if (cleanup) {
+            cleanup()
           }
+          // TODO handle error (including ASYNC)
+          try {
+            cb(newValue, oldValue, registerCleanup)
+          } catch (e) {}
           oldValue = newValue
         }
       }
@@ -105,12 +104,12 @@ export function watch<T>(
     lazy: true,
     // so it runs before component update effects in pre flush mode
     computed: true,
-    onTrack: options.onTrack,
-    onTrigger: options.onTrigger,
+    onTrack,
+    onTrigger,
     scheduler: applyCb ? () => scheduler(applyCb) : void 0
   })
 
-  if (!options.lazy) {
+  if (!lazy) {
     applyCb && scheduler(applyCb)
   } else {
     oldValue = runner()

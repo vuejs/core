@@ -37,21 +37,6 @@ describe('observer/computed', () => {
     expect(getter).toHaveBeenCalledTimes(2)
   })
 
-  it('should accept context', () => {
-    const value: any = observable({})
-    let callCtx, callArg
-    const getter = function(arg: any) {
-      callCtx = this
-      callArg = arg
-      return value.foo
-    }
-    const ctx = {}
-    const cValue = computed(getter, ctx)
-    cValue.value
-    expect(callCtx).toBe(ctx)
-    expect(callArg).toBe(ctx)
-  })
-
   it('should trigger effect', () => {
     const value: any = observable({})
     const cValue = computed(() => value.foo)
@@ -135,5 +120,9 @@ describe('observer/computed', () => {
     stop(cValue.effect)
     value.foo = 2
     expect(dummy).toBe(1)
+  })
+
+  it('should support setter', () => {
+    // TODO
   })
 })
