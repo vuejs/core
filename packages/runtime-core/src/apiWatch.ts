@@ -1,55 +1,13 @@
-export {
-  value,
-  isValue,
-  observable,
-  immutable,
-  isObservable,
-  isImmutable,
-  unwrap,
-  markImmutable,
-  markNonReactive,
-  effect,
-  // types
-  ReactiveEffect,
-  ReactiveEffectOptions,
-  DebuggerEvent,
-  OperationTypes,
-  Value,
-  ComputedValue,
-  UnwrapValue
-} from '@vue/observer'
-
 import {
   effect,
   stop,
-  computed as _computed,
   isValue,
   Value,
-  ComputedValue,
-  ReactiveEffect,
   ReactiveEffectOptions
 } from '@vue/observer'
-import { currentInstance } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
-
-// record effects created during a component's setup() so that they can be
-// stopped when the component unmounts
-function recordEffect(effect: ReactiveEffect) {
-  if (currentInstance) {
-    ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
-  }
-}
-
-// a wrapped version of raw computed to tear it down at component unmount
-export function computed<T, C = null>(
-  getter: () => T,
-  setter?: (v: T) => void
-): ComputedValue<T> {
-  const c = _computed(getter, setter)
-  recordEffect(c.effect)
-  return c
-}
+import { recordEffect } from './apiState'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -59,10 +17,12 @@ export interface WatchOptions {
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
+type WatcherSource<T> = Value<T> | (() => T)
+
 const invoke = (fn: Function) => fn()
 
 export function watch<T>(
-  source: Value<T> | (() => T),
+  source: WatcherSource<T> | WatcherSource<T>[],
   cb?: <V extends T>(
     newValue: V,
     oldValue: V,
@@ -73,7 +33,11 @@ export function watch<T>(
   const scheduler =
     flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
 
-  const baseGetter = isValue(source) ? () => source.value : source
+  const baseGetter = isArray(source)
+    ? () => source.map(s => (isValue(s) ? s.value : s()))
+    : isValue(source)
+      ? () => source.value
+      : source
   const getter = deep ? () => traverse(baseGetter()) : baseGetter
 
   let cleanup: any
