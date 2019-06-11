@@ -1,5 +1,4 @@
-import { value } from '../src/value'
-import { effect, state } from '../src/index'
+import { value, effect, state } from '../src/index'
 
 describe('observer/value', () => {
   it('should hold a value', () => {

@@ -1,5 +1,6 @@
 import { OperationTypes } from './operations'
 import { Dep, targetMap } from './state'
+import { EMPTY_OBJ } from '@vue/shared'
 
 export interface ReactiveEffect {
   (): any
@@ -38,7 +39,31 @@ export const activeReactiveEffectStack: ReactiveEffect[] = []
 
 export const ITERATE_KEY = Symbol('iterate')
 
-export function createReactiveEffect(
+export function effect(
+  fn: Function,
+  options: ReactiveEffectOptions = EMPTY_OBJ
+): ReactiveEffect {
+  if ((fn as ReactiveEffect).isEffect) {
+    fn = (fn as ReactiveEffect).raw
+  }
+  const effect = createReactiveEffect(fn, options)
+  if (!options.lazy) {
+    effect()
+  }
+  return effect
+}
+
+export function stop(effect: ReactiveEffect) {
+  if (effect.active) {
+    cleanup(effect)
+    if (effect.onStop) {
+      effect.onStop()
+    }
+    effect.active = false
+  }
+}
+
+function createReactiveEffect(
   fn: Function,
   options: ReactiveEffectOptions
 ): ReactiveEffect {
@@ -72,7 +97,7 @@ function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
   }
 }
 
-export function cleanup(effect: ReactiveEffect) {
+function cleanup(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
