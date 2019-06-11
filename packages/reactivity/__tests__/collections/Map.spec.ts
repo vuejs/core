@@ -1,18 +1,18 @@
-import { observable, effect, unwrap, isObservable } from '../../src'
+import { state, effect, toRaw, isState } from '../../src'
 
 describe('observer/collections', () => {
   describe('Map', () => {
     test('instanceof', () => {
       const original = new Map()
-      const observed = observable(original)
-      expect(isObservable(observed)).toBe(true)
+      const observed = state(original)
+      expect(isState(observed)).toBe(true)
       expect(original instanceof Map).toBe(true)
       expect(observed instanceof Map).toBe(true)
     })
 
     it('should observe mutations', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = map.get('key')
       })
@@ -28,7 +28,7 @@ describe('observer/collections', () => {
 
     it('should observe size mutations', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => (dummy = map.size))
 
       expect(dummy).toBe(0)
@@ -43,7 +43,7 @@ describe('observer/collections', () => {
 
     it('should observe for of iteration', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
@@ -66,7 +66,7 @@ describe('observer/collections', () => {
 
     it('should observe forEach iteration', () => {
       let dummy: any
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = 0
         map.forEach((num: any) => (dummy += num))
@@ -85,7 +85,7 @@ describe('observer/collections', () => {
 
     it('should observe keys iteration', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = 0
         for (let key of map.keys()) {
@@ -106,7 +106,7 @@ describe('observer/collections', () => {
 
     it('should observe values iteration', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = 0
         for (let num of map.values()) {
@@ -127,7 +127,7 @@ describe('observer/collections', () => {
 
     it('should observe entries iteration', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
@@ -150,7 +150,7 @@ describe('observer/collections', () => {
 
     it('should be triggered by clearing', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       effect(() => (dummy = map.get('key')))
 
       expect(dummy).toBe(undefined)
@@ -162,7 +162,7 @@ describe('observer/collections', () => {
 
     it('should not observe custom property mutations', () => {
       let dummy
-      const map: any = observable(new Map())
+      const map: any = state(new Map())
       effect(() => (dummy = map.customProp))
 
       expect(dummy).toBe(undefined)
@@ -172,7 +172,7 @@ describe('observer/collections', () => {
 
     it('should not observe non value changing mutations', () => {
       let dummy
-      const map = observable(new Map())
+      const map = state(new Map())
       const mapSpy = jest.fn(() => (dummy = map.get('key')))
       effect(mapSpy)
 
@@ -197,8 +197,8 @@ describe('observer/collections', () => {
 
     it('should not observe raw data', () => {
       let dummy
-      const map = observable(new Map())
-      effect(() => (dummy = unwrap(map).get('key')))
+      const map = state(new Map())
+      effect(() => (dummy = toRaw(map).get('key')))
 
       expect(dummy).toBe(undefined)
       map.set('key', 'Hello')
@@ -209,24 +209,24 @@ describe('observer/collections', () => {
 
     it('should not pollute original Map with Proxies', () => {
       const map = new Map()
-      const observed = observable(map)
-      const value = observable({})
+      const observed = state(map)
+      const value = state({})
       observed.set('key', value)
       expect(map.get('key')).not.toBe(value)
-      expect(map.get('key')).toBe(unwrap(value))
+      expect(map.get('key')).toBe(toRaw(value))
     })
 
     it('should return observable versions of contained values', () => {
-      const observed = observable(new Map())
+      const observed = state(new Map())
       const value = {}
       observed.set('key', value)
       const wrapped = observed.get('key')
-      expect(isObservable(wrapped)).toBe(true)
-      expect(unwrap(wrapped)).toBe(value)
+      expect(isState(wrapped)).toBe(true)
+      expect(toRaw(wrapped)).toBe(value)
     })
 
     it('should observed nested data', () => {
-      const observed = observable(new Map())
+      const observed = state(new Map())
       observed.set('key', { a: 1 })
       let dummy
       effect(() => {
@@ -237,12 +237,12 @@ describe('observer/collections', () => {
     })
 
     it('should observe nested values in iterations (forEach)', () => {
-      const map = observable(new Map([[1, { foo: 1 }]]))
+      const map = state(new Map([[1, { foo: 1 }]]))
       let dummy: any
       effect(() => {
         dummy = 0
         map.forEach(value => {
-          expect(isObservable(value)).toBe(true)
+          expect(isState(value)).toBe(true)
           dummy += value.foo
         })
       })
@@ -252,12 +252,12 @@ describe('observer/collections', () => {
     })
 
     it('should observe nested values in iterations (values)', () => {
-      const map = observable(new Map([[1, { foo: 1 }]]))
+      const map = state(new Map([[1, { foo: 1 }]]))
       let dummy: any
       effect(() => {
         dummy = 0
         for (const value of map.values()) {
-          expect(isObservable(value)).toBe(true)
+          expect(isState(value)).toBe(true)
           dummy += value.foo
         }
       })
@@ -268,14 +268,14 @@ describe('observer/collections', () => {
 
     it('should observe nested values in iterations (entries)', () => {
       const key = {}
-      const map = observable(new Map([[key, { foo: 1 }]]))
+      const map = state(new Map([[key, { foo: 1 }]]))
       let dummy: any
       effect(() => {
         dummy = 0
         for (const [key, value] of map.entries()) {
           key
-          expect(isObservable(key)).toBe(true)
-          expect(isObservable(value)).toBe(true)
+          expect(isState(key)).toBe(true)
+          expect(isState(value)).toBe(true)
           dummy += value.foo
         }
       })
@@ -286,14 +286,14 @@ describe('observer/collections', () => {
 
     it('should observe nested values in iterations (for...of)', () => {
       const key = {}
-      const map = observable(new Map([[key, { foo: 1 }]]))
+      const map = state(new Map([[key, { foo: 1 }]]))
       let dummy: any
       effect(() => {
         dummy = 0
         for (const [key, value] of map) {
           key
-          expect(isObservable(key)).toBe(true)
-          expect(isObservable(value)).toBe(true)
+          expect(isState(key)).toBe(true)
+          expect(isState(value)).toBe(true)
           dummy += value.foo
         }
       })

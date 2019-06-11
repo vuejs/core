@@ -1,11 +1,11 @@
 export {
   value,
   isValue,
-  observable,
-  immutable,
-  isObservable,
-  isImmutable,
-  unwrap,
+  state,
+  isState,
+  immutableState,
+  isImmutableState,
+  toRaw,
   markImmutable,
   markNonReactive,
   effect,
@@ -17,13 +17,13 @@ export {
   Value,
   ComputedValue,
   UnwrapValue
-} from '@vue/observer'
+} from '@vue/reactivity'
 
 import {
   computed as _computed,
   ComputedValue,
   ReactiveEffect
-} from '@vue/observer'
+} from '@vue/reactivity'
 
 import { currentInstance } from './component'
 

@@ -2,9 +2,9 @@ import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import {
   ReactiveEffect,
   UnwrapValue,
-  observable,
-  immutable
-} from '@vue/observer'
+  state,
+  immutableState
+} from '@vue/reactivity'
 import { EMPTY_OBJ } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
@@ -151,9 +151,9 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     // only need to create it if setup() actually expects it
     // it will be updated in resolveProps() on updates before render
     const propsProxy = (instance.propsProxy = setup.length
-      ? immutable(instance.props)
+      ? immutableState(instance.props)
       : null)
-    instance.state = observable(setup.call(proxy, propsProxy))
+    instance.state = state(setup.call(proxy, propsProxy))
     currentInstance = null
   }
 }

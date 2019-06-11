@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
-import { observable } from './index'
+import { state } from './index'
 
 export const knownValues = new WeakSet()
 
@@ -9,7 +9,7 @@ export interface Value<T> {
   value: T
 }
 
-const convert = (val: any): any => (isObject(val) ? observable(val) : val)
+const convert = (val: any): any => (isObject(val) ? state(val) : val)
 
 export function value<T>(raw: T): Value<T> {
   raw = convert(raw)

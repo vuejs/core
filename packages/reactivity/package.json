@@ -1,11 +1,11 @@
 {
-  "name": "@vue/observer",
+  "name": "@vue/reactivity",
   "version": "3.0.0-alpha.1",
-  "description": "@vue/observer",
+  "description": "@vue/reactivity",
   "main": "index.js",
-  "module": "dist/observer.esm-bundler.js",
+  "module": "dist/reactivity.esm-bundler.js",
   "types": "dist/index.d.ts",
-  "unpkg": "dist/observer.global.js",
+  "unpkg": "dist/reactivity.global.js",
   "sideEffects": false,
   "repository": {
     "type": "git",
@@ -23,5 +23,5 @@
   "bugs": {
     "url": "https://github.com/vuejs/vue/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/observer#readme"
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/reactivity#readme"
 }

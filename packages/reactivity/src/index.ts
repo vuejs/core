@@ -46,14 +46,14 @@ const canObserve = (value: any): boolean => {
 
 type ObservableFactory = <T>(target?: T) => UnwrapValue<T>
 
-export const observable = ((target: any = {}): any => {
+export const state = ((target: any = {}): any => {
   // if trying to observe an immutable proxy, return the immutable version.
   if (immutableToRaw.has(target)) {
     return target
   }
   // target is explicitly marked as immutable by user
   if (immutableValues.has(target)) {
-    return immutable(target)
+    return immutableState(target)
   }
   return createObservable(
     target,
@@ -64,7 +64,7 @@ export const observable = ((target: any = {}): any => {
   )
 }) as ObservableFactory
 
-export const immutable = ((target: any = {}): any => {
+export const immutableState = ((target: any = {}): any => {
   // value is a mutable observable, retrive its original and return
   // a readonly version.
   if (observedToRaw.has(target)) {
@@ -141,15 +141,15 @@ export function stop(effect: ReactiveEffect) {
   }
 }
 
-export function isObservable(value: any): boolean {
+export function isState(value: any): boolean {
   return observedToRaw.has(value) || immutableToRaw.has(value)
 }
 
-export function isImmutable(value: any): boolean {
+export function isImmutableState(value: any): boolean {
   return immutableToRaw.has(value)
 }
 
-export function unwrap<T>(observed: T): T {
+export function toRaw<T>(observed: T): T {
   return observedToRaw.get(observed) || immutableToRaw.get(observed) || observed
 }
 

@@ -31,7 +31,7 @@ import {
   FULL_PROPS
 } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
-import { effect, stop, ReactiveEffectOptions } from '@vue/observer'
+import { effect, stop, ReactiveEffectOptions } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
 import {

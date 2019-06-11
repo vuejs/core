@@ -1,16 +1,16 @@
-import { unwrap, observable, immutable } from './index'
+import { toRaw, state, immutableState } from './index'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'
 
-const toObservable = (value: any) =>
-  isObject(value) ? observable(value) : value
-const toImmutable = (value: any) => (isObject(value) ? immutable(value) : value)
+const toObservable = (value: any) => (isObject(value) ? state(value) : value)
+const toImmutable = (value: any) =>
+  isObject(value) ? immutableState(value) : value
 
 function get(target: any, key: any, wrap: (t: any) => any): any {
-  target = unwrap(target)
-  key = unwrap(key)
+  target = toRaw(target)
+  key = toRaw(key)
   const proto: any = Reflect.getPrototypeOf(target)
   track(target, OperationTypes.GET, key)
   const res = proto.get.call(target, key)
@@ -18,23 +18,23 @@ function get(target: any, key: any, wrap: (t: any) => any): any {
 }
 
 function has(key: any): boolean {
-  const target = unwrap(this)
-  key = unwrap(key)
+  const target = toRaw(this)
+  key = toRaw(key)
   const proto: any = Reflect.getPrototypeOf(target)
   track(target, OperationTypes.HAS, key)
   return proto.has.call(target, key)
 }
 
 function size(target: any) {
-  target = unwrap(target)
+  target = toRaw(target)
   const proto = Reflect.getPrototypeOf(target)
   track(target, OperationTypes.ITERATE)
   return Reflect.get(proto, 'size', target)
 }
 
 function add(value: any) {
-  value = unwrap(value)
-  const target = unwrap(this)
+  value = toRaw(value)
+  const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadKey = proto.has.call(target, value)
   const result = proto.add.call(target, value)
@@ -50,8 +50,8 @@ function add(value: any) {
 }
 
 function set(key: any, value: any) {
-  value = unwrap(value)
-  const target = unwrap(this)
+  value = toRaw(value)
+  const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadKey = proto.has.call(target, key)
   const oldValue = proto.get.call(target, key)
@@ -77,7 +77,7 @@ function set(key: any, value: any) {
 }
 
 function deleteEntry(key: any) {
-  const target = unwrap(this)
+  const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadKey = proto.has.call(target, key)
   const oldValue = proto.get ? proto.get.call(target, key) : undefined
@@ -95,7 +95,7 @@ function deleteEntry(key: any) {
 }
 
 function clear() {
-  const target = unwrap(this)
+  const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadItems = target.size !== 0
   const oldTarget = target instanceof Map ? new Map(target) : new Set(target)
@@ -115,7 +115,7 @@ function clear() {
 function createForEach(isImmutable: boolean) {
   return function forEach(callback: Function, thisArg?: any) {
     const observed = this
-    const target = unwrap(observed)
+    const target = toRaw(observed)
     const proto: any = Reflect.getPrototypeOf(target)
     const wrap = isImmutable ? toImmutable : toObservable
     track(target, OperationTypes.ITERATE)
@@ -131,7 +131,7 @@ function createForEach(isImmutable: boolean) {
 
 function createIterableMethod(method: string | symbol, isImmutable: boolean) {
   return function(...args: any[]) {
-    const target = unwrap(this)
+    const target = toRaw(this)
     const proto: any = Reflect.getPrototypeOf(target)
     const isPair =
       method === 'entries' ||
@@ -170,7 +170,7 @@ function createImmutableMethod(
         const key = args[0] ? `on key "${args[0]}"` : ``
         console.warn(
           `${type} operation ${key}failed: target is immutable.`,
-          unwrap(this)
+          toRaw(this)
         )
       }
       return type === OperationTypes.DELETE ? false : this

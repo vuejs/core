@@ -1,4 +1,4 @@
-import { immutable, unwrap, lock, unlock } from '@vue/observer'
+import { immutableState, toRaw, lock, unlock } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -140,7 +140,7 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__ && rawProps) {
-        validateProp(key, unwrap(rawProps[key]), opt, isAbsent)
+        validateProp(key, toRaw(rawProps[key]), opt, isAbsent)
       }
     }
   } else {
@@ -152,7 +152,7 @@ export function resolveProps(
   // the props proxy
   const { patchFlag } = instance.vnode
   if (propsProxy !== null && (patchFlag === 0 || patchFlag & FULL_PROPS)) {
-    const rawInitialProps = unwrap(propsProxy)
+    const rawInitialProps = toRaw(propsProxy)
     for (const key in rawInitialProps) {
       if (!props.hasOwnProperty(key)) {
         delete propsProxy[key]
@@ -163,10 +163,10 @@ export function resolveProps(
   // lock immutable
   lock()
 
-  instance.props = __DEV__ ? immutable(props) : props
+  instance.props = __DEV__ ? immutableState(props) : props
   instance.attrs = options
     ? __DEV__
-      ? immutable(attrs)
+      ? immutableState(attrs)
       : attrs
     : instance.props
 }

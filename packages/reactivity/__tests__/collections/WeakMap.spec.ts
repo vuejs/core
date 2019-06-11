@@ -1,11 +1,11 @@
-import { observable, effect, unwrap, isObservable } from '../../src'
+import { state, effect, toRaw, isState } from '../../src'
 
 describe('observer/collections', () => {
   describe('WeakMap', () => {
     test('instanceof', () => {
       const original = new WeakMap()
-      const observed = observable(original)
-      expect(isObservable(observed)).toBe(true)
+      const observed = state(original)
+      expect(isState(observed)).toBe(true)
       expect(original instanceof WeakMap).toBe(true)
       expect(observed instanceof WeakMap).toBe(true)
     })
@@ -13,7 +13,7 @@ describe('observer/collections', () => {
     it('should observe mutations', () => {
       let dummy
       const key = {}
-      const map = observable(new WeakMap())
+      const map = state(new WeakMap())
       effect(() => {
         dummy = map.get(key)
       })
@@ -29,7 +29,7 @@ describe('observer/collections', () => {
 
     it('should not observe custom property mutations', () => {
       let dummy
-      const map: any = observable(new WeakMap())
+      const map: any = state(new WeakMap())
       effect(() => (dummy = map.customProp))
 
       expect(dummy).toBe(undefined)
@@ -40,7 +40,7 @@ describe('observer/collections', () => {
     it('should not observe non value changing mutations', () => {
       let dummy
       const key = {}
-      const map = observable(new WeakMap())
+      const map = state(new WeakMap())
       const mapSpy = jest.fn(() => (dummy = map.get(key)))
       effect(mapSpy)
 
@@ -63,8 +63,8 @@ describe('observer/collections', () => {
     it('should not observe raw data', () => {
       let dummy
       const key = {}
-      const map = observable(new WeakMap())
-      effect(() => (dummy = unwrap(map).get(key)))
+      const map = state(new WeakMap())
+      effect(() => (dummy = toRaw(map).get(key)))
 
       expect(dummy).toBe(undefined)
       map.set(key, 'Hello')
@@ -75,26 +75,26 @@ describe('observer/collections', () => {
 
     it('should not pollute original Map with Proxies', () => {
       const map = new WeakMap()
-      const observed = observable(map)
+      const observed = state(map)
       const key = {}
-      const value = observable({})
+      const value = state({})
       observed.set(key, value)
       expect(map.get(key)).not.toBe(value)
-      expect(map.get(key)).toBe(unwrap(value))
+      expect(map.get(key)).toBe(toRaw(value))
     })
 
     it('should return observable versions of contained values', () => {
-      const observed = observable(new WeakMap())
+      const observed = state(new WeakMap())
       const key = {}
       const value = {}
       observed.set(key, value)
       const wrapped = observed.get(key)
-      expect(isObservable(wrapped)).toBe(true)
-      expect(unwrap(wrapped)).toBe(value)
+      expect(isState(wrapped)).toBe(true)
+      expect(toRaw(wrapped)).toBe(value)
     })
 
     it('should observed nested data', () => {
-      const observed = observable(new Map())
+      const observed = state(new Map())
       const key = {}
       observed.set(key, { a: 1 })
       let dummy

@@ -1,5 +1,5 @@
 import { createComponent } from '../src/component'
-import { value } from '@vue/observer'
+import { value } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
 
 test('createComponent type inference', () => {

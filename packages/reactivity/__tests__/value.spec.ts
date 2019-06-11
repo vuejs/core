@@ -1,5 +1,5 @@
 import { value } from '../src/value'
-import { effect, observable } from '../src/index'
+import { effect, state } from '../src/index'
 
 describe('observer/value', () => {
   it('should hold a value', () => {
@@ -35,7 +35,7 @@ describe('observer/value', () => {
 
   it('should work like a normal property when nested in an observable', () => {
     const a = value(1)
-    const obj = observable({
+    const obj = state({
       a,
       b: {
         c: a,

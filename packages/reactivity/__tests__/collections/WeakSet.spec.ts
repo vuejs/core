@@ -1,11 +1,11 @@
-import { observable, isObservable, effect, unwrap } from '../../src'
+import { state, isState, effect, toRaw } from '../../src'
 
 describe('observer/collections', () => {
   describe('WeakSet', () => {
     it('instanceof', () => {
       const original = new Set()
-      const observed = observable(original)
-      expect(isObservable(observed)).toBe(true)
+      const observed = state(original)
+      expect(isState(observed)).toBe(true)
       expect(original instanceof Set).toBe(true)
       expect(observed instanceof Set).toBe(true)
     })
@@ -13,7 +13,7 @@ describe('observer/collections', () => {
     it('should observe mutations', () => {
       let dummy
       const value = {}
-      const set = observable(new WeakSet())
+      const set = state(new WeakSet())
       effect(() => (dummy = set.has(value)))
 
       expect(dummy).toBe(false)
@@ -25,7 +25,7 @@ describe('observer/collections', () => {
 
     it('should not observe custom property mutations', () => {
       let dummy
-      const set: any = observable(new WeakSet())
+      const set: any = state(new WeakSet())
       effect(() => (dummy = set.customProp))
 
       expect(dummy).toBe(undefined)
@@ -36,7 +36,7 @@ describe('observer/collections', () => {
     it('should not observe non value changing mutations', () => {
       let dummy
       const value = {}
-      const set = observable(new WeakSet())
+      const set = state(new WeakSet())
       const setSpy = jest.fn(() => (dummy = set.has(value)))
       effect(setSpy)
 
@@ -59,8 +59,8 @@ describe('observer/collections', () => {
     it('should not observe raw data', () => {
       const value = {}
       let dummy
-      const set = observable(new WeakSet())
-      effect(() => (dummy = unwrap(set).has(value)))
+      const set = state(new WeakSet())
+      effect(() => (dummy = toRaw(set).has(value)))
 
       expect(dummy).toBe(false)
       set.add(value)
@@ -70,18 +70,18 @@ describe('observer/collections', () => {
     it('should not be triggered by raw mutations', () => {
       const value = {}
       let dummy
-      const set = observable(new WeakSet())
+      const set = state(new WeakSet())
       effect(() => (dummy = set.has(value)))
 
       expect(dummy).toBe(false)
-      unwrap(set).add(value)
+      toRaw(set).add(value)
       expect(dummy).toBe(false)
     })
 
     it('should not pollute original Set with Proxies', () => {
       const set = new WeakSet()
-      const observed = observable(set)
-      const value = observable({})
+      const observed = state(set)
+      const value = state({})
       observed.add(value)
       expect(observed.has(value)).toBe(true)
       expect(set.has(value)).toBe(false)

@@ -1,12 +1,12 @@
-import { observable, isObservable, unwrap, markNonReactive } from '../src/index'
+import { state, isState, toRaw, markNonReactive } from '../src/index'
 
 describe('observer/observable', () => {
   test('Object', () => {
     const original = { foo: 1 }
-    const observed = observable(original)
+    const observed = state(original)
     expect(observed).not.toBe(original)
-    expect(isObservable(observed)).toBe(true)
-    expect(isObservable(original)).toBe(false)
+    expect(isState(observed)).toBe(true)
+    expect(isState(original)).toBe(false)
     // get
     expect(observed.foo).toBe(1)
     // has
@@ -17,11 +17,11 @@ describe('observer/observable', () => {
 
   test('Array', () => {
     const original: any[] = [{ foo: 1 }]
-    const observed = observable(original)
+    const observed = state(original)
     expect(observed).not.toBe(original)
-    expect(isObservable(observed)).toBe(true)
-    expect(isObservable(original)).toBe(false)
-    expect(isObservable(observed[0])).toBe(true)
+    expect(isState(observed)).toBe(true)
+    expect(isState(original)).toBe(false)
+    expect(isState(observed[0])).toBe(true)
     // get
     expect(observed[0].foo).toBe(1)
     // has
@@ -32,9 +32,9 @@ describe('observer/observable', () => {
 
   test('cloned observable Array should point to observed values', () => {
     const original = [{ foo: 1 }]
-    const observed = observable(original)
+    const observed = state(original)
     const clone = observed.slice()
-    expect(isObservable(clone[0])).toBe(true)
+    expect(isState(clone[0])).toBe(true)
     expect(clone[0]).not.toBe(original[0])
     expect(clone[0]).toBe(observed[0])
   })
@@ -46,15 +46,15 @@ describe('observer/observable', () => {
       },
       array: [{ bar: 2 }]
     }
-    const observed = observable(original)
-    expect(isObservable(observed.nested)).toBe(true)
-    expect(isObservable(observed.array)).toBe(true)
-    expect(isObservable(observed.array[0])).toBe(true)
+    const observed = state(original)
+    expect(isState(observed.nested)).toBe(true)
+    expect(isState(observed.array)).toBe(true)
+    expect(isState(observed.array[0])).toBe(true)
   })
 
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
-    const observed = observable(original)
+    const observed = state(original)
     // set
     observed.bar = 1
     expect(observed.bar).toBe(1)
@@ -67,10 +67,10 @@ describe('observer/observable', () => {
 
   test('observed value should proxy mutations to original (Array)', () => {
     const original: any[] = [{ foo: 1 }, { bar: 2 }]
-    const observed = observable(original)
+    const observed = state(original)
     // set
     const value = { baz: 3 }
-    const observableValue = observable(value)
+    const observableValue = state(value)
     observed[0] = value
     expect(observed[0]).toBe(observableValue)
     expect(original[0]).toBe(value)
@@ -85,32 +85,32 @@ describe('observer/observable', () => {
   })
 
   test('setting a property with an unobserved value should wrap with observable', () => {
-    const observed: any = observable({})
+    const observed: any = state({})
     const raw = {}
     observed.foo = raw
     expect(observed.foo).not.toBe(raw)
-    expect(isObservable(observed.foo)).toBe(true)
+    expect(isState(observed.foo)).toBe(true)
   })
 
   test('observing already observed value should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = observable(original)
-    const observed2 = observable(observed)
+    const observed = state(original)
+    const observed2 = state(observed)
     expect(observed2).toBe(observed)
   })
 
   test('observing the same value multiple times should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = observable(original)
-    const observed2 = observable(original)
+    const observed = state(original)
+    const observed2 = state(original)
     expect(observed2).toBe(observed)
   })
 
   test('should not pollute original object with Proxies', () => {
     const original: any = { foo: 1 }
     const original2 = { bar: 2 }
-    const observed = observable(original)
-    const observed2 = observable(original2)
+    const observed = state(original)
+    const observed2 = state(original2)
     observed.bar = observed2
     expect(observed.bar).toBe(observed2)
     expect(original.bar).toBe(original2)
@@ -118,9 +118,9 @@ describe('observer/observable', () => {
 
   test('unwrap', () => {
     const original = { foo: 1 }
-    const observed = observable(original)
-    expect(unwrap(observed)).toBe(original)
-    expect(unwrap(original)).toBe(original)
+    const observed = state(original)
+    expect(toRaw(observed)).toBe(original)
+    expect(toRaw(original)).toBe(original)
   })
 
   test('unobservable values', () => {
@@ -132,7 +132,7 @@ describe('observer/observable', () => {
 
     const getMsg = (value: any) => `value is not observable: ${String(value)}`
     const assertValue = (value: any) => {
-      observable(value)
+      state(value)
       expect(lastMsg).toMatch(getMsg(value))
     }
 
@@ -146,7 +146,7 @@ describe('observer/observable', () => {
     assertValue(null)
     // undefined should work because it returns empty object observable
     lastMsg = ''
-    observable(undefined)
+    state(undefined)
     expect(lastMsg).toBe('')
     // symbol
     const s = Symbol()
@@ -156,19 +156,19 @@ describe('observer/observable', () => {
 
     // built-ins should work and return same value
     const p = Promise.resolve()
-    expect(observable(p)).toBe(p)
+    expect(state(p)).toBe(p)
     const r = new RegExp('')
-    expect(observable(r)).toBe(r)
+    expect(state(r)).toBe(r)
     const d = new Date()
-    expect(observable(d)).toBe(d)
+    expect(state(d)).toBe(d)
   })
 
   test('markNonReactive', () => {
-    const obj = observable({
+    const obj = state({
       foo: { a: 1 },
       bar: markNonReactive({ b: 2 })
     })
-    expect(isObservable(obj.foo)).toBe(true)
-    expect(isObservable(obj.bar)).toBe(false)
+    expect(isState(obj.foo)).toBe(true)
+    expect(isState(obj.bar)).toBe(false)
   })
 })

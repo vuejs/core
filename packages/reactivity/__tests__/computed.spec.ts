@@ -1,8 +1,8 @@
-import { computed, observable, effect, stop } from '../src'
+import { computed, state, effect, stop } from '../src'
 
 describe('observer/computed', () => {
   it('should return updated value', () => {
-    const value: any = observable({})
+    const value: any = state({})
     const cValue = computed(() => value.foo)
     expect(cValue.value).toBe(undefined)
     value.foo = 1
@@ -10,7 +10,7 @@ describe('observer/computed', () => {
   })
 
   it('should compute lazily', () => {
-    const value: any = observable({})
+    const value: any = state({})
     const getter = jest.fn(() => value.foo)
     const cValue = computed(getter)
 
@@ -38,7 +38,7 @@ describe('observer/computed', () => {
   })
 
   it('should trigger effect', () => {
-    const value: any = observable({})
+    const value: any = state({})
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {
@@ -50,7 +50,7 @@ describe('observer/computed', () => {
   })
 
   it('should work when chained', () => {
-    const value: any = observable({ foo: 0 })
+    const value: any = state({ foo: 0 })
     const c1 = computed(() => value.foo)
     const c2 = computed(() => c1.value + 1)
     expect(c2.value).toBe(1)
@@ -61,7 +61,7 @@ describe('observer/computed', () => {
   })
 
   it('should trigger effect when chained', () => {
-    const value: any = observable({ foo: 0 })
+    const value: any = state({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
       return c1.value + 1
@@ -84,7 +84,7 @@ describe('observer/computed', () => {
   })
 
   it('should trigger effect when chained (mixed invocations)', () => {
-    const value: any = observable({ foo: 0 })
+    const value: any = state({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
       return c1.value + 1
@@ -108,7 +108,7 @@ describe('observer/computed', () => {
   })
 
   it('should no longer update when stopped', () => {
-    const value: any = observable({})
+    const value: any = state({})
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {

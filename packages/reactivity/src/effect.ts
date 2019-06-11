@@ -25,7 +25,7 @@ export interface ReactiveEffectOptions {
 
 export type Scheduler = (run: () => any) => void
 
-export type DebuggerEvent = {
+export interface DebuggerEvent {
   effect: ReactiveEffect
   target: any
   type: OperationTypes

@@ -1,4 +1,4 @@
-import { observable, immutable, unwrap } from './index'
+import { state, immutableState, toRaw } from './index'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
@@ -27,8 +27,8 @@ function createGetter(isImmutable: boolean) {
       ? isImmutable
         ? // need to lazy access immutable and observable here to avoid
           // circular dependency
-          immutable(res)
-        : observable(res)
+          immutableState(res)
+        : state(res)
       : res
   }
 }
@@ -39,7 +39,7 @@ function set(
   value: any,
   receiver: any
 ): boolean {
-  value = unwrap(value)
+  value = toRaw(value)
   const hadKey = hasOwnProperty.call(target, key)
   const oldValue = target[key]
   if (isValue(oldValue)) {
@@ -48,7 +48,7 @@ function set(
   }
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
-  if (target === unwrap(receiver)) {
+  if (target === toRaw(receiver)) {
     /* istanbul ignore else */
     if (__DEV__) {
       const extraInfo = { oldValue, newValue: value }

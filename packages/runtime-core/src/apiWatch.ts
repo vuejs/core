@@ -4,7 +4,7 @@ import {
   isValue,
   Value,
   ReactiveEffectOptions
-} from '@vue/observer'
+} from '@vue/reactivity'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
 import { recordEffect } from './apiState'

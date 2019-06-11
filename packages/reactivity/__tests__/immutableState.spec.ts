@@ -1,9 +1,9 @@
 import {
-  observable,
-  immutable,
-  unwrap,
-  isObservable,
-  isImmutable,
+  state,
+  immutableState,
+  toRaw,
+  isState,
+  isImmutableState,
   markNonReactive,
   markImmutable,
   lock,
@@ -26,16 +26,16 @@ describe('observer/immutable', () => {
   describe('Object', () => {
     it('should make nested values immutable', () => {
       const original = { foo: 1, bar: { baz: 2 } }
-      const observed = immutable(original)
+      const observed = immutableState(original)
       expect(observed).not.toBe(original)
-      expect(isObservable(observed)).toBe(true)
-      expect(isImmutable(observed)).toBe(true)
-      expect(isObservable(original)).toBe(false)
-      expect(isImmutable(original)).toBe(false)
-      expect(isObservable(observed.bar)).toBe(true)
-      expect(isImmutable(observed.bar)).toBe(true)
-      expect(isObservable(original.bar)).toBe(false)
-      expect(isImmutable(original.bar)).toBe(false)
+      expect(isState(observed)).toBe(true)
+      expect(isImmutableState(observed)).toBe(true)
+      expect(isState(original)).toBe(false)
+      expect(isImmutableState(original)).toBe(false)
+      expect(isState(observed.bar)).toBe(true)
+      expect(isImmutableState(observed.bar)).toBe(true)
+      expect(isState(original.bar)).toBe(false)
+      expect(isImmutableState(original.bar)).toBe(false)
       // get
       expect(observed.foo).toBe(1)
       // has
@@ -45,7 +45,7 @@ describe('observer/immutable', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed = immutableState({ foo: 1, bar: { baz: 2 } })
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(warn).toHaveBeenCalledTimes(1)
@@ -61,7 +61,7 @@ describe('observer/immutable', () => {
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed: any = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed: any = immutableState({ foo: 1, bar: { baz: 2 } })
       unlock()
       observed.prop = 2
       observed.bar.qux = 3
@@ -76,7 +76,7 @@ describe('observer/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed = immutable({ a: 1 })
+      const observed = immutableState({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -88,7 +88,7 @@ describe('observer/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed = immutable({ a: 1 })
+      const observed = immutableState({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -105,16 +105,16 @@ describe('observer/immutable', () => {
   describe('Array', () => {
     it('should make nested values immutable', () => {
       const original: any[] = [{ foo: 1 }]
-      const observed = immutable(original)
+      const observed = immutableState(original)
       expect(observed).not.toBe(original)
-      expect(isObservable(observed)).toBe(true)
-      expect(isImmutable(observed)).toBe(true)
-      expect(isObservable(original)).toBe(false)
-      expect(isImmutable(original)).toBe(false)
-      expect(isObservable(observed[0])).toBe(true)
-      expect(isImmutable(observed[0])).toBe(true)
-      expect(isObservable(original[0])).toBe(false)
-      expect(isImmutable(original[0])).toBe(false)
+      expect(isState(observed)).toBe(true)
+      expect(isImmutableState(observed)).toBe(true)
+      expect(isState(original)).toBe(false)
+      expect(isImmutableState(original)).toBe(false)
+      expect(isState(observed[0])).toBe(true)
+      expect(isImmutableState(observed[0])).toBe(true)
+      expect(isState(original[0])).toBe(false)
+      expect(isImmutableState(original[0])).toBe(false)
       // get
       expect(observed[0].foo).toBe(1)
       // has
@@ -124,7 +124,7 @@ describe('observer/immutable', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = immutable([{ foo: 1 }])
+      const observed: any = immutableState([{ foo: 1 }])
       observed[0] = 1
       expect(observed[0]).not.toBe(1)
       expect(warn).toHaveBeenCalledTimes(1)
@@ -146,7 +146,7 @@ describe('observer/immutable', () => {
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed: any[] = immutable([{ foo: 1, bar: { baz: 2 } }])
+      const observed: any[] = immutableState([{ foo: 1, bar: { baz: 2 } }])
       unlock()
       observed[1] = 2
       observed.push(3)
@@ -162,7 +162,7 @@ describe('observer/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed = immutable([{ a: 1 }])
+      const observed = immutableState([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -177,7 +177,7 @@ describe('observer/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed = immutable([{ a: 1 }])
+      const observed = immutableState([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -208,20 +208,20 @@ describe('observer/immutable', () => {
         const key1 = {}
         const key2 = {}
         const original = new Collection([[key1, {}], [key2, {}]])
-        const observed = immutable(original)
+        const observed = immutableState(original)
         expect(observed).not.toBe(original)
-        expect(isObservable(observed)).toBe(true)
-        expect(isImmutable(observed)).toBe(true)
-        expect(isObservable(original)).toBe(false)
-        expect(isImmutable(original)).toBe(false)
-        expect(isObservable(observed.get(key1))).toBe(true)
-        expect(isImmutable(observed.get(key1))).toBe(true)
-        expect(isObservable(original.get(key1))).toBe(false)
-        expect(isImmutable(original.get(key1))).toBe(false)
+        expect(isState(observed)).toBe(true)
+        expect(isImmutableState(observed)).toBe(true)
+        expect(isState(original)).toBe(false)
+        expect(isImmutableState(original)).toBe(false)
+        expect(isState(observed.get(key1))).toBe(true)
+        expect(isImmutableState(observed.get(key1))).toBe(true)
+        expect(isState(original.get(key1))).toBe(false)
+        expect(isImmutableState(original.get(key1))).toBe(false)
       })
 
       test('should not allow mutation & not trigger effect', () => {
-        const map = immutable(new Collection())
+        const map = immutableState(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -235,7 +235,7 @@ describe('observer/immutable', () => {
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
-        const map = immutable(new Collection())
+        const map = immutableState(new Collection())
         const isWeak = Collection === WeakMap
         const key = {}
         let dummy
@@ -256,16 +256,16 @@ describe('observer/immutable', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
-          const observed = immutable(original)
+          const observed = immutableState(original)
           for (const [key, value] of observed) {
-            expect(isImmutable(key)).toBe(true)
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(key)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           }
           observed.forEach((value: any) => {
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           })
           for (const value of observed.values()) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           }
         })
       }
@@ -279,18 +279,18 @@ describe('observer/immutable', () => {
         const key1 = {}
         const key2 = {}
         const original = new Collection([key1, key2])
-        const observed = immutable(original)
+        const observed = immutableState(original)
         expect(observed).not.toBe(original)
-        expect(isObservable(observed)).toBe(true)
-        expect(isImmutable(observed)).toBe(true)
-        expect(isObservable(original)).toBe(false)
-        expect(isImmutable(original)).toBe(false)
-        expect(observed.has(observable(key1))).toBe(true)
-        expect(original.has(observable(key1))).toBe(false)
+        expect(isState(observed)).toBe(true)
+        expect(isImmutableState(observed)).toBe(true)
+        expect(isState(original)).toBe(false)
+        expect(isImmutableState(original)).toBe(false)
+        expect(observed.has(state(key1))).toBe(true)
+        expect(original.has(state(key1))).toBe(false)
       })
 
       test('should not allow mutation & not trigger effect', () => {
-        const set = immutable(new Collection())
+        const set = immutableState(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -304,7 +304,7 @@ describe('observer/immutable', () => {
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
-        const set = immutable(new Collection())
+        const set = immutableState(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -322,19 +322,19 @@ describe('observer/immutable', () => {
       if (Collection === Set) {
         test('should retrive immutable values on iteration', () => {
           const original = new Collection([{}, {}])
-          const observed = immutable(original)
+          const observed = immutableState(original)
           for (const value of observed) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           }
           observed.forEach((value: any) => {
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           })
           for (const value of observed.values()) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isImmutableState(value)).toBe(true)
           }
           for (const [v1, v2] of observed.entries()) {
-            expect(isImmutable(v1)).toBe(true)
-            expect(isImmutable(v2)).toBe(true)
+            expect(isImmutableState(v1)).toBe(true)
+            expect(isImmutableState(v2)).toBe(true)
           }
         })
       }
@@ -342,52 +342,52 @@ describe('observer/immutable', () => {
   })
 
   test('calling observable on an immutable should return immutable', () => {
-    const a = immutable()
-    const b = observable(a)
-    expect(isImmutable(b)).toBe(true)
+    const a = immutableState()
+    const b = state(a)
+    expect(isImmutableState(b)).toBe(true)
     // should point to same original
-    expect(unwrap(a)).toBe(unwrap(b))
+    expect(toRaw(a)).toBe(toRaw(b))
   })
 
   test('calling immutable on an observable should return immutable', () => {
-    const a = observable()
-    const b = immutable(a)
-    expect(isImmutable(b)).toBe(true)
+    const a = state()
+    const b = immutableState(a)
+    expect(isImmutableState(b)).toBe(true)
     // should point to same original
-    expect(unwrap(a)).toBe(unwrap(b))
+    expect(toRaw(a)).toBe(toRaw(b))
   })
 
   test('observing already observed value should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = immutable(original)
-    const observed2 = immutable(observed)
+    const observed = immutableState(original)
+    const observed2 = immutableState(observed)
     expect(observed2).toBe(observed)
   })
 
   test('observing the same value multiple times should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = immutable(original)
-    const observed2 = immutable(original)
+    const observed = immutableState(original)
+    const observed2 = immutableState(original)
     expect(observed2).toBe(observed)
   })
 
   test('markNonReactive', () => {
-    const obj = immutable({
+    const obj = immutableState({
       foo: { a: 1 },
       bar: markNonReactive({ b: 2 })
     })
-    expect(isObservable(obj.foo)).toBe(true)
-    expect(isObservable(obj.bar)).toBe(false)
+    expect(isState(obj.foo)).toBe(true)
+    expect(isState(obj.bar)).toBe(false)
   })
 
   test('markImmutable', () => {
-    const obj = observable({
+    const obj = state({
       foo: { a: 1 },
       bar: markImmutable({ b: 2 })
     })
-    expect(isObservable(obj.foo)).toBe(true)
-    expect(isObservable(obj.bar)).toBe(true)
-    expect(isImmutable(obj.foo)).toBe(false)
-    expect(isImmutable(obj.bar)).toBe(true)
+    expect(isState(obj.foo)).toBe(true)
+    expect(isState(obj.bar)).toBe(true)
+    expect(isImmutableState(obj.foo)).toBe(false)
+    expect(isImmutableState(obj.bar)).toBe(true)
   })
 })
