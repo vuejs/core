@@ -31,11 +31,18 @@ export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
 type PropConstructor<T> = { new (...args: any[]): T & object } | { (): T }
 
-type RequiredKeys<T> = {
-  [K in keyof T]: T[K] extends { required: true } | { default: any } ? K : never
+type RequiredKeys<T, MakeDefautRequired> = {
+  [K in keyof T]: T[K] extends
+    | { required: true }
+    | (MakeDefautRequired extends true ? { default: any } : never)
+    ? K
+    : never
 }[keyof T]
 
-type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
+type OptionalKeys<T, MakeDefautRequired> = Exclude<
+  keyof T,
+  RequiredKeys<T, MakeDefautRequired>
+>
 
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
@@ -45,9 +52,18 @@ type InferPropType<T> = T extends null
       ? { [key: string]: any }
       : T extends Prop<infer V> ? V : T
 
-export type ExtractPropTypes<O> = O extends object
-  ? { readonly [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { readonly [K in OptionalKeys<O>]?: InferPropType<O[K]> }
+export type ExtractPropTypes<
+  O,
+  MakeDefautRequired extends boolean = true
+> = O extends object
+  ? {
+      readonly [K in RequiredKeys<O, MakeDefautRequired>]: InferPropType<O[K]>
+    } &
+      {
+        readonly [K in OptionalKeys<O, MakeDefautRequired>]?: InferPropType<
+          O[K]
+        >
+      }
   : { [K in string]: any }
 
 const enum BooleanFlags {

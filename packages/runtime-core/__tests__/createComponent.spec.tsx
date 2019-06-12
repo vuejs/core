@@ -2,8 +2,13 @@ import { createComponent } from '../src/component'
 import { value } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
 
+// mock React just for TSX testing purposes
+const React = {
+  createElement: () => {}
+}
+
 test('createComponent type inference', () => {
-  createComponent({
+  const MyComponent = createComponent({
     props: {
       a: Number,
       // required should make property non-void
@@ -36,9 +41,7 @@ test('createComponent type inference', () => {
         }
       }
     },
-    render({ state, props }) {
-      state.c * 2
-      state.d.e.slice()
+    render(props) {
       props.a && props.a * 2
       props.b.slice()
       props.bb.slice()
@@ -53,47 +56,53 @@ test('createComponent type inference', () => {
       this.dd.push('dd')
     }
   })
-  // rename this file to .tsx to test TSX props inference
-  // ;(<MyComponent a={1} b="foo"/>)
+  // test TSX props inference
+  ;(<MyComponent a={1} b="foo" dd={['foo']}/>)
 })
 
 test('type inference w/ optional props declaration', () => {
-  createComponent({
-    setup(props) {
-      props.anything
+  const Comp = createComponent({
+    setup(props: { msg: string }) {
+      props.msg
       return {
         a: 1
       }
     },
-    render({ props, state }) {
-      props.foobar
-      state.a * 2
+    render(props) {
+      props.msg
       this.a * 2
-
       // should not make state and this indexable
       // state.foobar
       // this.foobar
     }
   })
+  ;(<Comp msg="hello"/>)
 })
 
-// test('type inference w/ array props declaration', () => {
-//   createComponent({
-//     props: ['a', 'b'],
-//     setup(props) {
-//       props.a
-//       props.b
-//       return {
-//         c: 1
-//       }
-//     },
-//     render({ props, state }) {
-//       props.a
-//       props.b
-//       state.c
-//       this.a
-//       this.b
-//       this.c
-//     }
-//   })
-// })
+test('type inference w/ direct setup function', () => {
+  const Comp = createComponent((props: { msg: string }) => {
+    return () => <div>{props.msg}</div>
+  })
+  ;(<Comp msg="hello"/>)
+})
+
+test('type inference w/ array props declaration', () => {
+  const Comp = createComponent({
+    props: ['a', 'b'],
+    setup(props) {
+      props.a
+      props.b
+      return {
+        c: 1
+      }
+    },
+    render(props) {
+      props.a
+      props.b
+      this.a
+      this.b
+      this.c
+    }
+  })
+  ;(<Comp a={1} b={2}/>)
+})

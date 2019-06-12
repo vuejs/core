@@ -8,10 +8,10 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],
   collectCoverageFrom: ['packages/*/src/**/*.ts'],
-  moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   moduleNameMapper: {
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src'
   },
   rootDir: __dirname,
-  testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.(t|j)s']
+  testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)']
 }

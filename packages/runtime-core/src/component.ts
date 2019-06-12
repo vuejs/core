@@ -5,7 +5,7 @@ import {
   state,
   immutableState
 } from '@vue/reactivity'
-import { EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
@@ -14,9 +14,9 @@ import { STATEFUL_COMPONENT } from './typeFlags'
 
 export type Data = { [key: string]: any }
 
-export type ComponentPublicProperties<P = {}, S = {}> = {
+export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
   $state: S
-  $props: P
+  $props: PublicProps
   $attrs: Data
 
   // TODO
@@ -28,22 +28,61 @@ export type ComponentPublicProperties<P = {}, S = {}> = {
 } & P &
   S
 
-interface ComponentOptions<
-  RawProps = ComponentPropsOptions,
+type RenderFunction<P = Data> = (
+  props: P,
+  slots: Slots,
+  attrs: Data,
+  vnode: VNode
+) => any
+
+type RenderFunctionWithThis<Props, RawBindings> = <
+  Bindings extends UnwrapValue<RawBindings>
+>(
+  this: ComponentRenderProxy<Props, Bindings>,
+  props: Props,
+  slots: Slots,
+  attrs: Data,
+  vnode: VNode
+) => VNodeChild
+
+interface ComponentOptionsWithProps<
+  PropsOptions = ComponentPropsOptions,
   RawBindings = Data,
-  Props = ExtractPropTypes<RawProps>,
-  ExposedProps = RawProps extends object ? Props : {}
+  Props = ExtractPropTypes<PropsOptions>
 > {
-  props?: RawProps
-  setup?: (this: ComponentPublicProperties, props: Props) => RawBindings
-  render?: <State extends UnwrapValue<RawBindings>>(
-    this: ComponentPublicProperties<ExposedProps, State>,
-    ctx: ComponentInstance<Props, State>
-  ) => VNodeChild
+  props: PropsOptions
+  setup?: (
+    this: ComponentRenderProxy<Props>,
+    props: Props
+  ) => RawBindings | RenderFunction<Props>
+  render?: RenderFunctionWithThis<Props, RawBindings>
 }
 
-export interface FunctionalComponent<P = {}> {
-  (ctx: ComponentInstance<P>): any
+interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
+  props?: undefined
+  setup?: (
+    this: ComponentRenderProxy<Props>,
+    props: Props
+  ) => RawBindings | RenderFunction<Props>
+  render?: RenderFunctionWithThis<Props, RawBindings>
+}
+
+interface ComponentOptionsWithArrayProps<
+  PropNames extends string,
+  RawBindings = Data,
+  Props = { [key in PropNames]?: any }
+> {
+  props: PropNames[]
+  setup?: (
+    this: ComponentRenderProxy<Props>,
+    props: Props
+  ) => RawBindings | RenderFunction<Props>
+  render?: RenderFunctionWithThis<Props, RawBindings>
+}
+
+type ComponentOptions = ComponentOptionsWithProps | ComponentOptionsWithoutProps
+
+export interface FunctionalComponent<P = {}> extends RenderFunction<P> {
   props?: ComponentPropsOptions<P>
   displayName?: string
 }
@@ -73,8 +112,9 @@ export type ComponentInstance<P = Data, S = Data> = {
   subTree: VNode
   update: ReactiveEffect
   effects: ReactiveEffect[] | null
+  render: RenderFunction<P> | null
   // the rest are only for stateful components
-  renderProxy: ComponentPublicProperties | null
+  renderProxy: ComponentRenderProxy | null
   propsProxy: Data | null
   state: S
   props: P
@@ -84,13 +124,36 @@ export type ComponentInstance<P = Data, S = Data> = {
 } & LifecycleHooks
 
 // no-op, for type inference only
-export function createComponent<RawProps, RawBindings>(
-  options: ComponentOptions<RawProps, RawBindings>
+export function createComponent<Props>(
+  setup: (props: Props) => RenderFunction<Props>
+): (props: Props) => any
+export function createComponent<PropNames extends string, RawBindings>(
+  options: ComponentOptionsWithArrayProps<PropNames, RawBindings>
 ): {
-  // for TSX
-  new (): { $props: ExtractPropTypes<RawProps> }
-} {
-  return options as any
+  // for Vetur and TSX support
+  new (): ComponentRenderProxy<
+    { [key in PropNames]?: any },
+    UnwrapValue<RawBindings>
+  >
+}
+export function createComponent<Props, RawBindings>(
+  options: ComponentOptionsWithoutProps<Props, RawBindings>
+): {
+  // for Vetur and TSX support
+  new (): ComponentRenderProxy<Props, UnwrapValue<RawBindings>>
+}
+export function createComponent<PropsOptions, RawBindings>(
+  options: ComponentOptionsWithProps<PropsOptions, RawBindings>
+): {
+  // for Vetur and TSX support
+  new (): ComponentRenderProxy<
+    ExtractPropTypes<PropsOptions>,
+    UnwrapValue<RawBindings>,
+    ExtractPropTypes<PropsOptions, false>
+  >
+}
+export function createComponent(options: any) {
+  return isFunction(options) ? { setup: options } : (options as any)
 }
 
 export function createComponentInstance(
@@ -105,6 +168,7 @@ export function createComponentInstance(
     next: null,
     subTree: null as any,
     update: null as any,
+    render: null,
     renderProxy: null,
     propsProxy: null,
 
@@ -153,23 +217,39 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     const propsProxy = (instance.propsProxy = setup.length
       ? immutableState(instance.props)
       : null)
-    instance.state = state(setup.call(proxy, propsProxy))
+    const setupResult = setup.call(proxy, propsProxy)
+    if (isFunction(setupResult)) {
+      // setup returned a render function
+      instance.render = setupResult
+    } else {
+      // setup returned bindings
+      instance.state = state(setupResult)
+      if (__DEV__ && !Component.render) {
+        // TODO warn missing render fn
+      }
+      instance.render = Component.render as RenderFunction
+    }
     currentInstance = null
   }
 }
 
 export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const { type: Component, vnode } = instance
+  const { type: Component, renderProxy, props, slots, attrs, vnode } = instance
   if (vnode.shapeFlag & STATEFUL_COMPONENT) {
-    if (__DEV__ && !(Component as any).render) {
-      // TODO warn missing render
-    }
     return normalizeVNode(
-      (Component as any).render.call(instance.renderProxy, instance)
+      (instance.render as RenderFunction).call(
+        renderProxy,
+        props,
+        slots,
+        attrs,
+        vnode
+      )
     )
   } else {
     // functional
-    return normalizeVNode((Component as FunctionalComponent)(instance))
+    return normalizeVNode(
+      (Component as FunctionalComponent)(props, slots, attrs, vnode)
+    )
   }
 }
 

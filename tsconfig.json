@@ -12,7 +12,7 @@
     "noImplicitAny": true,
     "experimentalDecorators": true,
     "removeComments": false,
-    "jsx": "preserve",
+    "jsx": "react",
     "lib": [
       "esnext",
       "dom"
