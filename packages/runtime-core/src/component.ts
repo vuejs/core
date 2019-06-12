@@ -68,7 +68,7 @@ interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
 }
 
 interface ComponentOptionsWithArrayProps<
-  PropNames extends string,
+  PropNames extends string = string,
   RawBindings = Data,
   Props = { [key in PropNames]?: any }
 > {
@@ -80,7 +80,10 @@ interface ComponentOptionsWithArrayProps<
   render?: RenderFunctionWithThis<Props, RawBindings>
 }
 
-type ComponentOptions = ComponentOptionsWithProps | ComponentOptionsWithoutProps
+type ComponentOptions =
+  | ComponentOptionsWithProps
+  | ComponentOptionsWithoutProps
+  | ComponentOptionsWithArrayProps
 
 export interface FunctionalComponent<P = {}> extends RenderFunction<P> {
   props?: ComponentPropsOptions<P>
