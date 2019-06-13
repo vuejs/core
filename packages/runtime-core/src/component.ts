@@ -14,15 +14,14 @@ import { STATEFUL_COMPONENT } from './typeFlags'
 
 export type Data = { [key: string]: any }
 
+// public properties exposed on the proxy, which is used as the render context
+// in templates (as `this` in the render option)
 export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
   $state: S
   $props: PublicProps
   $attrs: Data
-
-  // TODO
   $refs: Data
   $slots: Data
-
   $root: ComponentInstance | null
   $parent: ComponentInstance | null
 } & P &
@@ -44,19 +43,6 @@ type RenderFunctionWithThis<Props, RawBindings> = <
   attrs: Data,
   vnode: VNode
 ) => VNodeChild
-
-interface ComponentOptionsWithProps<
-  PropsOptions = ComponentPropsOptions,
-  RawBindings = Data,
-  Props = ExtractPropTypes<PropsOptions>
-> {
-  props: PropsOptions
-  setup?: (
-    this: ComponentRenderProxy<Props>,
-    props: Props
-  ) => RawBindings | RenderFunction<Props>
-  render?: RenderFunctionWithThis<Props, RawBindings>
-}
 
 interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
   props?: undefined
@@ -80,7 +66,20 @@ interface ComponentOptionsWithArrayProps<
   render?: RenderFunctionWithThis<Props, RawBindings>
 }
 
-type ComponentOptions =
+interface ComponentOptionsWithProps<
+  PropsOptions = ComponentPropsOptions,
+  RawBindings = Data,
+  Props = ExtractPropTypes<PropsOptions>
+> {
+  props: PropsOptions
+  setup?: (
+    this: ComponentRenderProxy<Props>,
+    props: Props
+  ) => RawBindings | RenderFunction<Props>
+  render?: RenderFunctionWithThis<Props, RawBindings>
+}
+
+export type ComponentOptions =
   | ComponentOptionsWithProps
   | ComponentOptionsWithoutProps
   | ComponentOptionsWithArrayProps
@@ -126,25 +125,33 @@ export type ComponentInstance<P = Data, S = Data> = {
   refs: Data
 } & LifecycleHooks
 
-// no-op, for type inference only
+// createComponent
+// overload 1: direct setup function
+// (uses user defined props interface)
 export function createComponent<Props>(
   setup: (props: Props) => RenderFunction<Props>
 ): (props: Props) => any
+// overload 2: object format with no props
+// (uses user defined props interface)
+// return type is for Vetur and TSX support
+export function createComponent<Props, RawBindings>(
+  options: ComponentOptionsWithoutProps<Props, RawBindings>
+): {
+  new (): ComponentRenderProxy<Props, UnwrapValue<RawBindings>>
+}
+// overload 3: object format with array props declaration
+// props inferred as { [key in PropNames]?: any }
+// return type is for Vetur and TSX support
 export function createComponent<PropNames extends string, RawBindings>(
   options: ComponentOptionsWithArrayProps<PropNames, RawBindings>
 ): {
-  // for Vetur and TSX support
   new (): ComponentRenderProxy<
     { [key in PropNames]?: any },
     UnwrapValue<RawBindings>
   >
 }
-export function createComponent<Props, RawBindings>(
-  options: ComponentOptionsWithoutProps<Props, RawBindings>
-): {
-  // for Vetur and TSX support
-  new (): ComponentRenderProxy<Props, UnwrapValue<RawBindings>>
-}
+// overload 4: object format with object props declaration
+// see `ExtractPropTypes` in ./componentProps.ts
 export function createComponent<PropsOptions, RawBindings>(
   options: ComponentOptionsWithProps<PropsOptions, RawBindings>
 ): {
@@ -155,6 +162,7 @@ export function createComponent<PropsOptions, RawBindings>(
     ExtractPropTypes<PropsOptions, false>
   >
 }
+// implementation, close to no-op
 export function createComponent(options: any) {
   return isFunction(options) ? { setup: options } : (options as any)
 }
@@ -222,10 +230,11 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       : null)
     const setupResult = setup.call(proxy, propsProxy)
     if (isFunction(setupResult)) {
-      // setup returned a render function
+      // setup returned an inline render function
       instance.render = setupResult
     } else {
-      // setup returned bindings
+      // setup returned bindings.
+      // assuming a render function compiled from template is present.
       instance.state = state(setupResult)
       if (__DEV__ && !Component.render) {
         // TODO warn missing render fn
