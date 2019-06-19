@@ -79,7 +79,7 @@ export interface FunctionalComponent<P = {}> {
 
 type LifecycleHook = Function[] | null
 
-interface LifecycleHooks {
+export interface LifecycleHooks {
   bm: LifecycleHook // beforeMount
   m: LifecycleHook // mounted
   bu: LifecycleHook // beforeUpdate
@@ -110,8 +110,9 @@ export type ComponentInstance<P = Data, S = Data> = {
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
-  effects: ReactiveEffect[] | null
   render: RenderFunction<P, S> | null
+  effects: ReactiveEffect[] | null
+  provides: Data | null
 
   // the rest are only for stateful components
   data: S
@@ -193,6 +194,7 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
     effects: null,
+    provides: null,
 
     // public properties
     data: EMPTY_OBJ,
