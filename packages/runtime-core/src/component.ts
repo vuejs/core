@@ -112,7 +112,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   update: ReactiveEffect
   render: RenderFunction<P, S> | null
   effects: ReactiveEffect[] | null
-  provides: Data | null
+  provides: Data
 
   // the rest are only for stateful components
   data: S
@@ -194,7 +194,7 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
     effects: null,
-    provides: null,
+    provides: parent ? parent.provides : {},
 
     // public properties
     data: EMPTY_OBJ,
@@ -225,7 +225,6 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   // 2. call setup()
   const { setup } = Component
   if (setup) {
-    currentInstance = instance
     // the props proxy makes the props object passed to setup() reactive
     // so props change can be tracked by watchers
     // it will be updated in resolveProps() on updates before render
@@ -234,7 +233,11 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       : null)
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
+
+    currentInstance = instance
     const setupResult = setup.call(null, propsProxy, setupContext)
+    currentInstance = null
+
     if (isFunction(setupResult)) {
       // setup returned an inline render function
       instance.render = setupResult
@@ -247,7 +250,6 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       }
       instance.render = Component.render as RenderFunction
     }
-    currentInstance = null
   }
 }
 

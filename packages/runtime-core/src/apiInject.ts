@@ -7,24 +7,29 @@ export function provide<T>(key: Key<T>, value: T | Value<T>) {
   if (!currentInstance) {
     // TODO warn
   } else {
-    const provides = currentInstance.provides || (currentInstance.provides = {})
+    let provides = currentInstance.provides
+    // by default an instance inherits its parent's provides object
+    // but when it needs to provide values of its own, it creates its
+    // own provides object using parent provides object as prototype.
+    // this way in `inject` we can simply look up injections from direct
+    // parent and let the prototype chain do the work.
+    const parentProvides =
+      currentInstance.parent && currentInstance.parent.provides
+    if (parentProvides === provides) {
+      provides = currentInstance.provides = Object.create(parentProvides)
+    }
     provides[key as any] = value
   }
 }
 
 export function inject<T>(key: Key<T>): Value<T> | undefined {
-  // traverse parent chain and look for provided value
   if (!currentInstance) {
     // TODO warn
   } else {
-    let parent = currentInstance.parent
-    while (parent) {
-      const { provides } = parent
-      if (provides !== null && provides.hasOwnProperty(key as any)) {
-        const val = provides[key as any]
-        return isValue(val) ? val : value(val)
-      }
-      parent = parent.parent
+    const provides = currentInstance.parent && currentInstance.provides
+    if (provides) {
+      const val = provides[key as any]
+      return isValue(val) ? val : value(val)
     }
   }
 }
