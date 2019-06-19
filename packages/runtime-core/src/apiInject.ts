@@ -26,6 +26,7 @@ export function inject<T>(key: Key<T>): Value<T> | undefined {
   if (!currentInstance) {
     // TODO warn
   } else {
+    // TODO should also check for app-level provides
     const provides = currentInstance.parent && currentInstance.provides
     if (provides) {
       const val = provides[key as any]
