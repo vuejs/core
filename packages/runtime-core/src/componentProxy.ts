@@ -25,6 +25,8 @@ export const RenderProxyHandlers = {
           return target.root
         case '$el':
           return target.vnode && target.vnode.el
+        case '$emit':
+          return target.emit
         default:
           break
       }

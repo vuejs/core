@@ -68,12 +68,11 @@ test('type inference w/ optional props declaration', () => {
         a: 1
       }
     },
-    render(props) {
-      props.msg
+    render(ctx) {
+      ctx.msg
+      ctx.a * 2
+      this.msg
       this.a * 2
-      // should not make state and this indexable
-      // state.foobar
-      // this.foobar
     }
   })
   ;(<Comp msg="hello"/>)
@@ -96,9 +95,10 @@ test('type inference w/ array props declaration', () => {
         c: 1
       }
     },
-    render(props) {
-      props.a
-      props.b
+    render(ctx) {
+      ctx.a
+      ctx.b
+      ctx.c
       this.a
       this.b
       this.c

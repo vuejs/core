@@ -30,3 +30,16 @@ export const hyphenate = (str: string): string => {
 export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
+
+export function invokeHandlers(
+  handlers: Function | Function[],
+  args: any[] = EMPTY_ARR
+) {
+  if (isArray(handlers)) {
+    for (let i = 0; i < handlers.length; i++) {
+      handlers[i].apply(null, args)
+    }
+  } else {
+    handlers.apply(null, args)
+  }
+}

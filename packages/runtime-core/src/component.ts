@@ -5,7 +5,7 @@ import {
   state,
   immutableState
 } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isFunction, capitalize, invokeHandlers } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
@@ -24,33 +24,26 @@ export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
   $slots: Data
   $root: ComponentInstance | null
   $parent: ComponentInstance | null
+  $emit: (event: string, ...args: any[]) => void
 } & P &
   S
 
-type RenderFunction<P = Data> = (
-  props: P,
-  slots: Slots,
-  attrs: Data,
-  vnode: VNode
-) => any
+type SetupFunction<Props, RawBindings> = (
+  props: Props,
+  ctx: SetupContext
+) => RawBindings | (() => VNodeChild)
 
-type RenderFunctionWithThis<Props, RawBindings> = <
+type RenderFunction<Props = {}, RawBindings = {}> = <
   Bindings extends UnwrapValue<RawBindings>
 >(
   this: ComponentRenderProxy<Props, Bindings>,
-  props: Props,
-  slots: Slots,
-  attrs: Data,
-  vnode: VNode
+  ctx: ComponentRenderProxy<Props, Bindings>
 ) => VNodeChild
 
 interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
   props?: undefined
-  setup?: (
-    this: ComponentRenderProxy<Props>,
-    props: Props
-  ) => RawBindings | RenderFunction<Props>
-  render?: RenderFunctionWithThis<Props, RawBindings>
+  setup?: SetupFunction<Props, RawBindings>
+  render?: RenderFunction<Props, RawBindings>
 }
 
 interface ComponentOptionsWithArrayProps<
@@ -59,11 +52,8 @@ interface ComponentOptionsWithArrayProps<
   Props = { [key in PropNames]?: any }
 > {
   props: PropNames[]
-  setup?: (
-    this: ComponentRenderProxy<Props>,
-    props: Props
-  ) => RawBindings | RenderFunction<Props>
-  render?: RenderFunctionWithThis<Props, RawBindings>
+  setup?: SetupFunction<Props, RawBindings>
+  render?: RenderFunction<Props, RawBindings>
 }
 
 interface ComponentOptionsWithProps<
@@ -72,11 +62,8 @@ interface ComponentOptionsWithProps<
   Props = ExtractPropTypes<PropsOptions>
 > {
   props: PropsOptions
-  setup?: (
-    this: ComponentRenderProxy<Props>,
-    props: Props
-  ) => RawBindings | RenderFunction<Props>
-  render?: RenderFunctionWithThis<Props, RawBindings>
+  setup?: SetupFunction<Props, RawBindings>
+  render?: RenderFunction<Props, RawBindings>
 }
 
 export type ComponentOptions =
@@ -84,14 +71,15 @@ export type ComponentOptions =
   | ComponentOptionsWithoutProps
   | ComponentOptionsWithArrayProps
 
-export interface FunctionalComponent<P = {}> extends RenderFunction<P> {
+export interface FunctionalComponent<P = {}> {
+  (props: P, ctx: SetupContext): VNodeChild
   props?: ComponentPropsOptions<P>
   displayName?: string
 }
 
 type LifecycleHook = Function[] | null
 
-export interface LifecycleHooks {
+interface LifecycleHooks {
   bm: LifecycleHook // beforeMount
   m: LifecycleHook // mounted
   bu: LifecycleHook // beforeUpdate
@@ -105,6 +93,13 @@ export interface LifecycleHooks {
   ec: LifecycleHook // errorCaptured
 }
 
+interface SetupContext {
+  attrs: Data
+  slots: Slots
+  refs: Data
+  emit: ((event: string, ...args: any[]) => void)
+}
+
 export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
@@ -114,22 +109,22 @@ export type ComponentInstance<P = Data, S = Data> = {
   subTree: VNode
   update: ReactiveEffect
   effects: ReactiveEffect[] | null
-  render: RenderFunction<P> | null
+  render: RenderFunction<P, S> | null
+
   // the rest are only for stateful components
-  renderProxy: ComponentRenderProxy | null
-  propsProxy: Data | null
   state: S
   props: P
-  attrs: Data
-  slots: Slots
-  refs: Data
-} & LifecycleHooks
+  renderProxy: ComponentRenderProxy | null
+  propsProxy: P | null
+  setupContext: SetupContext | null
+} & SetupContext &
+  LifecycleHooks
 
 // createComponent
 // overload 1: direct setup function
 // (uses user defined props interface)
 export function createComponent<Props>(
-  setup: (props: Props) => RenderFunction<Props>
+  setup: (props: Props, ctx: SetupContext) => (() => any)
 ): (props: Props) => any
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -182,6 +177,7 @@ export function createComponentInstance(
     render: null,
     renderProxy: null,
     propsProxy: null,
+    setupContext: null,
 
     bm: null,
     m: null,
@@ -201,7 +197,15 @@ export function createComponentInstance(
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
-    refs: EMPTY_OBJ
+    refs: EMPTY_OBJ,
+
+    emit: (event: string, ...args: any[]) => {
+      const props = instance.vnode.props || EMPTY_OBJ
+      const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
+      if (handler) {
+        invokeHandlers(handler, args)
+      }
+    }
   }
 
   instance.root = parent ? parent.root : instance
@@ -223,12 +227,13 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     currentInstance = instance
     // the props proxy makes the props object passed to setup() reactive
     // so props change can be tracked by watchers
-    // only need to create it if setup() actually expects it
     // it will be updated in resolveProps() on updates before render
     const propsProxy = (instance.propsProxy = setup.length
       ? immutableState(instance.props)
       : null)
-    const setupResult = setup.call(proxy, propsProxy)
+    const setupContext = (instance.setupContext =
+      setup.length > 1 ? createSetupContext(instance) : null)
+    const setupResult = setup.call(proxy, propsProxy, setupContext)
     if (isFunction(setupResult)) {
       // setup returned an inline render function
       instance.render = setupResult
@@ -245,22 +250,55 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   }
 }
 
+const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
+;['attrs', 'slots', 'refs'].forEach((type: string) => {
+  SetupProxyHandlers[type] = {
+    get: (instance: any, key: string) => (instance[type] as any)[key],
+    has: (instance: any, key: string) => key in (instance[type] as any),
+    ownKeys: (instance: any) => Object.keys(instance[type] as any),
+    set: () => false,
+    deleteProperty: () => false
+  }
+})
+
+function createSetupContext(instance: ComponentInstance): SetupContext {
+  const context = {
+    // attrs, slots & refs are non-reactive, but they need to always expose
+    // the latest values (instance.xxx may get replaced during updates) so we
+    // need to expose them through a proxy
+    attrs: new Proxy(instance, SetupProxyHandlers.attrs),
+    slots: new Proxy(instance, SetupProxyHandlers.slots),
+    refs: new Proxy(instance, SetupProxyHandlers.refs),
+    emit: instance.emit
+  } as any
+  return __DEV__ ? Object.freeze(context) : context
+}
+
 export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const { type: Component, renderProxy, props, slots, attrs, vnode } = instance
+  const {
+    type: Component,
+    vnode,
+    renderProxy,
+    setupContext,
+    props,
+    slots,
+    attrs,
+    refs,
+    emit
+  } = instance
   if (vnode.shapeFlag & STATEFUL_COMPONENT) {
     return normalizeVNode(
-      (instance.render as RenderFunction).call(
-        renderProxy,
-        props,
-        slots,
-        attrs,
-        vnode
-      )
+      (instance.render as RenderFunction).call(renderProxy, props, setupContext)
     )
   } else {
     // functional
     return normalizeVNode(
-      (Component as FunctionalComponent)(props, slots, attrs, vnode)
+      (Component as FunctionalComponent)(props, {
+        attrs,
+        slots,
+        refs,
+        emit
+      })
     )
   }
 }

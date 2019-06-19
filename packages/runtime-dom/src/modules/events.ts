@@ -1,3 +1,5 @@
+import { invokeHandlers } from '@vue/shared'
+
 interface Invoker extends Function {
   value: EventValue
   lastUpdated?: number
@@ -56,30 +58,18 @@ export function patchEvent(
 
 function createInvoker(value: any) {
   const invoker = ((e: Event) => {
-    invokeEvents(e, invoker.value, invoker.lastUpdated)
+    // async edge case #6566: inner click event triggers patch, event handler
+    // attached to outer element during patch, and triggered again. This
+    // happens because browsers fire microtask ticks between event propagation.
+    // the solution is simple: we save the timestamp when a handler is attached,
+    // and the handler would only fire if the event passed to it was fired
+    // AFTER it was attached.
+    if (e.timeStamp >= invoker.lastUpdated) {
+      invokeHandlers(invoker.value, [e])
+    }
   }) as any
   invoker.value = value
   value.invoker = invoker
   invoker.lastUpdated = getNow()
   return invoker
-}
-
-function invokeEvents(e: Event, value: EventValue, lastUpdated: number) {
-  // async edge case #6566: inner click event triggers patch, event handler
-  // attached to outer element during patch, and triggered again. This
-  // happens because browsers fire microtask ticks between event propagation.
-  // the solution is simple: we save the timestamp when a handler is attached,
-  // and the handler would only fire if the event passed to it was fired
-  // AFTER it was attached.
-  if (e.timeStamp < lastUpdated) {
-    return
-  }
-
-  if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      value[i](e)
-    }
-  } else {
-    value(e)
-  }
 }
