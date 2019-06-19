@@ -17,7 +17,7 @@ export type Data = { [key: string]: any }
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
-  $state: S
+  $data: S
   $props: PublicProps
   $attrs: Data
   $refs: Data
@@ -97,6 +97,8 @@ interface SetupContext {
   attrs: Data
   slots: Slots
   refs: Data
+  parent: ComponentInstance | null
+  root: ComponentInstance
   emit: ((event: string, ...args: any[]) => void)
 }
 
@@ -112,7 +114,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   render: RenderFunction<P, S> | null
 
   // the rest are only for stateful components
-  state: S
+  data: S
   props: P
   renderProxy: ComponentRenderProxy | null
   propsProxy: P | null
@@ -193,7 +195,7 @@ export function createComponentInstance(
     effects: null,
 
     // public properties
-    state: EMPTY_OBJ,
+    data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
@@ -217,10 +219,7 @@ export let currentInstance: ComponentInstance | null = null
 export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  const proxy = (instance.renderProxy = new Proxy(
-    instance,
-    RenderProxyHandlers
-  ) as any)
+  instance.renderProxy = new Proxy(instance, RenderProxyHandlers) as any
   // 2. call setup()
   const { setup } = Component
   if (setup) {
@@ -233,14 +232,14 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       : null)
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-    const setupResult = setup.call(proxy, propsProxy, setupContext)
+    const setupResult = setup.call(null, propsProxy, setupContext)
     if (isFunction(setupResult)) {
       // setup returned an inline render function
       instance.render = setupResult
     } else {
       // setup returned bindings.
       // assuming a render function compiled from template is present.
-      instance.state = state(setupResult)
+      instance.data = state(setupResult)
       if (__DEV__ && !Component.render) {
         // TODO warn missing render fn
       }
@@ -269,7 +268,9 @@ function createSetupContext(instance: ComponentInstance): SetupContext {
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
     refs: new Proxy(instance, SetupProxyHandlers.refs),
-    emit: instance.emit
+    emit: instance.emit,
+    parent: instance.parent,
+    root: instance.root
   } as any
   return __DEV__ ? Object.freeze(context) : context
 }
@@ -284,7 +285,9 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     slots,
     attrs,
     refs,
-    emit
+    emit,
+    parent,
+    root
   } = instance
   if (vnode.shapeFlag & STATEFUL_COMPONENT) {
     return normalizeVNode(
@@ -292,13 +295,18 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     )
   } else {
     // functional
+    const render = Component as FunctionalComponent
     return normalizeVNode(
-      (Component as FunctionalComponent)(props, {
-        attrs,
-        slots,
-        refs,
-        emit
-      })
+      render.length > 1
+        ? render(props, {
+            attrs,
+            slots,
+            refs,
+            emit,
+            parent,
+            root
+          })
+        : render(props, null as any)
     )
   }
 }

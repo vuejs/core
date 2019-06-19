@@ -2,17 +2,17 @@ import { ComponentInstance } from './component'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
-    const { state, props } = target
-    if (state.hasOwnProperty(key)) {
-      return state[key]
+    const { data, props } = target
+    if (data.hasOwnProperty(key)) {
+      return data[key]
     } else if (props.hasOwnProperty(key)) {
       return props[key]
     } else {
       switch (key) {
-        case '$state':
-          return target.state
+        case '$data':
+          return data
         case '$props':
-          return target.props
+          return props
         case '$attrs':
           return target.attrs
         case '$slots':
@@ -23,8 +23,6 @@ export const RenderProxyHandlers = {
           return target.parent
         case '$root':
           return target.root
-        case '$el':
-          return target.vnode && target.vnode.el
         case '$emit':
           return target.emit
         default:
@@ -33,9 +31,9 @@ export const RenderProxyHandlers = {
     }
   },
   set(target: ComponentInstance, key: string, value: any): boolean {
-    const { state } = target
-    if (state.hasOwnProperty(key)) {
-      state[key] = value
+    const { data } = target
+    if (data.hasOwnProperty(key)) {
+      data[key] = value
       return true
     } else {
       if (__DEV__) {
