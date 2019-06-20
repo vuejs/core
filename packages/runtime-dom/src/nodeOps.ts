@@ -1,12 +1,7 @@
-import { RendererOptions } from '@vue/runtime-core'
-import { patchProp } from './patchProp'
-
 const doc = document
 const svgNS = 'http://www.w3.org/2000/svg'
 
-export const DOMRendererOptions: RendererOptions = {
-  patchProp,
-
+export const nodeOps = {
   insert: (child: Node, parent: Node, anchor?: Node) => {
     if (anchor != null) {
       parent.insertBefore(child, anchor)
@@ -16,7 +11,6 @@ export const DOMRendererOptions: RendererOptions = {
   },
 
   remove: (child: Node) => {
-    if (!child) debugger
     const parent = child.parentNode
     if (parent != null) {
       parent.removeChild(child)

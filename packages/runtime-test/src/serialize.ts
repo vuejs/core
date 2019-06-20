@@ -1,4 +1,10 @@
-import { TestElement, TestNode, NodeTypes, TestText } from './nodeOps'
+import {
+  TestElement,
+  TestNode,
+  NodeTypes,
+  TestText,
+  TestComment
+} from './nodeOps'
 import { isOn } from '@vue/shared'
 
 export function serialize(
@@ -37,7 +43,14 @@ function serializeElement(
   )
 }
 
-function serializeText(node: TestText, indent: number, depth: number): string {
+function serializeText(
+  node: TestText | TestComment,
+  indent: number,
+  depth: number
+): string {
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
-  return padding + node.text
+  return (
+    padding +
+    (node.type === NodeTypes.COMMENT ? `<!--${node.text}-->` : node.text)
+  )
 }

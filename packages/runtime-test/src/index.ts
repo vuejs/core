@@ -1,36 +1,11 @@
-import {
-  h,
-  createRenderer,
-  Component,
-  createComponentInstance
-} from '@vue/runtime-core'
+import { createRenderer, VNode } from '@vue/runtime-core'
 import { nodeOps, TestElement } from './nodeOps'
-import { patchData } from './patchData'
+import { patchProp } from './patchProp'
 
-const { render: _render } = createRenderer({
-  nodeOps,
-  patchData
-})
-
-type publicRender = (
-  node: {} | null,
-  container: TestElement
-) => Promise<Component | null>
-export const render = _render as publicRender
-
-export function createInstance<T extends Component>(
-  Class: new () => T,
-  props?: any
-): T {
-  return createComponentInstance(h(Class, props)).$proxy as any
-}
-
-export function renderInstance<T extends Component>(
-  Class: new () => T,
-  props?: any
-): Promise<T> {
-  return render(h(Class, props), nodeOps.createElement('div')) as any
-}
+export const render = createRenderer({
+  patchProp,
+  ...nodeOps
+}) as (node: VNode | null, container: TestElement) => VNode
 
 export { serialize } from './serialize'
 export { triggerEvent } from './triggerEvent'

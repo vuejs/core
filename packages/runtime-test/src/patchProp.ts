@@ -1,11 +1,11 @@
 import { TestElement, logNodeOp, NodeOpTypes } from './nodeOps'
 import { isOn } from '@vue/shared'
 
-export function patchData(
+export function patchProp(
   el: TestElement,
   key: string,
-  prevValue: any,
-  nextValue: any
+  nextValue: any,
+  prevValue: any
 ) {
   logNodeOp({
     type: NodeOpTypes.PATCH,

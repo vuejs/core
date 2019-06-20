@@ -1,10 +1,11 @@
 import { createRenderer, VNode } from '@vue/runtime-core'
-import { DOMRendererOptions } from './rendererOptions'
+import { nodeOps } from './nodeOps'
+import { patchProp } from './patchProp'
 
-export const render = createRenderer(DOMRendererOptions) as (
-  vnode: VNode | null,
-  container: HTMLElement
-) => VNode
+export const render = createRenderer({
+  patchProp,
+  ...nodeOps
+}) as (vnode: VNode | null, container: HTMLElement) => VNode
 
 // re-export everything from core
 // h, Component, observer API, nextTick, flags & types

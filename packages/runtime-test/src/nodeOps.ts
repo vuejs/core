@@ -1,6 +1,7 @@
 export const enum NodeTypes {
   TEXT = 'text',
-  ELEMENT = 'element'
+  ELEMENT = 'element',
+  COMMENT = 'comment'
 }
 
 export interface TestElement {
@@ -20,15 +21,21 @@ export interface TestText {
   text: string
 }
 
-export type TestNode = TestElement | TestText
+export interface TestComment {
+  id: number
+  type: NodeTypes.COMMENT
+  parentNode: TestElement | null
+  text: string
+}
+
+export type TestNode = TestElement | TestText | TestComment
 
 export const enum NodeOpTypes {
   CREATE = 'create',
   INSERT = 'insert',
-  APPEND = 'append',
   REMOVE = 'remove',
   SET_TEXT = 'setText',
-  CLEAR = 'clearContent',
+  SET_ELEMENT_TEXT = 'setElementText',
   PATCH = 'patch'
 }
 
@@ -39,7 +46,7 @@ export interface NodeOp {
   text?: string
   targetNode?: TestNode
   parentNode?: TestElement
-  refNode?: TestNode
+  refNode?: TestNode | null
   propKey?: string
   propPrevValue?: any
   propNextValue?: any
@@ -97,6 +104,22 @@ function createText(text: string): TestText {
   return node
 }
 
+function createComment(text: string): TestComment {
+  const node: TestComment = {
+    id: nodeId++,
+    type: NodeTypes.COMMENT,
+    text,
+    parentNode: null
+  }
+  logNodeOp({
+    type: NodeOpTypes.CREATE,
+    nodeType: NodeTypes.COMMENT,
+    targetNode: node,
+    text
+  })
+  return node
+}
+
 function setText(node: TestText, text: string) {
   logNodeOp({
     type: NodeOpTypes.SET_TEXT,
@@ -106,28 +129,15 @@ function setText(node: TestText, text: string) {
   node.text = text
 }
 
-function appendChild(parent: TestElement, child: TestNode) {
-  logNodeOp({
-    type: NodeOpTypes.APPEND,
-    targetNode: child,
-    parentNode: parent
-  })
-  if (child.parentNode) {
-    removeChild(child.parentNode, child)
-  }
-  parent.children.push(child)
-  child.parentNode = parent
-}
-
-function insertBefore(parent: TestElement, child: TestNode, ref: TestNode) {
-  if (child.parentNode) {
-    removeChild(child.parentNode, child)
-  }
-  const refIndex = parent.children.indexOf(ref)
-  if (refIndex === -1) {
-    console.error('ref: ', ref)
-    console.error('parent: ', parent)
-    throw new Error('ref is not a child of parent')
+function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
+  let refIndex
+  if (ref != null) {
+    refIndex = parent.children.indexOf(ref)
+    if (refIndex === -1) {
+      console.error('ref: ', ref)
+      console.error('parent: ', parent)
+      throw new Error('ref is not a child of parent')
+    }
   }
   logNodeOp({
     type: NodeOpTypes.INSERT,
@@ -135,40 +145,46 @@ function insertBefore(parent: TestElement, child: TestNode, ref: TestNode) {
     parentNode: parent,
     refNode: ref
   })
-  parent.children.splice(refIndex, 0, child)
-  child.parentNode = parent
-}
-
-function removeChild(parent: TestElement, child: TestNode) {
-  logNodeOp({
-    type: NodeOpTypes.REMOVE,
-    targetNode: child,
-    parentNode: parent
-  })
-  const i = parent.children.indexOf(child)
-  if (i > -1) {
-    parent.children.splice(i, 1)
+  remove(child)
+  if (refIndex === undefined) {
+    parent.children.push(child)
+    child.parentNode = parent
   } else {
-    console.error('target: ', child)
-    console.error('parent: ', parent)
-    throw Error('target is not a childNode of parent')
+    parent.children.splice(refIndex, 0, child)
+    child.parentNode = parent
   }
-  child.parentNode = null
 }
 
-function clearContent(node: TestNode) {
-  logNodeOp({
-    type: NodeOpTypes.CLEAR,
-    targetNode: node
-  })
-  if (node.type === NodeTypes.ELEMENT) {
-    node.children.forEach(c => {
-      c.parentNode = null
+function remove(child: TestNode) {
+  const parent = child.parentNode
+  if (parent != null) {
+    logNodeOp({
+      type: NodeOpTypes.REMOVE,
+      targetNode: child,
+      parentNode: parent
     })
-    node.children = []
-  } else {
-    node.text = ''
+    const i = parent.children.indexOf(child)
+    if (i > -1) {
+      parent.children.splice(i, 1)
+    } else {
+      console.error('target: ', child)
+      console.error('parent: ', parent)
+      throw Error('target is not a childNode of parent')
+    }
+    child.parentNode = null
   }
+}
+
+function setElementText(el: TestElement, text: string) {
+  logNodeOp({
+    type: NodeOpTypes.SET_ELEMENT_TEXT,
+    targetNode: el,
+    text
+  })
+  el.children.forEach(c => {
+    c.parentNode = null
+  })
+  el.children = [createText(text)]
 }
 
 function parentNode(node: TestNode): TestElement | null {
@@ -189,16 +205,14 @@ function querySelector() {
 }
 
 export const nodeOps = {
+  insert,
+  remove,
   createElement,
   createText,
+  createComment,
   setText,
-  appendChild,
-  insertBefore,
-  removeChild,
-  clearContent,
+  setElementText,
   parentNode,
   nextSibling,
   querySelector
 }
-
-export function patchData() {}
