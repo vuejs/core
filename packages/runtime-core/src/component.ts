@@ -218,6 +218,9 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInstance | null = null
 
+export const getCurrentInstance: () => ComponentInstance | null = () =>
+  currentInstance
+
 export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
