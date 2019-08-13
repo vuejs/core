@@ -43,7 +43,7 @@ function set(
   const hadKey = hasOwnProperty.call(target, key)
   const oldValue = target[key]
   if (isValue(oldValue)) {
-    oldValue.value = value
+    oldValue.value = isValue(value) ? value.value : value
     return true
   }
   const result = Reflect.set(target, key, value, receiver)
