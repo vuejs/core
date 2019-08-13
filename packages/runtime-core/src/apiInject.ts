@@ -3,7 +3,7 @@ import { currentInstance } from './component'
 
 export interface Key<T> extends Symbol {}
 
-export function provide<T>(key: Key<T>, value: T | Value<T>) {
+export function provide<T>(key: Key<T> | string, value: T | Value<T>) {
   if (!currentInstance) {
     // TODO warn
   } else {
@@ -22,14 +22,14 @@ export function provide<T>(key: Key<T>, value: T | Value<T>) {
   }
 }
 
-export function inject<T>(key: Key<T>): Value<T> | undefined {
+export function inject<T>(key: Key<T> | string): Value<T> | undefined {
   if (!currentInstance) {
     // TODO warn
   } else {
     // TODO should also check for app-level provides
     const provides = currentInstance.parent && currentInstance.provides
     if (provides) {
-      const val = provides[key as any]
+      const val = provides[key as any] as any
       return isValue(val) ? val : value(val)
     }
   }
