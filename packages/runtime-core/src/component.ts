@@ -12,7 +12,7 @@ import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
 import { Slots } from './componentSlots'
 import { STATEFUL_COMPONENT } from './typeFlags'
 
-export type Data = { [key: string]: any }
+export type Data = { [key: string]: unknown }
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -24,7 +24,7 @@ export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
   $slots: Data
   $root: ComponentInstance | null
   $parent: ComponentInstance | null
-  $emit: (event: string, ...args: any[]) => void
+  $emit: (event: string, ...args: unknown[]) => void
 } & P &
   S
 
@@ -49,7 +49,7 @@ interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
 interface ComponentOptionsWithArrayProps<
   PropNames extends string = string,
   RawBindings = Data,
-  Props = { [key in PropNames]?: any }
+  Props = { [key in PropNames]?: unknown }
 > {
   props: PropNames[]
   setup?: SetupFunction<Props, RawBindings>
@@ -99,7 +99,7 @@ interface SetupContext {
   refs: Data
   parent: ComponentInstance | null
   root: ComponentInstance
-  emit: ((event: string, ...args: any[]) => void)
+  emit: ((event: string, ...args: unknown[]) => void)
 }
 
 export type ComponentInstance<P = Data, S = Data> = {
@@ -127,8 +127,8 @@ export type ComponentInstance<P = Data, S = Data> = {
 // overload 1: direct setup function
 // (uses user defined props interface)
 export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => (() => any)
-): (props: Props) => any
+  setup: (props: Props, ctx: SetupContext) => (() => unknown)
+): (props: Props) => unknown
 // overload 2: object format with no props
 // (uses user defined props interface)
 // return type is for Vetur and TSX support
@@ -138,13 +138,13 @@ export function createComponent<Props, RawBindings>(
   new (): ComponentRenderProxy<Props, UnwrapValue<RawBindings>>
 }
 // overload 3: object format with array props declaration
-// props inferred as { [key in PropNames]?: any }
+// props inferred as { [key in PropNames]?: unknown }
 // return type is for Vetur and TSX support
 export function createComponent<PropNames extends string, RawBindings>(
   options: ComponentOptionsWithArrayProps<PropNames, RawBindings>
 ): {
   new (): ComponentRenderProxy<
-    { [key in PropNames]?: any },
+    { [key in PropNames]?: unknown },
     UnwrapValue<RawBindings>
   >
 }
@@ -203,7 +203,7 @@ export function createComponentInstance(
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
 
-    emit: (event: string, ...args: any[]) => {
+    emit: (event: string, ...args: unknown[]) => {
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
