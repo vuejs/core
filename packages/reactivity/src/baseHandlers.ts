@@ -42,7 +42,7 @@ function set(
   value = toRaw(value)
   const hadKey = hasOwnProperty.call(target, key)
   const oldValue = target[key]
-  if (isValue(oldValue)) {
+  if (isValue(oldValue) && !isValue(value)) {
     oldValue.value = value
     return true
   }
