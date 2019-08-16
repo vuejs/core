@@ -1,4 +1,4 @@
-import { immutableState, toRaw, lock, unlock } from '@vue/reactivity'
+import { immutable, toRaw, lock, unlock } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -179,10 +179,10 @@ export function resolveProps(
   // lock immutable
   lock()
 
-  instance.props = __DEV__ ? immutableState(props) : props
+  instance.props = __DEV__ ? immutable(props) : props
   instance.attrs = options
     ? __DEV__
-      ? immutableState(attrs)
+      ? immutable(attrs)
       : attrs
     : instance.props
 }

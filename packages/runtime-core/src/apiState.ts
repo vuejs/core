@@ -1,10 +1,10 @@
 export {
-  value,
-  isValue,
-  state,
-  isState,
-  immutableState,
-  isImmutableState,
+  ref,
+  isRef,
+  reactive,
+  isReactive,
+  immutable,
+  isImmutable,
   toRaw,
   markImmutable,
   markNonReactive,
@@ -14,14 +14,14 @@ export {
   ReactiveEffectOptions,
   DebuggerEvent,
   OperationTypes,
-  Value,
-  ComputedValue,
-  UnwrapValue
+  Ref,
+  ComputedRef,
+  UnwrapRef
 } from '@vue/reactivity'
 
 import {
   computed as _computed,
-  ComputedValue,
+  ComputedRef,
   ReactiveEffect
 } from '@vue/reactivity'
 
@@ -39,7 +39,7 @@ export function recordEffect(effect: ReactiveEffect) {
 export function computed<T, C = null>(
   getter: () => T,
   setter?: (v: T) => void
-): ComputedValue<T> {
+): ComputedRef<T> {
   const c = _computed(getter, setter)
   recordEffect(c.effect)
   return c

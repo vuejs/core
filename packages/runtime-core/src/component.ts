@@ -1,10 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import {
-  ReactiveEffect,
-  UnwrapValue,
-  state,
-  immutableState
-} from '@vue/reactivity'
+import { ReactiveEffect, UnwrapRef, reactive, immutable } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction, capitalize, invokeHandlers } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
@@ -34,7 +29,7 @@ type SetupFunction<Props, RawBindings> = (
 ) => RawBindings | (() => VNodeChild)
 
 type RenderFunction<Props = {}, RawBindings = {}> = <
-  Bindings extends UnwrapValue<RawBindings>
+  Bindings extends UnwrapRef<RawBindings>
 >(
   this: ComponentRenderProxy<Props, Bindings>,
   ctx: ComponentRenderProxy<Props, Bindings>
@@ -135,7 +130,7 @@ export function createComponent<Props>(
 export function createComponent<Props, RawBindings>(
   options: ComponentOptionsWithoutProps<Props, RawBindings>
 ): {
-  new (): ComponentRenderProxy<Props, UnwrapValue<RawBindings>>
+  new (): ComponentRenderProxy<Props, UnwrapRef<RawBindings>>
 }
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: unknown }
@@ -145,7 +140,7 @@ export function createComponent<PropNames extends string, RawBindings>(
 ): {
   new (): ComponentRenderProxy<
     { [key in PropNames]?: unknown },
-    UnwrapValue<RawBindings>
+    UnwrapRef<RawBindings>
   >
 }
 // overload 4: object format with object props declaration
@@ -156,7 +151,7 @@ export function createComponent<PropsOptions, RawBindings>(
   // for Vetur and TSX support
   new (): ComponentRenderProxy<
     ExtractPropTypes<PropsOptions>,
-    UnwrapValue<RawBindings>,
+    UnwrapRef<RawBindings>,
     ExtractPropTypes<PropsOptions, false>
   >
 }
@@ -232,7 +227,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     // so props change can be tracked by watchers
     // it will be updated in resolveProps() on updates before render
     const propsProxy = (instance.propsProxy = setup.length
-      ? immutableState(instance.props)
+      ? immutable(instance.props)
       : null)
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
@@ -247,7 +242,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     } else {
       // setup returned bindings.
       // assuming a render function compiled from template is present.
-      instance.data = state(setupResult)
+      instance.data = reactive(setupResult)
       if (__DEV__ && !Component.render) {
         // TODO warn missing render fn
       }

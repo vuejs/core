@@ -1,8 +1,8 @@
 import {
   effect,
   stop,
-  isValue,
-  Value,
+  isRef,
+  Ref,
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob, queuePostFlushCb } from './scheduler'
@@ -17,7 +17,7 @@ export interface WatchOptions {
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
-type WatcherSource<T> = Value<T> | (() => T)
+type WatcherSource<T> = Ref<T> | (() => T)
 
 const invoke = (fn: Function) => fn()
 
@@ -34,8 +34,8 @@ export function watch<T>(
     flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
 
   const baseGetter = isArray(source)
-    ? () => source.map(s => (isValue(s) ? s.value : s()))
-    : isValue(source)
+    ? () => source.map(s => (isRef(s) ? s.value : s()))
+    : isRef(source)
       ? () => source.value
       : source
   const getter = deep ? () => traverse(baseGetter()) : baseGetter
