@@ -61,4 +61,14 @@ describe('observer/value', () => {
     expect(dummy2).toBe(3)
     expect(dummy3).toBe(3)
   })
+
+  it('should unwrap nested values in types', () => {
+    const a = {
+      b: ref(0)
+    }
+
+    const c = ref(a)
+
+    expect(typeof (c.value.b + 1)).toBe('number')
+  })
 })
