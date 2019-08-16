@@ -1,5 +1,5 @@
 import { OperationTypes } from './operations'
-import { Dep, targetMap } from './state'
+import { Dep, targetMap } from './reactive'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export interface ReactiveEffect {

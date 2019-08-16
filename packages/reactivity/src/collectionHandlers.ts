@@ -1,12 +1,11 @@
-import { toRaw, state, immutableState } from './index'
+import { toRaw, reactive, immutable } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'
 
-const toObservable = (value: any) => (isObject(value) ? state(value) : value)
-const toImmutable = (value: any) =>
-  isObject(value) ? immutableState(value) : value
+const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
+const toImmutable = (value: any) => (isObject(value) ? immutable(value) : value)
 
 function get(target: any, key: any, wrap: (t: any) => any): any {
   target = toRaw(target)
@@ -117,7 +116,7 @@ function createForEach(isImmutable: boolean) {
     const observed = this
     const target = toRaw(observed)
     const proto: any = Reflect.getPrototypeOf(target)
-    const wrap = isImmutable ? toImmutable : toObservable
+    const wrap = isImmutable ? toImmutable : toReactive
     track(target, OperationTypes.ITERATE)
     // important: create sure the callback is
     // 1. invoked with the observable map as `this` and 3rd arg
@@ -137,7 +136,7 @@ function createIterableMethod(method: string | symbol, isImmutable: boolean) {
       method === 'entries' ||
       (method === Symbol.iterator && target instanceof Map)
     const innerIterator = proto[method].apply(target, args)
-    const wrap = isImmutable ? toImmutable : toObservable
+    const wrap = isImmutable ? toImmutable : toReactive
     track(target, OperationTypes.ITERATE)
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
@@ -182,7 +181,7 @@ function createImmutableMethod(
 
 const mutableInstrumentations: any = {
   get(key: any) {
-    return get(this, key, toObservable)
+    return get(this, key, toReactive)
   },
   get size() {
     return size(this)

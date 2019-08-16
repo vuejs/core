@@ -1,9 +1,9 @@
-import { state, immutableState, toRaw } from './index'
+import { reactive, immutable, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'
-import { isValue } from './value'
+import { isRef } from './ref'
 
 const hasOwnProperty = Object.prototype.hasOwnProperty
 
@@ -19,16 +19,16 @@ function createGetter(isImmutable: boolean) {
     if (typeof key === 'symbol' && builtInSymbols.has(key)) {
       return res
     }
-    if (isValue(res)) {
+    if (isRef(res)) {
       return res.value
     }
     track(target, OperationTypes.GET, key)
     return isObject(res)
       ? isImmutable
-        ? // need to lazy access immutable and observable here to avoid
+        ? // need to lazy access immutable and reactive here to avoid
           // circular dependency
-          immutableState(res)
-        : state(res)
+          immutable(res)
+        : reactive(res)
       : res
   }
 }
@@ -42,7 +42,7 @@ function set(
   value = toRaw(value)
   const hadKey = hasOwnProperty.call(target, key)
   const oldValue = target[key]
-  if (isValue(oldValue) && !isValue(value)) {
+  if (isRef(oldValue) && !isRef(value)) {
     oldValue.value = value
     return true
   }

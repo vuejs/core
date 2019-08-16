@@ -1,14 +1,14 @@
-export { value, isValue, Value, UnwrapValue } from './value'
+export { ref, isRef, Ref, UnwrapRef } from './ref'
 export {
-  state,
-  isState,
-  immutableState,
-  isImmutableState,
+  reactive,
+  isReactive,
+  immutable,
+  isImmutable,
   toRaw,
   markImmutable,
   markNonReactive
-} from './state'
-export { computed, ComputedValue } from './computed'
+} from './reactive'
+export { computed, ComputedRef } from './computed'
 export {
   effect,
   stop,

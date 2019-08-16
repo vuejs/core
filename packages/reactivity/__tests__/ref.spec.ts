@@ -1,15 +1,15 @@
-import { value, effect, state } from '../src/index'
+import { ref, effect, reactive } from '../src/index'
 
 describe('observer/value', () => {
   it('should hold a value', () => {
-    const a = value(1)
+    const a = ref(1)
     expect(a.value).toBe(1)
     a.value = 2
     expect(a.value).toBe(2)
   })
 
   it('should be reactive', () => {
-    const a = value(1)
+    const a = ref(1)
     let dummy
     effect(() => {
       dummy = a.value
@@ -20,7 +20,7 @@ describe('observer/value', () => {
   })
 
   it('should make nested properties reactive', () => {
-    const a = value({
+    const a = ref({
       count: 1
     })
     let dummy
@@ -33,8 +33,8 @@ describe('observer/value', () => {
   })
 
   it('should work like a normal property when nested in an observable', () => {
-    const a = value(1)
-    const obj = state({
+    const a = ref(1)
+    const obj = reactive({
       a,
       b: {
         c: a,

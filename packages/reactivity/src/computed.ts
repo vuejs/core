@@ -1,8 +1,7 @@
-import { effect } from './index'
-import { ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { knownValues } from './value'
+import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
+import { knownValues } from './ref'
 
-export interface ComputedValue<T> {
+export interface ComputedRef<T> {
   readonly value: T
   readonly effect: ReactiveEffect
 }
@@ -10,7 +9,7 @@ export interface ComputedValue<T> {
 export function computed<T>(
   getter: () => T,
   setter?: (v: T) => void
-): ComputedValue<T> {
+): ComputedRef<T> {
   let dirty: boolean = true
   let value: any = undefined
   const runner = effect(getter, {

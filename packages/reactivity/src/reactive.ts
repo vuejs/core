@@ -6,7 +6,7 @@ import {
   immutableCollectionHandlers
 } from './collectionHandlers'
 
-import { UnwrapValue } from './value'
+import { UnwrapRef } from './ref'
 import { ReactiveEffect } from './effect'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -40,16 +40,16 @@ const canObserve = (value: any): boolean => {
   )
 }
 
-type ObservableFactory = <T>(target?: T) => UnwrapValue<T>
+type ObservableFactory = <T>(target?: T) => UnwrapRef<T>
 
-export const state = ((target: any = {}): any => {
+export const reactive = ((target: any = {}): any => {
   // if trying to observe an immutable proxy, return the immutable version.
   if (immutableToRaw.has(target)) {
     return target
   }
   // target is explicitly marked as immutable by user
   if (immutableValues.has(target)) {
-    return immutableState(target)
+    return immutable(target)
   }
   return createObservable(
     target,
@@ -60,7 +60,7 @@ export const state = ((target: any = {}): any => {
   )
 }) as ObservableFactory
 
-export const immutableState = ((target: any = {}): any => {
+export const immutable = ((target: any = {}): any => {
   // value is a mutable observable, retrive its original and return
   // a readonly version.
   if (observedToRaw.has(target)) {
@@ -113,11 +113,11 @@ function createObservable(
   return observed
 }
 
-export function isState(value: any): boolean {
+export function isReactive(value: any): boolean {
   return observedToRaw.has(value) || immutableToRaw.has(value)
 }
 
-export function isImmutableState(value: any): boolean {
+export function isImmutable(value: any): boolean {
   return immutableToRaw.has(value)
 }
 
