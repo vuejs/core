@@ -6,8 +6,10 @@ import { reactive } from './reactive'
 export const knownValues = new WeakSet()
 
 export interface Ref<T> {
-  value: T extends Ref<infer V> ? Ref<V> : UnwrapRef<T>
+  value: UnwrapNestedRefs<T>
 }
+
+export type UnwrapNestedRefs<T> = T extends Ref<infer V> ? Ref<V> : UnwrapRef<T>
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 

@@ -1,8 +1,8 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { knownValues } from './ref'
+import { UnwrapNestedRefs, knownValues } from './ref'
 
 export interface ComputedRef<T> {
-  readonly value: T
+  readonly value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
 
