@@ -1,4 +1,6 @@
 import { currentInstance } from './component'
+import { immutable } from './apiState'
+import { isObject } from '@vue/shared'
 
 export interface InjectionKey<T> extends Symbol {}
 
@@ -29,8 +31,8 @@ export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
   } else {
     // TODO should also check for app-level provides
     const provides = currentInstance.parent && currentInstance.provides
-    return provides && key in provides
-      ? (provides[key as any] as any)
-      : defaultValue
+    const val =
+      provides && key in provides ? (provides[key as any] as any) : defaultValue
+    return __DEV__ && isObject(val) ? immutable(val) : val
   }
 }
