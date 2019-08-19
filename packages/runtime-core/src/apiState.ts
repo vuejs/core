@@ -26,6 +26,7 @@ import {
 } from '@vue/reactivity'
 
 import { currentInstance } from './component'
+import { isFunction } from '@vue/shared'
 
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
@@ -35,12 +36,20 @@ export function recordEffect(effect: ReactiveEffect) {
   }
 }
 
-// a wrapped version of raw computed to tear it down at component unmount
-export function computed<T, C = null>(
-  getter: () => T,
-  setter?: (v: T) => void
+interface ComputedOptions<T> {
+  get: () => T
+  set: (v: T) => void
+}
+
+export function computed<T>(
+  getterOrOptions: (() => T) | ComputedOptions<T>
 ): ComputedRef<T> {
-  const c = _computed(getter, setter)
+  let c: ComputedRef<T>
+  if (isFunction(getterOrOptions)) {
+    c = _computed(getterOrOptions)
+  } else {
+    c = _computed(getterOrOptions.get, getterOrOptions.set)
+  }
   recordEffect(c.effect)
   return c
 }

@@ -6,7 +6,7 @@ import {
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob, queuePostFlushCb } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray } from '@vue/shared'
+import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 import { recordEffect } from './apiState'
 
 export interface WatchOptions {
@@ -60,7 +60,7 @@ export function watch(
     | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
-  if (typeof effectOrOptions === 'function') {
+  if (isFunction(effectOrOptions)) {
     // effect callback as 2nd argument - this is a source watcher
     return doWatch(effectOrSource, effectOrOptions, options)
   } else {
