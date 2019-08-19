@@ -42,7 +42,7 @@ const canObserve = (value: any): boolean => {
 
 type ObservableFactory = <T>(target?: T) => UnwrapRef<T>
 
-export const reactive = ((target: any = {}): any => {
+export const reactive = ((target: unknown): any => {
   // if trying to observe an immutable proxy, return the immutable version.
   if (immutableToRaw.has(target)) {
     return target
@@ -60,7 +60,7 @@ export const reactive = ((target: any = {}): any => {
   )
 }) as ObservableFactory
 
-export const immutable = ((target: any = {}): any => {
+export const immutable = ((target: unknown): any => {
   // value is a mutable observable, retrive its original and return
   // a readonly version.
   if (observedToRaw.has(target)) {
