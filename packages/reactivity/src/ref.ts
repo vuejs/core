@@ -9,7 +9,7 @@ export interface Ref<T> {
   value: UnwrapNestedRefs<T>
 }
 
-export type UnwrapNestedRefs<T> = T extends Ref<infer V> ? Ref<V> : UnwrapRef<T>
+export type UnwrapNestedRefs<T> = T extends Ref<any> ? T : UnwrapRef<T>
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
