@@ -31,7 +31,14 @@ import {
   FULL_PROPS
 } from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
-import { effect, stop, ReactiveEffectOptions } from '@vue/reactivity'
+import {
+  effect,
+  stop,
+  ReactiveEffectOptions,
+  isRef,
+  Ref,
+  toRaw
+} from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
 import {
@@ -80,7 +87,11 @@ export interface RendererOptions {
     oldValue: any,
     isSVG: boolean,
     prevChildren?: VNode[],
-    unmountChildren?: (children: VNode[]) => void
+    parentComponent?: ComponentInstance | null,
+    unmountChildren?: (
+      children: VNode[],
+      parentComponent: ComponentInstance | null
+    ) => void
   ): void
   insert(el: HostNode, parent: HostNode, anchor?: HostNode): void
   remove(el: HostNode): void
@@ -121,7 +132,7 @@ export function createRenderer(options: RendererOptions) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
       anchor = getNextHostNode(n1)
-      unmount(n1, true)
+      unmount(n1, parentComponent, true)
       n1 = null
     }
 
@@ -237,7 +248,7 @@ export function createRenderer(options: RendererOptions) {
       patchElement(n1, n2, parentComponent, isSVG, optimized)
     }
     if (n2.ref !== null && parentComponent !== null) {
-      setRef(n2.ref, parentComponent, n2.el)
+      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.el)
     }
   }
 
@@ -306,7 +317,7 @@ export function createRenderer(options: RendererOptions) {
 
       if (patchFlag & FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(el, n2, oldProps, newProps, isSVG)
+        patchProps(el, n2, oldProps, newProps, parentComponent, isSVG)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
@@ -343,6 +354,7 @@ export function createRenderer(options: RendererOptions) {
                 prev,
                 isSVG,
                 n1.children as VNode[],
+                parentComponent,
                 unmountChildren
               )
             }
@@ -361,7 +373,7 @@ export function createRenderer(options: RendererOptions) {
       }
     } else if (!optimized) {
       // unoptimized, full diff
-      patchProps(el, n2, oldProps, newProps, isSVG)
+      patchProps(el, n2, oldProps, newProps, parentComponent, isSVG)
     }
 
     if (dynamicChildren != null) {
@@ -389,6 +401,7 @@ export function createRenderer(options: RendererOptions) {
     vnode: VNode,
     oldProps: any,
     newProps: any,
+    parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
     if (oldProps !== newProps) {
@@ -404,6 +417,7 @@ export function createRenderer(options: RendererOptions) {
             prev,
             isSVG,
             vnode.children as VNode[],
+            parentComponent,
             unmountChildren
           )
         }
@@ -419,6 +433,7 @@ export function createRenderer(options: RendererOptions) {
               null,
               isSVG,
               vnode.children as VNode[],
+              parentComponent,
               unmountChildren
             )
           }
@@ -550,6 +565,7 @@ export function createRenderer(options: RendererOptions) {
     if (n2.ref !== null && parentComponent !== null) {
       setRef(
         n2.ref,
+        n1 && n1.ref,
         parentComponent,
         (n2.component as ComponentInstance).renderProxy
       )
@@ -690,7 +706,7 @@ export function createRenderer(options: RendererOptions) {
     if (shapeFlag & TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ARRAY_CHILDREN) {
-        unmountChildren(c1 as VNode[])
+        unmountChildren(c1 as VNode[], parentComponent)
       }
       hostSetElementText(container, c2 as string)
     } else {
@@ -719,7 +735,7 @@ export function createRenderer(options: RendererOptions) {
           )
         } else {
           // c2 is null in this case
-          unmountChildren(c1 as VNode[], true)
+          unmountChildren(c1 as VNode[], parentComponent, true)
         }
       }
     }
@@ -754,7 +770,7 @@ export function createRenderer(options: RendererOptions) {
     }
     if (oldLength > newLength) {
       // remove old
-      unmountChildren(c1, true, commonLength)
+      unmountChildren(c1, parentComponent, true, commonLength)
     } else {
       // mount new
       mountChildren(c2, container, anchor, parentComponent, isSVG, commonLength)
@@ -855,7 +871,7 @@ export function createRenderer(options: RendererOptions) {
     // i = 0, e1 = 0, e2 = -1
     else if (i > e2) {
       while (i <= e1) {
-        unmount(c1[i], true)
+        unmount(c1[i], parentComponent, true)
         i++
       }
     }
@@ -898,7 +914,7 @@ export function createRenderer(options: RendererOptions) {
         const prevChild = c1[i]
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
-          unmount(prevChild, true)
+          unmount(prevChild, parentComponent, true)
           continue
         }
         let newIndex
@@ -914,7 +930,7 @@ export function createRenderer(options: RendererOptions) {
           }
         }
         if (newIndex === undefined) {
-          unmount(prevChild, true)
+          unmount(prevChild, parentComponent, true)
         } else {
           newIndexToOldIndexMap[newIndex - s2] = i + 1
           if (newIndex >= maxNewIndexSoFar) {
@@ -981,28 +997,45 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  function unmount(vnode: VNode, doRemove?: boolean) {
+  function unmount(
+    vnode: VNode,
+    parentComponent: ComponentInstance | null,
+    doRemove?: boolean
+  ) {
+    // unset ref
+    if (vnode.ref !== null && parentComponent !== null) {
+      setRef(vnode.ref, null, parentComponent, null)
+    }
+
     const instance = vnode.component
     if (instance != null) {
       unmountComponent(instance, doRemove)
       return
     }
+
     const shouldRemoveChildren = vnode.type === Fragment && doRemove
     if (vnode.dynamicChildren != null) {
-      unmountChildren(vnode.dynamicChildren, shouldRemoveChildren)
+      unmountChildren(
+        vnode.dynamicChildren,
+        parentComponent,
+        shouldRemoveChildren
+      )
     } else if (vnode.shapeFlag & ARRAY_CHILDREN) {
-      unmountChildren(vnode.children as VNode[], shouldRemoveChildren)
+      unmountChildren(
+        vnode.children as VNode[],
+        parentComponent,
+        shouldRemoveChildren
+      )
     }
+
     if (doRemove) {
       hostRemove(vnode.el)
       if (vnode.anchor != null) hostRemove(vnode.anchor)
     }
   }
 
-  function unmountComponent(
-    { bum, effects, update, subTree, um }: ComponentInstance,
-    doRemove?: boolean
-  ) {
+  function unmountComponent(instance: ComponentInstance, doRemove?: boolean) {
+    const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum !== null) {
       invokeHooks(bum)
@@ -1013,7 +1046,7 @@ export function createRenderer(options: RendererOptions) {
       }
     }
     stop(update)
-    unmount(subTree, doRemove)
+    unmount(subTree, instance, doRemove)
     // unmounted hook
     if (um !== null) {
       queuePostFlushCb(um)
@@ -1022,11 +1055,12 @@ export function createRenderer(options: RendererOptions) {
 
   function unmountChildren(
     children: VNode[],
+    parentComponent: ComponentInstance | null,
     doRemove?: boolean,
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
-      unmount(children[i], doRemove)
+      unmount(children[i], parentComponent, doRemove)
     }
   }
 
@@ -1037,13 +1071,35 @@ export function createRenderer(options: RendererOptions) {
   }
 
   function setRef(
-    ref: string | Function,
+    ref: string | Function | Ref<any>,
+    oldRef: string | Function | Ref<any> | null,
     parent: ComponentInstance,
-    value: HostNode | ComponentInstance
+    value: HostNode | ComponentInstance | null
   ) {
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
+    const rawData = toRaw(parent.data)
+
+    // unset old ref
+    if (oldRef !== null && oldRef !== ref) {
+      if (isString(oldRef)) {
+        refs[oldRef] = null
+        const oldSetupRef = rawData[oldRef]
+        if (isRef(oldSetupRef)) {
+          oldSetupRef.value = null
+        }
+      } else if (isRef(oldRef)) {
+        oldRef.value = null
+      }
+    }
+
     if (isString(ref)) {
+      const setupRef = rawData[ref]
+      if (isRef(setupRef)) {
+        setupRef.value = value
+      }
       refs[ref] = value
+    } else if (isRef(ref)) {
+      ref.value = value
     } else {
       if (__DEV__ && !isFunction(ref)) {
         // TODO warn invalid ref type
@@ -1055,7 +1111,7 @@ export function createRenderer(options: RendererOptions) {
   return function render(vnode: VNode | null, dom: HostNode): VNode | null {
     if (vnode == null) {
       if (dom._vnode) {
-        unmount(dom._vnode, true)
+        unmount(dom._vnode, null, true)
       }
     } else {
       patch(dom._vnode, vnode, dom)
