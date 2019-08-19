@@ -1,9 +1,8 @@
-import { ref, isRef, Ref } from './apiState'
 import { currentInstance } from './component'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T>(key: InjectionKey<T> | string, value: T | Ref<T>) {
+export function provide<T>(key: InjectionKey<T> | string, value: T) {
   if (!currentInstance) {
     // TODO warn
   } else {
@@ -22,19 +21,16 @@ export function provide<T>(key: InjectionKey<T> | string, value: T | Ref<T>) {
   }
 }
 
-export function inject<T>(key: InjectionKey<T> | string): Ref<T> | undefined
-export function inject<T>(
-  key: InjectionKey<T> | string,
-  defaultValue: T
-): Ref<T>
+export function inject<T>(key: InjectionKey<T> | string): T | undefined
+export function inject<T>(key: InjectionKey<T> | string, defaultValue: T): T
 export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
   if (!currentInstance) {
     // TODO warn
   } else {
     // TODO should also check for app-level provides
     const provides = currentInstance.parent && currentInstance.provides
-    const val =
-      provides && key in provides ? (provides[key as any] as any) : defaultValue
-    return isRef(val) ? val : ref(val)
+    return provides && key in provides
+      ? (provides[key as any] as any)
+      : defaultValue
   }
 }
