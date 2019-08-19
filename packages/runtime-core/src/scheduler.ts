@@ -8,21 +8,31 @@ export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
 }
 
-export function queueJob(job: () => void, onError?: (err: Error) => void) {
+type ErrorHandler = (err: Error) => void
+
+export function queueJob(job: () => void, onError?: ErrorHandler) {
   if (queue.indexOf(job) === -1) {
     queue.push(job)
-    if (!isFlushing) {
-      const p = nextTick(flushJobs)
-      if (onError) p.catch(onError)
-    }
+    queueFlush(onError)
   }
 }
 
-export function queuePostFlushCb(cb: Function | Function[]) {
+export function queuePostFlushCb(
+  cb: Function | Function[],
+  onError?: ErrorHandler
+) {
   if (Array.isArray(cb)) {
     postFlushCbs.push.apply(postFlushCbs, cb)
   } else {
     postFlushCbs.push(cb)
+  }
+  queueFlush(onError)
+}
+
+function queueFlush(onError?: ErrorHandler) {
+  if (!isFlushing) {
+    const p = nextTick(flushJobs)
+    if (onError) p.catch(onError)
   }
 }
 

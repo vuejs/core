@@ -77,9 +77,6 @@ function doWatch(
     | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
-  const scheduler =
-    flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
-
   const baseGetter = isArray(source)
     ? () => source.map(s => (isRef(s) ? s.value : s()))
     : isRef(source)
@@ -111,17 +108,24 @@ function doWatch(
       }
     : void 0
 
+  const scheduler =
+    flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
+
   const runner = effect(getter, {
     lazy: true,
     // so it runs before component update effects in pre flush mode
     computed: true,
     onTrack,
     onTrigger,
-    scheduler: applyCb ? () => scheduler(applyCb) : void 0
+    scheduler: applyCb ? () => scheduler(applyCb) : scheduler
   })
 
   if (!lazy) {
-    applyCb && scheduler(applyCb)
+    if (applyCb) {
+      scheduler(applyCb)
+    } else {
+      scheduler(runner)
+    }
   } else {
     oldValue = runner()
   }
