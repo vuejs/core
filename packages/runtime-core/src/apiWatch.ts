@@ -7,7 +7,7 @@ import {
 } from '@vue/reactivity'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
-import { recordEffect } from './apiState'
+import { recordEffect } from './apiReactivity'
 
 export interface WatchOptions {
   lazy?: boolean

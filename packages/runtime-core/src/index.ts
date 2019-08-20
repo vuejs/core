@@ -19,7 +19,7 @@ export { createRenderer, RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
 export { PropType, ComponentPropsOptions } from './componentProps'
 
-export * from './apiState'
+export * from './apiReactivity'
 export * from './apiWatch'
 export * from './apiLifecycle'
 export * from './apiInject'

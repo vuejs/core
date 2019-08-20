@@ -3,7 +3,7 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
-export const knownValues = new WeakSet()
+export const knownRefs = new WeakSet()
 
 export interface Ref<T> {
   value: UnwrapNestedRefs<T>
@@ -25,12 +25,38 @@ export function ref<T>(raw: T): Ref<T> {
       trigger(v, OperationTypes.SET, '')
     }
   }
-  knownValues.add(v)
-  return v as any
+  knownRefs.add(v)
+  return v as Ref<T>
 }
 
 export function isRef(v: any): v is Ref<any> {
-  return knownValues.has(v)
+  return knownRefs.has(v)
+}
+
+export function toRefs<T extends object>(
+  object: T
+): { [K in keyof T]: Ref<T[K]> } {
+  const ret: any = {}
+  for (const key in object) {
+    ret[key] = toProxyRef(object, key)
+  }
+  return ret
+}
+
+function toProxyRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K
+): Ref<T[K]> {
+  const v = {
+    get value() {
+      return object[key]
+    },
+    set value(newVal) {
+      object[key] = newVal
+    }
+  }
+  knownRefs.add(v)
+  return v as Ref<T[K]>
 }
 
 type BailTypes =

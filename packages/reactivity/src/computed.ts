@@ -1,5 +1,5 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs, knownValues } from './ref'
+import { UnwrapNestedRefs, knownRefs } from './ref'
 
 export interface ComputedRef<T> {
   readonly value: UnwrapNestedRefs<T>
@@ -42,7 +42,7 @@ export function computed<T>(
       }
     }
   }
-  knownValues.add(computedValue)
+  knownRefs.add(computedValue)
   return computedValue
 }
 

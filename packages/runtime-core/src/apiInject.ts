@@ -1,5 +1,5 @@
 import { currentInstance } from './component'
-import { immutable } from './apiState'
+import { immutable } from './apiReactivity'
 import { isObject } from '@vue/shared'
 
 export interface InjectionKey<T> extends Symbol {}

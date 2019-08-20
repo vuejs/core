@@ -1,6 +1,7 @@
 export {
   ref,
   isRef,
+  toRefs,
   reactive,
   isReactive,
   immutable,

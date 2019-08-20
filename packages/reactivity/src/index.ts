@@ -1,4 +1,4 @@
-export { ref, isRef, Ref, UnwrapRef } from './ref'
+export { ref, isRef, toRefs, Ref, UnwrapRef } from './ref'
 export {
   reactive,
   isReactive,
