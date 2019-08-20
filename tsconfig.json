@@ -11,12 +11,10 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "experimentalDecorators": true,
+    "esModuleInterop": true,
     "removeComments": false,
     "jsx": "react",
-    "lib": [
-      "esnext",
-      "dom"
-    ],
+    "lib": ["esnext", "dom"],
     "rootDir": ".",
     "paths": {
       "@vue/shared": ["packages/shared/src"],

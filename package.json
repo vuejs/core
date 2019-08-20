@@ -25,13 +25,13 @@
     ]
   },
   "devDependencies": {
-    "@types/jest": "^23.3.2",
-    "chalk": "^2.4.1",
+    "@types/jest": "^24.0.18",
+    "chalk": "^2.4.2",
     "dts-bundle": "^0.7.3",
     "execa": "^2.0.4",
     "fs-extra": "^8.1.0",
-    "jest": "^23.6.0",
-    "lerna": "^3.4.0",
+    "jest": "^24.9.0",
+    "lerna": "^3.16.4",
     "lint-staged": "^9.2.3",
     "minimist": "^1.2.0",
     "prettier": "~1.14.0",
@@ -40,7 +40,7 @@
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-terser": "^5.1.1",
     "rollup-plugin-typescript2": "^0.22.1",
-    "ts-jest": "^23.10.0",
+    "ts-jest": "^24.0.2",
     "typescript": "^3.5.3",
     "yorkie": "^2.0.0"
   }
