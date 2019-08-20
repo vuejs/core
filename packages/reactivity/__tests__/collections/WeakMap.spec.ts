@@ -1,6 +1,6 @@
 import { reactive, effect, toRaw, isReactive } from '../../src'
 
-describe('observer/collections', () => {
+describe('reactivity/collections', () => {
   describe('WeakMap', () => {
     test('instanceof', () => {
       const original = new WeakMap()

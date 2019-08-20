@@ -9,7 +9,7 @@ import {
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
-describe('observer/effect', () => {
+describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
     const fnSpy = jest.fn(() => {})
     effect(fnSpy)
@@ -269,7 +269,7 @@ describe('observer/effect', () => {
 
   it('should not observe raw mutations', () => {
     let dummy
-    const obj: any = reactive()
+    const obj: any = reactive({})
     effect(() => (dummy = toRaw(obj).prop))
 
     expect(dummy).toBe(undefined)
@@ -279,7 +279,7 @@ describe('observer/effect', () => {
 
   it('should not be triggered by raw mutations', () => {
     let dummy
-    const obj: any = reactive()
+    const obj: any = reactive({})
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe(undefined)
@@ -437,7 +437,7 @@ describe('observer/effect', () => {
 
   it('should not run multiple times for a single mutation', () => {
     let dummy
-    const obj: any = reactive()
+    const obj: any = reactive({})
     const fnSpy = jest.fn(() => {
       for (const key in obj) {
         dummy = obj[key]

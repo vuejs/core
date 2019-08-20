@@ -1,6 +1,6 @@
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
 
-describe('observer/observable', () => {
+describe('reactivity/reactive', () => {
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -30,7 +30,7 @@ describe('observer/observable', () => {
     expect(Object.keys(observed)).toEqual(['0'])
   })
 
-  test('cloned observable Array should point to observed values', () => {
+  test('cloned reactive Array should point to observed values', () => {
     const original = [{ foo: 1 }]
     const observed = reactive(original)
     const clone = observed.slice()
@@ -39,7 +39,7 @@ describe('observer/observable', () => {
     expect(clone[0]).toBe(observed[0])
   })
 
-  test('nested observables', () => {
+  test('nested reactives', () => {
     const original = {
       nested: {
         foo: 1
@@ -70,9 +70,9 @@ describe('observer/observable', () => {
     const observed = reactive(original)
     // set
     const value = { baz: 3 }
-    const observableValue = reactive(value)
+    const reactiveValue = reactive(value)
     observed[0] = value
-    expect(observed[0]).toBe(observableValue)
+    expect(observed[0]).toBe(reactiveValue)
     expect(original[0]).toBe(value)
     // delete
     delete observed[0]
@@ -80,11 +80,11 @@ describe('observer/observable', () => {
     expect(original[0]).toBeUndefined()
     // mutating methods
     observed.push(value)
-    expect(observed[2]).toBe(observableValue)
+    expect(observed[2]).toBe(reactiveValue)
     expect(original[2]).toBe(value)
   })
 
-  test('setting a property with an unobserved value should wrap with observable', () => {
+  test('setting a property with an unobserved value should wrap with reactive', () => {
     const observed: any = reactive({})
     const raw = {}
     observed.foo = raw
@@ -123,14 +123,15 @@ describe('observer/observable', () => {
     expect(toRaw(original)).toBe(original)
   })
 
-  test('unobservable values', () => {
+  test('non-observable values', () => {
     const warn = jest.spyOn(console, 'warn')
     let lastMsg: string
     warn.mockImplementation(msg => {
       lastMsg = msg
     })
 
-    const getMsg = (value: any) => `value is not observable: ${String(value)}`
+    const getMsg = (value: any) =>
+      `value cannot be made reactive: ${String(value)}`
     const assertValue = (value: any) => {
       reactive(value)
       expect(lastMsg).toMatch(getMsg(value))
@@ -144,10 +145,8 @@ describe('observer/observable', () => {
     assertValue(false)
     // null
     assertValue(null)
-    // undefined should work because it returns empty object observable
-    lastMsg = ''
-    reactive(undefined)
-    expect(lastMsg).toBe('')
+    // undefined
+    assertValue(undefined)
     // symbol
     const s = Symbol()
     assertValue(s)

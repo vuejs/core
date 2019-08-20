@@ -1,4 +1,4 @@
-# @vue/observer
+# @vue/reactivity
 
 ## Usage Note
 
@@ -9,9 +9,8 @@ This package is inlined into Global & Browser ESM builds of user-facing renderer
 The implementation of this module is inspired by the following prior art in the JavaScript ecosystem:
 
 - [Meteor Tracker](https://docs.meteor.com/api/tracker.html)
-- [nx-js/observer-util](https://github.com/nx-js/observer-util)
+- [nx-js/reactivity-util](https://github.com/nx-js/reactivity-util)
 - [salesforce/observable-membrane](https://github.com/salesforce/observable-membrane)
-
 
 ## Caveats
 

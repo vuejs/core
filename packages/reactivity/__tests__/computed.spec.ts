@@ -1,6 +1,6 @@
 import { computed, reactive, effect, stop } from '../src'
 
-describe('observer/computed', () => {
+describe('reactivity/computed', () => {
   it('should return updated value', () => {
     const value: any = reactive({})
     const cValue = computed(() => value.foo)

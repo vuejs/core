@@ -1,6 +1,6 @@
 import { ref, effect, reactive } from '../src/index'
 
-describe('observer/value', () => {
+describe('reactivity/value', () => {
   it('should hold a value', () => {
     const a = ref(1)
     expect(a.value).toBe(1)

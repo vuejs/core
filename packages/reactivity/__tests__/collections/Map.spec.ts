@@ -1,6 +1,6 @@
 import { reactive, effect, toRaw, isReactive } from '../../src'
 
-describe('observer/collections', () => {
+describe('reactivity/collections', () => {
   describe('Map', () => {
     test('instanceof', () => {
       const original = new Map()

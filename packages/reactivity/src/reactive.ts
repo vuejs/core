@@ -51,7 +51,7 @@ export const reactive = ((target: unknown): any => {
   if (immutableValues.has(target)) {
     return immutable(target)
   }
-  return createObservable(
+  return createReactiveObject(
     target,
     rawToObserved,
     observedToRaw,
@@ -66,7 +66,7 @@ export const immutable = ((target: unknown): any => {
   if (observedToRaw.has(target)) {
     target = observedToRaw.get(target)
   }
-  return createObservable(
+  return createReactiveObject(
     target,
     rawToImmutable,
     immutableToRaw,
@@ -75,7 +75,7 @@ export const immutable = ((target: unknown): any => {
   )
 }) as ObservableFactory
 
-function createObservable(
+function createReactiveObject(
   target: any,
   toProxy: WeakMap<any, any>,
   toRaw: WeakMap<any, any>,
@@ -84,7 +84,7 @@ function createObservable(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value is not observable: ${String(target)}`)
+      console.warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }

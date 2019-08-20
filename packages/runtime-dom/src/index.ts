@@ -8,5 +8,5 @@ export const render = createRenderer({
 }) as (vnode: VNode | null, container: HTMLElement) => VNode
 
 // re-export everything from core
-// h, Component, observer API, nextTick, flags & types
+// h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'

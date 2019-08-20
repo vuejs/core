@@ -11,7 +11,7 @@ import {
   effect
 } from '../src'
 
-describe('observer/immutable', () => {
+describe('reactivity/immutable', () => {
   let warn: any
 
   beforeEach(() => {
@@ -341,16 +341,16 @@ describe('observer/immutable', () => {
     })
   })
 
-  test('calling observable on an immutable should return immutable', () => {
-    const a = immutable()
+  test('calling reactive on an immutable should return immutable', () => {
+    const a = immutable({})
     const b = reactive(a)
     expect(isImmutable(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
   })
 
-  test('calling immutable on an observable should return immutable', () => {
-    const a = reactive()
+  test('calling immutable on a reactive object should return immutable', () => {
+    const a = reactive({})
     const b = immutable(a)
     expect(isImmutable(b)).toBe(true)
     // should point to same original

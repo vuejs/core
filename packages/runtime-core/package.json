@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/observer": "3.0.0-alpha.1"
+    "@vue/reactivity": "3.0.0-alpha.1"
   }
 }

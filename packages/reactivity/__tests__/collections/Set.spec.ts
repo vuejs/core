@@ -1,6 +1,6 @@
 import { reactive, effect, isReactive, toRaw } from '../../src'
 
-describe('observer/collections', () => {
+describe('reactivity/collections', () => {
   describe('Set', () => {
     it('instanceof', () => {
       const original = new Set()

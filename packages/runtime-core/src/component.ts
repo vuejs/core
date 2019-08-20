@@ -242,7 +242,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     } else {
       // setup returned bindings.
       // assuming a render function compiled from template is present.
-      instance.data = reactive(setupResult)
+      instance.data = reactive(setupResult || {})
       if (__DEV__ && !Component.render) {
         // TODO warn missing render fn
       }
