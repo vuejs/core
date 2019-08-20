@@ -1,4 +1,5 @@
 import { currentInstance } from './component'
+import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
@@ -29,8 +30,12 @@ export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
   } else {
     // TODO should also check for app-level provides
     const provides = currentInstance.parent && currentInstance.provides
-    return provides && key in provides
-      ? (provides[key as any] as any)
-      : defaultValue
+    if (provides && key in provides) {
+      return provides[key as any] as any
+    } else if (defaultValue !== undefined) {
+      return defaultValue
+    } else if (__DEV__) {
+      warn(`injection ${key} not found.`)
+    }
   }
 }
