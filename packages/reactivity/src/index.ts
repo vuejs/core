@@ -8,7 +8,7 @@ export {
   markImmutable,
   markNonReactive
 } from './reactive'
-export { computed, ComputedRef } from './computed'
+export { computed, ComputedRef, ComputedOptions } from './computed'
 export {
   effect,
   stop,

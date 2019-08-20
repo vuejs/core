@@ -1,17 +1,29 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
 import { UnwrapNestedRefs, knownRefs } from './ref'
+import { isFunction } from '@vue/shared'
 
 export interface ComputedRef<T> {
   readonly value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
 
+export interface ComputedOptions<T> {
+  get: () => T
+  set: (v: T) => void
+}
+
 export function computed<T>(
-  getter: () => T,
-  setter?: (v: T) => void
+  getterOrOptions: (() => T) | ComputedOptions<T>
 ): ComputedRef<T> {
+  const isReadonly = isFunction(getterOrOptions)
+  const getter = isReadonly
+    ? (getterOrOptions as (() => T))
+    : (getterOrOptions as ComputedOptions<T>).get
+  const setter = isReadonly ? null : (getterOrOptions as ComputedOptions<T>).set
+
   let dirty: boolean = true
   let value: any = undefined
+
   const runner = effect(getter, {
     lazy: true,
     // mark effect as computed so that it gets priority during trigger
