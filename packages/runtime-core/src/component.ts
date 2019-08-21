@@ -125,8 +125,8 @@ export type ComponentInstance<P = Data, S = Data> = {
 // overload 1: direct setup function
 // (uses user defined props interface)
 export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => (() => unknown)
-): (props: Props) => unknown
+  setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
+): (props: Props) => any
 // overload 2: object format with no props
 // (uses user defined props interface)
 // return type is for Vetur and TSX support

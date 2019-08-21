@@ -1,5 +1,5 @@
 import { createComponent } from '../src/component'
-import { value } from '@vue/reactivity'
+import { ref } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
 
 // mock React just for TSX testing purposes
@@ -35,9 +35,9 @@ test('createComponent type inference', () => {
       props.cc && props.cc.push('hoo')
       props.dd.push('dd')
       return {
-        c: value(1),
+        c: ref(1),
         d: {
-          e: value('hi')
+          e: ref('hi')
         }
       }
     },
