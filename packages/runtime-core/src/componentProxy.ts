@@ -26,7 +26,7 @@ export const RenderProxyHandlers = {
         case '$emit':
           return target.emit
         default:
-          break
+          return target.user[key]
       }
     }
   },
@@ -35,15 +35,15 @@ export const RenderProxyHandlers = {
     if (data.hasOwnProperty(key)) {
       data[key] = value
       return true
+    } else if (key[0] === '$' && key.slice(1) in target) {
+      // TODO warn attempt of mutating public property
+      return false
+    } else if (key in target.props) {
+      // TODO warn attempt of mutating prop
+      return false
     } else {
-      if (__DEV__) {
-        if (key[0] === '$') {
-          // TODO warn attempt of mutating public property
-        } else if (target.props.hasOwnProperty(key)) {
-          // TODO warn attempt of mutating prop
-        }
-      }
+      target.user[key] = value
+      return true
     }
-    return false
   }
 }

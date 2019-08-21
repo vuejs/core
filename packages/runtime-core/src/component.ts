@@ -115,6 +115,9 @@ export type ComponentInstance<P = Data, S = Data> = {
   renderProxy: ComponentRenderProxy | null
   propsProxy: P | null
   setupContext: SetupContext | null
+
+  // user namespace
+  user: { [key: string]: any }
 } & SetupContext &
   LifecycleHooks
 
@@ -197,6 +200,9 @@ export function createComponentInstance(
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
+
+    // user namespace for storing whatever the user assigns to `this`
+    user: {},
 
     emit: (event: string, ...args: unknown[]) => {
       const props = instance.vnode.props || EMPTY_OBJ
