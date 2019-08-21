@@ -45,7 +45,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed: any = immutable({ foo: 1, bar: { baz: 2 } })
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(warn).toHaveBeenCalledTimes(1)
@@ -76,7 +76,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed = immutable({ a: 1 })
+      const observed: any = immutable({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -88,7 +88,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed = immutable({ a: 1 })
+      const observed: any = immutable({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -146,7 +146,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed: any[] = immutable([{ foo: 1, bar: { baz: 2 } }])
+      const observed: any = immutable([{ foo: 1, bar: { baz: 2 } }])
       unlock()
       observed[1] = 2
       observed.push(3)
@@ -162,7 +162,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed = immutable([{ a: 1 }])
+      const observed: any = immutable([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -177,7 +177,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed = immutable([{ a: 1 }])
+      const observed: any = immutable([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -256,7 +256,7 @@ describe('reactivity/immutable', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
-          const observed = immutable(original)
+          const observed: any = immutable(original)
           for (const [key, value] of observed) {
             expect(isImmutable(key)).toBe(true)
             expect(isImmutable(value)).toBe(true)
@@ -322,7 +322,7 @@ describe('reactivity/immutable', () => {
       if (Collection === Set) {
         test('should retrive immutable values on iteration', () => {
           const original = new Collection([{}, {}])
-          const observed = immutable(original)
+          const observed: any = immutable(original)
           for (const value of observed) {
             expect(isImmutable(value)).toBe(true)
           }

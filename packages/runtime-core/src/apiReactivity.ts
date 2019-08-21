@@ -21,6 +21,7 @@ export {
 } from '@vue/reactivity'
 
 import {
+  Ref,
   computed as _computed,
   ComputedRef,
   ComputedOptions,
@@ -37,9 +38,9 @@ export function recordEffect(effect: ReactiveEffect) {
   }
 }
 
-export function computed<T>(
-  getterOrOptions: (() => T) | ComputedOptions<T>
-): ComputedRef<T> {
+export function computed<T>(getter: () => T): ComputedRef<T>
+export function computed<T>(options: ComputedOptions<T>): Ref<T>
+export function computed<T>(getterOrOptions: any) {
   const c = _computed(getterOrOptions)
   recordEffect(c.effect)
   return c

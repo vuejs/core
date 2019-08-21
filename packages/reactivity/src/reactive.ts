@@ -6,7 +6,7 @@ import {
   immutableCollectionHandlers
 } from './collectionHandlers'
 
-import { UnwrapRef } from './ref'
+import { UnwrapNestedRefs } from './ref'
 import { ReactiveEffect } from './effect'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -40,9 +40,8 @@ const canObserve = (value: any): boolean => {
   )
 }
 
-type ObservableFactory = <T>(target?: T) => UnwrapRef<T>
-
-export const reactive = ((target: unknown): any => {
+export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive(target: object) {
   // if trying to observe an immutable proxy, return the immutable version.
   if (immutableToRaw.has(target)) {
     return target
@@ -58,9 +57,12 @@ export const reactive = ((target: unknown): any => {
     mutableHandlers,
     mutableCollectionHandlers
   )
-}) as ObservableFactory
+}
 
-export const immutable = ((target: unknown): any => {
+export function immutable<T extends object>(
+  target: T
+): Readonly<UnwrapNestedRefs<T>>
+export function immutable(target: object) {
   // value is a mutable observable, retrive its original and return
   // a readonly version.
   if (observedToRaw.has(target)) {
@@ -73,7 +75,7 @@ export const immutable = ((target: unknown): any => {
     immutableHandlers,
     immutableCollectionHandlers
   )
-}) as ObservableFactory
+}
 
 function createReactiveObject(
   target: any,

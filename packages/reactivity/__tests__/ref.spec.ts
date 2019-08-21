@@ -32,7 +32,7 @@ describe('reactivity/value', () => {
     expect(dummy).toBe(2)
   })
 
-  it('should work like a normal property when nested in an observable', () => {
+  it('should work like a normal property when nested in a reactive object', () => {
     const a = ref(1)
     const obj = reactive({
       a,

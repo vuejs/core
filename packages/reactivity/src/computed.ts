@@ -1,5 +1,5 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs, knownRefs } from './ref'
+import { UnwrapNestedRefs, knownRefs, Ref } from './ref'
 import { isFunction } from '@vue/shared'
 
 export interface ComputedRef<T> {
@@ -12,9 +12,11 @@ export interface ComputedOptions<T> {
   set: (v: T) => void
 }
 
+export function computed<T>(getter: () => T): ComputedRef<T>
+export function computed<T>(options: ComputedOptions<T>): Ref<T>
 export function computed<T>(
   getterOrOptions: (() => T) | ComputedOptions<T>
-): ComputedRef<T> {
+): Ref<T> {
   const isReadonly = isFunction(getterOrOptions)
   const getter = isReadonly
     ? (getterOrOptions as (() => T))
