@@ -254,6 +254,11 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       }
       instance.render = Component.render as RenderFunction
     }
+  } else {
+    if (__DEV__ && !Component.render) {
+      // TODO warn missing render fn
+    }
+    instance.render = Component.render as RenderFunction
   }
 }
 

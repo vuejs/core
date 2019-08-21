@@ -4,6 +4,15 @@ export const enum NodeTypes {
   COMMENT = 'comment'
 }
 
+export const enum NodeOpTypes {
+  CREATE = 'create',
+  INSERT = 'insert',
+  REMOVE = 'remove',
+  SET_TEXT = 'setText',
+  SET_ELEMENT_TEXT = 'setElementText',
+  PATCH = 'patch'
+}
+
 export interface TestElement {
   id: number
   type: NodeTypes.ELEMENT
@@ -29,15 +38,6 @@ export interface TestComment {
 }
 
 export type TestNode = TestElement | TestText | TestComment
-
-export const enum NodeOpTypes {
-  CREATE = 'create',
-  INSERT = 'insert',
-  REMOVE = 'remove',
-  SET_TEXT = 'setText',
-  SET_ELEMENT_TEXT = 'setElementText',
-  PATCH = 'patch'
-}
 
 export interface NodeOp {
   type: NodeOpTypes
@@ -184,7 +184,14 @@ function setElementText(el: TestElement, text: string) {
   el.children.forEach(c => {
     c.parentNode = null
   })
-  el.children = [createText(text)]
+  el.children = [
+    {
+      id: nodeId++,
+      type: NodeTypes.TEXT,
+      text,
+      parentNode: el
+    }
+  ]
 }
 
 function parentNode(node: TestNode): TestElement | null {
