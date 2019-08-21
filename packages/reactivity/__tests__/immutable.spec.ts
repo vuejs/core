@@ -8,7 +8,8 @@ import {
   markImmutable,
   lock,
   unlock,
-  effect
+  effect,
+  ref
 } from '../src'
 
 describe('reactivity/immutable', () => {
@@ -389,5 +390,12 @@ describe('reactivity/immutable', () => {
     expect(isReactive(obj.bar)).toBe(true)
     expect(isImmutable(obj.foo)).toBe(false)
     expect(isImmutable(obj.bar)).toBe(true)
+  })
+
+  test('should make ref immutable', () => {
+    const n: any = immutable(ref(1))
+    n.value = 2
+    expect(n.value).toBe(1)
+    expect(warn).toHaveBeenCalledTimes(1)
   })
 })
