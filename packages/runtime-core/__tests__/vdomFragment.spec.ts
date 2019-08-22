@@ -1,23 +1,19 @@
 import {
-  h,
-  Component,
+  createVNode as h,
   render,
   nodeOps,
   NodeTypes,
   TestElement,
   Fragment,
-  observable,
+  reactive,
   serialize,
-  ChildrenFlags,
   nextTick,
   resetOps,
   dumpOps,
-  NodeOpTypes,
-  createFragment,
-  createTextVNode
+  NodeOpTypes
 } from '@vue/runtime-test'
 
-describe('Fragments', () => {
+describe('vdom: fragment', () => {
   it('should allow returning multiple component root nodes', async () => {
     class App extends Component {
       render() {

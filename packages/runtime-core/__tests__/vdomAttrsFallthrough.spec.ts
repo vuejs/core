@@ -1,5 +1,5 @@
 // using DOM renderer because this case is mostly DOM-specific
-import { h, render, Component, nextTick, cloneVNode } from '@vue/runtime-dom'
+import { createVNode as h, render, nextTick, cloneVNode } from '@vue/runtime-dom'
 
 describe('attribute fallthrough', () => {
   it('everything should be in props when component has no declared props', async () => {
