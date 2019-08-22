@@ -3,9 +3,9 @@ import { ReactiveEffect, UnwrapRef, reactive, immutable } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction, capitalize, invokeHandlers } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
-import { PROPS, DYNAMIC_SLOTS, FULL_PROPS } from './patchFlags'
 import { Slots } from './componentSlots'
-import { STATEFUL_COMPONENT } from './typeFlags'
+import { PatchFlags } from './patchFlags'
+import { ShapeFlags } from './shapeFlags'
 
 export type Data = { [key: string]: unknown }
 
@@ -302,7 +302,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     parent,
     root
   } = instance
-  if (vnode.shapeFlag & STATEFUL_COMPONENT) {
+  if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
     return normalizeVNode(
       (instance.render as RenderFunction).call(renderProxy, props, setupContext)
     )
@@ -332,15 +332,15 @@ export function shouldUpdateComponent(
   const { props: prevProps, children: prevChildren } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
   if (patchFlag) {
-    if (patchFlag & DYNAMIC_SLOTS) {
+    if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for
       return true
     }
-    if (patchFlag & FULL_PROPS) {
+    if (patchFlag & PatchFlags.FULL_PROPS) {
       // presence of this flag indicates props are always non-null
       return hasPropsChanged(prevProps as Data, nextProps as Data)
-    } else if (patchFlag & PROPS) {
+    } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps as string[]
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]

@@ -13,48 +13,63 @@
 // Check the `patchElement` function in './createRednerer.ts' to see how the
 // flags are handled during diff.
 
-// Indicates an element with dynamic textContent (children fast path)
-export const TEXT = 1
+export const enum PatchFlags {
+  // Indicates an element with dynamic textContent (children fast path)
+  TEXT = 1,
 
-// Indicates an element with dynamic class.
-// The compiler also pre-normalizes the :class binding:
-// - b -> normalize(b)
-// - ['foo', b] -> 'foo' + normalize(b)
-// - { a, b: c } -> (a ? a : '') + (b ? c : '')
-// - ['a', b, { c }] -> 'a' + normalize(b) + (c ? c : '')
-export const CLASS = 1 << 1
+  // Indicates an element with dynamic class.
+  // The compiler also pre-normalizes the :class binding:
+  // - b -> normalize(b)
+  // - ['foo', b] -> 'foo' + normalize(b)
+  // - { a, b: c } -> (a ? a : '') + (b ? c : '')
+  // - ['a', b, { c }] -> 'a' + normalize(b) + (c ? c : '')
+  CLASS = 1 << 1,
 
-// Indicates an element with dynamic style
-// The compiler pre-compiles static string styles into static objects
-// + detects and hoists inline static objects
-// e.g. style="color: red" and :style="{ color: 'red' }" both get hoisted as
-//   const style = { color: 'red' }
-//   render() { return e('div', { style }) }
-export const STYLE = 1 << 2
+  // Indicates an element with dynamic style
+  // The compiler pre-compiles static string styles into static objects
+  // + detects and hoists inline static objects
+  // e.g. style="color: red" and :style="{ color: 'red' }" both get hoisted as
+  //   const style = { color: 'red' }
+  //   render() { return e('div', { style }) }
+  STYLE = 1 << 2,
 
-// Indicates an element that has non-class/style dynamic props.
-// Can also be on a component that has any dynamic props (includes class/style).
-// when this flag is present, the vnode also has a dynamicProps array that
-// contains the keys of the props that may change so the runtime can diff
-// them faster (without having to worry about removed props)
-export const PROPS = 1 << 3
+  // Indicates an element that has non-class/style dynamic props.
+  // Can also be on a component that has any dynamic props (includes
+  // class/style). when this flag is present, the vnode also has a dynamicProps
+  // array that contains the keys of the props that may change so the runtime
+  // can diff them faster (without having to worry about removed props)
+  PROPS = 1 << 3,
 
-// Indicates an element with props with dynamic keys. When keys change, a full
-// diff is always needed to remove the old key. This flag is mutually exclusive
-// with CLASS, STYLE and PROPS.
-export const FULL_PROPS = 1 << 4
+  // Indicates an element with props with dynamic keys. When keys change, a full
+  // diff is always needed to remove the old key. This flag is mutually
+  // exclusive with CLASS, STYLE and PROPS.
+  FULL_PROPS = 1 << 4,
 
-// Indicates a fragment or element with keyed or partially-keyed v-for children
-export const KEYED = 1 << 5
+  // Indicates a fragment or element with keyed or partially-keyed v-for
+  // children
+  KEYED = 1 << 5,
 
-// Indicates a fragment or element that contains unkeyed v-for children
-export const UNKEYED = 1 << 6
+  // Indicates a fragment or element that contains unkeyed v-for children
+  UNKEYED = 1 << 6,
 
-// Indicates a component with dynamic slots (e.g. slot that references a v-for
-// iterated value, or dynamic slot names).
-// Components with this flag are always force updated.
-export const DYNAMIC_SLOTS = 1 << 7
+  // Indicates a component with dynamic slots (e.g. slot that references a v-for
+  // iterated value, or dynamic slot names).
+  // Components with this flag are always force updated.
+  DYNAMIC_SLOTS = 1 << 7,
 
-// Indicates an element with ref. This includes static string refs because the
-// refs object is refreshed on each update and all refs need to set again.
-export const REF = 1 << 8
+  // Indicates an element with ref. This includes static string refs because the
+  // refs object is refreshed on each update and all refs need to set again.
+  REF = 1 << 8
+}
+
+// runtime object for public consumption
+export const PublicPatchFlags = {
+  TEXT: PatchFlags.TEXT,
+  CLASS: PatchFlags.CLASS,
+  STYLE: PatchFlags.STYLE,
+  PROPS: PatchFlags.PROPS,
+  FULL_PROPS: PatchFlags.FULL_PROPS,
+  KEYED: PatchFlags.KEYED,
+  UNKEYED: PatchFlags.UNKEYED,
+  REF: PatchFlags.REF
+}

@@ -12,7 +12,7 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInstance } from './component'
-import { FULL_PROPS } from './patchFlags'
+import { PatchFlags } from './patchFlags'
 
 export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
@@ -167,7 +167,10 @@ export function resolveProps(
   // in case of dynamic props, check if we need to delete keys from
   // the props proxy
   const { patchFlag } = instance.vnode
-  if (propsProxy !== null && (patchFlag === 0 || patchFlag & FULL_PROPS)) {
+  if (
+    propsProxy !== null &&
+    (patchFlag === 0 || patchFlag & PatchFlags.FULL_PROPS)
+  ) {
     const rawInitialProps = toRaw(propsProxy)
     for (const key in rawInitialProps) {
       if (!props.hasOwnProperty(key)) {

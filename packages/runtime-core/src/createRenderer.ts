@@ -21,15 +21,6 @@ import {
   isReservedProp,
   isFunction
 } from '@vue/shared'
-import {
-  TEXT,
-  CLASS,
-  STYLE,
-  PROPS,
-  KEYED,
-  UNKEYED,
-  FULL_PROPS
-} from './patchFlags'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
   effect,
@@ -41,13 +32,8 @@ import {
 } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
-import {
-  ELEMENT,
-  STATEFUL_COMPONENT,
-  FUNCTIONAL_COMPONENT,
-  TEXT_CHILDREN,
-  ARRAY_CHILDREN
-} from './typeFlags'
+import { PatchFlags } from './patchFlags'
+import { ShapeFlags } from './shapeFlags'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -167,7 +153,7 @@ export function createRenderer(options: RendererOptions) {
         )
         break
       default:
-        if (shapeFlag & ELEMENT) {
+        if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
             n1,
             n2,
@@ -180,8 +166,8 @@ export function createRenderer(options: RendererOptions) {
         } else {
           if (
             __DEV__ &&
-            !(shapeFlag & STATEFUL_COMPONENT) &&
-            !(shapeFlag & FUNCTIONAL_COMPONENT)
+            !(shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
+            !(shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
           ) {
             // TODO warn invalid node type
             debugger
@@ -269,9 +255,9 @@ export function createRenderer(options: RendererOptions) {
         hostPatchProp(el, key, props[key], null, isSVG)
       }
     }
-    if (shapeFlag & TEXT_CHILDREN) {
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
-    } else if (shapeFlag & ARRAY_CHILDREN) {
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       mountChildren(
         vnode.children as VNodeChildren,
         el,
@@ -315,13 +301,13 @@ export function createRenderer(options: RendererOptions) {
       // in this path old node and new node are guaranteed to have the same shape
       // (i.e. at the exact same position in the source template)
 
-      if (patchFlag & FULL_PROPS) {
+      if (patchFlag & PatchFlags.FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
         patchProps(el, n2, oldProps, newProps, parentComponent, isSVG)
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
-        if (patchFlag & CLASS) {
+        if (patchFlag & PatchFlags.CLASS) {
           if (oldProps.class !== newProps.class) {
             hostPatchProp(el, 'class', newProps.class, null, isSVG)
           }
@@ -329,7 +315,7 @@ export function createRenderer(options: RendererOptions) {
 
         // style
         // this flag is matched when the element has dynamic style bindings
-        if (patchFlag & STYLE) {
+        if (patchFlag & PatchFlags.STYLE) {
           hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
         }
 
@@ -339,7 +325,7 @@ export function createRenderer(options: RendererOptions) {
         // faster iteration.
         // Note dynamic keys like :[foo]="bar" will cause this optimization to
         // bail out and go through a full diff because we need to unset the old key
-        if (patchFlag & PROPS) {
+        if (patchFlag & PatchFlags.PROPS) {
           // if the flag is present then dynamicProps must be non-null
           const propsToUpdate = n2.dynamicProps as string[]
           for (let i = 0; i < propsToUpdate.length; i++) {
@@ -365,7 +351,7 @@ export function createRenderer(options: RendererOptions) {
       // text
       // This flag is matched when the element has only dynamic text children.
       // this flag is terminal (i.e. skips children diffing).
-      if (patchFlag & TEXT) {
+      if (patchFlag & PatchFlags.TEXT) {
         if (n1.children !== n2.children) {
           hostSetElementText(el, n2.children as string)
         }
@@ -495,9 +481,9 @@ export function createRenderer(options: RendererOptions) {
         ? hostQuerySelector(targetSelector)
         : null)
       if (target != null) {
-        if (shapeFlag & TEXT_CHILDREN) {
+        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
           hostSetElementText(target, children as string)
-        } else if (shapeFlag & ARRAY_CHILDREN) {
+        } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
             children as VNodeChildren,
             target,
@@ -512,7 +498,7 @@ export function createRenderer(options: RendererOptions) {
     } else {
       // update content
       const target = (n2.target = n1.target)
-      if (patchFlag === TEXT) {
+      if (patchFlag === PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
         patchChildren(n1, n2, target, null, parentComponent, isSVG)
@@ -524,10 +510,10 @@ export function createRenderer(options: RendererOptions) {
           : null)
         if (nextTarget != null) {
           // move content
-          if (shapeFlag & TEXT_CHILDREN) {
+          if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
             hostSetElementText(target, '')
             hostSetElementText(nextTarget, children as string)
-          } else if (shapeFlag & ARRAY_CHILDREN) {
+          } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
             for (let i = 0; i < (children as VNode[]).length; i++) {
               move((children as VNode[])[i], nextTarget, null)
             }
@@ -591,7 +577,7 @@ export function createRenderer(options: RendererOptions) {
         resolveProps(instance, initialVNode.props, Component.props)
         resolveSlots(instance, initialVNode.children)
         // setup stateful
-        if (initialVNode.shapeFlag & STATEFUL_COMPONENT) {
+        if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
           setupStatefulComponent(instance)
         }
         const subTree = (instance.subTree = renderComponentRoot(instance))
@@ -675,7 +661,7 @@ export function createRenderer(options: RendererOptions) {
     // fast path
     const { patchFlag, shapeFlag } = n2
     if (patchFlag) {
-      if (patchFlag & KEYED) {
+      if (patchFlag & PatchFlags.KEYED) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
         patchKeyedChildren(
@@ -688,7 +674,7 @@ export function createRenderer(options: RendererOptions) {
           optimized
         )
         return
-      } else if (patchFlag & UNKEYED) {
+      } else if (patchFlag & PatchFlags.UNKEYED) {
         // unkeyed
         patchUnkeyedChildren(
           c1 as VNode[],
@@ -703,16 +689,16 @@ export function createRenderer(options: RendererOptions) {
       }
     }
 
-    if (shapeFlag & TEXT_CHILDREN) {
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
-      if (prevShapeFlag & ARRAY_CHILDREN) {
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         unmountChildren(c1 as VNode[], parentComponent)
       }
       hostSetElementText(container, c2 as string)
     } else {
-      if (prevShapeFlag & TEXT_CHILDREN) {
+      if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(container, '')
-        if (shapeFlag & ARRAY_CHILDREN) {
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
             c2 as VNodeChildren,
             container,
@@ -721,8 +707,8 @@ export function createRenderer(options: RendererOptions) {
             isSVG
           )
         }
-      } else if (prevShapeFlag & ARRAY_CHILDREN) {
-        if (shapeFlag & ARRAY_CHILDREN) {
+      } else if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // two arrays, cannot assume anything, do full diff
           patchKeyedChildren(
             c1 as VNode[],
@@ -1020,7 +1006,7 @@ export function createRenderer(options: RendererOptions) {
         parentComponent,
         shouldRemoveChildren
       )
-    } else if (vnode.shapeFlag & ARRAY_CHILDREN) {
+    } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       unmountChildren(
         vnode.children as VNode[],
         parentComponent,
