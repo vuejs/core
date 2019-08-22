@@ -18,4 +18,6 @@ describe('vnode', () => {
   test.todo('node type inference')
 
   test.todo('cloneVNode')
+
+  test.todo('mergeProps')
 })
