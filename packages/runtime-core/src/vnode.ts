@@ -162,9 +162,22 @@ function trackDynamicNode(vnode: VNode) {
   }
 }
 
-export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
-  // TODO
-  return vnode
+export function cloneVNode(vnode: VNode): VNode {
+  return {
+    type: vnode.type,
+    props: vnode.props,
+    key: vnode.key,
+    ref: vnode.ref,
+    children: null,
+    component: null,
+    el: null,
+    anchor: null,
+    target: null,
+    shapeFlag: vnode.shapeFlag,
+    patchFlag: vnode.patchFlag,
+    dynamicProps: vnode.dynamicProps,
+    dynamicChildren: null
+  }
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
@@ -177,7 +190,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
-    return child as VNode
+    return child.el === null ? child : cloneVNode(child)
   } else {
     // primitive types
     return createVNode(Text, null, child + '')
@@ -238,4 +251,32 @@ export function normalizeClass(value: unknown): string {
     }
   }
   return res.trim()
+}
+
+const handlersRE = /^on|^vnode/
+
+export function mergeProps(...args: Data[]) {
+  const ret: Data = {}
+  for (const key in args[0]) {
+    ret[key] = args[0][key]
+  }
+  for (let i = 1; i < args.length; i++) {
+    const toMerge = args[i]
+    for (const key in toMerge) {
+      if (key === 'class') {
+        ret.class = normalizeClass([ret.class, toMerge.class])
+      } else if (key === 'style') {
+        ret.style = normalizeStyle([ret.style, toMerge.style])
+      } else if (handlersRE.test(key)) {
+        // on*, vnode*
+        const existing = ret[key]
+        ret[key] = existing
+          ? [].concat(existing as any, toMerge[key] as any)
+          : toMerge[key]
+      } else {
+        ret[key] = toMerge[key]
+      }
+    }
+  }
+  return ret
 }

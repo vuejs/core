@@ -10,10 +10,8 @@ export {
   openBlock,
   createBlock,
   createVNode,
-  Text,
-  Empty,
-  Fragment,
-  Portal
+  cloneVNode,
+  mergeProps
 } from './vnode'
 export { createComponent, getCurrentInstance } from './component'
 export { createRenderer } from './createRenderer'
@@ -23,6 +21,9 @@ export * from './apiWatch'
 export * from './apiLifecycle'
 export * from './apiInject'
 
-// Flags
+// VNode type symbols
+export { Text, Empty, Fragment, Portal } from './vnode'
+
+// VNode flags
 export { PublicPatchFlags as PatchFlags } from './patchFlags'
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
