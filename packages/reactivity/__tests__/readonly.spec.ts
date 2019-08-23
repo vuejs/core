@@ -1,18 +1,18 @@
 import {
   reactive,
-  immutable,
+  readonly,
   toRaw,
   isReactive,
-  isImmutable,
+  isReadonly,
   markNonReactive,
-  markImmutable,
+  markReadonly,
   lock,
   unlock,
   effect,
   ref
 } from '../src'
 
-describe('reactivity/immutable', () => {
+describe('reactivity/readonly', () => {
   let warn: any
 
   beforeEach(() => {
@@ -25,18 +25,18 @@ describe('reactivity/immutable', () => {
   })
 
   describe('Object', () => {
-    it('should make nested values immutable', () => {
+    it('should make nested values readonly', () => {
       const original = { foo: 1, bar: { baz: 2 } }
-      const observed = immutable(original)
+      const observed = readonly(original)
       expect(observed).not.toBe(original)
       expect(isReactive(observed)).toBe(true)
-      expect(isImmutable(observed)).toBe(true)
+      expect(isReadonly(observed)).toBe(true)
       expect(isReactive(original)).toBe(false)
-      expect(isImmutable(original)).toBe(false)
+      expect(isReadonly(original)).toBe(false)
       expect(isReactive(observed.bar)).toBe(true)
-      expect(isImmutable(observed.bar)).toBe(true)
+      expect(isReadonly(observed.bar)).toBe(true)
       expect(isReactive(original.bar)).toBe(false)
-      expect(isImmutable(original.bar)).toBe(false)
+      expect(isReadonly(original.bar)).toBe(false)
       // get
       expect(observed.foo).toBe(1)
       // has
@@ -46,7 +46,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(warn).toHaveBeenCalledTimes(1)
@@ -62,7 +62,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed: any = immutable({ foo: 1, bar: { baz: 2 } })
+      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
       unlock()
       observed.prop = 2
       observed.bar.qux = 3
@@ -77,7 +77,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed: any = immutable({ a: 1 })
+      const observed: any = readonly({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -89,7 +89,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed: any = immutable({ a: 1 })
+      const observed: any = readonly({ a: 1 })
       let dummy
       effect(() => {
         dummy = observed.a
@@ -104,18 +104,18 @@ describe('reactivity/immutable', () => {
   })
 
   describe('Array', () => {
-    it('should make nested values immutable', () => {
+    it('should make nested values readonly', () => {
       const original: any[] = [{ foo: 1 }]
-      const observed = immutable(original)
+      const observed = readonly(original)
       expect(observed).not.toBe(original)
       expect(isReactive(observed)).toBe(true)
-      expect(isImmutable(observed)).toBe(true)
+      expect(isReadonly(observed)).toBe(true)
       expect(isReactive(original)).toBe(false)
-      expect(isImmutable(original)).toBe(false)
+      expect(isReadonly(original)).toBe(false)
       expect(isReactive(observed[0])).toBe(true)
-      expect(isImmutable(observed[0])).toBe(true)
+      expect(isReadonly(observed[0])).toBe(true)
       expect(isReactive(original[0])).toBe(false)
-      expect(isImmutable(original[0])).toBe(false)
+      expect(isReadonly(original[0])).toBe(false)
       // get
       expect(observed[0].foo).toBe(1)
       // has
@@ -125,7 +125,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = immutable([{ foo: 1 }])
+      const observed: any = readonly([{ foo: 1 }])
       observed[0] = 1
       expect(observed[0]).not.toBe(1)
       expect(warn).toHaveBeenCalledTimes(1)
@@ -147,7 +147,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should allow mutation when unlocked', () => {
-      const observed: any = immutable([{ foo: 1, bar: { baz: 2 } }])
+      const observed: any = readonly([{ foo: 1, bar: { baz: 2 } }])
       unlock()
       observed[1] = 2
       observed.push(3)
@@ -163,7 +163,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should not trigger effects when locked', () => {
-      const observed: any = immutable([{ a: 1 }])
+      const observed: any = readonly([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -178,7 +178,7 @@ describe('reactivity/immutable', () => {
     })
 
     it('should trigger effects when unlocked', () => {
-      const observed: any = immutable([{ a: 1 }])
+      const observed: any = readonly([{ a: 1 }])
       let dummy
       effect(() => {
         dummy = observed[0].a
@@ -205,24 +205,24 @@ describe('reactivity/immutable', () => {
   const maps = [Map, WeakMap]
   maps.forEach((Collection: any) => {
     describe(Collection.name, () => {
-      test('should make nested values immutable', () => {
+      test('should make nested values readonly', () => {
         const key1 = {}
         const key2 = {}
         const original = new Collection([[key1, {}], [key2, {}]])
-        const observed = immutable(original)
+        const observed = readonly(original)
         expect(observed).not.toBe(original)
         expect(isReactive(observed)).toBe(true)
-        expect(isImmutable(observed)).toBe(true)
+        expect(isReadonly(observed)).toBe(true)
         expect(isReactive(original)).toBe(false)
-        expect(isImmutable(original)).toBe(false)
+        expect(isReadonly(original)).toBe(false)
         expect(isReactive(observed.get(key1))).toBe(true)
-        expect(isImmutable(observed.get(key1))).toBe(true)
+        expect(isReadonly(observed.get(key1))).toBe(true)
         expect(isReactive(original.get(key1))).toBe(false)
-        expect(isImmutable(original.get(key1))).toBe(false)
+        expect(isReadonly(original.get(key1))).toBe(false)
       })
 
       test('should not allow mutation & not trigger effect', () => {
-        const map = immutable(new Collection())
+        const map = readonly(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -236,7 +236,7 @@ describe('reactivity/immutable', () => {
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
-        const map = immutable(new Collection())
+        const map = readonly(new Collection())
         const isWeak = Collection === WeakMap
         const key = {}
         let dummy
@@ -253,20 +253,20 @@ describe('reactivity/immutable', () => {
       })
 
       if (Collection === Map) {
-        test('should retrive immutable values on iteration', () => {
+        test('should retrive readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
-          const observed: any = immutable(original)
+          const observed: any = readonly(original)
           for (const [key, value] of observed) {
-            expect(isImmutable(key)).toBe(true)
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(key)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           }
           observed.forEach((value: any) => {
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           })
           for (const value of observed.values()) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           }
         })
       }
@@ -276,22 +276,22 @@ describe('reactivity/immutable', () => {
   const sets = [Set, WeakSet]
   sets.forEach((Collection: any) => {
     describe(Collection.name, () => {
-      test('should make nested values immutable', () => {
+      test('should make nested values readonly', () => {
         const key1 = {}
         const key2 = {}
         const original = new Collection([key1, key2])
-        const observed = immutable(original)
+        const observed = readonly(original)
         expect(observed).not.toBe(original)
         expect(isReactive(observed)).toBe(true)
-        expect(isImmutable(observed)).toBe(true)
+        expect(isReadonly(observed)).toBe(true)
         expect(isReactive(original)).toBe(false)
-        expect(isImmutable(original)).toBe(false)
+        expect(isReadonly(original)).toBe(false)
         expect(observed.has(reactive(key1))).toBe(true)
         expect(original.has(reactive(key1))).toBe(false)
       })
 
       test('should not allow mutation & not trigger effect', () => {
-        const set = immutable(new Collection())
+        const set = readonly(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -305,7 +305,7 @@ describe('reactivity/immutable', () => {
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
-        const set = immutable(new Collection())
+        const set = readonly(new Collection())
         const key = {}
         let dummy
         effect(() => {
@@ -321,59 +321,59 @@ describe('reactivity/immutable', () => {
       })
 
       if (Collection === Set) {
-        test('should retrive immutable values on iteration', () => {
+        test('should retrive readonly values on iteration', () => {
           const original = new Collection([{}, {}])
-          const observed: any = immutable(original)
+          const observed: any = readonly(original)
           for (const value of observed) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           }
           observed.forEach((value: any) => {
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           })
           for (const value of observed.values()) {
-            expect(isImmutable(value)).toBe(true)
+            expect(isReadonly(value)).toBe(true)
           }
           for (const [v1, v2] of observed.entries()) {
-            expect(isImmutable(v1)).toBe(true)
-            expect(isImmutable(v2)).toBe(true)
+            expect(isReadonly(v1)).toBe(true)
+            expect(isReadonly(v2)).toBe(true)
           }
         })
       }
     })
   })
 
-  test('calling reactive on an immutable should return immutable', () => {
-    const a = immutable({})
+  test('calling reactive on an readonly should return readonly', () => {
+    const a = readonly({})
     const b = reactive(a)
-    expect(isImmutable(b)).toBe(true)
+    expect(isReadonly(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
   })
 
-  test('calling immutable on a reactive object should return immutable', () => {
+  test('calling readonly on a reactive object should return readonly', () => {
     const a = reactive({})
-    const b = immutable(a)
-    expect(isImmutable(b)).toBe(true)
+    const b = readonly(a)
+    expect(isReadonly(b)).toBe(true)
     // should point to same original
     expect(toRaw(a)).toBe(toRaw(b))
   })
 
   test('observing already observed value should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = immutable(original)
-    const observed2 = immutable(observed)
+    const observed = readonly(original)
+    const observed2 = readonly(observed)
     expect(observed2).toBe(observed)
   })
 
   test('observing the same value multiple times should return same Proxy', () => {
     const original = { foo: 1 }
-    const observed = immutable(original)
-    const observed2 = immutable(original)
+    const observed = readonly(original)
+    const observed2 = readonly(original)
     expect(observed2).toBe(observed)
   })
 
   test('markNonReactive', () => {
-    const obj = immutable({
+    const obj = readonly({
       foo: { a: 1 },
       bar: markNonReactive({ b: 2 })
     })
@@ -381,19 +381,19 @@ describe('reactivity/immutable', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  test('markImmutable', () => {
+  test('markReadonly', () => {
     const obj = reactive({
       foo: { a: 1 },
-      bar: markImmutable({ b: 2 })
+      bar: markReadonly({ b: 2 })
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(true)
-    expect(isImmutable(obj.foo)).toBe(false)
-    expect(isImmutable(obj.bar)).toBe(true)
+    expect(isReadonly(obj.foo)).toBe(false)
+    expect(isReadonly(obj.bar)).toBe(true)
   })
 
-  test('should make ref immutable', () => {
-    const n: any = immutable(ref(1))
+  test('should make ref readonly', () => {
+    const n: any = readonly(ref(1))
     n.value = 2
     expect(n.value).toBe(1)
     expect(warn).toHaveBeenCalledTimes(1)

@@ -1,9 +1,9 @@
 import { isObject } from '@vue/shared'
-import { mutableHandlers, immutableHandlers } from './baseHandlers'
+import { mutableHandlers, readonlyHandlers } from './baseHandlers'
 
 import {
   mutableCollectionHandlers,
-  immutableCollectionHandlers
+  readonlyCollectionHandlers
 } from './collectionHandlers'
 
 import { UnwrapNestedRefs } from './ref'
@@ -18,14 +18,14 @@ export type KeyToDepMap = Map<string | symbol, Dep>
 export const targetMap: WeakMap<any, KeyToDepMap> = new WeakMap()
 
 // WeakMaps that store {raw <-> observed} pairs.
-const rawToObserved: WeakMap<any, any> = new WeakMap()
-const observedToRaw: WeakMap<any, any> = new WeakMap()
-const rawToImmutable: WeakMap<any, any> = new WeakMap()
-const immutableToRaw: WeakMap<any, any> = new WeakMap()
+const rawToReactive: WeakMap<any, any> = new WeakMap()
+const reactiveToRaw: WeakMap<any, any> = new WeakMap()
+const rawToReadonly: WeakMap<any, any> = new WeakMap()
+const readonlyToRaw: WeakMap<any, any> = new WeakMap()
 
-// WeakSets for values that are marked immutable or non-reactive during
+// WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const immutableValues: WeakSet<any> = new WeakSet()
+const readonlyValues: WeakSet<any> = new WeakSet()
 const nonReactiveValues: WeakSet<any> = new WeakSet()
 
 const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
@@ -42,38 +42,38 @@ const canObserve = (value: any): boolean => {
 
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
-  // if trying to observe an immutable proxy, return the immutable version.
-  if (immutableToRaw.has(target)) {
+  // if trying to observe a readonly proxy, return the readonly version.
+  if (readonlyToRaw.has(target)) {
     return target
   }
-  // target is explicitly marked as immutable by user
-  if (immutableValues.has(target)) {
-    return immutable(target)
+  // target is explicitly marked as readonly by user
+  if (readonlyValues.has(target)) {
+    return readonly(target)
   }
   return createReactiveObject(
     target,
-    rawToObserved,
-    observedToRaw,
+    rawToReactive,
+    reactiveToRaw,
     mutableHandlers,
     mutableCollectionHandlers
   )
 }
 
-export function immutable<T extends object>(
+export function readonly<T extends object>(
   target: T
 ): Readonly<UnwrapNestedRefs<T>>
-export function immutable(target: object) {
+export function readonly(target: object) {
   // value is a mutable observable, retrive its original and return
   // a readonly version.
-  if (observedToRaw.has(target)) {
-    target = observedToRaw.get(target)
+  if (reactiveToRaw.has(target)) {
+    target = reactiveToRaw.get(target)
   }
   return createReactiveObject(
     target,
-    rawToImmutable,
-    immutableToRaw,
-    immutableHandlers,
-    immutableCollectionHandlers
+    rawToReadonly,
+    readonlyToRaw,
+    readonlyHandlers,
+    readonlyCollectionHandlers
   )
 }
 
@@ -116,19 +116,19 @@ function createReactiveObject(
 }
 
 export function isReactive(value: any): boolean {
-  return observedToRaw.has(value) || immutableToRaw.has(value)
+  return reactiveToRaw.has(value) || readonlyToRaw.has(value)
 }
 
-export function isImmutable(value: any): boolean {
-  return immutableToRaw.has(value)
+export function isReadonly(value: any): boolean {
+  return readonlyToRaw.has(value)
 }
 
 export function toRaw<T>(observed: T): T {
-  return observedToRaw.get(observed) || immutableToRaw.get(observed) || observed
+  return reactiveToRaw.get(observed) || readonlyToRaw.get(observed) || observed
 }
 
-export function markImmutable<T>(value: T): T {
-  immutableValues.add(value)
+export function markReadonly<T>(value: T): T {
+  readonlyValues.add(value)
   return value
 }
 

@@ -1,11 +1,11 @@
-import { toRaw, reactive, immutable } from './reactive'
+import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject } from '@vue/shared'
 
 const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
-const toImmutable = (value: any) => (isObject(value) ? immutable(value) : value)
+const toReadonly = (value: any) => (isObject(value) ? readonly(value) : value)
 
 function get(target: any, key: any, wrap: (t: any) => any): any {
   target = toRaw(target)
@@ -111,16 +111,16 @@ function clear() {
   return result
 }
 
-function createForEach(isImmutable: boolean) {
+function createForEach(isReadonly: boolean) {
   return function forEach(callback: Function, thisArg?: any) {
     const observed = this
     const target = toRaw(observed)
     const proto: any = Reflect.getPrototypeOf(target)
-    const wrap = isImmutable ? toImmutable : toReactive
+    const wrap = isReadonly ? toReadonly : toReactive
     track(target, OperationTypes.ITERATE)
     // important: create sure the callback is
-    // 1. invoked with the observable map as `this` and 3rd arg
-    // 2. the value received should be a corresponding observable/immutable.
+    // 1. invoked with the reactive map as `this` and 3rd arg
+    // 2. the value received should be a corresponding reactive/readonly.
     function wrappedCallback(value: any, key: any) {
       return callback.call(observed, wrap(value), wrap(key), observed)
     }
@@ -128,7 +128,7 @@ function createForEach(isImmutable: boolean) {
   }
 }
 
-function createIterableMethod(method: string | symbol, isImmutable: boolean) {
+function createIterableMethod(method: string | symbol, isReadonly: boolean) {
   return function(...args: any[]) {
     const target = toRaw(this)
     const proto: any = Reflect.getPrototypeOf(target)
@@ -136,7 +136,7 @@ function createIterableMethod(method: string | symbol, isImmutable: boolean) {
       method === 'entries' ||
       (method === Symbol.iterator && target instanceof Map)
     const innerIterator = proto[method].apply(target, args)
-    const wrap = isImmutable ? toImmutable : toReactive
+    const wrap = isReadonly ? toReadonly : toReactive
     track(target, OperationTypes.ITERATE)
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
@@ -159,7 +159,7 @@ function createIterableMethod(method: string | symbol, isImmutable: boolean) {
   }
 }
 
-function createImmutableMethod(
+function createReadonlyMethod(
   method: Function,
   type: OperationTypes
 ): Function {
@@ -168,7 +168,7 @@ function createImmutableMethod(
       if (__DEV__) {
         const key = args[0] ? `on key "${args[0]}"` : ``
         console.warn(
-          `${type} operation ${key}failed: target is immutable.`,
+          `${type} operation ${key}failed: target is readonly.`,
           toRaw(this)
         )
       }
@@ -194,25 +194,25 @@ const mutableInstrumentations: any = {
   forEach: createForEach(false)
 }
 
-const immutableInstrumentations: any = {
+const readonlyInstrumentations: any = {
   get(key: any) {
-    return get(this, key, toImmutable)
+    return get(this, key, toReadonly)
   },
   get size() {
     return size(this)
   },
   has,
-  add: createImmutableMethod(add, OperationTypes.ADD),
-  set: createImmutableMethod(set, OperationTypes.SET),
-  delete: createImmutableMethod(deleteEntry, OperationTypes.DELETE),
-  clear: createImmutableMethod(clear, OperationTypes.CLEAR),
+  add: createReadonlyMethod(add, OperationTypes.ADD),
+  set: createReadonlyMethod(set, OperationTypes.SET),
+  delete: createReadonlyMethod(deleteEntry, OperationTypes.DELETE),
+  clear: createReadonlyMethod(clear, OperationTypes.CLEAR),
   forEach: createForEach(true)
 }
 
 const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
 iteratorMethods.forEach(method => {
   mutableInstrumentations[method] = createIterableMethod(method, false)
-  immutableInstrumentations[method] = createIterableMethod(method, true)
+  readonlyInstrumentations[method] = createIterableMethod(method, true)
 })
 
 function createInstrumentationGetter(instrumentations: any) {
@@ -233,6 +233,6 @@ export const mutableCollectionHandlers: ProxyHandler<any> = {
   get: createInstrumentationGetter(mutableInstrumentations)
 }
 
-export const immutableCollectionHandlers: ProxyHandler<any> = {
-  get: createInstrumentationGetter(immutableInstrumentations)
+export const readonlyCollectionHandlers: ProxyHandler<any> = {
+  get: createInstrumentationGetter(readonlyInstrumentations)
 }

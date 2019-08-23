@@ -4,10 +4,10 @@ export {
   toRefs,
   reactive,
   isReactive,
-  immutable,
-  isImmutable,
+  readonly,
+  isReadonly,
   toRaw,
-  markImmutable,
+  markReadonly,
   markNonReactive,
   effect,
   // types

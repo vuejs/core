@@ -1,4 +1,4 @@
-import { reactive, immutable, toRaw } from './reactive'
+import { reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
@@ -13,7 +13,7 @@ const builtInSymbols = new Set(
     .filter(value => typeof value === 'symbol')
 )
 
-function createGetter(isImmutable: boolean) {
+function createGetter(isReadonly: boolean) {
   return function get(target: any, key: string | symbol, receiver: any) {
     const res = Reflect.get(target, key, receiver)
     if (typeof key === 'symbol' && builtInSymbols.has(key)) {
@@ -24,10 +24,10 @@ function createGetter(isImmutable: boolean) {
     }
     track(target, OperationTypes.GET, key)
     return isObject(res)
-      ? isImmutable
-        ? // need to lazy access immutable and reactive here to avoid
+      ? isReadonly
+        ? // need to lazy access readonly and reactive here to avoid
           // circular dependency
-          immutable(res)
+          readonly(res)
         : reactive(res)
       : res
   }
@@ -102,14 +102,14 @@ export const mutableHandlers: ProxyHandler<any> = {
   ownKeys
 }
 
-export const immutableHandlers: ProxyHandler<any> = {
+export const readonlyHandlers: ProxyHandler<any> = {
   get: createGetter(true),
 
   set(target: any, key: string | symbol, value: any, receiver: any): boolean {
     if (LOCKED) {
       if (__DEV__) {
         console.warn(
-          `Set operation on key "${key as any}" failed: target is immutable.`,
+          `Set operation on key "${key as any}" failed: target is readonly.`,
           target
         )
       }
@@ -123,7 +123,7 @@ export const immutableHandlers: ProxyHandler<any> = {
     if (LOCKED) {
       if (__DEV__) {
         console.warn(
-          `Delete operation on key "${key as any}" failed: target is immutable.`,
+          `Delete operation on key "${key as any}" failed: target is readonly.`,
           target
         )
       }

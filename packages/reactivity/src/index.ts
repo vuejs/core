@@ -2,10 +2,10 @@ export { ref, isRef, toRefs, Ref, UnwrapRef } from './ref'
 export {
   reactive,
   isReactive,
-  immutable,
-  isImmutable,
+  readonly,
+  isReadonly,
   toRaw,
-  markImmutable,
+  markReadonly,
   markNonReactive
 } from './reactive'
 export { computed, ComputedRef, ComputedOptions } from './computed'

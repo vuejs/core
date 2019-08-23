@@ -1,4 +1,4 @@
-import { immutable, toRaw, lock, unlock } from '@vue/reactivity'
+import { readonly, toRaw, lock, unlock } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -114,7 +114,7 @@ export function resolveProps(
         props[key] = val
       }
 
-  // allow mutation of propsProxy (which is immutable by default)
+  // allow mutation of propsProxy (which is readonly by default)
   unlock()
 
   if (rawProps != null) {
@@ -179,13 +179,13 @@ export function resolveProps(
     }
   }
 
-  // lock immutable
+  // lock readonly
   lock()
 
-  instance.props = __DEV__ ? immutable(props) : props
+  instance.props = __DEV__ ? readonly(props) : props
   instance.attrs = options
     ? __DEV__
-      ? immutable(attrs)
+      ? readonly(attrs)
       : attrs
     : instance.props
 }

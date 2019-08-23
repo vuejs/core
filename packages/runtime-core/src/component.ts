@@ -1,5 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from './vnode'
-import { ReactiveEffect, UnwrapRef, reactive, immutable } from '@vue/reactivity'
+import { ReactiveEffect, UnwrapRef, reactive, readonly } from '@vue/reactivity'
 import { EMPTY_OBJ, isFunction, capitalize, invokeHandlers } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
@@ -233,7 +233,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     // so props change can be tracked by watchers
     // it will be updated in resolveProps() on updates before render
     const propsProxy = (instance.propsProxy = setup.length
-      ? immutable(instance.props)
+      ? readonly(instance.props)
       : null)
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
