@@ -1,3 +1,5 @@
+// reference: https://github.com/vuejs/vue/blob/dev/test/unit/modules/vdom/patch/children.spec.js
+
 describe('vdom: unkeyed children', () => {
   test.todo('append')
 

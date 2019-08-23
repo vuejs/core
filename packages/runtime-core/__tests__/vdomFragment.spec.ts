@@ -1,199 +1,201 @@
-import {
-  createVNode as h,
-  render,
-  nodeOps,
-  NodeTypes,
-  TestElement,
-  Fragment,
-  reactive,
-  serialize,
-  nextTick,
-  resetOps,
-  dumpOps,
-  NodeOpTypes
-} from '@vue/runtime-test'
+// These tests are outdated.
 
-describe('vdom: fragment', () => {
-  it('should allow returning multiple component root nodes', async () => {
-    class App extends Component {
-      render() {
-        return [h('div', 'one'), 'two']
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
-    expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
-    expect(root.children.length).toBe(2)
-    expect(root.children[0]).toMatchObject({
-      type: NodeTypes.ELEMENT,
-      tag: 'div'
-    })
-    expect((root.children[0] as TestElement).children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
-      text: 'one'
-    })
-    expect(root.children[1]).toMatchObject({
-      type: NodeTypes.TEXT,
-      text: 'two'
-    })
-  })
+// import {
+//   createVNode as h,
+//   render,
+//   nodeOps,
+//   NodeTypes,
+//   TestElement,
+//   Fragment,
+//   reactive,
+//   serialize,
+//   nextTick,
+//   resetOps,
+//   dumpOps,
+//   NodeOpTypes
+// } from '@vue/runtime-test'
 
-  it('should be able to explicitly create fragments', async () => {
-    class App extends Component {
-      render() {
-        return h('div', [h(Fragment, [h('div', 'one'), 'two'])])
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
-    const parent = root.children[0] as TestElement
-    expect(serialize(parent)).toBe(`<div><div>one</div>two</div>`)
-  })
+// describe('vdom: fragment', () => {
+//   it('should allow returning multiple component root nodes', async () => {
+//     class App extends Component {
+//       render() {
+//         return [h('div', 'one'), 'two']
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
+//     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
+//     expect(root.children.length).toBe(2)
+//     expect(root.children[0]).toMatchObject({
+//       type: NodeTypes.ELEMENT,
+//       tag: 'div'
+//     })
+//     expect((root.children[0] as TestElement).children[0]).toMatchObject({
+//       type: NodeTypes.TEXT,
+//       text: 'one'
+//     })
+//     expect(root.children[1]).toMatchObject({
+//       type: NodeTypes.TEXT,
+//       text: 'two'
+//     })
+//   })
 
-  it('should be able to patch fragment children (unkeyed)', async () => {
-    const state = observable({ ok: true })
-    class App extends Component {
-      render() {
-        return state.ok
-          ? createFragment(
-              [h('div', 'one'), createTextVNode('two')],
-              ChildrenFlags.NONE_KEYED_VNODES
-            )
-          : createFragment(
-              [h('div', 'foo'), createTextVNode('bar'), createTextVNode('baz')],
-              ChildrenFlags.NONE_KEYED_VNODES
-            )
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
+//   it('should be able to explicitly create fragments', async () => {
+//     class App extends Component {
+//       render() {
+//         return h('div', [h(Fragment, [h('div', 'one'), 'two'])])
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
+//     const parent = root.children[0] as TestElement
+//     expect(serialize(parent)).toBe(`<div><div>one</div>two</div>`)
+//   })
 
-    expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
+//   it('should be able to patch fragment children (unkeyed)', async () => {
+//     const state = observable({ ok: true })
+//     class App extends Component {
+//       render() {
+//         return state.ok
+//           ? createFragment(
+//               [h('div', 'one'), createTextVNode('two')],
+//               ChildrenFlags.NONE_KEYED_VNODES
+//             )
+//           : createFragment(
+//               [h('div', 'foo'), createTextVNode('bar'), createTextVNode('baz')],
+//               ChildrenFlags.NONE_KEYED_VNODES
+//             )
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
 
-    state.ok = false
-    await nextTick()
-    expect(serialize(root)).toBe(`<div><div>foo</div>barbaz</div>`)
-  })
+//     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
 
-  it('should be able to patch fragment children (implicitly keyed)', async () => {
-    const state = observable({ ok: true })
-    class App extends Component {
-      render() {
-        return state.ok
-          ? [h('div', 'one'), 'two']
-          : [h('pre', 'foo'), 'bar', 'baz']
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await await render(h(App), root)
+//     state.ok = false
+//     await nextTick()
+//     expect(serialize(root)).toBe(`<div><div>foo</div>barbaz</div>`)
+//   })
 
-    expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
+//   it('should be able to patch fragment children (implicitly keyed)', async () => {
+//     const state = observable({ ok: true })
+//     class App extends Component {
+//       render() {
+//         return state.ok
+//           ? [h('div', 'one'), 'two']
+//           : [h('pre', 'foo'), 'bar', 'baz']
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await await render(h(App), root)
 
-    state.ok = false
-    await nextTick()
-    expect(serialize(root)).toBe(`<div><pre>foo</pre>barbaz</div>`)
-  })
+//     expect(serialize(root)).toBe(`<div><div>one</div>two</div>`)
 
-  it('should be able to patch fragment children (explcitly keyed)', async () => {
-    const state = observable({ ok: true })
-    class App extends Component {
-      render() {
-        return state.ok
-          ? [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')]
-          : [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')]
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
+//     state.ok = false
+//     await nextTick()
+//     expect(serialize(root)).toBe(`<div><pre>foo</pre>barbaz</div>`)
+//   })
 
-    expect(serialize(root)).toBe(`<div><div>one</div><div>two</div></div>`)
+//   it('should be able to patch fragment children (explcitly keyed)', async () => {
+//     const state = observable({ ok: true })
+//     class App extends Component {
+//       render() {
+//         return state.ok
+//           ? [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')]
+//           : [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')]
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
 
-    resetOps()
-    state.ok = false
-    await nextTick()
-    expect(serialize(root)).toBe(`<div><div>two</div><div>one</div></div>`)
-    const ops = dumpOps()
-    // should be moving nodes instead of re-creating them
-    expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
-  })
+//     expect(serialize(root)).toBe(`<div><div>one</div><div>two</div></div>`)
 
-  it('should be able to move fragment', async () => {
-    const state = observable({ ok: true })
-    class App extends Component {
-      render() {
-        return state.ok
-          ? h('div', [
-              h('div', { key: 1 }, 'outer'),
-              h(Fragment, { key: 2 }, [
-                h('div', { key: 1 }, 'one'),
-                h('div', { key: 2 }, 'two')
-              ])
-            ])
-          : h('div', [
-              h(Fragment, { key: 2 }, [
-                h('div', { key: 2 }, 'two'),
-                h('div', { key: 1 }, 'one')
-              ]),
-              h('div', { key: 1 }, 'outer')
-            ])
-      }
-    }
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
-    const parent = root.children[0] as TestElement
+//     resetOps()
+//     state.ok = false
+//     await nextTick()
+//     expect(serialize(root)).toBe(`<div><div>two</div><div>one</div></div>`)
+//     const ops = dumpOps()
+//     // should be moving nodes instead of re-creating them
+//     expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
+//   })
 
-    expect(serialize(parent)).toBe(
-      `<div><div>outer</div><div>one</div><div>two</div></div>`
-    )
+//   it('should be able to move fragment', async () => {
+//     const state = observable({ ok: true })
+//     class App extends Component {
+//       render() {
+//         return state.ok
+//           ? h('div', [
+//               h('div', { key: 1 }, 'outer'),
+//               h(Fragment, { key: 2 }, [
+//                 h('div', { key: 1 }, 'one'),
+//                 h('div', { key: 2 }, 'two')
+//               ])
+//             ])
+//           : h('div', [
+//               h(Fragment, { key: 2 }, [
+//                 h('div', { key: 2 }, 'two'),
+//                 h('div', { key: 1 }, 'one')
+//               ]),
+//               h('div', { key: 1 }, 'outer')
+//             ])
+//       }
+//     }
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
+//     const parent = root.children[0] as TestElement
 
-    resetOps()
-    state.ok = false
-    await nextTick()
-    expect(serialize(parent)).toBe(
-      `<div><div>two</div><div>one</div><div>outer</div></div>`
-    )
-    const ops = dumpOps()
-    // should be moving nodes instead of re-creating them
-    expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
-  })
+//     expect(serialize(parent)).toBe(
+//       `<div><div>outer</div><div>one</div><div>two</div></div>`
+//     )
 
-  it('should be able to handle nested fragments', async () => {
-    const state = observable({ ok: true })
-    class App extends Component {
-      render() {
-        return state.ok
-          ? [
-              h('div', { key: 1 }, 'outer'),
-              h(Fragment, { key: 2 }, [
-                h('div', { key: 1 }, 'one'),
-                h('div', { key: 2 }, 'two')
-              ])
-            ]
-          : [
-              h(Fragment, { key: 2 }, [
-                h('div', { key: 2 }, 'two'),
-                h('div', { key: 1 }, 'one')
-              ]),
-              h('div', { key: 1 }, 'outer')
-            ]
-      }
-    }
+//     resetOps()
+//     state.ok = false
+//     await nextTick()
+//     expect(serialize(parent)).toBe(
+//       `<div><div>two</div><div>one</div><div>outer</div></div>`
+//     )
+//     const ops = dumpOps()
+//     // should be moving nodes instead of re-creating them
+//     expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
+//   })
 
-    const root = nodeOps.createElement('div')
-    await render(h(App), root)
+//   it('should be able to handle nested fragments', async () => {
+//     const state = observable({ ok: true })
+//     class App extends Component {
+//       render() {
+//         return state.ok
+//           ? [
+//               h('div', { key: 1 }, 'outer'),
+//               h(Fragment, { key: 2 }, [
+//                 h('div', { key: 1 }, 'one'),
+//                 h('div', { key: 2 }, 'two')
+//               ])
+//             ]
+//           : [
+//               h(Fragment, { key: 2 }, [
+//                 h('div', { key: 2 }, 'two'),
+//                 h('div', { key: 1 }, 'one')
+//               ]),
+//               h('div', { key: 1 }, 'outer')
+//             ]
+//       }
+//     }
 
-    expect(serialize(root)).toBe(
-      `<div><div>outer</div><div>one</div><div>two</div></div>`
-    )
+//     const root = nodeOps.createElement('div')
+//     await render(h(App), root)
 
-    resetOps()
-    state.ok = false
-    await nextTick()
-    expect(serialize(root)).toBe(
-      `<div><div>two</div><div>one</div><div>outer</div></div>`
-    )
-    const ops = dumpOps()
-    // should be moving nodes instead of re-creating them
-    expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
-  })
-})
+//     expect(serialize(root)).toBe(
+//       `<div><div>outer</div><div>one</div><div>two</div></div>`
+//     )
+
+//     resetOps()
+//     state.ok = false
+//     await nextTick()
+//     expect(serialize(root)).toBe(
+//       `<div><div>two</div><div>one</div><div>outer</div></div>`
+//     )
+//     const ops = dumpOps()
+//     // should be moving nodes instead of re-creating them
+//     expect(ops.some(op => op.type === NodeOpTypes.CREATE)).toBe(false)
+//   })
+// })
