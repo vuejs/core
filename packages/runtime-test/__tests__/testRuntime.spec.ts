@@ -1,5 +1,5 @@
 import {
-  createVNode as h,
+  h,
   render,
   nodeOps,
   NodeTypes,
@@ -125,7 +125,7 @@ describe('test renderer', () => {
           {
             id: 'test'
           },
-          [h('span', 0, 'foo'), 'hello']
+          [h('span', 'foo'), 'hello']
         )
       }
     }

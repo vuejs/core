@@ -145,7 +145,8 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
     parentNode: parent,
     refNode: ref
   })
-  remove(child)
+  // remove the node first, but don't log it as a REMOVE op
+  remove(child, false)
   if (refIndex === undefined) {
     parent.children.push(child)
     child.parentNode = parent
@@ -155,14 +156,16 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   }
 }
 
-function remove(child: TestNode) {
+function remove(child: TestNode, logOp: boolean = true) {
   const parent = child.parentNode
   if (parent != null) {
-    logNodeOp({
-      type: NodeOpTypes.REMOVE,
-      targetNode: child,
-      parentNode: parent
-    })
+    if (logOp) {
+      logNodeOp({
+        type: NodeOpTypes.REMOVE,
+        targetNode: child,
+        parentNode: parent
+      })
+    }
     const i = parent.children.indexOf(child)
     if (i > -1) {
       parent.children.splice(i, 1)

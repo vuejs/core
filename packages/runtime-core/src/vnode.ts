@@ -18,7 +18,7 @@ export const Text = Symbol('Text')
 export const Empty = Symbol('Empty')
 export const Portal = Symbol('Portal')
 
-type VNodeTypes =
+export type VNodeTypes =
   | string
   | Function
   | Object

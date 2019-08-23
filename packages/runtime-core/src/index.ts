@@ -10,6 +10,7 @@ export * from './apiInject'
 // Advanced API ----------------------------------------------------------------
 
 // For raw render function users
+export { h } from './h'
 export {
   createVNode,
   cloneVNode,

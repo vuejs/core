@@ -694,7 +694,9 @@ export function createRenderer(options: RendererOptions) {
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         unmountChildren(c1 as VNode[], parentComponent)
       }
-      hostSetElementText(container, c2 as string)
+      if (c2 !== c1) {
+        hostSetElementText(container, c2 as string)
+      }
     } else {
       if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(container, '')

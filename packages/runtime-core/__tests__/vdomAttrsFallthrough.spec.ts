@@ -1,6 +1,6 @@
 // using DOM renderer because this case is mostly DOM-specific
 import {
-  createVNode as h,
+  h,
   render,
   nextTick,
   mergeProps,
