@@ -71,4 +71,8 @@ describe('reactivity/value', () => {
 
     expect(typeof (c.value.b + 1)).toBe('number')
   })
+
+  test.todo('isRef')
+
+  test.todo('toRefs')
 })
