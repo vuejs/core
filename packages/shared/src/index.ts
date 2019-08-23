@@ -7,6 +7,16 @@ export const reservedPropRE = /^(?:key|ref|slots)$|^vnode/
 
 export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
 
+export const extend = <T extends object, U extends object>(
+  a: T,
+  b: U
+): T & U => {
+  for (const key in b) {
+    ;(a as any)[key] = b[key]
+  }
+  return a as any
+}
+
 export const isArray = Array.isArray
 export const isFunction = (val: any): val is Function =>
   typeof val === 'function'

@@ -1,6 +1,6 @@
 import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
-import { EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ, extend } from '@vue/shared'
 
 export interface ReactiveEffect {
   (): any
@@ -203,7 +203,7 @@ function scheduleRun(
 ) {
   if (__DEV__ && effect.onTrigger) {
     effect.onTrigger(
-      Object.assign(
+      extend(
         {
           effect,
           target,

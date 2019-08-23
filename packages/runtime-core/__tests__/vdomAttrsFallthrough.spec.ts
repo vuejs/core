@@ -5,7 +5,8 @@ import {
   nextTick,
   mergeProps,
   ref,
-  onUpdated
+  onUpdated,
+  createComponent
 } from '@vue/runtime-dom'
 
 describe('attribute fallthrough', () => {
@@ -74,154 +75,156 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
   })
 
-  // it('should separate in attrs when component has declared props', async () => {
-  //   const click = jest.fn()
-  //   const childUpdated = jest.fn()
+  it('should separate in attrs when component has declared props', async () => {
+    const click = jest.fn()
+    const childUpdated = jest.fn()
 
-  //   class Hello extends Component {
-  //     count = 0
-  //     inc() {
-  //       this.count++
-  //       click()
-  //     }
-  //     render() {
-  //       return h(Child, {
-  //         foo: 123,
-  //         id: 'test',
-  //         class: 'c' + this.count,
-  //         style: { color: this.count ? 'red' : 'green' },
-  //         onClick: this.inc
-  //       })
-  //     }
-  //   }
+    const Hello = {
+      setup() {
+        const count = ref(0)
 
-  //   class Child extends Component<{ [key: string]: any; foo: number }> {
-  //     static props = {
-  //       foo: Number
-  //     }
-  //     updated() {
-  //       childUpdated()
-  //     }
-  //     render() {
-  //       return cloneVNode(
-  //         h(
-  //           'div',
-  //           {
-  //             class: 'c2',
-  //             style: { fontWeight: 'bold' }
-  //           },
-  //           this.$props.foo
-  //         ),
-  //         this.$attrs
-  //       )
-  //     }
-  //   }
+        function inc() {
+          count.value++
+          click()
+        }
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   await render(h(Hello), root)
+        return () =>
+          h(Child, {
+            foo: 1,
+            id: 'test',
+            class: 'c' + count.value,
+            style: { color: count.value ? 'red' : 'green' },
+            onClick: inc
+          })
+      }
+    }
 
-  //   const node = root.children[0] as HTMLElement
+    const Child = createComponent({
+      props: {
+        foo: Number
+      },
+      setup(props, { attrs }) {
+        onUpdated(childUpdated)
+        return () =>
+          h(
+            'div',
+            mergeProps(
+              {
+                class: 'c2',
+                style: { fontWeight: 'bold' }
+              },
+              attrs
+            ),
+            props.foo
+          )
+      }
+    })
 
-  //   // with declared props, any parent attr that isn't a prop falls through
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c0')
-  //   expect(node.style.color).toBe('green')
-  //   expect(node.style.fontWeight).toBe('bold')
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Hello), root)
 
-  //   // ...while declared ones remain props
-  //   expect(node.hasAttribute('foo')).toBe(false)
+    const node = root.children[0] as HTMLElement
 
-  //   await nextTick()
-  //   expect(childUpdated).toHaveBeenCalled()
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c1')
-  //   expect(node.style.color).toBe('red')
-  //   expect(node.style.fontWeight).toBe('bold')
+    // with declared props, any parent attr that isn't a prop falls through
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c0')
+    expect(node.style.color).toBe('green')
+    expect(node.style.fontWeight).toBe('bold')
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
 
-  //   expect(node.hasAttribute('foo')).toBe(false)
-  // })
+    // ...while declared ones remain props
+    expect(node.hasAttribute('foo')).toBe(false)
 
-  // it('should fallthrough on multi-nested components', async () => {
-  //   const click = jest.fn()
-  //   const childUpdated = jest.fn()
-  //   const grandChildUpdated = jest.fn()
+    await nextTick()
+    expect(childUpdated).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c1')
+    expect(node.style.color).toBe('red')
+    expect(node.style.fontWeight).toBe('bold')
 
-  //   class Hello extends Component {
-  //     count = 0
-  //     inc() {
-  //       this.count++
-  //       click()
-  //     }
-  //     render() {
-  //       return h(Child, {
-  //         foo: 1,
-  //         id: 'test',
-  //         class: 'c' + this.count,
-  //         style: { color: this.count ? 'red' : 'green' },
-  //         onClick: this.inc
-  //       })
-  //     }
-  //   }
+    expect(node.hasAttribute('foo')).toBe(false)
+  })
 
-  //   class Child extends Component<{ [key: string]: any; foo: number }> {
-  //     updated() {
-  //       childUpdated()
-  //     }
-  //     render() {
-  //       return h(GrandChild, this.$props)
-  //     }
-  //   }
+  it('should fallthrough on multi-nested components', async () => {
+    const click = jest.fn()
+    const childUpdated = jest.fn()
+    const grandChildUpdated = jest.fn()
 
-  //   class GrandChild extends Component<{ [key: string]: any; foo: number }> {
-  //     static props = {
-  //       foo: Number
-  //     }
-  //     updated() {
-  //       grandChildUpdated()
-  //     }
-  //     render(props: any) {
-  //       return cloneVNode(
-  //         h(
-  //           'div',
-  //           {
-  //             class: 'c2',
-  //             style: { fontWeight: 'bold' }
-  //           },
-  //           props.foo
-  //         ),
-  //         this.$attrs
-  //       )
-  //     }
-  //   }
+    const Hello = {
+      setup() {
+        const count = ref(0)
 
-  //   const root = document.createElement('div')
-  //   document.body.appendChild(root)
-  //   await render(h(Hello), root)
+        function inc() {
+          count.value++
+          click()
+        }
 
-  //   const node = root.children[0] as HTMLElement
+        return () =>
+          h(Child, {
+            foo: 1,
+            id: 'test',
+            class: 'c' + count.value,
+            style: { color: count.value ? 'red' : 'green' },
+            onClick: inc
+          })
+      }
+    }
 
-  //   // with declared props, any parent attr that isn't a prop falls through
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c0')
-  //   expect(node.style.color).toBe('green')
-  //   expect(node.style.fontWeight).toBe('bold')
-  //   node.dispatchEvent(new CustomEvent('click'))
-  //   expect(click).toHaveBeenCalled()
+    const Child = {
+      setup(props: any) {
+        onUpdated(childUpdated)
+        return () => h(GrandChild, props)
+      }
+    }
 
-  //   // ...while declared ones remain props
-  //   expect(node.hasAttribute('foo')).toBe(false)
+    const GrandChild = createComponent({
+      props: {
+        foo: Number
+      },
+      setup(props, { attrs }) {
+        onUpdated(grandChildUpdated)
+        return () =>
+          h(
+            'div',
+            mergeProps(
+              {
+                class: 'c2',
+                style: { fontWeight: 'bold' }
+              },
+              attrs
+            ),
+            props.foo
+          )
+      }
+    })
 
-  //   await nextTick()
-  //   expect(childUpdated).toHaveBeenCalled()
-  //   expect(grandChildUpdated).toHaveBeenCalled()
-  //   expect(node.getAttribute('id')).toBe('test')
-  //   expect(node.getAttribute('class')).toBe('c2 c1')
-  //   expect(node.style.color).toBe('red')
-  //   expect(node.style.fontWeight).toBe('bold')
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Hello), root)
 
-  //   expect(node.hasAttribute('foo')).toBe(false)
-  // })
+    const node = root.children[0] as HTMLElement
+
+    // with declared props, any parent attr that isn't a prop falls through
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c0')
+    expect(node.style.color).toBe('green')
+    expect(node.style.fontWeight).toBe('bold')
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
+
+    // ...while declared ones remain props
+    expect(node.hasAttribute('foo')).toBe(false)
+
+    await nextTick()
+    expect(childUpdated).toHaveBeenCalled()
+    expect(grandChildUpdated).toHaveBeenCalled()
+    expect(node.getAttribute('id')).toBe('test')
+    expect(node.getAttribute('class')).toBe('c2 c1')
+    expect(node.style.color).toBe('red')
+    expect(node.style.fontWeight).toBe('bold')
+
+    expect(node.hasAttribute('foo')).toBe(false)
+  })
 })

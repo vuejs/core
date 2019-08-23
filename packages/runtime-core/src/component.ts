@@ -262,12 +262,19 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   }
 }
 
+// used to identify a setup context proxy
+export const SetupProxySymbol = Symbol()
+
 const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
 ;['attrs', 'slots', 'refs'].forEach((type: string) => {
   SetupProxyHandlers[type] = {
-    get: (instance: any, key: string) => (instance[type] as any)[key],
-    has: (instance: any, key: string) => key in (instance[type] as any),
-    ownKeys: (instance: any) => Object.keys(instance[type] as any),
+    get: (instance, key) => (instance[type] as any)[key],
+    has: (instance, key) =>
+      key === SetupProxySymbol || key in (instance[type] as any),
+    ownKeys: instance => Reflect.ownKeys(instance[type] as any),
+    // this is necessary for ownKeys to work properly
+    getOwnPropertyDescriptor: (instance, key) =>
+      Reflect.getOwnPropertyDescriptor(instance[type], key),
     set: () => false,
     deleteProperty: () => false
   }
