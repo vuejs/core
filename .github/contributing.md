@@ -7,6 +7,8 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Development Setup](#development-setup)
 - [Project Structure](#project-structure)
+- [Contributing Tests](#contributing-tests)
+- [Financial Contribution](#financial-contribution)
 
 ## Issue Reporting Guidelines
 
