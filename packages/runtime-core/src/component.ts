@@ -92,8 +92,6 @@ interface SetupContext {
   attrs: Data
   slots: Slots
   refs: Data
-  parent: ComponentInstance | null
-  root: ComponentInstance
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
@@ -288,9 +286,7 @@ function createSetupContext(instance: ComponentInstance): SetupContext {
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
     refs: new Proxy(instance, SetupProxyHandlers.refs),
-    emit: instance.emit,
-    parent: instance.parent,
-    root: instance.root
+    emit: instance.emit
   } as any
   return __DEV__ ? Object.freeze(context) : context
 }
@@ -305,9 +301,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     slots,
     attrs,
     refs,
-    emit,
-    parent,
-    root
+    emit
   } = instance
   if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
     return normalizeVNode(
@@ -322,9 +316,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
             attrs,
             slots,
             refs,
-            emit,
-            parent,
-            root
+            emit
           })
         : render(props, null as any)
     )
@@ -387,5 +379,6 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
       return true
     }
   }
+  console.log(111)
   return false
 }

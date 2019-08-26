@@ -184,7 +184,7 @@ export function resolveProps(
 
   instance.props = __DEV__ ? readonly(props) : props
   instance.attrs = options
-    ? __DEV__
+    ? __DEV__ && attrs != null
       ? readonly(attrs)
       : attrs
     : instance.props

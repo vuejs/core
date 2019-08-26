@@ -19,6 +19,19 @@ export function serialize(
   }
 }
 
+export function serializeInner(
+  node: TestElement,
+  indent: number = 0,
+  depth: number = 0
+) {
+  const newLine = indent ? `\n` : ``
+  return node.children.length
+    ? newLine +
+        node.children.map(c => serialize(c, indent, depth + 1)).join(newLine) +
+        newLine
+    : ``
+}
+
 function serializeElement(
   node: TestElement,
   indent: number,
@@ -26,19 +39,15 @@ function serializeElement(
 ): string {
   const props = Object.keys(node.props)
     .map(key => {
-      return isOn(key) ? `` : `${key}=${JSON.stringify(node.props[key])}`
+      const value = node.props[key]
+      return isOn(key) || value == null ? `` : `${key}=${JSON.stringify(value)}`
     })
+    .filter(_ => _)
     .join(' ')
-  const newLine = indent ? `\n` : ``
-  const children = node.children.length
-    ? newLine +
-      node.children.map(c => serialize(c, indent, depth + 1)).join(newLine) +
-      newLine
-    : ``
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
   return (
     `${padding}<${node.tag}${props ? ` ${props}` : ``}>` +
-    `${children}` +
+    `${serializeInner(node, indent, depth)}` +
     `${padding}</${node.tag}>`
   )
 }

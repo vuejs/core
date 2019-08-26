@@ -12,5 +12,5 @@ export function patchDOMProp(
   if ((key === 'innerHTML' || key === 'textContent') && prevChildren != null) {
     unmountChildren(prevChildren, parentComponent)
   }
-  el[key] = value
+  el[key] = value == null ? '' : value
 }
