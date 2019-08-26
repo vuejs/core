@@ -1,4 +1,5 @@
-import { ref, effect, reactive } from '../src/index'
+import { ref, effect, reactive, isRef, toRefs } from '../src/index'
+import { computed } from '@vue/runtime-dom'
 
 describe('reactivity/value', () => {
   it('should hold a value', () => {
@@ -72,7 +73,53 @@ describe('reactivity/value', () => {
     expect(typeof (c.value.b + 1)).toBe('number')
   })
 
-  test.todo('isRef')
+  test('isRef', () => {
+    expect(isRef(ref(1))).toBe(true)
+    expect(isRef(computed(() => 1))).toBe(true)
 
-  test.todo('toRefs')
+    expect(isRef(0)).toBe(false)
+    // an object that looks like a ref isn't necessarily a ref
+    expect(isRef({ value: 0 })).toBe(false)
+  })
+
+  test('toRefs', () => {
+    const a = reactive({
+      x: 1,
+      y: 2
+    })
+
+    const { x, y } = toRefs(a)
+
+    expect(isRef(x)).toBe(true)
+    expect(isRef(y)).toBe(true)
+    expect(x.value).toBe(1)
+    expect(y.value).toBe(2)
+
+    // source -> proxy
+    a.x = 2
+    a.y = 3
+    expect(x.value).toBe(2)
+    expect(y.value).toBe(3)
+
+    // proxy -> source
+    x.value = 3
+    y.value = 4
+    expect(a.x).toBe(3)
+    expect(a.y).toBe(4)
+
+    // reactivity
+    let dummyX, dummyY
+    effect(() => {
+      dummyX = x.value
+      dummyY = y.value
+    })
+    expect(dummyX).toBe(x.value)
+    expect(dummyY).toBe(y.value)
+
+    // mutating source should trigger effect using the proxy refs
+    a.x = 4
+    a.y = 5
+    expect(dummyX).toBe(4)
+    expect(dummyY).toBe(5)
+  })
 })
