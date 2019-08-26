@@ -1,6 +1,9 @@
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
+import { mockWarn } from '@vue/runtime-test'
 
 describe('reactivity/reactive', () => {
+  mockWarn()
+
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -124,17 +127,11 @@ describe('reactivity/reactive', () => {
   })
 
   test('non-observable values', () => {
-    const warn = jest.spyOn(console, 'warn')
-    let lastMsg: string
-    warn.mockImplementation(msg => {
-      lastMsg = msg
-    })
-
-    const getMsg = (value: any) =>
-      `value cannot be made reactive: ${String(value)}`
     const assertValue = (value: any) => {
       reactive(value)
-      expect(lastMsg).toMatch(getMsg(value))
+      expect(
+        `value cannot be made reactive: ${String(value)}`
+      ).toHaveBeenWarnedLast()
     }
 
     // number
@@ -150,8 +147,6 @@ describe('reactivity/reactive', () => {
     // symbol
     const s = Symbol()
     assertValue(s)
-
-    warn.mockRestore()
 
     // built-ins should work and return same value
     const p = Promise.resolve()

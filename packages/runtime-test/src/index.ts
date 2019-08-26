@@ -10,4 +10,5 @@ export const render = createRenderer({
 export { serialize } from './serialize'
 export { triggerEvent } from './triggerEvent'
 export * from './nodeOps'
+export * from './jestUtils'
 export * from '@vue/runtime-core'

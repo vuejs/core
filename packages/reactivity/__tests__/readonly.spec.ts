@@ -11,18 +11,10 @@ import {
   effect,
   ref
 } from '../src'
+import { mockWarn } from '@vue/runtime-test'
 
 describe('reactivity/readonly', () => {
-  let warn: any
-
-  beforeEach(() => {
-    warn = jest.spyOn(console, 'warn')
-    warn.mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    warn.mockRestore()
-  })
+  mockWarn()
 
   describe('Object', () => {
     it('should make nested values readonly', () => {
@@ -49,16 +41,24 @@ describe('reactivity/readonly', () => {
       const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
       observed.foo = 2
       expect(observed.foo).toBe(1)
-      expect(warn).toHaveBeenCalledTimes(1)
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
       observed.bar.baz = 3
       expect(observed.bar.baz).toBe(2)
-      expect(warn).toHaveBeenCalledTimes(2)
+      expect(
+        `Set operation on key "baz" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
       delete observed.foo
       expect(observed.foo).toBe(1)
-      expect(warn).toHaveBeenCalledTimes(3)
+      expect(
+        `Delete operation on key "foo" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
       delete observed.bar.baz
       expect(observed.bar.baz).toBe(2)
-      expect(warn).toHaveBeenCalledTimes(4)
+      expect(
+        `Delete operation on key "baz" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
     })
 
     it('should allow mutation when unlocked', () => {
@@ -73,7 +73,7 @@ describe('reactivity/readonly', () => {
       expect(observed.foo).toBeUndefined()
       expect(observed.bar.qux).toBe(3)
       expect('baz' in observed.bar).toBe(false)
-      expect(warn).not.toHaveBeenCalled()
+      expect(`target is readonly`).not.toHaveBeenWarned()
     })
 
     it('should not trigger effects when locked', () => {
@@ -128,22 +128,28 @@ describe('reactivity/readonly', () => {
       const observed: any = readonly([{ foo: 1 }])
       observed[0] = 1
       expect(observed[0]).not.toBe(1)
-      expect(warn).toHaveBeenCalledTimes(1)
+      expect(
+        `Set operation on key "0" failed: target is readonly.`
+      ).toHaveBeenWarned()
       observed[0].foo = 2
       expect(observed[0].foo).toBe(1)
-      expect(warn).toHaveBeenCalledTimes(2)
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`
+      ).toHaveBeenWarned()
 
       // should block length mutation
       observed.length = 0
       expect(observed.length).toBe(1)
       expect(observed[0].foo).toBe(1)
-      expect(warn).toHaveBeenCalledTimes(3)
+      expect(
+        `Set operation on key "length" failed: target is readonly.`
+      ).toHaveBeenWarned()
 
       // mutation methods invoke set/length internally and thus are blocked as well
       observed.push(2)
       expect(observed.length).toBe(1)
       // push triggers two warnings on [1] and .length
-      expect(warn).toHaveBeenCalledTimes(5)
+      expect(`target is readonly.`).toHaveBeenWarnedTimes(5)
     })
 
     it('should allow mutation when unlocked', () => {
@@ -159,7 +165,7 @@ describe('reactivity/readonly', () => {
       expect(observed[2]).toBe(3)
       expect(observed[0].foo).toBe(2)
       expect(observed[0].bar.baz).toBe(3)
-      expect(warn).not.toHaveBeenCalled()
+      expect(`target is readonly`).not.toHaveBeenWarned()
     })
 
     it('should not trigger effects when locked', () => {
@@ -232,7 +238,9 @@ describe('reactivity/readonly', () => {
         map.set(key, 1)
         expect(dummy).toBeUndefined()
         expect(map.has(key)).toBe(false)
-        expect(warn).toHaveBeenCalledTimes(1)
+        expect(
+          `Set operation on key "${key}" failed: target is readonly.`
+        ).toHaveBeenWarned()
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
@@ -249,7 +257,7 @@ describe('reactivity/readonly', () => {
         lock()
         expect(dummy).toBe(isWeak ? 1 : 2)
         expect(map.get(key)).toBe(1)
-        expect(warn).not.toHaveBeenCalled()
+        expect(`target is readonly`).not.toHaveBeenWarned()
       })
 
       if (Collection === Map) {
@@ -301,7 +309,9 @@ describe('reactivity/readonly', () => {
         set.add(key)
         expect(dummy).toBe(false)
         expect(set.has(key)).toBe(false)
-        expect(warn).toHaveBeenCalledTimes(1)
+        expect(
+          `Add operation on key "${key}" failed: target is readonly.`
+        ).toHaveBeenWarned()
       })
 
       test('should allow mutation & trigger effect when unlocked', () => {
@@ -317,7 +327,7 @@ describe('reactivity/readonly', () => {
         lock()
         expect(dummy).toBe(true)
         expect(set.has(key)).toBe(true)
-        expect(warn).not.toHaveBeenCalled()
+        expect(`target is readonly`).not.toHaveBeenWarned()
       })
 
       if (Collection === Set) {
@@ -396,6 +406,8 @@ describe('reactivity/readonly', () => {
     const n: any = readonly(ref(1))
     n.value = 2
     expect(n.value).toBe(1)
-    expect(warn).toHaveBeenCalledTimes(1)
+    expect(
+      `Set operation on key "value" failed: target is readonly.`
+    ).toHaveBeenWarned()
   })
 })

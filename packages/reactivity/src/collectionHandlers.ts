@@ -2,7 +2,7 @@ import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
-import { isObject } from '@vue/shared'
+import { isObject, capitalize } from '@vue/shared'
 
 const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
 const toReadonly = (value: any) => (isObject(value) ? readonly(value) : value)
@@ -166,9 +166,9 @@ function createReadonlyMethod(
   return function(...args: any[]) {
     if (LOCKED) {
       if (__DEV__) {
-        const key = args[0] ? `on key "${args[0]}"` : ``
+        const key = args[0] ? `on key "${args[0]}" ` : ``
         console.warn(
-          `${type} operation ${key}failed: target is readonly.`,
+          `${capitalize(type)} operation ${key}failed: target is readonly.`,
           toRaw(this)
         )
       }
