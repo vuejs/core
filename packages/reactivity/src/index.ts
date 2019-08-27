@@ -12,6 +12,7 @@ export { computed, ComputedRef, ComputedOptions } from './computed'
 export {
   effect,
   stop,
+  ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent

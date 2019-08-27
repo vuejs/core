@@ -531,7 +531,7 @@ describe('reactivity/effect', () => {
   })
 
   it('events: onTrack', () => {
-    let events: any[] = []
+    let events: DebuggerEvent[] = []
     let dummy
     const onTrack = jest.fn((e: DebuggerEvent) => {
       events.push(e)

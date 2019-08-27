@@ -8,6 +8,7 @@ import {
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
+import { getCurrentInstance } from './component'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -113,8 +114,21 @@ function doWatch(
       }
     : void 0
 
+  const instance = getCurrentInstance()
   const scheduler =
-    flush === 'sync' ? invoke : flush === 'pre' ? queueJob : queuePostFlushCb
+    flush === 'sync'
+      ? invoke
+      : flush === 'pre'
+        ? (job: () => void) => {
+            if (!instance || instance.vnode.el != null) {
+              queueJob(job)
+            } else {
+              // with 'pre' option, the first call must happen before
+              // the component is mounted so it is called synchronously.
+              job()
+            }
+          }
+        : queuePostFlushCb
 
   const runner = effect(getter, {
     lazy: true,
