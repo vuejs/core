@@ -81,7 +81,12 @@ function doWatch(
     ? () => source.map(s => (isRef(s) ? s.value : s()))
     : isRef(source)
       ? () => source.value
-      : () => source(registerCleanup)
+      : () => {
+          if (cleanup) {
+            cleanup()
+          }
+          return source(registerCleanup)
+        }
   const getter = deep ? () => traverse(baseGetter()) : baseGetter
 
   let cleanup: any
@@ -90,7 +95,7 @@ function doWatch(
     cleanup = runner.onStop = fn
   }
 
-  let oldValue: any
+  let oldValue = isArray(source) ? [] : undefined
   const applyCb = cb
     ? () => {
         const newValue = runner()
