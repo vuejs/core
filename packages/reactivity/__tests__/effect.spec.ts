@@ -624,6 +624,15 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
+  it('events: onStop', () => {
+    const runner = effect(() => {}, {
+      onStop: jest.fn()
+    })
+
+    stop(runner)
+    expect(runner.onStop).toHaveBeenCalled()
+  })
+
   it('markNonReactive', () => {
     const obj = reactive({
       foo: markNonReactive({
