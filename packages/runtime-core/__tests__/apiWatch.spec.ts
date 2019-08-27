@@ -261,34 +261,45 @@ describe('api: watch', () => {
         count: ref(0)
       },
       array: [1, 2, 3],
-      map: new Map([['a', 1], ['b', 2]])
+      map: new Map([['a', 1], ['b', 2]]),
+      set: new Set([1, 2, 3])
     })
 
     let dummy
     watch(
       () => state,
       state => {
-        dummy = [state.nested.count, state.array[0], state.map.get('a')]
+        dummy = [
+          state.nested.count,
+          state.array[0],
+          state.map.get('a'),
+          state.set.has(1)
+        ]
       },
       { deep: true }
     )
 
     await nextTick()
-    expect(dummy).toEqual([0, 1, 1])
+    expect(dummy).toEqual([0, 1, 1, true])
 
     state.nested.count++
     await nextTick()
-    expect(dummy).toEqual([1, 1, 1])
+    expect(dummy).toEqual([1, 1, 1, true])
 
     // nested array mutation
     state.array[0] = 2
     await nextTick()
-    expect(dummy).toEqual([1, 2, 1])
+    expect(dummy).toEqual([1, 2, 1, true])
 
     // nested map mutation
     state.map.set('a', 2)
     await nextTick()
-    expect(dummy).toEqual([1, 2, 2])
+    expect(dummy).toEqual([1, 2, 2, true])
+
+    // nested set mutation
+    state.set.delete(1)
+    await nextTick()
+    expect(dummy).toEqual([1, 2, 2, false])
   })
 
   it('lazy', async () => {

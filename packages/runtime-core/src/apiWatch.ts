@@ -164,7 +164,12 @@ function traverse(value: any, seen: Set<any> = new Set()) {
     for (let i = 0; i < value.length; i++) {
       traverse(value[i], seen)
     }
-  } else if (value instanceof Map || value instanceof Set) {
+  } else if (value instanceof Map) {
+    ;(value as any).forEach((v: any, key: any) => {
+      // to register mutation dep for existing keys
+      traverse(value.get(key), seen)
+    })
+  } else if (value instanceof Set) {
     ;(value as any).forEach((v: any) => {
       traverse(v, seen)
     })
