@@ -35,7 +35,7 @@ export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {
-      warn(`injection ${key} not found.`)
+      warn(`injection "${key}" not found.`)
     }
   }
 }

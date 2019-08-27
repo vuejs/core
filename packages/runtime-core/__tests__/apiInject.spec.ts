@@ -258,4 +258,29 @@ describe('api: provide/inject', () => {
     await nextTick()
     expect(serialize(root)).toBe(`<div>2</div>`)
   })
+
+  it('should warn unfound', () => {
+    const Provider = {
+      setup() {
+        return () => h(Middle)
+      }
+    }
+
+    const Middle = {
+      render: () => h(Consumer)
+    }
+
+    const Consumer = {
+      setup() {
+        const foo = inject('foo')
+        expect(foo).toBeUndefined()
+        return () => foo
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Provider), root)
+    expect(serialize(root)).toBe(`<div><!----></div>`)
+    expect(`injection "foo" not found.`).toHaveBeenWarned()
+  })
 })

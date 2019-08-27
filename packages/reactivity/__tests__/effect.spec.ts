@@ -570,7 +570,7 @@ describe('reactivity/effect', () => {
   })
 
   it('events: onTrigger', () => {
-    let events: any[] = []
+    let events: DebuggerEvent[] = []
     let dummy
     const onTrigger = jest.fn((e: DebuggerEvent) => {
       events.push(e)

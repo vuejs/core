@@ -260,34 +260,35 @@ describe('api: watch', () => {
       nested: {
         count: ref(0)
       },
-      array: [1, 2, 3]
+      array: [1, 2, 3],
+      map: new Map([['a', 1], ['b', 2]])
     })
 
     let dummy
-    let arr
     watch(
       () => state,
       state => {
-        dummy = state.nested.count
-        arr = state.array[2]
+        dummy = [state.nested.count, state.array[0], state.map.get('a')]
       },
       { deep: true }
     )
 
     await nextTick()
-    expect(dummy).toBe(0)
-    expect(arr).toBe(3)
+    expect(dummy).toEqual([0, 1, 1])
 
     state.nested.count++
     await nextTick()
-    expect(dummy).toBe(1)
-    expect(arr).toBe(3)
+    expect(dummy).toEqual([1, 1, 1])
 
     // nested array mutation
-    state.array[2] = 4
+    state.array[0] = 2
     await nextTick()
-    expect(dummy).toBe(1)
-    expect(arr).toBe(4)
+    expect(dummy).toEqual([1, 2, 1])
+
+    // nested map mutation
+    state.map.set('a', 2)
+    await nextTick()
+    expect(dummy).toEqual([1, 2, 2])
   })
 
   it('lazy', async () => {
