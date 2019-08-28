@@ -314,7 +314,7 @@ describe('api: watch', () => {
   })
 
   it('onTrack', async () => {
-    let events: DebuggerEvent[] = []
+    const events: DebuggerEvent[] = []
     let dummy
     const onTrack = jest.fn((e: DebuggerEvent) => {
       events.push(e)
@@ -331,14 +331,17 @@ describe('api: watch', () => {
     expect(onTrack).toHaveBeenCalledTimes(3)
     expect(events).toMatchObject([
       {
+        target: obj,
         type: OperationTypes.GET,
         key: 'foo'
       },
       {
+        target: obj,
         type: OperationTypes.HAS,
         key: 'bar'
       },
       {
+        target: obj,
         type: OperationTypes.ITERATE,
         key: ITERATE_KEY
       }
@@ -346,7 +349,7 @@ describe('api: watch', () => {
   })
 
   it('onTrigger', async () => {
-    let events: DebuggerEvent[] = []
+    const events: DebuggerEvent[] = []
     let dummy
     const onTrigger = jest.fn((e: DebuggerEvent) => {
       events.push(e)

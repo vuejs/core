@@ -162,14 +162,14 @@ export function createComponent(options: any) {
 }
 
 export function createComponentInstance(
-  type: any,
+  vnode: VNode,
   parent: ComponentInstance | null
 ): ComponentInstance {
   const instance = {
-    type,
+    vnode,
     parent,
+    type: vnode.type as any,
     root: null as any, // set later so it can point to itself
-    vnode: null as any,
     next: null,
     subTree: null as any,
     update: null as any,

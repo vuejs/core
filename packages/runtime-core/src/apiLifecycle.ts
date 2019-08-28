@@ -2,7 +2,7 @@ import { ComponentInstance, LifecycleHooks, currentInstance } from './component'
 
 function injectHook(
   name: keyof LifecycleHooks,
-  hook: () => void,
+  hook: Function,
   target: ComponentInstance | null | void = currentInstance
 ) {
   if (target) {
@@ -14,41 +14,38 @@ function injectHook(
   }
 }
 
-export function onBeforeMount(hook: () => void, target?: ComponentInstance) {
+export function onBeforeMount(hook: Function, target?: ComponentInstance) {
   injectHook('bm', hook, target)
 }
 
-export function onMounted(hook: () => void, target?: ComponentInstance) {
+export function onMounted(hook: Function, target?: ComponentInstance) {
   injectHook('m', hook, target)
 }
 
-export function onBeforeUpdate(hook: () => void, target?: ComponentInstance) {
+export function onBeforeUpdate(hook: Function, target?: ComponentInstance) {
   injectHook('bu', hook, target)
 }
 
-export function onUpdated(hook: () => void, target?: ComponentInstance) {
+export function onUpdated(hook: Function, target?: ComponentInstance) {
   injectHook('u', hook, target)
 }
 
-export function onBeforeUnmount(hook: () => void, target?: ComponentInstance) {
+export function onBeforeUnmount(hook: Function, target?: ComponentInstance) {
   injectHook('bum', hook, target)
 }
 
-export function onUnmounted(hook: () => void, target?: ComponentInstance) {
+export function onUnmounted(hook: Function, target?: ComponentInstance) {
   injectHook('um', hook, target)
 }
 
-export function onRenderTriggered(
-  hook: () => void,
-  target?: ComponentInstance
-) {
+export function onRenderTriggered(hook: Function, target?: ComponentInstance) {
   injectHook('rtg', hook, target)
 }
 
-export function onRenderTracked(hook: () => void, target?: ComponentInstance) {
+export function onRenderTracked(hook: Function, target?: ComponentInstance) {
   injectHook('rtc', hook, target)
 }
 
-export function onErrorCaptured(hook: () => void, target?: ComponentInstance) {
+export function onErrorCaptured(hook: Function, target?: ComponentInstance) {
   injectHook('ec', hook, target)
 }

@@ -565,21 +565,25 @@ export function createRenderer(options: RendererOptions) {
     parentComponent: ComponentInstance | null,
     isSVG: boolean
   ) {
-    const Component = initialVNode.type as any
     const instance: ComponentInstance = (initialVNode.component = createComponentInstance(
-      Component,
+      initialVNode,
       parentComponent
     ))
+
+    // resolve props and slots for setup context
+    const propsOptions = (initialVNode.type as any).props
+    resolveProps(instance, initialVNode.props, propsOptions)
+    resolveSlots(instance, initialVNode.children)
+
+    // setup stateful logic
+    if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      setupStatefulComponent(instance)
+    }
+
+    // create reactive effect for rendering
+    let mounted = false
     instance.update = effect(function componentEffect() {
-      if (instance.vnode === null) {
-        // mountComponent
-        instance.vnode = initialVNode
-        resolveProps(instance, initialVNode.props, Component.props)
-        resolveSlots(instance, initialVNode.children)
-        // setup stateful
-        if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-          setupStatefulComponent(instance)
-        }
+      if (!mounted) {
         const subTree = (instance.subTree = renderComponentRoot(instance))
         // beforeMount hook
         if (instance.bm !== null) {
@@ -591,6 +595,7 @@ export function createRenderer(options: RendererOptions) {
         if (instance.m !== null) {
           queuePostFlushCb(instance.m)
         }
+        mounted = true
       } else {
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
@@ -601,7 +606,7 @@ export function createRenderer(options: RendererOptions) {
           next.component = instance
           instance.vnode = next
           instance.next = null
-          resolveProps(instance, next.props, Component.props)
+          resolveProps(instance, next.props, propsOptions)
           resolveSlots(instance, next.children)
         }
         const prevTree = instance.subTree
