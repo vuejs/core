@@ -1,4 +1,4 @@
-describe('vdom: element', () => {
+describe('renderer: element', () => {
   test.todo('with props')
 
   test.todo('with direct text children')

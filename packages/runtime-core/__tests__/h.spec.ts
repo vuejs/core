@@ -3,7 +3,7 @@ import { createVNode } from '../src/vnode'
 
 // Since h is a thin layer on top of createVNode, we are only testing its
 // own logic here. Details of vnode creation is tested in vnode.spec.ts.
-describe('vdom: h', () => {
+describe('renderer: h', () => {
   test('type only', () => {
     expect(h('div')).toMatchObject(createVNode('div'))
   })

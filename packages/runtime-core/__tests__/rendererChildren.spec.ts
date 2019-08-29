@@ -1,6 +1,6 @@
 // reference: https://github.com/vuejs/vue/blob/dev/test/unit/modules/vdom/patch/children.spec.js
 
-describe('vdom: unkeyed children', () => {
+describe('renderer: unkeyed children', () => {
   test.todo('append')
 
   test.todo('prepend')
@@ -34,4 +34,4 @@ describe('vdom: unkeyed children', () => {
   test.todo('should not de-opt when both head and tail change')
 })
 
-describe('vdom: keyed children', () => {})
+describe('renderer: keyed children', () => {})

@@ -13,7 +13,7 @@ import {
   serializeInner
 } from '@vue/runtime-test'
 
-describe('vdom: fragment', () => {
+describe('renderer: fragment', () => {
   it('should allow returning multiple component root nodes', () => {
     const App = {
       render() {
