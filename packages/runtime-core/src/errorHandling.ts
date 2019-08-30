@@ -88,7 +88,7 @@ export function handleError(
           errorCapturedHooks[i](
             err,
             instance && instance.renderProxy,
-            contextVNode
+            ErrorTypeStrings[type]
           )
         ) {
           return

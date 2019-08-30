@@ -443,6 +443,5 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
       return true
     }
   }
-  console.log(111)
   return false
 }

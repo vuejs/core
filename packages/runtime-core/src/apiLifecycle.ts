@@ -2,7 +2,8 @@ import {
   ComponentInstance,
   LifecycleHooks,
   currentInstance,
-  setCurrentInstance
+  setCurrentInstance,
+  ComponentRenderProxy
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
@@ -92,7 +93,11 @@ export function onRenderTracked(
 }
 
 export function onErrorCaptured(
-  hook: Function,
+  hook: (
+    err: Error,
+    instance: ComponentRenderProxy | null,
+    info: string
+  ) => boolean | void,
   target: ComponentInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
