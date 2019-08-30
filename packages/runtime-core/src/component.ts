@@ -296,15 +296,24 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       // setup returned an inline render function
       instance.render = setupResult
     } else {
+      if (__DEV__) {
+        if (!Component.render) {
+          warn(
+            `Component is missing render function. Either provide a template or ` +
+              `return a render function from setup().`
+          )
+        }
+        if (
+          setupResult &&
+          typeof setupResult.then === 'function' &&
+          typeof setupResult.catch === 'function'
+        ) {
+          warn(`setup() returned a Promise. setup() cannot be async.`)
+        }
+      }
       // setup returned bindings.
       // assuming a render function compiled from template is present.
       instance.data = reactive(setupResult || {})
-      if (__DEV__ && !Component.render) {
-        warn(
-          `Component is missing render function. Either provide a template or ` +
-            `return a render function from setup().`
-        )
-      }
       instance.render = (Component.render || NOOP) as RenderFunction
     }
   } else {
