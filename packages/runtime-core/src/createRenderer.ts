@@ -34,6 +34,7 @@ import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
+import { pushWarningContext, popWarningContext, warn } from './warning'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -163,15 +164,7 @@ export function createRenderer(options: RendererOptions) {
             isSVG,
             optimized
           )
-        } else {
-          if (
-            __DEV__ &&
-            !(shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
-            !(shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
-          ) {
-            // TODO warn invalid node type
-            debugger
-          }
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(
             n1,
             n2,
@@ -181,8 +174,9 @@ export function createRenderer(options: RendererOptions) {
             isSVG,
             optimized
           )
+        } else if (__DEV__) {
+          warn('Invalid VNode type:', n2.type, `(${typeof n2.type})`)
         }
-        break
     }
   }
 
@@ -492,8 +486,8 @@ export function createRenderer(options: RendererOptions) {
             isSVG
           )
         }
-      } else {
-        // TODO warn missing or invalid target
+      } else if (__DEV__) {
+        warn('Invalid Portal target on mount:', target, `(${typeof target})`)
       }
     } else {
       // update content
@@ -518,8 +512,8 @@ export function createRenderer(options: RendererOptions) {
               move((children as VNode[])[i], nextTarget, null)
             }
           }
-        } else {
-          // TODO warn missing or invalid target
+        } else if (__DEV__) {
+          warn('Invalid Portal target on update:', target, `(${typeof target})`)
         }
       }
     }
@@ -570,6 +564,10 @@ export function createRenderer(options: RendererOptions) {
       parentComponent
     ))
 
+    if (__DEV__) {
+      pushWarningContext(initialVNode)
+    }
+
     // resolve props and slots for setup context
     const propsOptions = (initialVNode.type as any).props
     resolveProps(instance, initialVNode.props, propsOptions)
@@ -601,6 +599,11 @@ export function createRenderer(options: RendererOptions) {
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
         const { next } = instance
+
+        if (__DEV__) {
+          pushWarningContext(next || instance.vnode)
+        }
+
         if (next !== null) {
           // update from parent
           next.component = instance
@@ -646,8 +649,16 @@ export function createRenderer(options: RendererOptions) {
         if (instance.u !== null) {
           queuePostFlushCb(instance.u)
         }
+
+        if (__DEV__) {
+          popWarningContext()
+        }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+
+    if (__DEV__) {
+      popWarningContext()
+    }
   }
 
   function patchChildren(
@@ -882,7 +893,13 @@ export function createRenderer(options: RendererOptions) {
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = normalizeVNode(c2[i]))
         if (nextChild.key != null) {
-          // TODO warn duplicate keys
+          if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
+            warn(
+              `Duplicate keys found during update:`,
+              JSON.stringify(nextChild.key),
+              `Make sure keys are unique.`
+            )
+          }
           keyToNewIndexMap.set(nextChild.key, i)
         }
       }
@@ -1093,11 +1110,10 @@ export function createRenderer(options: RendererOptions) {
       refs[ref] = value
     } else if (isRef(ref)) {
       ref.value = value
-    } else {
-      if (__DEV__ && !isFunction(ref)) {
-        // TODO warn invalid ref type
-      }
+    } else if (isFunction(ref)) {
       ref(value, refs)
+    } else if (__DEV__) {
+      warn('Invalid template ref type:', value, `(${typeof value})`)
     }
   }
 
