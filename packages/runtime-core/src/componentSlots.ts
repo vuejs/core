@@ -47,8 +47,10 @@ export function resolveSlots(
           ;(slots as any)[key] = normalizeSlot(key, value)
         } else {
           if (__DEV__) {
-            // TODO show tip on using functions
-            console.log('use function slots!')
+            warn(
+              `Non-function value encountered for slot "${key}". ` +
+                `Prefer function slots for better performance.`
+            )
           }
           value = normalizeSlotValue(value)
           ;(slots as any)[key] = () => value
@@ -58,8 +60,10 @@ export function resolveSlots(
   } else if (children !== null) {
     // non slot object children (direct value) passed to a component
     if (__DEV__) {
-      // TODO show tip on using functions
-      console.log('use function slots!')
+      warn(
+        `Non-function value encountered for default slot. ` +
+          `Prefer function slots for better performance.`
+      )
     }
     const normalized = normalizeSlotValue(children)
     slots = { default: () => normalized }
