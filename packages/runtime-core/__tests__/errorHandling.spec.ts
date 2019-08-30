@@ -11,7 +11,7 @@ describe('error handling', () => {
 
   test.todo('in watch (with source)')
 
-  test.todo('in native event handler')
-
   test.todo('in component event handler')
+
+  // native event handler handling should be tested in respective renderers
 })
