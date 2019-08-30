@@ -27,6 +27,10 @@ export function warn(msg: string, ...args: any[]) {
   if (!trace.length) {
     return
   }
+  // avoid spamming test output
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+    return
+  }
   if (trace.length > 1 && console.groupCollapsed) {
     console.groupCollapsed('at', ...formatTraceEntry(trace[0]))
     const logs: string[] = []

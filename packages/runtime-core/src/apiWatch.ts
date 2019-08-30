@@ -9,6 +9,11 @@ import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
 import { getCurrentInstance } from './component'
+import {
+  UserExecutionContexts,
+  callWithErrorHandling,
+  callWithAsyncErrorHandling
+} from './errorHandling'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -78,22 +83,57 @@ function doWatch(
     | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
-  const baseGetter = isArray(source)
-    ? () => source.map(s => (isRef(s) ? s.value : s()))
-    : isRef(source)
-      ? () => source.value
-      : () => {
-          if (cleanup) {
-            cleanup()
-          }
-          return source(registerCleanup)
-        }
-  const getter = deep ? () => traverse(baseGetter()) : baseGetter
+  const instance = getCurrentInstance()
 
-  let cleanup: any
+  let getter: Function
+  if (isArray(source)) {
+    getter = () =>
+      source.map(
+        s =>
+          isRef(s)
+            ? s.value
+            : callWithErrorHandling(
+                s,
+                instance,
+                UserExecutionContexts.WATCH_GETTER
+              )
+      )
+  } else if (isRef(source)) {
+    getter = () => source.value
+  } else if (cb) {
+    // getter with cb
+    getter = () =>
+      callWithErrorHandling(
+        source,
+        instance,
+        UserExecutionContexts.WATCH_GETTER
+      )
+  } else {
+    // no cb -> simple effect
+    getter = () => {
+      if (cleanup) {
+        cleanup()
+      }
+      return callWithErrorHandling(
+        source,
+        instance,
+        UserExecutionContexts.WATCH_CALLBACK,
+        [registerCleanup]
+      )
+    }
+  }
+
+  if (deep) {
+    const baseGetter = getter
+    getter = () => traverse(baseGetter())
+  }
+
+  let cleanup: Function
   const registerCleanup: CleanupRegistrator = (fn: () => void) => {
     // TODO wrap the cleanup fn for error handling
-    cleanup = runner.onStop = fn
+    cleanup = runner.onStop = () => {
+      callWithErrorHandling(fn, instance, UserExecutionContexts.WATCH_CLEANUP)
+    }
   }
 
   let oldValue = isArray(source) ? [] : undefined
@@ -105,16 +145,17 @@ function doWatch(
           if (cleanup) {
             cleanup()
           }
-          // TODO handle error (including ASYNC)
-          try {
-            cb(newValue, oldValue, registerCleanup)
-          } catch (e) {}
+          callWithAsyncErrorHandling(
+            cb,
+            instance,
+            UserExecutionContexts.WATCH_CALLBACK,
+            [newValue, oldValue, registerCleanup]
+          )
           oldValue = newValue
         }
       }
     : void 0
 
-  const instance = getCurrentInstance()
   const scheduler =
     flush === 'sync'
       ? invoke

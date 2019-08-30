@@ -26,7 +26,13 @@ export function patchProp(
       break
     default:
       if (isOn(key)) {
-        patchEvent(el, key.slice(2).toLowerCase(), prevValue, nextValue)
+        patchEvent(
+          el,
+          key.slice(2).toLowerCase(),
+          prevValue,
+          nextValue,
+          parentComponent
+        )
       } else if (!isSVG && key in el) {
         patchDOMProp(
           el,

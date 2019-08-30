@@ -5,7 +5,9 @@ export interface InjectionKey<T> extends Symbol {}
 
 export function provide<T>(key: InjectionKey<T> | string, value: T) {
   if (!currentInstance) {
-    // TODO warn
+    if (__DEV__) {
+      warn(`provide() is used without an active component instance.`)
+    }
   } else {
     let provides = currentInstance.provides
     // by default an instance inherits its parent's provides object

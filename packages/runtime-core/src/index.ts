@@ -29,11 +29,16 @@ export { getCurrentInstance } from './component'
 
 // For custom renderers
 export { createRenderer } from './createRenderer'
+export {
+  handleError,
+  callWithErrorHandling,
+  callWithAsyncErrorHandling
+} from './errorHandling'
 
 // Types -----------------------------------------------------------------------
 
 export { VNode } from './vnode'
-export { FunctionalComponent } from './component'
+export { FunctionalComponent, ComponentInstance } from './component'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
 export { PropType, ComponentPropsOptions } from './componentProps'

@@ -1,11 +1,18 @@
-import { VNode, normalizeVNode, VNodeChild } from './vnode'
+import { VNode, normalizeVNode, VNodeChild, createVNode, Empty } from './vnode'
 import { ReactiveEffect, UnwrapRef, reactive, readonly } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction, capitalize, invokeHandlers } from '@vue/shared'
+import { EMPTY_OBJ, isFunction, capitalize, NOOP, isArray } from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Slots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
+import { warn } from './warning'
+import {
+  UserExecutionContexts,
+  handleError,
+  callWithErrorHandling,
+  callWithAsyncErrorHandling
+} from './errorHandling'
 
 export type Data = { [key: string]: unknown }
 
@@ -226,7 +233,23 @@ export function createComponentInstance(
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
-        invokeHandlers(handler, args)
+        if (isArray(handler)) {
+          for (let i = 0; i < handler.length; i++) {
+            callWithAsyncErrorHandling(
+              handler[i],
+              instance,
+              UserExecutionContexts.COMPONENT_EVENT_HANDLER,
+              args
+            )
+          }
+        } else {
+          callWithAsyncErrorHandling(
+            handler,
+            instance,
+            UserExecutionContexts.COMPONENT_EVENT_HANDLER,
+            args
+          )
+        }
       }
     }
   }
@@ -261,7 +284,12 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
-    const setupResult = setup.call(null, propsProxy, setupContext)
+    const setupResult = callWithErrorHandling(
+      setup,
+      instance,
+      UserExecutionContexts.SETUP_FUNCTION,
+      [propsProxy, setupContext]
+    )
     currentInstance = null
 
     if (isFunction(setupResult)) {
@@ -272,9 +300,12 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       // assuming a render function compiled from template is present.
       instance.data = reactive(setupResult || {})
       if (__DEV__ && !Component.render) {
-        // TODO warn missing render fn
+        warn(
+          `Component is missing render function. Either provide a template or ` +
+            `return a render function from setup().`
+        )
       }
-      instance.render = Component.render as RenderFunction
+      instance.render = (Component.render || NOOP) as RenderFunction
     }
   } else {
     if (__DEV__ && !Component.render) {
@@ -327,23 +358,32 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     refs,
     emit
   } = instance
-  if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    return normalizeVNode(
-      (instance.render as RenderFunction).call(renderProxy, props, setupContext)
-    )
-  } else {
-    // functional
-    const render = Component as FunctionalComponent
-    return normalizeVNode(
-      render.length > 1
-        ? render(props, {
-            attrs,
-            slots,
-            refs,
-            emit
-          })
-        : render(props, null as any)
-    )
+  try {
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      return normalizeVNode(
+        (instance.render as RenderFunction).call(
+          renderProxy,
+          props,
+          setupContext
+        )
+      )
+    } else {
+      // functional
+      const render = Component as FunctionalComponent
+      return normalizeVNode(
+        render.length > 1
+          ? render(props, {
+              attrs,
+              slots,
+              refs,
+              emit
+            })
+          : render(props, null as any)
+      )
+    }
+  } catch (err) {
+    handleError(err, instance, UserExecutionContexts.RENDER_FUNCTION)
+    return createVNode(Empty)
   }
 }
 

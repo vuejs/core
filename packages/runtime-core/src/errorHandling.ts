@@ -5,8 +5,11 @@ import { warn, pushWarningContext, popWarningContext } from './warning'
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
 export const enum UserExecutionContexts {
-  RENDER_FUNCTION = 1,
+  SETUP_FUNCTION = 1,
+  RENDER_FUNCTION,
+  WATCH_GETTER,
   WATCH_CALLBACK,
+  WATCH_CLEANUP,
   NATIVE_EVENT_HANDLER,
   COMPONENT_EVENT_HANDLER,
   SCHEDULER
@@ -26,8 +29,11 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [LifecycleHooks.ERROR_CAPTURED]: 'errorCaptured hook',
   [LifecycleHooks.RENDER_TRACKED]: 'renderTracked hook',
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
+  [UserExecutionContexts.SETUP_FUNCTION]: 'setup function',
   [UserExecutionContexts.RENDER_FUNCTION]: 'render function',
+  [UserExecutionContexts.WATCH_GETTER]: 'watcher getter',
   [UserExecutionContexts.WATCH_CALLBACK]: 'watcher callback',
+  [UserExecutionContexts.WATCH_CLEANUP]: 'watcher cleanup function',
   [UserExecutionContexts.NATIVE_EVENT_HANDLER]: 'native event handler',
   [UserExecutionContexts.COMPONENT_EVENT_HANDLER]: 'component event handler',
   [UserExecutionContexts.SCHEDULER]:
@@ -37,7 +43,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
 
 type ErrorTypes = LifecycleHooks | UserExecutionContexts
 
-export function callUserFnWithErrorHandling(
+export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInstance | null,
   type: ErrorTypes,
@@ -46,13 +52,23 @@ export function callUserFnWithErrorHandling(
   let res: any
   try {
     res = args ? fn(...args) : fn()
-    if (res && !res._isVue && typeof res.then === 'function') {
-      ;(res as Promise<any>).catch(err => {
-        handleError(err, instance, type)
-      })
-    }
   } catch (err) {
     handleError(err, instance, type)
+  }
+  return res
+}
+
+export function callWithAsyncErrorHandling(
+  fn: Function,
+  instance: ComponentInstance | null,
+  type: ErrorTypes,
+  args?: any[]
+) {
+  const res = callWithErrorHandling(fn, instance, type, args)
+  if (res != null && !res._isVue && typeof res.then === 'function') {
+    ;(res as Promise<any>).catch(err => {
+      handleError(err, instance, type)
+    })
   }
   return res
 }
@@ -68,7 +84,13 @@ export function handleError(
     const errorCapturedHooks = cur.ec
     if (errorCapturedHooks !== null) {
       for (let i = 0; i < errorCapturedHooks.length; i++) {
-        if (errorCapturedHooks[i](err, type, contextVNode)) {
+        if (
+          errorCapturedHooks[i](
+            err,
+            instance && instance.renderProxy,
+            contextVNode
+          )
+        ) {
           return
         }
       }

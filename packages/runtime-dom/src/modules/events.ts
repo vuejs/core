@@ -1,4 +1,9 @@
-import { invokeHandlers } from '@vue/shared'
+import { isArray } from '@vue/shared'
+import {
+  ComponentInstance,
+  callWithAsyncErrorHandling
+} from '@vue/runtime-core'
+import { UserExecutionContexts } from 'packages/runtime-core/src/errorHandling'
 
 interface Invoker extends Function {
   value: EventValue
@@ -39,7 +44,8 @@ export function patchEvent(
   el: Element,
   name: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null
+  nextValue: EventValue | null,
+  instance: ComponentInstance | null
 ) {
   const invoker = prevValue && prevValue.invoker
   if (nextValue) {
@@ -49,14 +55,14 @@ export function patchEvent(
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(nextValue))
+      el.addEventListener(name, createInvoker(nextValue, instance))
     }
   } else if (invoker) {
     el.removeEventListener(name, invoker as any)
   }
 }
 
-function createInvoker(value: any) {
+function createInvoker(value: any, instance: ComponentInstance | null) {
   const invoker = ((e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
@@ -65,7 +71,24 @@ function createInvoker(value: any) {
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated) {
-      invokeHandlers(invoker.value, [e])
+      const args = [e]
+      if (isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          callWithAsyncErrorHandling(
+            value[i],
+            instance,
+            UserExecutionContexts.NATIVE_EVENT_HANDLER,
+            args
+          )
+        }
+      } else {
+        callWithAsyncErrorHandling(
+          value,
+          instance,
+          UserExecutionContexts.NATIVE_EVENT_HANDLER,
+          args
+        )
+      }
     }
   }) as any
   invoker.value = value
