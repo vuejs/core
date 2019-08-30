@@ -4,7 +4,7 @@ import {
   currentInstance,
   setCurrentInstance
 } from './component'
-import { applyErrorHandling, ErrorTypeStrings } from './errorHandling'
+import { callUserFnWithErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 
@@ -14,14 +14,12 @@ function injectHook(
   target: ComponentInstance | null = currentInstance
 ) {
   if (target) {
-    // wrap user hook with error handling logic
-    const withErrorHandling = applyErrorHandling(hook, target, type)
     ;(target[type] || (target[type] = [])).push((...args: any[]) => {
       // Set currentInstance during hook invocation.
       // This assumes the hook does not synchronously trigger other hooks, which
       // can only be false when the user does something really funky.
       setCurrentInstance(target)
-      const res = withErrorHandling(...args)
+      const res = callUserFnWithErrorHandling(hook, target, type, args)
       setCurrentInstance(null)
       return res
     })

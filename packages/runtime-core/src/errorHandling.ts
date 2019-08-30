@@ -37,27 +37,24 @@ export const ErrorTypeStrings: Record<number | string, string> = {
 
 type ErrorTypes = LifecycleHooks | UserExecutionContexts
 
-// takes a user-provided function and returns a verison that handles potential
-// errors (including async)
-export function applyErrorHandling<T extends Function>(
-  fn: T,
+export function callUserFnWithErrorHandling(
+  fn: Function,
   instance: ComponentInstance | null,
-  type: ErrorTypes
-): T {
-  return function errorHandlingWrapper(...args: any[]) {
-    let res: any
-    try {
-      res = fn(...args)
-      if (res && !res._isVue && typeof res.then === 'function') {
-        ;(res as Promise<any>).catch(err => {
-          handleError(err, instance, type)
-        })
-      }
-    } catch (err) {
-      handleError(err, instance, type)
+  type: ErrorTypes,
+  args?: any[]
+) {
+  let res: any
+  try {
+    res = args ? fn(...args) : fn()
+    if (res && !res._isVue && typeof res.then === 'function') {
+      ;(res as Promise<any>).catch(err => {
+        handleError(err, instance, type)
+      })
     }
-    return res
-  } as any
+  } catch (err) {
+    handleError(err, instance, type)
+  }
+  return res
 }
 
 export function handleError(
