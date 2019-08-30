@@ -1,7 +1,8 @@
-import { ComponentInstance } from './component'
+import { ComponentInstance, currentInstance } from './component'
 import { VNode, NormalizedChildren, normalizeVNode, VNodeChild } from './vnode'
 import { isArray, isFunction } from '@vue/shared'
 import { ShapeFlags } from './shapeFlags'
+import { warn } from './warning'
 
 export type Slot = (...args: any[]) => VNode[]
 export type Slots = Readonly<{
@@ -16,8 +17,18 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
     ? value.map(normalizeVNode)
     : [normalizeVNode(value as VNodeChild)]
 
-const normalizeSlot = (rawSlot: Function): Slot => (props: any) =>
-  normalizeSlotValue(rawSlot(props))
+const normalizeSlot = (key: string, rawSlot: Function): Slot => (
+  props: any
+) => {
+  if (__DEV__ && currentInstance != null) {
+    warn(
+      `Slot "${key}" invoked outside of the render function: ` +
+        `this will not track dependencies used in the slot. ` +
+        `Invoke the slot function inside the render function instead.`
+    )
+  }
+  return normalizeSlotValue(rawSlot(props))
+}
 
 export function resolveSlots(
   instance: ComponentInstance,
@@ -33,7 +44,7 @@ export function resolveSlots(
       for (const key in children as RawSlots) {
         let value = (children as RawSlots)[key]
         if (isFunction(value)) {
-          ;(slots as any)[key] = normalizeSlot(value)
+          ;(slots as any)[key] = normalizeSlot(key, value)
         } else {
           if (__DEV__) {
             // TODO show tip on using functions
