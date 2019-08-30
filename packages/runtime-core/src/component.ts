@@ -8,7 +8,7 @@ import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
 import {
-  UserExecutionContexts,
+  ErrorTypes,
   handleError,
   callWithErrorHandling,
   callWithAsyncErrorHandling
@@ -238,7 +238,7 @@ export function createComponentInstance(
             callWithAsyncErrorHandling(
               handler[i],
               instance,
-              UserExecutionContexts.COMPONENT_EVENT_HANDLER,
+              ErrorTypes.COMPONENT_EVENT_HANDLER,
               args
             )
           }
@@ -246,7 +246,7 @@ export function createComponentInstance(
           callWithAsyncErrorHandling(
             handler,
             instance,
-            UserExecutionContexts.COMPONENT_EVENT_HANDLER,
+            ErrorTypes.COMPONENT_EVENT_HANDLER,
             args
           )
         }
@@ -287,7 +287,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     const setupResult = callWithErrorHandling(
       setup,
       instance,
-      UserExecutionContexts.SETUP_FUNCTION,
+      ErrorTypes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
     currentInstance = null
@@ -382,7 +382,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
       )
     }
   } catch (err) {
-    handleError(err, instance, UserExecutionContexts.RENDER_FUNCTION)
+    handleError(err, instance, ErrorTypes.RENDER_FUNCTION)
     return createVNode(Empty)
   }
 }

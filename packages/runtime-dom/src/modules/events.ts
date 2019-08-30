@@ -3,7 +3,7 @@ import {
   ComponentInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
-import { UserExecutionContexts } from 'packages/runtime-core/src/errorHandling'
+import { ErrorTypes } from 'packages/runtime-core/src/errorHandling'
 
 interface Invoker extends Function {
   value: EventValue
@@ -77,7 +77,7 @@ function createInvoker(value: any, instance: ComponentInstance | null) {
           callWithAsyncErrorHandling(
             value[i],
             instance,
-            UserExecutionContexts.NATIVE_EVENT_HANDLER,
+            ErrorTypes.NATIVE_EVENT_HANDLER,
             args
           )
         }
@@ -85,7 +85,7 @@ function createInvoker(value: any, instance: ComponentInstance | null) {
         callWithAsyncErrorHandling(
           value,
           instance,
-          UserExecutionContexts.NATIVE_EVENT_HANDLER,
+          ErrorTypes.NATIVE_EVENT_HANDLER,
           args
         )
       }

@@ -10,7 +10,7 @@ import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
 import { getCurrentInstance } from './component'
 import {
-  UserExecutionContexts,
+  ErrorTypes,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
@@ -92,22 +92,14 @@ function doWatch(
         s =>
           isRef(s)
             ? s.value
-            : callWithErrorHandling(
-                s,
-                instance,
-                UserExecutionContexts.WATCH_GETTER
-              )
+            : callWithErrorHandling(s, instance, ErrorTypes.WATCH_GETTER)
       )
   } else if (isRef(source)) {
     getter = () => source.value
   } else if (cb) {
     // getter with cb
     getter = () =>
-      callWithErrorHandling(
-        source,
-        instance,
-        UserExecutionContexts.WATCH_GETTER
-      )
+      callWithErrorHandling(source, instance, ErrorTypes.WATCH_GETTER)
   } else {
     // no cb -> simple effect
     getter = () => {
@@ -117,7 +109,7 @@ function doWatch(
       return callWithErrorHandling(
         source,
         instance,
-        UserExecutionContexts.WATCH_CALLBACK,
+        ErrorTypes.WATCH_CALLBACK,
         [registerCleanup]
       )
     }
@@ -132,7 +124,7 @@ function doWatch(
   const registerCleanup: CleanupRegistrator = (fn: () => void) => {
     // TODO wrap the cleanup fn for error handling
     cleanup = runner.onStop = () => {
-      callWithErrorHandling(fn, instance, UserExecutionContexts.WATCH_CLEANUP)
+      callWithErrorHandling(fn, instance, ErrorTypes.WATCH_CLEANUP)
     }
   }
 
@@ -145,12 +137,11 @@ function doWatch(
           if (cleanup) {
             cleanup()
           }
-          callWithAsyncErrorHandling(
-            cb,
-            instance,
-            UserExecutionContexts.WATCH_CALLBACK,
-            [newValue, oldValue, registerCleanup]
-          )
+          callWithAsyncErrorHandling(cb, instance, ErrorTypes.WATCH_CALLBACK, [
+            newValue,
+            oldValue,
+            registerCleanup
+          ])
           oldValue = newValue
         }
       }

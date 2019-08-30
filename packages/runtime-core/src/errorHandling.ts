@@ -4,7 +4,7 @@ import { warn, pushWarningContext, popWarningContext } from './warning'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
-export const enum UserExecutionContexts {
+export const enum ErrorTypes {
   SETUP_FUNCTION = 1,
   RENDER_FUNCTION,
   WATCH_GETTER,
@@ -29,24 +29,24 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [LifecycleHooks.ERROR_CAPTURED]: 'errorCaptured hook',
   [LifecycleHooks.RENDER_TRACKED]: 'renderTracked hook',
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
-  [UserExecutionContexts.SETUP_FUNCTION]: 'setup function',
-  [UserExecutionContexts.RENDER_FUNCTION]: 'render function',
-  [UserExecutionContexts.WATCH_GETTER]: 'watcher getter',
-  [UserExecutionContexts.WATCH_CALLBACK]: 'watcher callback',
-  [UserExecutionContexts.WATCH_CLEANUP]: 'watcher cleanup function',
-  [UserExecutionContexts.NATIVE_EVENT_HANDLER]: 'native event handler',
-  [UserExecutionContexts.COMPONENT_EVENT_HANDLER]: 'component event handler',
-  [UserExecutionContexts.SCHEDULER]:
+  [ErrorTypes.SETUP_FUNCTION]: 'setup function',
+  [ErrorTypes.RENDER_FUNCTION]: 'render function',
+  [ErrorTypes.WATCH_GETTER]: 'watcher getter',
+  [ErrorTypes.WATCH_CALLBACK]: 'watcher callback',
+  [ErrorTypes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
+  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler',
+  [ErrorTypes.SCHEDULER]:
     'scheduler flush. This may be a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
 }
 
-type ErrorTypes = LifecycleHooks | UserExecutionContexts
+type AllErrorTypes = LifecycleHooks | ErrorTypes
 
 export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInstance | null,
-  type: ErrorTypes,
+  type: AllErrorTypes,
   args?: any[]
 ) {
   let res: any
@@ -61,7 +61,7 @@ export function callWithErrorHandling(
 export function callWithAsyncErrorHandling(
   fn: Function,
   instance: ComponentInstance | null,
-  type: ErrorTypes,
+  type: AllErrorTypes,
   args?: any[]
 ) {
   const res = callWithErrorHandling(fn, instance, type, args)
@@ -76,7 +76,7 @@ export function callWithAsyncErrorHandling(
 export function handleError(
   err: Error,
   instance: ComponentInstance | null,
-  type: ErrorTypes
+  type: AllErrorTypes
 ) {
   const contextVNode = instance ? instance.vnode : null
   let cur: ComponentInstance | null = instance && instance.parent
@@ -100,7 +100,7 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
-function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
+function logError(err: Error, type: AllErrorTypes, contextVNode: VNode | null) {
   if (__DEV__) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {

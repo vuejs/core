@@ -1,3 +1,5 @@
+import { handleError, ErrorTypes } from './errorHandling'
+
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
 const p = Promise.resolve()
@@ -8,31 +10,23 @@ export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
 }
 
-type ErrorHandler = (err: Error) => void
-
-export function queueJob(job: () => void, onError?: ErrorHandler) {
+export function queueJob(job: () => void) {
   if (queue.indexOf(job) === -1) {
     queue.push(job)
-    queueFlush(onError)
+    if (!isFlushing) {
+      nextTick(flushJobs)
+    }
   }
 }
 
-export function queuePostFlushCb(
-  cb: Function | Function[],
-  onError?: ErrorHandler
-) {
+export function queuePostFlushCb(cb: Function | Function[]) {
   if (Array.isArray(cb)) {
     postFlushCbs.push.apply(postFlushCbs, cb)
   } else {
     postFlushCbs.push(cb)
   }
-  queueFlush(onError)
-}
-
-function queueFlush(onError?: ErrorHandler) {
   if (!isFlushing) {
-    const p = nextTick(flushJobs)
-    if (onError) p.catch(onError)
+    nextTick(flushJobs)
   }
 }
 
@@ -75,7 +69,11 @@ function flushJobs(seenJobs?: JobCountMap) {
         }
       }
     }
-    job()
+    try {
+      job()
+    } catch (err) {
+      handleError(err, null, ErrorTypes.SCHEDULER)
+    }
   }
   flushPostFlushCbs()
   isFlushing = false
