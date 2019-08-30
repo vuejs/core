@@ -74,18 +74,20 @@ export interface FunctionalComponent<P = {}> {
 
 type LifecycleHook = Function[] | null
 
-export interface LifecycleHooks {
-  bm: LifecycleHook // beforeMount
-  m: LifecycleHook // mounted
-  bu: LifecycleHook // beforeUpdate
-  u: LifecycleHook // updated
-  bum: LifecycleHook // beforeUnmount
-  um: LifecycleHook // unmounted
-  da: LifecycleHook // deactivated
-  a: LifecycleHook // activated
-  rtg: LifecycleHook // renderTriggered
-  rtc: LifecycleHook // renderTracked
-  ec: LifecycleHook // errorCaptured
+export const enum LifecycleHooks {
+  BEFORE_CREATE = 'bc',
+  CREATED = 'c',
+  BEFORE_MOUNT = 'bm',
+  MOUNTED = 'm',
+  BEFORE_UPDATE = 'bu',
+  UPDATED = 'u',
+  BEFORE_UNMOUNT = 'bum',
+  UNMOUNTED = 'um',
+  DEACTIVATED = 'da',
+  ACTIVATED = 'a',
+  RENDER_TRIGGERED = 'rtg',
+  RENDER_TRACKED = 'rtc',
+  ERROR_CAPTURED = 'ec'
 }
 
 interface SetupContext {
@@ -116,8 +118,22 @@ export type ComponentInstance<P = Data, S = Data> = {
 
   // user namespace
   user: { [key: string]: any }
-} & SetupContext &
-  LifecycleHooks
+
+  // lifecycle
+  [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
+  [LifecycleHooks.CREATED]: LifecycleHook
+  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
+  [LifecycleHooks.MOUNTED]: LifecycleHook
+  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
+  [LifecycleHooks.UPDATED]: LifecycleHook
+  [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
+  [LifecycleHooks.UNMOUNTED]: LifecycleHook
+  [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
+  [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
+  [LifecycleHooks.ACTIVATED]: LifecycleHook
+  [LifecycleHooks.DEACTIVATED]: LifecycleHook
+  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+} & SetupContext
 
 // createComponent
 // overload 1: direct setup function
@@ -177,7 +193,23 @@ export function createComponentInstance(
     renderProxy: null,
     propsProxy: null,
     setupContext: null,
+    effects: null,
+    provides: parent ? parent.provides : {},
 
+    // setup context properties
+    data: EMPTY_OBJ,
+    props: EMPTY_OBJ,
+    attrs: EMPTY_OBJ,
+    slots: EMPTY_OBJ,
+    refs: EMPTY_OBJ,
+
+    // user namespace for storing whatever the user assigns to `this`
+    user: {},
+
+    // lifecycle hooks
+    // not using enums here because it results in computed properties
+    bc: null,
+    c: null,
     bm: null,
     m: null,
     bu: null,
@@ -189,18 +221,6 @@ export function createComponentInstance(
     rtg: null,
     rtc: null,
     ec: null,
-    effects: null,
-    provides: parent ? parent.provides : {},
-
-    // public properties
-    data: EMPTY_OBJ,
-    props: EMPTY_OBJ,
-    attrs: EMPTY_OBJ,
-    slots: EMPTY_OBJ,
-    refs: EMPTY_OBJ,
-
-    // user namespace for storing whatever the user assigns to `this`
-    user: {},
 
     emit: (event: string, ...args: unknown[]) => {
       const props = instance.vnode.props || EMPTY_OBJ
@@ -219,6 +239,10 @@ export let currentInstance: ComponentInstance | null = null
 
 export const getCurrentInstance: () => ComponentInstance | null = () =>
   currentInstance
+
+export const setCurrentInstance = (instance: ComponentInstance | null) => {
+  currentInstance = instance
+}
 
 export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions

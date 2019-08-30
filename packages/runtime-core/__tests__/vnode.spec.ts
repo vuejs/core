@@ -15,7 +15,7 @@ describe('vnode', () => {
 
   test.todo('normalizeVNode')
 
-  test.todo('node type inference')
+  test.todo('node type/shapeFlag inference')
 
   test.todo('cloneVNode')
 
