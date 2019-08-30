@@ -153,6 +153,36 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  it('onBeforeUnmount in onMounted', async () => {
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const fn = jest.fn(() => {
+      // should be called before inner div is removed
+      expect(serializeInner(root)).toBe(`<div></div>`)
+    })
+
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? h(Child) : null)
+      }
+    }
+
+    const Child = {
+      setup() {
+        onMounted(() => {
+          onBeforeUnmount(fn)
+        })
+        return () => h('div')
+      }
+    }
+
+    render(h(Comp), root)
+
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   it('lifecycle call order', async () => {
     const count = ref(0)
     const root = nodeOps.createElement('div')
@@ -313,6 +343,4 @@ describe('api: lifecycle hooks', () => {
       newValue: 3
     })
   })
-
-  test.todo('onErrorCaptured')
 })
