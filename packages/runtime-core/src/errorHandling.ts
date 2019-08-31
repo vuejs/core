@@ -12,6 +12,7 @@ export const enum ErrorTypes {
   WATCH_CLEANUP,
   NATIVE_EVENT_HANDLER,
   COMPONENT_EVENT_HANDLER,
+  DIRECTIVE_HOOK,
   SCHEDULER
 }
 
@@ -36,6 +37,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorTypes.WATCH_CLEANUP]: 'watcher cleanup function',
   [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler',
+  [ErrorTypes.DIRECTIVE_HOOK]: 'directive hook',
   [ErrorTypes.SCHEDULER]:
     'scheduler flush. This may be a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'

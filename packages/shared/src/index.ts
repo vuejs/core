@@ -3,8 +3,6 @@ export const EMPTY_ARR: [] = []
 
 export const NOOP = () => {}
 
-export const reservedPropRE = /^(?:key|ref|slots)$|^vnode/
-
 export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
 
 export const extend = <T extends object, U extends object>(
@@ -24,8 +22,9 @@ export const isString = (val: any): val is string => typeof val === 'string'
 export const isObject = (val: any): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
+const vnodeHooksRE = /^vnode/
 export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref'
+  key === 'key' || key === 'ref' || vnodeHooksRE.test(key)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {

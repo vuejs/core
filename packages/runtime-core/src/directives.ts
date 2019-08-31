@@ -13,13 +13,14 @@ return applyDirectives(
 */
 
 import { VNode, cloneVNode } from './vnode'
-import { extend } from '@vue/shared'
+import { extend, isArray, isFunction } from '@vue/shared'
 import { warn } from './warning'
 import {
   ComponentInstance,
   currentRenderingInstance,
   ComponentRenderProxy
 } from './component'
+import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 
 interface DirectiveBinding {
   instance: ComponentRenderProxy | null
@@ -119,4 +120,27 @@ export function applyDirectives(
 export function resolveDirective(name: string): Directive {
   // TODO
   return {} as any
+}
+
+export function invokeDirectiveHook(
+  hook: Function | Function[],
+  instance: ComponentInstance | null,
+  vnode: VNode
+) {
+  if (hook == null) {
+    return
+  }
+  const args = [vnode]
+  if (isArray(hook)) {
+    for (let i = 0; i < hook.length; i++) {
+      callWithAsyncErrorHandling(
+        hook[i],
+        instance,
+        ErrorTypes.DIRECTIVE_HOOK,
+        args
+      )
+    }
+  } else if (isFunction(hook)) {
+    callWithAsyncErrorHandling(hook, instance, ErrorTypes.DIRECTIVE_HOOK, args)
+  }
 }

@@ -35,6 +35,7 @@ import { resolveSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
+import { invokeDirectiveHook } from './directives'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -248,6 +249,7 @@ export function createRenderer(options: RendererOptions) {
         if (isReservedProp(key)) continue
         hostPatchProp(el, key, props[key], null, isSVG)
       }
+      invokeDirectiveHook(props.vnodeBeforeMount, parentComponent, vnode)
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
@@ -261,6 +263,9 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     hostInsert(el, container, anchor)
+    if (props != null) {
+      invokeDirectiveHook(props.vnodeMounted, parentComponent, vnode)
+    }
   }
 
   function mountChildren(
