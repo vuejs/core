@@ -88,7 +88,8 @@ export function handleError(
           errorCapturedHooks[i](
             err,
             instance && instance.renderProxy,
-            ErrorTypeStrings[type]
+            // in production the hook receives only the error code
+            __DEV__ ? ErrorTypeStrings[type] : type
           )
         ) {
           return
