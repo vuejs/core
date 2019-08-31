@@ -355,6 +355,10 @@ function createSetupContext(instance: ComponentInstance): SetupContext {
   return __DEV__ ? Object.freeze(context) : context
 }
 
+// mark the current rendering instance for asset resolution (e.g.
+// resolveComponent, resolveDirective) during render
+export let currentRenderingInstance: ComponentInstance | null = null
+
 export function renderComponentRoot(instance: ComponentInstance): VNode {
   const {
     type: Component,
@@ -367,9 +371,12 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     refs,
     emit
   } = instance
+
+  let result
+  currentRenderingInstance = instance
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      return normalizeVNode(
+      result = normalizeVNode(
         (instance.render as RenderFunction).call(
           renderProxy,
           props,
@@ -379,7 +386,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     } else {
       // functional
       const render = Component as FunctionalComponent
-      return normalizeVNode(
+      result = normalizeVNode(
         render.length > 1
           ? render(props, {
               attrs,
@@ -392,8 +399,10 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     }
   } catch (err) {
     handleError(err, instance, ErrorTypes.RENDER_FUNCTION)
-    return createVNode(Empty)
+    result = createVNode(Empty)
   }
+  currentRenderingInstance = null
+  return result
 }
 
 export function shouldUpdateComponent(

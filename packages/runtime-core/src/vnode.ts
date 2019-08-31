@@ -34,7 +34,7 @@ export type NormalizedChildren = string | VNodeChildren | RawSlots | null
 
 export interface VNode {
   type: VNodeTypes
-  props: { [key: string]: any } | null
+  props: Record<any, any> | null
   key: string | number | null
   ref: string | Function | null
   children: NormalizedChildren

@@ -35,6 +35,9 @@ export {
   callWithAsyncErrorHandling
 } from './errorHandling'
 
+// For the compiler
+export { applyDirectives, resolveDirective } from './directives'
+
 // Types -----------------------------------------------------------------------
 
 export { VNode } from './vnode'

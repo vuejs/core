@@ -8,7 +8,7 @@ import {
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
-import { getCurrentInstance } from './component'
+import { currentInstance } from './component'
 import {
   ErrorTypes,
   callWithErrorHandling,
@@ -83,7 +83,7 @@ function doWatch(
     | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
-  const instance = getCurrentInstance()
+  const instance = currentInstance
 
   let getter: Function
   if (isArray(source)) {
