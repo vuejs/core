@@ -157,8 +157,8 @@ export function createVNode(
 
   normalizeChildren(vnode, children)
 
-  // presence of a patch flag indicates this node is dynamic
-  // component nodes also should always be tracked, because even if the
+  // presence of a patch flag indicates this node needs patching on updates.
+  // component nodes also should always be patched, because even if the
   // component doesn't need to update, it needs to persist the instance on to
   // the next vnode so that it can be properly unmounted later.
   if (

@@ -249,7 +249,9 @@ export function createRenderer(options: RendererOptions) {
         if (isReservedProp(key)) continue
         hostPatchProp(el, key, props[key], null, isSVG)
       }
-      invokeDirectiveHook(props.vnodeBeforeMount, parentComponent, vnode)
+      if (props.vnodeBeforeMount != null) {
+        invokeDirectiveHook(props.vnodeBeforeMount, parentComponent, vnode)
+      }
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
@@ -263,8 +265,10 @@ export function createRenderer(options: RendererOptions) {
       )
     }
     hostInsert(el, container, anchor)
-    if (props != null) {
-      invokeDirectiveHook(props.vnodeMounted, parentComponent, vnode)
+    if (props != null && props.vnodeMounted != null) {
+      queuePostFlushCb(() => {
+        invokeDirectiveHook(props.vnodeMounted, parentComponent, vnode)
+      })
     }
   }
 
@@ -293,6 +297,10 @@ export function createRenderer(options: RendererOptions) {
     const { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
+
+    if (newProps.vnodeBeforeUpdate != null) {
+      invokeDirectiveHook(newProps.vnodeBeforeUpdate, parentComponent, n2)
+    }
 
     if (patchFlag) {
       // the presence of a patchFlag means this element's render code was
@@ -378,6 +386,12 @@ export function createRenderer(options: RendererOptions) {
     } else if (!optimized) {
       // full diff
       patchChildren(n1, n2, el, null, parentComponent, isSVG)
+    }
+
+    if (newProps.vnodeUpdated != null) {
+      queuePostFlushCb(() => {
+        invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2)
+      })
     }
   }
 
@@ -1017,27 +1031,37 @@ export function createRenderer(options: RendererOptions) {
     parentComponent: ComponentInstance | null,
     doRemove?: boolean
   ) {
+    const {
+      props,
+      ref,
+      type,
+      component,
+      children,
+      dynamicChildren,
+      shapeFlag,
+      anchor
+    } = vnode
+
     // unset ref
-    if (vnode.ref !== null && parentComponent !== null) {
-      setRef(vnode.ref, null, parentComponent, null)
+    if (ref !== null && parentComponent !== null) {
+      setRef(ref, null, parentComponent, null)
     }
 
-    const instance = vnode.component
-    if (instance != null) {
-      unmountComponent(instance, doRemove)
+    if (component != null) {
+      unmountComponent(component, doRemove)
       return
     }
 
-    const shouldRemoveChildren = vnode.type === Fragment && doRemove
-    if (vnode.dynamicChildren != null) {
+    if (props != null && props.vnodeBeforeUnmount != null) {
+      invokeDirectiveHook(props.vnodeBeforeUnmount, parentComponent, vnode)
+    }
+
+    const shouldRemoveChildren = type === Fragment && doRemove
+    if (dynamicChildren != null) {
+      unmountChildren(dynamicChildren, parentComponent, shouldRemoveChildren)
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       unmountChildren(
-        vnode.dynamicChildren,
-        parentComponent,
-        shouldRemoveChildren
-      )
-    } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      unmountChildren(
-        vnode.children as VNode[],
+        children as VNode[],
         parentComponent,
         shouldRemoveChildren
       )
@@ -1045,7 +1069,13 @@ export function createRenderer(options: RendererOptions) {
 
     if (doRemove) {
       hostRemove(vnode.el)
-      if (vnode.anchor != null) hostRemove(vnode.anchor)
+      if (anchor != null) hostRemove(anchor)
+    }
+
+    if (props != null && props.vnodeUnmounted != null) {
+      queuePostFlushCb(() => {
+        invokeDirectiveHook(props.vnodeUnmounted, parentComponent, vnode)
+      })
     }
   }
 

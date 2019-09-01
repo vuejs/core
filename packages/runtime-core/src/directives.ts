@@ -127,9 +127,6 @@ export function invokeDirectiveHook(
   instance: ComponentInstance | null,
   vnode: VNode
 ) {
-  if (hook == null) {
-    return
-  }
   const args = [vnode]
   if (isArray(hook)) {
     for (let i = 0; i < hook.length; i++) {

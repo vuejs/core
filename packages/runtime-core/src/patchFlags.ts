@@ -45,21 +45,22 @@ export const enum PatchFlags {
   // exclusive with CLASS, STYLE and PROPS.
   FULL_PROPS = 1 << 4,
 
+  // Indicates an element that only needs non-props patching, e.g. ref or
+  // directives (vnodeXXX hooks). It simply marks the vnode as "need patch",
+  // since every pathced vnode checks for refs and vnodeXXX hooks.
+  NEED_PATCH = 1 << 5,
+
   // Indicates a fragment or element with keyed or partially-keyed v-for
   // children
-  KEYED = 1 << 5,
+  KEYED = 1 << 6,
 
   // Indicates a fragment or element that contains unkeyed v-for children
-  UNKEYED = 1 << 6,
+  UNKEYED = 1 << 7,
 
   // Indicates a component with dynamic slots (e.g. slot that references a v-for
   // iterated value, or dynamic slot names).
   // Components with this flag are always force updated.
-  DYNAMIC_SLOTS = 1 << 7,
-
-  // Indicates an element with ref. This includes static string refs because the
-  // refs object is refreshed on each update and all refs need to set again.
-  REF = 1 << 8
+  DYNAMIC_SLOTS = 1 << 8
 }
 
 // runtime object for public consumption
@@ -68,8 +69,8 @@ export const PublicPatchFlags = {
   CLASS: PatchFlags.CLASS,
   STYLE: PatchFlags.STYLE,
   PROPS: PatchFlags.PROPS,
+  NEED_PATCH: PatchFlags.NEED_PATCH,
   FULL_PROPS: PatchFlags.FULL_PROPS,
   KEYED: PatchFlags.KEYED,
-  UNKEYED: PatchFlags.UNKEYED,
-  REF: PatchFlags.REF
+  UNKEYED: PatchFlags.UNKEYED
 }
