@@ -21,6 +21,7 @@ import {
   ComponentRenderProxy
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
+import { HostNode } from './createRenderer'
 
 export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
@@ -31,7 +32,7 @@ export interface DirectiveBinding {
 }
 
 export type DirectiveHook = (
-  el: any,
+  el: HostNode,
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null

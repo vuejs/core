@@ -12,6 +12,7 @@ import { RawSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
+import { AppContext } from './apiCreateApp'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')
@@ -50,6 +51,9 @@ export interface VNode {
   patchFlag: number
   dynamicProps: string[] | null
   dynamicChildren: VNode[] | null
+
+  // application root node only
+  appContext: AppContext | null
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -152,7 +156,8 @@ export function createVNode(
     shapeFlag,
     patchFlag,
     dynamicProps,
-    dynamicChildren: null
+    dynamicChildren: null,
+    appContext: null
   }
 
   normalizeChildren(vnode, children)
@@ -192,6 +197,7 @@ export function cloneVNode(vnode: VNode): VNode {
     patchFlag: vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
+    appContext: vnode.appContext,
 
     // these should be set to null since they should only be present on
     // mounted VNodes. If they are somehow not null, this means we have

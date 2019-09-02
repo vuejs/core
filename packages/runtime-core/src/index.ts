@@ -28,6 +28,7 @@ export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 export { getCurrentInstance } from './component'
 
 // For custom renderers
+export { createAppAPI } from './apiCreateApp'
 export { createRenderer } from './createRenderer'
 export {
   handleError,

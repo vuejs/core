@@ -1,4 +1,4 @@
-import { createRenderer, VNode } from '@vue/runtime-core'
+import { createRenderer, VNode, createAppAPI } from '@vue/runtime-core'
 import { nodeOps, TestElement } from './nodeOps'
 import { patchProp } from './patchProp'
 import { serializeInner } from './serialize'
@@ -6,7 +6,9 @@ import { serializeInner } from './serialize'
 export const render = createRenderer({
   patchProp,
   ...nodeOps
-}) as (node: VNode | null, container: TestElement) => VNode
+}) as (node: VNode | null, container: TestElement) => void
+
+export const createApp = createAppAPI(render)
 
 // convenience for one-off render validations
 export function renderToString(vnode: VNode) {

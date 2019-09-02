@@ -13,6 +13,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
+import { AppContext, createAppContext } from './apiCreateApp'
 
 export type Data = { [key: string]: unknown }
 
@@ -79,6 +80,8 @@ export interface FunctionalComponent<P = {}> {
   displayName?: string
 }
 
+export type Component = ComponentOptions | FunctionalComponent
+
 type LifecycleHook = Function[] | null
 
 export const enum LifecycleHooks {
@@ -107,6 +110,7 @@ interface SetupContext {
 export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
+  appContext: AppContext
   root: ComponentInstance
   vnode: VNode
   next: VNode | null
@@ -184,6 +188,8 @@ export function createComponent(options: any) {
   return isFunction(options) ? { setup: options } : (options as any)
 }
 
+const emptyAppContext = createAppContext()
+
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInstance | null
@@ -191,6 +197,9 @@ export function createComponentInstance(
   const instance = {
     vnode,
     parent,
+    // inherit parent app context - or - if root, adopt from root vnode
+    appContext:
+      (parent ? parent.appContext : vnode.appContext) || emptyAppContext,
     type: vnode.type as any,
     root: null as any, // set later so it can point to itself
     next: null,

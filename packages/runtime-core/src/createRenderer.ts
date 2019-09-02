@@ -93,7 +93,12 @@ export interface RendererOptions {
   querySelector(selector: string): HostNode | null
 }
 
-export function createRenderer(options: RendererOptions) {
+export type RootRenderFunction = (
+  vnode: VNode | null,
+  dom: HostNode | string
+) => void
+
+export function createRenderer(options: RendererOptions): RootRenderFunction {
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -1152,8 +1157,31 @@ export function createRenderer(options: RendererOptions) {
     }
   }
 
-  return function render(vnode: VNode | null, dom: HostNode): VNode | null {
+  return function render(vnode: VNode | null, dom: HostNode | string) {
+    if (isString(dom)) {
+      if (isFunction(hostQuerySelector)) {
+        dom = hostQuerySelector(dom)
+        if (!dom) {
+          if (__DEV__) {
+            warn(
+              `Failed to locate root container: ` +
+                `querySelector returned null.`
+            )
+          }
+          return
+        }
+      } else {
+        if (__DEV__) {
+          warn(
+            `Failed to locate root container: ` +
+              `target platform does not support querySelector.`
+          )
+        }
+        return
+      }
+    }
     if (vnode == null) {
+      debugger
       if (dom._vnode) {
         unmount(dom._vnode, null, true)
       }
@@ -1161,7 +1189,7 @@ export function createRenderer(options: RendererOptions) {
       patch(dom._vnode, vnode, dom)
     }
     flushPostFlushCbs()
-    return (dom._vnode = vnode)
+    dom._vnode = vnode
   }
 }
 
