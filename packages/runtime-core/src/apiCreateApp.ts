@@ -98,9 +98,11 @@ export function createAppAPI(render: RootRenderFunction): () => App {
       },
 
       set config(v) {
-        warn(
-          `app.config cannot be replaced. Modify individual options instead.`
-        )
+        if (__DEV__) {
+          warn(
+            `app.config cannot be replaced. Modify individual options instead.`
+          )
+        }
       },
 
       use(plugin: Plugin) {
