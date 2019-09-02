@@ -186,15 +186,19 @@ export function cloneVNode(vnode: VNode): VNode {
     props: vnode.props,
     key: vnode.key,
     ref: vnode.ref,
-    children: null,
-    component: null,
-    el: null,
-    anchor: null,
-    target: null,
+    children: vnode.children,
+    target: vnode.target,
     shapeFlag: vnode.shapeFlag,
     patchFlag: vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
-    dynamicChildren: null
+    dynamicChildren: vnode.dynamicChildren,
+
+    // these should be set to null since they should only be present on
+    // mounted VNodes. If they are somehow not null, this means we have
+    // encountered an already-mounted vnode being used again.
+    component: null,
+    el: null,
+    anchor: null
   }
 }
 

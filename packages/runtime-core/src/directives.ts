@@ -22,7 +22,7 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 
-interface DirectiveBinding {
+export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
   value?: any
   oldValue?: any
@@ -30,20 +30,20 @@ interface DirectiveBinding {
   modifiers?: DirectiveModifiers
 }
 
-type DirectiveHook = (
+export type DirectiveHook = (
   el: any,
   binding: DirectiveBinding,
   vnode: VNode,
-  prevVNode: VNode | void
+  prevVNode: VNode | null
 ) => void
 
-interface Directive {
-  beforeMount: DirectiveHook
-  mounted: DirectiveHook
-  beforeUpdate: DirectiveHook
-  updated: DirectiveHook
-  beforeUnmount: DirectiveHook
-  unmounted: DirectiveHook
+export interface Directive {
+  beforeMount?: DirectiveHook
+  mounted?: DirectiveHook
+  beforeUpdate?: DirectiveHook
+  updated?: DirectiveHook
+  beforeUnmount?: DirectiveHook
+  unmounted?: DirectiveHook
 }
 
 type DirectiveModifiers = Record<string, boolean>
@@ -64,11 +64,11 @@ function applyDirective(
     valueCache.set(directive, valueCacheForDir)
   }
   for (const key in directive) {
-    const hook = directive[key as keyof Directive]
+    const hook = directive[key as keyof Directive] as DirectiveHook
     const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
-    const vnodeHook = (vnode: VNode, prevVNode?: VNode) => {
+    const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue
-      if (prevVNode !== void 0) {
+      if (prevVNode != null) {
         oldValue = valueCacheForDir.get(prevVNode)
         valueCacheForDir.delete(prevVNode)
       }
@@ -93,12 +93,13 @@ function applyDirective(
   }
 }
 
-type DirectiveArguments = [
-  Directive,
-  any,
-  string | undefined,
-  DirectiveModifiers | undefined
-][]
+// Directive, value, argument, modifiers
+type DirectiveArguments = Array<
+  | [Directive]
+  | [Directive, any]
+  | [Directive, any, string]
+  | [Directive, any, string, DirectiveModifiers]
+>
 
 export function applyDirectives(
   vnode: VNode,
@@ -109,7 +110,7 @@ export function applyDirectives(
     vnode = cloneVNode(vnode)
     vnode.props = vnode.props != null ? extend({}, vnode.props) : {}
     for (let i = 0; i < directives.length; i++) {
-      applyDirective(vnode.props, instance, ...directives[i])
+      ;(applyDirective as any)(vnode.props, instance, ...directives[i])
     }
   } else if (__DEV__) {
     warn(`applyDirectives can only be used inside render functions.`)
@@ -125,9 +126,10 @@ export function resolveDirective(name: string): Directive {
 export function invokeDirectiveHook(
   hook: Function | Function[],
   instance: ComponentInstance | null,
-  vnode: VNode
+  vnode: VNode,
+  prevVNode: VNode | null = null
 ) {
-  const args = [vnode]
+  const args = [vnode, prevVNode]
   if (isArray(hook)) {
     for (let i = 0; i < hook.length; i++) {
       callWithAsyncErrorHandling(

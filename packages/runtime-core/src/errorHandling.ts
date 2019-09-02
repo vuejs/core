@@ -104,7 +104,12 @@ export function handleError(
 }
 
 function logError(err: Error, type: AllErrorTypes, contextVNode: VNode | null) {
-  if (__DEV__) {
+  // default behavior is crash in prod & test, recover in dev.
+  // TODO we should probably make this configurable via `createApp`
+  if (
+    __DEV__ &&
+    !(typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
+  ) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {
       pushWarningContext(contextVNode)

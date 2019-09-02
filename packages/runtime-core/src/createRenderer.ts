@@ -299,7 +299,7 @@ export function createRenderer(options: RendererOptions) {
     const newProps = n2.props || EMPTY_OBJ
 
     if (newProps.vnodeBeforeUpdate != null) {
-      invokeDirectiveHook(newProps.vnodeBeforeUpdate, parentComponent, n2)
+      invokeDirectiveHook(newProps.vnodeBeforeUpdate, parentComponent, n2, n1)
     }
 
     if (patchFlag) {
@@ -390,7 +390,7 @@ export function createRenderer(options: RendererOptions) {
 
     if (newProps.vnodeUpdated != null) {
       queuePostFlushCb(() => {
-        invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2)
+        invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2, n1)
       })
     }
   }

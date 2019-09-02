@@ -23,12 +23,12 @@ export function popWarningContext() {
 export function warn(msg: string, ...args: any[]) {
   // TODO app level warn handler
   console.warn(`[Vue warn]: ${msg}`, ...args)
-  const trace = getComponentTrace()
-  if (!trace.length) {
+  // avoid spamming console during tests
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
     return
   }
-  // avoid spamming test output
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
+  const trace = getComponentTrace()
+  if (!trace.length) {
     return
   }
   if (trace.length > 1 && console.groupCollapsed) {

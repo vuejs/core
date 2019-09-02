@@ -360,8 +360,16 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
+    // temporarily simulate non-test env
+    process.env.NODE_ENV = 'dev'
+
     const onError = jest.spyOn(console, 'error')
     onError.mockImplementation(() => {})
+    const groupCollpased = jest.spyOn(console, 'groupCollapsed')
+    groupCollpased.mockImplementation(() => {})
+    const log = jest.spyOn(console, 'log')
+    log.mockImplementation(() => {})
+
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -387,7 +395,11 @@ describe('error handling', () => {
       `Unhandled error during execution of setup function`
     ).toHaveBeenWarned()
     expect(onError).toHaveBeenCalledWith(err)
+
     onError.mockRestore()
+    groupCollpased.mockRestore()
+    log.mockRestore()
+    process.env.NODE_ENV = 'test'
   })
 
   // native event handler handling should be tested in respective renderers
