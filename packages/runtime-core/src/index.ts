@@ -37,6 +37,7 @@ export {
 } from './errorHandling'
 
 // For the compiler
+export { resolveComponent } from './component'
 export { applyDirectives, resolveDirective } from './directives'
 
 // Types -----------------------------------------------------------------------

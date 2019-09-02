@@ -13,7 +13,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { AppContext, createAppContext } from './apiCreateApp'
+import { AppContext, createAppContext, resolveAsset } from './apiCreateApp'
 
 export type Data = { [key: string]: unknown }
 
@@ -471,4 +471,8 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
     }
   }
   return false
+}
+
+export function resolveComponent(name: string): Component | undefined {
+  return resolveAsset('components', name)
 }

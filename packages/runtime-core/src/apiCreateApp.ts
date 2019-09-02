@@ -3,12 +3,14 @@ import {
   Component,
   ComponentRenderProxy,
   Data,
-  ComponentInstance
+  ComponentInstance,
+  currentRenderingInstance,
+  currentInstance
 } from './component'
 import { Directive } from './directives'
 import { HostNode, RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
-import { isFunction } from '@vue/shared'
+import { isFunction, camelize, capitalize } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -42,15 +44,6 @@ export interface AppConfig {
     instance: ComponentRenderProxy,
     trace: string
   ) => void
-  ignoredElements: Array<string | RegExp>
-  keyCodes: Record<string, number | number[]>
-  optionMergeStrategies: {
-    [key: string]: (
-      parent: any,
-      child: any,
-      instance: ComponentRenderProxy
-    ) => any
-  }
 }
 
 export interface AppContext {
@@ -76,10 +69,7 @@ export function createAppContext(): AppContext {
       devtools: true,
       performance: false,
       errorHandler: undefined,
-      warnHandler: undefined,
-      ignoredElements: [],
-      keyCodes: {},
-      optionMergeStrategies: {}
+      warnHandler: undefined
     },
     mixins: [],
     components: {},
@@ -166,5 +156,31 @@ export function createAppAPI(render: RootRenderFunction): () => App {
     }
 
     return app
+  }
+}
+
+export function resolveAsset(type: 'components' | 'directives', name: string) {
+  const instance = currentRenderingInstance || currentInstance
+  if (instance) {
+    let camelized
+    let capitalized
+    const local = (instance.type as any)[type]
+    const global = instance.appContext[type]
+    const res =
+      local[name] ||
+      local[(camelized = camelize(name))] ||
+      local[(capitalized = capitalize(name))] ||
+      global[name] ||
+      global[camelized] ||
+      global[capitalized]
+    if (__DEV__ && !res) {
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+    }
+    return res
+  } else if (__DEV__) {
+    warn(
+      `resolve${capitalize(type.slice(0, -1))} ` +
+        `can only be used in render() or setup().`
+    )
   }
 }

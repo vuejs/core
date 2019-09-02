@@ -22,6 +22,7 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 import { HostNode } from './createRenderer'
+import { resolveAsset } from './apiCreateApp'
 
 export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
@@ -119,11 +120,6 @@ export function applyDirectives(
   return vnode
 }
 
-export function resolveDirective(name: string): Directive {
-  // TODO
-  return {} as any
-}
-
 export function invokeDirectiveHook(
   hook: Function | Function[],
   instance: ComponentInstance | null,
@@ -143,4 +139,8 @@ export function invokeDirectiveHook(
   } else if (isFunction(hook)) {
     callWithAsyncErrorHandling(hook, instance, ErrorTypes.DIRECTIVE_HOOK, args)
   }
+}
+
+export function resolveDirective(name: string): Directive | undefined {
+  return resolveAsset('directives', name)
 }
