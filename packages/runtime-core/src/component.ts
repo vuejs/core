@@ -107,7 +107,7 @@ interface SetupContext {
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
-export type ComponentInstance<P = {}, S = {}> = {
+export type ComponentInstance<P = Data, S = Data> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
   appContext: AppContext
