@@ -4,7 +4,11 @@
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
-  "types": "dist/index.d.ts",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "types": "dist/runtime-dom.d.ts",
   "unpkg": "dist/runtime-dom.global.js",
   "sideEffects": false,
   "buildOptions": {

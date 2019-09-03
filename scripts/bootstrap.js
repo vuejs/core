@@ -25,7 +25,8 @@ files.forEach(shortName => {
       description: name,
       main: 'index.js',
       module: `dist/${shortName}.esm-bundler.js`,
-      types: 'dist/index.d.ts',
+      files: [`index.js`, `dist`],
+      types: `dist/${shortName}.d.ts`,
       repository: {
         type: 'git',
         url: 'git+https://github.com/vuejs/vue.git'

@@ -19,7 +19,6 @@ const path = require('path')
 const zlib = require('zlib')
 const chalk = require('chalk')
 const execa = require('execa')
-const dts = require('dts-bundle')
 const { targets, fuzzyMatchTarget } = require('./utils')
 
 const args = require('minimist')(process.argv.slice(2))
@@ -55,22 +54,41 @@ async function build(target) {
       '--environment',
       `NODE_ENV:production,` +
         `TARGET:${target}` +
-        (formats ? `,FORMATS:${formats}` : ``)
+        (formats ? `,FORMATS:${formats}` : ``) +
+        (args.types ? `,TYPES:true` : ``)
     ],
     { stdio: 'inherit' }
   )
 
-  if (pkg.types) {
-    const dtsOptions = {
-      name: target === 'vue' ? target : `@vue/${target}`,
-      main: `${pkgDir}/dist/packages/${target}/src/index.d.ts`,
-      out: `${pkgDir}/${pkg.types}`
-    }
-    dts.bundle(dtsOptions)
+  if (args.types && pkg.types) {
     console.log()
     console.log(
-      chalk.blue(chalk.bold(`generated typings at ${dtsOptions.out}`))
+      chalk.bold(chalk.yellow(`Rolling up type definitions for ${target}...`))
     )
+
+    // build types
+    const { Extractor, ExtractorConfig } = require('@microsoft/api-extractor')
+
+    const extractorConfigPath = path.resolve(pkgDir, `api-extractor.json`)
+    const extractorConfig = ExtractorConfig.loadFileAndPrepare(
+      extractorConfigPath
+    )
+    const result = Extractor.invoke(extractorConfig, {
+      localBuild: true,
+      showVerboseMessages: true
+    })
+
+    if (result.succeeded) {
+      console.log(
+        chalk.bold(chalk.green(`API Extractor completed successfully.`))
+      )
+    } else {
+      console.error(
+        `API Extractor completed with ${extractorResult.errorCount} errors` +
+          ` and ${extractorResult.warningCount} warnings`
+      )
+      process.exitCode = 1
+    }
 
     await fs.remove(`${pkgDir}/dist/packages`)
   }

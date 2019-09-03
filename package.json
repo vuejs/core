@@ -25,9 +25,9 @@
     ]
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.3.9",
     "@types/jest": "^24.0.18",
     "chalk": "^2.4.2",
-    "dts-bundle": "^0.7.3",
     "execa": "^2.0.4",
     "fs-extra": "^8.1.0",
     "jest": "^24.9.0",

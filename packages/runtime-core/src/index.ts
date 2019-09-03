@@ -42,6 +42,7 @@ export { applyDirectives, resolveDirective } from './directives'
 
 // Types -----------------------------------------------------------------------
 
+export { App } from './apiCreateApp'
 export { VNode } from './vnode'
 export { FunctionalComponent, ComponentInstance } from './component'
 export { RendererOptions } from './createRenderer'
