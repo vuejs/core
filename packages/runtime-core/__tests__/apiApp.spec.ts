@@ -73,7 +73,11 @@ describe('api: createApp', () => {
 
   test('component', () => {
     const app = createApp()
-    app.component('FooBar', () => 'foobar!')
+
+    const FooBar = () => 'foobar!'
+    app.component('FooBar', FooBar)
+    expect(app.component('FooBar')).toBe(FooBar)
+
     app.component('BarBaz', () => 'barbaz!')
 
     const Root = {
@@ -103,9 +107,11 @@ describe('api: createApp', () => {
     const spy1 = jest.fn()
     const spy2 = jest.fn()
     const spy3 = jest.fn()
-    app.directive('FooBar', {
-      mounted: spy1
-    })
+
+    const FooBar = { mounted: spy1 }
+    app.directive('FooBar', FooBar)
+    expect(app.directive('FooBar')).toBe(FooBar)
+
     app.directive('BarBaz', {
       mounted: spy2
     })
