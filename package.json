@@ -34,7 +34,7 @@
     "lerna": "^3.16.4",
     "lint-staged": "^9.2.3",
     "minimist": "^1.2.0",
-    "prettier": "~1.14.0",
+    "prettier": "~1.18.2",
     "rollup": "^1.19.4",
     "rollup-plugin-alias": "^1.5.2",
     "rollup-plugin-replace": "^2.2.0",
