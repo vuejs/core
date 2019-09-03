@@ -88,6 +88,14 @@ Multiple formats can be specified as a comma-separated list:
 yarn build runtime-core -f esm,cjs
 ```
 
+#### Build with Type Declarations
+
+The `--types` flag will generate type declarations during the build and in addition:
+
+- Roll the declarations into a single `.dts` file for each package;
+- Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
+- Generate an API model json in `<projectRoot>/temp/<packageName>.api.md`. This file can be used to generate a Markdown version of the exported APIs.
+
 ### `yarn dev`
 
 The `dev` script bundles a target package (default: `vue`) in a specified format (default: `global`) in dev mode and watches for changes. This is useful when you want to load up a build in an HTML page for quick debugging:
