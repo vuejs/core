@@ -39,8 +39,7 @@ type SetupFunction<Props, RawBindings> = (
 type RenderFunction<Props = {}, RawBindings = {}> = <
   Bindings extends UnwrapRef<RawBindings>
 >(
-  this: ComponentRenderProxy<Props, Bindings>,
-  ctx: ComponentRenderProxy<Props, Bindings>
+  this: ComponentRenderProxy<Props, Bindings>
 ) => VNodeChild
 
 interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
@@ -103,7 +102,6 @@ export const enum LifecycleHooks {
 interface SetupContext {
   attrs: Data
   slots: Slots
-  refs: Data
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
@@ -126,6 +124,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   renderProxy: ComponentRenderProxy | null
   propsProxy: P | null
   setupContext: SetupContext | null
+  refs: Data
 
   // user namespace
   user: { [key: string]: any }
@@ -280,15 +279,13 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, RenderProxyHandlers) as any
-  // 2. call setup()
+  // 2. create props proxy
+  // the propsProxy is a reactive AND readonly proxy to the actual props.
+  // it will be updated in resolveProps() on updates before render
+  const propsProxy = (instance.propsProxy = readonly(instance.props))
+  // 3. call setup()
   const { setup } = Component
   if (setup) {
-    // the props proxy makes the props object passed to setup() reactive
-    // so props change can be tracked by watchers
-    // it will be updated in resolveProps() on updates before render
-    const propsProxy = (instance.propsProxy = setup.length
-      ? readonly(instance.props)
-      : null)
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
@@ -373,11 +370,9 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
     type: Component,
     vnode,
     renderProxy,
-    setupContext,
     props,
     slots,
     attrs,
-    refs,
     emit
   } = instance
 
@@ -386,11 +381,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       result = normalizeVNode(
-        (instance.render as RenderFunction).call(
-          renderProxy,
-          props,
-          setupContext
-        )
+        (instance.render as RenderFunction).call(renderProxy)
       )
     } else {
       // functional
@@ -400,7 +391,6 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
           ? render(props, {
               attrs,
               slots,
-              refs,
               emit
             })
           : render(props, null as any)

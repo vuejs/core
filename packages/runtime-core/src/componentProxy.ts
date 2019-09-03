@@ -2,17 +2,18 @@ import { ComponentInstance } from './component'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
-    const { data, props } = target
+    const { data, props, propsProxy } = target
     if (data.hasOwnProperty(key)) {
       return data[key]
     } else if (props.hasOwnProperty(key)) {
-      return props[key]
+      // return the value from propsProxy for ref unwrapping and readonly
+      return (propsProxy as any)[key]
     } else {
       switch (key) {
         case '$data':
           return data
         case '$props':
-          return props
+          return propsProxy
         case '$attrs':
           return target.attrs
         case '$slots':

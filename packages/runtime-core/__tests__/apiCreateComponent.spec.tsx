@@ -41,7 +41,8 @@ test('createComponent type inference', () => {
         }
       }
     },
-    render(props) {
+    render() {
+      const props = this.$props
       props.a && props.a * 2
       props.b.slice()
       props.bb.slice()
@@ -68,9 +69,9 @@ test('type inference w/ optional props declaration', () => {
         a: 1
       }
     },
-    render(ctx) {
-      ctx.msg
-      ctx.a * 2
+    render() {
+      this.$props.msg
+      this.$data.a * 2
       this.msg
       this.a * 2
     }
@@ -95,10 +96,10 @@ test('type inference w/ array props declaration', () => {
         c: 1
       }
     },
-    render(ctx) {
-      ctx.a
-      ctx.b
-      ctx.c
+    render() {
+      this.$props.a
+      this.$props.b
+      this.$data.c
       this.a
       this.b
       this.c
