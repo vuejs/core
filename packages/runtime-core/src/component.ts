@@ -13,7 +13,8 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { AppContext, createAppContext, resolveAsset } from './apiCreateApp'
+import { AppContext, createAppContext, resolveAsset } from './apiApp'
+import { Directive } from './directives'
 
 export type Data = { [key: string]: unknown }
 
@@ -31,41 +32,42 @@ export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
 } & P &
   S
 
-type SetupFunction<Props, RawBindings> = (
-  props: Props,
-  ctx: SetupContext
-) => RawBindings | (() => VNodeChild)
-
 type RenderFunction<Props = {}, RawBindings = {}> = <
   Bindings extends UnwrapRef<RawBindings>
 >(
   this: ComponentRenderProxy<Props, Bindings>
 ) => VNodeChild
 
-interface ComponentOptionsWithoutProps<Props = Data, RawBindings = Data> {
-  props?: undefined
-  setup?: SetupFunction<Props, RawBindings>
+interface ComponentOptionsBase<Props, RawBindings> {
+  setup?: (
+    props: Props,
+    ctx: SetupContext
+  ) => RawBindings | (() => VNodeChild) | void
   render?: RenderFunction<Props, RawBindings>
+  components?: Record<string, Component>
+  directives?: Record<string, Directive>
+  // TODO full 2.x options compat
+}
+
+interface ComponentOptionsWithoutProps<Props = {}, RawBindings = {}>
+  extends ComponentOptionsBase<Props, RawBindings> {
+  props?: undefined
 }
 
 interface ComponentOptionsWithArrayProps<
   PropNames extends string = string,
-  RawBindings = Data,
+  RawBindings = {},
   Props = { [key in PropNames]?: unknown }
-> {
+> extends ComponentOptionsBase<Props, RawBindings> {
   props: PropNames[]
-  setup?: SetupFunction<Props, RawBindings>
-  render?: RenderFunction<Props, RawBindings>
 }
 
 interface ComponentOptionsWithProps<
   PropsOptions = ComponentPropsOptions,
-  RawBindings = Data,
+  RawBindings = {},
   Props = ExtractPropTypes<PropsOptions>
-> {
+> extends ComponentOptionsBase<Props, RawBindings> {
   props: PropsOptions
-  setup?: SetupFunction<Props, RawBindings>
-  render?: RenderFunction<Props, RawBindings>
 }
 
 export type ComponentOptions =
@@ -105,7 +107,7 @@ interface SetupContext {
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
-export type ComponentInstance<P = Data, S = Data> = {
+export type ComponentInstance<P = {}, S = {}> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
   appContext: AppContext
@@ -193,12 +195,13 @@ export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInstance | null
 ): ComponentInstance {
+  // inherit parent app context - or - if root, adopt from root vnode
+  const appContext =
+    (parent ? parent.appContext : vnode.appContext) || emptyAppContext
   const instance = {
     vnode,
     parent,
-    // inherit parent app context - or - if root, adopt from root vnode
-    appContext:
-      (parent ? parent.appContext : vnode.appContext) || emptyAppContext,
+    appContext,
     type: vnode.type as any,
     root: null as any, // set later so it can point to itself
     next: null,
@@ -209,7 +212,7 @@ export function createComponentInstance(
     propsProxy: null,
     setupContext: null,
     effects: null,
-    provides: parent ? parent.provides : {},
+    provides: parent ? parent.provides : Object.create(appContext.provides),
 
     // setup context properties
     data: EMPTY_OBJ,

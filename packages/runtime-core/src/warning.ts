@@ -21,13 +21,24 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
-  // TODO app level warn handler
+  const instance = stack.length ? stack[stack.length - 1].component : null
+  const appWarnHandler = instance && instance.appContext.config.warnHandler
+  const trace = getComponentTrace()
+
+  if (appWarnHandler) {
+    appWarnHandler(
+      msg + args.join(''),
+      instance && instance.renderProxy,
+      formatTrace(trace).join('')
+    )
+    return
+  }
+
   console.warn(`[Vue warn]: ${msg}`, ...args)
   // avoid spamming console during tests
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
     return
   }
-  const trace = getComponentTrace()
   if (!trace.length) {
     return
   }
@@ -41,16 +52,7 @@ export function warn(msg: string, ...args: any[]) {
     console.log(...logs)
     console.groupEnd()
   } else {
-    const logs: string[] = []
-    trace.forEach((entry, i) => {
-      const formatted = formatTraceEntry(entry, i)
-      if (i === 0) {
-        logs.push('at', ...formatted)
-      } else {
-        logs.push('\n', ...formatted)
-      }
-    })
-    console.log(...logs)
+    console.log(...formatTrace(trace))
   }
 }
 
@@ -81,6 +83,19 @@ function getComponentTrace(): ComponentTraceStack {
   }
 
   return normlaizedStack
+}
+
+function formatTrace(trace: ComponentTraceStack): string[] {
+  const logs: string[] = []
+  trace.forEach((entry, i) => {
+    const formatted = formatTraceEntry(entry, i)
+    if (i === 0) {
+      logs.push('at', ...formatted)
+    } else {
+      logs.push('\n', ...formatted)
+    }
+  })
+  return logs
 }
 
 function formatTraceEntry(

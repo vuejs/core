@@ -12,7 +12,7 @@ import { RawSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
-import { AppContext } from './apiCreateApp'
+import { AppContext } from './apiApp'
 
 export const Fragment = Symbol('Fragment')
 export const Text = Symbol('Text')

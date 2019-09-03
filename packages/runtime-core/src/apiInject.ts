@@ -6,7 +6,7 @@ export interface InjectionKey<T> extends Symbol {}
 export function provide<T>(key: InjectionKey<T> | string, value: T) {
   if (!currentInstance) {
     if (__DEV__) {
-      warn(`provide() is used without an active component instance.`)
+      warn(`provide() can only be used inside setup().`)
     }
   } else {
     let provides = currentInstance.provides
@@ -27,17 +27,16 @@ export function provide<T>(key: InjectionKey<T> | string, value: T) {
 export function inject<T>(key: InjectionKey<T> | string): T | undefined
 export function inject<T>(key: InjectionKey<T> | string, defaultValue: T): T
 export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
-  if (!currentInstance) {
-    // TODO warn
-  } else {
-    // TODO should also check for app-level provides
-    const provides = currentInstance.parent && currentInstance.provides
-    if (provides && key in provides) {
+  if (currentInstance) {
+    const provides = currentInstance.provides
+    if (key in provides) {
       return provides[key as any] as any
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {
       warn(`injection "${key}" not found.`)
     }
+  } else if (__DEV__) {
+    warn(`inject() can only be used inside setup().`)
   }
 }

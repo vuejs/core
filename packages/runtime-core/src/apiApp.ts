@@ -36,12 +36,12 @@ export interface AppConfig {
   performance: boolean
   errorHandler?: (
     err: Error,
-    instance: ComponentRenderProxy,
+    instance: ComponentRenderProxy | null,
     info: string
   ) => void
   warnHandler?: (
     msg: string,
-    instance: ComponentRenderProxy,
+    instance: ComponentRenderProxy | null,
     trace: string
   ) => void
 }
@@ -56,7 +56,7 @@ export interface AppContext {
 
 type PluginInstallFunction = (app: App) => any
 
-type Plugin =
+export type Plugin =
   | PluginInstallFunction
   | {
       install: PluginInstallFunction
@@ -81,6 +81,8 @@ export function createAppContext(): AppContext {
 export function createAppAPI(render: RootRenderFunction): () => App {
   return function createApp(): App {
     const context = createAppContext()
+
+    let isMounted = false
 
     const app: App = {
       get config() {
@@ -134,14 +136,20 @@ export function createAppAPI(render: RootRenderFunction): () => App {
         }
       },
 
-      mount(rootComponent, rootContainer, rootProps?: Data) {
-        const vnode = createVNode(rootComponent, rootProps)
-        // store app context on the root VNode.
-        // this will be set on the root instance on initial mount.
-        vnode.appContext = context
-        render(vnode, rootContainer)
-        return (vnode.component as ComponentInstance)
-          .renderProxy as ComponentRenderProxy
+      mount(rootComponent, rootContainer, rootProps?: Data): any {
+        if (!isMounted) {
+          const vnode = createVNode(rootComponent, rootProps)
+          // store app context on the root VNode.
+          // this will be set on the root instance on initial mount.
+          vnode.appContext = context
+          render(vnode, rootContainer)
+          isMounted = true
+          return (vnode.component as ComponentInstance).renderProxy
+        } else if (__DEV__) {
+          warn(
+            `App has already been mounted. Create a new app instance instead.`
+          )
+        }
       },
 
       provide(key, value) {
@@ -164,15 +172,21 @@ export function resolveAsset(type: 'components' | 'directives', name: string) {
   if (instance) {
     let camelized
     let capitalized
+    let res
     const local = (instance.type as any)[type]
-    const global = instance.appContext[type]
-    const res =
-      local[name] ||
-      local[(camelized = camelize(name))] ||
-      local[(capitalized = capitalize(name))] ||
-      global[name] ||
-      global[camelized] ||
-      global[capitalized]
+    if (local) {
+      res =
+        local[name] ||
+        local[(camelized = camelize(name))] ||
+        local[(capitalized = capitalize(camelized))]
+    }
+    if (!res) {
+      const global = instance.appContext[type]
+      res =
+        global[name] ||
+        global[camelized || (camelized = camelize(name))] ||
+        global[capitalized || capitalize(camelized)]
+    }
     if (__DEV__ && !res) {
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }

@@ -5,11 +5,10 @@ const comp = resolveComponent('comp')
 const foo = resolveDirective('foo')
 const bar = resolveDirective('bar')
 
-return applyDirectives(
-  h(comp),
+return applyDirectives(h(comp), [
   [foo, this.x],
   [bar, this.y]
-)
+])
 */
 
 import { VNode, cloneVNode } from './vnode'
@@ -22,7 +21,7 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 import { HostNode } from './createRenderer'
-import { resolveAsset } from './apiCreateApp'
+import { resolveAsset } from './apiApp'
 
 export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
@@ -103,10 +102,7 @@ type DirectiveArguments = Array<
   | [Directive, any, string, DirectiveModifiers]
 >
 
-export function applyDirectives(
-  vnode: VNode,
-  ...directives: DirectiveArguments
-) {
+export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
   const instance = currentRenderingInstance
   if (instance !== null) {
     vnode = cloneVNode(vnode)

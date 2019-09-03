@@ -28,7 +28,7 @@ export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 export { getCurrentInstance } from './component'
 
 // For custom renderers
-export { createAppAPI } from './apiCreateApp'
+export { createAppAPI } from './apiApp'
 export { createRenderer } from './createRenderer'
 export {
   handleError,
@@ -42,8 +42,8 @@ export { applyDirectives, resolveDirective } from './directives'
 
 // Types -----------------------------------------------------------------------
 
-export { App } from './apiCreateApp'
-export { VNode } from './vnode'
+export { App, AppConfig, AppContext, Plugin } from './apiApp'
+export { VNode, VNodeTypes } from './vnode'
 export { FunctionalComponent, ComponentInstance } from './component'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'

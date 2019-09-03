@@ -109,20 +109,22 @@ describe('directives', () => {
       render() {
         _prevVnode = _vnode
         _vnode = applyDirectives(h('div', count.value), [
-          {
-            beforeMount,
-            mounted,
-            beforeUpdate,
-            updated,
-            beforeUnmount,
-            unmounted
-          },
-          // value
-          count.value,
-          // argument
-          'foo',
-          // modifiers
-          { ok: true }
+          [
+            {
+              beforeMount,
+              mounted,
+              beforeUpdate,
+              updated,
+              beforeUnmount,
+              unmounted
+            },
+            // value
+            count.value,
+            // argument
+            'foo',
+            // modifiers
+            { ok: true }
+          ]
         ])
         return _vnode
       }

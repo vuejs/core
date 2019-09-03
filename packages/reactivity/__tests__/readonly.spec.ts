@@ -86,6 +86,7 @@ describe('reactivity/readonly', () => {
       observed.a = 2
       expect(observed.a).toBe(1)
       expect(dummy).toBe(1)
+      expect(`target is readonly`).toHaveBeenWarned()
     })
 
     it('should trigger effects when unlocked', () => {
@@ -178,9 +179,11 @@ describe('reactivity/readonly', () => {
       observed[0].a = 2
       expect(observed[0].a).toBe(1)
       expect(dummy).toBe(1)
+      expect(`target is readonly`).toHaveBeenWarnedTimes(1)
       observed[0] = { a: 2 }
       expect(observed[0].a).toBe(1)
       expect(dummy).toBe(1)
+      expect(`target is readonly`).toHaveBeenWarnedTimes(2)
     })
 
     it('should trigger effects when unlocked', () => {
