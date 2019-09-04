@@ -31,7 +31,6 @@ export interface App {
 }
 
 export interface AppConfig {
-  silent: boolean
   devtools: boolean
   performance: boolean
   errorHandler?: (
@@ -65,7 +64,6 @@ export type Plugin =
 export function createAppContext(): AppContext {
   return {
     config: {
-      silent: false,
       devtools: true,
       performance: false,
       errorHandler: undefined,
