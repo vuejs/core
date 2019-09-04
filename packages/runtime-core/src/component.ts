@@ -1,6 +1,13 @@
 import { VNode, normalizeVNode, VNodeChild, createVNode, Empty } from './vnode'
 import { ReactiveEffect, UnwrapRef, reactive, readonly } from '@vue/reactivity'
-import { EMPTY_OBJ, isFunction, capitalize, NOOP, isArray } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  isFunction,
+  capitalize,
+  NOOP,
+  isArray,
+  isObject
+} from '@vue/shared'
 import { RenderProxyHandlers } from './componentProxy'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Slots } from './componentSlots'
@@ -15,6 +22,7 @@ import {
 } from './errorHandling'
 import { AppContext, createAppContext, resolveAsset } from './apiApp'
 import { Directive } from './directives'
+import { processOptions, LegacyOptions } from './apiOptions'
 
 export type Data = { [key: string]: unknown }
 
@@ -38,15 +46,16 @@ type RenderFunction<Props = {}, RawBindings = {}> = <
   this: ComponentRenderProxy<Props, Bindings>
 ) => VNodeChild
 
-interface ComponentOptionsBase<Props, RawBindings> {
+interface ComponentOptionsBase<Props, RawBindings> extends LegacyOptions {
   setup?: (
     props: Props,
     ctx: SetupContext
   ) => RawBindings | (() => VNodeChild) | void
+  name?: string
+  template?: string
   render?: RenderFunction<Props, RawBindings>
   components?: Record<string, Component>
   directives?: Record<string, Directive>
-  // TODO full 2.x options compat
 }
 
 interface ComponentOptionsWithoutProps<Props = {}, RawBindings = {}>
@@ -279,6 +288,7 @@ export const setCurrentInstance = (instance: ComponentInstance | null) => {
 }
 
 export function setupStatefulComponent(instance: ComponentInstance) {
+  currentInstance = instance
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, RenderProxyHandlers) as any
@@ -291,15 +301,12 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   if (setup) {
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
-
-    currentInstance = instance
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorTypes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
-    currentInstance = null
 
     if (isFunction(setupResult)) {
       // setup returned an inline render function
@@ -322,15 +329,32 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       }
       // setup returned bindings.
       // assuming a render function compiled from template is present.
-      instance.data = reactive(setupResult || {})
+      if (isObject(setupResult)) {
+        instance.data = setupResult
+      } else if (__DEV__ && setupResult !== undefined) {
+        warn(
+          `setup() should return an object. Received: ${
+            setupResult === null ? 'null' : typeof setupResult
+          }`
+        )
+      }
       instance.render = (Component.render || NOOP) as RenderFunction
     }
   } else {
     if (__DEV__ && !Component.render) {
-      // TODO warn missing render fn
+      warn(
+        `Component is missing render function. Either provide a template or ` +
+          `return a render function from setup().`
+      )
     }
     instance.render = Component.render as RenderFunction
   }
+  // support for 2.x options
+  if (__FEATURE_OPTIONS__) {
+    processOptions(instance)
+  }
+  instance.data = reactive(instance.data === EMPTY_OBJ ? {} : instance.data)
+  currentInstance = null
 }
 
 // used to identify a setup context proxy

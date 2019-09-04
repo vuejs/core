@@ -12,7 +12,7 @@ import { capitalize } from '@vue/shared'
 function injectHook(
   type: LifecycleHooks,
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInstance | null
 ) {
   if (target) {
     ;(target[type] || (target[type] = [])).push((...args: any[]) => {
@@ -26,7 +26,7 @@ function injectHook(
     })
   } else if (__DEV__) {
     const apiName = `on${capitalize(
-      ErrorTypeStrings[name].replace(/ hook$/, '')
+      ErrorTypeStrings[type].replace(/ hook$/, '')
     )}`
     warn(
       `${apiName} is called when there is no active component instance to be ` +

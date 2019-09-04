@@ -7,7 +7,7 @@ export interface ComputedRef<T> {
   readonly effect: ReactiveEffect
 }
 
-export interface ComputedOptions<T> {
+export interface ComputedOptions<T = any> {
   get: () => T
   set: (v: T) => void
 }

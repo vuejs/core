@@ -17,7 +17,8 @@ export {
   OperationTypes,
   Ref,
   ComputedRef,
-  UnwrapRef
+  UnwrapRef,
+  ComputedOptions
 } from '@vue/reactivity'
 
 import {
