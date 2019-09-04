@@ -74,7 +74,7 @@ export interface LegacyOptions {
   destroyed?(): void
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void
-  errorCaptured?(): boolean
+  errorCaptured?(): boolean | void
 }
 
 export function applyOptions(
