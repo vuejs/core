@@ -28,7 +28,7 @@ import {
   onBeforeUnmount,
   onUnmounted
 } from './apiLifecycle'
-import { DebuggerEvent } from '@vue/reactivity'
+import { DebuggerEvent, reactive } from '@vue/reactivity'
 import { warn } from './warning'
 
 // TODO legacy component definition also supports constructors with .options
@@ -83,7 +83,7 @@ export function applyOptions(
   asMixin: boolean = false
 ) {
   const data =
-    instance.data === EMPTY_OBJ ? (instance.data = {}) : instance.data
+    instance.data === EMPTY_OBJ ? (instance.data = reactive({})) : instance.data
   const ctx = instance.renderProxy as any
   const {
     // composition
@@ -135,7 +135,13 @@ export function applyOptions(
   }
   if (computedOptions) {
     for (const key in computedOptions) {
-      data[key] = computed(computedOptions[key] as any)
+      const opt = computedOptions[key]
+      data[key] = isFunction(opt)
+        ? computed(opt.bind(ctx))
+        : computed({
+            get: opt.get.bind(ctx),
+            set: opt.set.bind(ctx)
+          })
     }
   }
   if (methods) {
@@ -148,9 +154,9 @@ export function applyOptions(
       const raw = watchOptions[key]
       const getter = () => ctx[key]
       if (isString(raw)) {
-        const handler = data[key]
+        const handler = data[raw]
         if (isFunction(handler)) {
-          watch(getter, handler.bind(ctx))
+          watch(getter, handler as any)
         } else if (__DEV__) {
           // TODO warn invalid watch handler path
         }

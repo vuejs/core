@@ -337,7 +337,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       // setup returned bindings.
       // assuming a render function compiled from template is present.
       if (isObject(setupResult)) {
-        instance.data = setupResult
+        instance.data = reactive(setupResult)
       } else if (__DEV__ && setupResult !== undefined) {
         warn(
           `setup() should return an object. Received: ${
@@ -360,7 +360,9 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   if (__FEATURE_OPTIONS__) {
     applyOptions(instance, Component)
   }
-  instance.data = reactive(instance.data === EMPTY_OBJ ? {} : instance.data)
+  if (instance.data === EMPTY_OBJ) {
+    instance.data = reactive({})
+  }
   currentInstance = null
 }
 
