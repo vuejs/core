@@ -1,6 +1,6 @@
 import { ComponentInstance } from './component'
 import { nextTick } from './scheduler'
-import { legacyWatch } from './apiOptions'
+import { instanceWatch } from './apiWatch'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
@@ -42,7 +42,7 @@ export const RenderProxyHandlers = {
               case '$nextTick':
                 return nextTick
               case '$watch':
-                return legacyWatch.bind(target)
+                return instanceWatch.bind(target)
             }
           }
           return target.user[key]

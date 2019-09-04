@@ -2,7 +2,8 @@ import {
   ComponentInstance,
   Data,
   ComponentOptions,
-  ComponentRenderProxy
+  currentRenderingInstance,
+  currentInstance
 } from './component'
 import {
   isFunction,
@@ -10,10 +11,12 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  capitalize,
+  camelize
 } from '@vue/shared'
 import { computed, ComputedOptions } from './apiReactivity'
-import { watch, WatchOptions } from './apiWatch'
+import { watch } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -26,13 +29,10 @@ import {
   onUnmounted
 } from './apiLifecycle'
 import { DebuggerEvent } from '@vue/reactivity'
+import { warn } from './warning'
 
-type LegacyComponent =
-  | ComponentOptions
-  | {
-      new (): ComponentRenderProxy
-      options: ComponentOptions
-    }
+// TODO legacy component definition also supports constructors with .options
+type LegacyComponent = ComponentOptions
 
 // TODO type inference for these options
 export interface LegacyOptions {
@@ -77,17 +77,29 @@ export interface LegacyOptions {
   errorCaptured?(): boolean
 }
 
-export function processOptions(instance: ComponentInstance) {
+export function applyOptions(
+  instance: ComponentInstance,
+  options: ComponentOptions,
+  asMixin: boolean = false
+) {
   const data =
     instance.data === EMPTY_OBJ ? (instance.data = {}) : instance.data
   const ctx = instance.renderProxy as any
   const {
+    // composition
+    mixins,
+    extends: extendsOptions,
+    // state
     data: dataOptions,
     computed: computedOptions,
     methods,
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
+    // assets
+    components,
+    directives,
+    // lifecycle
     // beforeCreate is handled separately
     created,
     beforeMount,
@@ -101,24 +113,36 @@ export function processOptions(instance: ComponentInstance) {
     renderTracked,
     renderTriggered,
     errorCaptured
-  } = instance.type as ComponentOptions
+  } = options
 
+  // global mixins are applied first, and only if this is a non-mixin call
+  // so that they are applied once per instance.
+  if (!asMixin) {
+    applyMixins(instance, instance.appContext.mixins)
+  }
+  // extending a base component...
+  if (extendsOptions) {
+    applyOptions(instance, extendsOptions, true)
+  }
+  // local mixins
+  if (mixins) {
+    applyMixins(instance, mixins)
+  }
+
+  // state options
   if (dataOptions) {
     extend(data, isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions)
   }
-
   if (computedOptions) {
     for (const key in computedOptions) {
       data[key] = computed(computedOptions[key] as any)
     }
   }
-
   if (methods) {
     for (const key in methods) {
       data[key] = methods[key].bind(ctx)
     }
   }
-
   if (watchOptions) {
     for (const key in watchOptions) {
       const raw = watchOptions[key]
@@ -140,7 +164,6 @@ export function processOptions(instance: ComponentInstance) {
       }
     }
   }
-
   if (provideOptions) {
     const provides = isFunction(provideOptions)
       ? provideOptions.call(ctx)
@@ -149,7 +172,6 @@ export function processOptions(instance: ComponentInstance) {
       provide(key, provides[key])
     }
   }
-
   if (injectOptions) {
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
@@ -168,6 +190,15 @@ export function processOptions(instance: ComponentInstance) {
     }
   }
 
+  // asset options
+  if (components) {
+    extend(instance.components, components)
+  }
+  if (directives) {
+    extend(instance.directives, directives)
+  }
+
+  // lifecycle options
   if (created) {
     created.call(ctx)
   }
@@ -200,15 +231,29 @@ export function processOptions(instance: ComponentInstance) {
   }
 }
 
-export function legacyWatch(
-  this: ComponentInstance,
-  source: string | Function,
-  cb: Function,
-  options?: WatchOptions
-): () => void {
-  const ctx = this.renderProxy as any
-  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
-  const stop = watch(getter, cb.bind(ctx), options)
-  onBeforeMount(stop, this)
-  return stop
+function applyMixins(instance: ComponentInstance, mixins: ComponentOptions[]) {
+  for (let i = 0; i < mixins.length; i++) {
+    applyOptions(instance, mixins[i], true)
+  }
+}
+
+export function resolveAsset(type: 'components' | 'directives', name: string) {
+  const instance = currentRenderingInstance || currentInstance
+  if (instance) {
+    let camelized
+    const registry = instance[type]
+    const res =
+      registry[name] ||
+      registry[(camelized = camelize(name))] ||
+      registry[capitalize(camelized)]
+    if (__DEV__ && !res) {
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+    }
+    return res
+  } else if (__DEV__) {
+    warn(
+      `resolve${capitalize(type.slice(0, -1))} ` +
+        `can only be used in render() or setup().`
+    )
+  }
 }

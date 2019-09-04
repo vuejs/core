@@ -20,9 +20,9 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { AppContext, createAppContext, resolveAsset } from './apiApp'
+import { AppContext, createAppContext } from './apiApp'
 import { Directive } from './directives'
-import { processOptions, LegacyOptions } from './apiOptions'
+import { applyOptions, LegacyOptions, resolveAsset } from './apiOptions'
 
 export type Data = { [key: string]: unknown }
 
@@ -129,6 +129,9 @@ export type ComponentInstance<P = Data, S = Data> = {
   effects: ReactiveEffect[] | null
   provides: Data
 
+  components: Record<string, Component>
+  directives: Record<string, Directive>
+
   // the rest are only for stateful components
   data: S
   props: P
@@ -211,7 +214,7 @@ export function createComponentInstance(
     vnode,
     parent,
     appContext,
-    type: vnode.type as any,
+    type: vnode.type as Component,
     root: null as any, // set later so it can point to itself
     next: null,
     subTree: null as any,
@@ -229,6 +232,10 @@ export function createComponentInstance(
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
+
+    // per-instance asset storage (mutable during options resolution)
+    components: Object.create(appContext.components),
+    directives: Object.create(appContext.directives),
 
     // user namespace for storing whatever the user assigns to `this`
     user: {},
@@ -351,7 +358,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   }
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
-    processOptions(instance)
+    applyOptions(instance, Component)
   }
   instance.data = reactive(instance.data === EMPTY_OBJ ? {} : instance.data)
   currentInstance = null
@@ -491,5 +498,5 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
 }
 
 export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset('components', name)
+  return resolveAsset('components', name) as any
 }

@@ -207,6 +207,4 @@ describe('api: createApp', () => {
   })
 
   test.todo('mixin')
-
-  test.todo('config.optionsMergeStrategies')
 })

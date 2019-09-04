@@ -6,14 +6,15 @@ import {
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob, queuePostFlushCb } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray, isFunction } from '@vue/shared'
+import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
-import { currentInstance } from './component'
+import { currentInstance, ComponentInstance } from './component'
 import {
   ErrorTypes,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
+import { onBeforeMount } from './apiLifecycle'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -185,6 +186,20 @@ function doWatch(
   return () => {
     stop(runner)
   }
+}
+
+// this.$watch
+export function instanceWatch(
+  this: ComponentInstance,
+  source: string | Function,
+  cb: Function,
+  options?: WatchOptions
+): () => void {
+  const ctx = this.renderProxy as any
+  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
+  const stop = watch(getter, cb.bind(ctx), options)
+  onBeforeMount(stop, this)
+  return stop
 }
 
 function traverse(value: any, seen: Set<any> = new Set()) {

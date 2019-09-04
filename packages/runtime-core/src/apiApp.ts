@@ -3,14 +3,12 @@ import {
   Component,
   ComponentRenderProxy,
   Data,
-  ComponentInstance,
-  currentRenderingInstance,
-  currentInstance
+  ComponentInstance
 } from './component'
 import { Directive } from './directives'
 import { HostNode, RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
-import { isFunction, camelize, capitalize } from '@vue/shared'
+import { isFunction } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -162,37 +160,5 @@ export function createAppAPI(render: RootRenderFunction): () => App {
     }
 
     return app
-  }
-}
-
-export function resolveAsset(type: 'components' | 'directives', name: string) {
-  const instance = currentRenderingInstance || currentInstance
-  if (instance) {
-    let camelized
-    let capitalized
-    let res
-    const local = (instance.type as any)[type]
-    if (local) {
-      res =
-        local[name] ||
-        local[(camelized = camelize(name))] ||
-        local[(capitalized = capitalize(camelized))]
-    }
-    if (!res) {
-      const global = instance.appContext[type]
-      res =
-        global[name] ||
-        global[camelized || (camelized = camelize(name))] ||
-        global[capitalized || capitalize(camelized)]
-    }
-    if (__DEV__ && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
-    }
-    return res
-  } else if (__DEV__) {
-    warn(
-      `resolve${capitalize(type.slice(0, -1))} ` +
-        `can only be used in render() or setup().`
-    )
   }
 }

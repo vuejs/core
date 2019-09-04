@@ -21,7 +21,7 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 import { HostNode } from './createRenderer'
-import { resolveAsset } from './apiApp'
+import { resolveAsset } from './apiOptions'
 
 export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
@@ -138,5 +138,5 @@ export function invokeDirectiveHook(
 }
 
 export function resolveDirective(name: string): Directive | undefined {
-  return resolveAsset('directives', name)
+  return resolveAsset('directives', name) as any
 }
