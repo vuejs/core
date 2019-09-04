@@ -1,6 +1,6 @@
 import { VNode } from './vnode'
 import { Data, ComponentInstance } from './component'
-import { isString, EMPTY_OBJ } from '@vue/shared'
+import { isString } from '@vue/shared'
 import { toRaw } from '@vue/reactivity'
 
 let stack: VNode[] = []
