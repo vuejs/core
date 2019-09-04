@@ -1,4 +1,6 @@
 import { ComponentInstance } from './component'
+import { nextTick } from './scheduler'
+import { legacyWatch } from './apiOptions'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
@@ -26,7 +28,23 @@ export const RenderProxyHandlers = {
           return target.root
         case '$emit':
           return target.emit
+        case '$el':
+          return target.vnode.el
+        case '$options':
+          // TODO handle merging
+          return target.type
         default:
+          // methods are only exposed when options are supported
+          if (__FEATURE_OPTIONS__) {
+            switch (key) {
+              case '$forceUpdate':
+                return target.update
+              case '$nextTick':
+                return nextTick
+              case '$watch':
+                return legacyWatch.bind(target)
+            }
+          }
           return target.user[key]
       }
     }

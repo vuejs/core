@@ -13,7 +13,7 @@ import {
   EMPTY_OBJ
 } from '@vue/shared'
 import { computed, ComputedOptions } from './apiReactivity'
-import { watch } from './apiWatch'
+import { watch, WatchOptions } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -133,10 +133,8 @@ export function processOptions(instance: ComponentInstance) {
       } else if (isFunction(raw)) {
         watch(getter, raw.bind(ctx))
       } else if (isObject(raw)) {
-        watch(getter, raw.handler.bind(ctx), {
-          deep: !!raw.deep,
-          lazy: !raw.immediate
-        })
+        // TODO 2.x compat
+        watch(getter, raw.handler.bind(ctx), raw)
       } else if (__DEV__) {
         // TODO warn invalid watch options
       }
@@ -200,4 +198,17 @@ export function processOptions(instance: ComponentInstance) {
   if (destroyed) {
     onUnmounted(destroyed.bind(ctx))
   }
+}
+
+export function legacyWatch(
+  this: ComponentInstance,
+  source: string | Function,
+  cb: Function,
+  options?: WatchOptions
+): () => void {
+  const ctx = this.renderProxy as any
+  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
+  const stop = watch(getter, cb.bind(ctx), options)
+  onBeforeMount(stop, this)
+  return stop
 }
