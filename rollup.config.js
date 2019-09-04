@@ -75,7 +75,6 @@ function createConfig(output, plugins = []) {
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
-  const isCompat = /dist\/vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -112,7 +111,11 @@ function createConfig(output, plugins = []) {
     plugins: [
       tsPlugin,
       aliasPlugin,
-      createReplacePlugin(isProductionBuild, isBunlderESMBuild, isCompat),
+      createReplacePlugin(
+        isProductionBuild,
+        isBunlderESMBuild,
+        isGlobalBuild || isBrowserESMBuild
+      ),
       ...plugins
     ],
     output,
@@ -124,15 +127,19 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBunlderESMBuild, isCompat) {
+function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
   return replace({
     __DEV__: isBunlderESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
       : // hard coded dev/prod builds
         !isProduction,
-    // compatibility builds
-    __COMPAT__: !!packageOptions.compat,
+    // show production tip?
+    // should only do this for dev AND browser-targeting builds.
+    __FEATURE_PRODUCTION_TIP__: !isProduction && isBrowserBuild,
+    // support options?
+    // the lean build drops options related code with buildOptions.lean: true
+    __FEATURE_OPTIONS__: !packageOptions.lean,
     // this is only used during tests
     __JSDOM__: false
   })
