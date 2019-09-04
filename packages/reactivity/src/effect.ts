@@ -107,11 +107,24 @@ function cleanup(effect: ReactiveEffect) {
   }
 }
 
+let shouldTrack = true
+
+export function pauseTracking() {
+  shouldTrack = false
+}
+
+export function resumeTracking() {
+  shouldTrack = true
+}
+
 export function track(
   target: any,
   type: OperationTypes,
   key?: string | symbol
 ) {
+  if (!shouldTrack) {
+    return
+  }
   const effect = activeReactiveEffectStack[activeReactiveEffectStack.length - 1]
   if (effect) {
     if (type === OperationTypes.ITERATE) {

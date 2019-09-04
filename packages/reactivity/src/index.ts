@@ -12,6 +12,8 @@ export { computed, ComputedRef, ComputedOptions } from './computed'
 export {
   effect,
   stop,
+  pauseTracking,
+  resumeTracking,
   ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,
