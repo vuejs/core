@@ -70,8 +70,8 @@ export interface LegacyOptions {
   updated?(): void
   activated?(): void
   decativated?(): void
-  beforeDestroy?(): void
-  destroyed?(): void
+  beforeUnmount?(): void
+  unmounted?(): void
   renderTracked?(e: DebuggerEvent): void
   renderTriggered?(e: DebuggerEvent): void
   errorCaptured?(): boolean | void
@@ -100,25 +100,30 @@ export function applyOptions(
     components,
     directives,
     // lifecycle
-    // beforeCreate is handled separately
-    created,
     beforeMount,
     mounted,
     beforeUpdate,
     updated,
     // TODO activated
     // TODO decativated
-    beforeDestroy,
-    destroyed,
+    beforeUnmount,
+    unmounted,
     renderTracked,
     renderTriggered,
     errorCaptured
   } = options
 
+  const globalMixins = instance.appContext.mixins
+
+  // beforeCreate
+  if (!asMixin) {
+    callSyncHook('beforeCreate', options, ctx, globalMixins)
+  }
+
   // global mixins are applied first, and only if this is a non-mixin call
   // so that they are applied once per instance.
   if (!asMixin) {
-    applyMixins(instance, instance.appContext.mixins)
+    applyMixins(instance, globalMixins)
   }
   // extending a base component...
   if (extendsOptions) {
@@ -205,8 +210,8 @@ export function applyOptions(
   }
 
   // lifecycle options
-  if (created) {
-    created.call(ctx)
+  if (!asMixin) {
+    callSyncHook('created', options, ctx, globalMixins)
   }
   if (beforeMount) {
     onBeforeMount(beforeMount.bind(ctx))
@@ -229,11 +234,45 @@ export function applyOptions(
   if (renderTriggered) {
     onRenderTracked(renderTriggered.bind(ctx))
   }
-  if (beforeDestroy) {
-    onBeforeUnmount(beforeDestroy.bind(ctx))
+  if (beforeUnmount) {
+    onBeforeUnmount(beforeUnmount.bind(ctx))
   }
-  if (destroyed) {
-    onUnmounted(destroyed.bind(ctx))
+  if (unmounted) {
+    onUnmounted(unmounted.bind(ctx))
+  }
+}
+
+function callSyncHook(
+  name: 'beforeCreate' | 'created',
+  options: ComponentOptions,
+  ctx: any,
+  globalMixins: ComponentOptions[]
+) {
+  callHookFromMixins(name, globalMixins, ctx)
+  const baseHook = options.extends && options.extends[name]
+  if (baseHook) {
+    baseHook.call(ctx)
+  }
+  const mixins = options.mixins
+  if (mixins) {
+    callHookFromMixins(name, mixins, ctx)
+  }
+  const selfHook = options[name]
+  if (selfHook) {
+    selfHook.call(ctx)
+  }
+}
+
+function callHookFromMixins(
+  name: 'beforeCreate' | 'created',
+  mixins: ComponentOptions[],
+  ctx: any
+) {
+  for (let i = 0; i < mixins.length; i++) {
+    const fn = mixins[i][name]
+    if (fn) {
+      fn.call(ctx)
+    }
   }
 }
 

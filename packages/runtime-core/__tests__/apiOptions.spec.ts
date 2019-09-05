@@ -227,7 +227,145 @@ describe('api: options', () => {
     expect(renderToString(h(Root))).toBe(`<!---->1112<!---->`)
   })
 
-  test('lifecycle', () => {})
+  test('lifecycle', async () => {
+    const count = ref(0)
+    const root = nodeOps.createElement('div')
+    const calls: string[] = []
+
+    const Root = {
+      beforeCreate() {
+        calls.push('root beforeCreate')
+      },
+      created() {
+        calls.push('root created')
+      },
+      beforeMount() {
+        calls.push('root onBeforeMount')
+      },
+      mounted() {
+        calls.push('root onMounted')
+      },
+      beforeUpdate() {
+        calls.push('root onBeforeUpdate')
+      },
+      updated() {
+        calls.push('root onUpdated')
+      },
+      beforeUnmount() {
+        calls.push('root onBeforeUnmount')
+      },
+      unmounted() {
+        calls.push('root onUnmounted')
+      },
+      render() {
+        return h(Mid, { count: count.value })
+      }
+    }
+
+    const Mid = {
+      beforeCreate() {
+        calls.push('mid beforeCreate')
+      },
+      created() {
+        calls.push('mid created')
+      },
+      beforeMount() {
+        calls.push('mid onBeforeMount')
+      },
+      mounted() {
+        calls.push('mid onMounted')
+      },
+      beforeUpdate() {
+        calls.push('mid onBeforeUpdate')
+      },
+      updated() {
+        calls.push('mid onUpdated')
+      },
+      beforeUnmount() {
+        calls.push('mid onBeforeUnmount')
+      },
+      unmounted() {
+        calls.push('mid onUnmounted')
+      },
+      render() {
+        return h(Child, { count: this.$props.count })
+      }
+    }
+
+    const Child = {
+      beforeCreate() {
+        calls.push('child beforeCreate')
+      },
+      created() {
+        calls.push('child created')
+      },
+      beforeMount() {
+        calls.push('child onBeforeMount')
+      },
+      mounted() {
+        calls.push('child onMounted')
+      },
+      beforeUpdate() {
+        calls.push('child onBeforeUpdate')
+      },
+      updated() {
+        calls.push('child onUpdated')
+      },
+      beforeUnmount() {
+        calls.push('child onBeforeUnmount')
+      },
+      unmounted() {
+        calls.push('child onUnmounted')
+      },
+      render() {
+        return h('div', this.$props.count)
+      }
+    }
+
+    // mount
+    render(h(Root), root)
+    expect(calls).toEqual([
+      'root beforeCreate',
+      'root created',
+      'root onBeforeMount',
+      'mid beforeCreate',
+      'mid created',
+      'mid onBeforeMount',
+      'child beforeCreate',
+      'child created',
+      'child onBeforeMount',
+      'child onMounted',
+      'mid onMounted',
+      'root onMounted'
+    ])
+
+    calls.length = 0
+
+    // update
+    count.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'root onBeforeUpdate',
+      'mid onBeforeUpdate',
+      'child onBeforeUpdate',
+      'child onUpdated',
+      'mid onUpdated',
+      'root onUpdated'
+    ])
+
+    calls.length = 0
+
+    // unmount
+    render(null, root)
+    expect(calls).toEqual([
+      'root onBeforeUnmount',
+      'mid onBeforeUnmount',
+      'child onBeforeUnmount',
+      'child onUnmounted',
+      'mid onUnmounted',
+      'root onUnmounted'
+    ])
+  })
 
   test('mixins', () => {
     const calls: string[] = []
@@ -237,8 +375,14 @@ describe('api: options', () => {
           a: 1
         }
       },
+      created() {
+        calls.push('mixinA created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
       mounted() {
-        calls.push('mixinA')
+        calls.push('mixinA mounted')
       }
     }
     const mixinB = {
@@ -247,8 +391,14 @@ describe('api: options', () => {
           b: 2
         }
       },
+      created() {
+        calls.push('mixinB created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
       mounted() {
-        calls.push('mixinB')
+        calls.push('mixinB mounted')
       }
     }
     const Comp = {
@@ -258,8 +408,14 @@ describe('api: options', () => {
           c: 3
         }
       },
+      created() {
+        calls.push('comp created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
       mounted() {
-        calls.push('comp')
+        calls.push('comp mounted')
       },
       render() {
         return `${this.a}${this.b}${this.c}`
@@ -267,7 +423,14 @@ describe('api: options', () => {
     }
 
     expect(renderToString(h(Comp))).toBe(`123`)
-    expect(calls).toEqual(['mixinA', 'mixinB', 'comp'])
+    expect(calls).toEqual([
+      'mixinA created',
+      'mixinB created',
+      'comp created',
+      'mixinA mounted',
+      'mixinB mounted',
+      'comp mounted'
+    ])
   })
 
   test('extends', () => {
