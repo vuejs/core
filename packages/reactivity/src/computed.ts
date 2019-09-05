@@ -1,27 +1,38 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs, knownRefs, Ref } from './ref'
+import { UnwrapNestedRefs, isRefSymbol, knownRefs } from './ref'
 import { isFunction } from '@vue/shared'
 
 export interface ComputedRef<T> {
+  [isRefSymbol]: true
   readonly value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
 
-export interface ComputedOptions<T> {
+export interface WritableComputedRef<T> {
+  [isRefSymbol]: true
+  value: UnwrapNestedRefs<T>
+  readonly effect: ReactiveEffect
+}
+
+export interface WritableComputedOptions<T> {
   get: () => T
   set: (v: T) => void
 }
 
 export function computed<T>(getter: () => T): ComputedRef<T>
-export function computed<T>(options: ComputedOptions<T>): Ref<T>
 export function computed<T>(
-  getterOrOptions: (() => T) | ComputedOptions<T>
-): Ref<T> {
+  options: WritableComputedOptions<T>
+): WritableComputedRef<T>
+export function computed<T>(
+  getterOrOptions: (() => T) | WritableComputedOptions<T>
+): any {
   const isReadonly = isFunction(getterOrOptions)
   const getter = isReadonly
     ? (getterOrOptions as (() => T))
-    : (getterOrOptions as ComputedOptions<T>).get
-  const setter = isReadonly ? null : (getterOrOptions as ComputedOptions<T>).set
+    : (getterOrOptions as WritableComputedOptions<T>).get
+  const setter = isReadonly
+    ? null
+    : (getterOrOptions as WritableComputedOptions<T>).set
 
   let dirty: boolean = true
   let value: any = undefined
@@ -34,7 +45,7 @@ export function computed<T>(
       dirty = true
     }
   })
-  const computedValue = {
+  const computedRef = {
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
@@ -56,8 +67,8 @@ export function computed<T>(
       }
     }
   }
-  knownRefs.add(computedValue)
-  return computedValue
+  knownRefs.add(computedRef)
+  return computedRef
 }
 
 function trackChildRun(childRunner: ReactiveEffect) {

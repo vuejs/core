@@ -16,7 +16,7 @@ function get(target: any, key: any, wrap: (t: any) => any): any {
   return wrap(res)
 }
 
-function has(key: any): boolean {
+function has(this: any, key: any): boolean {
   const target = toRaw(this)
   key = toRaw(key)
   const proto: any = Reflect.getPrototypeOf(target)
@@ -31,7 +31,7 @@ function size(target: any) {
   return Reflect.get(proto, 'size', target)
 }
 
-function add(value: any) {
+function add(this: any, value: any) {
   value = toRaw(value)
   const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
@@ -48,7 +48,7 @@ function add(value: any) {
   return result
 }
 
-function set(key: any, value: any) {
+function set(this: any, key: any, value: any) {
   value = toRaw(value)
   const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
@@ -75,7 +75,7 @@ function set(key: any, value: any) {
   return result
 }
 
-function deleteEntry(key: any) {
+function deleteEntry(this: any, key: any) {
   const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadKey = proto.has.call(target, key)
@@ -93,7 +93,7 @@ function deleteEntry(key: any) {
   return result
 }
 
-function clear() {
+function clear(this: any) {
   const target = toRaw(this)
   const proto: any = Reflect.getPrototypeOf(this)
   const hadItems = target.size !== 0
@@ -112,7 +112,7 @@ function clear() {
 }
 
 function createForEach(isReadonly: boolean) {
-  return function forEach(callback: Function, thisArg?: any) {
+  return function forEach(this: any, callback: Function, thisArg?: any) {
     const observed = this
     const target = toRaw(observed)
     const proto: any = Reflect.getPrototypeOf(target)
@@ -129,7 +129,7 @@ function createForEach(isReadonly: boolean) {
 }
 
 function createIterableMethod(method: string | symbol, isReadonly: boolean) {
-  return function(...args: any[]) {
+  return function(this: any, ...args: any[]) {
     const target = toRaw(this)
     const proto: any = Reflect.getPrototypeOf(target)
     const isPair =
@@ -163,7 +163,7 @@ function createReadonlyMethod(
   method: Function,
   type: OperationTypes
 ): Function {
-  return function(...args: any[]) {
+  return function(this: any, ...args: any[]) {
     if (LOCKED) {
       if (__DEV__) {
         const key = args[0] ? `on key "${args[0]}" ` : ``

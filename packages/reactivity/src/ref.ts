@@ -5,7 +5,12 @@ import { reactive } from './reactive'
 
 export const knownRefs = new WeakSet()
 
+export const isRefSymbol = Symbol()
+
 export interface Ref<T> {
+  // this is a type-only field to avoid objects with 'value' property being
+  // treated as a ref by TypeScript
+  [isRefSymbol]: true
   value: UnwrapNestedRefs<T>
 }
 
