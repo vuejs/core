@@ -22,14 +22,28 @@ import {
 } from './errorHandling'
 import { AppContext, createAppContext } from './apiApp'
 import { Directive } from './directives'
-import { applyOptions, LegacyOptions, resolveAsset } from './apiOptions'
+import {
+  applyOptions,
+  LegacyOptions,
+  resolveAsset,
+  ComputedOptions,
+  MethodOptions,
+  ExtracComputedReturns
+} from './apiOptions'
 
 export type Data = { [key: string]: unknown }
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
-export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
-  $data: S
+export type ComponentRenderProxy<
+  P = {},
+  D = {},
+  B = {},
+  C = {},
+  M = {},
+  PublicProps = P
+> = {
+  $data: D
   $props: PublicProps
   $attrs: Data
   $refs: Data
@@ -38,50 +52,70 @@ export type ComponentRenderProxy<P = {}, S = {}, PublicProps = P> = {
   $parent: ComponentInstance | null
   $emit: (event: string, ...args: unknown[]) => void
 } & P &
-  S
+  D &
+  UnwrapRef<B> &
+  ExtracComputedReturns<C> &
+  M
 
-type RenderFunction<Props = {}, RawBindings = {}> = <
-  Bindings extends UnwrapRef<RawBindings>
+type RenderFunction<P = {}, D = {}, B = {}, C = {}, M = {}> = <
+  This extends ComponentRenderProxy<P, D, B, C, M>
 >(
-  this: ComponentRenderProxy<Props, Bindings>
+  this: This
 ) => VNodeChild
 
-interface ComponentOptionsBase<Props, RawBindings> extends LegacyOptions {
+interface ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C extends ComputedOptions,
+  M extends MethodOptions
+> extends LegacyOptions<Props, RawBindings, D, C, M> {
   setup?: (
     props: Props,
     ctx: SetupContext
   ) => RawBindings | (() => VNodeChild) | void
   name?: string
   template?: string
-  render?: RenderFunction<Props, RawBindings>
+  render?: RenderFunction<Props, D, RawBindings, C, M>
   components?: Record<string, Component>
   directives?: Record<string, Directive>
 }
 
-export interface ComponentOptionsWithoutProps<Props = {}, RawBindings = {}>
-  extends ComponentOptionsBase<Props, RawBindings> {
+export interface ComponentOptionsWithoutProps<
+  Props = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
   props?: undefined
 }
 
 export interface ComponentOptionsWithArrayProps<
   PropNames extends string = string,
   RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
   Props = { [key in PropNames]?: unknown }
-> extends ComponentOptionsBase<Props, RawBindings> {
+> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
   props: PropNames[]
 }
 
 export interface ComponentOptionsWithProps<
   PropsOptions = ComponentPropsOptions,
   RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
   Props = ExtractPropTypes<PropsOptions>
-> extends ComponentOptionsBase<Props, RawBindings> {
+> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
   props: PropsOptions
 }
 
 export type ComponentOptions =
-  | ComponentOptionsWithProps
   | ComponentOptionsWithoutProps
+  | ComponentOptionsWithProps
   | ComponentOptionsWithArrayProps
 
 export interface FunctionalComponent<P = {}> {
@@ -116,7 +150,7 @@ interface SetupContext {
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
-export type ComponentInstance<P = Data, S = Data> = {
+export type ComponentInstance<P = Data, D = Data> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
   appContext: AppContext
@@ -125,7 +159,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
-  render: RenderFunction<P, S> | null
+  render: RenderFunction<P, D> | null
   effects: ReactiveEffect[] | null
   provides: Data
 
@@ -133,7 +167,7 @@ export type ComponentInstance<P = Data, S = Data> = {
   directives: Record<string, Directive>
 
   // the rest are only for stateful components
-  data: S
+  data: D
   props: P
   renderProxy: ComponentRenderProxy | null
   propsProxy: P | null
@@ -168,31 +202,55 @@ export function createComponent<Props>(
 // overload 2: object format with no props
 // (uses user defined props interface)
 // return type is for Vetur and TSX support
-export function createComponent<Props, RawBindings>(
-  options: ComponentOptionsWithoutProps<Props, RawBindings>
+export function createComponent<
+  Props,
+  RawBindings,
+  D,
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+>(
+  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
 ): {
-  new (): ComponentRenderProxy<Props, UnwrapRef<RawBindings>>
+  new (): ComponentRenderProxy<Props, D, RawBindings, C, M>
 }
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: unknown }
 // return type is for Vetur and TSX support
-export function createComponent<PropNames extends string, RawBindings>(
-  options: ComponentOptionsWithArrayProps<PropNames, RawBindings>
+export function createComponent<
+  PropNames extends string,
+  RawBindings,
+  D,
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+>(
+  options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
 ): {
   new (): ComponentRenderProxy<
     { [key in PropNames]?: unknown },
-    UnwrapRef<RawBindings>
+    D,
+    RawBindings,
+    C,
+    M
   >
 }
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
-export function createComponent<PropsOptions, RawBindings>(
-  options: ComponentOptionsWithProps<PropsOptions, RawBindings>
+export function createComponent<
+  PropsOptions,
+  RawBindings,
+  D,
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+>(
+  options: ComponentOptionsWithProps<PropsOptions, RawBindings, D, C, M>
 ): {
   // for Vetur and TSX support
   new (): ComponentRenderProxy<
     ExtractPropTypes<PropsOptions>,
-    UnwrapRef<RawBindings>,
+    D,
+    RawBindings,
+    C,
+    M,
     ExtractPropTypes<PropsOptions, false>
   >
 }

@@ -32,7 +32,7 @@ type MapSources<T> = {
   [K in keyof T]: T[K] extends WatcherSource<infer V> ? V : never
 }
 
-type CleanupRegistrator = (invalidate: () => void) => void
+export type CleanupRegistrator = (invalidate: () => void) => void
 
 type SimpleEffect = (onCleanup: CleanupRegistrator) => void
 

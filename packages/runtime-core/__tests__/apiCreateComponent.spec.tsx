@@ -1,6 +1,7 @@
-import { createComponent } from '../src/component'
+import { createComponent, ComponentRenderProxy } from '../src/component'
 import { ref } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
+import { h } from '../src/h'
 
 // mock React just for TSX testing purposes
 const React = {
@@ -55,6 +56,7 @@ test('createComponent type inference', () => {
       this.d.e.slice()
       this.cc && this.cc.push('hoo')
       this.dd.push('dd')
+      // return h('div', this.bb)
     }
   })
   // test TSX props inference
@@ -71,9 +73,9 @@ test('type inference w/ optional props declaration', () => {
     },
     render() {
       this.$props.msg
-      this.$data.a * 2
       this.msg
       this.a * 2
+      // return h('div', this.msg)
     }
   })
   ;(<Comp msg="hello"/>)
@@ -99,11 +101,53 @@ test('type inference w/ array props declaration', () => {
     render() {
       this.$props.a
       this.$props.b
-      this.$data.c
       this.a
       this.b
       this.c
     }
   })
   ;(<Comp a={1} b={2}/>)
+})
+
+test('with legacy options', () => {
+  createComponent({
+    props: { a: Number },
+    setup() {
+      return {
+        b: 123
+      }
+    },
+    data() {
+      this.a
+      this.b
+      return {
+        c: 234
+      }
+    },
+    computed: {
+      d(): number {
+        return this.b + 1
+      }
+    },
+    watch: {
+      a() {
+        this.b + 1
+      }
+    },
+    created() {
+      this.a && this.a * 2
+      this.b * 2
+      this.c * 2
+      this.d * 2
+    },
+    methods: {
+      doSomething() {
+        this.a && this.a * 2
+        this.b * 2
+        this.c * 2
+        this.d * 2
+        return (this.a || 0) + this.b + this.c + this.d
+      }
+    }
+  })
 })

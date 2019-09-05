@@ -3,7 +3,8 @@ import {
   Data,
   ComponentOptions,
   currentRenderingInstance,
-  currentInstance
+  currentInstance,
+  ComponentRenderProxy
 } from './component'
 import {
   isFunction,
@@ -15,8 +16,8 @@ import {
   capitalize,
   camelize
 } from '@vue/shared'
-import { computed, ComputedOptions } from './apiReactivity'
-import { watch, WatchOptions } from './apiWatch'
+import { computed } from './apiReactivity'
+import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -34,20 +35,61 @@ import { warn } from './warning'
 // TODO legacy component definition also supports constructors with .options
 type LegacyComponent = ComponentOptions
 
+export interface ComputedOptions {
+  [key: string]:
+    | Function
+    | {
+        get: Function
+        set: Function
+      }
+}
+
+export interface MethodOptions {
+  [key: string]: Function
+}
+
+export type ExtracComputedReturns<T extends any> = {
+  [key in keyof T]: T[key] extends { get: Function }
+    ? ReturnType<T[key]['get']>
+    : ReturnType<T[key]>
+}
+
+type WatchHandler = (
+  val: any,
+  oldVal: any,
+  onCleanup: CleanupRegistrator
+) => void
+
 // TODO type inference for these options
-export interface LegacyOptions {
+export interface LegacyOptions<
+  Props,
+  RawBindings,
+  D,
+  C extends ComputedOptions,
+  M extends MethodOptions,
+  ThisContext = ThisType<ComponentRenderProxy<Props, D, RawBindings, C, M>>
+> {
   el?: any
 
   // state
-  data?: Data | (() => Data)
-  computed?: Record<string, (() => any) | ComputedOptions>
-  methods?: Record<string, Function>
+  data?:
+    | D
+    | (<This extends ComponentRenderProxy<Props, {}, RawBindings>>(
+        this: This
+      ) => D)
+  computed?: C & ThisContext
+  methods?: M & ThisContext
   // TODO watch array
   watch?: Record<
     string,
-    string | Function | { handler: Function } & WatchOptions
-  >
-  provide?: Data | (() => Data)
+    string | WatchHandler | { handler: WatchHandler } & WatchOptions
+  > &
+    ThisContext
+  provide?:
+    | Data
+    | (<This extends ComponentRenderProxy<Props, D, RawBindings, C, M>>(
+        this: This
+      ) => any)
   inject?:
     | string[]
     | Record<
@@ -60,8 +102,10 @@ export interface LegacyOptions {
   extends?: LegacyComponent
 
   // lifecycle
-  beforeCreate?(): void
-  created?(): void
+  beforeCreate?(this: ComponentRenderProxy): void
+  created?<This extends ComponentRenderProxy<Props, D, RawBindings, C, M>>(
+    this: This
+  ): void
   beforeMount?(): void
   mounted?(): void
   beforeUpdate?(): void
@@ -138,7 +182,7 @@ export function applyOptions(
   }
   if (computedOptions) {
     for (const key in computedOptions) {
-      const opt = computedOptions[key]
+      const opt = (computedOptions as ComputedOptions)[key]
       data[key] = isFunction(opt)
         ? computed(opt.bind(ctx))
         : computed({
@@ -149,7 +193,7 @@ export function applyOptions(
   }
   if (methods) {
     for (const key in methods) {
-      data[key] = methods[key].bind(ctx)
+      data[key] = (methods as MethodOptions)[key].bind(ctx)
     }
   }
   if (watchOptions) {

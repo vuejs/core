@@ -10,6 +10,7 @@
     "noUnusedLocals": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
+    "noImplicitThis": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
     "removeComments": false,
