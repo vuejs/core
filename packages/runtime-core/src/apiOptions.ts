@@ -16,7 +16,7 @@ import {
   camelize
 } from '@vue/shared'
 import { computed, ComputedOptions } from './apiReactivity'
-import { watch } from './apiWatch'
+import { watch, WatchOptions } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -45,16 +45,14 @@ export interface LegacyOptions {
   // TODO watch array
   watch?: Record<
     string,
-    | string
-    | Function
-    | { handler: Function; deep?: boolean; immediate: boolean }
+    string | Function | { handler: Function } & WatchOptions
   >
   provide?: Data | (() => Data)
   inject?:
     | string[]
     | Record<
         string | symbol,
-        string | symbol | { from: string | symbol; default: any }
+        string | symbol | { from: string | symbol; default?: any }
       >
 
   // composition

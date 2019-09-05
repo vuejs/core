@@ -24,6 +24,7 @@ export type VNodeTypes =
   | Function
   | Object
   | typeof Fragment
+  | typeof Portal
   | typeof Text
   | typeof Empty
 

@@ -58,12 +58,12 @@ interface ComponentOptionsBase<Props, RawBindings> extends LegacyOptions {
   directives?: Record<string, Directive>
 }
 
-interface ComponentOptionsWithoutProps<Props = {}, RawBindings = {}>
+export interface ComponentOptionsWithoutProps<Props = {}, RawBindings = {}>
   extends ComponentOptionsBase<Props, RawBindings> {
   props?: undefined
 }
 
-interface ComponentOptionsWithArrayProps<
+export interface ComponentOptionsWithArrayProps<
   PropNames extends string = string,
   RawBindings = {},
   Props = { [key in PropNames]?: unknown }
@@ -71,7 +71,7 @@ interface ComponentOptionsWithArrayProps<
   props: PropNames[]
 }
 
-interface ComponentOptionsWithProps<
+export interface ComponentOptionsWithProps<
   PropsOptions = ComponentPropsOptions,
   RawBindings = {},
   Props = ExtractPropTypes<PropsOptions>
