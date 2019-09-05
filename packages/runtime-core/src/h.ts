@@ -11,10 +11,10 @@ import { Ref } from '@vue/reactivity'
 import { RawSlots } from './componentSlots'
 import {
   FunctionalComponent,
-  ComponentOptions,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithProps
+  ComponentOptionsWithProps,
+  ComponentOptions
 } from './component'
 import { ExtractPropTypes } from './componentProps'
 
@@ -57,7 +57,7 @@ interface Props {
   [Symbol.iterator]?: never
 }
 
-type Children = string | number | VNodeChildren
+type Children = string | number | boolean | VNodeChildren | (() => any)
 
 // fake constructor type returned from `createComponent`
 interface Constructor<P = any> {

@@ -66,30 +66,20 @@ export interface LegacyOptions<
   RawBindings,
   D,
   C extends ComputedOptions,
-  M extends MethodOptions,
-  ThisContext = ThisType<ComponentRenderProxy<Props, D, RawBindings, C, M>>
+  M extends MethodOptions
 > {
   el?: any
 
   // state
-  data?:
-    | D
-    | (<This extends ComponentRenderProxy<Props, {}, RawBindings>>(
-        this: This
-      ) => D)
-  computed?: C & ThisContext
-  methods?: M & ThisContext
+  data?: D | ((this: ComponentRenderProxy<Props>) => D)
+  computed?: C
+  methods?: M
   // TODO watch array
   watch?: Record<
     string,
     string | WatchHandler | { handler: WatchHandler } & WatchOptions
-  > &
-    ThisContext
-  provide?:
-    | Data
-    | (<This extends ComponentRenderProxy<Props, D, RawBindings, C, M>>(
-        this: This
-      ) => any)
+  >
+  provide?: Data | Function
   inject?:
     | string[]
     | Record<
@@ -102,10 +92,8 @@ export interface LegacyOptions<
   extends?: LegacyComponent
 
   // lifecycle
-  beforeCreate?(this: ComponentRenderProxy): void
-  created?<This extends ComponentRenderProxy<Props, D, RawBindings, C, M>>(
-    this: This
-  ): void
+  beforeCreate?(): void
+  created?(): void
   beforeMount?(): void
   mounted?(): void
   beforeUpdate?(): void

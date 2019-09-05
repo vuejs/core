@@ -7,12 +7,13 @@ import {
   TestElement,
   nextTick,
   renderToString,
-  ref
+  ref,
+  createComponent
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
   test('data', async () => {
-    const Comp = {
+    const Comp = createComponent({
       data() {
         return {
           foo: 1
@@ -29,7 +30,7 @@ describe('api: options', () => {
           this.foo
         )
       }
-    }
+    })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>1</div>`)
@@ -40,17 +41,17 @@ describe('api: options', () => {
   })
 
   test('computed', async () => {
-    const Comp = {
+    const Comp = createComponent({
       data() {
         return {
           foo: 1
         }
       },
       computed: {
-        bar() {
+        bar(): number {
           return this.foo + 1
         },
-        baz() {
+        baz(): number {
           return this.bar + 1
         }
       },
@@ -65,7 +66,7 @@ describe('api: options', () => {
           this.bar + this.baz
         )
       }
-    }
+    })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>5</div>`)
@@ -76,7 +77,7 @@ describe('api: options', () => {
   })
 
   test('methods', async () => {
-    const Comp = {
+    const Comp = createComponent({
       data() {
         return {
           foo: 1
@@ -96,7 +97,7 @@ describe('api: options', () => {
           this.foo
         )
       }
-    }
+    })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>1</div>`)
@@ -107,7 +108,7 @@ describe('api: options', () => {
   })
 
   test('watch', async () => {
-    function returnThis() {
+    function returnThis(this: any) {
       return this
     }
     const spyA = jest.fn(returnThis)
@@ -188,20 +189,20 @@ describe('api: options', () => {
       render() {
         return [h(ChildA), h(ChildB), h(ChildC), h(ChildD)]
       }
-    }
+    } as any
     const ChildA = {
       inject: ['a'],
       render() {
         return this.a
       }
-    }
+    } as any
     const ChildB = {
       // object alias
       inject: { b: 'a' },
       render() {
         return this.b
       }
-    }
+    } as any
     const ChildC = {
       inject: {
         b: {
@@ -211,7 +212,7 @@ describe('api: options', () => {
       render() {
         return this.b
       }
-    }
+    } as any
     const ChildD = {
       inject: {
         b: {
@@ -222,7 +223,7 @@ describe('api: options', () => {
       render() {
         return this.b
       }
-    }
+    } as any
 
     expect(renderToString(h(Root))).toBe(`<!---->1112<!---->`)
   })
@@ -287,7 +288,7 @@ describe('api: options', () => {
       unmounted() {
         calls.push('mid onUnmounted')
       },
-      render() {
+      render(this: any) {
         return h(Child, { count: this.$props.count })
       }
     }
@@ -317,7 +318,7 @@ describe('api: options', () => {
       unmounted() {
         calls.push('child onUnmounted')
       },
-      render() {
+      render(this: any) {
         return h('div', this.$props.count)
       }
     }
@@ -375,7 +376,7 @@ describe('api: options', () => {
           a: 1
         }
       },
-      created() {
+      created(this: any) {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -391,7 +392,7 @@ describe('api: options', () => {
           b: 2
         }
       },
-      created() {
+      created(this: any) {
         calls.push('mixinB created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -408,7 +409,7 @@ describe('api: options', () => {
           c: 3
         }
       },
-      created() {
+      created(this: any) {
         calls.push('comp created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -417,7 +418,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('comp mounted')
       },
-      render() {
+      render(this: any) {
         return `${this.a}${this.b}${this.c}`
       }
     }
@@ -455,7 +456,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('comp')
       },
-      render() {
+      render(this: any) {
         return `${this.a}${this.b}`
       }
     }
@@ -465,7 +466,7 @@ describe('api: options', () => {
   })
 
   test('accessing setup() state from options', async () => {
-    const Comp = {
+    const Comp = createComponent({
       setup() {
         return {
           count: ref(0)
@@ -473,11 +474,11 @@ describe('api: options', () => {
       },
       data() {
         return {
-          plusOne: this.count + 1
+          plusOne: (this as any).count + 1
         }
       },
       computed: {
-        plusTwo() {
+        plusTwo(): number {
           return this.count + 2
         }
       },
@@ -495,7 +496,7 @@ describe('api: options', () => {
           `${this.count},${this.plusOne},${this.plusTwo}`
         )
       }
-    }
+    })
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>0,1,2</div>`)

@@ -28,7 +28,7 @@ export type VNodeTypes =
   | typeof Text
   | typeof Empty
 
-type VNodeChildAtom = VNode | string | number | null | void
+type VNodeChildAtom = VNode | string | number | boolean | null | void
 export interface VNodeChildren extends Array<VNodeChildren | VNodeChildAtom> {}
 export type VNodeChild = VNodeChildAtom | VNodeChildren
 

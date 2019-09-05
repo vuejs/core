@@ -37,8 +37,8 @@ export type Data = { [key: string]: unknown }
 // in templates (as `this` in the render option)
 export type ComponentRenderProxy<
   P = {},
-  D = {},
   B = {},
+  D = {},
   C = {},
   M = {},
   PublicProps = P
@@ -52,16 +52,10 @@ export type ComponentRenderProxy<
   $parent: ComponentInstance | null
   $emit: (event: string, ...args: unknown[]) => void
 } & P &
-  D &
   UnwrapRef<B> &
+  D &
   ExtracComputedReturns<C> &
   M
-
-type RenderFunction<P = {}, D = {}, B = {}, C = {}, M = {}> = <
-  This extends ComponentRenderProxy<P, D, B, C, M>
->(
-  this: This
-) => VNodeChild
 
 interface ComponentOptionsBase<
   Props,
@@ -71,47 +65,53 @@ interface ComponentOptionsBase<
   M extends MethodOptions
 > extends LegacyOptions<Props, RawBindings, D, C, M> {
   setup?: (
+    this: null,
     props: Props,
     ctx: SetupContext
   ) => RawBindings | (() => VNodeChild) | void
   name?: string
   template?: string
-  render?: RenderFunction<Props, D, RawBindings, C, M>
+  // Note: we are intentionally using the signature-less `Function` type here
+  // since any type with signature will cause the whole inference to fail when
+  // the return expression contains reference to `this`.
+  // Luckily `render()` doesn't need any arguments nor does it care about return
+  // type.
+  render?: Function
   components?: Record<string, Component>
   directives?: Record<string, Directive>
 }
 
-export interface ComponentOptionsWithoutProps<
+export type ComponentOptionsWithoutProps<
   Props = {},
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
-> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-}
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
 
-export interface ComponentOptionsWithArrayProps<
+export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Props = { [key in PropNames]?: unknown }
-> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
-}
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
 
-export interface ComponentOptionsWithProps<
+export type ComponentOptionsWithProps<
   PropsOptions = ComponentPropsOptions,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Props = ExtractPropTypes<PropsOptions>
-> extends ComponentOptionsBase<Props, RawBindings, D, C, M> {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
-}
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
@@ -150,6 +150,8 @@ interface SetupContext {
   emit: ((event: string, ...args: unknown[]) => void)
 }
 
+type RenderFunction = () => VNodeChild
+
 export type ComponentInstance<P = Data, D = Data> = {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
@@ -159,7 +161,7 @@ export type ComponentInstance<P = Data, D = Data> = {
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
-  render: RenderFunction<P, D> | null
+  render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
 
@@ -211,7 +213,7 @@ export function createComponent<
 >(
   options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
 ): {
-  new (): ComponentRenderProxy<Props, D, RawBindings, C, M>
+  new (): ComponentRenderProxy<Props, RawBindings, D, C, M>
 }
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: unknown }
@@ -227,8 +229,8 @@ export function createComponent<
 ): {
   new (): ComponentRenderProxy<
     { [key in PropNames]?: unknown },
-    D,
     RawBindings,
+    D,
     C,
     M
   >
@@ -247,8 +249,8 @@ export function createComponent<
   // for Vetur and TSX support
   new (): ComponentRenderProxy<
     ExtractPropTypes<PropsOptions>,
-    D,
     RawBindings,
+    D,
     C,
     M,
     ExtractPropTypes<PropsOptions, false>

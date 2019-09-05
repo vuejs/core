@@ -23,8 +23,8 @@ describe('api: createApp', () => {
           default: 0
         }
       },
-      render() {
-        return this.count
+      setup(props: { count: number }) {
+        return () => props.count
       }
     }
 

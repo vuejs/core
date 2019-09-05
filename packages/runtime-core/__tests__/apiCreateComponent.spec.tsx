@@ -1,4 +1,4 @@
-import { createComponent, ComponentRenderProxy } from '../src/component'
+import { createComponent } from '../src/component'
 import { ref } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
 import { h } from '../src/h'
@@ -56,7 +56,7 @@ test('createComponent type inference', () => {
       this.d.e.slice()
       this.cc && this.cc.push('hoo')
       this.dd.push('dd')
-      // return h('div', this.bb)
+      return h('div', this.bb)
     }
   })
   // test TSX props inference
@@ -75,7 +75,7 @@ test('type inference w/ optional props declaration', () => {
       this.$props.msg
       this.msg
       this.a * 2
-      // return h('div', this.msg)
+      return h('div', this.msg)
     }
   })
   ;(<Comp msg="hello"/>)
@@ -118,10 +118,10 @@ test('with legacy options', () => {
       }
     },
     data() {
-      this.a
-      this.b
+      // Limitation: we cannot expose the return result of setup() on `this`
+      // here in data() - somehow that would mess up the inference
       return {
-        c: 234
+        c: this.a || 123
       }
     },
     computed: {
@@ -148,6 +148,13 @@ test('with legacy options', () => {
         this.d * 2
         return (this.a || 0) + this.b + this.c + this.d
       }
+    },
+    render() {
+      this.a && this.a * 2
+      this.b * 2
+      this.c * 2
+      this.d * 2
+      return h('div', (this.a || 0) + this.b + this.c + this.d)
     }
   })
 })

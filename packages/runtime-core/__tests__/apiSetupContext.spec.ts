@@ -16,7 +16,7 @@ import {
 
 describe('api: setup context', () => {
   it('should expose return values to template render context', () => {
-    const Comp = {
+    const Comp = createComponent({
       setup() {
         return {
           // ref should auto-unwrap
@@ -30,7 +30,7 @@ describe('api: setup context', () => {
       render() {
         return `${this.ref} ${this.object.msg} ${this.value}`
       }
-    }
+    })
     expect(renderToString(h(Comp))).toMatch(`foo bar baz`)
   })
 
