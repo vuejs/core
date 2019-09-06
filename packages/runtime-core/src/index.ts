@@ -36,9 +36,9 @@ export {
   callWithAsyncErrorHandling
 } from './errorHandling'
 
-// For the compiler
-export { resolveComponent } from './component'
-export { applyDirectives, resolveDirective } from './directives'
+// For compiler generated code
+export { applyDirectives } from './directives'
+export { resolveComponent, resolveDirective } from './componentOptions'
 
 // Types -----------------------------------------------------------------------
 

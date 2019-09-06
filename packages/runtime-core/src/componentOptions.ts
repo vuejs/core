@@ -1,7 +1,6 @@
 import {
   ComponentInstance,
   Data,
-  currentRenderingInstance,
   currentInstance,
   Component,
   SetupContext
@@ -35,6 +34,7 @@ import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
 import { ComponentRenderProxy } from './componentProxy'
+import { currentRenderingInstance } from './componentRenderUtils'
 
 interface ComponentOptionsBase<
   Props,
@@ -385,7 +385,15 @@ function applyMixins(instance: ComponentInstance, mixins: ComponentOptions[]) {
   }
 }
 
-export function resolveAsset(type: 'components' | 'directives', name: string) {
+export function resolveComponent(name: string): Component | undefined {
+  return resolveAsset('components', name) as any
+}
+
+export function resolveDirective(name: string): Directive | undefined {
+  return resolveAsset('directives', name) as any
+}
+
+function resolveAsset(type: 'components' | 'directives', name: string) {
   const instance = currentRenderingInstance || currentInstance
   if (instance) {
     let camelized

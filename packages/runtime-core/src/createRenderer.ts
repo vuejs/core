@@ -9,11 +9,13 @@ import {
 } from './vnode'
 import {
   ComponentInstance,
-  renderComponentRoot,
-  shouldUpdateComponent,
   createComponentInstance,
   setupStatefulComponent
 } from './component'
+import {
+  renderComponentRoot,
+  shouldUpdateComponent
+} from './componentRenderUtils'
 import {
   isString,
   EMPTY_OBJ,

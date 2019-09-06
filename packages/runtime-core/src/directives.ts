@@ -14,10 +14,10 @@ return applyDirectives(h(comp), [
 import { VNode, cloneVNode } from './vnode'
 import { extend, isArray, isFunction } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInstance, currentRenderingInstance } from './component'
+import { ComponentInstance } from './component'
+import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 import { HostNode } from './createRenderer'
-import { resolveAsset } from './componentOptions'
 import { ComponentRenderProxy } from './componentProxy'
 
 export interface DirectiveBinding {
@@ -132,8 +132,4 @@ export function invokeDirectiveHook(
   } else if (isFunction(hook)) {
     callWithAsyncErrorHandling(hook, instance, ErrorTypes.DIRECTIVE_HOOK, args)
   }
-}
-
-export function resolveDirective(name: string): Directive | undefined {
-  return resolveAsset('directives', name) as any
 }

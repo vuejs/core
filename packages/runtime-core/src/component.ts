@@ -1,24 +1,17 @@
-import { VNode, normalizeVNode, VNodeChild, createVNode, Empty } from './vnode'
+import { VNode, VNodeChild } from './vnode'
 import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
 import { RenderProxyHandlers, ComponentRenderProxy } from './componentProxy'
 import { ComponentPropsOptions } from './componentProps'
 import { Slots } from './componentSlots'
-import { PatchFlags } from './patchFlags'
-import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
 import {
   ErrorTypes,
-  handleError,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
 import { AppContext, createAppContext } from './apiApp'
 import { Directive } from './directives'
-import {
-  applyOptions,
-  resolveAsset,
-  ComponentOptions
-} from './componentOptions'
+import { applyOptions, ComponentOptions } from './componentOptions'
 import {
   EMPTY_OBJ,
   isFunction,
@@ -308,110 +301,4 @@ function createSetupContext(instance: ComponentInstance): SetupContext {
     emit: instance.emit
   } as any
   return __DEV__ ? Object.freeze(context) : context
-}
-
-// mark the current rendering instance for asset resolution (e.g.
-// resolveComponent, resolveDirective) during render
-export let currentRenderingInstance: ComponentInstance | null = null
-
-export function renderComponentRoot(instance: ComponentInstance): VNode {
-  const {
-    type: Component,
-    vnode,
-    renderProxy,
-    props,
-    slots,
-    attrs,
-    emit
-  } = instance
-
-  let result
-  currentRenderingInstance = instance
-  try {
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode(
-        (instance.render as RenderFunction).call(renderProxy)
-      )
-    } else {
-      // functional
-      const render = Component as FunctionalComponent
-      result = normalizeVNode(
-        render.length > 1
-          ? render(props, {
-              attrs,
-              slots,
-              emit
-            })
-          : render(props, null as any)
-      )
-    }
-  } catch (err) {
-    handleError(err, instance, ErrorTypes.RENDER_FUNCTION)
-    result = createVNode(Empty)
-  }
-  currentRenderingInstance = null
-  return result
-}
-
-export function shouldUpdateComponent(
-  prevVNode: VNode,
-  nextVNode: VNode,
-  optimized?: boolean
-): boolean {
-  const { props: prevProps, children: prevChildren } = prevVNode
-  const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
-  if (patchFlag) {
-    if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
-      // slot content that references values that might have changed,
-      // e.g. in a v-for
-      return true
-    }
-    if (patchFlag & PatchFlags.FULL_PROPS) {
-      // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps as Data, nextProps as Data)
-    } else if (patchFlag & PatchFlags.PROPS) {
-      const dynamicProps = nextVNode.dynamicProps as string[]
-      for (let i = 0; i < dynamicProps.length; i++) {
-        const key = dynamicProps[i]
-        if ((nextProps as any)[key] !== (prevProps as any)[key]) {
-          return true
-        }
-      }
-    }
-  } else if (!optimized) {
-    // this path is only taken by manually written render functions
-    // so presence of any children leads to a forced update
-    if (prevChildren != null || nextChildren != null) {
-      return true
-    }
-    if (prevProps === nextProps) {
-      return false
-    }
-    if (prevProps === null) {
-      return nextProps !== null
-    }
-    if (nextProps === null) {
-      return prevProps !== null
-    }
-    return hasPropsChanged(prevProps, nextProps)
-  }
-  return false
-}
-
-function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
-  const nextKeys = Object.keys(nextProps)
-  if (nextKeys.length !== Object.keys(prevProps).length) {
-    return true
-  }
-  for (let i = 0; i < nextKeys.length; i++) {
-    const key = nextKeys[i]
-    if (nextProps[key] !== prevProps[key]) {
-      return true
-    }
-  }
-  return false
-}
-
-export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset('components', name) as any
 }
