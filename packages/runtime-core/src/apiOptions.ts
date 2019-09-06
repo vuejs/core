@@ -146,15 +146,10 @@ export function applyOptions(
   } = options
 
   const globalMixins = instance.appContext.mixins
-
-  // beforeCreate
+  // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     callSyncHook('beforeCreate', options, ctx, globalMixins)
-  }
-
-  // global mixins are applied first, and only if this is a non-mixin call
-  // so that they are applied once per instance.
-  if (!asMixin) {
+    // global mixins are applied first
     applyMixins(instance, globalMixins)
   }
   // extending a base component...

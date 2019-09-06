@@ -10,7 +10,8 @@ import {
   resolveDirective,
   applyDirectives,
   Plugin,
-  ref
+  ref,
+  getCurrentInstance
 } from '@vue/runtime-test'
 
 describe('api: createApp', () => {
@@ -139,6 +140,78 @@ describe('api: createApp', () => {
     expect(spy3).toHaveBeenCalled()
   })
 
+  test('mixin', () => {
+    const calls: string[] = []
+    const mixinA = {
+      data() {
+        return {
+          a: 1
+        }
+      },
+      created(this: any) {
+        calls.push('mixinA created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('mixinA mounted')
+      }
+    }
+    const mixinB = {
+      data() {
+        return {
+          b: 2
+        }
+      },
+      created(this: any) {
+        calls.push('mixinB created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('mixinB mounted')
+      }
+    }
+    const Comp = {
+      data() {
+        return {
+          c: 3
+        }
+      },
+      created(this: any) {
+        calls.push('comp created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('comp mounted')
+      },
+      render(this: any) {
+        return `${this.a}${this.b}${this.c}`
+      }
+    }
+
+    const app = createApp()
+    app.mixin(mixinA)
+    app.mixin(mixinB)
+
+    const root = nodeOps.createElement('div')
+    app.mount(Comp, root)
+
+    expect(serializeInner(root)).toBe(`123`)
+    expect(calls).toEqual([
+      'mixinA created',
+      'mixinB created',
+      'comp created',
+      'mixinA mounted',
+      'mixinB mounted',
+      'comp mounted'
+    ])
+  })
+
   test('use', () => {
     const PluginA: Plugin = app => app.provide('foo', 1)
     const PluginB: Plugin = {
@@ -193,18 +266,24 @@ describe('api: createApp', () => {
 
   test('config.warnHandler', () => {
     const app = createApp()
+    let ctx: any
 
     const handler = (app.config.warnHandler = jest.fn(
-      (msg, instance, trace) => {}
+      (msg, instance, trace) => {
+        expect(msg).toMatch(`Component is missing render function`)
+        expect(instance).toBe(ctx.renderProxy)
+        expect(trace).toMatch(`Hello`)
+      }
     ))
 
     const Root = {
-      setup() {}
+      name: 'Hello',
+      setup() {
+        ctx = getCurrentInstance()
+      }
     }
 
     app.mount(Root, nodeOps.createElement('div'))
-    expect(handler).toHaveBeenCalled()
+    expect(handler).toHaveBeenCalledTimes(1)
   })
-
-  test.todo('mixin')
 })
