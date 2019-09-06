@@ -4,7 +4,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn } from '@vue/shared'
-import { VNode } from '@vue/runtime-core'
+import { VNode, ComponentInternalInstance } from '@vue/runtime-core'
 
 export function patchProp(
   el: Element,
@@ -13,7 +13,7 @@ export function patchProp(
   prevValue: any,
   isSVG: boolean,
   prevChildren?: VNode[],
-  parentComponent?: any,
+  parentComponent?: ComponentInternalInstance,
   unmountChildren?: any
 ) {
   switch (key) {

@@ -9,8 +9,7 @@ For full exposed APIs, see `src/index.ts`. You can also run `yarn build runtime-
 ``` ts
 import { createRenderer, createAppAPI } from '@vue/runtime-core'
 
-// low-level render method
-export const render = createRenderer({
+const { render, createApp } = createRenderer({
   pathcProp,
   insert,
   remove,
@@ -18,7 +17,10 @@ export const render = createRenderer({
   // ...
 })
 
-export const createApp = createAppAPI(render)
+// `render` is the low-level API
+// `createApp` returns an app instance with configurable context shared
+// by the entire app tree.
+export { render, createApp }
 
 export * from '@vue/runtime-core'
 ```

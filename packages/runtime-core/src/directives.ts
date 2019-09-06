@@ -17,7 +17,6 @@ import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { HostNode } from './createRenderer'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 
 export interface DirectiveBinding {
@@ -29,7 +28,7 @@ export interface DirectiveBinding {
 }
 
 export type DirectiveHook = (
-  el: HostNode,
+  el: any,
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null

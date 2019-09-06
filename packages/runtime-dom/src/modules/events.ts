@@ -45,7 +45,7 @@ export function patchEvent(
   name: string,
   prevValue: EventValue | null,
   nextValue: EventValue | null,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null = null
 ) {
   const invoker = prevValue && prevValue.invoker
   if (nextValue) {

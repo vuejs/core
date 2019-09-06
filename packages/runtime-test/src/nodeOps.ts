@@ -218,7 +218,7 @@ function nextSibling(node: TestNode): TestNode | null {
   return parent.children[i + 1] || null
 }
 
-function querySelector() {
+function querySelector(): any {
   throw new Error('querySelector not supported in test renderer.')
 }
 

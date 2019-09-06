@@ -7,17 +7,16 @@ import {
   extend
 } from '@vue/shared'
 import { ComponentInternalInstance, Data, SetupProxySymbol } from './component'
-import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
 
-export const Fragment = Symbol('Fragment')
-export const Text = Symbol('Text')
-export const Empty = Symbol('Empty')
-export const Portal = Symbol('Portal')
+export const Fragment = __DEV__ ? Symbol('Fragment') : Symbol()
+export const Text = __DEV__ ? Symbol('Text') : Symbol()
+export const Empty = __DEV__ ? Symbol('Empty') : Symbol()
+export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
 
 export type VNodeTypes =
   | string
@@ -28,24 +27,42 @@ export type VNodeTypes =
   | typeof Text
   | typeof Empty
 
-type VNodeChildAtom = VNode | string | number | boolean | null | void
-export interface VNodeChildren extends Array<VNodeChildren | VNodeChildAtom> {}
-export type VNodeChild = VNodeChildAtom | VNodeChildren
+type VNodeChildAtom<HostNode, HostElement> =
+  | VNode<HostNode, HostElement>
+  | string
+  | number
+  | boolean
+  | null
+  | void
 
-export type NormalizedChildren = string | VNodeChildren | RawSlots | null
+export interface VNodeChildren<HostNode = any, HostElement = any>
+  extends Array<
+      | VNodeChildren<HostNode, HostElement>
+      | VNodeChildAtom<HostNode, HostElement>
+    > {}
 
-export interface VNode {
+export type VNodeChild<HostNode = any, HostElement = any> =
+  | VNodeChildAtom<HostNode, HostElement>
+  | VNodeChildren<HostNode, HostElement>
+
+export type NormalizedChildren<HostNode, HostElement> =
+  | string
+  | VNodeChildren<HostNode, HostElement>
+  | RawSlots
+  | null
+
+export interface VNode<HostNode = any, HostElement = any> {
   type: VNodeTypes
   props: Record<any, any> | null
   key: string | number | null
   ref: string | Function | null
-  children: NormalizedChildren
+  children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
 
   // DOM
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
-  target: HostNode | null // portal target
+  target: HostElement | null // portal target
 
   // optimization only
   shapeFlag: number
@@ -209,7 +226,7 @@ export function cloneVNode(vnode: VNode): VNode {
   }
 }
 
-export function normalizeVNode(child: VNodeChild): VNode {
+export function normalizeVNode(child: VNodeChild<any, any>): VNode {
   if (child == null) {
     // empty placeholder
     return createVNode(Empty)
@@ -241,7 +258,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = isString(children) ? children : children + ''
     type = ShapeFlags.TEXT_CHILDREN
   }
-  vnode.children = children as NormalizedChildren
+  vnode.children = children as NormalizedChildren<any, any>
   vnode.shapeFlag |= type
 }
 

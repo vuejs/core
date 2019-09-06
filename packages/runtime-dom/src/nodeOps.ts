@@ -36,5 +36,6 @@ export const nodeOps = {
 
   nextSibling: (node: Node): Node | null => node.nextSibling,
 
-  querySelector: (selector: string): Node | null => doc.querySelector(selector)
+  querySelector: (selector: string): Element | null =>
+    doc.querySelector(selector)
 }

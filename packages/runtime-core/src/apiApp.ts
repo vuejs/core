@@ -2,13 +2,13 @@ import { Component, Data, ComponentInternalInstance } from './component'
 import { ComponentOptions } from './componentOptions'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { Directive } from './directives'
-import { HostNode, RootRenderFunction } from './createRenderer'
+import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
 import { isFunction } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
-export interface App {
+export interface App<HostElement = any> {
   config: AppConfig
   use(plugin: Plugin, options?: any): this
   mixin(mixin: ComponentOptions): this
@@ -18,7 +18,7 @@ export interface App {
   directive(name: string, directive: Directive): this
   mount(
     rootComponent: Component,
-    rootContainer: string | HostNode,
+    rootContainer: HostElement,
     rootProps?: Data
   ): ComponentPublicInstance
   provide<T>(key: InjectionKey<T> | string, value: T): void
@@ -70,7 +70,9 @@ export function createAppContext(): AppContext {
   }
 }
 
-export function createAppAPI(render: RootRenderFunction): () => App {
+export function createAppAPI<HostNode, HostElement>(
+  render: RootRenderFunction<HostNode, HostElement>
+): () => App<HostElement> {
   return function createApp(): App {
     const context = createAppContext()
 
@@ -128,7 +130,11 @@ export function createAppAPI(render: RootRenderFunction): () => App {
         }
       },
 
-      mount(rootComponent, rootContainer, rootProps?: Data): any {
+      mount(
+        rootComponent: Component,
+        rootContainer: string | HostElement,
+        rootProps?: Data
+      ): any {
         if (!isMounted) {
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.

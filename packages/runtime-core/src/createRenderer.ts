@@ -38,6 +38,8 @@ import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { App, createAppAPI } from './apiApp'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -67,40 +69,64 @@ function invokeHooks(hooks: Function[], arg?: any) {
   }
 }
 
-export type HostNode = any
-
-export interface RendererOptions {
+export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
-    el: HostNode,
+    el: HostElement,
     key: string,
     value: any,
     oldValue: any,
     isSVG: boolean,
-    prevChildren?: VNode[],
+    prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
     unmountChildren?: (
-      children: VNode[],
+      children: VNode<HostNode, HostElement>[],
       parentComponent: ComponentInternalInstance | null
     ) => void
   ): void
-  insert(el: HostNode, parent: HostNode, anchor?: HostNode): void
+  insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
-  createElement(type: string, isSVG?: boolean): HostNode
+  createElement(type: string, isSVG?: boolean): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
-  setElementText(node: HostNode, text: string): void
+  setElementText(node: HostElement, text: string): void
   parentNode(node: HostNode): HostNode | null
   nextSibling(node: HostNode): HostNode | null
-  querySelector(selector: string): HostNode | null
+  querySelector(selector: string): HostElement | null
 }
 
-export type RootRenderFunction = (
-  vnode: VNode | null,
-  dom: HostNode | string
+export type RootRenderFunction<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement> | null,
+  dom: HostElement | string
 ) => void
 
-export function createRenderer(options: RendererOptions): RootRenderFunction {
+/**
+ * The createRenderer function accepts two generic arguments:
+ * HostNode and HostElement, corresponding to Node and Element types in the
+ * host environment. For example, for runtime-dom, HostNode would be the DOM
+ * `Node` interface and HostElement would be the DOM `Element` interface.
+ *
+ * Custom renderers can pass in the platform specific types like this:
+ *
+ * ``` js
+ * const { render, createApp } = createRenderer<Node, Element>({
+ *   patchProp,
+ *   ...nodeOps
+ * })
+ * ```
+ */
+export function createRenderer<
+  HostNode extends object = any,
+  HostElement extends HostNode = any
+>(
+  options: RendererOptions<HostNode, HostElement>
+): {
+  render: RootRenderFunction<HostNode, HostElement>
+  createApp: () => App<HostElement>
+} {
+  type HostVNode = VNode<HostNode, HostElement>
+  type HostVNodeChildren = VNodeChildren<HostNode, HostElement>
+
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -116,10 +142,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   } = options
 
   function patch(
-    n1: VNode | null, // null means this is a mount
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode = null,
+    n1: HostVNode | null, // null means this is a mount
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null = null,
     parentComponent: ComponentInternalInstance | null = null,
     isSVG: boolean = false,
     optimized: boolean = false
@@ -183,16 +209,16 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
             optimized
           )
         } else if (__DEV__) {
-          warn('Invalid VNode type:', n2.type, `(${typeof n2.type})`)
+          warn('Invalid HostVNode type:', n2.type, `(${typeof n2.type})`)
         }
     }
   }
 
   function processText(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null
   ) {
     if (n1 == null) {
       hostInsert(
@@ -201,7 +227,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         anchor
       )
     } else {
-      const el = (n2.el = n1.el)
+      const el = (n2.el = n1.el) as HostNode
       if (n2.children !== n1.children) {
         hostSetText(el, n2.children as string)
       }
@@ -209,10 +235,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function processEmptyNode(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null
   ) {
     if (n1 == null) {
       hostInsert((n2.el = hostCreateComment('')), container, anchor)
@@ -222,10 +248,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function processElement(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
@@ -241,9 +267,9 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function mountElement(
-    vnode: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    vnode: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean
   ) {
@@ -264,7 +290,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       mountChildren(
-        vnode.children as VNodeChildren,
+        vnode.children as HostVNodeChildren,
         el,
         null,
         parentComponent,
@@ -280,9 +306,9 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function mountChildren(
-    children: VNodeChildren,
-    container: HostNode,
-    anchor: HostNode,
+    children: HostVNodeChildren,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     start: number = 0
@@ -294,13 +320,13 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function patchElement(
-    n1: VNode,
-    n2: VNode,
+    n1: HostVNode,
+    n2: HostVNode,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
-    const el = (n2.el = n1.el)
+    const el = (n2.el = n1.el) as HostElement
     const { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
@@ -353,7 +379,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
                 next,
                 prev,
                 isSVG,
-                n1.children as VNode[],
+                n1.children as HostVNode[],
                 parentComponent,
                 unmountChildren
               )
@@ -378,7 +404,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
 
     if (dynamicChildren != null) {
       // children fast path
-      const olddynamicChildren = n1.dynamicChildren as VNode[]
+      const olddynamicChildren = n1.dynamicChildren as HostVNode[]
       for (let i = 0; i < dynamicChildren.length; i++) {
         patch(
           olddynamicChildren[i],
@@ -403,8 +429,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function patchProps(
-    el: HostNode,
-    vnode: VNode,
+    el: HostElement,
+    vnode: HostVNode,
     oldProps: any,
     newProps: any,
     parentComponent: ComponentInternalInstance | null,
@@ -422,7 +448,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
             next,
             prev,
             isSVG,
-            vnode.children as VNode[],
+            vnode.children as HostVNode[],
             parentComponent,
             unmountChildren
           )
@@ -438,7 +464,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
               null,
               null,
               isSVG,
-              vnode.children as VNode[],
+              vnode.children as HostVNode[],
               parentComponent,
               unmountChildren
             )
@@ -449,24 +475,26 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function processFragment(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
-    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))
+    const fragmentStartAnchor = (n2.el = n1
+      ? n1.el
+      : hostCreateComment('')) as HostNode
     const fragmentEndAnchor = (n2.anchor = n1
       ? n1.anchor
-      : hostCreateComment(''))
+      : hostCreateComment('')) as HostNode
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
       mountChildren(
-        n2.children as VNodeChildren,
+        n2.children as HostVNodeChildren,
         container,
         fragmentEndAnchor,
         parentComponent,
@@ -486,10 +514,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function processPortal(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
@@ -505,7 +533,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
           hostSetElementText(target, children as string)
         } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
-            children as VNodeChildren,
+            children as HostVNodeChildren,
             target,
             null,
             parentComponent,
@@ -517,7 +545,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       }
     } else {
       // update content
-      const target = (n2.target = n1.target)
+      const target = (n2.target = n1.target) as HostElement
       if (patchFlag === PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
@@ -534,8 +562,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
             hostSetElementText(target, '')
             hostSetElementText(nextTarget, children as string)
           } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-            for (let i = 0; i < (children as VNode[]).length; i++) {
-              move((children as VNode[])[i], nextTarget, null)
+            for (let i = 0; i < (children as HostVNode[]).length; i++) {
+              move((children as HostVNode[])[i], nextTarget, null)
             }
           }
         } else if (__DEV__) {
@@ -548,10 +576,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function processComponent(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
@@ -580,9 +608,9 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function mountComponent(
-    initialVNode: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    initialVNode: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean
   ) {
@@ -624,7 +652,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       } else {
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
-        // OR parent calling processComponent (next: VNode)
+        // OR parent calling processComponent (next: HostVNode)
         const { next } = instance
 
         if (__DEV__) {
@@ -654,7 +682,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
           prevTree,
           nextTree,
           // parent may have changed if it's in a portal
-          hostParentNode(prevTree.el),
+          hostParentNode(prevTree.el as HostNode) as HostElement,
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
@@ -689,10 +717,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function patchChildren(
-    n1: VNode | null,
-    n2: VNode,
-    container: HostNode,
-    anchor: HostNode,
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean = false
@@ -708,8 +736,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
         patchKeyedChildren(
-          c1 as VNode[],
-          c2 as VNodeChildren,
+          c1 as HostVNode[],
+          c2 as HostVNodeChildren,
           container,
           anchor,
           parentComponent,
@@ -720,8 +748,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       } else if (patchFlag & PatchFlags.UNKEYED) {
         // unkeyed
         patchUnkeyedChildren(
-          c1 as VNode[],
-          c2 as VNodeChildren,
+          c1 as HostVNode[],
+          c2 as HostVNodeChildren,
           container,
           anchor,
           parentComponent,
@@ -735,7 +763,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        unmountChildren(c1 as VNode[], parentComponent)
+        unmountChildren(c1 as HostVNode[], parentComponent)
       }
       if (c2 !== c1) {
         hostSetElementText(container, c2 as string)
@@ -745,7 +773,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         hostSetElementText(container, '')
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
-            c2 as VNodeChildren,
+            c2 as HostVNodeChildren,
             container,
             anchor,
             parentComponent,
@@ -756,8 +784,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // two arrays, cannot assume anything, do full diff
           patchKeyedChildren(
-            c1 as VNode[],
-            c2 as VNodeChildren,
+            c1 as HostVNode[],
+            c2 as HostVNodeChildren,
             container,
             anchor,
             parentComponent,
@@ -766,17 +794,17 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
           )
         } else {
           // c2 is null in this case
-          unmountChildren(c1 as VNode[], parentComponent, true)
+          unmountChildren(c1 as HostVNode[], parentComponent, true)
         }
       }
     }
   }
 
   function patchUnkeyedChildren(
-    c1: VNode[],
-    c2: VNodeChildren,
-    container: HostNode,
-    anchor: HostNode,
+    c1: HostVNode[],
+    c2: HostVNodeChildren,
+    container: HostElement,
+    anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
@@ -810,10 +838,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
 
   // can be all-keyed or mixed
   function patchKeyedChildren(
-    c1: VNode[],
-    c2: VNodeChildren,
-    container: HostNode,
-    parentAnchor: HostNode,
+    c1: HostVNode[],
+    c2: HostVNodeChildren,
+    container: HostElement,
+    parentAnchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
@@ -878,7 +906,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1
-        const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
+        const anchor =
+          nextPos < l2 ? (c2[nextPos] as HostVNode).el : parentAnchor
         while (i <= e2) {
           patch(
             null,
@@ -960,7 +989,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         } else {
           // key-less node, try to locate a key-less node of the same type
           for (j = s2; j <= e2; j++) {
-            if (isSameType(prevChild, c2[j] as VNode)) {
+            if (isSameType(prevChild, c2[j] as HostVNode)) {
               newIndex = j
               break
             }
@@ -977,7 +1006,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
           }
           patch(
             prevChild,
-            c2[newIndex] as VNode,
+            c2[newIndex] as HostVNode,
             container,
             null,
             parentComponent,
@@ -997,9 +1026,11 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       // looping backwards so that we can use last patched node as anchor
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
-        const nextChild = c2[nextIndex] as VNode
+        const nextChild = c2[nextIndex] as HostVNode
         const anchor =
-          nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
+          nextIndex + 1 < l2
+            ? (c2[nextIndex + 1] as HostVNode).el
+            : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
           patch(null, nextChild, container, anchor, parentComponent, isSVG)
@@ -1017,25 +1048,29 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     }
   }
 
-  function move(vnode: VNode, container: HostNode, anchor: HostNode) {
+  function move(
+    vnode: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null
+  ) {
     if (vnode.component !== null) {
       move(vnode.component.subTree, container, anchor)
       return
     }
     if (vnode.type === Fragment) {
-      hostInsert(vnode.el, container, anchor)
-      const children = vnode.children as VNode[]
+      hostInsert(vnode.el as HostNode, container, anchor)
+      const children = vnode.children as HostVNode[]
       for (let i = 0; i < children.length; i++) {
-        hostInsert(children[i].el, container, anchor)
+        hostInsert(children[i].el as HostNode, container, anchor)
       }
-      hostInsert(vnode.anchor, container, anchor)
+      hostInsert(vnode.anchor as HostNode, container, anchor)
     } else {
-      hostInsert(vnode.el, container, anchor)
+      hostInsert(vnode.el as HostNode, container, anchor)
     }
   }
 
   function unmount(
-    vnode: VNode,
+    vnode: HostVNode,
     parentComponent: ComponentInternalInstance | null,
     doRemove?: boolean
   ) {
@@ -1069,14 +1104,14 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
       unmountChildren(dynamicChildren, parentComponent, shouldRemoveChildren)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       unmountChildren(
-        children as VNode[],
+        children as HostVNode[],
         parentComponent,
         shouldRemoveChildren
       )
     }
 
     if (doRemove) {
-      hostRemove(vnode.el)
+      hostRemove(vnode.el as HostNode)
       if (anchor != null) hostRemove(anchor)
     }
 
@@ -1110,7 +1145,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   }
 
   function unmountChildren(
-    children: VNode[],
+    children: HostVNode[],
     parentComponent: ComponentInternalInstance | null,
     doRemove?: boolean,
     start: number = 0
@@ -1120,9 +1155,9 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     }
   }
 
-  function getNextHostNode(vnode: VNode): HostNode {
+  function getNextHostNode(vnode: HostVNode): HostNode | null {
     return vnode.component === null
-      ? hostNextSibling(vnode.anchor || vnode.el)
+      ? hostNextSibling((vnode.anchor || vnode.el) as HostNode)
       : getNextHostNode(vnode.component.subTree)
   }
 
@@ -1130,7 +1165,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     ref: string | Function | Ref<any>,
     oldRef: string | Function | Ref<any> | null,
     parent: ComponentInternalInstance,
-    value: HostNode | ComponentInternalInstance | null
+    value: HostNode | ComponentPublicInstance | null
   ) {
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
     const renderContext = toRaw(parent.renderContext)
@@ -1163,39 +1198,33 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     }
   }
 
-  return function render(vnode: VNode | null, dom: HostNode | string) {
-    if (isString(dom)) {
-      if (isFunction(hostQuerySelector)) {
-        dom = hostQuerySelector(dom)
-        if (!dom) {
-          if (__DEV__) {
-            warn(
-              `Failed to locate root container: ` +
-                `querySelector returned null.`
-            )
-          }
-          return
-        }
-      } else {
+  function render(vnode: HostVNode | null, rawContainer: HostElement | string) {
+    let container: any = rawContainer
+    if (isString(container)) {
+      container = hostQuerySelector(container)
+      if (!container) {
         if (__DEV__) {
           warn(
-            `Failed to locate root container: ` +
-              `target platform does not support querySelector.`
+            `Failed to locate root container: ` + `querySelector returned null.`
           )
         }
         return
       }
     }
     if (vnode == null) {
-      debugger
-      if (dom._vnode) {
-        unmount(dom._vnode, null, true)
+      if (container._vnode) {
+        unmount(container._vnode, null, true)
       }
     } else {
-      patch(dom._vnode, vnode, dom)
+      patch(container._vnode || null, vnode, container)
     }
     flushPostFlushCbs()
-    dom._vnode = vnode
+    container._vnode = vnode
+  }
+
+  return {
+    render,
+    createApp: createAppAPI(render)
   }
 }
 
