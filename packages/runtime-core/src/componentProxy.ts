@@ -1,16 +1,16 @@
 import { ComponentInstance } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ, hasOwn } from '@vue/shared'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
     const { renderContext, data, props, propsProxy } = target
-    if (data !== EMPTY_OBJ && data.hasOwnProperty(key)) {
+    if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       return data[key]
-    } else if (renderContext.hasOwnProperty(key)) {
+    } else if (hasOwn(renderContext, key)) {
       return renderContext[key]
-    } else if (props.hasOwnProperty(key)) {
+    } else if (hasOwn(props, key)) {
       // return the value from propsProxy for ref unwrapping and readonly
       return (propsProxy as any)[key]
     } else {
@@ -53,9 +53,9 @@ export const RenderProxyHandlers = {
   },
   set(target: ComponentInstance, key: string, value: any): boolean {
     const { data, renderContext } = target
-    if (data !== EMPTY_OBJ && data.hasOwnProperty(key)) {
+    if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
-    } else if (renderContext.hasOwnProperty(key)) {
+    } else if (hasOwn(renderContext, key)) {
       renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
       // TODO warn attempt of mutating public property

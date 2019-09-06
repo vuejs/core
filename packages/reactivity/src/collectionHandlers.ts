@@ -2,7 +2,7 @@ import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
-import { isObject, capitalize } from '@vue/shared'
+import { isObject, capitalize, hasOwn } from '@vue/shared'
 
 const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
 const toReadonly = (value: any) => (isObject(value) ? readonly(value) : value)
@@ -222,9 +222,7 @@ function createInstrumentationGetter(instrumentations: any) {
     receiver: any
   ) {
     target =
-      instrumentations.hasOwnProperty(key) && key in target
-        ? instrumentations
-        : target
+      hasOwn(instrumentations, key) && key in target ? instrumentations : target
     return Reflect.get(target, key, receiver)
   }
 }

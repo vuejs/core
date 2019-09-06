@@ -8,7 +8,8 @@ import {
   isFunction,
   isArray,
   isObject,
-  isReservedProp
+  isReservedProp,
+  hasOwn
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInstance } from './component'
@@ -123,7 +124,7 @@ export function resolveProps(
       if (isReservedProp(key)) continue
       // any non-declared data are put into a separate `attrs` object
       // for spreading
-      if (hasDeclaredProps && !options.hasOwnProperty(key)) {
+      if (hasDeclaredProps && !hasOwn(options, key)) {
         ;(attrs || (attrs = {}))[key] = rawProps[key]
       } else {
         setProp(key, rawProps[key])
@@ -135,8 +136,8 @@ export function resolveProps(
     for (const key in options) {
       let opt = options[key]
       if (opt == null) continue
-      const isAbsent = !props.hasOwnProperty(key)
-      const hasDefault = opt.hasOwnProperty('default')
+      const isAbsent = !hasOwn(props, key)
+      const hasDefault = hasOwn(opt, 'default')
       const currentValue = props[key]
       // default values
       if (hasDefault && currentValue === undefined) {
@@ -173,7 +174,7 @@ export function resolveProps(
   ) {
     const rawInitialProps = toRaw(propsProxy)
     for (const key in rawInitialProps) {
-      if (!props.hasOwnProperty(key)) {
+      if (!hasOwn(props, key)) {
         delete propsProxy[key]
       }
     }

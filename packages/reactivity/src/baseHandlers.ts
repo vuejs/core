@@ -2,10 +2,8 @@ import { reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
-import { isObject } from '@vue/shared'
+import { isObject, hasOwn } from '@vue/shared'
 import { isRef } from './ref'
-
-const hasOwnProperty = Object.prototype.hasOwnProperty
 
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
@@ -40,7 +38,7 @@ function set(
   receiver: any
 ): boolean {
   value = toRaw(value)
-  const hadKey = hasOwnProperty.call(target, key)
+  const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   if (isRef(oldValue) && !isRef(value)) {
     oldValue.value = value
@@ -69,7 +67,7 @@ function set(
 }
 
 function deleteProperty(target: any, key: string | symbol): boolean {
-  const hadKey = hasOwnProperty.call(target, key)
+  const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
   if (hadKey) {
