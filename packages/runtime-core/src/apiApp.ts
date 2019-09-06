@@ -1,10 +1,6 @@
-import {
-  ComponentOptions,
-  Component,
-  ComponentRenderProxy,
-  Data,
-  ComponentInstance
-} from './component'
+import { Component, Data, ComponentInstance } from './component'
+import { ComponentOptions } from './componentOptions'
+import { ComponentRenderProxy } from './componentProxy'
 import { Directive } from './directives'
 import { HostNode, RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'

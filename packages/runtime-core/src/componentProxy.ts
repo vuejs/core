@@ -1,7 +1,33 @@
-import { ComponentInstance } from './component'
+import { ComponentInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn } from '@vue/shared'
+import { ExtracComputedReturns } from './componentOptions'
+import { UnwrapRef } from '@vue/reactivity'
+
+// public properties exposed on the proxy, which is used as the render context
+// in templates (as `this` in the render option)
+export type ComponentRenderProxy<
+  P = {},
+  B = {},
+  D = {},
+  C = {},
+  M = {},
+  PublicProps = P
+> = {
+  $data: D
+  $props: PublicProps
+  $attrs: Data
+  $refs: Data
+  $slots: Data
+  $root: ComponentInstance | null
+  $parent: ComponentInstance | null
+  $emit: (event: string, ...args: unknown[]) => void
+} & P &
+  UnwrapRef<B> &
+  D &
+  ExtracComputedReturns<C> &
+  M
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {

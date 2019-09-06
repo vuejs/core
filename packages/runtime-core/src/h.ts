@@ -9,13 +9,13 @@ import {
 import { isObject, isArray } from '@vue/shared'
 import { Ref } from '@vue/reactivity'
 import { RawSlots } from './componentSlots'
+import { FunctionalComponent } from './component'
 import {
-  FunctionalComponent,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithProps,
   ComponentOptions
-} from './component'
+} from './componentOptions'
 import { ExtractPropTypes } from './componentProps'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the

@@ -1,6 +1,6 @@
 // Public API ------------------------------------------------------------------
 
-export { createComponent } from './component'
+export { createComponent } from './apiCreateComponent'
 export { nextTick } from './scheduler'
 export * from './apiReactivity'
 export * from './apiWatch'

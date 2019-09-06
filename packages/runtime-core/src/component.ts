@@ -1,15 +1,7 @@
 import { VNode, normalizeVNode, VNodeChild, createVNode, Empty } from './vnode'
-import { ReactiveEffect, UnwrapRef, reactive, readonly } from '@vue/reactivity'
-import {
-  EMPTY_OBJ,
-  isFunction,
-  capitalize,
-  NOOP,
-  isArray,
-  isObject
-} from '@vue/shared'
-import { RenderProxyHandlers } from './componentProxy'
-import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
+import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
+import { RenderProxyHandlers, ComponentRenderProxy } from './componentProxy'
+import { ComponentPropsOptions } from './componentProps'
 import { Slots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
@@ -24,99 +16,19 @@ import { AppContext, createAppContext } from './apiApp'
 import { Directive } from './directives'
 import {
   applyOptions,
-  LegacyOptions,
   resolveAsset,
-  ComputedOptions,
-  MethodOptions,
-  ExtracComputedReturns
-} from './apiOptions'
+  ComponentOptions
+} from './componentOptions'
+import {
+  EMPTY_OBJ,
+  isFunction,
+  capitalize,
+  NOOP,
+  isArray,
+  isObject
+} from '@vue/shared'
 
 export type Data = { [key: string]: unknown }
-
-// public properties exposed on the proxy, which is used as the render context
-// in templates (as `this` in the render option)
-export type ComponentRenderProxy<
-  P = {},
-  B = {},
-  D = {},
-  C = {},
-  M = {},
-  PublicProps = P
-> = {
-  $data: D
-  $props: PublicProps
-  $attrs: Data
-  $refs: Data
-  $slots: Data
-  $root: ComponentInstance | null
-  $parent: ComponentInstance | null
-  $emit: (event: string, ...args: unknown[]) => void
-} & P &
-  UnwrapRef<B> &
-  D &
-  ExtracComputedReturns<C> &
-  M
-
-interface ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C extends ComputedOptions,
-  M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M> {
-  setup?: (
-    this: null,
-    props: Props,
-    ctx: SetupContext
-  ) => RawBindings | (() => VNodeChild) | void
-  name?: string
-  template?: string
-  // Note: we are intentionally using the signature-less `Function` type here
-  // since any type with signature will cause the whole inference to fail when
-  // the return expression contains reference to `this`.
-  // Luckily `render()` doesn't need any arguments nor does it care about return
-  // type.
-  render?: Function
-  components?: Record<string, Component>
-  directives?: Record<string, Directive>
-}
-
-export type ComponentOptionsWithoutProps<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {}
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
-  props?: undefined
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
-
-export type ComponentOptionsWithArrayProps<
-  PropNames extends string = string,
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Props = { [key in PropNames]?: unknown }
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
-  props: PropNames[]
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
-
-export type ComponentOptionsWithProps<
-  PropsOptions = ComponentPropsOptions,
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
-  props: PropsOptions
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
-
-export type ComponentOptions =
-  | ComponentOptionsWithoutProps
-  | ComponentOptionsWithProps
-  | ComponentOptionsWithArrayProps
 
 export interface FunctionalComponent<P = {}> {
   (props: P, ctx: SetupContext): VNodeChild
@@ -146,7 +58,7 @@ export const enum LifecycleHooks {
 
 type Emit = ((event: string, ...args: unknown[]) => void)
 
-interface SetupContext {
+export interface SetupContext {
   attrs: Data
   slots: Slots
   emit: Emit
@@ -199,72 +111,6 @@ export interface ComponentInstance {
   [LifecycleHooks.ACTIVATED]: LifecycleHook
   [LifecycleHooks.DEACTIVATED]: LifecycleHook
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-}
-
-// createComponent
-// overload 1: direct setup function
-// (uses user defined props interface)
-export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
-): (props: Props) => any
-// overload 2: object format with no props
-// (uses user defined props interface)
-// return type is for Vetur and TSX support
-export function createComponent<
-  Props,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {}
->(
-  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
-): {
-  new (): ComponentRenderProxy<Props, RawBindings, D, C, M>
-}
-// overload 3: object format with array props declaration
-// props inferred as { [key in PropNames]?: unknown }
-// return type is for Vetur and TSX support
-export function createComponent<
-  PropNames extends string,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {}
->(
-  options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
-): {
-  new (): ComponentRenderProxy<
-    { [key in PropNames]?: unknown },
-    RawBindings,
-    D,
-    C,
-    M
-  >
-}
-// overload 4: object format with object props declaration
-// see `ExtractPropTypes` in ./componentProps.ts
-export function createComponent<
-  PropsOptions,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {}
->(
-  options: ComponentOptionsWithProps<PropsOptions, RawBindings, D, C, M>
-): {
-  // for Vetur and TSX support
-  new (): ComponentRenderProxy<
-    ExtractPropTypes<PropsOptions>,
-    RawBindings,
-    D,
-    C,
-    M,
-    ExtractPropTypes<PropsOptions, false>
-  >
-}
-// implementation, close to no-op
-export function createComponent(options: any) {
-  return isFunction(options) ? { setup: options } : (options as any)
 }
 
 const emptyAppContext = createAppContext()

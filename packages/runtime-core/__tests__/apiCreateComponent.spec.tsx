@@ -1,4 +1,4 @@
-import { createComponent } from '../src/component'
+import { createComponent } from '../src/apiCreateComponent'
 import { ref } from '@vue/reactivity'
 import { PropType } from '../src/componentProps'
 import { h } from '../src/h'

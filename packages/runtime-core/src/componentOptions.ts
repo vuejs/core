@@ -1,10 +1,10 @@
 import {
   ComponentInstance,
   Data,
-  ComponentOptions,
   currentRenderingInstance,
   currentInstance,
-  ComponentRenderProxy
+  Component,
+  SetupContext
 } from './component'
 import {
   isFunction,
@@ -31,6 +31,71 @@ import {
 } from './apiLifecycle'
 import { DebuggerEvent, reactive } from '@vue/reactivity'
 import { warn } from './warning'
+import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
+import { Directive } from './directives'
+import { VNodeChild } from './vnode'
+import { ComponentRenderProxy } from './componentProxy'
+
+interface ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C extends ComputedOptions,
+  M extends MethodOptions
+> extends LegacyOptions<Props, RawBindings, D, C, M> {
+  setup?: (
+    this: null,
+    props: Props,
+    ctx: SetupContext
+  ) => RawBindings | (() => VNodeChild) | void
+  name?: string
+  template?: string
+  // Note: we are intentionally using the signature-less `Function` type here
+  // since any type with signature will cause the whole inference to fail when
+  // the return expression contains reference to `this`.
+  // Luckily `render()` doesn't need any arguments nor does it care about return
+  // type.
+  render?: Function
+  components?: Record<string, Component>
+  directives?: Record<string, Directive>
+}
+
+export type ComponentOptionsWithoutProps<
+  Props = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+  props?: undefined
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+
+export type ComponentOptionsWithArrayProps<
+  PropNames extends string = string,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Props = { [key in PropNames]?: unknown }
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+  props: PropNames[]
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+
+export type ComponentOptionsWithProps<
+  PropsOptions = ComponentPropsOptions,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Props = ExtractPropTypes<PropsOptions>
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+  props: PropsOptions
+} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+
+export type ComponentOptions =
+  | ComponentOptionsWithoutProps
+  | ComponentOptionsWithProps
+  | ComponentOptionsWithArrayProps
 
 // TODO legacy component definition also supports constructors with .options
 type LegacyComponent = ComponentOptions
@@ -60,6 +125,18 @@ type WatchHandler = (
   onCleanup: CleanupRegistrator
 ) => void
 
+type ComponentWatchOptions = Record<
+  string,
+  string | WatchHandler | { handler: WatchHandler } & WatchOptions
+>
+
+type ComponentInjectOptions =
+  | string[]
+  | Record<
+      string | symbol,
+      string | symbol | { from: string | symbol; default?: any }
+    >
+
 // TODO type inference for these options
 export interface LegacyOptions<
   Props,
@@ -71,21 +148,16 @@ export interface LegacyOptions<
   el?: any
 
   // state
+  // Limitation: we cannot expose RawBindings on the `this` context for data
+  // since that leads to some sort of circular inference and breaks ThisType
+  // for the entire component.
   data?: D | ((this: ComponentRenderProxy<Props>) => D)
   computed?: C
   methods?: M
   // TODO watch array
-  watch?: Record<
-    string,
-    string | WatchHandler | { handler: WatchHandler } & WatchOptions
-  >
+  watch?: ComponentWatchOptions
   provide?: Data | Function
-  inject?:
-    | string[]
-    | Record<
-        string | symbol,
-        string | symbol | { from: string | symbol; default?: any }
-      >
+  inject?: ComponentInjectOptions
 
   // composition
   mixins?: LegacyComponent[]

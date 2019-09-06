@@ -2,9 +2,9 @@ import {
   ComponentInstance,
   LifecycleHooks,
   currentInstance,
-  setCurrentInstance,
-  ComponentRenderProxy
+  setCurrentInstance
 } from './component'
+import { ComponentRenderProxy } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'

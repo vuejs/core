@@ -14,14 +14,11 @@ return applyDirectives(h(comp), [
 import { VNode, cloneVNode } from './vnode'
 import { extend, isArray, isFunction } from '@vue/shared'
 import { warn } from './warning'
-import {
-  ComponentInstance,
-  currentRenderingInstance,
-  ComponentRenderProxy
-} from './component'
+import { ComponentInstance, currentRenderingInstance } from './component'
 import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
 import { HostNode } from './createRenderer'
-import { resolveAsset } from './apiOptions'
+import { resolveAsset } from './componentOptions'
+import { ComponentRenderProxy } from './componentProxy'
 
 export interface DirectiveBinding {
   instance: ComponentRenderProxy | null
