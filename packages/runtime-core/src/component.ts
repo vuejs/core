@@ -144,15 +144,17 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
+type Emit = ((event: string, ...args: unknown[]) => void)
+
 interface SetupContext {
   attrs: Data
   slots: Slots
-  emit: ((event: string, ...args: unknown[]) => void)
+  emit: Emit
 }
 
 type RenderFunction = () => VNodeChild
 
-export type ComponentInstance<P = Data, D = Data> = {
+export interface ComponentInstance {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInstance | null
   appContext: AppContext
@@ -169,12 +171,16 @@ export type ComponentInstance<P = Data, D = Data> = {
   directives: Record<string, Directive>
 
   // the rest are only for stateful components
-  data: D
-  props: P
+  renderContext: Data
+  data: Data
+  props: Data
+  attrs: Data
+  slots: Slots
   renderProxy: ComponentRenderProxy | null
-  propsProxy: P | null
+  propsProxy: Data | null
   setupContext: SetupContext | null
   refs: Data
+  emit: Emit
 
   // user namespace
   user: { [key: string]: any }
@@ -193,7 +199,7 @@ export type ComponentInstance<P = Data, D = Data> = {
   [LifecycleHooks.ACTIVATED]: LifecycleHook
   [LifecycleHooks.DEACTIVATED]: LifecycleHook
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-} & SetupContext
+}
 
 // createComponent
 // overload 1: direct setup function
@@ -287,6 +293,7 @@ export function createComponentInstance(
     provides: parent ? parent.provides : Object.create(appContext.provides),
 
     // setup context properties
+    renderContext: EMPTY_OBJ,
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
@@ -397,7 +404,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
       // setup returned bindings.
       // assuming a render function compiled from template is present.
       if (isObject(setupResult)) {
-        instance.data = reactive(setupResult)
+        instance.renderContext = reactive(setupResult)
       } else if (__DEV__ && setupResult !== undefined) {
         warn(
           `setup() should return an object. Received: ${
@@ -420,8 +427,8 @@ export function setupStatefulComponent(instance: ComponentInstance) {
   if (__FEATURE_OPTIONS__) {
     applyOptions(instance, Component)
   }
-  if (instance.data === EMPTY_OBJ) {
-    instance.data = reactive({})
+  if (instance.renderContext === EMPTY_OBJ) {
+    instance.renderContext = reactive({})
   }
   currentInstance = null
 }

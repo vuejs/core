@@ -112,8 +112,10 @@ export function applyOptions(
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
-  const data =
-    instance.data === EMPTY_OBJ ? (instance.data = reactive({})) : instance.data
+  const renderContext =
+    instance.renderContext === EMPTY_OBJ
+      ? (instance.renderContext = reactive({}))
+      : instance.renderContext
   const ctx = instance.renderProxy as any
   const {
     // composition
@@ -166,12 +168,16 @@ export function applyOptions(
 
   // state options
   if (dataOptions) {
+    const data =
+      instance.data === EMPTY_OBJ
+        ? (instance.data = reactive({}))
+        : instance.data
     extend(data, isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions)
   }
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
-      data[key] = isFunction(opt)
+      renderContext[key] = isFunction(opt)
         ? computed(opt.bind(ctx))
         : computed({
             get: opt.get.bind(ctx),
@@ -181,7 +187,7 @@ export function applyOptions(
   }
   if (methods) {
     for (const key in methods) {
-      data[key] = (methods as MethodOptions)[key].bind(ctx)
+      renderContext[key] = (methods as MethodOptions)[key].bind(ctx)
     }
   }
   if (watchOptions) {
@@ -189,7 +195,7 @@ export function applyOptions(
       const raw = watchOptions[key]
       const getter = () => ctx[key]
       if (isString(raw)) {
-        const handler = data[raw]
+        const handler = renderContext[raw]
         if (isFunction(handler)) {
           watch(getter, handler as any)
         } else if (__DEV__) {
@@ -217,15 +223,15 @@ export function applyOptions(
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
-        data[key] = inject(key)
+        renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
         const opt = injectOptions[key]
         if (isObject(opt)) {
-          data[key] = inject(opt.from, opt.default)
+          renderContext[key] = inject(opt.from, opt.default)
         } else {
-          data[key] = inject(opt)
+          renderContext[key] = inject(opt)
         }
       }
     }

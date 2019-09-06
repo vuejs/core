@@ -1127,13 +1127,13 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     value: HostNode | ComponentInstance | null
   ) {
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
-    const rawData = toRaw(parent.data)
+    const renderContext = toRaw(parent.renderContext)
 
     // unset old ref
     if (oldRef !== null && oldRef !== ref) {
       if (isString(oldRef)) {
         refs[oldRef] = null
-        const oldSetupRef = rawData[oldRef]
+        const oldSetupRef = renderContext[oldRef]
         if (isRef(oldSetupRef)) {
           oldSetupRef.value = null
         }
@@ -1143,7 +1143,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     }
 
     if (isString(ref)) {
-      const setupRef = rawData[ref]
+      const setupRef = renderContext[ref]
       if (isRef(setupRef)) {
         setupRef.value = value
       }

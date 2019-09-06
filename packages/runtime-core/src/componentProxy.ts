@@ -1,12 +1,15 @@
 import { ComponentInstance } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
+import { EMPTY_OBJ } from '@vue/shared'
 
 export const RenderProxyHandlers = {
   get(target: ComponentInstance, key: string) {
-    const { data, props, propsProxy } = target
-    if (data.hasOwnProperty(key)) {
+    const { renderContext, data, props, propsProxy } = target
+    if (data !== EMPTY_OBJ && data.hasOwnProperty(key)) {
       return data[key]
+    } else if (renderContext.hasOwnProperty(key)) {
+      return renderContext[key]
     } else if (props.hasOwnProperty(key)) {
       // return the value from propsProxy for ref unwrapping and readonly
       return (propsProxy as any)[key]
@@ -31,7 +34,6 @@ export const RenderProxyHandlers = {
         case '$el':
           return target.vnode.el
         case '$options':
-          // TODO handle merging
           return target.type
         default:
           // methods are only exposed when options are supported
@@ -50,10 +52,11 @@ export const RenderProxyHandlers = {
     }
   },
   set(target: ComponentInstance, key: string, value: any): boolean {
-    const { data } = target
-    if (data.hasOwnProperty(key)) {
+    const { data, renderContext } = target
+    if (data !== EMPTY_OBJ && data.hasOwnProperty(key)) {
       data[key] = value
-      return true
+    } else if (renderContext.hasOwnProperty(key)) {
+      renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
       // TODO warn attempt of mutating public property
       return false
@@ -62,7 +65,7 @@ export const RenderProxyHandlers = {
       return false
     } else {
       target.user[key] = value
-      return true
     }
+    return true
   }
 }
