@@ -1,10 +1,10 @@
 import { VNode } from './vnode'
-import { ComponentInstance, LifecycleHooks } from './component'
+import { ComponentInternalInstance, LifecycleHooks } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
-export const enum ErrorTypes {
+export const enum ErrorCodes {
   SETUP_FUNCTION = 1,
   RENDER_FUNCTION,
   WATCH_GETTER,
@@ -32,27 +32,27 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [LifecycleHooks.ERROR_CAPTURED]: 'errorCaptured hook',
   [LifecycleHooks.RENDER_TRACKED]: 'renderTracked hook',
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
-  [ErrorTypes.SETUP_FUNCTION]: 'setup function',
-  [ErrorTypes.RENDER_FUNCTION]: 'render function',
-  [ErrorTypes.WATCH_GETTER]: 'watcher getter',
-  [ErrorTypes.WATCH_CALLBACK]: 'watcher callback',
-  [ErrorTypes.WATCH_CLEANUP]: 'watcher cleanup function',
-  [ErrorTypes.NATIVE_EVENT_HANDLER]: 'native event handler',
-  [ErrorTypes.COMPONENT_EVENT_HANDLER]: 'component event handler',
-  [ErrorTypes.DIRECTIVE_HOOK]: 'directive hook',
-  [ErrorTypes.APP_ERROR_HANDLER]: 'app errorHandler',
-  [ErrorTypes.APP_WARN_HANDLER]: 'app warnHandler',
-  [ErrorTypes.SCHEDULER]:
+  [ErrorCodes.SETUP_FUNCTION]: 'setup function',
+  [ErrorCodes.RENDER_FUNCTION]: 'render function',
+  [ErrorCodes.WATCH_GETTER]: 'watcher getter',
+  [ErrorCodes.WATCH_CALLBACK]: 'watcher callback',
+  [ErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [ErrorCodes.NATIVE_EVENT_HANDLER]: 'native event handler',
+  [ErrorCodes.COMPONENT_EVENT_HANDLER]: 'component event handler',
+  [ErrorCodes.DIRECTIVE_HOOK]: 'directive hook',
+  [ErrorCodes.APP_ERROR_HANDLER]: 'app errorHandler',
+  [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
+  [ErrorCodes.SCHEDULER]:
     'scheduler flush. This may be a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
 }
 
-type AllErrorTypes = LifecycleHooks | ErrorTypes
+export type ErrorTypes = LifecycleHooks | ErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,
-  instance: ComponentInstance | null,
-  type: AllErrorTypes,
+  instance: ComponentInternalInstance | null,
+  type: ErrorTypes,
   args?: any[]
 ) {
   let res: any
@@ -66,8 +66,8 @@ export function callWithErrorHandling(
 
 export function callWithAsyncErrorHandling(
   fn: Function,
-  instance: ComponentInstance | null,
-  type: AllErrorTypes,
+  instance: ComponentInternalInstance | null,
+  type: ErrorTypes,
   args?: any[]
 ) {
   const res = callWithErrorHandling(fn, instance, type, args)
@@ -81,12 +81,12 @@ export function callWithAsyncErrorHandling(
 
 export function handleError(
   err: Error,
-  instance: ComponentInstance | null,
-  type: AllErrorTypes
+  instance: ComponentInternalInstance | null,
+  type: ErrorTypes
 ) {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
-    let cur: ComponentInstance | null = instance.parent
+    let cur: ComponentInternalInstance | null = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.renderProxy
     // in production the hook receives only the error code
@@ -108,7 +108,7 @@ export function handleError(
       callWithErrorHandling(
         appErrorHandler,
         null,
-        ErrorTypes.APP_ERROR_HANDLER,
+        ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo]
       )
       return
@@ -117,7 +117,7 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
-function logError(err: Error, type: AllErrorTypes, contextVNode: VNode | null) {
+function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   // default behavior is crash in prod & test, recover in dev.
   // TODO we should probably make this configurable via `createApp`
   if (

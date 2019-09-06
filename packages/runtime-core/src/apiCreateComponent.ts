@@ -7,7 +7,7 @@ import {
 } from './componentOptions'
 import { SetupContext } from './component'
 import { VNodeChild } from './vnode'
-import { ComponentRenderProxy } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { ExtractPropTypes } from './componentProps'
 import { isFunction } from '@vue/shared'
 
@@ -29,7 +29,7 @@ export function createComponent<
 >(
   options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
 ): {
-  new (): ComponentRenderProxy<Props, RawBindings, D, C, M>
+  new (): ComponentPublicInstance<Props, RawBindings, D, C, M>
 }
 
 // overload 3: object format with array props declaration
@@ -44,7 +44,7 @@ export function createComponent<
 >(
   options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
 ): {
-  new (): ComponentRenderProxy<
+  new (): ComponentPublicInstance<
     { [key in PropNames]?: unknown },
     RawBindings,
     D,
@@ -65,7 +65,7 @@ export function createComponent<
   options: ComponentOptionsWithProps<PropsOptions, RawBindings, D, C, M>
 ): {
   // for Vetur and TSX support
-  new (): ComponentRenderProxy<
+  new (): ComponentPublicInstance<
     ExtractPropTypes<PropsOptions>,
     RawBindings,
     D,

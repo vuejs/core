@@ -6,7 +6,7 @@ import {
   EMPTY_ARR,
   extend
 } from '@vue/shared'
-import { ComponentInstance, Data, SetupProxySymbol } from './component'
+import { ComponentInternalInstance, Data, SetupProxySymbol } from './component'
 import { HostNode } from './createRenderer'
 import { RawSlots } from './componentSlots'
 import { PatchFlags } from './patchFlags'
@@ -40,7 +40,7 @@ export interface VNode {
   key: string | number | null
   ref: string | Function | null
   children: NormalizedChildren
-  component: ComponentInstance | null
+  component: ComponentInternalInstance | null
 
   // DOM
   el: HostNode | null

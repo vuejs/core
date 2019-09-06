@@ -12,14 +12,14 @@ import {
   hasOwn
 } from '@vue/shared'
 import { warn } from './warning'
-import { Data, ComponentInstance } from './component'
+import { Data, ComponentInternalInstance } from './component'
 import { PatchFlags } from './patchFlags'
 
 export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
 
-type Prop<T> = PropOptions<T> | PropType<T>
+export type Prop<T> = PropOptions<T> | PropType<T>
 
 interface PropOptions<T = any> {
   type?: PropType<T> | true | null
@@ -90,7 +90,7 @@ type NormalizedPropsOptions = Record<string, NormalizedProp>
 //   - else: everything goes in `props`.
 
 export function resolveProps(
-  instance: ComponentInstance,
+  instance: ComponentInternalInstance,
   rawProps: any,
   _options: ComponentPropsOptions | void
 ) {

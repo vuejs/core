@@ -8,7 +8,12 @@ export {
   markReadonly,
   markNonReactive
 } from './reactive'
-export { computed, ComputedRef, WritableComputedOptions } from './computed'
+export {
+  computed,
+  ComputedRef,
+  WritableComputedRef,
+  WritableComputedOptions
+} from './computed'
 export {
   effect,
   stop,

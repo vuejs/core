@@ -8,7 +8,7 @@ import {
   VNodeChildren
 } from './vnode'
 import {
-  ComponentInstance,
+  ComponentInternalInstance,
   createComponentInstance,
   setupStatefulComponent
 } from './component'
@@ -44,7 +44,7 @@ const prodEffectOptions = {
 }
 
 function createDevEffectOptions(
-  instance: ComponentInstance
+  instance: ComponentInternalInstance
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
@@ -77,10 +77,10 @@ export interface RendererOptions {
     oldValue: any,
     isSVG: boolean,
     prevChildren?: VNode[],
-    parentComponent?: ComponentInstance | null,
+    parentComponent?: ComponentInternalInstance | null,
     unmountChildren?: (
       children: VNode[],
-      parentComponent: ComponentInstance | null
+      parentComponent: ComponentInternalInstance | null
     ) => void
   ): void
   insert(el: HostNode, parent: HostNode, anchor?: HostNode): void
@@ -120,7 +120,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode = null,
-    parentComponent: ComponentInstance | null = null,
+    parentComponent: ComponentInternalInstance | null = null,
     isSVG: boolean = false,
     optimized: boolean = false
   ) {
@@ -226,7 +226,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -244,7 +244,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     vnode: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean
   ) {
     const tag = vnode.type as string
@@ -283,7 +283,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     children: VNodeChildren,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     start: number = 0
   ) {
@@ -296,7 +296,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   function patchElement(
     n1: VNode,
     n2: VNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -407,7 +407,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     vnode: VNode,
     oldProps: any,
     newProps: any,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean
   ) {
     if (oldProps !== newProps) {
@@ -453,7 +453,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -490,7 +490,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -552,14 +552,15 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
     if (n1 == null) {
       mountComponent(n2, container, anchor, parentComponent, isSVG)
     } else {
-      const instance = (n2.component = n1.component) as ComponentInstance
+      const instance = (n2.component =
+        n1.component) as ComponentInternalInstance
       if (shouldUpdateComponent(n1, n2, optimized)) {
         instance.next = n2
         instance.update()
@@ -573,7 +574,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
         n2.ref,
         n1 && n1.ref,
         parentComponent,
-        (n2.component as ComponentInstance).renderProxy
+        (n2.component as ComponentInternalInstance).renderProxy
       )
     }
   }
@@ -582,10 +583,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     initialVNode: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean
   ) {
-    const instance: ComponentInstance = (initialVNode.component = createComponentInstance(
+    const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
       parentComponent
     ))
@@ -692,7 +693,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     n2: VNode,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean = false
   ) {
@@ -776,7 +777,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     c2: VNodeChildren,
     container: HostNode,
     anchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -813,7 +814,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     c2: VNodeChildren,
     container: HostNode,
     parentAnchor: HostNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -1035,7 +1036,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
 
   function unmount(
     vnode: VNode,
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     doRemove?: boolean
   ) {
     const {
@@ -1086,7 +1087,10 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
     }
   }
 
-  function unmountComponent(instance: ComponentInstance, doRemove?: boolean) {
+  function unmountComponent(
+    instance: ComponentInternalInstance,
+    doRemove?: boolean
+  ) {
     const { bum, effects, update, subTree, um } = instance
     // beforeUnmount hook
     if (bum !== null) {
@@ -1107,7 +1111,7 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
 
   function unmountChildren(
     children: VNode[],
-    parentComponent: ComponentInstance | null,
+    parentComponent: ComponentInternalInstance | null,
     doRemove?: boolean,
     start: number = 0
   ) {
@@ -1125,8 +1129,8 @@ export function createRenderer(options: RendererOptions): RootRenderFunction {
   function setRef(
     ref: string | Function | Ref<any>,
     oldRef: string | Function | Ref<any> | null,
-    parent: ComponentInstance,
-    value: HostNode | ComponentInstance | null
+    parent: ComponentInternalInstance,
+    value: HostNode | ComponentInternalInstance | null
   ) {
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
     const renderContext = toRaw(parent.renderContext)

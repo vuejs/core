@@ -43,9 +43,26 @@ export { resolveComponent, resolveDirective } from './componentOptions'
 // Types -----------------------------------------------------------------------
 
 export { App, AppConfig, AppContext, Plugin } from './apiApp'
+export { RawProps, RawChildren, RawSlots } from './h'
 export { VNode, VNodeTypes } from './vnode'
-export { FunctionalComponent, ComponentInstance } from './component'
+export {
+  Component,
+  FunctionalComponent,
+  ComponentInternalInstance
+} from './component'
+export {
+  ComponentOptions,
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithProps,
+  ComponentOptionsWithArrayProps
+} from './componentOptions'
+export { ComponentPublicInstance } from './componentPublicInstanceProxy'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
-export { PropType, ComponentPropsOptions } from './componentProps'
-export { Directive, DirectiveBinding, DirectiveHook } from './directives'
+export { Prop, PropType, ComponentPropsOptions } from './componentProps'
+export {
+  Directive,
+  DirectiveBinding,
+  DirectiveHook,
+  DirectiveArguments
+} from './directives'

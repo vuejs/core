@@ -6,11 +6,10 @@ import {
   nodeOps,
   DirectiveHook,
   VNode,
-  ComponentInstance,
   DirectiveBinding,
   nextTick
 } from '@vue/runtime-test'
-import { currentInstance } from '../src/component'
+import { currentInstance, ComponentInternalInstance } from '../src/component'
 
 describe('directives', () => {
   it('should work', async () => {
@@ -99,7 +98,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    let _instance: ComponentInstance | null = null
+    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
     const Comp = {

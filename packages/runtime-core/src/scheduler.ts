@@ -1,4 +1,4 @@
-import { handleError, ErrorTypes } from './errorHandling'
+import { handleError, ErrorCodes } from './errorHandling'
 
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
@@ -72,7 +72,7 @@ function flushJobs(seenJobs?: JobCountMap) {
     try {
       job()
     } catch (err) {
-      handleError(err, null, ErrorTypes.SCHEDULER)
+      handleError(err, null, ErrorCodes.SCHEDULER)
     }
   }
   flushPostFlushCbs()

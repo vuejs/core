@@ -1,9 +1,9 @@
 import { isArray } from '@vue/shared'
 import {
-  ComponentInstance,
+  ComponentInternalInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
-import { ErrorTypes } from 'packages/runtime-core/src/errorHandling'
+import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 interface Invoker extends Function {
   value: EventValue
@@ -45,7 +45,7 @@ export function patchEvent(
   name: string,
   prevValue: EventValue | null,
   nextValue: EventValue | null,
-  instance: ComponentInstance | null
+  instance: ComponentInternalInstance | null
 ) {
   const invoker = prevValue && prevValue.invoker
   if (nextValue) {
@@ -62,7 +62,7 @@ export function patchEvent(
   }
 }
 
-function createInvoker(value: any, instance: ComponentInstance | null) {
+function createInvoker(value: any, instance: ComponentInternalInstance | null) {
   const invoker = ((e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
@@ -77,7 +77,7 @@ function createInvoker(value: any, instance: ComponentInstance | null) {
           callWithAsyncErrorHandling(
             value[i],
             instance,
-            ErrorTypes.NATIVE_EVENT_HANDLER,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
             args
           )
         }
@@ -85,7 +85,7 @@ function createInvoker(value: any, instance: ComponentInstance | null) {
         callWithAsyncErrorHandling(
           value,
           instance,
-          ErrorTypes.NATIVE_EVENT_HANDLER,
+          ErrorCodes.NATIVE_EVENT_HANDLER,
           args
         )
       }

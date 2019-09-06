@@ -1,11 +1,14 @@
 import { VNode, VNodeChild } from './vnode'
 import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
-import { RenderProxyHandlers, ComponentRenderProxy } from './componentProxy'
+import {
+  PublicInstanceProxyHandlers,
+  ComponentPublicInstance
+} from './componentPublicInstanceProxy'
 import { ComponentPropsOptions } from './componentProps'
 import { Slots } from './componentSlots'
 import { warn } from './warning'
 import {
-  ErrorTypes,
+  ErrorCodes,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
@@ -59,11 +62,11 @@ export interface SetupContext {
 
 type RenderFunction = () => VNodeChild
 
-export interface ComponentInstance {
+export interface ComponentInternalInstance {
   type: FunctionalComponent | ComponentOptions
-  parent: ComponentInstance | null
+  parent: ComponentInternalInstance | null
   appContext: AppContext
-  root: ComponentInstance
+  root: ComponentInternalInstance
   vnode: VNode
   next: VNode | null
   subTree: VNode
@@ -81,7 +84,7 @@ export interface ComponentInstance {
   props: Data
   attrs: Data
   slots: Slots
-  renderProxy: ComponentRenderProxy | null
+  renderProxy: ComponentPublicInstance | null
   propsProxy: Data | null
   setupContext: SetupContext | null
   refs: Data
@@ -110,8 +113,8 @@ const emptyAppContext = createAppContext()
 
 export function createComponentInstance(
   vnode: VNode,
-  parent: ComponentInstance | null
-): ComponentInstance {
+  parent: ComponentInternalInstance | null
+): ComponentInternalInstance {
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
@@ -171,7 +174,7 @@ export function createComponentInstance(
             callWithAsyncErrorHandling(
               handler[i],
               instance,
-              ErrorTypes.COMPONENT_EVENT_HANDLER,
+              ErrorCodes.COMPONENT_EVENT_HANDLER,
               args
             )
           }
@@ -179,7 +182,7 @@ export function createComponentInstance(
           callWithAsyncErrorHandling(
             handler,
             instance,
-            ErrorTypes.COMPONENT_EVENT_HANDLER,
+            ErrorCodes.COMPONENT_EVENT_HANDLER,
             args
           )
         }
@@ -191,20 +194,22 @@ export function createComponentInstance(
   return instance
 }
 
-export let currentInstance: ComponentInstance | null = null
+export let currentInstance: ComponentInternalInstance | null = null
 
-export const getCurrentInstance: () => ComponentInstance | null = () =>
+export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance
 
-export const setCurrentInstance = (instance: ComponentInstance | null) => {
+export const setCurrentInstance = (
+  instance: ComponentInternalInstance | null
+) => {
   currentInstance = instance
 }
 
-export function setupStatefulComponent(instance: ComponentInstance) {
+export function setupStatefulComponent(instance: ComponentInternalInstance) {
   currentInstance = instance
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  instance.renderProxy = new Proxy(instance, RenderProxyHandlers) as any
+  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
@@ -217,7 +222,7 @@ export function setupStatefulComponent(instance: ComponentInstance) {
     const setupResult = callWithErrorHandling(
       setup,
       instance,
-      ErrorTypes.SETUP_FUNCTION,
+      ErrorCodes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
 
@@ -290,7 +295,7 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
   }
 })
 
-function createSetupContext(instance: ComponentInstance): SetupContext {
+function createSetupContext(instance: ComponentInternalInstance): SetupContext {
   const context = {
     // attrs, slots & refs are non-reactive, but they need to always expose
     // the latest values (instance.xxx may get replaced during updates) so we

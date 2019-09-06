@@ -1,14 +1,20 @@
-import { ComponentInstance, FunctionalComponent, Data } from './component'
+import {
+  ComponentInternalInstance,
+  FunctionalComponent,
+  Data
+} from './component'
 import { VNode, normalizeVNode, createVNode, Empty } from './vnode'
 import { ShapeFlags } from './shapeFlags'
-import { handleError, ErrorTypes } from './errorHandling'
+import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags } from './patchFlags'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
-export let currentRenderingInstance: ComponentInstance | null = null
+export let currentRenderingInstance: ComponentInternalInstance | null = null
 
-export function renderComponentRoot(instance: ComponentInstance): VNode {
+export function renderComponentRoot(
+  instance: ComponentInternalInstance
+): VNode {
   const {
     type: Component,
     vnode,
@@ -38,7 +44,7 @@ export function renderComponentRoot(instance: ComponentInstance): VNode {
       )
     }
   } catch (err) {
-    handleError(err, instance, ErrorTypes.RENDER_FUNCTION)
+    handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Empty)
   }
   currentRenderingInstance = null

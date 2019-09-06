@@ -1,10 +1,10 @@
 import {
-  ComponentInstance,
+  ComponentInternalInstance,
   LifecycleHooks,
   currentInstance,
   setCurrentInstance
 } from './component'
-import { ComponentRenderProxy } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
@@ -13,7 +13,7 @@ import { pauseTracking, resumeTracking } from '@vue/reactivity'
 function injectHook(
   type: LifecycleHooks,
   hook: Function,
-  target: ComponentInstance | null
+  target: ComponentInternalInstance | null
 ) {
   if (target) {
     ;(target[type] || (target[type] = [])).push((...args: any[]) => {
@@ -43,56 +43,56 @@ function injectHook(
 
 export function onBeforeMount(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_MOUNT, hook, target)
 }
 
 export function onMounted(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.MOUNTED, hook, target)
 }
 
 export function onBeforeUpdate(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_UPDATE, hook, target)
 }
 
 export function onUpdated(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.UPDATED, hook, target)
 }
 
 export function onBeforeUnmount(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_UNMOUNT, hook, target)
 }
 
 export function onUnmounted(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.UNMOUNTED, hook, target)
 }
 
 export function onRenderTriggered(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
 }
 
 export function onRenderTracked(
   hook: Function,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)
 }
@@ -100,10 +100,10 @@ export function onRenderTracked(
 export function onErrorCaptured(
   hook: (
     err: Error,
-    instance: ComponentRenderProxy | null,
+    instance: ComponentPublicInstance | null,
     info: string
   ) => boolean | void,
-  target: ComponentInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }

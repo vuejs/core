@@ -8,9 +8,9 @@ import {
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
-import { currentInstance, ComponentInstance } from './component'
+import { currentInstance, ComponentInternalInstance } from './component'
 import {
-  ErrorTypes,
+  ErrorCodes,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
@@ -93,14 +93,14 @@ function doWatch(
         s =>
           isRef(s)
             ? s.value
-            : callWithErrorHandling(s, instance, ErrorTypes.WATCH_GETTER)
+            : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
       )
   } else if (isRef(source)) {
     getter = () => source.value
   } else if (cb) {
     // getter with cb
     getter = () =>
-      callWithErrorHandling(source, instance, ErrorTypes.WATCH_GETTER)
+      callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
   } else {
     // no cb -> simple effect
     getter = () => {
@@ -110,7 +110,7 @@ function doWatch(
       return callWithErrorHandling(
         source,
         instance,
-        ErrorTypes.WATCH_CALLBACK,
+        ErrorCodes.WATCH_CALLBACK,
         [registerCleanup]
       )
     }
@@ -125,7 +125,7 @@ function doWatch(
   const registerCleanup: CleanupRegistrator = (fn: () => void) => {
     // TODO wrap the cleanup fn for error handling
     cleanup = runner.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorTypes.WATCH_CLEANUP)
+      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
 
@@ -138,7 +138,7 @@ function doWatch(
           if (cleanup) {
             cleanup()
           }
-          callWithAsyncErrorHandling(cb, instance, ErrorTypes.WATCH_CALLBACK, [
+          callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
             newValue,
             oldValue,
             registerCleanup
@@ -190,7 +190,7 @@ function doWatch(
 
 // this.$watch
 export function instanceWatch(
-  this: ComponentInstance,
+  this: ComponentInternalInstance,
   source: string | Function,
   cb: Function,
   options?: WatchOptions

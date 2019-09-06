@@ -9,22 +9,20 @@ export interface ReactiveEffect {
   raw: Function
   deps: Array<Dep>
   computed?: boolean
-  scheduler?: Scheduler
-  onTrack?: Debugger
-  onTrigger?: Debugger
+  scheduler?: (run: Function) => void
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
 }
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
   computed?: boolean
-  scheduler?: Scheduler
-  onTrack?: Debugger
-  onTrigger?: Debugger
+  scheduler?: (run: Function) => void
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
 }
-
-export type Scheduler = (run: () => any) => void
 
 export interface DebuggerEvent {
   effect: ReactiveEffect
@@ -32,8 +30,6 @@ export interface DebuggerEvent {
   type: OperationTypes
   key: string | symbol | undefined
 }
-
-export type Debugger = (event: DebuggerEvent) => void
 
 export const activeReactiveEffectStack: ReactiveEffect[] = []
 

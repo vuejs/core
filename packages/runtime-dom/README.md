@@ -1,21 +1,13 @@
 # @vue/runtime-dom
 
 ``` js
-import { h, render, Component } from '@vue/runtime-dom'
+import { h, createApp } from '@vue/runtime-dom'
 
-class App extends Component {
-  data () {
-    return {
-      msg: 'Hello World!'
-    }
-  }
-  render () {
-    return h('div', this.msg)
+const RootComponent = {
+  render() {
+    return h('div', 'hello world')
   }
 }
 
-render(
-  h(App),
-  document.getElementById('app')
-)
+createApp().mount(RootComponent, '#app')
 ```

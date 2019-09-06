@@ -1,5 +1,5 @@
 import { VNode } from './vnode'
-import { Data, ComponentInstance } from './component'
+import { Data, ComponentInternalInstance } from './component'
 import { isString } from '@vue/shared'
 import { toRaw } from '@vue/reactivity'
 
@@ -77,7 +77,7 @@ function getComponentTrace(): ComponentTraceStack {
         recurseCount: 0
       })
     }
-    const parentInstance: ComponentInstance | null = (currentVNode.component as ComponentInstance)
+    const parentInstance: ComponentInternalInstance | null = (currentVNode.component as ComponentInternalInstance)
       .parent
     currentVNode = parentInstance && parentInstance.vnode
   }
@@ -108,7 +108,9 @@ function formatTraceEntry(
   const open = padding + `<${formatComponentName(vnode)}`
   const close = `>` + postfix
   const rootLabel =
-    (vnode.component as ComponentInstance).parent == null ? `(Root)` : ``
+    (vnode.component as ComponentInternalInstance).parent == null
+      ? `(Root)`
+      : ``
   return vnode.props
     ? [open, ...formatProps(vnode.props), close, rootLabel]
     : [open + close, rootLabel]

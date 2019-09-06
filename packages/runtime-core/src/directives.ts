@@ -14,14 +14,14 @@ return applyDirectives(h(comp), [
 import { VNode, cloneVNode } from './vnode'
 import { extend, isArray, isFunction } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInstance } from './component'
+import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
-import { callWithAsyncErrorHandling, ErrorTypes } from './errorHandling'
+import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { HostNode } from './createRenderer'
-import { ComponentRenderProxy } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 
 export interface DirectiveBinding {
-  instance: ComponentRenderProxy | null
+  instance: ComponentPublicInstance | null
   value?: any
   oldValue?: any
   arg?: string
@@ -50,7 +50,7 @@ const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 
 function applyDirective(
   props: Record<any, any>,
-  instance: ComponentInstance,
+  instance: ComponentInternalInstance,
   directive: Directive,
   value?: any,
   arg?: string,
@@ -92,7 +92,7 @@ function applyDirective(
 }
 
 // Directive, value, argument, modifiers
-type DirectiveArguments = Array<
+export type DirectiveArguments = Array<
   | [Directive]
   | [Directive, any]
   | [Directive, any, string]
@@ -115,7 +115,7 @@ export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
 
 export function invokeDirectiveHook(
   hook: Function | Function[],
-  instance: ComponentInstance | null,
+  instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null
 ) {
@@ -125,11 +125,11 @@ export function invokeDirectiveHook(
       callWithAsyncErrorHandling(
         hook[i],
         instance,
-        ErrorTypes.DIRECTIVE_HOOK,
+        ErrorCodes.DIRECTIVE_HOOK,
         args
       )
     }
   } else if (isFunction(hook)) {
-    callWithAsyncErrorHandling(hook, instance, ErrorTypes.DIRECTIVE_HOOK, args)
+    callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, args)
   }
 }

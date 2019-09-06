@@ -1,4 +1,4 @@
-import { ComponentInstance, currentInstance } from './component'
+import { ComponentInternalInstance, currentInstance } from './component'
 import { VNode, NormalizedChildren, normalizeVNode, VNodeChild } from './vnode'
 import { isArray, isFunction } from '@vue/shared'
 import { ShapeFlags } from './shapeFlags'
@@ -31,7 +31,7 @@ const normalizeSlot = (key: string, rawSlot: Function): Slot => (
 }
 
 export function resolveSlots(
-  instance: ComponentInstance,
+  instance: ComponentInternalInstance,
   children: NormalizedChildren
 ) {
   let slots: Slots | void

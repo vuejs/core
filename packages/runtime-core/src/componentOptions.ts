@@ -1,5 +1,5 @@
 import {
-  ComponentInstance,
+  ComponentInternalInstance,
   Data,
   currentInstance,
   Component,
@@ -33,7 +33,7 @@ import { warn } from './warning'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
-import { ComponentRenderProxy } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { currentRenderingInstance } from './componentRenderUtils'
 
 interface ComponentOptionsBase<
@@ -68,7 +68,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -79,7 +79,7 @@ export type ComponentOptionsWithArrayProps<
   Props = { [key in PropNames]?: unknown }
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
 export type ComponentOptionsWithProps<
   PropsOptions = ComponentPropsOptions,
@@ -90,7 +90,7 @@ export type ComponentOptionsWithProps<
   Props = ExtractPropTypes<PropsOptions>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
-} & ThisType<ComponentRenderProxy<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
@@ -151,7 +151,7 @@ export interface LegacyOptions<
   // Limitation: we cannot expose RawBindings on the `this` context for data
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
-  data?: D | ((this: ComponentRenderProxy<Props>) => D)
+  data?: D | ((this: ComponentPublicInstance<Props>) => D)
   computed?: C
   methods?: M
   // TODO watch array
@@ -180,7 +180,7 @@ export interface LegacyOptions<
 }
 
 export function applyOptions(
-  instance: ComponentInstance,
+  instance: ComponentInternalInstance,
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
@@ -379,7 +379,10 @@ function callHookFromMixins(
   }
 }
 
-function applyMixins(instance: ComponentInstance, mixins: ComponentOptions[]) {
+function applyMixins(
+  instance: ComponentInternalInstance,
+  mixins: ComponentOptions[]
+) {
   for (let i = 0; i < mixins.length; i++) {
     applyOptions(instance, mixins[i], true)
   }

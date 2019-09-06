@@ -1,6 +1,6 @@
-import { Component, Data, ComponentInstance } from './component'
+import { Component, Data, ComponentInternalInstance } from './component'
 import { ComponentOptions } from './componentOptions'
-import { ComponentRenderProxy } from './componentProxy'
+import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { Directive } from './directives'
 import { HostNode, RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
@@ -20,7 +20,7 @@ export interface App {
     rootComponent: Component,
     rootContainer: string | HostNode,
     rootProps?: Data
-  ): ComponentRenderProxy
+  ): ComponentPublicInstance
   provide<T>(key: InjectionKey<T> | string, value: T): void
 }
 
@@ -29,12 +29,12 @@ export interface AppConfig {
   performance: boolean
   errorHandler?: (
     err: Error,
-    instance: ComponentRenderProxy | null,
+    instance: ComponentPublicInstance | null,
     info: string
   ) => void
   warnHandler?: (
     msg: string,
-    instance: ComponentRenderProxy | null,
+    instance: ComponentPublicInstance | null,
     trace: string
   ) => void
 }
@@ -136,7 +136,7 @@ export function createAppAPI(render: RootRenderFunction): () => App {
           vnode.appContext = context
           render(vnode, rootContainer)
           isMounted = true
-          return (vnode.component as ComponentInstance).renderProxy
+          return (vnode.component as ComponentInternalInstance).renderProxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted. Create a new app instance instead.`
