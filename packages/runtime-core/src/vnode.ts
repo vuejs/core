@@ -45,7 +45,7 @@ export type VNodeChild<HostNode = any, HostElement = any> =
   | VNodeChildAtom<HostNode, HostElement>
   | VNodeChildren<HostNode, HostElement>
 
-export type NormalizedChildren<HostNode, HostElement> =
+export type NormalizedChildren<HostNode = any, HostElement = any> =
   | string
   | VNodeChildren<HostNode, HostElement>
   | RawSlots
@@ -226,7 +226,7 @@ export function cloneVNode(vnode: VNode): VNode {
   }
 }
 
-export function normalizeVNode(child: VNodeChild<any, any>): VNode {
+export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null) {
     // empty placeholder
     return createVNode(Empty)
@@ -258,7 +258,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = isString(children) ? children : children + ''
     type = ShapeFlags.TEXT_CHILDREN
   }
-  vnode.children = children as NormalizedChildren<any, any>
+  vnode.children = children as NormalizedChildren
   vnode.shapeFlag |= type
 }
 
