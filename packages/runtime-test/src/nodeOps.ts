@@ -195,14 +195,18 @@ function setElementText(el: TestElement, text: string) {
   el.children.forEach(c => {
     c.parentNode = null
   })
-  el.children = [
-    {
-      id: nodeId++,
-      type: NodeTypes.TEXT,
-      text,
-      parentNode: el
-    }
-  ]
+  if (!text) {
+    el.children = []
+  } else {
+    el.children = [
+      {
+        id: nodeId++,
+        type: NodeTypes.TEXT,
+        text,
+        parentNode: el
+      }
+    ]
+  }
 }
 
 function parentNode(node: TestNode): TestElement | null {
