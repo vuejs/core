@@ -1,23 +1,119 @@
 // reference: https://github.com/vuejs/vue/blob/dev/test/unit/modules/vdom/patch/children.spec.js
 
+import {
+  h,
+  nodeOps,
+  TestElement,
+  render,
+  serializeInner
+} from '@vue/runtime-test'
+
 describe('renderer: unkeyed children', () => {
-  test.todo('append')
+  const App = {
+    // @ts-ignore
+    render() {
+      // @ts-ignore
+      return h('ul', this.$slots.default())
+    }
+  }
 
-  test.todo('prepend')
+  let root: TestElement
 
-  test.todo('insert in middle')
+  function renderChildren(items: number[]) {
+    return render(
+      h(App, {}, { default: () => items.map(item => h('li', item)) }),
+      root
+    )
+  }
 
-  test.todo('insert at beginning and end')
+  beforeEach(() => {
+    root = nodeOps.createElement('div')
+  })
 
-  test.todo('insert to empty parent')
+  test('append', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+
+    items.push(5)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li><li>5</li></ul>')
+  })
+
+  test('prepend', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+
+    items.unshift(1)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>1</li><li>2</li><li>4</li></ul>')
+  })
+
+  test('insert in middle', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+
+    items.splice(1, 0, 3)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>3</li><li>4</li></ul>')
+  })
+
+  test('insert at beginning and end', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+
+    items.unshift(1)
+    items.push(5)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe(
+      '<ul><li>1</li><li>2</li><li>4</li><li>5</li></ul>'
+    )
+  })
+
+  test('insert to empty parent', () => {
+    const items: number[] = []
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul></ul>')
+
+    items.unshift(1)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>1</li></ul>')
+  })
 
   test.todo('shift with offset')
 
-  test.todo('remove from beginning')
+  test('remove from beginning', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
 
-  test.todo('remove from end')
+    items.shift()
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>4</li></ul>')
+  })
 
-  test.todo('remove from middle')
+  test('remove from end', () => {
+    const items = [2, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+
+    items.pop()
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li></ul>')
+  })
+
+  test('remove from middle', () => {
+    const items = [2, 3, 4]
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>3</li><li>4</li></ul>')
+
+    items.splice(1, 1)
+    renderChildren(items)
+    expect(serializeInner(root)).toBe('<ul><li>2</li><li>4</li></ul>')
+  })
 
   test.todo('moving single child forward')
 
