@@ -12,11 +12,13 @@ import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
+import { SuspenseBoundary } from './suspense'
 
 export const Fragment = __DEV__ ? Symbol('Fragment') : Symbol()
 export const Text = __DEV__ ? Symbol('Text') : Symbol()
 export const Empty = __DEV__ ? Symbol('Empty') : Symbol()
 export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
+export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
 
 export type VNodeTypes =
   | string
@@ -26,6 +28,7 @@ export type VNodeTypes =
   | typeof Portal
   | typeof Text
   | typeof Empty
+  | typeof Suspense
 
 type VNodeChildAtom<HostNode, HostElement> =
   | VNode<HostNode, HostElement>
@@ -58,6 +61,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   ref: string | Function | null
   children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
+  suspense: SuspenseBoundary | null
 
   // DOM
   el: HostNode | null
@@ -168,6 +172,7 @@ export function createVNode(
     ref: (props && props.ref) || null,
     children: null,
     component: null,
+    suspense: null,
     el: null,
     anchor: null,
     target: null,
@@ -221,6 +226,7 @@ export function cloneVNode(vnode: VNode): VNode {
     // mounted VNodes. If they are somehow not null, this means we have
     // encountered an already-mounted vnode being used again.
     component: null,
+    suspense: null,
     el: null,
     anchor: null
   }

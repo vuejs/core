@@ -5,12 +5,14 @@ import {
   Portal,
   normalizeVNode,
   VNode,
-  VNodeChildren
+  VNodeChildren,
+  Suspense
 } from './vnode'
 import {
   ComponentInternalInstance,
   createComponentInstance,
-  setupStatefulComponent
+  setupStatefulComponent,
+  setCurrentInstance
 } from './component'
 import {
   renderComponentRoot,
@@ -40,6 +42,12 @@ import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { App, createAppAPI } from './apiApp'
+import {
+  SuspenseSymbol,
+  createSuspenseBoundary,
+  SuspenseBoundary
+} from './suspense'
+import { provide } from './apiInject'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -178,6 +186,17 @@ export function createRenderer<
         break
       case Portal:
         processPortal(
+          n1,
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
+        break
+      case Suspense:
+        processSuspense(
           n1,
           n2,
           container,
@@ -573,6 +592,44 @@ export function createRenderer<
     }
     // insert an empty node as the placeholder for the portal
     processEmptyNode(n1, n2, container, anchor)
+  }
+
+  function processSuspense(
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    parentComponent: ComponentInternalInstance | null,
+    isSVG: boolean,
+    optimized: boolean
+  ) {
+    if (n1 == null) {
+      const parentSuspense =
+        parentComponent &&
+        (parentComponent.provides[SuspenseSymbol as any] as SuspenseBoundary)
+      const suspense = (n2.suspense = createSuspenseBoundary(parentSuspense))
+
+      // provide this as the parent suspense for descendents
+      setCurrentInstance(parentComponent)
+      provide(SuspenseSymbol, suspense)
+      setCurrentInstance(null)
+
+      // start mounting the subtree off-dom
+      // - tracking async deps and buffering postQueue jobs on current boundary
+
+      // now check if we have encountered any async deps
+      // yes: mount the fallback tree.
+      // Each time an async dep resolves, it pings the boundary
+      // and causes a re-entry.
+
+      // no: just mount the tree
+      // - if have parent boundary that is still not resolved:
+      //   merge the buffered jobs into parent
+      // - else: flush buffered jobs.
+      // - mark resolved.
+    } else {
+      const suspense = (n2.suspense = n1.suspense) as SuspenseBoundary
+    }
   }
 
   function processComponent(
