@@ -760,6 +760,7 @@ export function createRenderer<
       }
     }
 
+    // children has 3 possibilities: text, array or no children.
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -769,18 +770,8 @@ export function createRenderer<
         hostSetElementText(container, c2 as string)
       }
     } else {
-      if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        hostSetElementText(container, '')
-        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(
-            c2 as HostVNodeChildren,
-            container,
-            anchor,
-            parentComponent,
-            isSVG
-          )
-        }
-      } else if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // prev children was array
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // two arrays, cannot assume anything, do full diff
           patchKeyedChildren(
@@ -793,8 +784,24 @@ export function createRenderer<
             optimized
           )
         } else {
-          // c2 is null in this case
+          // no new children, just unmount old
           unmountChildren(c1 as HostVNode[], parentComponent, true)
+        }
+      } else {
+        // prev children was text OR null
+        // new children is array OR null
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          hostSetElementText(container, '')
+        }
+        // mount new if array
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          mountChildren(
+            c2 as HostVNodeChildren,
+            container,
+            anchor,
+            parentComponent,
+            isSVG
+          )
         }
       }
     }
