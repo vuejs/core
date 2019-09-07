@@ -48,9 +48,11 @@ describe('renderer: keyed children', () => {
     let elm = root.children[0] as TestElement
     expect(elm.children.length).toBe(1)
 
-    render(h('div', { id: 1 }, [5, 6, 7].map(toSpan)), root)
+    render(h('div', { id: 1 }, [1, 2, 3].map(toSpan)), root)
     elm = root.children[0] as TestElement
     expect(elm.children.length).toBe(3)
+    expect(serialize(elm.children[1])).toBe('<span>2</span>')
+    expect(serialize(elm.children[2])).toBe('<span>3</span>')
   })
 
   test.todo('prepend')
