@@ -1,5 +1,12 @@
 // reference: https://github.com/vuejs/vue/blob/dev/test/unit/modules/vdom/patch/children.spec.js
-import { h, render, nodeOps, TestElement } from '@vue/runtime-test'
+import {
+  h,
+  render,
+  nodeOps,
+  TestElement,
+  serialize,
+  serializeInner
+} from '@vue/runtime-test'
 
 function toSpan(content: any) {
   if (typeof content === 'string') {
@@ -11,24 +18,22 @@ function toSpan(content: any) {
 
 it('should patch previously empty children', () => {
   const root = nodeOps.createElement('div')
-  render(h('div', []), root)
 
-  let elm = root.children[0] as TestElement
-  expect(elm.children.length).toBe(0)
+  render(h('div', []), root)
+  expect(serializeInner(root)).toBe('<div></div>')
 
   render(h('div', ['hello']), root)
-  expect(elm.children.length).toBe(1)
+  expect(serializeInner(root)).toBe('<div>hello</div>')
 })
 
 it('should patch previously null children', () => {
   const root = nodeOps.createElement('div')
-  render(h('div'), root)
 
-  let elm = root.children[0] as TestElement
-  expect(elm.children.length).toBe(0)
+  render(h('div'), root)
+  expect(serializeInner(root)).toBe('<div></div>')
 
   render(h('div', ['hello']), root)
-  expect(elm.children.length).toBe(1)
+  expect(serializeInner(root)).toBe('<div>hello</div>')
 })
 
 describe('renderer: keyed children', () => {
