@@ -158,15 +158,70 @@ describe('renderer: keyed children', () => {
     )
   })
 
-  test.todo('moving single child forward')
+  test('moving single child forward', () => {
+    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
 
-  test.todo('moving single child backwards')
+    render(h('div', [2, 3, 1, 4].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['2', '3', '1', '4']
+    )
+  })
 
-  test.todo('moving single child to end')
+  test('moving single child backwards', () => {
+    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
 
-  test.todo('swap first and last')
+    render(h('div', [1, 4, 2, 3].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '4', '2', '3']
+    )
+  })
 
-  test.todo('move to left & replace')
+  test('moving single child to end', () => {
+    render(h('div', [1, 2, 3].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(3)
+
+    render(h('div', [2, 3, 1].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(3)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['2', '3', '1']
+    )
+  })
+
+  test('swap first and last', () => {
+    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
+
+    render(h('div', [4, 2, 3, 1].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['4', '2', '3', '1']
+    )
+  })
+
+  test('move to left & replace', () => {
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+
+    render(h('div', [4, 1, 2, 3, 6].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['4', '1', '2', '3', '6']
+    )
+  })
 
   test.todo('shift with offset')
 
