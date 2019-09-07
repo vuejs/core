@@ -15,7 +15,6 @@ function toSpan(content: any) {
     return h('span', { key: content }, content.toString())
   }
 }
-
 it('should patch previously empty children', () => {
   const root = nodeOps.createElement('div')
 
@@ -55,21 +54,109 @@ describe('renderer: keyed children', () => {
     expect(serialize(elm.children[2])).toBe('<span>3</span>')
   })
 
-  test.todo('prepend')
+  test('prepend', () => {
+    render(h('div', [4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(2)
 
-  test.todo('insert in middle')
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3', '4', '5']
+    )
+  })
 
-  test.todo('insert at beginning and end')
+  test('insert in middle', () => {
+    render(h('div', [1, 2, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
 
-  test.todo('insert to empty parent')
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3', '4', '5']
+    )
+  })
 
-  test.todo('shift with offset')
+  test('insert at beginning and end', () => {
+    render(h('div', [2, 3, 4].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(3)
 
-  test.todo('remove from beginning')
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3', '4', '5']
+    )
+  })
 
-  test.todo('remove from end')
+  test('insert to empty parent', () => {
+    render(h('div'), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(0)
 
-  test.todo('remove from middle')
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3', '4', '5']
+    )
+  })
+
+  test('remove all children from parent', () => {
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3', '4', '5']
+    )
+
+    render(h('div'), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(0)
+  })
+
+  test('remove from beginning', () => {
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+
+    render(h('div', [3, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(3)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['3', '4', '5']
+    )
+  })
+
+  test('remove from end', () => {
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+
+    render(h('div', [1, 2, 3].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(3)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '3']
+    )
+  })
+
+  test('remove from middle', () => {
+    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
+    let elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(5)
+
+    render(h('div', [1, 2, 4, 5].map(toSpan)), root)
+    elm = root.children[0] as TestElement
+    expect(elm.children.length).toBe(4)
+    expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
+      ['1', '2', '4', '5']
+    )
+  })
 
   test.todo('moving single child forward')
 
@@ -80,6 +167,8 @@ describe('renderer: keyed children', () => {
   test.todo('swap first and last')
 
   test.todo('move to left & replace')
+
+  test.todo('shift with offset')
 
   test.todo('generic reorder')
 
