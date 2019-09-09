@@ -4,7 +4,8 @@ module.exports = {
     __DEV__: true,
     __JSDOM__: true,
     __FEATURE_OPTIONS__: true,
-    __FEATURE_PRODUCTION_TIP__: false
+    __FEATURE_PRODUCTION_TIP__: false,
+    __FEATURE_SUSPENSE__: true
   },
   coverageDirectory: 'coverage',
   coverageReporters: ['html', 'lcov', 'text'],

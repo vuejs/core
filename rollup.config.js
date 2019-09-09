@@ -140,6 +140,7 @@ function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean,
+    __FEATURE_SUSPENSE__: true,
     // this is only used during tests
     __JSDOM__: false
   })

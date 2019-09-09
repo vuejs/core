@@ -194,15 +194,19 @@ export function createRenderer<
         )
         break
       case Suspense:
-        processSuspense(
-          n1,
-          n2,
-          container,
-          anchor,
-          parentComponent,
-          isSVG,
-          optimized
-        )
+        if (__FEATURE_SUSPENSE__) {
+          processSuspense(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            isSVG,
+            optimized
+          )
+        } else if (__DEV__) {
+          warn(`Suspense is not enabled in the version of Vue you are using.`)
+        }
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -730,10 +734,16 @@ export function createRenderer<
     } else {
       const instance = (n2.component =
         n1.component) as ComponentInternalInstance
+
       // async still pending
-      if (instance.asyncDep && !instance.asyncResolved) {
+      if (
+        __FEATURE_SUSPENSE__ &&
+        instance.asyncDep &&
+        !instance.asyncResolved
+      ) {
         return
       }
+
       // a resolved async component, on successful re-entry.
       // pickup the mounting process and setup render effect
       if (!instance.update) {
@@ -741,7 +751,8 @@ export function createRenderer<
       } else if (
         shouldUpdateComponent(n1, n2, optimized) ||
         // TODO use context suspense
-        (instance.provides.suspense &&
+        (__FEATURE_SUSPENSE__ &&
+          instance.provides.suspense &&
           !(instance.provides.suspense as any).isResolved)
       ) {
         // normal update
@@ -791,7 +802,7 @@ export function createRenderer<
 
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
-    if (instance.asyncDep) {
+    if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       // TODO use context suspense
       const suspense = (instance as any).provides.suspense
       if (!suspense) {

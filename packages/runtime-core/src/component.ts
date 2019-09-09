@@ -242,9 +242,16 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
       isFunction(setupResult.then) &&
       isFunction(setupResult.catch)
     ) {
-      // async setup returned Promise.
-      // bail here and wait for re-entry.
-      instance.asyncDep = setupResult as Promise<any>
+      if (__FEATURE_SUSPENSE__) {
+        // async setup returned Promise.
+        // bail here and wait for re-entry.
+        instance.asyncDep = setupResult as Promise<any>
+      } else if (__DEV__) {
+        warn(
+          `setup() returned a Promise, but the version of Vue you are using ` +
+            `does not support it yet.`
+        )
+      }
       return
     } else {
       handleSetupResult(instance, setupResult)
