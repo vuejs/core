@@ -617,8 +617,8 @@ export function createRenderer<
 
       suspense.onRetry(() => {
         processFragment(
-          suspense.oldContentTree,
-          suspense.contentTree as HostVNode,
+          suspense.oldSubTree,
+          suspense.subTree as HostVNode,
           contentContainer,
           null,
           parentComponent,
@@ -635,10 +635,10 @@ export function createRenderer<
 
       suspense.onResolve(() => {
         // move content from off-dom container to actual container
-        ;(suspense.contentTree as any).children.forEach((vnode: HostVNode) => {
+        ;(suspense.subTree as any).children.forEach((vnode: HostVNode) => {
           move(vnode, container, anchor)
         })
-        suspense.vnode.el = (suspense.contentTree as HostVNode).el
+        suspense.vnode.el = (suspense.subTree as HostVNode).el
         // check if there is a pending parent suspense
         let parent = suspense.parent
         let hasUnresolvedAncestor = false
@@ -667,12 +667,12 @@ export function createRenderer<
 
       // start mounting the subtree off-dom
       // TODO should buffer postQueue jobs on current boundary
-      const contentTree = (suspense.contentTree = suspense.oldContentTree = childrenToFragment(
+      const subTree = (suspense.subTree = suspense.oldSubTree = childrenToFragment(
         n2
       ))
       processFragment(
         null,
-        contentTree as HostVNode,
+        subTree as HostVNode,
         contentContainer,
         null,
         parentComponent,
@@ -692,14 +692,14 @@ export function createRenderer<
         HostElement
       >
       suspense.vnode = n2
-      const oldContentTree = (suspense.oldContentTree = suspense.contentTree)
-      const newContentTree = (suspense.contentTree = childrenToFragment(n2))
+      const oldSubTree = (suspense.oldSubTree = suspense.subTree)
+      const newContentTree = (suspense.subTree = childrenToFragment(n2))
       if (!suspense.isResolved) {
         suspense.retry()
       } else {
         // just normal patch inner content as a fragment
         processFragment(
-          oldContentTree,
+          oldSubTree,
           newContentTree,
           container,
           null,
@@ -1259,6 +1259,10 @@ export function createRenderer<
       move(vnode.component.subTree, container, anchor)
       return
     }
+    if (__FEATURE_SUSPENSE__ && vnode.type === Suspense) {
+      move((vnode.suspense as any).subTree, container, anchor)
+      return
+    }
     if (vnode.type === Fragment) {
       hostInsert(vnode.el as HostNode, container, anchor)
       const children = vnode.children as HostVNode[]
@@ -1281,6 +1285,7 @@ export function createRenderer<
       ref,
       type,
       component,
+      suspense,
       children,
       dynamicChildren,
       shapeFlag,
@@ -1294,6 +1299,11 @@ export function createRenderer<
 
     if (component != null) {
       unmountComponent(component, doRemove)
+      return
+    }
+
+    if (__FEATURE_SUSPENSE__ && suspense != null) {
+      unmount(suspense.subTree as HostVNode, parentComponent, doRemove)
       return
     }
 
