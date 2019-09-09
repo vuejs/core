@@ -12,7 +12,9 @@ import {
 import {
   ComponentInternalInstance,
   createComponentInstance,
-  setupStatefulComponent
+  setupStatefulComponent,
+  handleSetupResult,
+  setCurrentInstance
 } from './component'
 import {
   renderComponentRoot,
@@ -43,6 +45,7 @@ import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { App, createAppAPI } from './apiApp'
 import { SuspenseBoundary, createSuspenseBoundary } from './suspense'
+import { provide } from './apiInject'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -604,16 +607,68 @@ export function createRenderer<
     if (n1 == null) {
       const contentContainer = hostCreateElement('div')
       const suspense = (n2.suspense = createSuspenseBoundary(
-        parentSuspense,
-        contentContainer
+        n2,
+        parentSuspense
       ))
 
+      suspense.onRetry(() => {
+        processFragment(
+          suspense.oldContentTree,
+          suspense.contentTree as HostVNode,
+          contentContainer,
+          null,
+          parentComponent,
+          isSVG,
+          optimized
+        )
+        if (suspense.deps > 0) {
+          // still pending.
+          // patch the fallback tree.
+        } else {
+          suspense.resolve()
+        }
+      })
+
+      suspense.onResolve(() => {
+        // move content from off-dom container to actual container
+        ;(suspense.contentTree as any).children.forEach((vnode: HostVNode) => {
+          move(vnode, container, anchor)
+        })
+        suspense.vnode.el = (suspense.contentTree as HostVNode).el
+        // check if there is a pending parent suspense
+        let parent = suspense.parent
+        let hasUnresolvedAncestor = false
+        while (parent) {
+          if (!parent.isResolved) {
+            // found a pending parent suspense, merge buffered post jobs
+            // into that parent
+            parent.bufferedJobs.push(...suspense.bufferedJobs)
+            hasUnresolvedAncestor = true
+            break
+          }
+        }
+        // no pending parent suspense, flush all jobs
+        if (!hasUnresolvedAncestor) {
+          queuePostFlushCb(suspense.bufferedJobs)
+        }
+        suspense.isResolved = true
+      })
+
+      // TODO pass it down as an arg instead
+      if (parentComponent) {
+        setCurrentInstance(parentComponent)
+        provide('suspense', suspense)
+        setCurrentInstance(null)
+      }
+
       // start mounting the subtree off-dom
-      // - TODO tracking async deps and buffering postQueue jobs on current boundary
-      const contentTree = (suspense.contentTree = childrenToFragment(n2))
+      // TODO should buffer postQueue jobs on current boundary
+      const contentTree = (suspense.contentTree = suspense.oldContentTree = childrenToFragment(
+        n2
+      ))
       processFragment(
         null,
-        contentTree as VNode<HostNode, HostElement>,
+        contentTree as HostVNode,
         contentContainer,
         null,
         parentComponent,
@@ -625,6 +680,7 @@ export function createRenderer<
         // yes: mount the fallback tree.
         // Each time an async dep resolves, it pings the boundary
         // and causes a re-entry.
+        console.log('fallback')
       } else {
         suspense.resolve()
       }
@@ -633,23 +689,23 @@ export function createRenderer<
         HostNode,
         HostElement
       >
-      const oldContentTree = suspense.contentTree
+      suspense.vnode = n2
+      const oldContentTree = (suspense.oldContentTree = suspense.contentTree)
       const newContentTree = (suspense.contentTree = childrenToFragment(n2))
-      // patch suspense subTree as fragment
-      processFragment(
-        oldContentTree,
-        newContentTree,
-        container,
-        anchor,
-        parentComponent,
-        isSVG,
-        optimized
-      )
-      if (suspense.deps > 0) {
-        // still pending.
-        // patch the fallback tree.
+      if (!suspense.isResolved) {
+        suspense.retry()
       } else {
-        suspense.resolve()
+        // just normal patch inner content as a fragment
+        processFragment(
+          oldContentTree,
+          newContentTree,
+          container,
+          null,
+          parentComponent,
+          isSVG,
+          optimized
+        )
+        n2.el = newContentTree.el
       }
     }
   }
@@ -676,10 +732,24 @@ export function createRenderer<
     } else {
       const instance = (n2.component =
         n1.component) as ComponentInternalInstance
-      if (shouldUpdateComponent(n1, n2, optimized)) {
+      // async still pending
+      if (instance.asyncDep && !instance.asyncResolved) {
+        return
+      }
+      // a resolved async component, on successful re-entry.
+      // pickup the mounting process and setup render effect
+      if (!instance.update) {
+        setupRenderEffect(instance, n2, container, anchor, isSVG)
+      } else if (
+        shouldUpdateComponent(n1, n2, optimized) ||
+        (instance.provides.suspense &&
+          !(instance.provides.suspense as any).isResolved)
+      ) {
+        // normal update
         instance.next = n2
         instance.update()
       } else {
+        // no update needed. just copy over properties
         n2.component = n1.component
         n2.el = n1.el
       }
@@ -720,6 +790,37 @@ export function createRenderer<
       setupStatefulComponent(instance)
     }
 
+    // setup() is async. This component relies on async logic to be resolved
+    // before proceeding
+    if (instance.asyncDep) {
+      const suspense = (instance as any).provides.suspense
+      if (!suspense) {
+        throw new Error('Async component without a suspense boundary!')
+      }
+      suspense.deps++
+      instance.asyncDep.then(res => {
+        instance.asyncResolved = true
+        handleSetupResult(instance, res)
+        suspense.deps--
+        suspense.retry()
+      })
+      return
+    }
+
+    setupRenderEffect(instance, initialVNode, container, anchor, isSVG)
+
+    if (__DEV__) {
+      popWarningContext()
+    }
+  }
+
+  function setupRenderEffect(
+    instance: ComponentInternalInstance,
+    initialVNode: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    isSVG: boolean
+  ) {
     // create reactive effect for rendering
     let mounted = false
     instance.update = effect(function componentEffect() {
@@ -751,7 +852,7 @@ export function createRenderer<
           next.component = instance
           instance.vnode = next
           instance.next = null
-          resolveProps(instance, next.props, propsOptions)
+          resolveProps(instance, next.props, (initialVNode.type as any).props)
           resolveSlots(instance, next.children)
         }
         const prevTree = instance.subTree
@@ -797,10 +898,6 @@ export function createRenderer<
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
-
-    if (__DEV__) {
-      popWarningContext()
-    }
   }
 
   function patchChildren(

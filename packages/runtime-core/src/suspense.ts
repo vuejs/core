@@ -1,46 +1,54 @@
 import { VNode } from './vnode'
-import { queuePostFlushCb } from './scheduler'
 
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
-export interface SuspenseBoundary<HostNode, HostElement> {
+export interface SuspenseBoundary<
+  HostNode,
+  HostElement,
+  HostVNode = VNode<HostNode, HostElement>
+> {
+  vnode: HostVNode
   parent: SuspenseBoundary<HostNode, HostElement> | null
-  contentTree: VNode<HostNode, HostElement> | null
-  fallbackTree: VNode<HostNode, HostElement> | null
+  contentTree: HostVNode | null
+  oldContentTree: HostVNode | null
+  fallbackTree: HostVNode | null
+  oldFallbackTree: HostVNode | null
   deps: number
   isResolved: boolean
   bufferedJobs: Function[]
-  container: HostElement
+  onRetry(fn: Function): void
+  retry(): void
+  onResolve(fn: Function): void
   resolve(): void
 }
 
 export function createSuspenseBoundary<HostNode, HostElement>(
-  parent: SuspenseBoundary<HostNode, HostElement> | null,
-  container: HostElement
+  vnode: VNode<HostNode, HostElement>,
+  parent: SuspenseBoundary<HostNode, HostElement> | null
 ): SuspenseBoundary<HostNode, HostElement> {
+  let retry: Function
+  let resolve: Function
   const suspense: SuspenseBoundary<HostNode, HostElement> = {
+    vnode,
     parent,
-    container,
     deps: 0,
     contentTree: null,
+    oldContentTree: null,
     fallbackTree: null,
+    oldFallbackTree: null,
     isResolved: false,
     bufferedJobs: [],
+    onRetry(fn: Function) {
+      retry = fn
+    },
+    retry() {
+      retry()
+    },
+    onResolve(fn: Function) {
+      resolve = fn
+    },
     resolve() {
-      suspense.isResolved = true
-      let parent = suspense.parent
-      let hasUnresolvedAncestor = false
-      while (parent) {
-        if (!parent.isResolved) {
-          parent.bufferedJobs.push(...suspense.bufferedJobs)
-          hasUnresolvedAncestor = true
-          break
-        }
-      }
-      if (!hasUnresolvedAncestor) {
-        queuePostFlushCb(suspense.bufferedJobs)
-      }
-      suspense.isResolved = true
+      resolve()
     }
   }
 

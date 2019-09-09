@@ -78,6 +78,10 @@ export interface ComponentInternalInstance {
   components: Record<string, Component>
   directives: Record<string, Directive>
 
+  asyncDep: Promise<any> | null
+  asyncResult: any
+  asyncResolved: boolean
+
   // the rest are only for stateful components
   renderContext: Data
   data: Data
@@ -146,6 +150,11 @@ export function createComponentInstance(
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
 
+    // async dependency management
+    asyncDep: null,
+    asyncResult: null,
+    asyncResolved: false,
+
     // user namespace for storing whatever the user assigns to `this`
     user: {},
 
@@ -206,7 +215,6 @@ export const setCurrentInstance = (
 }
 
 export function setupStatefulComponent(instance: ComponentInternalInstance) {
-  currentInstance = instance
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
@@ -219,62 +227,76 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
   if (setup) {
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
+
+    currentInstance = instance
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
+    currentInstance = null
 
-    if (isFunction(setupResult)) {
-      // setup returned an inline render function
-      instance.render = setupResult
+    if (
+      setupResult &&
+      isFunction(setupResult.then) &&
+      isFunction(setupResult.catch)
+    ) {
+      // async setup returned Promise.
+      // bail here and wait for re-entry.
+      instance.asyncDep = setupResult as Promise<any>
+      return
     } else {
-      if (__DEV__) {
-        if (!Component.render) {
-          warn(
-            `Component is missing render function. Either provide a template or ` +
-              `return a render function from setup().`
-          )
-        }
-        if (
-          setupResult &&
-          typeof setupResult.then === 'function' &&
-          typeof setupResult.catch === 'function'
-        ) {
-          warn(`setup() returned a Promise. setup() cannot be async.`)
-        }
-      }
-      // setup returned bindings.
-      // assuming a render function compiled from template is present.
-      if (isObject(setupResult)) {
-        instance.renderContext = reactive(setupResult)
-      } else if (__DEV__ && setupResult !== undefined) {
-        warn(
-          `setup() should return an object. Received: ${
-            setupResult === null ? 'null' : typeof setupResult
-          }`
-        )
-      }
-      instance.render = (Component.render || NOOP) as RenderFunction
+      handleSetupResult(instance, setupResult)
     }
   } else {
+    finishComponentSetup(instance)
+  }
+}
+
+export function handleSetupResult(
+  instance: ComponentInternalInstance,
+  setupResult: unknown
+) {
+  if (isFunction(setupResult)) {
+    // setup returned an inline render function
+    instance.render = setupResult as RenderFunction
+  } else if (isObject(setupResult)) {
+    // setup returned bindings.
+    // assuming a render function compiled from template is present.
+    instance.renderContext = reactive(setupResult)
+  } else if (__DEV__ && setupResult !== undefined) {
+    warn(
+      `setup() should return an object. Received: ${
+        setupResult === null ? 'null' : typeof setupResult
+      }`
+    )
+  }
+  finishComponentSetup(instance)
+}
+
+function finishComponentSetup(instance: ComponentInternalInstance) {
+  const Component = instance.type as ComponentOptions
+  if (!instance.render) {
     if (__DEV__ && !Component.render) {
       warn(
         `Component is missing render function. Either provide a template or ` +
           `return a render function from setup().`
       )
     }
-    instance.render = Component.render as RenderFunction
+    instance.render = (Component.render || NOOP) as RenderFunction
   }
+
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
+    currentInstance = instance
     applyOptions(instance, Component)
+    currentInstance = null
   }
+
   if (instance.renderContext === EMPTY_OBJ) {
     instance.renderContext = reactive({})
   }
-  currentInstance = null
 }
 
 // used to identify a setup context proxy

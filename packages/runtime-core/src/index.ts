@@ -19,7 +19,7 @@ export {
   createBlock
 } from './vnode'
 // VNode type symbols
-export { Text, Empty, Fragment, Portal } from './vnode'
+export { Text, Empty, Fragment, Portal, Suspense } from './vnode'
 // VNode flags
 export { PublicPatchFlags as PatchFlags } from './patchFlags'
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
