@@ -23,6 +23,7 @@ describe('renderer: suspense', () => {
       }
     })
 
+    // TODO test mounted hook & watch callback buffering
     const AsyncChild = createAsyncComponent(
       () =>
         new Promise(resolve => {
@@ -33,6 +34,19 @@ describe('renderer: suspense', () => {
               }
             })
           }, 0)
+        })
+    )
+
+    const AsyncChild2 = createAsyncComponent(
+      () =>
+        new Promise(resolve => {
+          setTimeout(() => {
+            resolve({
+              setup(props: { msg: string }) {
+                return () => h('div', props.msg)
+              }
+            })
+          }, 10)
         })
     )
 
@@ -49,7 +63,8 @@ describe('renderer: suspense', () => {
       name: 'root',
       setup() {
         // TODO test fallback
-        return () => h(Suspense, [msg.value, h(Mid)])
+        return () =>
+          h(Suspense, [msg.value, h(Mid), h(AsyncChild2, { msg: 'child 2' })])
       }
     }
 
@@ -59,6 +74,16 @@ describe('renderer: suspense', () => {
 
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<!---->hello<div>hello</div><!---->`)
+    expect(serializeInner(root)).toBe(
+      `<!---->hello<div>hello</div><div>child 2</div><!---->`
+    )
   })
+
+  test.todo('fallback content update')
+
+  test.todo('content update before suspense resolve')
+
+  test.todo('unmount before suspense resolve')
+
+  test.todo('nested suspense')
 })
