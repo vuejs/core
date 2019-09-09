@@ -623,7 +623,7 @@ export function createRenderer<
         )
         if (suspense.deps > 0) {
           // still pending.
-          // patch the fallback tree.
+          // TODO patch the fallback tree.
         } else {
           suspense.resolve()
         }
@@ -677,9 +677,7 @@ export function createRenderer<
       )
       // now check if we have encountered any async deps
       if (suspense.deps > 0) {
-        // yes: mount the fallback tree.
-        // Each time an async dep resolves, it pings the boundary
-        // and causes a re-entry.
+        // TODO mount the fallback tree.
         console.log('fallback')
       } else {
         suspense.resolve()
@@ -742,6 +740,7 @@ export function createRenderer<
         setupRenderEffect(instance, n2, container, anchor, isSVG)
       } else if (
         shouldUpdateComponent(n1, n2, optimized) ||
+        // TODO use context suspense
         (instance.provides.suspense &&
           !(instance.provides.suspense as any).isResolved)
       ) {
@@ -793,6 +792,7 @@ export function createRenderer<
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (instance.asyncDep) {
+      // TODO use context suspense
       const suspense = (instance as any).provides.suspense
       if (!suspense) {
         throw new Error('Async component without a suspense boundary!')
