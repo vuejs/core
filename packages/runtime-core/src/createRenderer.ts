@@ -634,10 +634,10 @@ export function createRenderer<
       })
 
       suspense.onResolve(() => {
+        // unmount fallback tree
+        unmount(suspense.fallbackTree as HostVNode, parentComponent, true)
         // move content from off-dom container to actual container
-        ;(suspense.subTree as any).children.forEach((vnode: HostVNode) => {
-          move(vnode, container, anchor)
-        })
+        move(suspense.subTree as HostVNode, container, anchor)
         suspense.vnode.el = (suspense.subTree as HostVNode).el
         // check if there is a pending parent suspense
         let parent = suspense.parent
@@ -682,7 +682,12 @@ export function createRenderer<
       // now check if we have encountered any async deps
       if (suspense.deps > 0) {
         // TODO mount the fallback tree.
-        console.log('fallback')
+        processEmptyNode(
+          null,
+          (suspense.fallbackTree = createVNode(Empty)),
+          container,
+          anchor
+        )
       } else {
         suspense.resolve()
       }
@@ -815,6 +820,10 @@ export function createRenderer<
         suspense.deps--
         suspense.retry()
       })
+      // give it a placeholder
+      const placeholder = (instance.subTree = createVNode(Empty))
+      processEmptyNode(null, placeholder, container, anchor)
+      initialVNode.el = placeholder.el
       return
     }
 
