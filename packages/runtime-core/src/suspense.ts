@@ -1,48 +1,48 @@
-import { warn } from './warning'
+import { VNode } from './vnode'
+import { queuePostFlushCb } from './scheduler'
 
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
-export interface SuspenseBoundary {
+export interface SuspenseBoundary<HostNode, HostElement> {
+  parent: SuspenseBoundary<HostNode, HostElement> | null
+  contentTree: VNode<HostNode, HostElement> | null
+  fallbackTree: VNode<HostNode, HostElement> | null
   deps: number
   isResolved: boolean
-  parent: SuspenseBoundary | null
-  ping(): void
+  bufferedJobs: Function[]
+  container: HostElement
   resolve(): void
-  onResolve(cb: () => void): void
 }
 
-export function createSuspenseBoundary(
-  parent: SuspenseBoundary | null
-): SuspenseBoundary {
-  let onResolve: () => void
-
-  if (parent && !parent.isResolved) {
-    parent.deps++
-  }
-
-  const boundary: SuspenseBoundary = {
+export function createSuspenseBoundary<HostNode, HostElement>(
+  parent: SuspenseBoundary<HostNode, HostElement> | null,
+  container: HostElement
+): SuspenseBoundary<HostNode, HostElement> {
+  const suspense: SuspenseBoundary<HostNode, HostElement> = {
+    parent,
+    container,
     deps: 0,
+    contentTree: null,
+    fallbackTree: null,
     isResolved: false,
-    parent: parent && parent.isResolved ? parent : null,
-    ping() {
-      // one of the deps resolved - re-entry from root suspense
-      if (boundary.parent) {
-      }
-      if (__DEV__ && boundary.deps < 0) {
-        warn(`Suspense boundary pinged when deps === 0. This is a bug.`)
-      }
-    },
+    bufferedJobs: [],
     resolve() {
-      boundary.isResolved = true
-      if (parent && !parent.isResolved) {
-        parent.ping()
-      } else {
-        onResolve && onResolve()
+      suspense.isResolved = true
+      let parent = suspense.parent
+      let hasUnresolvedAncestor = false
+      while (parent) {
+        if (!parent.isResolved) {
+          parent.bufferedJobs.push(...suspense.bufferedJobs)
+          hasUnresolvedAncestor = true
+          break
+        }
       }
-    },
-    onResolve(cb: () => void) {
-      onResolve = cb
+      if (!hasUnresolvedAncestor) {
+        queuePostFlushCb(suspense.bufferedJobs)
+      }
+      suspense.isResolved = true
     }
   }
-  return boundary
+
+  return suspense
 }

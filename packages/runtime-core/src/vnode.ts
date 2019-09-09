@@ -61,7 +61,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   ref: string | Function | null
   children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
-  suspense: SuspenseBoundary | null
+  suspense: SuspenseBoundary<HostNode, HostElement> | null
 
   // DOM
   el: HostNode | null

@@ -6,13 +6,13 @@ import {
   normalizeVNode,
   VNode,
   VNodeChildren,
-  Suspense
+  Suspense,
+  createVNode
 } from './vnode'
 import {
   ComponentInternalInstance,
   createComponentInstance,
-  setupStatefulComponent,
-  setCurrentInstance
+  setupStatefulComponent
 } from './component'
 import {
   renderComponentRoot,
@@ -42,12 +42,7 @@ import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { App, createAppAPI } from './apiApp'
-import {
-  SuspenseSymbol,
-  createSuspenseBoundary,
-  SuspenseBoundary
-} from './suspense'
-import { provide } from './apiInject'
+import { SuspenseBoundary, createSuspenseBoundary } from './suspense'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -603,35 +598,68 @@ export function createRenderer<
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     isSVG: boolean,
-    optimized: boolean
+    optimized: boolean,
+    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null = null
   ) {
     if (n1 == null) {
-      const parentSuspense =
-        parentComponent &&
-        (parentComponent.provides[SuspenseSymbol as any] as SuspenseBoundary)
-      const suspense = (n2.suspense = createSuspenseBoundary(parentSuspense))
-
-      // provide this as the parent suspense for descendents
-      setCurrentInstance(parentComponent)
-      provide(SuspenseSymbol, suspense)
-      setCurrentInstance(null)
+      const contentContainer = hostCreateElement('div')
+      const suspense = (n2.suspense = createSuspenseBoundary(
+        parentSuspense,
+        contentContainer
+      ))
 
       // start mounting the subtree off-dom
-      // - tracking async deps and buffering postQueue jobs on current boundary
-
+      // - TODO tracking async deps and buffering postQueue jobs on current boundary
+      const contentTree = (suspense.contentTree = childrenToFragment(n2))
+      processFragment(
+        null,
+        contentTree as VNode<HostNode, HostElement>,
+        contentContainer,
+        null,
+        parentComponent,
+        isSVG,
+        optimized
+      )
       // now check if we have encountered any async deps
-      // yes: mount the fallback tree.
-      // Each time an async dep resolves, it pings the boundary
-      // and causes a re-entry.
-
-      // no: just mount the tree
-      // - if have parent boundary that is still not resolved:
-      //   merge the buffered jobs into parent
-      // - else: flush buffered jobs.
-      // - mark resolved.
+      if (suspense.deps > 0) {
+        // yes: mount the fallback tree.
+        // Each time an async dep resolves, it pings the boundary
+        // and causes a re-entry.
+      } else {
+        suspense.resolve()
+      }
     } else {
-      const suspense = (n2.suspense = n1.suspense) as SuspenseBoundary
+      const suspense = (n2.suspense = n1.suspense) as SuspenseBoundary<
+        HostNode,
+        HostElement
+      >
+      const oldContentTree = suspense.contentTree
+      const newContentTree = (suspense.contentTree = childrenToFragment(n2))
+      // patch suspense subTree as fragment
+      processFragment(
+        oldContentTree,
+        newContentTree,
+        container,
+        anchor,
+        parentComponent,
+        isSVG,
+        optimized
+      )
+      if (suspense.deps > 0) {
+        // still pending.
+        // patch the fallback tree.
+      } else {
+        suspense.resolve()
+      }
     }
+  }
+
+  function childrenToFragment(vnode: HostVNode): HostVNode {
+    return vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN
+      ? createVNode(Fragment, null, vnode.children)
+      : vnode.shapeFlag & ShapeFlags.TEXT_CHILDREN
+        ? createVNode(Fragment, null, [vnode.children])
+        : createVNode(Fragment, null, [])
   }
 
   function processComponent(
