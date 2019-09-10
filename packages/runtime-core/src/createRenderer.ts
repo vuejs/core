@@ -13,8 +13,7 @@ import {
   ComponentInternalInstance,
   createComponentInstance,
   setupStatefulComponent,
-  handleSetupResult,
-  setCurrentInstance
+  handleSetupResult
 } from './component'
 import {
   renderComponentRoot,
@@ -49,7 +48,6 @@ import {
   createSuspenseBoundary,
   normalizeSuspenseChildren
 } from './suspense'
-import { provide } from './apiInject'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -88,9 +86,11 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
     isSVG: boolean,
     prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
+    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
     unmountChildren?: (
       children: VNode<HostNode, HostElement>[],
-      parentComponent: ComponentInternalInstance | null
+      parentComponent: ComponentInternalInstance | null,
+      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null
     ) => void
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
@@ -136,6 +136,7 @@ export function createRenderer<
 } {
   type HostVNode = VNode<HostNode, HostElement>
   type HostVNodeChildren = VNodeChildren<HostNode, HostElement>
+  type HostSuspsenseBoundary = SuspenseBoundary<HostNode, HostElement>
 
   const {
     insert: hostInsert,
@@ -157,13 +158,14 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null = null,
     parentComponent: ComponentInternalInstance | null = null,
+    parentSuspense: HostSuspsenseBoundary | null = null,
     isSVG: boolean = false,
     optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameType(n1, n2)) {
       anchor = getNextHostNode(n1)
-      unmount(n1, parentComponent, true)
+      unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
     }
 
@@ -182,6 +184,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -193,6 +196,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -205,6 +209,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG,
             optimized
           )
@@ -220,6 +225,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG,
             optimized
           )
@@ -230,6 +236,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG,
             optimized
           )
@@ -278,13 +285,21 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
     if (n1 == null) {
-      mountElement(n2, container, anchor, parentComponent, isSVG)
+      mountElement(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        isSVG
+      )
     } else {
-      patchElement(n1, n2, parentComponent, isSVG, optimized)
+      patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
     }
     if (n2.ref !== null && parentComponent !== null) {
       setRef(n2.ref, n1 && n1.ref, parentComponent, n2.el)
@@ -296,6 +311,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean
   ) {
     const tag = vnode.type as string
@@ -319,6 +335,7 @@ export function createRenderer<
         el,
         null,
         parentComponent,
+        parentSuspense,
         isSVG
       )
     }
@@ -335,12 +352,21 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = normalizeVNode(children[i]))
-      patch(null, child, container, anchor, parentComponent, isSVG)
+      patch(
+        null,
+        child,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        isSVG
+      )
     }
   }
 
@@ -348,6 +374,7 @@ export function createRenderer<
     n1: HostVNode,
     n2: HostVNode,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -368,7 +395,15 @@ export function createRenderer<
 
       if (patchFlag & PatchFlags.FULL_PROPS) {
         // element props contain dynamic keys, full diff needed
-        patchProps(el, n2, oldProps, newProps, parentComponent, isSVG)
+        patchProps(
+          el,
+          n2,
+          oldProps,
+          newProps,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
       } else {
         // class
         // this flag is matched when the element has dynamic class bindings.
@@ -406,6 +441,7 @@ export function createRenderer<
                 isSVG,
                 n1.children as HostVNode[],
                 parentComponent,
+                parentSuspense,
                 unmountChildren
               )
             }
@@ -424,7 +460,15 @@ export function createRenderer<
       }
     } else if (!optimized) {
       // unoptimized, full diff
-      patchProps(el, n2, oldProps, newProps, parentComponent, isSVG)
+      patchProps(
+        el,
+        n2,
+        oldProps,
+        newProps,
+        parentComponent,
+        parentSuspense,
+        isSVG
+      )
     }
 
     if (dynamicChildren != null) {
@@ -437,13 +481,14 @@ export function createRenderer<
           el,
           null,
           parentComponent,
+          parentSuspense,
           isSVG,
           true
         )
       }
     } else if (!optimized) {
       // full diff
-      patchChildren(n1, n2, el, null, parentComponent, isSVG)
+      patchChildren(n1, n2, el, null, parentComponent, parentSuspense, isSVG)
     }
 
     if (newProps.vnodeUpdated != null) {
@@ -459,6 +504,7 @@ export function createRenderer<
     oldProps: any,
     newProps: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean
   ) {
     if (oldProps !== newProps) {
@@ -475,6 +521,7 @@ export function createRenderer<
             isSVG,
             vnode.children as HostVNode[],
             parentComponent,
+            parentSuspense,
             unmountChildren
           )
         }
@@ -491,6 +538,7 @@ export function createRenderer<
               isSVG,
               vnode.children as HostVNode[],
               parentComponent,
+              parentSuspense,
               unmountChildren
             )
           }
@@ -505,6 +553,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -525,6 +574,7 @@ export function createRenderer<
         container,
         fragmentEndAnchor,
         parentComponent,
+        parentSuspense,
         isSVG
       )
     } else {
@@ -534,6 +584,7 @@ export function createRenderer<
         container,
         fragmentEndAnchor,
         parentComponent,
+        parentSuspense,
         isSVG,
         optimized
       )
@@ -546,6 +597,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -564,6 +616,7 @@ export function createRenderer<
             target,
             null,
             parentComponent,
+            parentSuspense,
             isSVG
           )
         }
@@ -576,7 +629,15 @@ export function createRenderer<
       if (patchFlag === PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
-        patchChildren(n1, n2, target, null, parentComponent, isSVG)
+        patchChildren(
+          n1,
+          n2,
+          target,
+          null,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
       }
       // target changed
       if (targetSelector !== (n1.props && n1.props.target)) {
@@ -608,9 +669,9 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
-    optimized: boolean,
-    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null = null
+    optimized: boolean
   ) {
     if (n1 == null) {
       const suspense = (n2.suspense = createSuspenseBoundary(
@@ -623,7 +684,7 @@ export function createRenderer<
       function resolveSuspense() {
         const { subTree, fallbackTree, bufferedJobs, vnode } = suspense
         // unmount fallback tree
-        unmount(fallbackTree as HostVNode, parentComponent, true)
+        unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
         // move content from off-dom container to actual container
         move(subTree as HostVNode, container, anchor)
         const el = (vnode.el = (subTree as HostVNode).el as HostNode)
@@ -656,13 +717,6 @@ export function createRenderer<
         }
       }
 
-      // TODO pass it down as an arg instead
-      if (parentComponent) {
-        setCurrentInstance(parentComponent)
-        provide('suspense', suspense)
-        setCurrentInstance(null)
-      }
-
       const { content, fallback } = normalizeSuspenseChildren(n2)
       suspense.subTree = content
       suspense.fallbackTree = fallback
@@ -675,6 +729,7 @@ export function createRenderer<
         suspense.container,
         null,
         parentComponent,
+        suspense,
         isSVG,
         optimized
       )
@@ -687,6 +742,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          suspense,
           isSVG,
           optimized
         )
@@ -696,10 +752,7 @@ export function createRenderer<
         suspense.resolve()
       }
     } else {
-      const suspense = (n2.suspense = n1.suspense) as SuspenseBoundary<
-        HostNode,
-        HostElement
-      >
+      const suspense = (n2.suspense = n1.suspense) as HostSuspsenseBoundary
       suspense.vnode = n2
       const { content, fallback } = normalizeSuspenseChildren(n2)
       const oldSubTree = (suspense.oldSubTree = suspense.subTree)
@@ -713,6 +766,7 @@ export function createRenderer<
           suspense.container,
           null,
           parentComponent,
+          suspense,
           isSVG,
           optimized
         )
@@ -724,6 +778,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            suspense,
             isSVG,
             optimized
           )
@@ -739,6 +794,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          suspense,
           isSVG,
           optimized
         )
@@ -753,11 +809,19 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
     if (n1 == null) {
-      mountComponent(n2, container, anchor, parentComponent, isSVG)
+      mountComponent(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        isSVG
+      )
     } else {
       const instance = (n2.component =
         n1.component) as ComponentInternalInstance
@@ -796,6 +860,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean
   ) {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
@@ -820,21 +885,26 @@ export function createRenderer<
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
-      // TODO use context suspense
-      const suspense = (instance as any).provides.suspense
-      if (!suspense) {
+      if (!parentSuspense) {
         throw new Error('Async component without a suspense boundary!')
       }
-      suspense.deps++
+      parentSuspense.deps++
       instance.asyncDep.then(asyncSetupResult => {
-        suspense.deps--
+        parentSuspense.deps--
         // retry from this component
         instance.asyncResolved = true
         handleSetupResult(instance, asyncSetupResult)
-        setupRenderEffect(instance, initialVNode, container, anchor, isSVG)
+        setupRenderEffect(
+          instance,
+          parentSuspense,
+          initialVNode,
+          container,
+          anchor,
+          isSVG
+        )
         updateHOCHostEl(instance, initialVNode.el as HostNode)
-        if (suspense.deps === 0) {
-          suspense.resolve()
+        if (parentSuspense.deps === 0) {
+          parentSuspense.resolve()
         }
       })
       // give it a placeholder
@@ -844,7 +914,14 @@ export function createRenderer<
       return
     }
 
-    setupRenderEffect(instance, initialVNode, container, anchor, isSVG)
+    setupRenderEffect(
+      instance,
+      parentSuspense,
+      initialVNode,
+      container,
+      anchor,
+      isSVG
+    )
 
     if (__DEV__) {
       popWarningContext()
@@ -853,6 +930,7 @@ export function createRenderer<
 
   function setupRenderEffect(
     instance: ComponentInternalInstance,
+    parentSuspense: HostSuspsenseBoundary | null,
     initialVNode: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
@@ -867,7 +945,7 @@ export function createRenderer<
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
-        patch(null, subTree, container, anchor, instance, isSVG)
+        patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
         initialVNode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
@@ -911,6 +989,7 @@ export function createRenderer<
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
           instance,
+          parentSuspense,
           isSVG
         )
         let current = instance.vnode
@@ -949,6 +1028,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean = false
   ) {
@@ -968,6 +1048,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -980,6 +1061,7 @@ export function createRenderer<
           container,
           anchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -991,7 +1073,7 @@ export function createRenderer<
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        unmountChildren(c1 as HostVNode[], parentComponent)
+        unmountChildren(c1 as HostVNode[], parentComponent, parentSuspense)
       }
       if (c2 !== c1) {
         hostSetElementText(container, c2 as string)
@@ -1007,12 +1089,18 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG,
             optimized
           )
         } else {
           // no new children, just unmount old
-          unmountChildren(c1 as HostVNode[], parentComponent, true)
+          unmountChildren(
+            c1 as HostVNode[],
+            parentComponent,
+            parentSuspense,
+            true
+          )
         }
       } else {
         // prev children was text OR null
@@ -1027,6 +1115,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG
           )
         }
@@ -1040,6 +1129,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -1057,16 +1147,25 @@ export function createRenderer<
         container,
         null,
         parentComponent,
+        parentSuspense,
         isSVG,
         optimized
       )
     }
     if (oldLength > newLength) {
       // remove old
-      unmountChildren(c1, parentComponent, true, commonLength)
+      unmountChildren(c1, parentComponent, parentSuspense, true, commonLength)
     } else {
       // mount new
-      mountChildren(c2, container, anchor, parentComponent, isSVG, commonLength)
+      mountChildren(
+        c2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        isSVG,
+        commonLength
+      )
     }
   }
 
@@ -1077,6 +1176,7 @@ export function createRenderer<
     container: HostElement,
     parentAnchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -1098,6 +1198,7 @@ export function createRenderer<
           container,
           parentAnchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -1120,6 +1221,7 @@ export function createRenderer<
           container,
           parentAnchor,
           parentComponent,
+          parentSuspense,
           isSVG,
           optimized
         )
@@ -1149,6 +1251,7 @@ export function createRenderer<
             container,
             anchor,
             parentComponent,
+            parentSuspense,
             isSVG
           )
           i++
@@ -1165,7 +1268,7 @@ export function createRenderer<
     // i = 0, e1 = 0, e2 = -1
     else if (i > e2) {
       while (i <= e1) {
-        unmount(c1[i], parentComponent, true)
+        unmount(c1[i], parentComponent, parentSuspense, true)
         i++
       }
     }
@@ -1214,7 +1317,7 @@ export function createRenderer<
         const prevChild = c1[i]
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
-          unmount(prevChild, parentComponent, true)
+          unmount(prevChild, parentComponent, parentSuspense, true)
           continue
         }
         let newIndex
@@ -1230,7 +1333,7 @@ export function createRenderer<
           }
         }
         if (newIndex === undefined) {
-          unmount(prevChild, parentComponent, true)
+          unmount(prevChild, parentComponent, parentSuspense, true)
         } else {
           newIndexToOldIndexMap[newIndex - s2] = i + 1
           if (newIndex >= maxNewIndexSoFar) {
@@ -1244,6 +1347,7 @@ export function createRenderer<
             container,
             null,
             parentComponent,
+            parentSuspense,
             isSVG,
             optimized
           )
@@ -1267,7 +1371,15 @@ export function createRenderer<
             : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
           // mount new
-          patch(null, nextChild, container, anchor, parentComponent, isSVG)
+          patch(
+            null,
+            nextChild,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            isSVG
+          )
         } else if (moved) {
           // move if:
           // There is no stable subsequence (e.g. a reverse)
@@ -1310,6 +1422,7 @@ export function createRenderer<
   function unmount(
     vnode: HostVNode,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     doRemove?: boolean
   ) {
     const {
@@ -1330,12 +1443,17 @@ export function createRenderer<
     }
 
     if (component != null) {
-      unmountComponent(component, doRemove)
+      unmountComponent(component, parentSuspense, doRemove)
       return
     }
 
     if (__FEATURE_SUSPENSE__ && suspense != null) {
-      unmount(suspense.subTree as HostVNode, parentComponent, doRemove)
+      unmount(
+        suspense.subTree as HostVNode,
+        parentComponent,
+        parentSuspense,
+        doRemove
+      )
       return
     }
 
@@ -1345,11 +1463,17 @@ export function createRenderer<
 
     const shouldRemoveChildren = type === Fragment && doRemove
     if (dynamicChildren != null) {
-      unmountChildren(dynamicChildren, parentComponent, shouldRemoveChildren)
+      unmountChildren(
+        dynamicChildren,
+        parentComponent,
+        parentSuspense,
+        shouldRemoveChildren
+      )
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       unmountChildren(
         children as HostVNode[],
         parentComponent,
+        parentSuspense,
         shouldRemoveChildren
       )
     }
@@ -1368,6 +1492,7 @@ export function createRenderer<
 
   function unmountComponent(
     instance: ComponentInternalInstance,
+    parentSuspense: HostSuspsenseBoundary | null,
     doRemove?: boolean
   ) {
     const { bum, effects, update, subTree, um } = instance
@@ -1381,7 +1506,7 @@ export function createRenderer<
       }
     }
     stop(update)
-    unmount(subTree, instance, doRemove)
+    unmount(subTree, instance, parentSuspense, doRemove)
     // unmounted hook
     if (um !== null) {
       queuePostFlushCb(um)
@@ -1391,11 +1516,12 @@ export function createRenderer<
   function unmountChildren(
     children: HostVNode[],
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
     doRemove?: boolean,
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
-      unmount(children[i], parentComponent, doRemove)
+      unmount(children[i], parentComponent, parentSuspense, doRemove)
     }
   }
 
@@ -1457,7 +1583,7 @@ export function createRenderer<
     }
     if (vnode == null) {
       if (container._vnode) {
-        unmount(container._vnode, null, true)
+        unmount(container._vnode, null, null, true)
       }
     } else {
       patch(container._vnode || null, vnode, container)

@@ -122,4 +122,6 @@ describe('renderer: suspense', () => {
   test.todo('nested suspense')
 
   test.todo('error handling')
+
+  test.todo('portal inside suspense')
 })
