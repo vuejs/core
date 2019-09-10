@@ -2,7 +2,7 @@ export function patchDOMProp(
   el: any,
   key: string,
   value: any,
-  // the next 3 args are passed only due to potential innerHTML/textContent
+  // the following args are passed only due to potential innerHTML/textContent
   // overriding existing VNodes, in which case the old tree must be properly
   // unmounted.
   prevChildren: any,

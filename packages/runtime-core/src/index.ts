@@ -65,3 +65,4 @@ export {
   DirectiveHook,
   DirectiveArguments
 } from './directives'
+export { SuspenseBoundary } from './suspense'
