@@ -16,19 +16,17 @@ export interface SuspenseBoundary<
   deps: number
   isResolved: boolean
   bufferedJobs: Function[]
-  onRetry(fn: Function): void
   retry(): void
-  onResolve(fn: Function): void
   resolve(): void
 }
 
 export function createSuspenseBoundary<HostNode, HostElement>(
   vnode: VNode<HostNode, HostElement>,
-  parent: SuspenseBoundary<HostNode, HostElement> | null
+  parent: SuspenseBoundary<HostNode, HostElement> | null,
+  retry: () => void,
+  resolve: () => void
 ): SuspenseBoundary<HostNode, HostElement> {
-  let retry: Function
-  let resolve: Function
-  const suspense: SuspenseBoundary<HostNode, HostElement> = {
+  return {
     vnode,
     parent,
     deps: 0,
@@ -38,19 +36,7 @@ export function createSuspenseBoundary<HostNode, HostElement>(
     oldFallbackTree: null,
     isResolved: false,
     bufferedJobs: [],
-    onRetry(fn: Function) {
-      retry = fn
-    },
-    retry() {
-      retry()
-    },
-    onResolve(fn: Function) {
-      resolve = fn
-    },
-    resolve() {
-      resolve()
-    }
+    retry,
+    resolve
   }
-
-  return suspense
 }

@@ -610,12 +610,8 @@ export function createRenderer<
   ) {
     if (n1 == null) {
       const contentContainer = hostCreateElement('div')
-      const suspense = (n2.suspense = createSuspenseBoundary(
-        n2,
-        parentSuspense
-      ))
 
-      suspense.onRetry(() => {
+      function retry() {
         processFragment(
           suspense.oldSubTree,
           suspense.subTree as HostVNode,
@@ -631,9 +627,9 @@ export function createRenderer<
         } else {
           suspense.resolve()
         }
-      })
+      }
 
-      suspense.onResolve(() => {
+      function resolve() {
         // unmount fallback tree
         unmount(suspense.fallbackTree as HostVNode, parentComponent, true)
         // move content from off-dom container to actual container
@@ -656,7 +652,14 @@ export function createRenderer<
           queuePostFlushCb(suspense.bufferedJobs)
         }
         suspense.isResolved = true
-      })
+      }
+
+      const suspense = (n2.suspense = createSuspenseBoundary(
+        n2,
+        parentSuspense,
+        retry,
+        resolve
+      ))
 
       // TODO pass it down as an arg instead
       if (parentComponent) {
@@ -749,17 +752,7 @@ export function createRenderer<
         return
       }
 
-      // a resolved async component, on successful re-entry.
-      // pickup the mounting process and setup render effect
-      if (!instance.update) {
-        setupRenderEffect(instance, n2, container, anchor, isSVG)
-      } else if (
-        shouldUpdateComponent(n1, n2, optimized) ||
-        // TODO use context suspense
-        (__FEATURE_SUSPENSE__ &&
-          instance.provides.suspense &&
-          !(instance.provides.suspense as any).isResolved)
-      ) {
+      if (shouldUpdateComponent(n1, n2, optimized)) {
         // normal update
         instance.next = n2
         instance.update()
@@ -814,11 +807,15 @@ export function createRenderer<
         throw new Error('Async component without a suspense boundary!')
       }
       suspense.deps++
-      instance.asyncDep.then(res => {
-        instance.asyncResolved = true
-        handleSetupResult(instance, res)
+      instance.asyncDep.then(asyncSetupResult => {
         suspense.deps--
-        suspense.retry()
+        // retry from this component
+        instance.asyncResolved = true
+        handleSetupResult(instance, asyncSetupResult)
+        setupRenderEffect(instance, initialVNode, container, anchor, isSVG)
+        if (suspense.deps === 0) {
+          suspense.resolve()
+        }
       })
       // give it a placeholder
       const placeholder = (instance.subTree = createVNode(Empty))
@@ -1276,7 +1273,7 @@ export function createRenderer<
       hostInsert(vnode.el as HostNode, container, anchor)
       const children = vnode.children as HostVNode[]
       for (let i = 0; i < children.length; i++) {
-        hostInsert(children[i].el as HostNode, container, anchor)
+        move(children[i], container, anchor)
       }
       hostInsert(vnode.anchor as HostNode, container, anchor)
     } else {
