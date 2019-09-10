@@ -44,7 +44,11 @@ import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
 import { App, createAppAPI } from './apiApp'
-import { SuspenseBoundary, createSuspenseBoundary } from './suspense'
+import {
+  SuspenseBoundary,
+  createSuspenseBoundary,
+  normalizeSuspenseChildren
+} from './suspense'
 import { provide } from './apiInject'
 
 const prodEffectOptions = {
@@ -609,26 +613,6 @@ export function createRenderer<
     parentSuspense: SuspenseBoundary<HostNode, HostElement> | null = null
   ) {
     if (n1 == null) {
-      const contentContainer = hostCreateElement('div')
-
-      function retry() {
-        processFragment(
-          suspense.oldSubTree,
-          suspense.subTree as HostVNode,
-          contentContainer,
-          null,
-          parentComponent,
-          isSVG,
-          optimized
-        )
-        if (suspense.deps > 0) {
-          // still pending.
-          // TODO patch the fallback tree.
-        } else {
-          suspense.resolve()
-        }
-      }
-
       function resolve() {
         // unmount fallback tree
         unmount(suspense.fallbackTree as HostVNode, parentComponent, true)
@@ -657,7 +641,7 @@ export function createRenderer<
       const suspense = (n2.suspense = createSuspenseBoundary(
         n2,
         parentSuspense,
-        retry,
+        hostCreateElement('div'),
         resolve
       ))
 
@@ -668,15 +652,16 @@ export function createRenderer<
         setCurrentInstance(null)
       }
 
-      // start mounting the subtree off-dom
+      const { content, fallback } = normalizeSuspenseChildren(n2)
+      suspense.subTree = content
+      suspense.fallbackTree = fallback
+
+      // start mounting the content subtree in an off-dom container
       // TODO should buffer postQueue jobs on current boundary
-      const subTree = (suspense.subTree = suspense.oldSubTree = childrenToFragment(
-        n2
-      ))
-      processFragment(
+      patch(
         null,
-        subTree as HostVNode,
-        contentContainer,
+        content,
+        suspense.container,
         null,
         parentComponent,
         isSVG,
@@ -684,14 +669,19 @@ export function createRenderer<
       )
       // now check if we have encountered any async deps
       if (suspense.deps > 0) {
-        // TODO mount the fallback tree.
-        processEmptyNode(
+        // mount the fallback tree
+        patch(
           null,
-          (suspense.fallbackTree = createVNode(Empty)),
+          fallback,
           container,
-          anchor
+          anchor,
+          parentComponent,
+          isSVG,
+          optimized
         )
+        n2.el = fallback.el
       } else {
+        // Suspense has no async deps. Just resolve.
         suspense.resolve()
       }
     } else {
@@ -700,32 +690,50 @@ export function createRenderer<
         HostElement
       >
       suspense.vnode = n2
+      const { content, fallback } = normalizeSuspenseChildren(n2)
       const oldSubTree = (suspense.oldSubTree = suspense.subTree)
-      const newContentTree = (suspense.subTree = childrenToFragment(n2))
+      suspense.subTree = content
+      const oldFallbackTree = (suspense.oldFallbackTree = suspense.fallbackTree)
+      suspense.fallbackTree = fallback
       if (!suspense.isResolved) {
-        suspense.retry()
-      } else {
-        // just normal patch inner content as a fragment
-        processFragment(
+        patch(
           oldSubTree,
-          newContentTree,
-          container,
+          content,
+          suspense.container,
           null,
           parentComponent,
           isSVG,
           optimized
         )
-        n2.el = newContentTree.el
+        if (suspense.deps > 0) {
+          // still pending. patch the fallback tree.
+          patch(
+            oldFallbackTree,
+            fallback,
+            container,
+            anchor,
+            parentComponent,
+            isSVG,
+            optimized
+          )
+          n2.el = fallback.el
+        } else {
+          suspense.resolve()
+        }
+      } else {
+        // just normal patch inner content as a fragment
+        patch(
+          oldSubTree,
+          content,
+          container,
+          anchor,
+          parentComponent,
+          isSVG,
+          optimized
+        )
+        n2.el = content.el
       }
     }
-  }
-
-  function childrenToFragment(vnode: HostVNode): HostVNode {
-    return vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN
-      ? createVNode(Fragment, null, vnode.children)
-      : vnode.shapeFlag & ShapeFlags.TEXT_CHILDREN
-        ? createVNode(Fragment, null, [vnode.children])
-        : createVNode(Fragment, null, [])
   }
 
   function processComponent(

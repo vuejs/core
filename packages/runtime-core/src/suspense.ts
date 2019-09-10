@@ -1,4 +1,5 @@
-import { VNode } from './vnode'
+import { VNode, normalizeVNode } from './vnode'
+import { ShapeFlags } from '.'
 
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
@@ -9,6 +10,7 @@ export interface SuspenseBoundary<
 > {
   vnode: HostVNode
   parent: SuspenseBoundary<HostNode, HostElement> | null
+  container: HostElement
   subTree: HostVNode | null
   oldSubTree: HostVNode | null
   fallbackTree: HostVNode | null
@@ -16,19 +18,19 @@ export interface SuspenseBoundary<
   deps: number
   isResolved: boolean
   bufferedJobs: Function[]
-  retry(): void
   resolve(): void
 }
 
 export function createSuspenseBoundary<HostNode, HostElement>(
   vnode: VNode<HostNode, HostElement>,
   parent: SuspenseBoundary<HostNode, HostElement> | null,
-  retry: () => void,
+  container: HostElement,
   resolve: () => void
 ): SuspenseBoundary<HostNode, HostElement> {
   return {
     vnode,
     parent,
+    container,
     deps: 0,
     subTree: null,
     oldSubTree: null,
@@ -36,7 +38,27 @@ export function createSuspenseBoundary<HostNode, HostElement>(
     oldFallbackTree: null,
     isResolved: false,
     bufferedJobs: [],
-    retry,
     resolve
+  }
+}
+
+export function normalizeSuspenseChildren(
+  vnode: VNode
+): {
+  content: VNode
+  fallback: VNode
+} {
+  const { shapeFlag } = vnode
+  const children = vnode.children as any
+  if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    return {
+      content: normalizeVNode(children.default()),
+      fallback: normalizeVNode(children.fallback ? children.fallback() : null)
+    }
+  } else {
+    return {
+      content: normalizeVNode(children),
+      fallback: normalizeVNode(null)
+    }
   }
 }

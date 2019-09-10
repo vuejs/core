@@ -23,7 +23,6 @@ describe('renderer: suspense', () => {
       }
     })
 
-    // TODO test mounted hook & watch callback buffering
     const AsyncChild = createAsyncComponent(
       () =>
         new Promise(resolve => {
@@ -62,7 +61,6 @@ describe('renderer: suspense', () => {
     const Comp = {
       name: 'root',
       setup() {
-        // TODO test fallback
         return () =>
           h(Suspense, [msg.value, h(Mid), h(AsyncChild2, { msg: 'child 2' })])
       }
@@ -79,7 +77,9 @@ describe('renderer: suspense', () => {
     )
   })
 
-  test.todo('fallback content update')
+  test.todo('buffer mounted/updated hooks & watch callbacks')
+
+  test.todo('fallback content')
 
   test.todo('content update before suspense resolve')
 
