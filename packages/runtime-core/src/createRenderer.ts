@@ -613,12 +613,25 @@ export function createRenderer<
     parentSuspense: SuspenseBoundary<HostNode, HostElement> | null = null
   ) {
     if (n1 == null) {
-      function resolve() {
+      const suspense = (n2.suspense = createSuspenseBoundary(
+        n2,
+        parentSuspense,
+        hostCreateElement('div'),
+        resolveSuspense
+      ))
+
+      function resolveSuspense() {
+        const { subTree, fallbackTree, bufferedJobs, vnode } = suspense
         // unmount fallback tree
-        unmount(suspense.fallbackTree as HostVNode, parentComponent, true)
+        unmount(fallbackTree as HostVNode, parentComponent, true)
         // move content from off-dom container to actual container
-        move(suspense.subTree as HostVNode, container, anchor)
-        suspense.vnode.el = (suspense.subTree as HostVNode).el
+        move(subTree as HostVNode, container, anchor)
+        const el = (vnode.el = (subTree as HostVNode).el as HostNode)
+        // suspense as the root node of a component...
+        if (parentComponent && parentComponent.subTree === vnode) {
+          parentComponent.vnode.el = el
+          updateHOCHostEl(parentComponent, el)
+        }
         // check if there is a pending parent suspense
         let parent = suspense.parent
         let hasUnresolvedAncestor = false
@@ -626,24 +639,22 @@ export function createRenderer<
           if (!parent.isResolved) {
             // found a pending parent suspense, merge buffered post jobs
             // into that parent
-            parent.bufferedJobs.push(...suspense.bufferedJobs)
+            parent.bufferedJobs.push(...bufferedJobs)
             hasUnresolvedAncestor = true
             break
           }
         }
         // no pending parent suspense, flush all jobs
         if (!hasUnresolvedAncestor) {
-          queuePostFlushCb(suspense.bufferedJobs)
+          queuePostFlushCb(bufferedJobs)
         }
         suspense.isResolved = true
+        // invoke @resolve event
+        const onResolve = vnode.props && vnode.props.onResolve
+        if (isFunction(onResolve)) {
+          onResolve()
+        }
       }
-
-      const suspense = (n2.suspense = createSuspenseBoundary(
-        n2,
-        parentSuspense,
-        hostCreateElement('div'),
-        resolve
-      ))
 
       // TODO pass it down as an arg instead
       if (parentComponent) {
@@ -821,6 +832,7 @@ export function createRenderer<
         instance.asyncResolved = true
         handleSetupResult(instance, asyncSetupResult)
         setupRenderEffect(instance, initialVNode, container, anchor, isSVG)
+        updateHOCHostEl(instance, initialVNode.el as HostNode)
         if (suspense.deps === 0) {
           suspense.resolve()
         }
@@ -907,11 +919,7 @@ export function createRenderer<
           // self-triggered update. In case of HOC, update parent component
           // vnode el. HOC is indicated by parent instance's subTree pointing
           // to child component's vnode
-          let parent = instance.parent
-          while (parent && parent.subTree === current) {
-            ;(current = parent.vnode).el = nextTree.el
-            parent = parent.parent
-          }
+          updateHOCHostEl(instance, nextTree.el)
         }
         // upated hook
         if (instance.u !== null) {
@@ -923,6 +931,16 @@ export function createRenderer<
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+  }
+
+  function updateHOCHostEl(
+    { vnode, parent }: ComponentInternalInstance,
+    el: HostNode
+  ) {
+    while (parent && parent.subTree === vnode) {
+      ;(vnode = parent.vnode).el = el
+      parent = parent.parent
+    }
   }
 
   function patchChildren(
