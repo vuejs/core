@@ -10,7 +10,7 @@ import {
 } from '@vue/runtime-test'
 
 describe('renderer: suspense', () => {
-  it('should work', async () => {
+  it('basic usage (nested + multiple deps)', async () => {
     const msg = ref('hello')
     const deps: Promise<any>[] = []
 
@@ -59,7 +59,6 @@ describe('renderer: suspense', () => {
     }
 
     const Comp = {
-      name: 'root',
       setup() {
         return () =>
           h(Suspense, [msg.value, h(Mid), h(AsyncChild2, { msg: 'child 2' })])
@@ -77,13 +76,50 @@ describe('renderer: suspense', () => {
     )
   })
 
-  test.todo('buffer mounted/updated hooks & watch callbacks')
+  test('fallback content', async () => {
+    const deps: Promise<any>[] = []
 
-  test.todo('fallback content')
+    const Async = {
+      async setup() {
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p)
+        await p
+        // test resume for returning bindings
+        return {
+          msg: 'async'
+        }
+      },
+      render(this: any) {
+        return h('div', this.msg)
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(Async),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>async</div>`)
+  })
+
+  test.todo('buffer mounted/updated hooks & watch callbacks')
 
   test.todo('content update before suspense resolve')
 
   test.todo('unmount before suspense resolve')
 
   test.todo('nested suspense')
+
+  test.todo('error handling')
 })
