@@ -690,59 +690,146 @@ export function createRenderer<
     optimized: boolean
   ) {
     if (n1 == null) {
-      const suspense = (n2.suspense = createSuspenseBoundary(
+      mountSuspense(
         n2,
+        container,
+        anchor,
+        parentComponent,
         parentSuspense,
-        hostCreateElement('div'),
-        resolveSuspense
-      ))
+        isSVG,
+        optimized
+      )
+    } else {
+      patchSuspense(
+        n1,
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        isSVG,
+        optimized
+      )
+    }
+  }
 
-      function resolveSuspense() {
-        const { subTree, fallbackTree, effects, vnode } = suspense
-        // unmount fallback tree
-        if (fallback.el) {
-          unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
+  function mountSuspense(
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
+    isSVG: boolean,
+    optimized: boolean
+  ) {
+    const suspense = (n2.suspense = createSuspenseBoundary(
+      n2,
+      parentSuspense,
+      hostCreateElement('div'),
+      resolveSuspense
+    ))
+
+    function resolveSuspense() {
+      if (__DEV__) {
+        if (suspense.isResolved) {
+          throw new Error(
+            `suspense.resolve() is called when it's already resolved`
+          )
         }
-        // move content from off-dom container to actual container
-        move(subTree as HostVNode, container, anchor)
-        const el = (vnode.el = (subTree as HostVNode).el as HostNode)
-        // suspense as the root node of a component...
-        if (parentComponent && parentComponent.subTree === vnode) {
-          parentComponent.vnode.el = el
-          updateHOCHostEl(parentComponent, el)
-        }
-        // check if there is a pending parent suspense
-        let parent = suspense.parent
-        let hasUnresolvedAncestor = false
-        while (parent) {
-          if (!parent.isResolved) {
-            // found a pending parent suspense, merge buffered post jobs
-            // into that parent
-            parent.effects.push(...effects)
-            hasUnresolvedAncestor = true
-            break
-          }
-        }
-        // no pending parent suspense, flush all jobs
-        if (!hasUnresolvedAncestor) {
-          queuePostFlushCb(effects)
-        }
-        suspense.isResolved = true
-        // invoke @resolve event
-        const onResolve = vnode.props && vnode.props.onResolve
-        if (isFunction(onResolve)) {
-          onResolve()
+        if (suspense.isUnmounted) {
+          throw new Error(
+            `suspense.resolve() is called when it's already unmounted`
+          )
         }
       }
+      const { subTree, fallbackTree, effects, vnode } = suspense
+      // unmount fallback tree
+      if (fallbackTree.el) {
+        unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
+      }
+      // move content from off-dom container to actual container
+      move(subTree as HostVNode, container, anchor)
+      const el = (vnode.el = (subTree as HostVNode).el as HostNode)
+      // suspense as the root node of a component...
+      if (parentComponent && parentComponent.subTree === vnode) {
+        parentComponent.vnode.el = el
+        updateHOCHostEl(parentComponent, el)
+      }
+      // check if there is a pending parent suspense
+      let parent = suspense.parent
+      let hasUnresolvedAncestor = false
+      while (parent) {
+        if (!parent.isResolved) {
+          // found a pending parent suspense, merge buffered post jobs
+          // into that parent
+          parent.effects.push(...effects)
+          hasUnresolvedAncestor = true
+          break
+        }
+      }
+      // no pending parent suspense, flush all jobs
+      if (!hasUnresolvedAncestor) {
+        queuePostFlushCb(effects)
+      }
+      suspense.isResolved = true
+      // invoke @resolve event
+      const onResolve = vnode.props && vnode.props.onResolve
+      if (isFunction(onResolve)) {
+        onResolve()
+      }
+    }
 
-      const { content, fallback } = normalizeSuspenseChildren(n2)
-      suspense.subTree = content
-      suspense.fallbackTree = fallback
+    const { content, fallback } = normalizeSuspenseChildren(n2)
+    suspense.subTree = content
+    suspense.fallbackTree = fallback
 
-      // start mounting the content subtree in an off-dom container
-      // TODO should buffer postQueue jobs on current boundary
+    // start mounting the content subtree in an off-dom container
+    patch(
+      null,
+      content,
+      suspense.container,
+      null,
+      parentComponent,
+      suspense,
+      isSVG,
+      optimized
+    )
+    // now check if we have encountered any async deps
+    if (suspense.deps > 0) {
+      // mount the fallback tree
       patch(
         null,
+        fallback,
+        container,
+        anchor,
+        parentComponent,
+        null, // fallback tree will not have suspense context
+        isSVG,
+        optimized
+      )
+      n2.el = fallback.el
+    } else {
+      // Suspense has no async deps. Just resolve.
+      suspense.resolve()
+    }
+  }
+
+  function patchSuspense(
+    n1: HostVNode,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    parentComponent: ComponentInternalInstance | null,
+    isSVG: boolean,
+    optimized: boolean
+  ) {
+    const suspense = (n2.suspense = n1.suspense) as HostSuspsenseBoundary
+    suspense.vnode = n2
+    const { content, fallback } = normalizeSuspenseChildren(n2)
+    const oldSubTree = suspense.subTree
+    const oldFallbackTree = suspense.fallbackTree
+    if (!suspense.isResolved) {
+      patch(
+        oldSubTree,
         content,
         suspense.container,
         null,
@@ -751,74 +838,39 @@ export function createRenderer<
         isSVG,
         optimized
       )
-      // now check if we have encountered any async deps
       if (suspense.deps > 0) {
-        // mount the fallback tree
+        // still pending. patch the fallback tree.
         patch(
-          null,
+          oldFallbackTree,
           fallback,
           container,
           anchor,
           parentComponent,
-          suspense,
+          null, // fallback tree will not have suspense context
           isSVG,
           optimized
         )
         n2.el = fallback.el
-      } else {
-        // Suspense has no async deps. Just resolve.
-        suspense.resolve()
       }
+      // If deps somehow becomes 0 after the patch it means the patch caused an
+      // async dep component to unmount and removed its dep. It will cause the
+      // suspense to resolve and we don't need to do anything here.
     } else {
-      const suspense = (n2.suspense = n1.suspense) as HostSuspsenseBoundary
-      suspense.vnode = n2
-      const { content, fallback } = normalizeSuspenseChildren(n2)
-      const oldSubTree = (suspense.oldSubTree = suspense.subTree)
-      suspense.subTree = content
-      const oldFallbackTree = (suspense.oldFallbackTree = suspense.fallbackTree)
-      suspense.fallbackTree = fallback
-      if (!suspense.isResolved) {
-        patch(
-          oldSubTree,
-          content,
-          suspense.container,
-          null,
-          parentComponent,
-          suspense,
-          isSVG,
-          optimized
-        )
-        if (suspense.deps > 0) {
-          // still pending. patch the fallback tree.
-          patch(
-            oldFallbackTree,
-            fallback,
-            container,
-            anchor,
-            parentComponent,
-            suspense,
-            isSVG,
-            optimized
-          )
-          n2.el = fallback.el
-        } else {
-          suspense.resolve()
-        }
-      } else {
-        // just normal patch inner content as a fragment
-        patch(
-          oldSubTree,
-          content,
-          container,
-          anchor,
-          parentComponent,
-          suspense,
-          isSVG,
-          optimized
-        )
-        n2.el = content.el
-      }
+      // just normal patch inner content as a fragment
+      patch(
+        oldSubTree,
+        content,
+        container,
+        anchor,
+        parentComponent,
+        suspense,
+        isSVG,
+        optimized
+      )
+      n2.el = content.el
     }
+    suspense.subTree = content
+    suspense.fallbackTree = fallback
   }
 
   function processComponent(
@@ -913,10 +965,19 @@ export function createRenderer<
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       if (!parentSuspense) {
+        // TODO handle this properly
         throw new Error('Async component without a suspense boundary!')
+      }
+      if (parentSuspense.isResolved) {
+        // TODO if parentSuspense is already resolved it needs to enter waiting
+        // state again
       }
       parentSuspense.deps++
       instance.asyncDep.then(asyncSetupResult => {
+        // unmounted before resolve
+        if (instance.isUnmounted || parentSuspense.isUnmounted) {
+          return
+        }
         parentSuspense.deps--
         // retry from this component
         instance.asyncResolved = true
@@ -1481,12 +1542,7 @@ export function createRenderer<
     }
 
     if (__FEATURE_SUSPENSE__ && suspense != null) {
-      unmount(
-        suspense.subTree as HostVNode,
-        parentComponent,
-        parentSuspense,
-        doRemove
-      )
+      unmountSuspense(suspense, parentComponent, parentSuspense, doRemove)
       return
     }
 
@@ -1538,15 +1594,58 @@ export function createRenderer<
         stop(effects[i])
       }
     }
-    stop(update)
-    unmount(subTree, instance, parentSuspense, doRemove)
+    // update may be null if a component is unmounted before its async
+    // setup has resolved.
+    if (update !== null) {
+      stop(update)
+      unmount(subTree, instance, parentSuspense, doRemove)
+    }
     // unmounted hook
     if (um !== null) {
       queuePostRenderEffect(um, parentSuspense)
-      // set unmounted after unmounted hooks are fired
-      queuePostRenderEffect(() => {
-        instance.isUnmounted = true
-      }, parentSuspense)
+    }
+    queuePostFlushCb(() => {
+      instance.isUnmounted = true
+    })
+
+    // A component with async dep inside a pending suspense is unmounted before
+    // its async dep resolves. This should remove the dep from the suspense, and
+    // cause the suspense to resolve immediately if that was the last dep.
+    if (
+      __FEATURE_SUSPENSE__ &&
+      parentSuspense !== null &&
+      !parentSuspense.isResolved &&
+      !parentSuspense.isUnmounted &&
+      instance.asyncDep !== null &&
+      !instance.asyncResolved
+    ) {
+      parentSuspense.deps--
+      if (parentSuspense.deps === 0) {
+        parentSuspense.resolve()
+      }
+    }
+  }
+
+  function unmountSuspense(
+    suspense: HostSuspsenseBoundary,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspsenseBoundary | null,
+    doRemove?: boolean
+  ) {
+    suspense.isUnmounted = true
+    unmount(
+      suspense.subTree as HostVNode,
+      parentComponent,
+      parentSuspense,
+      doRemove
+    )
+    if (!suspense.isResolved) {
+      unmount(
+        suspense.fallbackTree as HostVNode,
+        parentComponent,
+        parentSuspense,
+        doRemove
+      )
     }
   }
 

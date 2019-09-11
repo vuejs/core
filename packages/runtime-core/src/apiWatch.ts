@@ -113,6 +113,9 @@ function doWatch(
   } else {
     // no cb -> simple effect
     getter = () => {
+      if (instance && instance.isUnmounted) {
+        return
+      }
       if (cleanup) {
         cleanup()
       }
@@ -141,6 +144,9 @@ function doWatch(
   let oldValue = isArray(source) ? [] : undefined
   const applyCb = cb
     ? () => {
+        if (instance && instance.isUnmounted) {
+          return
+        }
         const newValue = runner()
         if (deep || newValue !== oldValue) {
           // cleanup before running cb again
@@ -157,20 +163,24 @@ function doWatch(
       }
     : void 0
 
-  const scheduler =
-    flush === 'sync'
-      ? invoke
-      : flush === 'pre'
-        ? (job: () => any) => {
-            if (!instance || instance.vnode.el != null) {
-              queueJob(job)
-            } else {
-              // with 'pre' option, the first call must happen before
-              // the component is mounted so it is called synchronously.
-              job()
-            }
-          }
-        : (job: () => any) => queuePostRenderEffect(job, suspense)
+  let scheduler: (job: () => any) => void
+  if (flush === 'sync') {
+    scheduler = invoke
+  } else if (flush === 'pre') {
+    scheduler = job => {
+      if (!instance || instance.vnode.el != null) {
+        queueJob(job)
+      } else {
+        // with 'pre' option, the first call must happen before
+        // the component is mounted so it is called synchronously.
+        job()
+      }
+    }
+  } else {
+    scheduler = job => {
+      queuePostRenderEffect(job, suspense)
+    }
+  }
 
   const runner = effect(getter, {
     lazy: true,

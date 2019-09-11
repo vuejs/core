@@ -164,13 +164,7 @@ describe('renderer: suspense', () => {
         })
 
         await p
-        // test resume for returning bindings
-        return {
-          msg: 'async'
-        }
-      },
-      render(this: any) {
-        return h('div', this.msg)
+        return () => h('div', 'async')
       }
     }
 
@@ -201,11 +195,100 @@ describe('renderer: suspense', () => {
     expect(calls).toEqual([`watch callback`, `mounted`, 'unmounted'])
   })
 
-  // should receive updated props/slots when resolved
-  test.todo('content update before suspense resolve')
+  test('content update before suspense resolve', async () => {
+    const Async = createAsyncComponent({
+      setup(props: { msg: string }) {
+        return () => h('div', props.msg)
+      }
+    })
+
+    const msg = ref('foo')
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(Async, { msg: msg.value }),
+            fallback: h('div', `fallback ${msg.value}`)
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback foo</div>`)
+
+    // value changed before resolve
+    msg.value = 'bar'
+    await nextTick()
+    // fallback content should be updated
+    expect(serializeInner(root)).toBe(`<div>fallback bar</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    // async component should receive updated props/slots when resolved
+    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+  })
 
   // mount/unmount hooks should not even fire
-  test.todo('unmount before suspense resolve')
+  test('unmount before suspense resolve', async () => {
+    const deps: Promise<any>[] = []
+    const calls: string[] = []
+    const toggle = ref(true)
+
+    const Async = {
+      async setup() {
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p)
+
+        watch(() => {
+          calls.push('watch callback')
+        })
+
+        onMounted(() => {
+          calls.push('mounted')
+        })
+
+        onUnmounted(() => {
+          calls.push('unmounted')
+        })
+
+        await p
+        return () => h('div', 'async')
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: toggle.value ? h(Async) : null,
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
+
+    // remvoe the async dep before it's resolved
+    toggle.value = false
+    await nextTick()
+    // should cause the suspense to resolve immediately
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    // should discard effects
+    expect(calls).toEqual([])
+  })
+
+  test.todo('unmount suspense after resolve')
+
+  test.todo('unmount suspense before resolve')
 
   test.todo('nested suspense')
 

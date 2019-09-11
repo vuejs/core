@@ -12,12 +12,11 @@ export interface SuspenseBoundary<
   vnode: HostVNode
   parent: SuspenseBoundary<HostNode, HostElement> | null
   container: HostElement
-  subTree: HostVNode | null
-  oldSubTree: HostVNode | null
-  fallbackTree: HostVNode | null
-  oldFallbackTree: HostVNode | null
+  subTree: HostVNode
+  fallbackTree: HostVNode
   deps: number
   isResolved: boolean
+  isUnmounted: boolean
   effects: Function[]
   resolve(): void
 }
@@ -33,11 +32,10 @@ export function createSuspenseBoundary<HostNode, HostElement>(
     parent,
     container,
     deps: 0,
-    subTree: null,
-    oldSubTree: null,
-    fallbackTree: null,
-    oldFallbackTree: null,
+    subTree: null as any, // will be set immediately after creation
+    fallbackTree: null as any, // will be set immediately after creation
     isResolved: false,
+    isUnmounted: false,
     effects: [],
     resolve
   }
