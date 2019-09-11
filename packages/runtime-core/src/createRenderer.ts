@@ -24,7 +24,8 @@ import {
   EMPTY_OBJ,
   EMPTY_ARR,
   isReservedProp,
-  isFunction
+  isFunction,
+  isArray
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
@@ -74,6 +75,19 @@ function isSameType(n1: VNode, n2: VNode): boolean {
 function invokeHooks(hooks: Function[], arg?: any) {
   for (let i = 0; i < hooks.length; i++) {
     hooks[i](arg)
+  }
+}
+
+function queuePostEffect(
+  fn: Function | Function[],
+  suspense: SuspenseBoundary<any, any> | null
+) {
+  if (suspense === null) {
+    queuePostFlushCb(fn)
+  } else if (isArray(fn)) {
+    suspense.effects.push(...fn)
+  } else {
+    suspense.effects.push(fn)
   }
 }
 
@@ -341,9 +355,9 @@ export function createRenderer<
     }
     hostInsert(el, container, anchor)
     if (props != null && props.vnodeMounted != null) {
-      queuePostFlushCb(() => {
+      queuePostEffect(() => {
         invokeDirectiveHook(props.vnodeMounted, parentComponent, vnode)
-      })
+      }, parentSuspense)
     }
   }
 
@@ -492,9 +506,9 @@ export function createRenderer<
     }
 
     if (newProps.vnodeUpdated != null) {
-      queuePostFlushCb(() => {
+      queuePostEffect(() => {
         invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2, n1)
-      })
+      }, parentSuspense)
     }
   }
 
@@ -682,7 +696,7 @@ export function createRenderer<
       ))
 
       function resolveSuspense() {
-        const { subTree, fallbackTree, bufferedJobs, vnode } = suspense
+        const { subTree, fallbackTree, effects, vnode } = suspense
         // unmount fallback tree
         unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
         // move content from off-dom container to actual container
@@ -700,14 +714,14 @@ export function createRenderer<
           if (!parent.isResolved) {
             // found a pending parent suspense, merge buffered post jobs
             // into that parent
-            parent.bufferedJobs.push(...bufferedJobs)
+            parent.effects.push(...effects)
             hasUnresolvedAncestor = true
             break
           }
         }
         // no pending parent suspense, flush all jobs
         if (!hasUnresolvedAncestor) {
-          queuePostFlushCb(bufferedJobs)
+          queuePostFlushCb(effects)
         }
         suspense.isResolved = true
         // invoke @resolve event
@@ -949,7 +963,7 @@ export function createRenderer<
         initialVNode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
-          queuePostFlushCb(instance.m)
+          queuePostEffect(instance.m, parentSuspense)
         }
         mounted = true
       } else {
@@ -1002,7 +1016,7 @@ export function createRenderer<
         }
         // upated hook
         if (instance.u !== null) {
-          queuePostFlushCb(instance.u)
+          queuePostEffect(instance.u, parentSuspense)
         }
 
         if (__DEV__) {
@@ -1484,9 +1498,9 @@ export function createRenderer<
     }
 
     if (props != null && props.vnodeUnmounted != null) {
-      queuePostFlushCb(() => {
+      queuePostEffect(() => {
         invokeDirectiveHook(props.vnodeUnmounted, parentComponent, vnode)
-      })
+      }, parentSuspense)
     }
   }
 
@@ -1509,7 +1523,7 @@ export function createRenderer<
     unmount(subTree, instance, parentSuspense, doRemove)
     // unmounted hook
     if (um !== null) {
-      queuePostFlushCb(um)
+      queuePostEffect(um, parentSuspense)
     }
   }
 

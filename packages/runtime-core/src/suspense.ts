@@ -18,7 +18,7 @@ export interface SuspenseBoundary<
   oldFallbackTree: HostVNode | null
   deps: number
   isResolved: boolean
-  bufferedJobs: Function[]
+  effects: Function[]
   resolve(): void
 }
 
@@ -38,7 +38,7 @@ export function createSuspenseBoundary<HostNode, HostElement>(
     fallbackTree: null,
     oldFallbackTree: null,
     isResolved: false,
-    bufferedJobs: [],
+    effects: [],
     resolve
   }
 }
