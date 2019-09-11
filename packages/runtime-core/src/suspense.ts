@@ -5,8 +5,8 @@ import { isFunction } from '@vue/shared'
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
 export interface SuspenseBoundary<
-  HostNode,
-  HostElement,
+  HostNode = any,
+  HostElement = any,
   HostVNode = VNode<HostNode, HostElement>
 > {
   vnode: HostVNode

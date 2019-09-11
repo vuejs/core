@@ -23,6 +23,7 @@ import {
   isArray,
   isObject
 } from '@vue/shared'
+import { SuspenseBoundary } from './suspense'
 
 export type Data = { [key: string]: unknown }
 
@@ -206,6 +207,7 @@ export function createComponentInstance(
 }
 
 export let currentInstance: ComponentInternalInstance | null = null
+export let currentSuspense: SuspenseBoundary | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance
@@ -216,7 +218,10 @@ export const setCurrentInstance = (
   currentInstance = instance
 }
 
-export function setupStatefulComponent(instance: ComponentInternalInstance) {
+export function setupStatefulComponent(
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null
+) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
@@ -231,6 +236,7 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
+    currentSuspense = parentSuspense
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -238,6 +244,7 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
       [propsProxy, setupContext]
     )
     currentInstance = null
+    currentSuspense = null
 
     if (
       setupResult &&
@@ -256,16 +263,17 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
       }
       return
     } else {
-      handleSetupResult(instance, setupResult)
+      handleSetupResult(instance, setupResult, parentSuspense)
     }
   } else {
-    finishComponentSetup(instance)
+    finishComponentSetup(instance, parentSuspense)
   }
 }
 
 export function handleSetupResult(
   instance: ComponentInternalInstance,
-  setupResult: unknown
+  setupResult: unknown,
+  parentSuspense: SuspenseBoundary | null
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
@@ -281,10 +289,13 @@ export function handleSetupResult(
       }`
     )
   }
-  finishComponentSetup(instance)
+  finishComponentSetup(instance, parentSuspense)
 }
 
-function finishComponentSetup(instance: ComponentInternalInstance) {
+function finishComponentSetup(
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null
+) {
   const Component = instance.type as ComponentOptions
   if (!instance.render) {
     if (__DEV__ && !Component.render) {
@@ -299,8 +310,10 @@ function finishComponentSetup(instance: ComponentInternalInstance) {
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
     currentInstance = instance
+    currentSuspense = parentSuspense
     applyOptions(instance, Component)
     currentInstance = null
+    currentSuspense = null
   }
 
   if (instance.renderContext === EMPTY_OBJ) {

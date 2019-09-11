@@ -78,7 +78,7 @@ function invokeHooks(hooks: Function[], arg?: any) {
   }
 }
 
-function queuePostEffect(
+export function queuePostRenderEffect(
   fn: Function | Function[],
   suspense: SuspenseBoundary<any, any> | null
 ) {
@@ -357,7 +357,7 @@ export function createRenderer<
     }
     hostInsert(el, container, anchor)
     if (props != null && props.vnodeMounted != null) {
-      queuePostEffect(() => {
+      queuePostRenderEffect(() => {
         invokeDirectiveHook(props.vnodeMounted, parentComponent, vnode)
       }, parentSuspense)
     }
@@ -508,7 +508,7 @@ export function createRenderer<
     }
 
     if (newProps.vnodeUpdated != null) {
-      queuePostEffect(() => {
+      queuePostRenderEffect(() => {
         invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2, n1)
       }, parentSuspense)
     }
@@ -700,7 +700,9 @@ export function createRenderer<
       function resolveSuspense() {
         const { subTree, fallbackTree, effects, vnode } = suspense
         // unmount fallback tree
-        unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
+        if (fallback.el) {
+          unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
+        }
         // move content from off-dom container to actual container
         move(subTree as HostVNode, container, anchor)
         const el = (vnode.el = (subTree as HostVNode).el as HostNode)
@@ -895,7 +897,7 @@ export function createRenderer<
 
     // setup stateful logic
     if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      setupStatefulComponent(instance)
+      setupStatefulComponent(instance, parentSuspense)
     }
 
     // setup() is async. This component relies on async logic to be resolved
@@ -909,7 +911,7 @@ export function createRenderer<
         parentSuspense.deps--
         // retry from this component
         instance.asyncResolved = true
-        handleSetupResult(instance, asyncSetupResult)
+        handleSetupResult(instance, asyncSetupResult, parentSuspense)
         setupRenderEffect(
           instance,
           parentSuspense,
@@ -965,7 +967,7 @@ export function createRenderer<
         initialVNode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
-          queuePostEffect(instance.m, parentSuspense)
+          queuePostRenderEffect(instance.m, parentSuspense)
         }
         mounted = true
       } else {
@@ -1018,7 +1020,7 @@ export function createRenderer<
         }
         // upated hook
         if (instance.u !== null) {
-          queuePostEffect(instance.u, parentSuspense)
+          queuePostRenderEffect(instance.u, parentSuspense)
         }
 
         if (__DEV__) {
@@ -1500,7 +1502,7 @@ export function createRenderer<
     }
 
     if (props != null && props.vnodeUnmounted != null) {
-      queuePostEffect(() => {
+      queuePostRenderEffect(() => {
         invokeDirectiveHook(props.vnodeUnmounted, parentComponent, vnode)
       }, parentSuspense)
     }
@@ -1525,9 +1527,9 @@ export function createRenderer<
     unmount(subTree, instance, parentSuspense, doRemove)
     // unmounted hook
     if (um !== null) {
-      queuePostEffect(um, parentSuspense)
+      queuePostRenderEffect(um, parentSuspense)
       // set unmounted after unmounted hooks are fired
-      queuePostEffect(() => {
+      queuePostRenderEffect(() => {
         instance.isUnmounted = true
       }, parentSuspense)
     }

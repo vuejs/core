@@ -115,6 +115,8 @@ describe('renderer: suspense', () => {
 
   test.todo('buffer mounted/updated hooks & watch callbacks')
 
+  test.todo('onResolve')
+
   test.todo('content update before suspense resolve')
 
   test.todo('unmount before suspense resolve')

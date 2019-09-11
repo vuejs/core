@@ -5,16 +5,21 @@ import {
   Ref,
   ReactiveEffectOptions
 } from '@vue/reactivity'
-import { queueJob, queuePostFlushCb } from './scheduler'
+import { queueJob } from './scheduler'
 import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
-import { currentInstance, ComponentInternalInstance } from './component'
+import {
+  currentInstance,
+  ComponentInternalInstance,
+  currentSuspense
+} from './component'
 import {
   ErrorCodes,
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { onBeforeMount } from './apiLifecycle'
+import { onBeforeUnmount } from './apiLifecycle'
+import { queuePostRenderEffect } from './createRenderer'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -38,14 +43,17 @@ type SimpleEffect = (onCleanup: CleanupRegistrator) => void
 
 const invoke = (fn: Function) => fn()
 
+// overload #1: simple effect
 export function watch(effect: SimpleEffect, options?: WatchOptions): StopHandle
 
+// overload #2: single source + cb
 export function watch<T>(
   source: WatcherSource<T>,
   cb: (newValue: T, oldValue: T, onCleanup: CleanupRegistrator) => any,
   options?: WatchOptions
 ): StopHandle
 
+// overload #3: array of multiple sources + cb
 export function watch<T extends WatcherSource<unknown>[]>(
   sources: T,
   cb: (
@@ -85,6 +93,7 @@ function doWatch(
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
   const instance = currentInstance
+  const suspense = currentSuspense
 
   let getter: Function
   if (isArray(source)) {
@@ -152,7 +161,7 @@ function doWatch(
     flush === 'sync'
       ? invoke
       : flush === 'pre'
-        ? (job: () => void) => {
+        ? (job: () => any) => {
             if (!instance || instance.vnode.el != null) {
               queueJob(job)
             } else {
@@ -161,7 +170,7 @@ function doWatch(
               job()
             }
           }
-        : queuePostFlushCb
+        : (job: () => any) => queuePostRenderEffect(job, suspense)
 
   const runner = effect(getter, {
     lazy: true,
@@ -198,7 +207,7 @@ export function instanceWatch(
   const ctx = this.renderProxy as any
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
-  onBeforeMount(stop, this)
+  onBeforeUnmount(stop, this)
   return stop
 }
 
