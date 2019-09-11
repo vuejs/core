@@ -82,12 +82,14 @@ function queuePostEffect(
   fn: Function | Function[],
   suspense: SuspenseBoundary<any, any> | null
 ) {
-  if (suspense === null) {
-    queuePostFlushCb(fn)
-  } else if (isArray(fn)) {
-    suspense.effects.push(...fn)
+  if (suspense !== null && !suspense.isResolved) {
+    if (isArray(fn)) {
+      suspense.effects.push(...fn)
+    } else {
+      suspense.effects.push(fn)
+    }
   } else {
-    suspense.effects.push(fn)
+    queuePostFlushCb(fn)
   }
 }
 
