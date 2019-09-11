@@ -286,7 +286,7 @@ describe('renderer: suspense', () => {
     expect(calls).toEqual([])
   })
 
-  test.todo('unmount suspense after resolve')
+  test('unmount suspense after resolve', () => {})
 
   test.todo('unmount suspense before resolve')
 

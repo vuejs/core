@@ -1,6 +1,7 @@
 import { VNode, normalizeVNode } from './vnode'
 import { ShapeFlags } from '.'
 import { isFunction } from '@vue/shared'
+import { ComponentInternalInstance } from './component'
 
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
@@ -11,33 +12,39 @@ export interface SuspenseBoundary<
 > {
   vnode: HostVNode
   parent: SuspenseBoundary<HostNode, HostElement> | null
+  parentComponent: ComponentInternalInstance | null
   container: HostElement
+  hiddenContainer: HostElement
+  anchor: HostNode | null
   subTree: HostVNode
   fallbackTree: HostVNode
   deps: number
   isResolved: boolean
   isUnmounted: boolean
   effects: Function[]
-  resolve(): void
 }
 
 export function createSuspenseBoundary<HostNode, HostElement>(
   vnode: VNode<HostNode, HostElement>,
   parent: SuspenseBoundary<HostNode, HostElement> | null,
+  parentComponent: ComponentInternalInstance | null,
   container: HostElement,
-  resolve: () => void
+  hiddenContainer: HostElement,
+  anchor: HostNode | null
 ): SuspenseBoundary<HostNode, HostElement> {
   return {
     vnode,
     parent,
+    parentComponent,
     container,
+    hiddenContainer,
+    anchor,
     deps: 0,
     subTree: null as any, // will be set immediately after creation
     fallbackTree: null as any, // will be set immediately after creation
     isResolved: false,
     isUnmounted: false,
-    effects: [],
-    resolve
+    effects: []
   }
 }
 
