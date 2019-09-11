@@ -17,6 +17,9 @@ function injectHook(
 ) {
   if (target) {
     ;(target[type] || (target[type] = [])).push((...args: any[]) => {
+      if (target.isUnmounted) {
+        return
+      }
       // disable tracking inside all lifecycle hooks
       // since they can potentially be called inside effects.
       pauseTracking()

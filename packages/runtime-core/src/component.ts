@@ -98,6 +98,7 @@ export interface ComponentInternalInstance {
   user: { [key: string]: any }
 
   // lifecycle
+  isUnmounted: boolean
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
   [LifecycleHooks.CREATED]: LifecycleHook
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
@@ -160,6 +161,7 @@ export function createComponentInstance(
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    isUnmounted: false,
     bc: null,
     c: null,
     bm: null,

@@ -1526,6 +1526,10 @@ export function createRenderer<
     // unmounted hook
     if (um !== null) {
       queuePostEffect(um, parentSuspense)
+      // set unmounted after unmounted hooks are fired
+      queuePostEffect(() => {
+        instance.isUnmounted = true
+      }, parentSuspense)
     }
   }
 
