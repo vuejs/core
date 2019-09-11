@@ -844,19 +844,28 @@ export function createRenderer<
       const instance = (n2.component =
         n1.component) as ComponentInternalInstance
 
-      // async still pending
-      if (
-        __FEATURE_SUSPENSE__ &&
-        instance.asyncDep &&
-        !instance.asyncResolved
-      ) {
-        return
-      }
-
       if (shouldUpdateComponent(n1, n2, optimized)) {
-        // normal update
-        instance.next = n2
-        instance.update()
+        if (
+          __FEATURE_SUSPENSE__ &&
+          instance.asyncDep &&
+          !instance.asyncResolved
+        ) {
+          // async & still pending - just update props and slots
+          // since the component's reactive effect for render isn't set-up yet
+          if (__DEV__) {
+            pushWarningContext(n2)
+          }
+          updateComponentPropsAndSlots(instance, n2)
+          if (__DEV__) {
+            popWarningContext()
+          }
+          return
+        } else {
+          // normal update
+          instance.next = n2
+          // instance.update is the reactive effect runner.
+          instance.update()
+        }
       } else {
         // no update needed. just copy over properties
         n2.component = n1.component
@@ -981,12 +990,7 @@ export function createRenderer<
         }
 
         if (next !== null) {
-          // update from parent
-          next.component = instance
-          instance.vnode = next
-          instance.next = null
-          resolveProps(instance, next.props, (initialVNode.type as any).props)
-          resolveSlots(instance, next.children)
+          updateComponentPropsAndSlots(instance, next)
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
@@ -1028,6 +1032,17 @@ export function createRenderer<
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+  }
+
+  function updateComponentPropsAndSlots(
+    instance: ComponentInternalInstance,
+    nextVNode: HostVNode
+  ) {
+    nextVNode.component = instance
+    instance.vnode = nextVNode
+    instance.next = null
+    resolveProps(instance, nextVNode.props, (nextVNode.type as any).props)
+    resolveSlots(instance, nextVNode.children)
   }
 
   function updateHOCHostEl(
@@ -1624,11 +1639,7 @@ export function createRenderer<
 function getSequence(arr: number[]): number[] {
   const p = arr.slice()
   const result = [0]
-  let i
-  let j
-  let u
-  let v
-  let c
+  let i, j, u, v, c
   const len = arr.length
   for (i = 0; i < len; i++) {
     const arrI = arr[i]
