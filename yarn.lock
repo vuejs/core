@@ -1054,9 +1054,9 @@
     "@types/node" "8.5.8"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.4.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.4.1.tgz#f34ed0b5ac42a7038eb430a8fd6a0974a5487acb"
-  integrity sha512-Ng6Lrva2Sy6ISrv5ko0suaOCBdrL0H4eeYlbGSOuCEe1H11JR/pKZ1sN421pEmJvTjsYtIzwFpLdCb117oPZWQ==
+  version "7.4.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.4.2.tgz#440023cf05c69840e054cdb5f85cab9680227a40"
+  integrity sha512-O8OEaFvsvWEuwkOcVyWegIAFDY6TBZBvSIoOKLsSQYiQZtryGf13e2ym83iewhbUN7RmuOJtyQUKlBvcJbpgQA==
   dependencies:
     "@microsoft/api-extractor-model" "7.4.1"
     "@microsoft/node-core-library" "3.14.2"
