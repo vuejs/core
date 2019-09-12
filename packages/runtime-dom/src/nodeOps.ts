@@ -32,12 +32,7 @@ export const nodeOps = {
     el.textContent = text
   },
 
-  parentNode: (node: Node): Node | null => {
-    if (!node) {
-      debugger
-    }
-    return node.parentNode
-  },
+  parentNode: (node: Node): Node | null => node.parentNode,
 
   nextSibling: (node: Node): Node | null => node.nextSibling,
 

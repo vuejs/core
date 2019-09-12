@@ -1517,7 +1517,6 @@ export function createRenderer<
         anchor
       )
       suspense.container = container
-      // suspense.anchor = anchor
       return
     }
     if (vnode.type === Fragment) {
