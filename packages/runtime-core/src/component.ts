@@ -1,4 +1,4 @@
-import { VNode, VNodeChild } from './vnode'
+import { VNode, VNodeChild, isVNode } from './vnode'
 import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
@@ -279,6 +279,12 @@ export function handleSetupResult(
     // setup returned an inline render function
     instance.render = setupResult as RenderFunction
   } else if (isObject(setupResult)) {
+    if (__DEV__ && isVNode(setupResult)) {
+      warn(
+        `setup() should not return VNodes directly - ` +
+          `return a render function instead.`
+      )
+    }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
     instance.renderContext = reactive(setupResult)

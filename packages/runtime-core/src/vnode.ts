@@ -124,6 +124,12 @@ export function createBlock(
   return vnode
 }
 
+const knownVNodes = new WeakSet<VNode>()
+
+export function isVNode(value: any): boolean {
+  return knownVNodes.has(value)
+}
+
 export function createVNode(
   type: VNodeTypes,
   props: { [key: string]: any } | null | 0 = null,
@@ -196,6 +202,10 @@ export function createVNode(
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
   ) {
     trackDynamicNode(vnode)
+  }
+
+  if (__DEV__) {
+    knownVNodes.add(vnode)
   }
 
   return vnode

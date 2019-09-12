@@ -105,6 +105,53 @@ describe('renderer: suspense', () => {
     expect(serializeInner(root)).toBe(`<div>async</div>`)
   })
 
+  test('nested async deps', async () => {
+    const calls: string[] = []
+
+    const AsyncOuter = createAsyncComponent({
+      setup() {
+        onMounted(() => {
+          calls.push('outer mounted')
+        })
+        return () => h(AsyncInner)
+      }
+    })
+
+    const AsyncInner = createAsyncComponent(
+      {
+        setup() {
+          onMounted(() => {
+            calls.push('inner mounted')
+          })
+          return () => h('div', 'inner')
+        }
+      },
+      10
+    )
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(AsyncOuter),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>inner</div>`)
+  })
+
   test('onResolve', async () => {
     const Async = createAsyncComponent({
       render() {
@@ -286,15 +333,219 @@ describe('renderer: suspense', () => {
     expect(calls).toEqual([])
   })
 
-  test('unmount suspense after resolve', () => {})
+  test('unmount suspense after resolve', async () => {
+    const toggle = ref(true)
+    const unmounted = jest.fn()
 
-  test.todo('unmount suspense before resolve')
+    const Async = createAsyncComponent({
+      setup() {
+        onUnmounted(unmounted)
+        return () => h('div', 'async')
+      }
+    })
 
-  test.todo('nested suspense')
+    const Comp = {
+      setup() {
+        return () =>
+          toggle.value
+            ? h(Suspense, null, {
+                default: h(Async),
+                fallback: h('div', 'fallback')
+              })
+            : null
+      }
+    }
 
-  test.todo('new async dep after resolve should cause suspense to restart')
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>async</div>`)
+    expect(unmounted).not.toHaveBeenCalled()
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(unmounted).toHaveBeenCalled()
+  })
+
+  test('unmount suspense before resolve', async () => {
+    const toggle = ref(true)
+    const mounted = jest.fn()
+    const unmounted = jest.fn()
+
+    const Async = createAsyncComponent({
+      setup() {
+        onMounted(mounted)
+        onUnmounted(unmounted)
+        return () => h('div', 'async')
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          toggle.value
+            ? h(Suspense, null, {
+                default: h(Async),
+                fallback: h('div', 'fallback')
+              })
+            : null
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    toggle.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(mounted).not.toHaveBeenCalled()
+    expect(unmounted).not.toHaveBeenCalled()
+
+    await Promise.all(deps)
+    await nextTick()
+    // should not resolve and cause unmount
+    expect(mounted).not.toHaveBeenCalled()
+    expect(unmounted).not.toHaveBeenCalled()
+  })
+
+  test('nested suspense (parent resolves first)', async () => {
+    const calls: string[] = []
+
+    const AsyncOuter = createAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('outer mounted')
+          })
+          return () => h('div', 'async outer')
+        }
+      },
+      1
+    )
+
+    const AsyncInner = createAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('inner mounted')
+          })
+          return () => h('div', 'async inner')
+        }
+      },
+      10
+    )
+
+    const Inner = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(AsyncInner),
+            fallback: h('div', 'fallback inner')
+          })
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: [h(AsyncOuter), h(Inner)],
+            fallback: h('div', 'fallback outer')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback outer</div>`)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>async outer</div><div>fallback inner</div><!---->`
+    )
+    expect(calls).toEqual([`outer mounted`])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>async outer</div><div>async inner</div><!---->`
+    )
+    expect(calls).toEqual([`outer mounted`, `inner mounted`])
+  })
+
+  test('nested suspense (child resolves first)', async () => {
+    const calls: string[] = []
+
+    const AsyncOuter = createAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('outer mounted')
+          })
+          return () => h('div', 'async outer')
+        }
+      },
+      10
+    )
+
+    const AsyncInner = createAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('inner mounted')
+          })
+          return () => h('div', 'async inner')
+        }
+      },
+      1
+    )
+
+    const Inner = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(AsyncInner),
+            fallback: h('div', 'fallback inner')
+          })
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: [h(AsyncOuter), h(Inner)],
+            fallback: h('div', 'fallback outer')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback outer</div>`)
+
+    await deps[1]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback outer</div>`)
+    expect(calls).toEqual([])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>async outer</div><div>async inner</div><!---->`
+    )
+    expect(calls).toEqual([`inner mounted`, `outer mounted`])
+  })
 
   test.todo('error handling')
+
+  test.todo('new async dep after resolve should cause suspense to restart')
 
   test.todo('portal inside suspense')
 })

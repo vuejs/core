@@ -871,6 +871,7 @@ export function createRenderer<
         hasUnresolvedAncestor = true
         break
       }
+      parent = parent.parent
     }
     // no pending parent suspense, flush all jobs
     if (!hasUnresolvedAncestor) {
@@ -1509,7 +1510,14 @@ export function createRenderer<
       return
     }
     if (__FEATURE_SUSPENSE__ && vnode.type === Suspense) {
-      move((vnode.suspense as any).subTree, container, anchor)
+      const suspense = vnode.suspense as SuspenseBoundary
+      move(
+        suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
+        container,
+        anchor
+      )
+      suspense.container = container
+      // suspense.anchor = anchor
       return
     }
     if (vnode.type === Fragment) {
