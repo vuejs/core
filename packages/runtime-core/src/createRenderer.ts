@@ -49,6 +49,7 @@ import {
   createSuspenseBoundary,
   normalizeSuspenseChildren
 } from './suspense'
+import { handleError, ErrorCodes } from './errorHandling'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -919,7 +920,7 @@ export function createRenderer<
           if (__DEV__) {
             pushWarningContext(n2)
           }
-          updateComponentPropsAndSlots(instance, n2)
+          updateComponentPreRender(instance, n2)
           if (__DEV__) {
             popWarningContext()
           }
@@ -985,28 +986,21 @@ export function createRenderer<
         // state again
       }
       parentSuspense.deps++
-      instance.asyncDep.then(asyncSetupResult => {
-        // unmounted before resolve
-        if (instance.isUnmounted || parentSuspense.isUnmounted) {
-          return
-        }
-        parentSuspense.deps--
-        // retry from this component
-        instance.asyncResolved = true
-        handleSetupResult(instance, asyncSetupResult, parentSuspense)
-        setupRenderEffect(
-          instance,
-          parentSuspense,
-          initialVNode,
-          container,
-          anchor,
-          isSVG
-        )
-        updateHOCHostEl(instance, initialVNode.el as HostNode)
-        if (parentSuspense.deps === 0) {
-          resolveSuspense(parentSuspense)
-        }
-      })
+      instance.asyncDep
+        .catch(err => {
+          handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
+        })
+        .then(asyncSetupResult => {
+          // component may be unmounted before resolve
+          if (!instance.isUnmounted && !parentSuspense.isUnmounted) {
+            retryAsyncComponent(
+              instance,
+              asyncSetupResult,
+              parentSuspense,
+              isSVG
+            )
+          }
+        })
       // give it a placeholder
       const placeholder = (instance.subTree = createVNode(Empty))
       processEmptyNode(null, placeholder, container, anchor)
@@ -1025,6 +1019,38 @@ export function createRenderer<
 
     if (__DEV__) {
       popWarningContext()
+    }
+  }
+
+  function retryAsyncComponent(
+    instance: ComponentInternalInstance,
+    asyncSetupResult: unknown,
+    parentSuspense: HostSuspsenseBoundary,
+    isSVG: boolean
+  ) {
+    parentSuspense.deps--
+    // retry from this component
+    instance.asyncResolved = true
+    const { vnode } = instance
+    if (__DEV__) {
+      pushWarningContext(vnode)
+    }
+    handleSetupResult(instance, asyncSetupResult, parentSuspense)
+    setupRenderEffect(
+      instance,
+      parentSuspense,
+      vnode,
+      // component may have been moved before resolve
+      hostParentNode(instance.subTree.el) as HostElement,
+      getNextHostNode(instance.subTree),
+      isSVG
+    )
+    updateHOCHostEl(instance, vnode.el as HostNode)
+    if (__DEV__) {
+      popWarningContext()
+    }
+    if (parentSuspense.deps === 0) {
+      resolveSuspense(parentSuspense)
     }
   }
 
@@ -1063,7 +1089,7 @@ export function createRenderer<
         }
 
         if (next !== null) {
-          updateComponentPropsAndSlots(instance, next)
+          updateComponentPreRender(instance, next)
         }
         const prevTree = instance.subTree
         const nextTree = (instance.subTree = renderComponentRoot(instance))
@@ -1107,7 +1133,7 @@ export function createRenderer<
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
   }
 
-  function updateComponentPropsAndSlots(
+  function updateComponentPreRender(
     instance: ComponentInternalInstance,
     nextVNode: HostVNode
   ) {
@@ -1679,10 +1705,21 @@ export function createRenderer<
     }
   }
 
-  function getNextHostNode(vnode: HostVNode): HostNode | null {
-    return vnode.component === null
-      ? hostNextSibling((vnode.anchor || vnode.el) as HostNode)
-      : getNextHostNode(vnode.component.subTree)
+  function getNextHostNode({
+    component,
+    suspense,
+    anchor,
+    el
+  }: HostVNode): HostNode | null {
+    if (component !== null) {
+      return getNextHostNode(component.subTree)
+    }
+    if (__FEATURE_SUSPENSE__ && suspense !== null) {
+      return getNextHostNode(
+        suspense.isResolved ? suspense.subTree : suspense.fallbackTree
+      )
+    }
+    return hostNextSibling((anchor || el) as HostNode)
   }
 
   function setRef(

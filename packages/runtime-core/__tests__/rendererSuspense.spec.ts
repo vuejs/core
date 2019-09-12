@@ -9,7 +9,8 @@ import {
   nextTick,
   onMounted,
   watch,
-  onUnmounted
+  onUnmounted,
+  onErrorCaptured
 } from '@vue/runtime-test'
 
 describe('renderer: suspense', () => {
@@ -543,7 +544,39 @@ describe('renderer: suspense', () => {
     expect(calls).toEqual([`inner mounted`, `outer mounted`])
   })
 
-  test.todo('error handling')
+  test('error handling', async () => {
+    const Async = {
+      async setup() {
+        throw new Error('oops')
+      }
+    }
+
+    const Comp = {
+      setup() {
+        const error = ref<any>(null)
+        onErrorCaptured(e => {
+          error.value = e
+          return true
+        })
+
+        return () =>
+          error.value
+            ? h('div', error.value.message)
+            : h(Suspense, null, {
+                default: h(Async),
+                fallback: h('div', 'fallback')
+              })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>oops</div>`)
+  })
 
   test.todo('new async dep after resolve should cause suspense to restart')
 

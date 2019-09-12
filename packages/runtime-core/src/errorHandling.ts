@@ -43,7 +43,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.APP_ERROR_HANDLER]: 'app errorHandler',
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.SCHEDULER]:
-    'scheduler flush. This may be a Vue internals bug. ' +
+    'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
 }
 
