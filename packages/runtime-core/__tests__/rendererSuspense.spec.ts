@@ -535,9 +535,13 @@ describe('renderer: suspense', () => {
 
   it('combined usage (nested async + nested suspense + multiple deps)', async () => {
     const msg = ref('nested msg')
+    const calls: number[] = []
 
     const AsyncChildWithSuspense = createAsyncComponent({
       setup(props: { msg: string }) {
+        onMounted(() => {
+          calls.push(0)
+        })
         return () =>
           h(Suspense, null, {
             default: h(AsyncInsideNestedSuspense, { msg: props.msg }),
@@ -549,6 +553,9 @@ describe('renderer: suspense', () => {
     const AsyncInsideNestedSuspense = createAsyncComponent(
       {
         setup(props: { msg: string }) {
+          onMounted(() => {
+            calls.push(2)
+          })
           return () => h('div', props.msg)
         }
       },
@@ -557,6 +564,9 @@ describe('renderer: suspense', () => {
 
     const AsyncChildParent = createAsyncComponent({
       setup(props: { msg: string }) {
+        onMounted(() => {
+          calls.push(1)
+        })
         return () => h(NestedAsyncChild, { msg: props.msg })
       }
     })
@@ -564,6 +574,9 @@ describe('renderer: suspense', () => {
     const NestedAsyncChild = createAsyncComponent(
       {
         setup(props: { msg: string }) {
+          onMounted(() => {
+            calls.push(3)
+          })
           return () => h('div', props.msg)
         }
       },
@@ -597,16 +610,17 @@ describe('renderer: suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+    expect(calls).toEqual([])
 
     /**
      * <Root>
      *   <Suspense>
      *     <MiddleComponent>
-     *       <AsyncChildWithSuspense> (0)
+     *       <AsyncChildWithSuspense> (0: resolves on macrotask)
      *         <Suspense>
-     *           <AsyncInsideNestedSuspense> (2)
-     *     <AsyncChildParent> (1)
-     *       <NestedAsyncChild> (3)
+     *           <AsyncInsideNestedSuspense> (2: resolves on macrotask + 20ms)
+     *     <AsyncChildParent> (1: resolves on macrotask)
+     *       <NestedAsyncChild> (3: resolves on macrotask + 10ms)
      */
 
     // both top level async deps resolved, but there is another nested dep
@@ -614,6 +628,7 @@ describe('renderer: suspense', () => {
     await Promise.all([deps[0], deps[1]])
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+    expect(calls).toEqual([])
 
     // root suspense all deps resolved. should show root content now
     // with nested suspense showing fallback content
@@ -622,12 +637,24 @@ describe('renderer: suspense', () => {
     expect(serializeInner(root)).toBe(
       `<!----><div>nested fallback</div><div>root async</div><!---->`
     )
+    expect(calls).toEqual([0, 1, 3])
+
+    // change state for the nested component before it resolves
+    msg.value = 'nested changed'
 
     // all deps resolved, nested suspense should resolve now
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested msg</div><div>root async</div><!---->`
+      `<!----><div>nested changed</div><div>root async</div><!---->`
+    )
+    expect(calls).toEqual([0, 1, 3, 2])
+
+    // should update just fine after resolve
+    msg.value = 'nested changed again'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>nested changed again</div><div>root async</div><!---->`
     )
   })
 
