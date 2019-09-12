@@ -658,7 +658,49 @@ describe('renderer: suspense', () => {
     )
   })
 
-  test.todo('new async dep after resolve should cause suspense to restart')
+  test('new async dep after resolve should cause suspense to restart', async () => {
+    const toggle = ref(false)
+
+    const ChildA = createAsyncComponent({
+      setup() {
+        return () => h('div', 'Child A')
+      }
+    })
+
+    const ChildB = createAsyncComponent({
+      setup() {
+        return () => h('div', 'Child B')
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: [h(ChildA), toggle.value ? h(ChildB) : null],
+            fallback: h('div', 'root fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!----><div>Child A</div><!----><!---->`)
+
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+
+    await deps[1]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>Child A</div><div>Child B</div><!---->`
+    )
+  })
 
   test.todo('portal inside suspense')
 })

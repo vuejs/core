@@ -729,7 +729,9 @@ export function createRenderer<
       parentComponent,
       container,
       hiddenContainer,
-      anchor
+      anchor,
+      isSVG,
+      optimized
     ))
 
     const { content, fallback } = normalizeSuspenseChildren(n2)
@@ -831,20 +833,20 @@ export function createRenderer<
     if (__DEV__) {
       if (suspense.isResolved) {
         throw new Error(
-          `suspense.resolve() is called when it's already resolved`
+          `resolveSuspense() is called on an already resolved suspense boundary.`
         )
       }
       if (suspense.isUnmounted) {
         throw new Error(
-          `suspense.resolve() is called when it's already unmounted`
+          `resolveSuspense() is called on an already unmounted suspense boundary.`
         )
       }
     }
     const {
+      vnode,
       subTree,
       fallbackTree,
       effects,
-      vnode,
       parentComponent,
       container
     } = suspense
@@ -888,6 +890,47 @@ export function createRenderer<
     const onResolve = vnode.props && vnode.props.onResolve
     if (isFunction(onResolve)) {
       onResolve()
+    }
+  }
+
+  function restartSuspense(suspense: HostSuspsenseBoundary) {
+    suspense.isResolved = false
+    const {
+      vnode,
+      subTree,
+      fallbackTree,
+      parentComponent,
+      container,
+      hiddenContainer,
+      isSVG,
+      optimized
+    } = suspense
+
+    // move content tree back to the off-dom container
+    const anchor = getNextHostNode(subTree)
+    move(subTree as HostVNode, hiddenContainer, null)
+    // remount the fallback tree
+    patch(
+      null,
+      fallbackTree,
+      container,
+      anchor,
+      parentComponent,
+      null, // fallback tree will not have suspense context
+      isSVG,
+      optimized
+    )
+    const el = (vnode.el = (fallbackTree as HostVNode).el as HostNode)
+    // suspense as the root node of a component...
+    if (parentComponent && parentComponent.subTree === vnode) {
+      parentComponent.vnode.el = el
+      updateHOCHostEl(parentComponent, el)
+    }
+
+    // invoke @suspense event
+    const onSuspense = vnode.props && vnode.props.onSuspense
+    if (isFunction(onSuspense)) {
+      onSuspense()
     }
   }
 
@@ -986,10 +1029,16 @@ export function createRenderer<
         // TODO handle this properly
         throw new Error('Async component without a suspense boundary!')
       }
+
+      // parent suspense already resolved, need to re-suspense
+      // use queueJob so it's handled synchronously after patching the current
+      // suspense tree
       if (parentSuspense.isResolved) {
-        // TODO if parentSuspense is already resolved it needs to enter waiting
-        // state again
+        queueJob(() => {
+          restartSuspense(parentSuspense)
+        })
       }
+
       parentSuspense.deps++
       instance.asyncDep
         .catch(err => {
@@ -1006,6 +1055,7 @@ export function createRenderer<
             )
           }
         })
+
       // give it a placeholder
       const placeholder = (instance.subTree = createVNode(Empty))
       processEmptyNode(null, placeholder, container, anchor)
@@ -1118,8 +1168,7 @@ export function createRenderer<
           parentSuspense,
           isSVG
         )
-        let current = instance.vnode
-        current.el = nextTree.el
+        instance.vnode.el = nextTree.el
         if (next === null) {
           // self-triggered update. In case of HOC, update parent component
           // vnode el. HOC is indicated by parent instance's subTree pointing

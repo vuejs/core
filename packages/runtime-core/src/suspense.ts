@@ -13,6 +13,8 @@ export interface SuspenseBoundary<
   vnode: HostVNode
   parent: SuspenseBoundary<HostNode, HostElement> | null
   parentComponent: ComponentInternalInstance | null
+  isSVG: boolean
+  optimized: boolean
   container: HostElement
   hiddenContainer: HostElement
   anchor: HostNode | null
@@ -30,12 +32,16 @@ export function createSuspenseBoundary<HostNode, HostElement>(
   parentComponent: ComponentInternalInstance | null,
   container: HostElement,
   hiddenContainer: HostElement,
-  anchor: HostNode | null
+  anchor: HostNode | null,
+  isSVG: boolean,
+  optimized: boolean
 ): SuspenseBoundary<HostNode, HostElement> {
   return {
     vnode,
     parent,
     parentComponent,
+    isSVG,
+    optimized,
     container,
     hiddenContainer,
     anchor,
