@@ -35,51 +35,6 @@ describe('renderer: suspense', () => {
     }
   }
 
-  it('basic usage (nested + multiple deps)', async () => {
-    const msg = ref('hello')
-
-    const AsyncChild = createAsyncComponent({
-      setup(props: { msg: string }) {
-        return () => h('div', props.msg)
-      }
-    })
-
-    const AsyncChild2 = createAsyncComponent(
-      {
-        setup(props: { msg: string }) {
-          return () => h('div', props.msg)
-        }
-      },
-      10
-    )
-
-    const Mid = {
-      setup() {
-        return () =>
-          h(AsyncChild, {
-            msg: msg.value
-          })
-      }
-    }
-
-    const Comp = {
-      setup() {
-        return () =>
-          h(Suspense, [msg.value, h(Mid), h(AsyncChild2, { msg: 'child 2' })])
-      }
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-    expect(serializeInner(root)).toBe(`<!---->`)
-
-    await Promise.all(deps)
-    await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<!---->hello<div>hello</div><div>child 2</div><!---->`
-    )
-  })
-
   test('fallback content', async () => {
     const Async = createAsyncComponent({
       render() {
@@ -576,6 +531,104 @@ describe('renderer: suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>oops</div>`)
+  })
+
+  it('combined usage (nested async + nested suspense + multiple deps)', async () => {
+    const msg = ref('nested msg')
+
+    const AsyncChildWithSuspense = createAsyncComponent({
+      setup(props: { msg: string }) {
+        return () =>
+          h(Suspense, null, {
+            default: h(AsyncInsideNestedSuspense, { msg: props.msg }),
+            fallback: h('div', 'nested fallback')
+          })
+      }
+    })
+
+    const AsyncInsideNestedSuspense = createAsyncComponent(
+      {
+        setup(props: { msg: string }) {
+          return () => h('div', props.msg)
+        }
+      },
+      20
+    )
+
+    const AsyncChildParent = createAsyncComponent({
+      setup(props: { msg: string }) {
+        return () => h(NestedAsyncChild, { msg: props.msg })
+      }
+    })
+
+    const NestedAsyncChild = createAsyncComponent(
+      {
+        setup(props: { msg: string }) {
+          return () => h('div', props.msg)
+        }
+      },
+      10
+    )
+
+    const MiddleComponent = {
+      setup() {
+        return () =>
+          h(AsyncChildWithSuspense, {
+            msg: msg.value
+          })
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: [
+              h(MiddleComponent),
+              h(AsyncChildParent, {
+                msg: 'root async'
+              })
+            ],
+            fallback: h('div', 'root fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+
+    /**
+     * <Root>
+     *   <Suspense>
+     *     <MiddleComponent>
+     *       <AsyncChildWithSuspense> (0)
+     *         <Suspense>
+     *           <AsyncInsideNestedSuspense> (2)
+     *     <AsyncChildParent> (1)
+     *       <NestedAsyncChild> (3)
+     */
+
+    // both top level async deps resolved, but there is another nested dep
+    // so should still be in fallback state
+    await Promise.all([deps[0], deps[1]])
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>root fallback</div>`)
+
+    // root suspense all deps resolved. should show root content now
+    // with nested suspense showing fallback content
+    await deps[3]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>nested fallback</div><div>root async</div><!---->`
+    )
+
+    // all deps resolved, nested suspense should resolve now
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><div>nested msg</div><div>root async</div><!---->`
+    )
   })
 
   test.todo('new async dep after resolve should cause suspense to restart')

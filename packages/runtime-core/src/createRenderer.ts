@@ -846,11 +846,16 @@ export function createRenderer<
       effects,
       vnode,
       parentComponent,
-      container,
-      anchor
+      container
     } = suspense
+
+    // this is initial anchor on mount
+    let { anchor } = suspense
     // unmount fallback tree
     if (fallbackTree.el) {
+      // if the fallback tree was mounted, it may have been moved
+      // as part of a parent suspense. get the latest anchor for insertion
+      anchor = getNextHostNode(fallbackTree)
       unmount(fallbackTree as HostVNode, parentComponent, suspense, true)
     }
     // move content from off-dom container to actual container
