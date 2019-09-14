@@ -26,11 +26,16 @@ describe('renderer: suspense', () => {
     delay: number = 0
   ) {
     return {
-      async setup(props: any, { slots }: any) {
-        const p: Promise<T> = new Promise(r => setTimeout(() => r(comp), delay))
-        deps.push(p)
-        const Inner = await p
-        return () => h(Inner, props, slots)
+      setup(props: any, { slots }: any) {
+        const p = new Promise(resolve => {
+          setTimeout(() => {
+            resolve(() => h(comp, props, slots))
+          }, delay)
+        })
+        // in Node 12, due to timer/nextTick mechanism change, we have to wait
+        // an extra tick to avoid race conditions
+        deps.push(p.then(() => Promise.resolve()))
+        return p
       }
     }
   }
@@ -98,13 +103,16 @@ describe('renderer: suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
 
     await deps[0]
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([])
 
     await Promise.all(deps)
     await nextTick()
+    expect(calls).toEqual([`outer mounted`, `inner mounted`])
     expect(serializeInner(root)).toBe(`<div>inner</div>`)
   })
 
@@ -152,7 +160,8 @@ describe('renderer: suspense', () => {
     const Async = {
       async setup() {
         const p = new Promise(r => setTimeout(r, 1))
-        deps.push(p)
+        // extra tick needed for Node 12+
+        deps.push(p.then(() => Promise.resolve()))
 
         watch(() => {
           calls.push('watch callback')
