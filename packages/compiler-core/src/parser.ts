@@ -1,4 +1,4 @@
-import { ParserErrorTypes } from './parserErrorTypes'
+import { ParserErrorTypes } from './errorTypes'
 import {
   Node,
   AttributeNode,

@@ -1,3 +1,3 @@
 export { parse } from './parser'
 export * from './ast'
-export * from './parserErrorTypes'
+export * from './errorTypes'

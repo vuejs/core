@@ -1,6 +1,6 @@
 import { TextModes, ParserOptions } from './parser'
 import { ElementNode, Namespaces, Position, Node } from './ast'
-import { ParserErrorTypes, errorMessages } from './parserErrorTypes'
+import { ParserErrorTypes, errorMessages } from './errorTypes'
 
 export const parserOptionsMinimal: ParserOptions = {
   delimiters: [`{{`, `}}`],

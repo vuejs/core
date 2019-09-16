@@ -11,7 +11,7 @@ import {
   Position,
   TextNode
 } from '../src/ast'
-import { ParserErrorTypes } from '../src/parserErrorTypes'
+import { ParserErrorTypes } from '../src/errorTypes'
 import { parserOptionsMinimal as parserOptions } from '../src/parserOptionsMinimal'
 
 describe('parser/parse', () => {
