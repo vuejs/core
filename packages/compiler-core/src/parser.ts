@@ -77,11 +77,6 @@ function createParserContext(
   }
 }
 
-function getCursor(context: ParserContext): Position {
-  const { column, line, offset } = context
-  return { column, line, offset }
-}
-
 function parseChildren(
   context: ParserContext,
   mode: TextModes,
@@ -170,134 +165,6 @@ function parseChildren(
   }
 
   return nodes
-}
-
-function getSelection(
-  context: ParserContext,
-  start: Position,
-  end?: Position
-): SourceLocation {
-  end = end || getCursor(context)
-  return {
-    start,
-    end,
-    source: context.originalSource.slice(start.offset, end.offset)
-  }
-}
-
-function last<T>(xs: T[]): T | undefined {
-  return xs[xs.length - 1]
-}
-
-function startsWith(source: string, searchString: string): boolean {
-  return source.startsWith(searchString)
-}
-
-function advanceBy(context: ParserContext, numberOfCharacters: number): void {
-  __DEV__ && assert(numberOfCharacters <= context.source.length)
-
-  const { column, source } = context
-  const str = source.slice(0, numberOfCharacters)
-  const lines = str.split(/\r?\n/)
-
-  context.source = source.slice(numberOfCharacters)
-  context.offset += numberOfCharacters
-  context.line += lines.length - 1
-  context.column =
-    lines.length === 1
-      ? column + numberOfCharacters
-      : Math.max(1, lines.pop()!.length)
-}
-
-function advanceSpaces(context: ParserContext): void {
-  const match = /^[\t\r\n\f ]+/.exec(context.source)
-  if (match) {
-    advanceBy(context, match[0].length)
-  }
-}
-
-function getNewPosition(
-  context: ParserContext,
-  start: Position,
-  numberOfCharacters: number
-): Position {
-  const { originalSource } = context
-  const str = originalSource.slice(start.offset, numberOfCharacters)
-  const lines = str.split(/\r?\n/)
-
-  const newPosition = {
-    column: start.column,
-    line: start.line,
-    offset: start.offset
-  }
-
-  newPosition.offset += numberOfCharacters
-  newPosition.line += lines.length - 1
-  newPosition.column =
-    lines.length === 1
-      ? start.column + numberOfCharacters
-      : Math.max(1, lines.pop()!.length)
-
-  return newPosition
-}
-
-function emitError(
-  context: ParserContext,
-  type: ParserErrorTypes,
-  offset?: number
-): void {
-  const loc = getCursor(context)
-  if (offset) {
-    loc.offset += offset
-    loc.column += offset
-  }
-  context.onError(type, loc)
-}
-
-function isEnd(
-  context: ParserContext,
-  mode: TextModes,
-  ancestors: ElementNode[]
-): boolean {
-  const s = context.source
-
-  switch (mode) {
-    case TextModes.DATA:
-      if (startsWith(s, '</')) {
-        //TODO: probably bad performance
-        for (let i = ancestors.length - 1; i >= 0; --i) {
-          if (startsWithEndTagOpen(s, ancestors[i].tag)) {
-            return true
-          }
-        }
-      }
-      break
-
-    case TextModes.RCDATA:
-    case TextModes.RAWTEXT: {
-      const parent = last(ancestors)
-      if (parent && startsWithEndTagOpen(s, parent.tag)) {
-        return true
-      }
-      break
-    }
-
-    case TextModes.CDATA:
-      if (startsWith(s, ']]>')) {
-        return true
-      }
-      break
-  }
-
-  return !s
-}
-
-function startsWithEndTagOpen(source: string, tag: string): boolean {
-  return (
-    startsWith(source, '</') &&
-    source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
-    /[\t\n\f />]/.test(source[2 + tag.length] || '>')
-  )
 }
 
 function pushNode(
@@ -887,6 +754,145 @@ function parseTextData(
   return text
 }
 
+function getCursor(context: ParserContext): Position {
+  const { column, line, offset } = context
+  return { column, line, offset }
+}
+
+function getSelection(
+  context: ParserContext,
+  start: Position,
+  end?: Position
+): SourceLocation {
+  end = end || getCursor(context)
+  return {
+    start,
+    end,
+    source: context.originalSource.slice(start.offset, end.offset)
+  }
+}
+
+function last<T>(xs: T[]): T | undefined {
+  return xs[xs.length - 1]
+}
+
+function startsWith(source: string, searchString: string): boolean {
+  return source.startsWith(searchString)
+}
+
+function advanceBy(context: ParserContext, numberOfCharacters: number): void {
+  __DEV__ && assert(numberOfCharacters <= context.source.length)
+
+  const { column, source } = context
+  const str = source.slice(0, numberOfCharacters)
+  const lines = str.split(/\r?\n/)
+
+  context.source = source.slice(numberOfCharacters)
+  context.offset += numberOfCharacters
+  context.line += lines.length - 1
+  context.column =
+    lines.length === 1
+      ? column + numberOfCharacters
+      : Math.max(1, lines.pop()!.length)
+}
+
+function advanceSpaces(context: ParserContext): void {
+  const match = /^[\t\r\n\f ]+/.exec(context.source)
+  if (match) {
+    advanceBy(context, match[0].length)
+  }
+}
+
+function getNewPosition(
+  context: ParserContext,
+  start: Position,
+  numberOfCharacters: number
+): Position {
+  const { originalSource } = context
+  const str = originalSource.slice(start.offset, numberOfCharacters)
+  const lines = str.split(/\r?\n/)
+
+  const newPosition = {
+    column: start.column,
+    line: start.line,
+    offset: start.offset
+  }
+
+  newPosition.offset += numberOfCharacters
+  newPosition.line += lines.length - 1
+  newPosition.column =
+    lines.length === 1
+      ? start.column + numberOfCharacters
+      : Math.max(1, lines.pop()!.length)
+
+  return newPosition
+}
+
+function emitError(
+  context: ParserContext,
+  type: ParserErrorTypes,
+  offset?: number
+): void {
+  const loc = getCursor(context)
+  if (offset) {
+    loc.offset += offset
+    loc.column += offset
+  }
+  context.onError(type, loc)
+}
+
+function isEnd(
+  context: ParserContext,
+  mode: TextModes,
+  ancestors: ElementNode[]
+): boolean {
+  const s = context.source
+
+  switch (mode) {
+    case TextModes.DATA:
+      if (startsWith(s, '</')) {
+        //TODO: probably bad performance
+        for (let i = ancestors.length - 1; i >= 0; --i) {
+          if (startsWithEndTagOpen(s, ancestors[i].tag)) {
+            return true
+          }
+        }
+      }
+      break
+
+    case TextModes.RCDATA:
+    case TextModes.RAWTEXT: {
+      const parent = last(ancestors)
+      if (parent && startsWithEndTagOpen(s, parent.tag)) {
+        return true
+      }
+      break
+    }
+
+    case TextModes.CDATA:
+      if (startsWith(s, ']]>')) {
+        return true
+      }
+      break
+  }
+
+  return !s
+}
+
+function startsWithEndTagOpen(source: string, tag: string): boolean {
+  return (
+    startsWith(source, '</') &&
+    source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
+    /[\t\n\f />]/.test(source[2 + tag.length] || '>')
+  )
+}
+
+function assert(condition: boolean, msg?: string) {
+  if (!condition) {
+    throw new Error(msg || `unexpected parser condition`)
+  }
+}
+
 // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
 const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
   0x80: 0x20ac,
@@ -916,10 +922,4 @@ const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
   0x9c: 0x0153,
   0x9e: 0x017e,
   0x9f: 0x0178
-}
-
-function assert(condition: boolean, msg?: string) {
-  if (!condition) {
-    throw new Error(msg || `unexpected parser condition`)
-  }
 }
