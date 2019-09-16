@@ -47,6 +47,26 @@ files.forEach(shortName => {
     fs.writeFileSync(readmePath, `# ${name}`)
   }
 
+  const apiExtractorConfigPath = path.join(
+    packagesDir,
+    shortName,
+    `api-extractor.json`
+  )
+  if (args.force || !fs.existsSync(apiExtractorConfigPath)) {
+    fs.writeFileSync(
+      apiExtractorConfigPath,
+      `
+{
+  "extends": "../../api-extractor.json",
+  "mainEntryPointFilePath": "./dist/packages/<unscopedPackageName>/src/index.d.ts",
+  "dtsRollup": {
+    "untrimmedFilePath": "./dist/<unscopedPackageName>.d.ts"
+  }
+}
+`.trim()
+    )
+  }
+
   const srcDir = path.join(packagesDir, shortName, `src`)
   const indexPath = path.join(packagesDir, shortName, `src/index.ts`)
   if (args.force || !fs.existsSync(indexPath)) {

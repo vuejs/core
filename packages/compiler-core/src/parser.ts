@@ -1,4 +1,4 @@
-import assert from 'assert'
+import { assert } from './assert'
 import { ParserErrorTypes } from './errorTypes'
 import {
   Node,
@@ -69,7 +69,7 @@ function startsWith(source: string, searchString: string): boolean {
 }
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
-  assert(numberOfCharacters <= context.source.length)
+  __DEV__ && assert(numberOfCharacters <= context.source.length)
 
   const { column, source } = context
   const str = source.slice(0, numberOfCharacters)
@@ -175,7 +175,7 @@ function parseChildren(
   const nodes: RootNode['children'] = []
 
   while (!isEnd(context, mode, ancestors)) {
-    assert(context.source.length > 0)
+    __DEV__ && assert(context.source.length > 0)
     const s = context.source
     let node: any = null
 
@@ -332,15 +332,16 @@ function parseCDATA(
   context: ParserContext,
   ancestors: ElementNode[]
 ): RootNode['children'] {
-  assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
-  assert(startsWith(context.source, '<![CDATA['))
+  __DEV__ &&
+    assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
+  __DEV__ && assert(startsWith(context.source, '<![CDATA['))
 
   advanceBy(context, 9)
   const nodes = parseChildren(context, TextModes.CDATA, ancestors)
   if (context.source.length === 0) {
     emitError(context, ParserErrorTypes.EOF_IN_CDATA)
   } else {
-    assert(startsWith(context.source, ']]>'))
+    __DEV__ && assert(startsWith(context.source, ']]>'))
     advanceBy(context, 3)
   }
 
@@ -348,7 +349,7 @@ function parseCDATA(
 }
 
 function parseComment(context: ParserContext): CommentNode {
-  assert(startsWith(context.source, '<!--'))
+  __DEV__ && assert(startsWith(context.source, '<!--'))
 
   const start = getCursor(context)
   let content: string
@@ -390,7 +391,7 @@ function parseComment(context: ParserContext): CommentNode {
 }
 
 function parseBogusComment(context: ParserContext): CommentNode | undefined {
-  assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
+  __DEV__ && assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
 
   const start = getCursor(context)
   const contentStart = context.source[1] === '?' ? 1 : 2
@@ -416,7 +417,7 @@ function parseElement(
   context: ParserContext,
   ancestors: ElementNode[]
 ): ElementNode | undefined {
-  assert(/^<[a-z]/i.test(context.source))
+  __DEV__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
   const parent = last(ancestors)
@@ -470,10 +471,11 @@ function parseTag(
   type: TagType,
   parent: ElementNode | undefined
 ): ElementNode {
-  assert(/^<\/?[a-z]/i.test(context.source))
-  assert(
-    type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
-  )
+  __DEV__ && assert(/^<\/?[a-z]/i.test(context.source))
+  __DEV__ &&
+    assert(
+      type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
+    )
 
   // Tag open.
   const start = getCursor(context)
@@ -547,7 +549,7 @@ function parseAttribute(
   context: ParserContext,
   nameSet: Set<string>
 ): AttributeNode | DirectiveNode {
-  assert(/^[^\t\r\n\f />]/.test(context.source))
+  __DEV__ && assert(/^[^\t\r\n\f />]/.test(context.source))
 
   // Name.
   const start = getCursor(context)
@@ -712,7 +714,7 @@ function parseInterpolation(
   mode: TextModes
 ): ExpressionNode | undefined {
   const [open, close] = context.delimiters
-  assert(startsWith(context.source, open))
+  __DEV__ && assert(startsWith(context.source, open))
 
   const closeIndex = context.source.indexOf(close, open.length)
   if (closeIndex === -1) {
@@ -734,7 +736,7 @@ function parseInterpolation(
 }
 
 function parseText(context: ParserContext, mode: TextModes): TextNode {
-  assert(context.source.length > 0)
+  __DEV__ && assert(context.source.length > 0)
 
   const [open] = context.delimiters
   const endIndex = Math.min(
@@ -745,7 +747,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
       context.source.length
     ].filter(n => n !== -1)
   )
-  assert(endIndex > 0)
+  __DEV__ && assert(endIndex > 0)
 
   const start = getCursor(context)
   const content = parseTextData(context, endIndex, mode)
