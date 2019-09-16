@@ -47,11 +47,6 @@ files.forEach(shortName => {
     fs.writeFileSync(readmePath, `# ${name}`)
   }
 
-  const npmIgnorePath = path.join(packagesDir, shortName, `.npmignore`)
-  if (args.force || !fs.existsSync(npmIgnorePath)) {
-    fs.writeFileSync(npmIgnorePath, `__tests__/\n__mocks__/\ndist/packages`)
-  }
-
   const srcDir = path.join(packagesDir, shortName, `src`)
   const indexPath = path.join(packagesDir, shortName, `src/index.ts`)
   if (args.force || !fs.existsSync(indexPath)) {
