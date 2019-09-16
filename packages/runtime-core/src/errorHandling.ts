@@ -5,7 +5,7 @@ import { warn, pushWarningContext, popWarningContext } from './warning'
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
 export const enum ErrorCodes {
-  SETUP_FUNCTION = 1,
+  SETUP_FUNCTION,
   RENDER_FUNCTION,
   WATCH_GETTER,
   WATCH_CALLBACK,
