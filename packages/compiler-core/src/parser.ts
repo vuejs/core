@@ -1,13 +1,13 @@
-import { ParserErrorTypes } from './errorTypes'
+import { ParserErrorTypes, errorMessages } from './errorTypes'
 import {
-  Node,
+  Namespace,
+  Namespaces,
   AttributeNode,
   CommentNode,
   DirectiveNode,
   ElementNode,
   ElementTypes,
   ExpressionNode,
-  Namespaces,
   NodeTypes,
   Position,
   RootNode,
@@ -16,30 +16,46 @@ import {
 } from './ast'
 
 export interface ParserOptions {
-  isVoidTag: (tag: string) => boolean // e.g. img, br, hr
-  getNamespace: (tag: string, parent: ElementNode | undefined) => Namespaces
-  getTextMode: (tag: string, ns: Namespaces) => TextModes
-  delimiters: [string, string] // ['{{', '}}']
-  transform: (node: Node) => Node // --
-  ignoreSpaces: boolean
+  isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
+  getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
+  getTextMode?: (tag: string, ns: Namespace) => TextModes
+  delimiters?: [string, string] // ['{{', '}}']
+  ignoreSpaces?: boolean
 
   // Map to HTML entities. E.g., `{ "amp;": "&" }`
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences: { [name: string]: string | undefined }
+  namedCharacterReferences?: { [name: string]: string | undefined }
 
-  onError: (type: ParserErrorTypes, loc: Position) => void
+  onError?: (type: ParserErrorTypes, loc: Position) => void
+}
+
+export const defaultParserOptions: Required<ParserOptions> = {
+  delimiters: [`{{`, `}}`],
+  ignoreSpaces: true,
+  getNamespace: () => Namespaces.HTML,
+  getTextMode: () => TextModes.DATA,
+  isVoidTag: () => false,
+  namedCharacterReferences: {},
+  onError(code: ParserErrorTypes, loc: Position): void {
+    const error: any = new SyntaxError(
+      `${errorMessages[code]} (${loc.line}:${loc.column})`
+    )
+    error.code = code
+    error.loc = loc
+    throw error
+  }
 }
 
 export const enum TextModes {
-  // | Elements | Entities | End sign              | Inside of
-  DATA, // | ✔       | ✔       | End tags of ancestors |
-  RCDATA, // | ✘       | ✔       | End tag of the parent | <textarea>
+  //          | Elements | Entities | End sign              | Inside of
+  DATA, //    | ✔       | ✔       | End tags of ancestors |
+  RCDATA, //  | ✘       | ✔       | End tag of the parent | <textarea>
   RAWTEXT, // | ✘       | ✘       | End tag of the parent | <style>,<script>
   CDATA,
   ATTRIBUTE_VALUE
 }
 
-interface ParserContext extends ParserOptions {
+interface ParserContext extends Required<ParserOptions> {
   readonly originalSource: string
   source: string
   offset: number
@@ -48,7 +64,7 @@ interface ParserContext extends ParserOptions {
   maxCRNameLength: number
 }
 
-export function parse(content: string, options: ParserOptions): RootNode {
+export function parse(content: string, options: ParserOptions = {}): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
 
@@ -64,16 +80,17 @@ function createParserContext(
   options: ParserOptions
 ): ParserContext {
   return {
+    ...defaultParserOptions,
     ...options,
     column: 1,
     line: 1,
     offset: 0,
     originalSource: content,
     source: content,
-    maxCRNameLength: Object.keys(options.namedCharacterReferences).reduce(
-      (max, name) => Math.max(max, name.length),
-      0
-    )
+    maxCRNameLength: Object.keys(
+      options.namedCharacterReferences ||
+        defaultParserOptions.namedCharacterReferences
+    ).reduce((max, name) => Math.max(max, name.length), 0)
   }
 }
 

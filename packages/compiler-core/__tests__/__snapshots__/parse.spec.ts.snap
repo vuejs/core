@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`parser/parse invalid html 1`] = `
+exports[`base parser invalid html 1`] = `
 Object {
   "children": Array [
     Object {
@@ -72,7 +72,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!--></template> 1`] = `
+exports[`base parser onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!--></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -133,7 +133,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!---></template> 1`] = `
+exports[`base parser onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!---></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -194,7 +194,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!----></template> 1`] = `
+exports[`base parser onError option ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!----></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -255,7 +255,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#99;"></template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#99;"></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -334,7 +334,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#a;"></template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#a;"></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -413,7 +413,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xff;"></template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xff;"></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -492,7 +492,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xg;"></template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xg;"></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -571,7 +571,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#99;</template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#99;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -633,7 +633,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#a;</template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#a;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -695,7 +695,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xff;</template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xff;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -757,7 +757,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xg;</template> 1`] = `
+exports[`base parser onError option ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xg;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -819,7 +819,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option CDATA_IN_HTML_CONTENT <template><![CDATA[cdata]]></template> 1`] = `
+exports[`base parser onError option CDATA_IN_HTML_CONTENT <template><![CDATA[cdata]]></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -880,7 +880,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option CDATA_IN_HTML_CONTENT <template><svg><![CDATA[cdata]]></svg></template> 1`] = `
+exports[`base parser onError option CDATA_IN_HTML_CONTENT <template><svg><![CDATA[cdata]]></svg></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -965,7 +965,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE <template>&#1234567;</template> 1`] = `
+exports[`base parser onError option CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE <template>&#1234567;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1027,7 +1027,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option CONTROL_CHARACTER_REFERENCE <template>&#0003;</template> 1`] = `
+exports[`base parser onError option CONTROL_CHARACTER_REFERENCE <template>&#0003;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1089,7 +1089,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option CONTROL_CHARACTER_REFERENCE <template>&#x7F;</template> 1`] = `
+exports[`base parser onError option CONTROL_CHARACTER_REFERENCE <template>&#x7F;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1151,7 +1151,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option DUPLICATE_ATTRIBUTE <template><div id="" id=""></div></template> 1`] = `
+exports[`base parser onError option DUPLICATE_ATTRIBUTE <template><div id="" id=""></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1288,7 +1288,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option END_TAG_WITH_ATTRIBUTES <template><div></div id=""></template> 1`] = `
+exports[`base parser onError option END_TAG_WITH_ATTRIBUTES <template><div></div id=""></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1354,7 +1354,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option END_TAG_WITH_TRAILING_SOLIDUS <template><div></div/></template> 1`] = `
+exports[`base parser onError option END_TAG_WITH_TRAILING_SOLIDUS <template><div></div/></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1420,7 +1420,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_BEFORE_TAG_NAME <template>< 1`] = `
+exports[`base parser onError option EOF_BEFORE_TAG_NAME <template>< 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1482,7 +1482,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_BEFORE_TAG_NAME <template></ 1`] = `
+exports[`base parser onError option EOF_BEFORE_TAG_NAME <template></ 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1544,7 +1544,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_CDATA <template><svg><![CDATA[ 1`] = `
+exports[`base parser onError option EOF_IN_CDATA <template><svg><![CDATA[ 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1610,7 +1610,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_CDATA <template><svg><![CDATA[cdata 1`] = `
+exports[`base parser onError option EOF_IN_CDATA <template><svg><![CDATA[cdata 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1695,7 +1695,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_COMMENT <template><! 1`] = `
+exports[`base parser onError option EOF_IN_COMMENT <template><! 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1756,7 +1756,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_COMMENT <template><!- 1`] = `
+exports[`base parser onError option EOF_IN_COMMENT <template><!- 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1817,7 +1817,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_COMMENT <template><!-- 1`] = `
+exports[`base parser onError option EOF_IN_COMMENT <template><!-- 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1878,7 +1878,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_COMMENT <template><!--comment 1`] = `
+exports[`base parser onError option EOF_IN_COMMENT <template><!--comment 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1939,7 +1939,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_COMMENT <template><!abc 1`] = `
+exports[`base parser onError option EOF_IN_COMMENT <template><!abc 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2000,7 +2000,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script><!--console.log('hello') 1`] = `
+exports[`base parser onError option EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script><!--console.log('hello') 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2062,7 +2062,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script>console.log('hello') 1`] = `
+exports[`base parser onError option EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script>console.log('hello') 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2124,7 +2124,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div  1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div  1`] = `
 Object {
   "children": Array [
     Object {
@@ -2190,7 +2190,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2256,7 +2256,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id  1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id  1`] = `
 Object {
   "children": Array [
     Object {
@@ -2341,7 +2341,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id = 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id = 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2426,7 +2426,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2511,7 +2511,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id="abc 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id="abc 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2613,7 +2613,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id="abc" 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id="abc" 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2715,7 +2715,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id="abc"/ 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id="abc"/ 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2817,7 +2817,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id='abc 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id='abc 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2919,7 +2919,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id='abc' 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id='abc' 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3021,7 +3021,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id='abc'/ 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id='abc'/ 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3123,7 +3123,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id=abc / 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id=abc / 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3225,7 +3225,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option EOF_IN_TAG <template><div id=abc 1`] = `
+exports[`base parser onError option EOF_IN_TAG <template><div id=abc 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3327,7 +3327,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INCORRECTLY_CLOSED_COMMENT <template><!--comment--!></template> 1`] = `
+exports[`base parser onError option INCORRECTLY_CLOSED_COMMENT <template><!--comment--!></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3388,7 +3388,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INCORRECTLY_OPENED_COMMENT <!DOCTYPE html> 1`] = `
+exports[`base parser onError option INCORRECTLY_OPENED_COMMENT <!DOCTYPE html> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3426,7 +3426,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INCORRECTLY_OPENED_COMMENT <template><!></template> 1`] = `
+exports[`base parser onError option INCORRECTLY_OPENED_COMMENT <template><!></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3487,7 +3487,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INCORRECTLY_OPENED_COMMENT <template><!-></template> 1`] = `
+exports[`base parser onError option INCORRECTLY_OPENED_COMMENT <template><!-></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3548,7 +3548,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INCORRECTLY_OPENED_COMMENT <template><!ELEMENT br EMPTY></template> 1`] = `
+exports[`base parser onError option INCORRECTLY_OPENED_COMMENT <template><!ELEMENT br EMPTY></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3609,7 +3609,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template></�></template> 1`] = `
+exports[`base parser onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template></�></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3670,7 +3670,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template><�></template> 1`] = `
+exports[`base parser onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template><�></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3732,7 +3732,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>{{a < b}}</template> 1`] = `
+exports[`base parser onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>{{a < b}}</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3794,7 +3794,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a < b</template> 1`] = `
+exports[`base parser onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a < b</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3856,7 +3856,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a </ b</template> 1`] = `
+exports[`base parser onError option INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a </ b</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3935,7 +3935,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_ATTRIBUTE_VALUE <template><div id= /></div></template> 1`] = `
+exports[`base parser onError option MISSING_ATTRIBUTE_VALUE <template><div id= /></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4037,7 +4037,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_ATTRIBUTE_VALUE <template><div id= ></div></template> 1`] = `
+exports[`base parser onError option MISSING_ATTRIBUTE_VALUE <template><div id= ></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4122,7 +4122,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_ATTRIBUTE_VALUE <template><div id=></div></template> 1`] = `
+exports[`base parser onError option MISSING_ATTRIBUTE_VALUE <template><div id=></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4207,7 +4207,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_END_TAG_NAME <template></></template> 1`] = `
+exports[`base parser onError option MISSING_END_TAG_NAME <template></></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4250,7 +4250,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#40</template> 1`] = `
+exports[`base parser onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#40</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4312,7 +4312,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#x40</template> 1`] = `
+exports[`base parser onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#x40</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4374,7 +4374,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&amp</template> 1`] = `
+exports[`base parser onError option MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&amp</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4436,7 +4436,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"\\x0d;\\x0a;class="bar"></div></template> 1`] = `
+exports[`base parser onError option MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"\\x0d;\\x0a;class="bar"></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4576,7 +4576,7 @@ class=\\"bar\\"></div></template>",
 }
 `;
 
-exports[`parser/parse onError option MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"class="bar"></div></template> 1`] = `
+exports[`base parser onError option MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"class="bar"></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4713,7 +4713,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NESTED_COMMENT <template><!--a<!-- 1`] = `
+exports[`base parser onError option NESTED_COMMENT <template><!--a<!-- 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4774,7 +4774,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NESTED_COMMENT <template><!--a<!--></template> 1`] = `
+exports[`base parser onError option NESTED_COMMENT <template><!--a<!--></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4835,7 +4835,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NESTED_COMMENT <template><!--a<!--b<!--c--></template> 1`] = `
+exports[`base parser onError option NESTED_COMMENT <template><!--a<!--b<!--c--></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4896,7 +4896,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NESTED_COMMENT <template><!--a<!--b--></template> 1`] = `
+exports[`base parser onError option NESTED_COMMENT <template><!--a<!--b--></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -4957,7 +4957,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NONCHARACTER_CHARACTER_REFERENCE <template>&#x1FFFF;</template> 1`] = `
+exports[`base parser onError option NONCHARACTER_CHARACTER_REFERENCE <template>&#x1FFFF;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5019,7 +5019,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NONCHARACTER_CHARACTER_REFERENCE <template>&#xFFFE;</template> 1`] = `
+exports[`base parser onError option NONCHARACTER_CHARACTER_REFERENCE <template>&#xFFFE;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5081,7 +5081,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option NULL_CHARACTER_REFERENCE <template>&#0000;</template> 1`] = `
+exports[`base parser onError option NULL_CHARACTER_REFERENCE <template>&#0000;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5143,7 +5143,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option SURROGATE_CHARACTER_REFERENCE <template>&#xD800;</template> 1`] = `
+exports[`base parser onError option SURROGATE_CHARACTER_REFERENCE <template>&#xD800;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5205,7 +5205,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a"bc=''></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a"bc=''></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5307,7 +5307,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a'bc=''></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a'bc=''></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5409,7 +5409,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a<bc=''></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a<bc=''></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5511,7 +5511,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar"></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar"></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5613,7 +5613,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar'></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar'></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5715,7 +5715,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar<div></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar<div></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5817,7 +5817,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar=baz></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar=baz></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -5919,7 +5919,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar\`></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar\`></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6021,7 +6021,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6106,7 +6106,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =foo=bar></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =foo=bar></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6208,7 +6208,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME <template><?xml?></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME <template><?xml?></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6269,7 +6269,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNEXPECTED_SOLIDUS_IN_TAG <template><div a/b></div></template> 1`] = `
+exports[`base parser onError option UNEXPECTED_SOLIDUS_IN_TAG <template><div a/b></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6372,7 +6372,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown;</template> 1`] = `
+exports[`base parser onError option UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown;</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6434,7 +6434,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <svg><![CDATA[</div>]]></svg> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <svg><![CDATA[</div>]]></svg> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6496,7 +6496,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <svg><!--</div>--></svg> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <svg><!--</div>--></svg> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6557,7 +6557,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <template></div></div></template> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <template></div></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6600,7 +6600,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <template></div></template> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <template></div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6643,7 +6643,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <template>{{'</div>'}}</template> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <template>{{'</div>'}}</template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6705,7 +6705,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_INVALID_END_TAG <textarea></div></textarea> 1`] = `
+exports[`base parser onError option X_INVALID_END_TAG <textarea></div></textarea> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6767,7 +6767,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_MISSING_END_TAG <template><div> 1`] = `
+exports[`base parser onError option X_MISSING_END_TAG <template><div> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6833,7 +6833,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_MISSING_END_TAG <template><div></template> 1`] = `
+exports[`base parser onError option X_MISSING_END_TAG <template><div></template> 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6899,7 +6899,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_MISSING_INTERPOLATION_END {{ 1`] = `
+exports[`base parser onError option X_MISSING_INTERPOLATION_END {{ 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6938,7 +6938,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_MISSING_INTERPOLATION_END {{ foo 1`] = `
+exports[`base parser onError option X_MISSING_INTERPOLATION_END {{ foo 1`] = `
 Object {
   "children": Array [
     Object {
@@ -6977,7 +6977,7 @@ Object {
 }
 `;
 
-exports[`parser/parse onError option X_MISSING_INTERPOLATION_END {{}} 1`] = `
+exports[`base parser onError option X_MISSING_INTERPOLATION_END {{}} 1`] = `
 Object {
   "children": Array [
     Object {
@@ -7016,7 +7016,7 @@ Object {
 }
 `;
 
-exports[`parser/parse self closing multiple tag 1`] = `
+exports[`base parser self closing multiple tag 1`] = `
 Object {
   "children": Array [
     Object {
@@ -7192,7 +7192,7 @@ Object {
 }
 `;
 
-exports[`parser/parse valid html 1`] = `
+exports[`base parser valid html 1`] = `
 Object {
   "children": Array [
     Object {

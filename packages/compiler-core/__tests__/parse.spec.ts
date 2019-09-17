@@ -1,6 +1,6 @@
-import { parse, ParserOptions } from '../src/parser'
+import { parse, ParserOptions, TextModes } from '../src/parser'
+import { ParserErrorTypes } from '../src/errorTypes'
 import {
-  AttributeNode,
   CommentNode,
   DirectiveNode,
   ElementNode,
@@ -11,13 +11,11 @@ import {
   Position,
   TextNode
 } from '../src/ast'
-import { ParserErrorTypes } from '../src/errorTypes'
-import { parserOptionsMinimal as parserOptions } from '../src/parserOptionsMinimal'
 
-describe('parser/parse', () => {
+describe('base parser', () => {
   describe('Text', () => {
     test('simple text', () => {
-      const ast = parse('some text', parserOptions)
+      const ast = parse('some text')
       const text = ast.children[0] as TextNode
 
       expect(text).toStrictEqual({
@@ -34,7 +32,6 @@ describe('parser/parse', () => {
 
     test('simple text with invalid end tag', () => {
       const ast = parse('some text</div>', {
-        ...parserOptions,
         onError: () => {}
       })
       const text = ast.children[0] as TextNode
@@ -52,7 +49,7 @@ describe('parser/parse', () => {
     })
 
     test('text with interpolation', () => {
-      const ast = parse('some {{ foo + bar }} text', parserOptions)
+      const ast = parse('some {{ foo + bar }} text')
       const text1 = ast.children[0] as TextNode
       const text2 = ast.children[2] as TextNode
 
@@ -79,7 +76,7 @@ describe('parser/parse', () => {
     })
 
     test('text with interpolation which has `<`', () => {
-      const ast = parse('some {{ a<b && c>d }} text', parserOptions)
+      const ast = parse('some {{ a<b && c>d }} text')
       const text1 = ast.children[0] as TextNode
       const text2 = ast.children[2] as TextNode
 
@@ -106,10 +103,7 @@ describe('parser/parse', () => {
     })
 
     test('text with mix of tags and interpolations', () => {
-      const ast = parse(
-        'some <span>{{ foo < bar + foo }} text</span>',
-        parserOptions
-      )
+      const ast = parse('some <span>{{ foo < bar + foo }} text</span>')
       const text1 = ast.children[0] as TextNode
       const text2 = (ast.children[1] as ElementNode).children![1] as TextNode
 
@@ -135,25 +129,8 @@ describe('parser/parse', () => {
       })
     })
 
-    test('CDATA', () => {
-      const ast = parse('<svg><![CDATA[some text]]></svg>', parserOptions)
-      const text = (ast.children[0] as ElementNode).children![0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: 'some text',
-        isEmpty: false,
-        loc: {
-          start: { offset: 14, line: 1, column: 15 },
-          end: { offset: 23, line: 1, column: 24 },
-          source: 'some text'
-        }
-      })
-    })
-
     test('lonly "<" don\'t separate nodes', () => {
       const ast = parse('a < b', {
-        ...parserOptions,
         onError: errorCode => {
           if (
             errorCode !== ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME
@@ -178,7 +155,6 @@ describe('parser/parse', () => {
 
     test('lonly "{{" don\'t separate nodes', () => {
       const ast = parse('a {{ b', {
-        ...parserOptions,
         onError: errorCode => {
           if (errorCode !== ParserErrorTypes.X_MISSING_INTERPOLATION_END) {
             throw new Error(`${errorCode}`)
@@ -199,163 +175,9 @@ describe('parser/parse', () => {
       })
     })
 
-    test('textarea handles comments/elements as just a text', () => {
-      const ast = parse(
-        '<textarea>some<div>text</div>and<!--comment--></textarea>',
-        parserOptions
-      )
-      const element = ast.children[0] as ElementNode
-      const text = element.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: 'some<div>text</div>and<!--comment-->',
-        isEmpty: false,
-        loc: {
-          start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 46, line: 1, column: 47 },
-          source: 'some<div>text</div>and<!--comment-->'
-        }
-      })
-    })
-
-    test('textarea handles character references', () => {
-      const ast = parse('<textarea>&amp;</textarea>', parserOptions)
-      const element = ast.children[0] as ElementNode
-      const text = element.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&',
-        isEmpty: false,
-        loc: {
-          start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: '&amp;'
-        }
-      })
-    })
-
-    test('style handles comments/elements as just a text', () => {
-      const ast = parse(
-        '<style>some<div>text</div>and<!--comment--></style>',
-        parserOptions
-      )
-      const element = ast.children[0] as ElementNode
-      const text = element.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: 'some<div>text</div>and<!--comment-->',
-        isEmpty: false,
-        loc: {
-          start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 43, line: 1, column: 44 },
-          source: 'some<div>text</div>and<!--comment-->'
-        }
-      })
-    })
-
-    test("style doesn't handle character references", () => {
-      const ast = parse('<style>&amp;</style>', parserOptions)
-      const element = ast.children[0] as ElementNode
-      const text = element.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&amp;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 12, line: 1, column: 13 },
-          source: '&amp;'
-        }
-      })
-    })
-
-    test('HTML entities compatibility in text (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = parse('&ampersand;', {
-        ...parserOptions,
-        namedCharacterReferences: { amp: '&' },
-        onError: spy
-      })
-      const text = ast.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '&ampersand;'
-        }
-      })
-      expect(spy.mock.calls).toEqual([
-        [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 4, line: 1, column: 5 }
-        ]
-      ])
-    })
-
-    test('HTML entities compatibility in attribute (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = parse(
-        '<div a="&ampersand;" b="&amp;ersand;" c="&amp!"></div>',
-        {
-          ...parserOptions,
-          namedCharacterReferences: { amp: '&', 'amp;': '&' },
-          onError: spy
-        }
-      )
-      const element = ast.children[0] as ElementNode
-      const text1 = (element.props[0] as AttributeNode).value
-      const text2 = (element.props[1] as AttributeNode).value
-      const text3 = (element.props[2] as AttributeNode).value
-
-      expect(text1).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ampersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 20, line: 1, column: 21 },
-          source: '"&ampersand;"'
-        }
-      })
-      expect(text2).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 23, line: 1, column: 24 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: '"&amp;ersand;"'
-        }
-      })
-      expect(text3).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&!',
-        isEmpty: false,
-        loc: {
-          start: { offset: 40, line: 1, column: 41 },
-          end: { offset: 47, line: 1, column: 48 },
-          source: '"&amp!"'
-        }
-      })
-      expect(spy.mock.calls).toEqual([
-        [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 45, line: 1, column: 46 }
-        ]
-      ])
-    })
-
     test('Some control character reference should be replaced.', () => {
       const spy = jest.fn()
-      const ast = parse('&#x86;', { ...parserOptions, onError: spy })
+      const ast = parse('&#x86;', { onError: spy })
       const text = ast.children[0] as TextNode
 
       expect(text).toStrictEqual({
@@ -379,7 +201,7 @@ describe('parser/parse', () => {
 
   describe('Interpolation', () => {
     test('simple interpolation', () => {
-      const ast = parse('{{message}}', parserOptions)
+      const ast = parse('{{message}}')
       const interpolation = ast.children[0] as ExpressionNode
 
       expect(interpolation).toStrictEqual({
@@ -395,7 +217,7 @@ describe('parser/parse', () => {
     })
 
     test('it can have tag-like notation', () => {
-      const ast = parse('{{ a<b }}', parserOptions)
+      const ast = parse('{{ a<b }}')
       const interpolation = ast.children[0] as ExpressionNode
 
       expect(interpolation).toStrictEqual({
@@ -411,7 +233,7 @@ describe('parser/parse', () => {
     })
 
     test('it can have tag-like notation (2)', () => {
-      const ast = parse('{{ a<b }}{{ c>d }}', parserOptions)
+      const ast = parse('{{ a<b }}{{ c>d }}')
       const interpolation1 = ast.children[0] as ExpressionNode
       const interpolation2 = ast.children[1] as ExpressionNode
 
@@ -438,7 +260,7 @@ describe('parser/parse', () => {
     })
 
     test('it can have tag-like notation (3)', () => {
-      const ast = parse('<div>{{ "</div>" }}</div>', parserOptions)
+      const ast = parse('<div>{{ "</div>" }}</div>')
       const element = ast.children[0] as ElementNode
       const interpolation = element.children[0] as ExpressionNode
 
@@ -453,28 +275,11 @@ describe('parser/parse', () => {
         }
       })
     })
-
-    test('HTML entities in interpolation should be translated for backward compatibility.', () => {
-      const ast = parse('<div>{{ a &lt; b }}</div>', parserOptions)
-      const element = ast.children[0] as ElementNode
-      const interpolation = element.children[0] as ExpressionNode
-
-      expect(interpolation).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'a < b',
-        isStatic: false,
-        loc: {
-          start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '{{ a &lt; b }}'
-        }
-      })
-    })
   })
 
   describe('Comment', () => {
     test('empty comment', () => {
-      const ast = parse('<!---->', parserOptions)
+      const ast = parse('<!---->')
       const comment = ast.children[0] as CommentNode
 
       expect(comment).toStrictEqual({
@@ -489,7 +294,7 @@ describe('parser/parse', () => {
     })
 
     test('simple comment', () => {
-      const ast = parse('<!--abc-->', parserOptions)
+      const ast = parse('<!--abc-->')
       const comment = ast.children[0] as CommentNode
 
       expect(comment).toStrictEqual({
@@ -504,7 +309,7 @@ describe('parser/parse', () => {
     })
 
     test('two comments', () => {
-      const ast = parse('<!--abc--><!--def-->', parserOptions)
+      const ast = parse('<!--abc--><!--def-->')
       const comment1 = ast.children[0] as CommentNode
       const comment2 = ast.children[1] as CommentNode
 
@@ -531,7 +336,7 @@ describe('parser/parse', () => {
 
   describe('Element', () => {
     test('simple div', () => {
-      const ast = parse('<div>hello</div>', parserOptions)
+      const ast = parse('<div>hello</div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -562,7 +367,7 @@ describe('parser/parse', () => {
     })
 
     test('empty', () => {
-      const ast = parse('<div></div>', parserOptions)
+      const ast = parse('<div></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -582,7 +387,7 @@ describe('parser/parse', () => {
     })
 
     test('self closing', () => {
-      const ast = parse('<div/>after', parserOptions)
+      const ast = parse('<div/>after')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -602,7 +407,9 @@ describe('parser/parse', () => {
     })
 
     test('void element', () => {
-      const ast = parse('<img>after', parserOptions)
+      const ast = parse('<img>after', {
+        isVoidTag: tag => tag === 'img'
+      })
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -622,7 +429,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with no value', () => {
-      const ast = parse('<div id></div>', parserOptions)
+      const ast = parse('<div id></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -653,7 +460,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with empty value, double quote', () => {
-      const ast = parse('<div id=""></div>', parserOptions)
+      const ast = parse('<div id=""></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -693,7 +500,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with empty value, single quote', () => {
-      const ast = parse("<div id=''></div>", parserOptions)
+      const ast = parse("<div id=''></div>")
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -733,7 +540,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with value, double quote', () => {
-      const ast = parse('<div id=">\'"></div>', parserOptions)
+      const ast = parse('<div id=">\'"></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -773,7 +580,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with value, single quote', () => {
-      const ast = parse("<div id='>\"'></div>", parserOptions)
+      const ast = parse("<div id='>\"'></div>")
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -813,7 +620,7 @@ describe('parser/parse', () => {
     })
 
     test('attribute with value, unquoted', () => {
-      const ast = parse('<div id=a/></div>', parserOptions)
+      const ast = parse('<div id=a/></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -853,10 +660,7 @@ describe('parser/parse', () => {
     })
 
     test('multiple attributes', () => {
-      const ast = parse(
-        '<div id=a class="c" inert style=\'\'></div>',
-        parserOptions
-      )
+      const ast = parse('<div id=a class="c" inert style=\'\'></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
@@ -944,7 +748,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with no value', () => {
-      const ast = parse('<div v-if/>', parserOptions)
+      const ast = parse('<div v-if/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -963,7 +767,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with value', () => {
-      const ast = parse('<div v-if="a"/>', parserOptions)
+      const ast = parse('<div v-if="a"/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -991,7 +795,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with argument', () => {
-      const ast = parse('<div v-on:click/>', parserOptions)
+      const ast = parse('<div v-on:click/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1027,7 +831,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with a modifier', () => {
-      const ast = parse('<div v-on.enter/>', parserOptions)
+      const ast = parse('<div v-on.enter/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1046,7 +850,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with two modifiers', () => {
-      const ast = parse('<div v-on.enter.exact/>', parserOptions)
+      const ast = parse('<div v-on.enter.exact/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1065,7 +869,7 @@ describe('parser/parse', () => {
     })
 
     test('directive with argument and modifiers', () => {
-      const ast = parse('<div v-on:click.enter.exact/>', parserOptions)
+      const ast = parse('<div v-on:click.enter.exact/>')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1101,7 +905,7 @@ describe('parser/parse', () => {
     })
 
     test('v-bind shorthand', () => {
-      const ast = parse('<div :a=b />', parserOptions)
+      const ast = parse('<div :a=b />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1146,7 +950,7 @@ describe('parser/parse', () => {
     })
 
     test('v-bind shorthand with modifier', () => {
-      const ast = parse('<div :a.sync=b />', parserOptions)
+      const ast = parse('<div :a.sync=b />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1191,7 +995,7 @@ describe('parser/parse', () => {
     })
 
     test('v-on shorthand', () => {
-      const ast = parse('<div @a=b />', parserOptions)
+      const ast = parse('<div @a=b />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1236,7 +1040,7 @@ describe('parser/parse', () => {
     })
 
     test('v-on shorthand with modifier', () => {
-      const ast = parse('<div @a.enter=b />', parserOptions)
+      const ast = parse('<div @a.enter=b />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
 
@@ -1281,7 +1085,7 @@ describe('parser/parse', () => {
     })
 
     test('end tags are case-insensitive.', () => {
-      const ast = parse('<div>hello</DIV>after', parserOptions)
+      const ast = parse('<div>hello</DIV>after')
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
 
@@ -1296,38 +1100,10 @@ describe('parser/parse', () => {
         }
       })
     })
-
-    test('Strict end tag detection.', () => {
-      const ast = parse(
-        '<textarea>hello</textarea</textarea0></texTArea a="<>">',
-        {
-          ...parserOptions,
-          onError: type => {
-            if (type !== ParserErrorTypes.END_TAG_WITH_ATTRIBUTES) {
-              throw new Error(String(type))
-            }
-          }
-        }
-      )
-      const element = ast.children[0] as ElementNode
-      const text = element.children[0] as TextNode
-
-      expect(ast.children.length).toBe(1)
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: 'hello</textarea</textarea0>',
-        isEmpty: false,
-        loc: {
-          start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: 'hello</textarea</textarea0>'
-        }
-      })
-    })
   })
 
   test('self closing single tag', () => {
-    const ast = parse('<div :class="{ some: condition }" />', parserOptions)
+    const ast = parse('<div :class="{ some: condition }" />')
 
     expect(ast.children).toHaveLength(1)
     expect(ast.children[0]).toMatchObject({ tag: 'div' })
@@ -1336,8 +1112,7 @@ describe('parser/parse', () => {
   test('self closing multiple tag', () => {
     const ast = parse(
       `<div :class="{ some: condition }" />\n` +
-        `<p v-bind:style="{ color: 'red' }"/>`,
-      parserOptions
+        `<p v-bind:style="{ color: 'red' }"/>`
     )
 
     expect(ast).toMatchSnapshot()
@@ -1352,8 +1127,7 @@ describe('parser/parse', () => {
       `<div :class="{ some: condition }">\n` +
         `  <p v-bind:style="{ color: 'red' }"/>\n` +
         `  <!-- a comment with <html> inside it -->\n` +
-        `</div>`,
-      parserOptions
+        `</div>`
     )
 
     expect(ast).toMatchSnapshot()
@@ -1374,12 +1148,11 @@ describe('parser/parse', () => {
 
   test('invalid html', () => {
     expect(() => {
-      parse(`<div>\n<span>\n</div>\n</span>`, parserOptions)
+      parse(`<div>\n<span>\n</div>\n</span>`)
     }).toThrow('End tag was not found. (3:1)')
 
     const spy = jest.fn()
     const ast = parse(`<div>\n<span>\n</div>\n</span>`, {
-      ...parserOptions,
       onError: spy
     })
 
@@ -1398,8 +1171,7 @@ describe('parser/parse', () => {
 
   test('parse with correct location info', () => {
     const [foo, bar, but, baz] = parse(
-      'foo \n is {{ bar }} but {{ baz }}',
-      parserOptions
+      'foo \n is {{ bar }} but {{ baz }}'
     ).children
 
     let offset = 0
@@ -1423,7 +1195,6 @@ describe('parser/parse', () => {
   describe('namedCharacterReferences option', () => {
     test('use the given map', () => {
       const ast: any = parse('&amp;&cups;', {
-        ...parserOptions,
         namedCharacterReferences: {
           'cups;': '\u222A\uFE00' // UNION with serifs
         },
@@ -1436,7 +1207,7 @@ describe('parser/parse', () => {
     })
   })
 
-  describe('onError option', () => {
+  describe('Errors', () => {
     const patterns: {
       [key: string]: Array<{
         code: string
@@ -2499,7 +2270,24 @@ describe('parser/parse', () => {
             () => {
               const spy = jest.fn()
               const ast = parse(code, {
-                ...parserOptions,
+                getNamespace: (tag, parent) => {
+                  const ns = parent ? parent.ns : Namespaces.HTML
+                  if (ns === Namespaces.HTML) {
+                    if (tag === 'svg') {
+                      return (Namespaces.HTML + 1) as any
+                    }
+                  }
+                  return ns
+                },
+                getTextMode: tag => {
+                  if (tag === 'textarea') {
+                    return TextModes.RCDATA
+                  }
+                  if (tag === 'script') {
+                    return TextModes.RAWTEXT
+                  }
+                  return TextModes.DATA
+                },
                 ...options,
                 onError: spy
               })

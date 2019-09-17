@@ -1,3 +1,12 @@
+// Vue template is a platform-agnostic superset of HTML (syntax only).
+// More namespaces like SVG and MathML are declared by platform specific
+// compilers.
+export type Namespace = number
+
+export const enum Namespaces {
+  HTML
+}
+
 export const enum NodeTypes {
   TEXT,
   COMMENT,
@@ -15,12 +24,6 @@ export const enum ElementTypes {
   TEMPLATE // template, component
 }
 
-export const enum Namespaces {
-  HTML,
-  SVG, // allows CDATA section and forbids end tag omission.
-  MATH_ML // allows CDATA section and forbids end tag omission.
-}
-
 export interface Node {
   type: NodeTypes
   loc: SourceLocation
@@ -33,7 +36,7 @@ export interface RootNode extends Node {
 
 export interface ElementNode extends Node {
   type: NodeTypes.ELEMENT
-  ns: Namespaces
+  ns: Namespace
   tag: string
   tagType: ElementTypes
   isSelfClosing: boolean

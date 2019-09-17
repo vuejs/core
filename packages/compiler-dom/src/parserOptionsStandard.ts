@@ -1,74 +1,9 @@
-import { TextModes, ParserOptions } from './parser'
-import { ElementNode, Namespaces, NodeTypes } from './ast'
+import { ParserOptions } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 
 export const parserOptionsStandard: ParserOptions = {
   // extends the minimal options with more spec-compliant overrides
   ...parserOptionsMinimal,
-
-  // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
-  getNamespace(tag: string, parent: ElementNode | undefined): Namespaces {
-    let ns = parent ? parent.ns : Namespaces.HTML
-
-    if (parent && ns === Namespaces.MATH_ML) {
-      if (parent.tag === 'annotation-xml') {
-        if (tag === 'svg') {
-          return Namespaces.SVG
-        }
-        if (
-          parent.props.some(
-            a =>
-              a.type === NodeTypes.ATTRIBUTE &&
-              a.name === 'encoding' &&
-              a.value != null &&
-              (a.value.content === 'text/html' ||
-                a.value.content === 'application/xhtml+xml')
-          )
-        ) {
-          ns = Namespaces.HTML
-        }
-      } else if (
-        /^m(?:[ions]|text)$/.test(parent.tag) &&
-        tag !== 'mglyph' &&
-        tag !== 'malignmark'
-      ) {
-        ns = Namespaces.HTML
-      }
-    } else if (parent && ns === Namespaces.SVG) {
-      if (
-        parent.tag === 'foreignObject' ||
-        parent.tag === 'desc' ||
-        parent.tag === 'title'
-      ) {
-        ns = Namespaces.HTML
-      }
-    }
-
-    if (ns === Namespaces.HTML) {
-      if (tag === 'svg') {
-        return Namespaces.SVG
-      }
-      if (tag === 'math') {
-        return Namespaces.MATH_ML
-      }
-    }
-    return ns
-  },
-
-  // https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments
-  getTextMode(tag: string, ns: Namespaces): TextModes {
-    if (ns === Namespaces.HTML) {
-      if (/^(?:title|textarea)$/i.test(tag)) {
-        return TextModes.RCDATA
-      }
-      if (
-        /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i.test(tag)
-      ) {
-        return TextModes.RAWTEXT
-      }
-    }
-    return TextModes.DATA
-  },
 
   // https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
   namedCharacterReferences: {
