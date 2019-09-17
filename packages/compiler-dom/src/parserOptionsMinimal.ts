@@ -12,10 +12,6 @@ export const enum DOMNamespaces {
   MATH_ML
 }
 
-const MATH_ML_TEXT_INTEGRATION_POINT_RE = /^m(?:[ions]|text)$/
-const RAW_TEXT_CONTAINER_RE = /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i
-const VOID_TAG_RE = /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i
-
 export const parserOptionsMinimal: ParserOptions = {
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
@@ -39,7 +35,7 @@ export const parserOptionsMinimal: ParserOptions = {
           ns = DOMNamespaces.HTML
         }
       } else if (
-        MATH_ML_TEXT_INTEGRATION_POINT_RE.test(parent.tag) &&
+        /^m(?:[ions]|text)$/.test(parent.tag) &&
         tag !== 'mglyph' &&
         tag !== 'malignmark'
       ) {
@@ -72,7 +68,9 @@ export const parserOptionsMinimal: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (RAW_TEXT_CONTAINER_RE.test(tag)) {
+      if (
+        /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i.test(tag)
+      ) {
         return TextModes.RAWTEXT
       }
     }
@@ -80,6 +78,8 @@ export const parserOptionsMinimal: ParserOptions = {
   },
 
   isVoidTag(tag: string): boolean {
-    return VOID_TAG_RE.test(tag)
+    return /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i.test(
+      tag
+    )
   }
 }
