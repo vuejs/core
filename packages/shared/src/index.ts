@@ -1,4 +1,6 @@
-export const EMPTY_OBJ: { readonly [key: string]: any } = Object.freeze({})
+export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
+  ? Object.freeze({})
+  : {}
 export const EMPTY_ARR: [] = []
 
 export const NOOP = () => {}
