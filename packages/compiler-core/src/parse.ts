@@ -1,4 +1,4 @@
-import { ParserErrorTypes, errorMessages } from './errorTypes'
+import { ErrorCodes, CompilerError, createCompilerError } from './errors'
 import {
   Namespace,
   Namespaces,
@@ -12,7 +12,8 @@ import {
   Position,
   RootNode,
   SourceLocation,
-  TextNode
+  TextNode,
+  ChildNode
 } from './ast'
 
 export interface ParserOptions {
@@ -26,7 +27,7 @@ export interface ParserOptions {
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
   namedCharacterReferences?: { [name: string]: string | undefined }
 
-  onError?: (type: ParserErrorTypes, loc: Position) => void
+  onError?: (error: CompilerError) => void
 }
 
 export const defaultParserOptions: Required<ParserOptions> = {
@@ -42,14 +43,7 @@ export const defaultParserOptions: Required<ParserOptions> = {
     'apos;': "'",
     'quot;': '"'
   },
-  onError(code: ParserErrorTypes, loc: Position): void {
-    const error: any = new SyntaxError(
-      `${__DEV__ || !__BROWSER__ ? errorMessages[code] : code} (${loc.line}:${
-        loc.column
-      })`
-    )
-    error.code = code
-    error.loc = loc
+  onError(error: CompilerError): void {
     throw error
   }
 }
@@ -106,10 +100,10 @@ function parseChildren(
   context: ParserContext,
   mode: TextModes,
   ancestors: ElementNode[]
-): RootNode['children'] {
+): ChildNode[] {
   const parent = last(ancestors)
   const ns = parent ? parent.ns : Namespaces.HTML
-  const nodes: RootNode['children'] = []
+  const nodes: ChildNode[] = []
 
   while (!isEnd(context, mode, ancestors)) {
     __DEV__ && assert(context.source.length > 0)
@@ -122,7 +116,7 @@ function parseChildren(
     } else if (mode === TextModes.DATA && s[0] === '<') {
       // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
       if (s.length === 1) {
-        emitError(context, ParserErrorTypes.EOF_BEFORE_TAG_NAME, 1)
+        emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
       } else if (s[1] === '!') {
         // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
         if (startsWith(s, '<!--')) {
@@ -134,31 +128,27 @@ function parseChildren(
           if (ns !== Namespaces.HTML) {
             node = parseCDATA(context, ancestors)
           } else {
-            emitError(context, ParserErrorTypes.CDATA_IN_HTML_CONTENT)
+            emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
             node = parseBogusComment(context)
           }
         } else {
-          emitError(context, ParserErrorTypes.INCORRECTLY_OPENED_COMMENT)
+          emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
           node = parseBogusComment(context)
         }
       } else if (s[1] === '/') {
         // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
         if (s.length === 2) {
-          emitError(context, ParserErrorTypes.EOF_BEFORE_TAG_NAME, 2)
+          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
         } else if (s[2] === '>') {
-          emitError(context, ParserErrorTypes.MISSING_END_TAG_NAME, 2)
+          emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
           advanceBy(context, 3)
           continue
         } else if (/[a-z]/i.test(s[2])) {
-          emitError(context, ParserErrorTypes.X_INVALID_END_TAG)
+          emitError(context, ErrorCodes.X_INVALID_END_TAG)
           parseTag(context, TagType.End, parent)
           continue
         } else {
-          emitError(
-            context,
-            ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-            2
-          )
+          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 2)
           node = parseBogusComment(context)
         }
       } else if (/[a-z]/i.test(s[1])) {
@@ -166,16 +156,12 @@ function parseChildren(
       } else if (s[1] === '?') {
         emitError(
           context,
-          ParserErrorTypes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
+          ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
           1
         )
         node = parseBogusComment(context)
       } else {
-        emitError(
-          context,
-          ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-          1
-        )
+        emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
       }
     }
     if (!node) {
@@ -183,7 +169,9 @@ function parseChildren(
     }
 
     if (Array.isArray(node)) {
-      node.forEach(pushNode.bind(null, context, nodes))
+      for (let i = 0; i < node.length; i++) {
+        pushNode(context, nodes, node[i])
+      }
     } else {
       pushNode(context, nodes, node)
     }
@@ -194,8 +182,8 @@ function parseChildren(
 
 function pushNode(
   context: ParserContext,
-  nodes: RootNode['children'],
-  node: RootNode['children'][0]
+  nodes: ChildNode[],
+  node: ChildNode
 ): void {
   if (context.ignoreSpaces && node.type === NodeTypes.TEXT && node.isEmpty) {
     return
@@ -222,7 +210,7 @@ function pushNode(
 function parseCDATA(
   context: ParserContext,
   ancestors: ElementNode[]
-): RootNode['children'] {
+): ChildNode[] {
   __DEV__ &&
     assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
   __DEV__ && assert(startsWith(context.source, '<![CDATA['))
@@ -230,7 +218,7 @@ function parseCDATA(
   advanceBy(context, 9)
   const nodes = parseChildren(context, TextModes.CDATA, ancestors)
   if (context.source.length === 0) {
-    emitError(context, ParserErrorTypes.EOF_IN_CDATA)
+    emitError(context, ErrorCodes.EOF_IN_CDATA)
   } else {
     __DEV__ && assert(startsWith(context.source, ']]>'))
     advanceBy(context, 3)
@@ -250,13 +238,13 @@ function parseComment(context: ParserContext): CommentNode {
   if (!match) {
     content = context.source.slice(4)
     advanceBy(context, context.source.length)
-    emitError(context, ParserErrorTypes.EOF_IN_COMMENT)
+    emitError(context, ErrorCodes.EOF_IN_COMMENT)
   } else {
     if (match.index <= 3) {
-      emitError(context, ParserErrorTypes.ABRUPT_CLOSING_OF_EMPTY_COMMENT)
+      emitError(context, ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT)
     }
     if (match[1]) {
-      emitError(context, ParserErrorTypes.INCORRECTLY_CLOSED_COMMENT)
+      emitError(context, ErrorCodes.INCORRECTLY_CLOSED_COMMENT)
     }
     content = context.source.slice(4, match.index)
 
@@ -267,7 +255,7 @@ function parseComment(context: ParserContext): CommentNode {
     while ((nestedIndex = s.indexOf('<!--', prevIndex)) !== -1) {
       advanceBy(context, nestedIndex - prevIndex + 1)
       if (nestedIndex + 4 < s.length) {
-        emitError(context, ParserErrorTypes.NESTED_COMMENT)
+        emitError(context, ErrorCodes.NESTED_COMMENT)
       }
       prevIndex = nestedIndex + 1
     }
@@ -333,14 +321,11 @@ function parseElement(
   if (startsWithEndTagOpen(context.source, element.tag)) {
     parseTag(context, TagType.End, parent)
   } else {
-    emitError(context, ParserErrorTypes.X_MISSING_END_TAG)
+    emitError(context, ErrorCodes.X_MISSING_END_TAG)
     if (context.source.length === 0 && element.tag.toLowerCase() === 'script') {
       const first = children[0]
       if (first && startsWith(first.loc.source, '<!--')) {
-        emitError(
-          context,
-          ParserErrorTypes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT
-        )
+        emitError(context, ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT)
       }
     }
   }
@@ -372,7 +357,8 @@ function parseTag(
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
-  const props = []
+  const attrs = []
+  const directives = []
   const ns = context.getNamespace(tag, parent)
 
   advanceBy(context, match[0].length)
@@ -386,22 +372,26 @@ function parseTag(
     !startsWith(context.source, '/>')
   ) {
     if (startsWith(context.source, '/')) {
-      emitError(context, ParserErrorTypes.UNEXPECTED_SOLIDUS_IN_TAG)
+      emitError(context, ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG)
       advanceBy(context, 1)
       advanceSpaces(context)
       continue
     }
     if (type === TagType.End) {
-      emitError(context, ParserErrorTypes.END_TAG_WITH_ATTRIBUTES)
+      emitError(context, ErrorCodes.END_TAG_WITH_ATTRIBUTES)
     }
 
     const attr = parseAttribute(context, attributeNames)
     if (type === TagType.Start) {
-      props.push(attr)
+      if (attr.type === NodeTypes.DIRECTIVE) {
+        directives.push(attr)
+      } else {
+        attrs.push(attr)
+      }
     }
 
     if (/^[^\t\r\n\f />]/.test(context.source)) {
-      emitError(context, ParserErrorTypes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES)
+      emitError(context, ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES)
     }
     advanceSpaces(context)
   }
@@ -409,11 +399,11 @@ function parseTag(
   // Tag close.
   let isSelfClosing = false
   if (context.source.length === 0) {
-    emitError(context, ParserErrorTypes.EOF_IN_TAG)
+    emitError(context, ErrorCodes.EOF_IN_TAG)
   } else {
     isSelfClosing = startsWith(context.source, '/>')
     if (type === TagType.End && isSelfClosing) {
-      emitError(context, ParserErrorTypes.END_TAG_WITH_TRAILING_SOLIDUS)
+      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
     }
     advanceBy(context, isSelfClosing ? 2 : 1)
   }
@@ -429,7 +419,8 @@ function parseTag(
     ns,
     tag,
     tagType,
-    props,
+    attrs,
+    directives,
     isSelfClosing,
     children: [],
     loc: getSelection(context, start)
@@ -448,15 +439,12 @@ function parseAttribute(
   const name = match[0]
 
   if (nameSet.has(name)) {
-    emitError(context, ParserErrorTypes.DUPLICATE_ATTRIBUTE)
+    emitError(context, ErrorCodes.DUPLICATE_ATTRIBUTE)
   }
   nameSet.add(name)
 
   if (name[0] === '=') {
-    emitError(
-      context,
-      ParserErrorTypes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
-    )
+    emitError(context, ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME)
   }
   {
     const pattern = /["'<]/g
@@ -464,7 +452,7 @@ function parseAttribute(
     while ((m = pattern.exec(name)) !== null) {
       emitError(
         context,
-        ParserErrorTypes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+        ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
         m.index
       )
     }
@@ -480,7 +468,7 @@ function parseAttribute(
     advanceSpaces(context)
     value = parseAttributeValue(context)
     if (!value) {
-      emitError(context, ParserErrorTypes.MISSING_ATTRIBUTE_VALUE)
+      emitError(context, ErrorCodes.MISSING_ATTRIBUTE_VALUE)
     }
   }
   const loc = getSelection(context, start)
@@ -508,7 +496,7 @@ function parseAttribute(
         if (!content.endsWith(']')) {
           emitError(
             context,
-            ParserErrorTypes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
+            ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
           )
         }
 
@@ -590,7 +578,7 @@ function parseAttributeValue(
     while ((m = unexpectedChars.exec(match[0])) !== null) {
       emitError(
         context,
-        ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+        ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
         m.index
       )
     }
@@ -609,7 +597,7 @@ function parseInterpolation(
 
   const closeIndex = context.source.indexOf(close, open.length)
   if (closeIndex === -1) {
-    emitError(context, ParserErrorTypes.X_MISSING_INTERPOLATION_END)
+    emitError(context, ErrorCodes.X_MISSING_INTERPOLATION_END)
     return undefined
   }
 
@@ -712,12 +700,12 @@ function parseTextData(
             if (!semi) {
               emitError(
                 context,
-                ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
+                ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
               )
             }
           }
         } else {
-          emitError(context, ParserErrorTypes.UNKNOWN_NAMED_CHARACTER_REFERENCE)
+          emitError(context, ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE)
           text += '&'
           text += name
           advanceBy(context, 1 + name.length)
@@ -735,33 +723,33 @@ function parseTextData(
         text += head[0]
         emitError(
           context,
-          ParserErrorTypes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
+          ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
         )
         advanceBy(context, head[0].length)
       } else {
         // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
         let cp = Number.parseInt(body[1], hex ? 16 : 10)
         if (cp === 0) {
-          emitError(context, ParserErrorTypes.NULL_CHARACTER_REFERENCE)
+          emitError(context, ErrorCodes.NULL_CHARACTER_REFERENCE)
           cp = 0xfffd
         } else if (cp > 0x10ffff) {
           emitError(
             context,
-            ParserErrorTypes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE
+            ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE
           )
           cp = 0xfffd
         } else if (cp >= 0xd800 && cp <= 0xdfff) {
-          emitError(context, ParserErrorTypes.SURROGATE_CHARACTER_REFERENCE)
+          emitError(context, ErrorCodes.SURROGATE_CHARACTER_REFERENCE)
           cp = 0xfffd
         } else if ((cp >= 0xfdd0 && cp <= 0xfdef) || (cp & 0xfffe) === 0xfffe) {
-          emitError(context, ParserErrorTypes.NONCHARACTER_CHARACTER_REFERENCE)
+          emitError(context, ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE)
         } else if (
           (cp >= 0x01 && cp <= 0x08) ||
           cp === 0x0b ||
           (cp >= 0x0d && cp <= 0x1f) ||
           (cp >= 0x7f && cp <= 0x9f)
         ) {
-          emitError(context, ParserErrorTypes.CONTROL_CHARACTER_REFERENCE)
+          emitError(context, ErrorCodes.CONTROL_CHARACTER_REFERENCE)
           cp = CCR_REPLACEMENTS[cp] || cp
         }
         text += String.fromCodePoint(cp)
@@ -769,7 +757,7 @@ function parseTextData(
         if (!body![0].endsWith(';')) {
           emitError(
             context,
-            ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
+            ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
           )
         }
       }
@@ -854,7 +842,7 @@ function getNewPosition(
 
 function emitError(
   context: ParserContext,
-  type: ParserErrorTypes,
+  code: ErrorCodes,
   offset?: number
 ): void {
   const loc = getCursor(context)
@@ -862,7 +850,7 @@ function emitError(
     loc.offset += offset
     loc.column += offset
   }
-  context.onError(type, loc)
+  context.onError(createCompilerError(code, loc))
 }
 
 function isEnd(

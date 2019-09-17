@@ -4,6 +4,7 @@ exports[`base parser Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!--></tem
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -20,9 +21,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -38,10 +40,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -57,7 +58,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -65,6 +66,7 @@ exports[`base parser Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!---></te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -81,9 +83,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -99,10 +102,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -118,7 +120,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -126,6 +128,7 @@ exports[`base parser Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!----></t
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -142,9 +145,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -160,10 +164,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -179,7 +182,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -187,23 +190,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
-      "children": Array [],
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 35,
-          "line": 1,
-          "offset": 34,
-        },
-        "source": "<template attr=\\"&#99;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "attrs": Array [
         Object {
           "loc": Object {
             "end": Object {
@@ -219,7 +206,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 3,
+          "type": 5,
           "value": Object {
             "content": "c",
             "isEmpty": false,
@@ -236,13 +223,30 @@ Object {
                 "offset": 15,
               },
             },
-            "type": 0,
+            "type": 2,
           },
         },
       ],
+      "children": Array [],
+      "directives": Array [],
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 35,
+          "line": 1,
+          "offset": 34,
+        },
+        "source": "<template attr=\\"&#99;\\"></template>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -258,7 +262,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -266,23 +270,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
-      "children": Array [],
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 34,
-          "line": 1,
-          "offset": 33,
-        },
-        "source": "<template attr=\\"&#a;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "attrs": Array [
         Object {
           "loc": Object {
             "end": Object {
@@ -298,7 +286,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 3,
+          "type": 5,
           "value": Object {
             "content": "&#a;",
             "isEmpty": false,
@@ -315,13 +303,30 @@ Object {
                 "offset": 15,
               },
             },
-            "type": 0,
+            "type": 2,
           },
         },
       ],
+      "children": Array [],
+      "directives": Array [],
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 34,
+          "line": 1,
+          "offset": 33,
+        },
+        "source": "<template attr=\\"&#a;\\"></template>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -337,7 +342,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -345,23 +350,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
-      "children": Array [],
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-        "source": "<template attr=\\"&#xff;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "attrs": Array [
         Object {
           "loc": Object {
             "end": Object {
@@ -377,7 +366,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 3,
+          "type": 5,
           "value": Object {
             "content": "ÿ",
             "isEmpty": false,
@@ -394,13 +383,30 @@ Object {
                 "offset": 15,
               },
             },
-            "type": 0,
+            "type": 2,
           },
         },
       ],
+      "children": Array [],
+      "directives": Array [],
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 36,
+          "line": 1,
+          "offset": 35,
+        },
+        "source": "<template attr=\\"&#xff;\\"></template>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -416,7 +422,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -424,23 +430,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
-      "children": Array [],
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 35,
-          "line": 1,
-          "offset": 34,
-        },
-        "source": "<template attr=\\"&#xg;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "attrs": Array [
         Object {
           "loc": Object {
             "end": Object {
@@ -456,7 +446,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 3,
+          "type": 5,
           "value": Object {
             "content": "&#xg;",
             "isEmpty": false,
@@ -473,13 +463,30 @@ Object {
                 "offset": 15,
               },
             },
-            "type": 0,
+            "type": 2,
           },
         },
       ],
+      "children": Array [],
+      "directives": Array [],
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 35,
+          "line": 1,
+          "offset": 34,
+        },
+        "source": "<template attr=\\"&#xg;\\"></template>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -495,7 +502,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -503,6 +510,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "c",
@@ -520,9 +528,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -538,10 +547,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -557,7 +565,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -565,6 +573,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "&#a;",
@@ -582,9 +591,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -600,10 +610,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -619,7 +628,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -627,6 +636,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "ÿ",
@@ -644,9 +654,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -662,10 +673,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -681,7 +691,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -689,6 +699,7 @@ exports[`base parser Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "&#xg;",
@@ -706,9 +717,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -724,10 +736,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -743,7 +754,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -751,6 +762,7 @@ exports[`base parser Errors CDATA_IN_HTML_CONTENT <template><![CDATA[cdata]]></t
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "[CDATA[cdata]]",
@@ -767,9 +779,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -785,10 +798,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -804,7 +816,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -812,8 +824,10 @@ exports[`base parser Errors CDATA_IN_HTML_CONTENT <template><svg><![CDATA[cdata]
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [
             Object {
               "content": "cdata",
@@ -831,9 +845,10 @@ Object {
                   "offset": 24,
                 },
               },
-              "type": 0,
+              "type": 2,
             },
           ],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -849,12 +864,12 @@ Object {
             },
           },
           "ns": 1,
-          "props": Array [],
           "tag": "svg",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -870,10 +885,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -889,7 +903,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -897,6 +911,7 @@ exports[`base parser Errors CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE <template>
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "�",
@@ -914,9 +929,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -932,10 +948,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -951,7 +966,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -959,6 +974,7 @@ exports[`base parser Errors CONTROL_CHARACTER_REFERENCE <template>&#0003;</templ
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -976,9 +992,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -994,10 +1011,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1013,7 +1029,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1021,6 +1037,7 @@ exports[`base parser Errors CONTROL_CHARACTER_REFERENCE <template>&#x7F;</templa
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -1038,9 +1055,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1056,10 +1074,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1075,7 +1092,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1083,25 +1100,10 @@ exports[`base parser Errors DUPLICATE_ATTRIBUTE <template><div id="" id=""></div
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": "<div id=\\"\\" id=\\"\\"></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -1117,7 +1119,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -1134,7 +1136,7 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
             Object {
@@ -1152,7 +1154,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -1169,15 +1171,33 @@ Object {
                     "offset": 24,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": "<div id=\\"\\" id=\\"\\"></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1193,10 +1213,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1212,7 +1231,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1220,9 +1239,12 @@ exports[`base parser Errors END_TAG_WITH_ATTRIBUTES <template><div></div id=""><
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -1238,12 +1260,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1259,10 +1281,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1278,7 +1299,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1286,9 +1307,12 @@ exports[`base parser Errors END_TAG_WITH_TRAILING_SOLIDUS <template><div></div/>
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -1304,12 +1328,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1325,10 +1349,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1344,7 +1367,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1352,6 +1375,7 @@ exports[`base parser Errors EOF_BEFORE_TAG_NAME <template>< 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "<",
@@ -1369,9 +1393,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1387,10 +1412,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1406,7 +1430,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1414,6 +1438,7 @@ exports[`base parser Errors EOF_BEFORE_TAG_NAME <template></ 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "</",
@@ -1431,9 +1456,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1449,10 +1475,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1468,7 +1493,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1476,9 +1501,12 @@ exports[`base parser Errors EOF_IN_CDATA <template><svg><![CDATA[ 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -1494,12 +1522,12 @@ Object {
             },
           },
           "ns": 1,
-          "props": Array [],
           "tag": "svg",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1515,10 +1543,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1534,7 +1561,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1542,8 +1569,10 @@ exports[`base parser Errors EOF_IN_CDATA <template><svg><![CDATA[cdata 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [
             Object {
               "content": "cdata",
@@ -1561,9 +1590,10 @@ Object {
                   "offset": 24,
                 },
               },
-              "type": 0,
+              "type": 2,
             },
           ],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -1579,12 +1609,12 @@ Object {
             },
           },
           "ns": 1,
-          "props": Array [],
           "tag": "svg",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1600,10 +1630,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1619,7 +1648,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1627,6 +1656,7 @@ exports[`base parser Errors EOF_IN_COMMENT <template><! 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -1643,9 +1673,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1661,10 +1692,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1680,7 +1710,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1688,6 +1718,7 @@ exports[`base parser Errors EOF_IN_COMMENT <template><!- 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "-",
@@ -1704,9 +1735,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1722,10 +1754,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1741,7 +1772,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1749,6 +1780,7 @@ exports[`base parser Errors EOF_IN_COMMENT <template><!-- 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -1765,9 +1797,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1783,10 +1816,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1802,7 +1834,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1810,6 +1842,7 @@ exports[`base parser Errors EOF_IN_COMMENT <template><!--comment 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "comment",
@@ -1826,9 +1859,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1844,10 +1878,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1863,7 +1896,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1871,6 +1904,7 @@ exports[`base parser Errors EOF_IN_COMMENT <template><!abc 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "abc",
@@ -1887,9 +1921,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1905,10 +1940,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1924,7 +1958,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1932,6 +1966,7 @@ exports[`base parser Errors EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script><!--con
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "<!--console.log('hello')",
@@ -1949,9 +1984,10 @@ Object {
               "offset": 8,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -1967,10 +2003,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "script",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -1986,7 +2021,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -1994,6 +2029,7 @@ exports[`base parser Errors EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script>console
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "console.log('hello')",
@@ -2011,9 +2047,10 @@ Object {
               "offset": 8,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2029,10 +2066,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "script",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2048,7 +2084,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2056,9 +2092,12 @@ exports[`base parser Errors EOF_IN_TAG <template><div  1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -2074,12 +2113,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2095,10 +2134,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2114,7 +2152,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2122,9 +2160,12 @@ exports[`base parser Errors EOF_IN_TAG <template><div 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -2140,12 +2181,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2161,10 +2202,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2180,7 +2220,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2188,9 +2228,31 @@ exports[`base parser Errors EOF_IN_TAG <template><div id  1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [
+            Object {
+              "loc": Object {
+                "end": Object {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+                "source": "id",
+                "start": Object {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "id",
+              "type": 5,
+              "value": undefined,
+            },
+          ],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -2206,31 +2268,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [
-            Object {
-              "loc": Object {
-                "end": Object {
-                  "column": 18,
-                  "line": 1,
-                  "offset": 17,
-                },
-                "source": "id",
-                "start": Object {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 3,
-              "value": undefined,
-            },
-          ],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2246,10 +2289,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2265,7 +2307,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2273,25 +2315,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id = 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "<div id =",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2307,15 +2334,33 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 20,
+              "line": 1,
+              "offset": 19,
+            },
+            "source": "<div id =",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2331,10 +2376,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2350,7 +2394,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2358,25 +2402,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "<div id",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2392,15 +2421,33 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 18,
+              "line": 1,
+              "offset": 17,
+            },
+            "source": "<div id",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2416,10 +2463,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2435,7 +2481,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2443,25 +2489,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id="abc 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "<div id=\\"abc",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2477,7 +2508,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2494,15 +2525,33 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 23,
+              "line": 1,
+              "offset": 22,
+            },
+            "source": "<div id=\\"abc",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2518,10 +2567,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2537,7 +2585,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2545,9 +2593,48 @@ exports[`base parser Errors EOF_IN_TAG <template><div id="abc" 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [
+            Object {
+              "loc": Object {
+                "end": Object {
+                  "column": 24,
+                  "line": 1,
+                  "offset": 23,
+                },
+                "source": "id=\\"abc\\"",
+                "start": Object {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "id",
+              "type": 5,
+              "value": Object {
+                "content": "abc",
+                "isEmpty": false,
+                "loc": Object {
+                  "end": Object {
+                    "column": 24,
+                    "line": 1,
+                    "offset": 23,
+                  },
+                  "source": "\\"abc\\"",
+                  "start": Object {
+                    "column": 19,
+                    "line": 1,
+                    "offset": 18,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -2563,48 +2650,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [
-            Object {
-              "loc": Object {
-                "end": Object {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id=\\"abc\\"",
-                "start": Object {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 3,
-              "value": Object {
-                "content": "abc",
-                "isEmpty": false,
-                "loc": Object {
-                  "end": Object {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "\\"abc\\"",
-                  "start": Object {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 0,
-              },
-            },
-          ],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2620,10 +2671,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2639,7 +2689,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2647,25 +2697,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id="abc"/ 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 25,
-              "line": 1,
-              "offset": 24,
-            },
-            "source": "<div id=\\"abc\\"/",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2681,7 +2716,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2698,15 +2733,33 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 25,
+              "line": 1,
+              "offset": 24,
+            },
+            "source": "<div id=\\"abc\\"/",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2722,10 +2775,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2741,7 +2793,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2749,25 +2801,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id='abc 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "<div id='abc",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2783,7 +2820,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2800,15 +2837,33 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 23,
+              "line": 1,
+              "offset": 22,
+            },
+            "source": "<div id='abc",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2824,10 +2879,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2843,7 +2897,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2851,9 +2905,48 @@ exports[`base parser Errors EOF_IN_TAG <template><div id='abc' 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [
+            Object {
+              "loc": Object {
+                "end": Object {
+                  "column": 24,
+                  "line": 1,
+                  "offset": 23,
+                },
+                "source": "id='abc'",
+                "start": Object {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "id",
+              "type": 5,
+              "value": Object {
+                "content": "abc",
+                "isEmpty": false,
+                "loc": Object {
+                  "end": Object {
+                    "column": 24,
+                    "line": 1,
+                    "offset": 23,
+                  },
+                  "source": "'abc'",
+                  "start": Object {
+                    "column": 19,
+                    "line": 1,
+                    "offset": 18,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -2869,48 +2962,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [
-            Object {
-              "loc": Object {
-                "end": Object {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id='abc'",
-                "start": Object {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 3,
-              "value": Object {
-                "content": "abc",
-                "isEmpty": false,
-                "loc": Object {
-                  "end": Object {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "'abc'",
-                  "start": Object {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 0,
-              },
-            },
-          ],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -2926,10 +2983,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -2945,7 +3001,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -2953,25 +3009,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id='abc'/ 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 25,
-              "line": 1,
-              "offset": 24,
-            },
-            "source": "<div id='abc'/",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -2987,7 +3028,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3004,15 +3045,33 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 25,
+              "line": 1,
+              "offset": 24,
+            },
+            "source": "<div id='abc'/",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3028,10 +3087,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3047,7 +3105,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3055,9 +3113,48 @@ exports[`base parser Errors EOF_IN_TAG <template><div id=abc / 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [
+            Object {
+              "loc": Object {
+                "end": Object {
+                  "column": 22,
+                  "line": 1,
+                  "offset": 21,
+                },
+                "source": "id=abc",
+                "start": Object {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "id",
+              "type": 5,
+              "value": Object {
+                "content": "abc",
+                "isEmpty": false,
+                "loc": Object {
+                  "end": Object {
+                    "column": 22,
+                    "line": 1,
+                    "offset": 21,
+                  },
+                  "source": "abc",
+                  "start": Object {
+                    "column": 19,
+                    "line": 1,
+                    "offset": 18,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -3073,48 +3170,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [
-            Object {
-              "loc": Object {
-                "end": Object {
-                  "column": 22,
-                  "line": 1,
-                  "offset": 21,
-                },
-                "source": "id=abc",
-                "start": Object {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 3,
-              "value": Object {
-                "content": "abc",
-                "isEmpty": false,
-                "loc": Object {
-                  "end": Object {
-                    "column": 22,
-                    "line": 1,
-                    "offset": 21,
-                  },
-                  "source": "abc",
-                  "start": Object {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 0,
-              },
-            },
-          ],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3130,10 +3191,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3149,7 +3209,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3157,25 +3217,10 @@ exports[`base parser Errors EOF_IN_TAG <template><div id=abc 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 22,
-              "line": 1,
-              "offset": 21,
-            },
-            "source": "<div id=abc",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -3191,7 +3236,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3208,15 +3253,33 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 22,
+              "line": 1,
+              "offset": 21,
+            },
+            "source": "<div id=abc",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3232,10 +3295,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3251,7 +3313,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3259,6 +3321,7 @@ exports[`base parser Errors INCORRECTLY_CLOSED_COMMENT <template><!--comment--!>
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "comment",
@@ -3275,9 +3338,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3293,10 +3357,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3312,7 +3375,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3334,7 +3397,7 @@ Object {
           "offset": 0,
         },
       },
-      "type": 1,
+      "type": 3,
     },
   ],
   "loc": Object {
@@ -3350,7 +3413,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3358,6 +3421,7 @@ exports[`base parser Errors INCORRECTLY_OPENED_COMMENT <template><!></template> 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "",
@@ -3374,9 +3438,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3392,10 +3457,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3411,7 +3475,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3419,6 +3483,7 @@ exports[`base parser Errors INCORRECTLY_OPENED_COMMENT <template><!-></template>
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "-",
@@ -3435,9 +3500,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3453,10 +3519,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3472,7 +3537,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3480,6 +3545,7 @@ exports[`base parser Errors INCORRECTLY_OPENED_COMMENT <template><!ELEMENT br EM
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "ELEMENT br EMPTY",
@@ -3496,9 +3562,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3514,10 +3581,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3533,7 +3599,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3541,6 +3607,7 @@ exports[`base parser Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template></�>
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "�",
@@ -3557,9 +3624,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3575,10 +3643,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3594,7 +3661,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3602,6 +3669,7 @@ exports[`base parser Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template><�><
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "<�>",
@@ -3619,9 +3687,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3637,10 +3706,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3656,7 +3724,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3664,6 +3732,7 @@ exports[`base parser Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>{{a < 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a < b",
@@ -3684,6 +3753,7 @@ Object {
           "type": 4,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3699,10 +3769,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3718,7 +3787,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3726,6 +3795,7 @@ exports[`base parser Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a < b<
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a < b",
@@ -3743,9 +3813,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3761,10 +3832,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3780,7 +3850,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3788,6 +3858,7 @@ exports[`base parser Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a </ b
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a ",
@@ -3805,7 +3876,7 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
         Object {
           "content": " b</template",
@@ -3822,9 +3893,10 @@ Object {
               "offset": 12,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3840,10 +3912,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3859,7 +3930,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3867,25 +3938,10 @@ exports[`base parser Errors MISSING_ATTRIBUTE_VALUE <template><div id= /></div><
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 28,
-              "line": 1,
-              "offset": 27,
-            },
-            "source": "<div id= /></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -3901,7 +3957,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "/",
                 "isEmpty": false,
@@ -3918,15 +3974,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 28,
+              "line": 1,
+              "offset": 27,
+            },
+            "source": "<div id= /></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -3942,10 +4016,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -3961,7 +4034,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -3969,25 +4042,10 @@ exports[`base parser Errors MISSING_ATTRIBUTE_VALUE <template><div id= ></div></
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 27,
-              "line": 1,
-              "offset": 26,
-            },
-            "source": "<div id= ></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -4003,15 +4061,33 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 27,
+              "line": 1,
+              "offset": 26,
+            },
+            "source": "<div id= ></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4027,10 +4103,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4046,7 +4121,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4054,25 +4129,10 @@ exports[`base parser Errors MISSING_ATTRIBUTE_VALUE <template><div id=></div></t
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-            "source": "<div id=></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -4088,15 +4148,33 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 26,
+              "line": 1,
+              "offset": 25,
+            },
+            "source": "<div id=></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4112,10 +4190,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4131,7 +4208,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4139,7 +4216,9 @@ exports[`base parser Errors MISSING_END_TAG_NAME <template></></template> 1`] = 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4155,10 +4234,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4174,7 +4252,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4182,6 +4260,7 @@ exports[`base parser Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <templat
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "(",
@@ -4199,9 +4278,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4217,10 +4297,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4236,7 +4315,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4244,6 +4323,7 @@ exports[`base parser Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <templat
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "@",
@@ -4261,9 +4341,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4279,10 +4360,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4298,7 +4378,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4306,6 +4386,7 @@ exports[`base parser Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <templat
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "&",
@@ -4323,9 +4404,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4341,10 +4423,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4360,7 +4441,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4368,26 +4449,10 @@ exports[`base parser Errors MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 19,
-              "line": 2,
-              "offset": 43,
-            },
-            "source": "<div id=\\"foo\\"
-class=\\"bar\\"></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -4403,7 +4468,7 @@ class=\\"bar\\"></div>",
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "foo",
                 "isEmpty": false,
@@ -4420,7 +4485,7 @@ class=\\"bar\\"></div>",
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
             Object {
@@ -4438,7 +4503,7 @@ class=\\"bar\\"></div>",
                 },
               },
               "name": "class",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -4455,15 +4520,34 @@ class=\\"bar\\"></div>",
                     "offset": 31,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 19,
+              "line": 2,
+              "offset": 43,
+            },
+            "source": "<div id=\\"foo\\"
+class=\\"bar\\"></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4480,10 +4564,9 @@ class=\\"bar\\"></div></template>",
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4500,7 +4583,7 @@ class=\\"bar\\"></div></template>",
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4508,25 +4591,10 @@ exports[`base parser Errors MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 42,
-              "line": 1,
-              "offset": 41,
-            },
-            "source": "<div id=\\"foo\\"class=\\"bar\\"></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -4542,7 +4610,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "foo",
                 "isEmpty": false,
@@ -4559,7 +4627,7 @@ Object {
                     "offset": 18,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
             Object {
@@ -4577,7 +4645,7 @@ Object {
                 },
               },
               "name": "class",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -4594,15 +4662,33 @@ Object {
                     "offset": 29,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 42,
+              "line": 1,
+              "offset": 41,
+            },
+            "source": "<div id=\\"foo\\"class=\\"bar\\"></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4618,10 +4704,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4637,7 +4722,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4645,6 +4730,7 @@ exports[`base parser Errors NESTED_COMMENT <template><!--a<!-- 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a<!--",
@@ -4661,9 +4747,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4679,10 +4766,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4698,7 +4784,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4706,6 +4792,7 @@ exports[`base parser Errors NESTED_COMMENT <template><!--a<!--></template> 1`] =
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a<!",
@@ -4722,9 +4809,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4740,10 +4828,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4759,7 +4846,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4767,6 +4854,7 @@ exports[`base parser Errors NESTED_COMMENT <template><!--a<!--b<!--c--></templat
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a<!--b<!--c",
@@ -4783,9 +4871,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4801,10 +4890,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4820,7 +4908,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4828,6 +4916,7 @@ exports[`base parser Errors NESTED_COMMENT <template><!--a<!--b--></template> 1`
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "a<!--b",
@@ -4844,9 +4933,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4862,10 +4952,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4881,7 +4970,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4889,6 +4978,7 @@ exports[`base parser Errors NONCHARACTER_CHARACTER_REFERENCE <template>&#x1FFFF;
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "🿿",
@@ -4906,9 +4996,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4924,10 +5015,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -4943,7 +5033,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -4951,6 +5041,7 @@ exports[`base parser Errors NONCHARACTER_CHARACTER_REFERENCE <template>&#xFFFE;<
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "￾",
@@ -4968,9 +5059,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -4986,10 +5078,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5005,7 +5096,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5013,6 +5104,7 @@ exports[`base parser Errors NULL_CHARACTER_REFERENCE <template>&#0000;</template
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "�",
@@ -5030,9 +5122,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5048,10 +5141,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5067,7 +5159,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5075,6 +5167,7 @@ exports[`base parser Errors SURROGATE_CHARACTER_REFERENCE <template>&#xD800;</te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "�",
@@ -5092,9 +5185,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5110,10 +5204,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5129,7 +5222,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5137,25 +5230,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><di
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "<div a\\"bc=''></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5171,7 +5249,7 @@ Object {
                 },
               },
               "name": "a\\"bc",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5188,15 +5266,33 @@ Object {
                     "offset": 20,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 30,
+              "line": 1,
+              "offset": 29,
+            },
+            "source": "<div a\\"bc=''></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5212,10 +5308,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5231,7 +5326,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5239,25 +5334,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><di
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "<div a'bc=''></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5273,7 +5353,7 @@ Object {
                 },
               },
               "name": "a'bc",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5290,15 +5370,33 @@ Object {
                     "offset": 20,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 30,
+              "line": 1,
+              "offset": 29,
+            },
+            "source": "<div a'bc=''></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5314,10 +5412,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5333,7 +5430,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5341,25 +5438,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><di
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "<div a<bc=''></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5375,7 +5457,7 @@ Object {
                 },
               },
               "name": "a<bc",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5392,15 +5474,33 @@ Object {
                     "offset": 20,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 30,
+              "line": 1,
+              "offset": 29,
+            },
+            "source": "<div a<bc=''></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5416,10 +5516,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5435,7 +5534,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5443,25 +5542,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 31,
-              "line": 1,
-              "offset": 30,
-            },
-            "source": "<div foo=bar\\"></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5477,7 +5561,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar\\"",
                 "isEmpty": false,
@@ -5494,15 +5578,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 31,
+              "line": 1,
+              "offset": 30,
+            },
+            "source": "<div foo=bar\\"></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5518,10 +5620,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5537,7 +5638,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5545,25 +5646,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 31,
-              "line": 1,
-              "offset": 30,
-            },
-            "source": "<div foo=bar'></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5579,7 +5665,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar'",
                 "isEmpty": false,
@@ -5596,15 +5682,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 31,
+              "line": 1,
+              "offset": 30,
+            },
+            "source": "<div foo=bar'></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5620,10 +5724,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5639,7 +5742,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5647,25 +5750,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": "<div foo=bar<div></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5681,7 +5769,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar<div",
                 "isEmpty": false,
@@ -5698,15 +5786,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": "<div foo=bar<div></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5722,10 +5828,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5741,7 +5846,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5749,25 +5854,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": "<div foo=bar=baz></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5783,7 +5873,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar=baz",
                 "isEmpty": false,
@@ -5800,15 +5890,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": "<div foo=bar=baz></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5824,10 +5932,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5843,7 +5950,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5851,25 +5958,10 @@ exports[`base parser Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <te
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 31,
-              "line": 1,
-              "offset": 30,
-            },
-            "source": "<div foo=bar\`></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5885,7 +5977,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar\`",
                 "isEmpty": false,
@@ -5902,15 +5994,33 @@ Object {
                     "offset": 19,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 31,
+              "line": 1,
+              "offset": 30,
+            },
+            "source": "<div foo=bar\`></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -5926,10 +6036,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -5945,7 +6054,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -5953,25 +6062,10 @@ exports[`base parser Errors UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <templa
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-            "source": "<div =></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -5987,15 +6081,33 @@ Object {
                 },
               },
               "name": "=",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 24,
+              "line": 1,
+              "offset": 23,
+            },
+            "source": "<div =></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6011,10 +6123,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6030,7 +6141,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6038,25 +6149,10 @@ exports[`base parser Errors UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <templa
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 31,
-              "line": 1,
-              "offset": 30,
-            },
-            "source": "<div =foo=bar></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -6072,7 +6168,7 @@ Object {
                 },
               },
               "name": "=foo",
-              "type": 3,
+              "type": 5,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -6089,15 +6185,33 @@ Object {
                     "offset": 20,
                   },
                 },
-                "type": 0,
+                "type": 2,
               },
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 31,
+              "line": 1,
+              "offset": 30,
+            },
+            "source": "<div =foo=bar></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6113,10 +6227,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6132,7 +6245,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6140,6 +6253,7 @@ exports[`base parser Errors UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME <templa
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "?xml?",
@@ -6156,9 +6270,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6174,10 +6289,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6193,7 +6307,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6201,25 +6315,10 @@ exports[`base parser Errors UNEXPECTED_SOLIDUS_IN_TAG <template><div a/b></div><
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
-          "children": Array [],
-          "isSelfClosing": false,
-          "loc": Object {
-            "end": Object {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-            "source": "<div a/b></div>",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "attrs": Array [
             Object {
               "loc": Object {
                 "end": Object {
@@ -6235,7 +6334,7 @@ Object {
                 },
               },
               "name": "a",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
             Object {
@@ -6253,15 +6352,33 @@ Object {
                 },
               },
               "name": "b",
-              "type": 3,
+              "type": 5,
               "value": undefined,
             },
           ],
+          "children": Array [],
+          "directives": Array [],
+          "isSelfClosing": false,
+          "loc": Object {
+            "end": Object {
+              "column": 26,
+              "line": 1,
+              "offset": 25,
+            },
+            "source": "<div a/b></div>",
+            "start": Object {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6277,10 +6394,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6296,7 +6412,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6304,6 +6420,7 @@ exports[`base parser Errors UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "&unknown;",
@@ -6321,9 +6438,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6339,10 +6457,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6358,7 +6475,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6366,6 +6483,7 @@ exports[`base parser Errors X_INVALID_END_TAG <svg><![CDATA[</div>]]></svg> 1`] 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "</div>",
@@ -6383,9 +6501,10 @@ Object {
               "offset": 14,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6401,10 +6520,9 @@ Object {
         },
       },
       "ns": 1,
-      "props": Array [],
       "tag": "svg",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6420,7 +6538,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6428,6 +6546,7 @@ exports[`base parser Errors X_INVALID_END_TAG <svg><!--</div>--></svg> 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "</div>",
@@ -6444,9 +6563,10 @@ Object {
               "offset": 5,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6462,10 +6582,9 @@ Object {
         },
       },
       "ns": 1,
-      "props": Array [],
       "tag": "svg",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6481,7 +6600,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6489,7 +6608,9 @@ exports[`base parser Errors X_INVALID_END_TAG <template></div></div></template> 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6505,10 +6626,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6524,7 +6644,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6532,7 +6652,9 @@ exports[`base parser Errors X_INVALID_END_TAG <template></div></template> 1`] = 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6548,10 +6670,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6567,7 +6688,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6575,6 +6696,7 @@ exports[`base parser Errors X_INVALID_END_TAG <template>{{'</div>'}}</template> 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "'</div>'",
@@ -6595,6 +6717,7 @@ Object {
           "type": 4,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6610,10 +6733,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6629,7 +6751,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6637,6 +6759,7 @@ exports[`base parser Errors X_INVALID_END_TAG <textarea></div></textarea> 1`] = 
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
           "content": "</div>",
@@ -6654,9 +6777,10 @@ Object {
               "offset": 10,
             },
           },
-          "type": 0,
+          "type": 2,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6672,10 +6796,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "textarea",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6691,7 +6814,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6699,9 +6822,12 @@ exports[`base parser Errors X_MISSING_END_TAG <template><div> 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -6717,12 +6843,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6738,10 +6864,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6757,7 +6882,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6765,9 +6890,12 @@ exports[`base parser Errors X_MISSING_END_TAG <template><div></template> 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -6783,12 +6911,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "div",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6804,10 +6932,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "template",
       "tagType": 3,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -6823,7 +6950,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6846,7 +6973,7 @@ Object {
           "offset": 0,
         },
       },
-      "type": 0,
+      "type": 2,
     },
   ],
   "loc": Object {
@@ -6862,7 +6989,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6885,7 +7012,7 @@ Object {
           "offset": 0,
         },
       },
-      "type": 0,
+      "type": 2,
     },
   ],
   "loc": Object {
@@ -6901,7 +7028,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6940,7 +7067,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -6948,9 +7075,12 @@ exports[`base parser invalid html 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
+          "directives": Array [],
           "isSelfClosing": false,
           "loc": Object {
             "end": Object {
@@ -6967,12 +7097,12 @@ Object {
             },
           },
           "ns": 0,
-          "props": Array [],
           "tag": "span",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
       ],
+      "directives": Array [],
       "isSelfClosing": false,
       "loc": Object {
         "end": Object {
@@ -6990,10 +7120,9 @@ Object {
         },
       },
       "ns": 0,
-      "props": Array [],
       "tag": "div",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -7012,7 +7141,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -7020,23 +7149,9 @@ exports[`base parser self closing multiple tag 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [],
-      "isSelfClosing": true,
-      "loc": Object {
-        "end": Object {
-          "column": 37,
-          "line": 1,
-          "offset": 36,
-        },
-        "source": "<div :class=\\"{ some: condition }\\" />",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "directives": Array [
         Object {
           "arg": Object {
             "content": "class",
@@ -7089,31 +7204,32 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 5,
+          "type": 6,
         },
       ],
-      "tag": "div",
-      "tagType": 0,
-      "type": 2,
-    },
-    Object {
-      "children": Array [],
       "isSelfClosing": true,
       "loc": Object {
         "end": Object {
           "column": 37,
-          "line": 2,
-          "offset": 73,
+          "line": 1,
+          "offset": 36,
         },
-        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+        "source": "<div :class=\\"{ some: condition }\\" />",
         "start": Object {
           "column": 1,
-          "line": 2,
-          "offset": 37,
+          "line": 1,
+          "offset": 0,
         },
       },
       "ns": 0,
-      "props": Array [
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+    Object {
+      "attrs": Array [],
+      "children": Array [],
+      "directives": Array [
         Object {
           "arg": Object {
             "content": "style",
@@ -7166,12 +7282,27 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 5,
+          "type": 6,
         },
       ],
+      "isSelfClosing": true,
+      "loc": Object {
+        "end": Object {
+          "column": 37,
+          "line": 2,
+          "offset": 73,
+        },
+        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+        "start": Object {
+          "column": 1,
+          "line": 2,
+          "offset": 37,
+        },
+      },
+      "ns": 0,
       "tag": "p",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -7188,7 +7319,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;
 
@@ -7196,25 +7327,12 @@ exports[`base parser valid html 1`] = `
 Object {
   "children": Array [
     Object {
+      "attrs": Array [],
       "children": Array [
         Object {
+          "attrs": Array [],
           "children": Array [],
-          "isSelfClosing": true,
-          "loc": Object {
-            "end": Object {
-              "column": 38,
-              "line": 2,
-              "offset": 73,
-            },
-            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
-            "start": Object {
-              "column": 2,
-              "line": 2,
-              "offset": 37,
-            },
-          },
-          "ns": 0,
-          "props": Array [
+          "directives": Array [
             Object {
               "arg": Object {
                 "content": "style",
@@ -7267,12 +7385,27 @@ Object {
               },
               "modifiers": Array [],
               "name": "bind",
-              "type": 5,
+              "type": 6,
             },
           ],
+          "isSelfClosing": true,
+          "loc": Object {
+            "end": Object {
+              "column": 38,
+              "line": 2,
+              "offset": 73,
+            },
+            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+            "start": Object {
+              "column": 2,
+              "line": 2,
+              "offset": 37,
+            },
+          },
+          "ns": 0,
           "tag": "p",
           "tagType": 0,
-          "type": 2,
+          "type": 1,
         },
         Object {
           "content": " a comment with <html> inside it ",
@@ -7289,28 +7422,10 @@ Object {
               "offset": 76,
             },
           },
-          "type": 1,
+          "type": 3,
         },
       ],
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 7,
-          "line": 4,
-          "offset": 123,
-        },
-        "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
+      "directives": Array [
         Object {
           "arg": Object {
             "content": "class",
@@ -7363,12 +7478,30 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 5,
+          "type": 6,
         },
       ],
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 7,
+          "line": 4,
+          "offset": 123,
+        },
+        "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
       "tag": "div",
       "tagType": 0,
-      "type": 2,
+      "type": 1,
     },
   ],
   "loc": Object {
@@ -7387,6 +7520,6 @@ Object {
       "offset": 0,
     },
   },
-  "type": 6,
+  "type": 0,
 }
 `;

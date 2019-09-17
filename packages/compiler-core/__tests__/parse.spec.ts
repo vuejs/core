@@ -1,8 +1,7 @@
-import { parse, ParserOptions, TextModes } from '../src/parser'
-import { ParserErrorTypes } from '../src/errorTypes'
+import { parse, ParserOptions, TextModes } from '../src/parse'
+import { ErrorCodes } from '../src/errors'
 import {
   CommentNode,
-  DirectiveNode,
   ElementNode,
   ElementTypes,
   ExpressionNode,
@@ -132,11 +131,9 @@ describe('base parser', () => {
 
     test('lonly "<" don\'t separate nodes', () => {
       const ast = parse('a < b', {
-        onError: errorCode => {
-          if (
-            errorCode !== ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME
-          ) {
-            throw new Error(`${errorCode}`)
+        onError: err => {
+          if (err.code !== ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME) {
+            throw err
           }
         }
       })
@@ -156,9 +153,9 @@ describe('base parser', () => {
 
     test('lonly "{{" don\'t separate nodes', () => {
       const ast = parse('a {{ b', {
-        onError: errorCode => {
-          if (errorCode !== ParserErrorTypes.X_MISSING_INTERPOLATION_END) {
-            throw new Error(`${errorCode}`)
+        onError: error => {
+          if (error.code !== ErrorCodes.X_MISSING_INTERPOLATION_END) {
+            throw error
           }
         }
       })
@@ -194,10 +191,12 @@ describe('base parser', () => {
           source: '&ampersand;'
         }
       })
-      expect(spy.mock.calls).toEqual([
+      expect(spy.mock.calls).toMatchObject([
         [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 4, line: 1, column: 5 }
+          {
+            code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
+            loc: { offset: 4, line: 1, column: 5 }
+          }
         ]
       ])
     })
@@ -212,9 +211,9 @@ describe('base parser', () => {
         }
       )
       const element = ast.children[0] as ElementNode
-      const text1 = (element.props[0] as AttributeNode).value
-      const text2 = (element.props[1] as AttributeNode).value
-      const text3 = (element.props[2] as AttributeNode).value
+      const text1 = (element.attrs[0] as AttributeNode).value
+      const text2 = (element.attrs[1] as AttributeNode).value
+      const text3 = (element.attrs[2] as AttributeNode).value
 
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -246,10 +245,12 @@ describe('base parser', () => {
           source: '"&amp!"'
         }
       })
-      expect(spy.mock.calls).toEqual([
+      expect(spy.mock.calls).toMatchObject([
         [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 45, line: 1, column: 46 }
+          {
+            code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
+            loc: { offset: 45, line: 1, column: 46 }
+          }
         ]
       ])
     })
@@ -269,10 +270,12 @@ describe('base parser', () => {
           source: '&#x86;'
         }
       })
-      expect(spy.mock.calls).toEqual([
+      expect(spy.mock.calls).toMatchObject([
         [
-          ParserErrorTypes.CONTROL_CHARACTER_REFERENCE,
-          { offset: 0, line: 1, column: 1 }
+          {
+            code: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
+            loc: { offset: 0, line: 1, column: 1 }
+          }
         ]
       ])
     })
@@ -423,7 +426,8 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [],
+        attrs: [],
+        directives: [],
         isSelfClosing: false,
         children: [
           {
@@ -454,7 +458,8 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [],
+        attrs: [],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -474,7 +479,8 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [],
+        attrs: [],
+        directives: [],
         isSelfClosing: true,
         children: [],
         loc: {
@@ -496,7 +502,8 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
-        props: [],
+        attrs: [],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -516,7 +523,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -528,6 +535,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -547,7 +555,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -568,6 +576,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -587,7 +596,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -608,6 +617,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -627,7 +637,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -648,6 +658,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -667,7 +678,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -688,6 +699,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -707,7 +719,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -728,6 +740,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -747,7 +760,7 @@ describe('base parser', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        props: [
+        attrs: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -816,6 +829,7 @@ describe('base parser', () => {
             }
           }
         ],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -828,8 +842,7 @@ describe('base parser', () => {
 
     test('directive with no value', () => {
       const ast = parse('<div v-if/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -847,8 +860,7 @@ describe('base parser', () => {
 
     test('directive with value', () => {
       const ast = parse('<div v-if="a"/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -875,8 +887,7 @@ describe('base parser', () => {
 
     test('directive with argument', () => {
       const ast = parse('<div v-on:click/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -911,8 +922,7 @@ describe('base parser', () => {
 
     test('directive with a modifier', () => {
       const ast = parse('<div v-on.enter/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -930,8 +940,7 @@ describe('base parser', () => {
 
     test('directive with two modifiers', () => {
       const ast = parse('<div v-on.enter.exact/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -949,8 +958,7 @@ describe('base parser', () => {
 
     test('directive with argument and modifiers', () => {
       const ast = parse('<div v-on:click.enter.exact/>')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -985,8 +993,7 @@ describe('base parser', () => {
 
     test('v-bind shorthand', () => {
       const ast = parse('<div :a=b />')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1030,8 +1037,7 @@ describe('base parser', () => {
 
     test('v-bind shorthand with modifier', () => {
       const ast = parse('<div :a.sync=b />')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1075,8 +1081,7 @@ describe('base parser', () => {
 
     test('v-on shorthand', () => {
       const ast = parse('<div @a=b />')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1120,8 +1125,7 @@ describe('base parser', () => {
 
     test('v-on shorthand with modifier', () => {
       const ast = parse('<div @a.enter=b />')
-      const directive = (ast.children[0] as ElementNode)
-        .props[0] as DirectiveNode
+      const directive = (ast.children[0] as ElementNode).directives[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1235,16 +1239,29 @@ describe('base parser', () => {
       onError: spy
     })
 
-    expect(spy).toBeCalledWith(ParserErrorTypes.X_MISSING_END_TAG, {
-      offset: 13,
-      line: 3,
-      column: 1
-    })
-    expect(spy).toBeCalledWith(ParserErrorTypes.X_INVALID_END_TAG, {
-      offset: 20,
-      line: 4,
-      column: 1
-    })
+    expect(spy.mock.calls).toMatchObject([
+      [
+        {
+          code: ErrorCodes.X_MISSING_END_TAG,
+          loc: {
+            offset: 13,
+            line: 3,
+            column: 1
+          }
+        }
+      ],
+      [
+        {
+          code: ErrorCodes.X_INVALID_END_TAG,
+          loc: {
+            offset: 20,
+            line: 4,
+            column: 1
+          }
+        }
+      ]
+    ])
+
     expect(ast).toMatchSnapshot()
   })
 
@@ -1290,7 +1307,7 @@ describe('base parser', () => {
     const patterns: {
       [key: string]: Array<{
         code: string
-        errors: Array<{ type: ParserErrorTypes; loc: Position }>
+        errors: Array<{ type: ErrorCodes; loc: Position }>
         options?: Partial<ParserOptions>
       }>
     } = {
@@ -1299,7 +1316,7 @@ describe('base parser', () => {
           code: '<template><!--></template>',
           errors: [
             {
-              type: ParserErrorTypes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1308,7 +1325,7 @@ describe('base parser', () => {
           code: '<template><!---></template>',
           errors: [
             {
-              type: ParserErrorTypes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1323,8 +1340,7 @@ describe('base parser', () => {
           code: '<template>&#a;</template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
+              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1333,8 +1349,7 @@ describe('base parser', () => {
           code: '<template>&#xg;</template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
+              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1351,8 +1366,7 @@ describe('base parser', () => {
           code: '<template attr="&#a;"></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
+              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -1361,8 +1375,7 @@ describe('base parser', () => {
           code: '<template attr="&#xg;"></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
+              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -1381,7 +1394,7 @@ describe('base parser', () => {
           code: '<template><![CDATA[cdata]]></template>',
           errors: [
             {
-              type: ParserErrorTypes.CDATA_IN_HTML_CONTENT,
+              type: ErrorCodes.CDATA_IN_HTML_CONTENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1396,7 +1409,7 @@ describe('base parser', () => {
           code: '<template>&#1234567;</template>',
           errors: [
             {
-              type: ParserErrorTypes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE,
+              type: ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1407,7 +1420,7 @@ describe('base parser', () => {
           code: '<template>&#0003;</template>',
           errors: [
             {
-              type: ParserErrorTypes.CONTROL_CHARACTER_REFERENCE,
+              type: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1416,7 +1429,7 @@ describe('base parser', () => {
           code: '<template>&#x7F;</template>',
           errors: [
             {
-              type: ParserErrorTypes.CONTROL_CHARACTER_REFERENCE,
+              type: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1427,7 +1440,7 @@ describe('base parser', () => {
           code: '<template><div id="" id=""></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.DUPLICATE_ATTRIBUTE,
+              type: ErrorCodes.DUPLICATE_ATTRIBUTE,
               loc: { offset: 21, line: 1, column: 22 }
             }
           ]
@@ -1438,7 +1451,7 @@ describe('base parser', () => {
           code: '<template><div></div id=""></template>',
           errors: [
             {
-              type: ParserErrorTypes.END_TAG_WITH_ATTRIBUTES,
+              type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
               loc: { offset: 21, line: 1, column: 22 }
             }
           ]
@@ -1449,7 +1462,7 @@ describe('base parser', () => {
           code: '<template><div></div/></template>',
           errors: [
             {
-              type: ParserErrorTypes.END_TAG_WITH_TRAILING_SOLIDUS,
+              type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
               loc: { offset: 20, line: 1, column: 21 }
             }
           ]
@@ -1460,11 +1473,11 @@ describe('base parser', () => {
           code: '<template><',
           errors: [
             {
-              type: ParserErrorTypes.EOF_BEFORE_TAG_NAME,
+              type: ErrorCodes.EOF_BEFORE_TAG_NAME,
               loc: { offset: 11, line: 1, column: 12 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 11, line: 1, column: 12 }
             }
           ]
@@ -1473,11 +1486,11 @@ describe('base parser', () => {
           code: '<template></',
           errors: [
             {
-              type: ParserErrorTypes.EOF_BEFORE_TAG_NAME,
+              type: ErrorCodes.EOF_BEFORE_TAG_NAME,
               loc: { offset: 12, line: 1, column: 13 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 12, line: 1, column: 13 }
             }
           ]
@@ -1488,15 +1501,15 @@ describe('base parser', () => {
           code: '<template><svg><![CDATA[cdata',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_CDATA,
+              type: ErrorCodes.EOF_IN_CDATA,
               loc: { offset: 29, line: 1, column: 30 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 29, line: 1, column: 30 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 29, line: 1, column: 30 }
             }
           ]
@@ -1505,15 +1518,15 @@ describe('base parser', () => {
           code: '<template><svg><![CDATA[',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_CDATA,
+              type: ErrorCodes.EOF_IN_CDATA,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             }
           ]
@@ -1524,11 +1537,11 @@ describe('base parser', () => {
           code: '<template><!--comment',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_COMMENT,
+              type: ErrorCodes.EOF_IN_COMMENT,
               loc: { offset: 21, line: 1, column: 22 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 21, line: 1, column: 22 }
             }
           ]
@@ -1537,11 +1550,11 @@ describe('base parser', () => {
           code: '<template><!--',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_COMMENT,
+              type: ErrorCodes.EOF_IN_COMMENT,
               loc: { offset: 14, line: 1, column: 15 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 14, line: 1, column: 15 }
             }
           ]
@@ -1552,11 +1565,11 @@ describe('base parser', () => {
           code: '<template><!',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 12, line: 1, column: 13 }
             }
           ]
@@ -1565,11 +1578,11 @@ describe('base parser', () => {
           code: '<template><!-',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 13, line: 1, column: 14 }
             }
           ]
@@ -1578,11 +1591,11 @@ describe('base parser', () => {
           code: '<template><!abc',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -1593,11 +1606,11 @@ describe('base parser', () => {
           code: "<script><!--console.log('hello')",
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 32, line: 1, column: 33 }
             },
             {
-              type: ParserErrorTypes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
+              type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
               loc: { offset: 32, line: 1, column: 33 }
             }
           ]
@@ -1606,7 +1619,7 @@ describe('base parser', () => {
           code: "<script>console.log('hello')",
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 28, line: 1, column: 29 }
             }
           ]
@@ -1617,15 +1630,15 @@ describe('base parser', () => {
           code: '<template><div',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 14, line: 1, column: 15 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 14, line: 1, column: 15 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 14, line: 1, column: 15 }
             }
           ]
@@ -1634,15 +1647,15 @@ describe('base parser', () => {
           code: '<template><div ',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -1651,15 +1664,15 @@ describe('base parser', () => {
           code: '<template><div id',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 17, line: 1, column: 18 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 17, line: 1, column: 18 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 17, line: 1, column: 18 }
             }
           ]
@@ -1668,15 +1681,15 @@ describe('base parser', () => {
           code: '<template><div id ',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 18, line: 1, column: 19 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 18, line: 1, column: 19 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 18, line: 1, column: 19 }
             }
           ]
@@ -1685,19 +1698,19 @@ describe('base parser', () => {
           code: '<template><div id =',
           errors: [
             {
-              type: ParserErrorTypes.MISSING_ATTRIBUTE_VALUE,
+              type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
               loc: { offset: 19, line: 1, column: 20 }
             },
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 19, line: 1, column: 20 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 19, line: 1, column: 20 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 19, line: 1, column: 20 }
             }
           ]
@@ -1706,15 +1719,15 @@ describe('base parser', () => {
           code: "<template><div id='abc",
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -1723,15 +1736,15 @@ describe('base parser', () => {
           code: '<template><div id="abc',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -1740,15 +1753,15 @@ describe('base parser', () => {
           code: "<template><div id='abc'",
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             }
           ]
@@ -1757,15 +1770,15 @@ describe('base parser', () => {
           code: '<template><div id="abc"',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             }
           ]
@@ -1774,15 +1787,15 @@ describe('base parser', () => {
           code: '<template><div id=abc',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 21, line: 1, column: 22 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 21, line: 1, column: 22 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 21, line: 1, column: 22 }
             }
           ]
@@ -1791,19 +1804,19 @@ describe('base parser', () => {
           code: "<template><div id='abc'/",
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_SOLIDUS_IN_TAG,
+              type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             }
           ]
@@ -1812,19 +1825,19 @@ describe('base parser', () => {
           code: '<template><div id="abc"/',
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_SOLIDUS_IN_TAG,
+              type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 24, line: 1, column: 25 }
             }
           ]
@@ -1833,19 +1846,19 @@ describe('base parser', () => {
           code: '<template><div id=abc /',
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_SOLIDUS_IN_TAG,
+              type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
               loc: { offset: 22, line: 1, column: 23 }
             },
             {
-              type: ParserErrorTypes.EOF_IN_TAG,
+              type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 23, line: 1, column: 24 }
             }
           ]
@@ -1856,7 +1869,7 @@ describe('base parser', () => {
           code: '<template><!--comment--!></template>',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_CLOSED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1867,7 +1880,7 @@ describe('base parser', () => {
           code: '<template><!></template>',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1876,7 +1889,7 @@ describe('base parser', () => {
           code: '<template><!-></template>',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1885,7 +1898,7 @@ describe('base parser', () => {
           code: '<template><!ELEMENT br EMPTY></template>',
           errors: [
             {
-              type: ParserErrorTypes.INCORRECTLY_OPENED_COMMENT,
+              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -1901,7 +1914,7 @@ describe('base parser', () => {
           code: '<template>a < b</template>',
           errors: [
             {
-              type: ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
               loc: { offset: 13, line: 1, column: 14 }
             }
           ]
@@ -1910,7 +1923,7 @@ describe('base parser', () => {
           code: '<template><�></template>',
           errors: [
             {
-              type: ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
               loc: { offset: 11, line: 1, column: 12 }
             }
           ]
@@ -1919,11 +1932,11 @@ describe('base parser', () => {
           code: '<template>a </ b</template>',
           errors: [
             {
-              type: ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
               loc: { offset: 14, line: 1, column: 15 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 27, line: 1, column: 28 }
             }
           ]
@@ -1932,7 +1945,7 @@ describe('base parser', () => {
           code: '<template></�></template>',
           errors: [
             {
-              type: ParserErrorTypes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
               loc: { offset: 12, line: 1, column: 13 }
             }
           ]
@@ -1948,7 +1961,7 @@ describe('base parser', () => {
           code: '<template><div id=></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.MISSING_ATTRIBUTE_VALUE,
+              type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
               loc: { offset: 18, line: 1, column: 19 }
             }
           ]
@@ -1957,7 +1970,7 @@ describe('base parser', () => {
           code: '<template><div id= ></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.MISSING_ATTRIBUTE_VALUE,
+              type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
               loc: { offset: 19, line: 1, column: 20 }
             }
           ]
@@ -1972,7 +1985,7 @@ describe('base parser', () => {
           code: '<template></></template>',
           errors: [
             {
-              type: ParserErrorTypes.MISSING_END_TAG_NAME,
+              type: ErrorCodes.MISSING_END_TAG_NAME,
               loc: { offset: 12, line: 1, column: 13 }
             }
           ]
@@ -1984,8 +1997,7 @@ describe('base parser', () => {
           options: { namedCharacterReferences: { amp: '&' } },
           errors: [
             {
-              type:
-                ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
+              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
               loc: { offset: 14, line: 1, column: 15 }
             }
           ]
@@ -1994,8 +2006,7 @@ describe('base parser', () => {
           code: '<template>&#40</template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
+              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
               loc: { offset: 14, line: 1, column: 15 }
             }
           ]
@@ -2004,8 +2015,7 @@ describe('base parser', () => {
           code: '<template>&#x40</template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
+              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2016,7 +2026,7 @@ describe('base parser', () => {
           code: '<template><div id="foo"class="bar"></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
+              type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
               loc: { offset: 23, line: 1, column: 24 }
             }
           ]
@@ -2033,7 +2043,7 @@ describe('base parser', () => {
           code: '<template><!--a<!--b--></template>',
           errors: [
             {
-              type: ParserErrorTypes.NESTED_COMMENT,
+              type: ErrorCodes.NESTED_COMMENT,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2042,11 +2052,11 @@ describe('base parser', () => {
           code: '<template><!--a<!--b<!--c--></template>',
           errors: [
             {
-              type: ParserErrorTypes.NESTED_COMMENT,
+              type: ErrorCodes.NESTED_COMMENT,
               loc: { offset: 15, line: 1, column: 16 }
             },
             {
-              type: ParserErrorTypes.NESTED_COMMENT,
+              type: ErrorCodes.NESTED_COMMENT,
               loc: { offset: 20, line: 1, column: 21 }
             }
           ]
@@ -2059,11 +2069,11 @@ describe('base parser', () => {
           code: '<template><!--a<!--',
           errors: [
             {
-              type: ParserErrorTypes.EOF_IN_COMMENT,
+              type: ErrorCodes.EOF_IN_COMMENT,
               loc: { offset: 19, line: 1, column: 20 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 19, line: 1, column: 20 }
             }
           ]
@@ -2074,7 +2084,7 @@ describe('base parser', () => {
           code: '<template>&#xFFFE;</template>',
           errors: [
             {
-              type: ParserErrorTypes.NONCHARACTER_CHARACTER_REFERENCE,
+              type: ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2083,7 +2093,7 @@ describe('base parser', () => {
           code: '<template>&#x1FFFF;</template>',
           errors: [
             {
-              type: ParserErrorTypes.NONCHARACTER_CHARACTER_REFERENCE,
+              type: ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2094,7 +2104,7 @@ describe('base parser', () => {
           code: '<template>&#0000;</template>',
           errors: [
             {
-              type: ParserErrorTypes.NULL_CHARACTER_REFERENCE,
+              type: ErrorCodes.NULL_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2105,7 +2115,7 @@ describe('base parser', () => {
           code: '<template>&#xD800;</template>',
           errors: [
             {
-              type: ParserErrorTypes.SURROGATE_CHARACTER_REFERENCE,
+              type: ErrorCodes.SURROGATE_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2116,7 +2126,7 @@ describe('base parser', () => {
           code: "<template><div a\"bc=''></div></template>",
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -2125,7 +2135,7 @@ describe('base parser', () => {
           code: "<template><div a'bc=''></div></template>",
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -2134,7 +2144,7 @@ describe('base parser', () => {
           code: "<template><div a<bc=''></div></template>",
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -2145,8 +2155,7 @@ describe('base parser', () => {
           code: '<template><div foo=bar"></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -2155,8 +2164,7 @@ describe('base parser', () => {
           code: "<template><div foo=bar'></div></template>",
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -2165,8 +2173,7 @@ describe('base parser', () => {
           code: '<template><div foo=bar<div></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -2175,8 +2182,7 @@ describe('base parser', () => {
           code: '<template><div foo=bar=baz></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -2185,8 +2191,7 @@ describe('base parser', () => {
           code: '<template><div foo=bar`></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+              type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
               loc: { offset: 22, line: 1, column: 23 }
             }
           ]
@@ -2197,8 +2202,7 @@ describe('base parser', () => {
           code: '<template><div =foo=bar></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+              type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2207,8 +2211,7 @@ describe('base parser', () => {
           code: '<template><div =></div></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+              type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2219,8 +2222,7 @@ describe('base parser', () => {
           code: '<template><?xml?></template>',
           errors: [
             {
-              type:
-                ParserErrorTypes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
+              type: ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
               loc: { offset: 11, line: 1, column: 12 }
             }
           ]
@@ -2231,7 +2233,7 @@ describe('base parser', () => {
           code: '<template><div a/b></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.UNEXPECTED_SOLIDUS_IN_TAG,
+              type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -2242,7 +2244,7 @@ describe('base parser', () => {
           code: '<template>&unknown;</template>',
           errors: [
             {
-              type: ParserErrorTypes.UNKNOWN_NAMED_CHARACTER_REFERENCE,
+              type: ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2253,7 +2255,7 @@ describe('base parser', () => {
           code: '<template></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.X_INVALID_END_TAG,
+              type: ErrorCodes.X_INVALID_END_TAG,
               loc: { offset: 10, line: 1, column: 11 }
             }
           ]
@@ -2262,11 +2264,11 @@ describe('base parser', () => {
           code: '<template></div></div></template>',
           errors: [
             {
-              type: ParserErrorTypes.X_INVALID_END_TAG,
+              type: ErrorCodes.X_INVALID_END_TAG,
               loc: { offset: 10, line: 1, column: 11 }
             },
             {
-              type: ParserErrorTypes.X_INVALID_END_TAG,
+              type: ErrorCodes.X_INVALID_END_TAG,
               loc: { offset: 16, line: 1, column: 17 }
             }
           ]
@@ -2293,7 +2295,7 @@ describe('base parser', () => {
           code: '<template><div></template>',
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2302,11 +2304,11 @@ describe('base parser', () => {
           code: '<template><div>',
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             },
             {
-              type: ParserErrorTypes.X_MISSING_END_TAG,
+              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 15, line: 1, column: 16 }
             }
           ]
@@ -2317,7 +2319,7 @@ describe('base parser', () => {
           code: '{{ foo',
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_INTERPOLATION_END,
+              type: ErrorCodes.X_MISSING_INTERPOLATION_END,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2326,7 +2328,7 @@ describe('base parser', () => {
           code: '{{',
           errors: [
             {
-              type: ParserErrorTypes.X_MISSING_INTERPOLATION_END,
+              type: ErrorCodes.X_MISSING_INTERPOLATION_END,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2371,9 +2373,12 @@ describe('base parser', () => {
                 onError: spy
               })
 
-              expect(spy.mock.calls).toEqual(
-                errors.map(({ type, loc }) => [type, loc])
-              )
+              expect(
+                spy.mock.calls.map(([err]) => ({
+                  type: err.code,
+                  loc: err.loc
+                }))
+              ).toMatchObject(errors)
               expect(ast).toMatchSnapshot()
             }
           )

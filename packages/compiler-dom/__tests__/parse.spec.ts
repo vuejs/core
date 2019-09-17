@@ -3,7 +3,7 @@ import {
   NodeTypes,
   ElementNode,
   TextNode,
-  ParserErrorTypes,
+  ErrorCodes,
   ExpressionNode,
   ElementTypes
 } from '@vue/compiler-core'
@@ -134,7 +134,8 @@ describe('DOM parser', () => {
         ns: DOMNamespaces.HTML,
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
-        props: [],
+        attrs: [],
+        directives: [],
         isSelfClosing: false,
         children: [],
         loc: {
@@ -150,9 +151,9 @@ describe('DOM parser', () => {
         '<textarea>hello</textarea</textarea0></texTArea a="<>">',
         {
           ...parserOptions,
-          onError: type => {
-            if (type !== ParserErrorTypes.END_TAG_WITH_ATTRIBUTES) {
-              throw new Error(String(type))
+          onError: err => {
+            if (err.code !== ErrorCodes.END_TAG_WITH_ATTRIBUTES) {
+              throw err
             }
           }
         }

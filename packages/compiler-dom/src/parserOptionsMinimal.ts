@@ -1,5 +1,4 @@
 import {
-  NodeTypes,
   TextModes,
   ParserOptions,
   ElementNode,
@@ -23,9 +22,8 @@ export const parserOptionsMinimal: ParserOptions = {
           return DOMNamespaces.SVG
         }
         if (
-          parent.props.some(
+          parent.attrs.some(
             a =>
-              a.type === NodeTypes.ATTRIBUTE &&
               a.name === 'encoding' &&
               a.value != null &&
               (a.value.content === 'text/html' ||

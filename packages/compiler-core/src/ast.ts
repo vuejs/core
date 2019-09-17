@@ -8,20 +8,23 @@ export const enum Namespaces {
 }
 
 export const enum NodeTypes {
+  ROOT,
+  ELEMENT,
   TEXT,
   COMMENT,
-  ELEMENT,
-  ATTRIBUTE,
   EXPRESSION,
+  ATTRIBUTE,
   DIRECTIVE,
-  ROOT
+  IF,
+  IF_BRANCH,
+  FOR
 }
 
 export const enum ElementTypes {
   ELEMENT,
   COMPONENT,
-  SLOT, // slot
-  TEMPLATE // template, component
+  SLOT,
+  TEMPLATE
 }
 
 export interface Node {
@@ -29,9 +32,18 @@ export interface Node {
   loc: SourceLocation
 }
 
+export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
+export type ChildNode =
+  | ElementNode
+  | ExpressionNode
+  | TextNode
+  | CommentNode
+  | IfNode
+  | ForNode
+
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
-  children: Array<ElementNode | ExpressionNode | TextNode | CommentNode>
+  children: ChildNode[]
 }
 
 export interface ElementNode extends Node {
@@ -40,8 +52,9 @@ export interface ElementNode extends Node {
   tag: string
   tagType: ElementTypes
   isSelfClosing: boolean
-  props: Array<AttributeNode | DirectiveNode>
-  children: Array<ElementNode | ExpressionNode | TextNode | CommentNode>
+  attrs: AttributeNode[]
+  directives: DirectiveNode[]
+  children: ChildNode[]
 }
 
 export interface TextNode extends Node {
@@ -75,8 +88,28 @@ export interface ExpressionNode extends Node {
   isStatic: boolean
 }
 
+export interface IfNode extends Node {
+  type: NodeTypes.IF
+  branches: IfBranchNode[]
+}
+
+export interface IfBranchNode extends Node {
+  type: NodeTypes.IF_BRANCH
+  condition: ExpressionNode | undefined // else
+  children: ChildNode[]
+}
+
+export interface ForNode extends Node {
+  type: NodeTypes.FOR
+  source: ExpressionNode
+  valueAlias: ExpressionNode
+  keyAlias: ExpressionNode
+  objectIndexAlias: ExpressionNode
+  children: ChildNode[]
+}
+
 export interface Position {
-  offset: number // from start of file
+  offset: number // from start of file (in SFCs)
   line: number
   column: number
 }
