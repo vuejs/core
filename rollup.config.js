@@ -134,9 +134,8 @@ function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
         `process.env.NODE_ENV !== 'production'`
       : // hard coded dev/prod builds
         !isProduction,
-    // show production tip?
-    // should only do this for dev AND browser-targeting builds.
-    __FEATURE_PRODUCTION_TIP__: !isProduction && isBrowserBuild,
+    // If the build is expected to run directly in the browser (global / esm-browser builds)
+    __BROWSER__: isBrowserBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean,

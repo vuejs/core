@@ -81,13 +81,5 @@ export const parserOptionsMinimal: ParserOptions = {
 
   isVoidTag(tag: string): boolean {
     return VOID_TAG_RE.test(tag)
-  },
-
-  namedCharacterReferences: {
-    'gt;': '>',
-    'lt;': '<',
-    'amp;': '&',
-    'apos;': "'",
-    'quot;': '"'
   }
 }

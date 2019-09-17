@@ -35,10 +35,18 @@ export const defaultParserOptions: Required<ParserOptions> = {
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: () => false,
-  namedCharacterReferences: {},
+  namedCharacterReferences: {
+    'gt;': '>',
+    'lt;': '<',
+    'amp;': '&',
+    'apos;': "'",
+    'quot;': '"'
+  },
   onError(code: ParserErrorTypes, loc: Position): void {
     const error: any = new SyntaxError(
-      `${errorMessages[code]} (${loc.line}:${loc.column})`
+      `${__DEV__ || !__BROWSER__ ? errorMessages[code] : code} (${loc.line}:${
+        loc.column
+      })`
     )
     error.code = code
     error.loc = loc
@@ -658,7 +666,7 @@ function parseTextData(
     return text
   }
 
-  // DATA or RCDATA.
+  // DATA or RCDATA. Entity decoding required.
   const end = context.offset + length
   let text: string = ''
 
@@ -767,7 +775,6 @@ function parseTextData(
       }
     }
   }
-
   return text
 }
 

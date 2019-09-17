@@ -2,9 +2,9 @@ module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
+    __BROWSER__: false,
     __JSDOM__: true,
     __FEATURE_OPTIONS__: true,
-    __FEATURE_PRODUCTION_TIP__: false,
     __FEATURE_SUSPENSE__: true
   },
   coverageDirectory: 'coverage',

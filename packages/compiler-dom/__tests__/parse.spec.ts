@@ -3,7 +3,6 @@ import {
   NodeTypes,
   ElementNode,
   TextNode,
-  AttributeNode,
   ParserErrorTypes,
   ExpressionNode,
   ElementTypes
@@ -103,86 +102,6 @@ describe('DOM parser', () => {
           source: 'some text'
         }
       })
-    })
-
-    test('HTML entities compatibility in text (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = parse('&ampersand;', {
-        ...parserOptions,
-        namedCharacterReferences: { amp: '&' },
-        onError: spy
-      })
-      const text = ast.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '&ampersand;'
-        }
-      })
-      expect(spy.mock.calls).toEqual([
-        [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 4, line: 1, column: 5 }
-        ]
-      ])
-    })
-
-    test('HTML entities compatibility in attribute (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = parse(
-        '<div a="&ampersand;" b="&amp;ersand;" c="&amp!"></div>',
-        {
-          ...parserOptions,
-          namedCharacterReferences: { amp: '&', 'amp;': '&' },
-          onError: spy
-        }
-      )
-      const element = ast.children[0] as ElementNode
-      const text1 = (element.props[0] as AttributeNode).value
-      const text2 = (element.props[1] as AttributeNode).value
-      const text3 = (element.props[2] as AttributeNode).value
-
-      expect(text1).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ampersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 20, line: 1, column: 21 },
-          source: '"&ampersand;"'
-        }
-      })
-      expect(text2).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        isEmpty: false,
-        loc: {
-          start: { offset: 23, line: 1, column: 24 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: '"&amp;ersand;"'
-        }
-      })
-      expect(text3).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&!',
-        isEmpty: false,
-        loc: {
-          start: { offset: 40, line: 1, column: 41 },
-          end: { offset: 47, line: 1, column: 48 },
-          source: '"&amp!"'
-        }
-      })
-      expect(spy.mock.calls).toEqual([
-        [
-          ParserErrorTypes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-          { offset: 45, line: 1, column: 46 }
-        ]
-      ])
     })
   })
 
