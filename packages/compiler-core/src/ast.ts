@@ -103,8 +103,8 @@ export interface ForNode extends Node {
   type: NodeTypes.FOR
   source: ExpressionNode
   valueAlias: ExpressionNode
-  keyAlias: ExpressionNode
-  objectIndexAlias: ExpressionNode
+  keyAlias: ExpressionNode | undefined
+  objectIndexAlias: ExpressionNode | undefined
   children: ChildNode[]
 }
 
