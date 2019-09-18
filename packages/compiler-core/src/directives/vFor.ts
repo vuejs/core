@@ -83,7 +83,7 @@ function parseAliasExpressions(source: string): null | AliasExpressions {
 
   if (!inMatch) return null
 
-  const [, /* fullMatch */ LHS, RHS] = inMatch
+  const [, LHS, RHS] = inMatch
 
   const result: AliasExpressions = {
     source: {
