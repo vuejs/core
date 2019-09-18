@@ -1,70 +1,140 @@
-import { createDirectiveTransform } from '../transform'
-import { NodeTypes, ExpressionNode, Node } from '../ast'
+import {
+  createDirectiveTransform,
+  TransformContext,
+  getInnerRange
+} from '../transform'
+import { NodeTypes, ExpressionNode, Node, SourceLocation } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 
-const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 export const transformFor = createDirectiveTransform(
   'for',
   (node, dir, context) => {
     if (dir.exp) {
-      const content = dir.exp.content
-      const inMatch = content.match(forAliasRE)
+      const aliases = parseAliasExpressions(dir.exp.content)
 
-      if (inMatch) {
-        const sourceContent = inMatch[2].trim()
-        let valueContent = inMatch[1].trim().replace(stripParensRE, '')
-        let keyContent: string = ''
-        let objectIndexContent: string = ''
-
-        const iteratorMatch = valueContent.match(forIteratorRE)
-        if (iteratorMatch) {
-          valueContent = valueContent.replace(forIteratorRE, '').trim()
-          keyContent = iteratorMatch[1].trim()
-          if (iteratorMatch[2]) {
-            objectIndexContent = iteratorMatch[2].trim()
-          }
-        }
-
-        // TODO: Do we check invalid JavaScript identifier?
-
+      if (aliases) {
         context.replaceNode({
           type: NodeTypes.FOR,
           loc: node.loc,
-          source: createExpression(sourceContent, node),
-          valueAlias: createExpression(valueContent, node),
-          keyAlias: keyContent ? createExpression(keyContent, node) : undefined,
-          objectIndexAlias: objectIndexContent
-            ? createExpression(objectIndexContent, node)
+          source: createExpression(aliases.source, dir.exp, context),
+          valueAlias: aliases.value
+            ? createExpression(aliases.value, dir.exp, context)
+            : undefined,
+          keyAlias: aliases.key
+            ? createExpression(aliases.key, dir.exp, context)
+            : undefined,
+          objectIndexAlias: aliases.index
+            ? createExpression(aliases.index, dir.exp, context)
             : undefined,
           children: [node]
         })
-
-        return
-      }
-
-      context.onError(
-        createCompilerError(
-          ErrorCodes.X_FOR_MALFORMED_EXPRESSION,
-          dir.loc.start
+      } else {
+        context.onError(
+          createCompilerError(
+            ErrorCodes.X_FOR_MALFORMED_EXPRESSION,
+            dir.loc.start
+          )
         )
+      }
+    } else {
+      context.onError(
+        createCompilerError(ErrorCodes.X_FOR_NO_EXPRESSION, dir.loc.start)
       )
-
-      return
     }
-
-    context.onError(
-      createCompilerError(ErrorCodes.X_FOR_NO_EXPRESSION, dir.loc.start)
-    )
   }
 )
 
-function createExpression(content: string, node: Node): ExpressionNode {
+function createExpression(
+  alias: AliasExpression,
+  node: Node,
+  context: TransformContext
+): ExpressionNode {
+  const loc: SourceLocation = getInnerRange(
+    node.loc,
+    alias.offset,
+    alias.content.length
+  )
+
   return {
     type: NodeTypes.EXPRESSION,
-    loc: node.loc,
-    content,
+    loc: loc,
+    content: alias.content,
     isStatic: false
   }
+}
+
+interface AliasExpression {
+  offset: number
+  content: string
+}
+
+interface AliasExpressions {
+  source: AliasExpression
+  value: AliasExpression | undefined
+  key: AliasExpression | undefined
+  index: AliasExpression | undefined
+}
+
+function parseAliasExpressions(source: string): null | AliasExpressions {
+  const inMatch = source.match(forAliasRE)
+
+  if (!inMatch) return null
+
+  const [, /* fullMatch */ LHS, RHS] = inMatch
+
+  const result: AliasExpressions = {
+    source: {
+      offset: source.indexOf(RHS, LHS.length),
+      content: RHS.trim()
+    },
+    value: undefined,
+    key: undefined,
+    index: undefined
+  }
+
+  let valueContent = LHS.trim()
+    .replace(stripParensRE, '')
+    .trim()
+  const trimmedOffset = LHS.indexOf(valueContent)
+
+  const iteratorMatch = valueContent.match(forIteratorRE)
+  if (iteratorMatch) {
+    valueContent = valueContent.replace(forIteratorRE, '').trim()
+
+    const keyContent = iteratorMatch[1].trim()
+    if (keyContent) {
+      result.key = {
+        offset: source.indexOf(keyContent, trimmedOffset + valueContent.length),
+        content: keyContent
+      }
+    }
+
+    if (iteratorMatch[2]) {
+      const indexContent = iteratorMatch[2].trim()
+
+      if (indexContent) {
+        result.index = {
+          offset: source.indexOf(
+            indexContent,
+            result.key
+              ? result.key.offset + result.key.content.length
+              : trimmedOffset + valueContent.length
+          ),
+          content: indexContent
+        }
+      }
+    }
+  }
+
+  if (valueContent) {
+    result.value = {
+      offset: trimmedOffset,
+      content: valueContent
+    }
+  }
+
+  return result
 }
