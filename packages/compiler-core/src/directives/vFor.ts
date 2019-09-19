@@ -1,5 +1,5 @@
-import { createDirectiveTransform, TransformContext } from '../transform'
-import { NodeTypes, ExpressionNode, Node, SourceLocation } from '../ast'
+import { createDirectiveTransform } from '../transform'
+import { NodeTypes, ExpressionNode, Node } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
 
@@ -16,16 +16,13 @@ export const transformFor = createDirectiveTransform(
         context.replaceNode({
           type: NodeTypes.FOR,
           loc: node.loc,
-          source: createExpression(aliases.source, dir.exp, context),
-          valueAlias: aliases.value
-            ? createExpression(aliases.value, dir.exp, context)
-            : undefined,
-          keyAlias: aliases.key
-            ? createExpression(aliases.key, dir.exp, context)
-            : undefined,
-          objectIndexAlias: aliases.index
-            ? createExpression(aliases.index, dir.exp, context)
-            : undefined,
+          source: maybeCreateExpression(
+            aliases.source,
+            dir.exp
+          ) as ExpressionNode,
+          valueAlias: maybeCreateExpression(aliases.value, dir.exp),
+          keyAlias: maybeCreateExpression(aliases.key, dir.exp),
+          objectIndexAlias: maybeCreateExpression(aliases.index, dir.exp),
           children: [node]
         })
       } else {
@@ -44,25 +41,6 @@ export const transformFor = createDirectiveTransform(
   }
 )
 
-function createExpression(
-  alias: AliasExpression,
-  node: Node,
-  context: TransformContext
-): ExpressionNode {
-  const loc: SourceLocation = getInnerRange(
-    node.loc,
-    alias.offset,
-    alias.content.length
-  )
-
-  return {
-    type: NodeTypes.EXPRESSION,
-    loc: loc,
-    content: alias.content,
-    isStatic: false
-  }
-}
-
 interface AliasExpression {
   offset: number
   content: string
@@ -75,13 +53,11 @@ interface AliasExpressions {
   index: AliasExpression | undefined
 }
 
-function parseAliasExpressions(source: string): null | AliasExpressions {
+function parseAliasExpressions(source: string): AliasExpressions | null {
   const inMatch = source.match(forAliasRE)
-
   if (!inMatch) return null
 
   const [, LHS, RHS] = inMatch
-
   const result: AliasExpressions = {
     source: {
       offset: source.indexOf(RHS, LHS.length),
@@ -134,4 +110,18 @@ function parseAliasExpressions(source: string): null | AliasExpressions {
   }
 
   return result
+}
+
+function maybeCreateExpression(
+  alias: AliasExpression | undefined,
+  node: Node
+): ExpressionNode | undefined {
+  if (alias) {
+    return {
+      type: NodeTypes.EXPRESSION,
+      loc: getInnerRange(node.loc, alias.offset, alias.content.length),
+      content: alias.content,
+      isStatic: false
+    }
+  }
 }
