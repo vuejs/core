@@ -102,9 +102,9 @@ export interface IfBranchNode extends Node {
 export interface ForNode extends Node {
   type: NodeTypes.FOR
   source: ExpressionNode
-  valueAlias: ExpressionNode
-  keyAlias: ExpressionNode
-  objectIndexAlias: ExpressionNode
+  valueAlias: ExpressionNode | undefined
+  keyAlias: ExpressionNode | undefined
+  objectIndexAlias: ExpressionNode | undefined
   children: ChildNode[]
 }
 

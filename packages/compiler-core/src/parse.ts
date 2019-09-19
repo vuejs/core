@@ -15,6 +15,7 @@ import {
   TextNode,
   ChildNode
 } from './ast'
+import { assert, advancePositionBy } from './utils'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
@@ -795,17 +796,13 @@ function startsWith(source: string, searchString: string): boolean {
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   __DEV__ && assert(numberOfCharacters <= context.source.length)
 
-  const { column, source } = context
-  const str = source.slice(0, numberOfCharacters)
-  const lines = str.split(/\r?\n/)
+  const { source } = context
+  const pos = advancePositionBy(context, source, numberOfCharacters)
 
   context.source = source.slice(numberOfCharacters)
-  context.offset += numberOfCharacters
-  context.line += lines.length - 1
-  context.column =
-    lines.length === 1
-      ? column + numberOfCharacters
-      : Math.max(1, lines.pop()!.length)
+  context.offset = pos.offset
+  context.line = pos.line
+  context.column = pos.column
 }
 
 function advanceSpaces(context: ParserContext): void {
@@ -897,12 +894,6 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\n\f />]/.test(source[2 + tag.length] || '>')
   )
-}
-
-function assert(condition: boolean, msg?: string) {
-  if (!condition) {
-    throw new Error(msg || `unexpected parser condition`)
-  }
 }
 
 // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state

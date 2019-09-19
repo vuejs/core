@@ -59,7 +59,9 @@ export const enum ErrorCodes {
 
   // transform errors
   X_ELSE_IF_NO_ADJACENT_IF,
-  X_ELSE_NO_ADJACENT_IF
+  X_ELSE_NO_ADJACENT_IF,
+  X_FOR_NO_EXPRESSION,
+  X_FOR_MALFORMED_EXPRESSION
 }
 
 export const errorMessages: { [code: number]: string } = {
@@ -116,5 +118,7 @@ export const errorMessages: { [code: number]: string } = {
 
   // transform errors
   [ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF]: `v-else-if has no adjacent v-if`,
-  [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else has no adjacent v-if`
+  [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else has no adjacent v-if`,
+  [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for has no expression`,
+  [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression`
 }
