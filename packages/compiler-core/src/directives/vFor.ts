@@ -1,10 +1,7 @@
-import {
-  createDirectiveTransform,
-  TransformContext,
-  getInnerRange
-} from '../transform'
+import { createDirectiveTransform, TransformContext } from '../transform'
 import { NodeTypes, ExpressionNode, Node, SourceLocation } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
+import { getInnerRange } from '../utils'
 
 const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
