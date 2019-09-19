@@ -1,4 +1,5 @@
 import { ErrorCodes, CompilerError, createCompilerError } from './errors'
+import { assert, advancePositionWithMutation } from './utils'
 import {
   Namespace,
   Namespaces,
@@ -15,7 +16,6 @@ import {
   TextNode,
   ChildNode
 } from './ast'
-import { assert, advancePositionBy } from './utils'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
@@ -794,15 +794,9 @@ function startsWith(source: string, searchString: string): boolean {
 }
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
-  __DEV__ && assert(numberOfCharacters <= context.source.length)
-
   const { source } = context
-  const pos = advancePositionBy(context, source, numberOfCharacters)
-
+  advancePositionWithMutation(context, source, numberOfCharacters)
   context.source = source.slice(numberOfCharacters)
-  context.offset = pos.offset
-  context.line = pos.line
-  context.column = pos.column
 }
 
 function advanceSpaces(context: ParserContext): void {

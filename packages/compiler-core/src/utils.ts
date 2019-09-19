@@ -24,23 +24,29 @@ export function advancePositionBy(
   source: string,
   numberOfCharacters: number
 ): Position {
-  __DEV__ && assert(numberOfCharacters <= source.length)
+  return advancePositionWithMutation({ ...pos }, source, numberOfCharacters)
+}
 
-  const newPosition = {
-    ...pos
-  }
+// advance by mutation without cloning (for performance reasons), since this
+// gets called a lot in the parser
+export function advancePositionWithMutation(
+  pos: Position,
+  source: string,
+  numberOfCharacters: number
+): Position {
+  __DEV__ && assert(numberOfCharacters <= source.length)
 
   const str = source.slice(0, numberOfCharacters)
   const lines = str.split(/\r?\n/)
 
-  newPosition.offset += numberOfCharacters
-  newPosition.line += lines.length - 1
-  newPosition.column =
+  pos.offset += numberOfCharacters
+  pos.line += lines.length - 1
+  pos.column =
     lines.length === 1
       ? pos.column + numberOfCharacters
       : Math.max(1, lines.pop()!.length)
 
-  return newPosition
+  return pos
 }
 
 export function assert(condition: boolean, msg?: string) {
