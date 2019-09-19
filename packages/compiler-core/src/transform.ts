@@ -46,9 +46,12 @@ function createTransformContext(
     },
     ...options,
     parent: root,
-    ancestors: [root],
+    ancestors: [],
     childIndex: 0,
     replaceNode(node) {
+      if (__DEV__ && context.nodeRemoved) {
+        throw new Error(`node being replaced is already removed`)
+      }
       context.parent.children[context.childIndex] = node
     },
     removeNode() {
@@ -85,9 +88,9 @@ function traverseNode(
   // apply transform plugins
   const transforms = context.transforms
   for (let i = 0; i < transforms.length; i++) {
-    const transform = transforms[i]
+    const plugin = transforms[i]
     context.nodeRemoved = false
-    transform(node, context)
+    plugin(node, context)
     if (context.nodeRemoved) {
       return
     } else {

@@ -12,7 +12,7 @@ import {
   AttributeNode
 } from '../src/ast'
 
-describe('base parser', () => {
+describe('compiler: parse', () => {
   describe('Text', () => {
     test('simple text', () => {
       const ast = parse('some text')
