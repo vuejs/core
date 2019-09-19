@@ -20,16 +20,23 @@ export const transformIf = createDirectiveTransform(
     } else {
       // locate the adjacent v-if
       const siblings = context.parent.children
-      let i = context.childIndex
-      while (i--) {
+      const comments = []
+      let i = siblings.indexOf(node)
+      while (i-- >= -1) {
         const sibling = siblings[i]
-        if (sibling.type === NodeTypes.COMMENT) {
+        if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
+          context.removeNode(sibling)
+          comments.unshift(sibling)
           continue
         }
-        if (sibling.type === NodeTypes.IF) {
+        if (sibling && sibling.type === NodeTypes.IF) {
           // move the node to the if node's branches
           context.removeNode()
-          sibling.branches.push(createIfBranch(node, dir))
+          const branch = createIfBranch(node, dir)
+          if (__DEV__ && comments.length) {
+            branch.children = [...comments, ...branch.children]
+          }
+          sibling.branches.push(branch)
         } else {
           context.onError(
             createCompilerError(

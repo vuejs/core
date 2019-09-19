@@ -186,6 +186,10 @@ function pushNode(
   nodes: ChildNode[],
   node: ChildNode
 ): void {
+  // ignore comments in production
+  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
+    return
+  }
   if (context.ignoreSpaces && node.type === NodeTypes.TEXT && node.isEmpty) {
     return
   }

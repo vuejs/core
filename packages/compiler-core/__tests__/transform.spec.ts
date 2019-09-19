@@ -25,7 +25,7 @@ describe('compiler: transform', () => {
       {
         parent: ast,
         ancestors: [ast],
-        childIndex: 0
+        currentNode: div
       }
     ])
     expect(calls[1]).toMatchObject([
@@ -33,7 +33,7 @@ describe('compiler: transform', () => {
       {
         parent: div,
         ancestors: [ast, div],
-        childIndex: 0
+        currentNode: div.children[0]
       }
     ])
     expect(calls[2]).toMatchObject([
@@ -41,7 +41,7 @@ describe('compiler: transform', () => {
       {
         parent: div,
         ancestors: [ast, div],
-        childIndex: 1
+        currentNode: div.children[1]
       }
     ])
   })
@@ -81,7 +81,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode', () => {
-    const ast = parse(`<span/><div/><span/>`)
+    const ast = parse(`<span/><div>hello</div><span/>`)
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
@@ -99,10 +99,65 @@ describe('compiler: transform', () => {
     expect(ast.children[0]).toBe(c1)
     expect(ast.children[1]).toBe(c2)
 
+    // should not traverse children of remove node
     expect(spy).toHaveBeenCalledTimes(3)
     // should traverse nodes around removed
     expect(spy.mock.calls[0][0]).toBe(c1)
     expect(spy.mock.calls[2][0]).toBe(c2)
+  })
+
+  test('context.removeNode (prev sibling)', () => {
+    const ast = parse(`<span/><div/><span/>`)
+    const c1 = ast.children[0]
+    const c2 = ast.children[2]
+
+    const plugin: Transform = (node, context) => {
+      if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
+        context.removeNode()
+        // remove previous sibling
+        context.removeNode(context.parent.children[0])
+      }
+    }
+    const spy = jest.fn(plugin)
+    transform(ast, {
+      transforms: [spy]
+    })
+
+    expect(ast.children.length).toBe(1)
+    expect(ast.children[0]).toBe(c2)
+
+    expect(spy).toHaveBeenCalledTimes(3)
+    // should still traverse first span before removal
+    expect(spy.mock.calls[0][0]).toBe(c1)
+    // should still traverse last span
+    expect(spy.mock.calls[2][0]).toBe(c2)
+  })
+
+  test('context.removeNode (next sibling)', () => {
+    const ast = parse(`<span/><div/><span/>`)
+    const c1 = ast.children[0]
+    const d1 = ast.children[1]
+
+    const plugin: Transform = (node, context) => {
+      if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
+        context.removeNode()
+        // remove next sibling
+        context.removeNode(context.parent.children[1])
+      }
+    }
+    const spy = jest.fn(plugin)
+    transform(ast, {
+      transforms: [spy]
+    })
+
+    expect(ast.children.length).toBe(1)
+    expect(ast.children[0]).toBe(c1)
+
+    expect(spy).toHaveBeenCalledTimes(2)
+    // should still traverse first span before removal
+    expect(spy.mock.calls[0][0]).toBe(c1)
+    // should not traverse last span
+    expect(spy.mock.calls[1][0]).toBe(d1)
   })
 
   test('onError option', () => {

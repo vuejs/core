@@ -26,9 +26,10 @@ export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
+  currentNode: ChildNode | null
   replaceNode(node: ChildNode): void
-  removeNode(): void
-  nodeRemoved: boolean
+  removeNode(node?: ChildNode): void
+  onNodeRemoved: () => void
 }
 
 export function transform(root: RootNode, options: TransformOptions) {
@@ -48,17 +49,37 @@ function createTransformContext(
     parent: root,
     ancestors: [],
     childIndex: 0,
+    currentNode: null,
     replaceNode(node) {
-      if (__DEV__ && context.nodeRemoved) {
-        throw new Error(`node being replaced is already removed`)
+      if (__DEV__ && !context.currentNode) {
+        throw new Error(`node being replaced is already removed.`)
       }
-      context.parent.children[context.childIndex] = node
+      context.parent.children[context.childIndex] = context.currentNode = node
     },
-    removeNode() {
-      context.parent.children.splice(context.childIndex, 1)
-      context.nodeRemoved = true
+    removeNode(node) {
+      const list = context.parent.children
+      const removalIndex = node
+        ? list.indexOf(node)
+        : context.currentNode
+          ? context.childIndex
+          : -1
+      if (__DEV__ && removalIndex < 0) {
+        throw new Error(`node being removed is not a child of current parent`)
+      }
+      if (!node || node === context.currentNode) {
+        // current node removed
+        context.currentNode = null
+        context.onNodeRemoved()
+      } else {
+        // sibling node removed
+        if (context.childIndex > removalIndex) {
+          context.childIndex--
+          context.onNodeRemoved()
+        }
+      }
+      context.parent.children.splice(removalIndex, 1)
     },
-    nodeRemoved: false
+    onNodeRemoved: () => {}
   }
   return context
 }
@@ -69,14 +90,16 @@ function traverseChildren(
   ancestors: ParentNode[]
 ) {
   ancestors = ancestors.concat(parent)
-  for (let i = 0; i < parent.children.length; i++) {
+  let i = 0
+  const nodeRemoved = () => {
+    i--
+  }
+  for (; i < parent.children.length; i++) {
     context.parent = parent
     context.ancestors = ancestors
     context.childIndex = i
-    traverseNode(parent.children[i], context, ancestors)
-    if (context.nodeRemoved) {
-      i--
-    }
+    context.onNodeRemoved = nodeRemoved
+    traverseNode((context.currentNode = parent.children[i]), context, ancestors)
   }
 }
 
@@ -89,13 +112,12 @@ function traverseNode(
   const transforms = context.transforms
   for (let i = 0; i < transforms.length; i++) {
     const plugin = transforms[i]
-    context.nodeRemoved = false
     plugin(node, context)
-    if (context.nodeRemoved) {
+    if (!context.currentNode) {
       return
     } else {
       // node may have been replaced
-      node = context.parent.children[context.childIndex]
+      node = context.currentNode
     }
   }
 
