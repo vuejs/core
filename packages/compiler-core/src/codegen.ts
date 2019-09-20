@@ -107,6 +107,9 @@ function createCodegenContext(
       }
     }
   }
+  if (!__BROWSER__) {
+    context.map!.setSourceContent(filename, context.source)
+  }
   return context
 }
 

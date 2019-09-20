@@ -3,9 +3,15 @@ import { SourceMapConsumer, RawSourceMap } from 'source-map'
 
 describe('compiler: codegen', () => {
   test('basic source map support', async () => {
-    const ast = parse(`hello {{ world }}`)
-    const { code, map } = generate(ast)
+    const source = `hello {{ world }}`
+    const ast = parse(source)
+    const { code, map } = generate(ast, {
+      filename: `foo.vue`
+    })
     expect(code).toBe(`["hello ", world]`)
+
+    expect(map!.sources).toEqual([`foo.vue`])
+    expect(map!.sourcesContent).toEqual([source])
 
     const consumer = await new SourceMapConsumer(map as RawSourceMap)
     const pos = consumer.originalPositionFor({
