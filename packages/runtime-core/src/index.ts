@@ -35,9 +35,12 @@ export {
   callWithAsyncErrorHandling
 } from './errorHandling'
 
-// For compiler generated code
+// Internal, for compiler generated code
 export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './componentOptions'
+
+// Internal, for integration with runtime compiler
+export { registerCompiler } from './component'
 
 // Types -----------------------------------------------------------------------
 

@@ -298,12 +298,28 @@ export function handleSetupResult(
   finishComponentSetup(instance, parentSuspense)
 }
 
+let compile: Function | undefined
+export function registerCompiler(_compile: Function) {
+  compile = _compile
+}
+
 function finishComponentSetup(
   instance: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null
 ) {
   const Component = instance.type as ComponentOptions
   if (!instance.render) {
+    if (Component.template && !Component.render) {
+      if (compile) {
+        Component.render = compile(Component.template)
+      } else if (__DEV__) {
+        warn(
+          `Component provides template but the build of Vue you are running ` +
+            `does not support on-the-fly template compilation. Either use the ` +
+            `full build or pre-compile the template using Vue CLI.`
+        )
+      }
+    }
     if (__DEV__ && !Component.render) {
       warn(
         `Component is missing render function. Either provide a template or ` +
