@@ -77,6 +77,14 @@ export const PublicInstanceProxyHandlers = {
       }
     }
   },
+  has(target: ComponentInternalInstance, key: string): boolean {
+    const { renderContext, data, props } = target
+    return (
+      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+      hasOwn(renderContext, key) ||
+      hasOwn(props, key)
+    )
+  },
   set(target: ComponentInternalInstance, key: string, value: any): boolean {
     const { data, renderContext } = target
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {

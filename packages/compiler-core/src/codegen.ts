@@ -15,6 +15,7 @@ import { advancePositionWithMutation } from './utils'
 export interface CodegenOptions {
   // Assume ES module environment. If true, will generate import statements for
   // runtime helpers; otherwise will grab the helpers from global `Vue`.
+  // default: false
   module?: boolean
   // Filename for source map generation.
   filename?: string
@@ -68,7 +69,7 @@ function createCodegenContext(
   options: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
-    module: true,
+    module: false,
     filename: `template.vue.html`,
     ...options,
     source: ast.loc.source,

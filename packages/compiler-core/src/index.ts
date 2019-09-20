@@ -1,5 +1,11 @@
 export { parse, ParserOptions, TextModes } from './parse'
-export { transform, TransformOptions, Transform } from './transform'
+export {
+  transform,
+  createDirectiveTransform,
+  TransformOptions,
+  Transform
+} from './transform'
 export { generate, CodegenOptions, CodegenResult } from './codegen'
-export { ErrorCodes } from './errors'
+export { ErrorCodes, CompilerError, createCompilerError } from './errors'
+
 export * from './ast'

@@ -4,7 +4,13 @@
 
 // TODO hook up the runtime to compile templates on the fly
 
-export * from '@vue/compiler-dom'
+import { compile as baseCompile, CompilerOptions } from '@vue/compiler-dom'
+
+export function compile(template: string, options?: CompilerOptions): Function {
+  const { code } = baseCompile(template, options)
+  return new Function(`with(this){return ${code}}`)
+}
+
 export * from '@vue/runtime-dom'
 
 if (__BROWSER__ && __DEV__) {
