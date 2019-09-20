@@ -36,15 +36,21 @@ export function advancePositionWithMutation(
 ): Position {
   __DEV__ && assert(numberOfCharacters <= source.length)
 
-  const str = source.slice(0, numberOfCharacters)
-  const lines = str.split(/\r?\n/)
+  let linesCount = 0
+  let lastNewLinePos = -1
+  for (let i = 0; i < numberOfCharacters; i++) {
+    if (source.charCodeAt(i) === 10 /* newline char code */) {
+      linesCount++
+      lastNewLinePos = i
+    }
+  }
 
   pos.offset += numberOfCharacters
-  pos.line += lines.length - 1
+  pos.line += linesCount
   pos.column =
-    lines.length === 1
+    lastNewLinePos === -1
       ? pos.column + numberOfCharacters
-      : Math.max(1, lines.pop()!.length)
+      : Math.max(1, numberOfCharacters - lastNewLinePos - 1)
 
   return pos
 }
