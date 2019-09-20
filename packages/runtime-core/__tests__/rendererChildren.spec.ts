@@ -37,30 +37,30 @@ it('should patch previously null children', () => {
 
 describe('renderer: keyed children', () => {
   const root = nodeOps.createElement('div')
+  const renderKeyedChildren = (arr: number[]) => {
+    render(h('div', arr.map(toSpan)), root)
+    return root.children[0] as TestElement
+  }
 
   beforeEach(() => {
     render(h('div', { id: 1 }, 'hello'), root)
   })
 
   test('append', () => {
-    render(h('div', { id: 1 }, [1].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1])
     expect(elm.children.length).toBe(1)
 
-    render(h('div', { id: 1 }, [1, 2, 3].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3])
     expect(elm.children.length).toBe(3)
     expect(serialize(elm.children[1])).toBe('<span>2</span>')
     expect(serialize(elm.children[2])).toBe('<span>3</span>')
   })
 
   test('prepend', () => {
-    render(h('div', [4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([4, 5])
     expect(elm.children.length).toBe(2)
 
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3', '4', '5']
@@ -68,12 +68,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('insert in middle', () => {
-    render(h('div', [1, 2, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 4, 5])
     expect(elm.children.length).toBe(4)
 
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3', '4', '5']
@@ -81,12 +79,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('insert at beginning and end', () => {
-    render(h('div', [2, 3, 4].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([2, 3, 4])
     expect(elm.children.length).toBe(3)
 
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3', '4', '5']
@@ -94,12 +90,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('insert to empty parent', () => {
-    render(h('div'), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([])
     expect(elm.children.length).toBe(0)
 
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3', '4', '5']
@@ -107,25 +101,21 @@ describe('renderer: keyed children', () => {
   })
 
   test('remove all children from parent', () => {
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3', '4', '5']
     )
 
     render(h('div'), root)
-    elm = root.children[0] as TestElement
     expect(elm.children.length).toBe(0)
   })
 
   test('remove from beginning', () => {
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
 
-    render(h('div', [3, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([3, 4, 5])
     expect(elm.children.length).toBe(3)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['3', '4', '5']
@@ -133,12 +123,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('remove from end', () => {
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
 
-    render(h('div', [1, 2, 3].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 3])
     expect(elm.children.length).toBe(3)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '3']
@@ -146,12 +134,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('remove from middle', () => {
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
 
-    render(h('div', [1, 2, 4, 5].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 2, 4, 5])
     expect(elm.children.length).toBe(4)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '2', '4', '5']
@@ -159,12 +145,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('moving single child forward', () => {
-    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4])
     expect(elm.children.length).toBe(4)
 
-    render(h('div', [2, 3, 1, 4].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([2, 3, 1, 4])
     expect(elm.children.length).toBe(4)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['2', '3', '1', '4']
@@ -172,12 +156,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('moving single child backwards', () => {
-    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4])
     expect(elm.children.length).toBe(4)
 
-    render(h('div', [1, 4, 2, 3].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([1, 4, 2, 3])
     expect(elm.children.length).toBe(4)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['1', '4', '2', '3']
@@ -185,12 +167,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('moving single child to end', () => {
-    render(h('div', [1, 2, 3].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3])
     expect(elm.children.length).toBe(3)
 
-    render(h('div', [2, 3, 1].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([2, 3, 1])
     expect(elm.children.length).toBe(3)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['2', '3', '1']
@@ -198,12 +178,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('swap first and last', () => {
-    render(h('div', [1, 2, 3, 4].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4])
     expect(elm.children.length).toBe(4)
 
-    render(h('div', [4, 2, 3, 1].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([4, 2, 3, 1])
     expect(elm.children.length).toBe(4)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['4', '2', '3', '1']
@@ -211,12 +189,10 @@ describe('renderer: keyed children', () => {
   })
 
   test('move to left & replace', () => {
-    render(h('div', [1, 2, 3, 4, 5].map(toSpan)), root)
-    let elm = root.children[0] as TestElement
+    let elm = renderKeyedChildren([1, 2, 3, 4, 5])
     expect(elm.children.length).toBe(5)
 
-    render(h('div', [4, 1, 2, 3, 6].map(toSpan)), root)
-    elm = root.children[0] as TestElement
+    elm = renderKeyedChildren([4, 1, 2, 3, 6])
     expect(elm.children.length).toBe(5)
     expect((elm.children as TestElement[]).map(c => serializeInner(c))).toEqual(
       ['4', '1', '2', '3', '6']
