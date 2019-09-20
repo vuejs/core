@@ -3,6 +3,7 @@ const path = require('path')
 const ts = require('rollup-plugin-typescript2')
 const replace = require('rollup-plugin-replace')
 const alias = require('rollup-plugin-alias')
+const json = require('rollup-plugin-json')
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -110,6 +111,9 @@ function createConfig(output, plugins = []) {
     // used alone.
     external: isGlobalBuild || isBrowserESMBuild ? [] : externals,
     plugins: [
+      json({
+        namedExports: false
+      }),
       tsPlugin,
       aliasPlugin,
       createReplacePlugin(
