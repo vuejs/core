@@ -1,11 +1,12 @@
 import { createDirectiveTransform } from '../transform'
-import { NodeTypes, ExpressionNode, Node } from '../ast'
+import { NodeTypes, ExpressionNode } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
 
 const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
+
 export const transformFor = createDirectiveTransform(
   'for',
   (node, dir, context) => {
@@ -114,7 +115,7 @@ function parseAliasExpressions(source: string): AliasExpressions | null {
 
 function maybeCreateExpression(
   alias: AliasExpression | undefined,
-  node: Node
+  node: ExpressionNode
 ): ExpressionNode | undefined {
   if (alias) {
     return {

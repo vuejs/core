@@ -1,14 +1,14 @@
 import { Position } from '../src/ast'
-import { getInnerRange, advancePositionBy } from '../src/utils'
+import { getInnerRange, advancePositionWithClone } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
   return { column, line, offset }
 }
 
-describe('advancePositionBy', () => {
+describe('advancePositionWithClone', () => {
   test('same line', () => {
     const pos = p(1, 1, 0)
-    const newPos = advancePositionBy(pos, 'foo\nbar', 2)
+    const newPos = advancePositionWithClone(pos, 'foo\nbar', 2)
 
     expect(newPos.column).toBe(3)
     expect(newPos.line).toBe(1)
@@ -17,7 +17,7 @@ describe('advancePositionBy', () => {
 
   test('same line', () => {
     const pos = p(1, 1, 0)
-    const newPos = advancePositionBy(pos, 'foo\nbar', 4)
+    const newPos = advancePositionWithClone(pos, 'foo\nbar', 4)
 
     expect(newPos.column).toBe(1)
     expect(newPos.line).toBe(2)
@@ -26,7 +26,7 @@ describe('advancePositionBy', () => {
 
   test('multiple lines', () => {
     const pos = p(1, 1, 0)
-    const newPos = advancePositionBy(pos, 'foo\nbar\nbaz', 10)
+    const newPos = advancePositionWithClone(pos, 'foo\nbar\nbaz', 10)
 
     expect(newPos.column).toBe(2)
     expect(newPos.line).toBe(3)

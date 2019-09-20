@@ -1,5 +1,9 @@
 import { ErrorCodes, CompilerError, createCompilerError } from './errors'
-import { assert, advancePositionWithMutation } from './utils'
+import {
+  assert,
+  advancePositionWithMutation,
+  advancePositionWithClone
+} from './utils'
 import {
   Namespace,
   Namespaces,
@@ -799,6 +803,7 @@ function startsWith(source: string, searchString: string): boolean {
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   const { source } = context
+  __DEV__ && assert(numberOfCharacters <= source.length)
   advancePositionWithMutation(context, source, numberOfCharacters)
   context.source = source.slice(numberOfCharacters)
 }
@@ -815,24 +820,11 @@ function getNewPosition(
   start: Position,
   numberOfCharacters: number
 ): Position {
-  const { originalSource } = context
-  const str = originalSource.slice(start.offset, numberOfCharacters)
-  const lines = str.split(/\r?\n/)
-
-  const newPosition = {
-    column: start.column,
-    line: start.line,
-    offset: start.offset
-  }
-
-  newPosition.offset += numberOfCharacters
-  newPosition.line += lines.length - 1
-  newPosition.column =
-    lines.length === 1
-      ? start.column + numberOfCharacters
-      : Math.max(1, lines.pop()!.length)
-
-  return newPosition
+  return advancePositionWithClone(
+    start,
+    context.originalSource.slice(start.offset, numberOfCharacters),
+    numberOfCharacters
+  )
 }
 
 function emitError(

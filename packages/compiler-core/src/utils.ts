@@ -5,21 +5,27 @@ export function getInnerRange(
   offset: number,
   length?: number
 ): SourceLocation {
+  __DEV__ && assert(offset <= loc.source.length)
   const source = loc.source.substr(offset, length)
   const newLoc: SourceLocation = {
     source,
-    start: advancePositionBy(loc.start, loc.source, offset),
+    start: advancePositionWithClone(loc.start, loc.source, offset),
     end: loc.end
   }
 
   if (length != null) {
-    newLoc.end = advancePositionBy(loc.start, loc.source, offset + length)
+    __DEV__ && assert(offset + length <= loc.source.length)
+    newLoc.end = advancePositionWithClone(
+      loc.start,
+      loc.source,
+      offset + length
+    )
   }
 
   return newLoc
 }
 
-export function advancePositionBy(
+export function advancePositionWithClone(
   pos: Position,
   source: string,
   numberOfCharacters: number
@@ -34,8 +40,6 @@ export function advancePositionWithMutation(
   source: string,
   numberOfCharacters: number
 ): Position {
-  __DEV__ && assert(numberOfCharacters <= source.length)
-
   let linesCount = 0
   let lastNewLinePos = -1
   for (let i = 0; i < numberOfCharacters; i++) {

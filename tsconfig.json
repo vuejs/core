@@ -16,6 +16,7 @@
     "removeComments": false,
     "jsx": "react",
     "lib": ["esnext", "dom"],
+    "types": ["jest", "node"],
     "rootDir": ".",
     "paths": {
       "@vue/shared": ["packages/shared/src"],

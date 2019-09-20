@@ -109,7 +109,7 @@ export interface ForNode extends Node {
 }
 
 export interface Position {
-  offset: number // from start of file (in SFCs)
+  offset: number // from start of file
   line: number
   column: number
 }

@@ -1,6 +1,5 @@
 export { parse, ParserOptions, TextModes } from './parse'
-export { transform, Transform, TransformContext } from './transform'
+export { transform, TransformOptions, Transform } from './transform'
+export { generate, CodegenOptions, CodegenResult } from './codegen'
 export { ErrorCodes } from './errors'
 export * from './ast'
-
-export { transformIf } from './directives/vIf'

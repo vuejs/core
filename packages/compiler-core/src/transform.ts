@@ -22,7 +22,7 @@ export interface TransformOptions {
   onError?: (error: CompilerError) => void
 }
 
-export interface TransformContext extends Required<TransformOptions> {
+interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
