@@ -155,7 +155,9 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   })
   // remove the node first, but don't log it as a REMOVE op
   remove(child, false)
-  if (refIndex === undefined) {
+  // re-calculate the ref index because the child's removal may have affected it
+  refIndex = ref ? parent.children.indexOf(ref) : -1
+  if (refIndex === -1) {
     parent.children.push(child)
     child.parentNode = parent
   } else {
