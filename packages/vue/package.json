@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
   "dependencies": {
+    "@vue/compiler-dom": "3.0.0-alpha.1",
     "@vue/runtime-dom": "3.0.0-alpha.1"
   }
 }

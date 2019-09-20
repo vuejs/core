@@ -19,7 +19,7 @@ export {
   createBlock
 } from './vnode'
 // VNode type symbols
-export { Text, Empty, Fragment, Portal } from './vnode'
+export { Text, Empty, Fragment, Portal, Suspense } from './vnode'
 // VNode flags
 export { PublicPatchFlags as PatchFlags } from './patchFlags'
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
@@ -35,9 +35,12 @@ export {
   callWithAsyncErrorHandling
 } from './errorHandling'
 
-// For compiler generated code
+// Internal, for compiler generated code
 export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './componentOptions'
+
+// Internal, for integration with runtime compiler
+export { registerCompiler } from './component'
 
 // Types -----------------------------------------------------------------------
 
@@ -65,3 +68,4 @@ export {
   DirectiveHook,
   DirectiveArguments
 } from './directives'
+export { SuspenseBoundary } from './suspense'

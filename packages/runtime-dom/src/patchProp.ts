@@ -4,7 +4,11 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn } from '@vue/shared'
-import { VNode, ComponentInternalInstance } from '@vue/runtime-core'
+import {
+  VNode,
+  ComponentInternalInstance,
+  SuspenseBoundary
+} from '@vue/runtime-core'
 
 export function patchProp(
   el: Element,
@@ -14,6 +18,7 @@ export function patchProp(
   isSVG: boolean,
   prevChildren?: VNode[],
   parentComponent?: ComponentInternalInstance,
+  parentSuspense?: SuspenseBoundary<Node, Element>,
   unmountChildren?: any
 ) {
   switch (key) {
@@ -40,6 +45,7 @@ export function patchProp(
           nextValue,
           prevChildren,
           parentComponent,
+          parentSuspense,
           unmountChildren
         )
       } else {

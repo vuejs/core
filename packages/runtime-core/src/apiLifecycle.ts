@@ -17,6 +17,9 @@ function injectHook(
 ) {
   if (target) {
     ;(target[type] || (target[type] = [])).push((...args: any[]) => {
+      if (target.isUnmounted) {
+        return
+      }
       // disable tracking inside all lifecycle hooks
       // since they can potentially be called inside effects.
       pauseTracking()
@@ -36,7 +39,11 @@ function injectHook(
     warn(
       `${apiName} is called when there is no active component instance to be ` +
         `associated with. ` +
-        `Lifecycle injection APIs can only be used during execution of setup().`
+        `Lifecycle injection APIs can only be used during execution of setup().` +
+        (__FEATURE_SUSPENSE__
+          ? ` If you are using async setup(), make sure to register lifecycle ` +
+            `hooks before the first await statement.`
+          : ``)
     )
   }
 }

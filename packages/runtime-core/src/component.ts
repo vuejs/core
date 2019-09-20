@@ -1,4 +1,4 @@
-import { VNode, VNodeChild } from './vnode'
+import { VNode, VNodeChild, isVNode } from './vnode'
 import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
@@ -23,6 +23,7 @@ import {
   isArray,
   isObject
 } from '@vue/shared'
+import { SuspenseBoundary } from './suspense'
 
 export type Data = { [key: string]: unknown }
 
@@ -78,6 +79,10 @@ export interface ComponentInternalInstance {
   components: Record<string, Component>
   directives: Record<string, Directive>
 
+  asyncDep: Promise<any> | null
+  asyncResult: any
+  asyncResolved: boolean
+
   // the rest are only for stateful components
   renderContext: Data
   data: Data
@@ -94,6 +99,7 @@ export interface ComponentInternalInstance {
   user: { [key: string]: any }
 
   // lifecycle
+  isUnmounted: boolean
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
   [LifecycleHooks.CREATED]: LifecycleHook
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
@@ -146,11 +152,17 @@ export function createComponentInstance(
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
 
+    // async dependency management
+    asyncDep: null,
+    asyncResult: null,
+    asyncResolved: false,
+
     // user namespace for storing whatever the user assigns to `this`
     user: {},
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    isUnmounted: false,
     bc: null,
     c: null,
     bm: null,
@@ -195,6 +207,7 @@ export function createComponentInstance(
 }
 
 export let currentInstance: ComponentInternalInstance | null = null
+export let currentSuspense: SuspenseBoundary | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance
@@ -205,8 +218,10 @@ export const setCurrentInstance = (
   currentInstance = instance
 }
 
-export function setupStatefulComponent(instance: ComponentInternalInstance) {
-  currentInstance = instance
+export function setupStatefulComponent(
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null
+) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
@@ -219,62 +234,113 @@ export function setupStatefulComponent(instance: ComponentInternalInstance) {
   if (setup) {
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
+
+    currentInstance = instance
+    currentSuspense = parentSuspense
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
+    currentInstance = null
+    currentSuspense = null
 
-    if (isFunction(setupResult)) {
-      // setup returned an inline render function
-      instance.render = setupResult
-    } else {
-      if (__DEV__) {
-        if (!Component.render) {
-          warn(
-            `Component is missing render function. Either provide a template or ` +
-              `return a render function from setup().`
-          )
-        }
-        if (
-          setupResult &&
-          typeof setupResult.then === 'function' &&
-          typeof setupResult.catch === 'function'
-        ) {
-          warn(`setup() returned a Promise. setup() cannot be async.`)
-        }
-      }
-      // setup returned bindings.
-      // assuming a render function compiled from template is present.
-      if (isObject(setupResult)) {
-        instance.renderContext = reactive(setupResult)
-      } else if (__DEV__ && setupResult !== undefined) {
+    if (
+      setupResult &&
+      isFunction(setupResult.then) &&
+      isFunction(setupResult.catch)
+    ) {
+      if (__FEATURE_SUSPENSE__) {
+        // async setup returned Promise.
+        // bail here and wait for re-entry.
+        instance.asyncDep = setupResult as Promise<any>
+      } else if (__DEV__) {
         warn(
-          `setup() should return an object. Received: ${
-            setupResult === null ? 'null' : typeof setupResult
-          }`
+          `setup() returned a Promise, but the version of Vue you are using ` +
+            `does not support it yet.`
         )
       }
-      instance.render = (Component.render || NOOP) as RenderFunction
+      return
+    } else {
+      handleSetupResult(instance, setupResult, parentSuspense)
     }
   } else {
+    finishComponentSetup(instance, parentSuspense)
+  }
+}
+
+export function handleSetupResult(
+  instance: ComponentInternalInstance,
+  setupResult: unknown,
+  parentSuspense: SuspenseBoundary | null
+) {
+  if (isFunction(setupResult)) {
+    // setup returned an inline render function
+    instance.render = setupResult as RenderFunction
+  } else if (isObject(setupResult)) {
+    if (__DEV__ && isVNode(setupResult)) {
+      warn(
+        `setup() should not return VNodes directly - ` +
+          `return a render function instead.`
+      )
+    }
+    // setup returned bindings.
+    // assuming a render function compiled from template is present.
+    instance.renderContext = reactive(setupResult)
+  } else if (__DEV__ && setupResult !== undefined) {
+    warn(
+      `setup() should return an object. Received: ${
+        setupResult === null ? 'null' : typeof setupResult
+      }`
+    )
+  }
+  finishComponentSetup(instance, parentSuspense)
+}
+
+let compile: Function | undefined
+export function registerCompiler(_compile: Function) {
+  compile = _compile
+}
+
+function finishComponentSetup(
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null
+) {
+  const Component = instance.type as ComponentOptions
+  if (!instance.render) {
+    if (Component.template && !Component.render) {
+      if (compile) {
+        Component.render = compile(Component.template)
+      } else if (__DEV__) {
+        warn(
+          `Component provides template but the build of Vue you are running ` +
+            `does not support on-the-fly template compilation. Either use the ` +
+            `full build or pre-compile the template using Vue CLI.`
+        )
+      }
+    }
     if (__DEV__ && !Component.render) {
       warn(
         `Component is missing render function. Either provide a template or ` +
           `return a render function from setup().`
       )
     }
-    instance.render = Component.render as RenderFunction
+    instance.render = (Component.render || NOOP) as RenderFunction
   }
+
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
+    currentInstance = instance
+    currentSuspense = parentSuspense
     applyOptions(instance, Component)
+    currentInstance = null
+    currentSuspense = null
   }
+
   if (instance.renderContext === EMPTY_OBJ) {
     instance.renderContext = reactive({})
   }
-  currentInstance = null
 }
 
 // used to identify a setup context proxy

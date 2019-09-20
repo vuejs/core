@@ -3,6 +3,7 @@ const path = require('path')
 const ts = require('rollup-plugin-typescript2')
 const replace = require('rollup-plugin-replace')
 const alias = require('rollup-plugin-alias')
+const json = require('rollup-plugin-json')
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -52,9 +53,9 @@ const configs = {
 const defaultFormats = ['esm', 'cjs']
 const inlineFromats = process.env.FORMATS && process.env.FORMATS.split(',')
 const packageFormats = inlineFromats || packageOptions.formats || defaultFormats
-const packageConfigs = packageFormats.map(format =>
-  createConfig(configs[format])
-)
+const packageConfigs = process.env.PROD_ONLY
+  ? []
+  : packageFormats.map(format => createConfig(configs[format]))
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
@@ -93,7 +94,8 @@ function createConfig(output, plugins = []) {
       compilerOptions: {
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
-      }
+      },
+      exclude: ['**/__tests__']
     }
   })
   // we only need to check TS and generate declarations once for each build.
@@ -109,6 +111,9 @@ function createConfig(output, plugins = []) {
     // used alone.
     external: isGlobalBuild || isBrowserESMBuild ? [] : externals,
     plugins: [
+      json({
+        namedExports: false
+      }),
       tsPlugin,
       aliasPlugin,
       createReplacePlugin(
@@ -134,12 +139,12 @@ function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
         `process.env.NODE_ENV !== 'production'`
       : // hard coded dev/prod builds
         !isProduction,
-    // show production tip?
-    // should only do this for dev AND browser-targeting builds.
-    __FEATURE_PRODUCTION_TIP__: !isProduction && isBrowserBuild,
+    // If the build is expected to run directly in the browser (global / esm-browser builds)
+    __BROWSER__: isBrowserBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean,
+    __FEATURE_SUSPENSE__: true,
     // this is only used during tests
     __JSDOM__: false
   })
