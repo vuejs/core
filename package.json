@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "size": "node scripts/build.js runtime-dom -f esm-browser",
+    "size": "node scripts/build.js runtime-dom -p -f esm-browser && node scripts/build.js compiler-dom -p -f esm-browser",
     "lint": "prettier --write --parser typescript 'packages/**/*.ts'",
     "test": "jest"
   },

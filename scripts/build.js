@@ -55,7 +55,8 @@ async function build(target) {
       `NODE_ENV:production,` +
         `TARGET:${target}` +
         (formats ? `,FORMATS:${formats}` : ``) +
-        (args.types ? `,TYPES:true` : ``)
+        (args.types ? `,TYPES:true` : ``) +
+        (args.p ? `,PROD_ONLY:true` : ``)
     ],
     { stdio: 'inherit' }
   )
