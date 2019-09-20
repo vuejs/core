@@ -409,9 +409,12 @@ describe('renderer: keyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0] as TestElement).toMatchObject({
       props: {
-        class: ''
+        // in the DOM renderer this will be ''
+        // but the test renderer simply sets whatever value it receives.
+        class: null
       }
     })
+    expect(serialize(elm.children[0])).toBe(`<div>four</div>`)
   })
 
   test('should warn with duplicate keys', () => {
