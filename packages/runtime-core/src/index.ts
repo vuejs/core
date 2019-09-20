@@ -40,7 +40,7 @@ export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './componentOptions'
 
 // Internal, for integration with runtime compiler
-export { registerCompiler } from './component'
+export { registerRuntimeCompiler } from './component'
 
 // Types -----------------------------------------------------------------------
 
@@ -50,7 +50,8 @@ export { VNode, VNodeTypes } from './vnode'
 export {
   Component,
   FunctionalComponent,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  RenderFunction
 } from './component'
 export {
   ComponentOptions,
@@ -58,6 +59,7 @@ export {
   ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
 } from './componentOptions'
+
 export { ComponentPublicInstance } from './componentPublicInstanceProxy'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'

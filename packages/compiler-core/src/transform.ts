@@ -7,7 +7,7 @@ import {
   DirectiveNode
 } from './ast'
 import { isString } from '@vue/shared'
-import { CompilerError } from './errors'
+import { CompilerError, defaultOnError } from './errors'
 
 export type Transform = (node: ChildNode, context: TransformContext) => void
 
@@ -18,11 +18,13 @@ export type DirectiveTransform = (
 ) => false | void
 
 export interface TransformOptions {
-  transforms: Transform[]
+  transforms?: Transform[]
   onError?: (error: CompilerError) => void
 }
 
-interface TransformContext extends Required<TransformOptions> {
+interface TransformContext {
+  transforms: Transform[]
+  emitError: (error: CompilerError) => void
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
@@ -42,10 +44,8 @@ function createTransformContext(
   options: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
-    onError(error: CompilerError) {
-      throw error
-    },
-    ...options,
+    transforms: options.transforms || [],
+    emitError: options.onError || defaultOnError,
     parent: root,
     ancestors: [],
     childIndex: 0,
@@ -109,7 +109,7 @@ function traverseNode(
   ancestors: ParentNode[]
 ) {
   // apply transform plugins
-  const transforms = context.transforms
+  const { transforms } = context
   for (let i = 0; i < transforms.length; i++) {
     const plugin = transforms[i]
     plugin(node, context)

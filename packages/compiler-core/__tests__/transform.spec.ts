@@ -164,7 +164,7 @@ describe('compiler: transform', () => {
     const ast = parse(`<div/>`)
     const loc = ast.children[0].loc.start
     const plugin: Transform = (node, context) => {
-      context.onError(
+      context.emitError(
         createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc.start)
       )
     }

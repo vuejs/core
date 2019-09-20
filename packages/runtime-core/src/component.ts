@@ -24,6 +24,7 @@ import {
   isObject
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
+import { CompilerOptions } from '@vue/compiler-dom'
 
 export type Data = { [key: string]: unknown }
 
@@ -61,7 +62,7 @@ export interface SetupContext {
   emit: Emit
 }
 
-type RenderFunction = () => VNodeChild
+export type RenderFunction = () => VNodeChild
 
 export interface ComponentInternalInstance {
   type: FunctionalComponent | ComponentOptions
@@ -298,8 +299,14 @@ export function handleSetupResult(
   finishComponentSetup(instance, parentSuspense)
 }
 
-let compile: Function | undefined
-export function registerCompiler(_compile: Function) {
+type CompileFunction = (
+  template: string,
+  options?: CompilerOptions
+) => RenderFunction
+
+let compile: CompileFunction | undefined
+
+export function registerRuntimeCompiler(_compile: CompileFunction) {
   compile = _compile
 }
 
@@ -311,7 +318,9 @@ function finishComponentSetup(
   if (!instance.render) {
     if (Component.template && !Component.render) {
       if (compile) {
-        Component.render = compile(Component.template)
+        Component.render = compile(Component.template, {
+          onError(err) {}
+        })
       } else if (__DEV__) {
         warn(
           `Component provides template but the build of Vue you are running ` +

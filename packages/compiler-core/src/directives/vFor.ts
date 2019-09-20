@@ -27,7 +27,7 @@ export const transformFor = createDirectiveTransform(
           children: [node]
         })
       } else {
-        context.onError(
+        context.emitError(
           createCompilerError(
             ErrorCodes.X_FOR_MALFORMED_EXPRESSION,
             dir.loc.start
@@ -35,7 +35,7 @@ export const transformFor = createDirectiveTransform(
         )
       }
     } else {
-      context.onError(
+      context.emitError(
         createCompilerError(ErrorCodes.X_FOR_NO_EXPRESSION, dir.loc.start)
       )
     }

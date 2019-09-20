@@ -38,7 +38,7 @@ export const transformIf = createDirectiveTransform(
           }
           sibling.branches.push(branch)
         } else {
-          context.onError(
+          context.emitError(
             createCompilerError(
               dir.name === 'else'
                 ? ErrorCodes.X_ELSE_NO_ADJACENT_IF

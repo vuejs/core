@@ -1,15 +1,19 @@
 // This package is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
-import { compile as baseCompile, CompilerOptions } from '@vue/compiler-dom'
-import { registerCompiler } from '@vue/runtime-dom'
+import { compile, CompilerOptions } from '@vue/compiler-dom'
+import { registerRuntimeCompiler, RenderFunction } from '@vue/runtime-dom'
 
-export function compile(template: string, options?: CompilerOptions): Function {
-  const { code } = baseCompile(template, options)
-  return new Function(`with(this){return ${code}}`)
+function compileToFunction(
+  template: string,
+  options?: CompilerOptions
+): RenderFunction {
+  const { code } = compile(template, options)
+  return new Function(`with(this){return ${code}}`) as RenderFunction
 }
 
-registerCompiler(compile)
+registerRuntimeCompiler(compileToFunction)
 
+export { compileToFunction as compile }
 export * from '@vue/runtime-dom'
 
 if (__BROWSER__ && __DEV__) {

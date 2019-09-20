@@ -66,12 +66,11 @@ export function generate(
 
 function createCodegenContext(
   ast: RootNode,
-  options: CodegenOptions
+  { module = false, filename = `template.vue.html` }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
-    module: false,
-    filename: `template.vue.html`,
-    ...options,
+    module,
+    filename,
     source: ast.loc.source,
     code: ``,
     column: 1,

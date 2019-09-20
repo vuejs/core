@@ -5,6 +5,10 @@ export interface CompilerError extends SyntaxError {
   loc: Position
 }
 
+export function defaultOnError(error: CompilerError) {
+  throw error
+}
+
 export function createCompilerError(
   code: ErrorCodes,
   loc: Position

@@ -1,4 +1,9 @@
-import { ErrorCodes, CompilerError, createCompilerError } from './errors'
+import {
+  ErrorCodes,
+  CompilerError,
+  createCompilerError,
+  defaultOnError
+} from './errors'
 import {
   assert,
   advancePositionWithMutation,
@@ -48,9 +53,7 @@ export const defaultParserOptions: Required<ParserOptions> = {
     'apos;': "'",
     'quot;': '"'
   },
-  onError(error: CompilerError): void {
-    throw error
-  }
+  onError: defaultOnError
 }
 
 export const enum TextModes {
@@ -62,7 +65,8 @@ export const enum TextModes {
   ATTRIBUTE_VALUE
 }
 
-interface ParserContext extends Required<ParserOptions> {
+interface ParserContext {
+  options: Required<ParserOptions>
   readonly originalSource: string
   source: string
   offset: number
@@ -87,8 +91,10 @@ function createParserContext(
   options: ParserOptions
 ): ParserContext {
   return {
-    ...defaultParserOptions,
-    ...options,
+    options: {
+      ...defaultParserOptions,
+      ...options
+    },
     column: 1,
     line: 1,
     offset: 0,
@@ -115,7 +121,7 @@ function parseChildren(
     const s = context.source
     let node: any = null
 
-    if (startsWith(s, context.delimiters[0])) {
+    if (startsWith(s, context.options.delimiters[0])) {
       // '{{'
       node = parseInterpolation(context, mode)
     } else if (mode === TextModes.DATA && s[0] === '<') {
@@ -194,7 +200,11 @@ function pushNode(
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
     return
   }
-  if (context.ignoreSpaces && node.type === NodeTypes.TEXT && node.isEmpty) {
+  if (
+    context.options.ignoreSpaces &&
+    node.type === NodeTypes.TEXT &&
+    node.isEmpty
+  ) {
     return
   }
 
@@ -311,13 +321,13 @@ function parseElement(
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
 
-  if (element.isSelfClosing || context.isVoidTag(element.tag)) {
+  if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
   }
 
   // Children.
   ancestors.push(element)
-  const mode = (context.getTextMode(
+  const mode = (context.options.getTextMode(
     element.tag,
     element.ns
   ) as unknown) as TextModes
@@ -368,7 +378,7 @@ function parseTag(
   const tag = match[1]
   const attrs = []
   const directives = []
-  const ns = context.getNamespace(tag, parent)
+  const ns = context.options.getNamespace(tag, parent)
 
   advanceBy(context, match[0].length)
   advanceSpaces(context)
@@ -601,7 +611,7 @@ function parseInterpolation(
   context: ParserContext,
   mode: TextModes
 ): ExpressionNode | undefined {
-  const [open, close] = context.delimiters
+  const [open, close] = context.options.delimiters
   __DEV__ && assert(startsWith(context.source, open))
 
   const closeIndex = context.source.indexOf(close, open.length)
@@ -626,7 +636,7 @@ function parseInterpolation(
 function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
-  const [open] = context.delimiters
+  const [open] = context.options.delimiters
   const endIndex = Math.min(
     ...[
       context.source.indexOf('<', 1),
@@ -691,7 +701,7 @@ function parseTextData(
           --length
         ) {
           name = context.source.substr(1, length)
-          value = context.namedCharacterReferences[name]
+          value = context.options.namedCharacterReferences[name]
         }
         if (value) {
           const semi = name.endsWith(';')
@@ -837,7 +847,7 @@ function emitError(
     loc.offset += offset
     loc.column += offset
   }
-  context.onError(createCompilerError(code, loc))
+  context.options.onError(createCompilerError(code, loc))
 }
 
 function isEnd(
