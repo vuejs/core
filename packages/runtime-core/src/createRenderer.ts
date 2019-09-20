@@ -1512,7 +1512,10 @@ export function createRenderer<
         } else {
           // key-less node, try to locate a key-less node of the same type
           for (j = s2; j <= e2; j++) {
-            if (isSameType(prevChild, c2[j] as HostVNode)) {
+            if (
+              newIndexToOldIndexMap[j - s2] === 0 &&
+              isSameType(prevChild, c2[j] as HostVNode)
+            ) {
               newIndex = j
               break
             }
