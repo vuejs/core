@@ -14,7 +14,7 @@ export function patchProp(
     propPrevValue: prevValue,
     propNextValue: nextValue
   })
-  el.props[key] = nextValue
+  el.props[key] = nextValue == null ? '' : nextValue
   if (isOn(key)) {
     const event = key.slice(2).toLowerCase()
     ;(el.eventListeners || (el.eventListeners = {}))[event] = nextValue

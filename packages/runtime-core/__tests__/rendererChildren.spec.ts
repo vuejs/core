@@ -6,8 +6,11 @@ import {
   NodeTypes,
   TestElement,
   serialize,
-  serializeInner
+  serializeInner,
+  mockWarn
 } from '@vue/runtime-test'
+
+mockWarn()
 
 function toSpan(content: any) {
   if (typeof content === 'string') {
@@ -406,42 +409,15 @@ describe('renderer: keyed children', () => {
     elm = root.children[0] as TestElement
     expect(elm.children[0] as TestElement).toMatchObject({
       props: {
-        // className is not of nullable DOMString type,
-        // which means null value will be converted to "null",
-        // so here it has to be an empty string.
-        // FIXME:
-        // this behavior is not consistent with Vue 2
-        // maybe we should fix it in runtime-dom and then use
-        // toBeFalsy to test the prop here
         class: ''
       }
     })
   })
 
-  test('should warn with duplicate keys: create', () => {
-    const spy = jest.spyOn(console, 'warn')
-    renderChildren([1, 2, 3, 1, 2])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
-  })
-
-  test('should warn with duplicate keys: update', () => {
-    const spy = jest.spyOn(console, 'warn')
+  test('should warn with duplicate keys', () => {
     renderChildren([1, 2, 3, 4, 5])
-    renderChildren([1, 2, 3, 3, 5])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
-  })
-
-  test('should warn with duplicate keys: patch with empty old vnode', () => {
-    const spy = jest.spyOn(console, 'warn')
-    renderChildren([])
-    renderChildren([1, 2, 3, 4, 4])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
+    renderChildren([1, 6, 6, 3, 5])
+    expect(`Duplicate keys`).toHaveBeenWarned()
   })
 })
 
