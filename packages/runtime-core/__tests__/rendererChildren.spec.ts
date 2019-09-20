@@ -417,6 +417,32 @@ describe('renderer: keyed children', () => {
       }
     })
   })
+
+  test('should warn with duplicate keys: create', () => {
+    const spy = jest.spyOn(console, 'warn')
+    renderChildren([1, 2, 3, 1, 2])
+    expect(spy).toHaveBeenCalled()
+    // TODO:
+    // expect(spy).toHaveBeenCalledWith('')
+  })
+
+  test('should warn with duplicate keys: update', () => {
+    const spy = jest.spyOn(console, 'warn')
+    renderChildren([1, 2, 3, 4, 5])
+    renderChildren([1, 2, 3, 3, 5])
+    expect(spy).toHaveBeenCalled()
+    // TODO:
+    // expect(spy).toHaveBeenCalledWith('')
+  })
+
+  test('should warn with duplicate keys: patch with empty old vnode', () => {
+    const spy = jest.spyOn(console, 'warn')
+    renderChildren([])
+    renderChildren([1, 2, 3, 4, 4])
+    expect(spy).toHaveBeenCalled()
+    // TODO:
+    // expect(spy).toHaveBeenCalledWith('')
+  })
 })
 
 describe('renderer: unkeyed children', () => {
@@ -614,31 +640,5 @@ describe('renderer: unkeyed children', () => {
     const postPatch = elm.children[1]
 
     expect(postPatch).toBe(original)
-  })
-
-  test('should warn with duplicate keys: create', () => {
-    const spy = jest.spyOn(console, 'warn')
-    renderChildren([1, 2, 3, 1, 2])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
-  })
-
-  test('should warn with duplicate keys: update', () => {
-    const spy = jest.spyOn(console, 'warn')
-    renderChildren([1, 2, 3, 4, 5])
-    renderChildren([1, 2, 3, 3, 5])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
-  })
-
-  test('should warn with duplicate keys: patch with empty old vnode', () => {
-    const spy = jest.spyOn(console, 'warn')
-    renderChildren([])
-    renderChildren([1, 2, 3, 4, 4])
-    expect(spy).toHaveBeenCalled()
-    // TODO:
-    // expect(spy).toHaveBeenCalledWith('')
   })
 })
