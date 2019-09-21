@@ -26,14 +26,15 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
-interface CodegenContext extends Required<CodegenOptions> {
+export interface CodegenContext extends Required<CodegenOptions> {
   source: string
   code: string
   line: number
   column: number
   offset: number
   indent: number
-  identifiers: Set<string>
+  imports: Set<string>
+  knownIdentifiers: Set<string>
   map?: SourceMapGenerator
   push(generatedCode: string, astNode?: ChildNode): void
 }
@@ -77,11 +78,14 @@ function createCodegenContext(
     line: 1,
     offset: 0,
     indent: 0,
-    identifiers: new Set(),
+    imports: new Set(),
+    knownIdentifiers: new Set(),
+
     // lazy require source-map implementation, only in non-browser builds!
     map: __BROWSER__
       ? undefined
       : new (require('source-map')).SourceMapGenerator(),
+
     push(generatedCode, node) {
       // TODO handle indent
       context.code += generatedCode
@@ -145,7 +149,7 @@ function genNode(node: ChildNode, context: CodegenContext) {
   }
 }
 
-function genElement(el: ElementNode, context: CodegenContext) {}
+function genElement(node: ElementNode, context: CodegenContext) {}
 
 function genText(node: TextNode | ExpressionNode, context: CodegenContext) {
   context.push(JSON.stringify(node.content), node)

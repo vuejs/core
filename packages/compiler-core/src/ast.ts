@@ -15,9 +15,15 @@ export const enum NodeTypes {
   EXPRESSION,
   ATTRIBUTE,
   DIRECTIVE,
+  // containers
   IF,
   IF_BRANCH,
-  FOR
+  FOR,
+  // codegen
+  CALL_EXPRESSION,
+  OBJECT_EXPRESSION,
+  PROPERTY,
+  ARRAY_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -32,7 +38,22 @@ export interface Node {
   loc: SourceLocation
 }
 
+// The node's range. The `start` is inclusive and `end` is exclusive.
+// [start, end)
+export interface SourceLocation {
+  start: Position
+  end: Position
+  source: string
+}
+
+export interface Position {
+  offset: number // from start of file
+  line: number
+  column: number
+}
+
 export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
+
 export type ChildNode =
   | ElementNode
   | ExpressionNode
@@ -55,6 +76,7 @@ export interface ElementNode extends Node {
   attrs: AttributeNode[]
   directives: DirectiveNode[]
   children: ChildNode[]
+  codegenNode: CallExpression | undefined
 }
 
 export interface TextNode extends Node {
@@ -108,16 +130,34 @@ export interface ForNode extends Node {
   children: ChildNode[]
 }
 
-export interface Position {
-  offset: number // from start of file
-  line: number
-  column: number
+// We also include a subset of JavaScript AST for code generation
+// purposes. The AST is intentioanlly minimal just to meet the exact needs of
+// Vue render function generation.
+type CodegenNode =
+  | string
+  | CallExpression
+  | ObjectExpression
+  | ArrayExpression
+  | ExpressionNode
+
+export interface CallExpression extends Node {
+  type: NodeTypes.CALL_EXPRESSION
+  callee: string // can only be imported runtime helpers, so no source location
+  arguments: Array<CodegenNode | ChildNode[]>
 }
 
-// The node's range. The `start` is inclusive and `end` is exclusive.
-// [start, end)
-export interface SourceLocation {
-  start: Position
-  end: Position
-  source: string
+export interface ObjectExpression extends Node {
+  type: NodeTypes.OBJECT_EXPRESSION
+  properties: Array<Property>
+}
+
+export interface Property extends Node {
+  type: NodeTypes.PROPERTY
+  key: ExpressionNode
+  value: ExpressionNode
+}
+
+export interface ArrayExpression extends Node {
+  type: NodeTypes.ARRAY_EXPRESSION
+  elements: Array<CodegenNode>
 }

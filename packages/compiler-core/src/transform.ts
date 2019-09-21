@@ -22,7 +22,7 @@ export interface TransformOptions {
   onError?: (error: CompilerError) => void
 }
 
-interface TransformContext {
+export interface TransformContext {
   transforms: Transform[]
   emitError: (error: CompilerError) => void
   parent: ParentNode

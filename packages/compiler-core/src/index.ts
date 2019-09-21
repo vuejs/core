@@ -1,14 +1,16 @@
 import { parse, ParserOptions } from './parse'
 import { transform, TransformOptions } from './transform'
 import { generate, CodegenOptions, CodegenResult } from './codegen'
+import { RootNode } from './ast'
+import { isString } from '@vue/shared'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
 export function compile(
-  template: string,
+  template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
-  const ast = parse(template, options)
+  const ast = isString(template) ? parse(template, options) : template
 
   transform(ast, {
     ...options,
@@ -27,9 +29,15 @@ export {
   transform,
   createDirectiveTransform,
   TransformOptions,
+  TransformContext,
   Transform,
   DirectiveTransform
 } from './transform'
-export { generate, CodegenOptions, CodegenResult } from './codegen'
+export {
+  generate,
+  CodegenOptions,
+  CodegenContext,
+  CodegenResult
+} from './codegen'
 export { ErrorCodes, CompilerError, createCompilerError } from './errors'
 export * from './ast'
