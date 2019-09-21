@@ -134,15 +134,15 @@ describe('DOM parser', () => {
         ns: DOMNamespaces.HTML,
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
-        attrs: [],
-        directives: [],
+        props: [],
         isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
           source: '<img>'
-        }
+        },
+        codegenNode: undefined
       })
     })
 

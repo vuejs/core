@@ -211,9 +211,9 @@ describe('compiler: parse', () => {
         }
       )
       const element = ast.children[0] as ElementNode
-      const text1 = (element.attrs[0] as AttributeNode).value
-      const text2 = (element.attrs[1] as AttributeNode).value
-      const text3 = (element.attrs[2] as AttributeNode).value
+      const text1 = (element.props[0] as AttributeNode).value
+      const text2 = (element.props[1] as AttributeNode).value
+      const text3 = (element.props[2] as AttributeNode).value
 
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -426,8 +426,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [],
-        directives: [],
+        codegenNode: undefined,
+        props: [],
         isSelfClosing: false,
         children: [
           {
@@ -458,8 +458,9 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [],
-        directives: [],
+        codegenNode: undefined,
+        props: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -479,8 +480,9 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [],
-        directives: [],
+        codegenNode: undefined,
+        props: [],
+
         isSelfClosing: true,
         children: [],
         loc: {
@@ -502,8 +504,9 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
-        attrs: [],
-        directives: [],
+        codegenNode: undefined,
+        props: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -523,7 +526,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -535,7 +539,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -555,7 +559,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -576,7 +581,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -596,7 +601,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -617,7 +623,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -637,7 +643,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -658,7 +665,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -678,7 +685,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -699,7 +707,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -719,7 +727,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -740,7 +749,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -760,7 +769,8 @@ describe('compiler: parse', () => {
         ns: Namespaces.HTML,
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        attrs: [
+        codegenNode: undefined,
+        props: [
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
@@ -829,7 +839,7 @@ describe('compiler: parse', () => {
             }
           }
         ],
-        directives: [],
+
         isSelfClosing: false,
         children: [],
         loc: {
@@ -842,7 +852,7 @@ describe('compiler: parse', () => {
 
     test('directive with no value', () => {
       const ast = parse('<div v-if/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -860,7 +870,7 @@ describe('compiler: parse', () => {
 
     test('directive with value', () => {
       const ast = parse('<div v-if="a"/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -887,7 +897,7 @@ describe('compiler: parse', () => {
 
     test('directive with argument', () => {
       const ast = parse('<div v-on:click/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -922,7 +932,7 @@ describe('compiler: parse', () => {
 
     test('directive with a modifier', () => {
       const ast = parse('<div v-on.enter/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -940,7 +950,7 @@ describe('compiler: parse', () => {
 
     test('directive with two modifiers', () => {
       const ast = parse('<div v-on.enter.exact/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -958,7 +968,7 @@ describe('compiler: parse', () => {
 
     test('directive with argument and modifiers', () => {
       const ast = parse('<div v-on:click.enter.exact/>')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -993,7 +1003,7 @@ describe('compiler: parse', () => {
 
     test('v-bind shorthand', () => {
       const ast = parse('<div :a=b />')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1037,7 +1047,7 @@ describe('compiler: parse', () => {
 
     test('v-bind shorthand with modifier', () => {
       const ast = parse('<div :a.sync=b />')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1081,7 +1091,7 @@ describe('compiler: parse', () => {
 
     test('v-on shorthand', () => {
       const ast = parse('<div @a=b />')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
@@ -1125,7 +1135,7 @@ describe('compiler: parse', () => {
 
     test('v-on shorthand with modifier', () => {
       const ast = parse('<div @a.enter=b />')
-      const directive = (ast.children[0] as ElementNode).directives[0]
+      const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
