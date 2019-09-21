@@ -65,7 +65,8 @@ export const enum ErrorCodes {
   X_ELSE_IF_NO_ADJACENT_IF,
   X_ELSE_NO_ADJACENT_IF,
   X_FOR_NO_EXPRESSION,
-  X_FOR_MALFORMED_EXPRESSION
+  X_FOR_MALFORMED_EXPRESSION,
+  X_V_BIND_NO_EXPRESSION
 }
 
 export const errorMessages: { [code: number]: string } = {

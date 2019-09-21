@@ -6,6 +6,8 @@ import {
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 
+export * from '@vue/compiler-core'
+
 export function compile(
   template: string,
   options: CompilerOptions = {}
@@ -13,11 +15,9 @@ export function compile(
   return baseCompile(template, {
     ...options,
     ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
-    transforms: [
-      // TODO include DOM-specific transforms
-      ...(options.transforms || []) // extra user transforms
-    ]
+    directiveTransforms: {
+      // TODO include DOM-specific directiveTransforms
+      ...(options.directiveTransforms || {})
+    }
   })
 }
-
-export * from '@vue/compiler-core'

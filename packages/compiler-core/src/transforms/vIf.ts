@@ -1,4 +1,4 @@
-import { createDirectiveTransform } from '../transform'
+import { createStructuralDirectiveTransform } from '../transform'
 import {
   NodeTypes,
   ElementTypes,
@@ -8,7 +8,7 @@ import {
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 
-export const transformIf = createDirectiveTransform(
+export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     if (dir.name === 'if') {
@@ -38,7 +38,7 @@ export const transformIf = createDirectiveTransform(
           }
           sibling.branches.push(branch)
         } else {
-          context.emitError(
+          context.onError(
             createCompilerError(
               dir.name === 'else'
                 ? ErrorCodes.X_ELSE_NO_ADJACENT_IF

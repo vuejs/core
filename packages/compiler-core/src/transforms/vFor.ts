@@ -1,5 +1,5 @@
-import { createDirectiveTransform } from '../transform'
-import { NodeTypes, ExpressionNode } from '../ast'
+import { createStructuralDirectiveTransform } from '../transform'
+import { NodeTypes, ExpressionNode, createExpression } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
 
@@ -7,7 +7,7 @@ const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
-export const transformFor = createDirectiveTransform(
+export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     if (dir.exp) {
@@ -27,7 +27,7 @@ export const transformFor = createDirectiveTransform(
           children: [node]
         })
       } else {
-        context.emitError(
+        context.onError(
           createCompilerError(
             ErrorCodes.X_FOR_MALFORMED_EXPRESSION,
             dir.loc.start
@@ -35,7 +35,7 @@ export const transformFor = createDirectiveTransform(
         )
       }
     } else {
-      context.emitError(
+      context.onError(
         createCompilerError(ErrorCodes.X_FOR_NO_EXPRESSION, dir.loc.start)
       )
     }
@@ -118,11 +118,10 @@ function maybeCreateExpression(
   node: ExpressionNode
 ): ExpressionNode | undefined {
   if (alias) {
-    return {
-      type: NodeTypes.EXPRESSION,
-      loc: getInnerRange(node.loc, alias.offset, alias.content.length),
-      content: alias.content,
-      isStatic: false
-    }
+    return createExpression(
+      alias.content,
+      false,
+      getInnerRange(node.loc, alias.offset, alias.content.length)
+    )
   }
 }

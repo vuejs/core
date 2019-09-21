@@ -1,6 +1,6 @@
 import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
-import { transformFor } from '../../src/directives/vFor'
+import { transformFor } from '../../src/transforms/vFor'
 import { ForNode, NodeTypes } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 
@@ -9,7 +9,7 @@ describe('v-for', () => {
     test('number expression', () => {
       const node = parse('<span v-for="index in 5" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -25,7 +25,7 @@ describe('v-for', () => {
     test('value', () => {
       const node = parse('<span v-for="(item) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -41,7 +41,7 @@ describe('v-for', () => {
     test('object de-structured value', () => {
       const node = parse('<span v-for="({ id, value }) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -57,7 +57,7 @@ describe('v-for', () => {
     test('array de-structured value', () => {
       const node = parse('<span v-for="([ id, value ]) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -73,7 +73,7 @@ describe('v-for', () => {
     test('value and key', () => {
       const node = parse('<span v-for="(item, key) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -89,7 +89,7 @@ describe('v-for', () => {
     test('value, key and index', () => {
       const node = parse('<span v-for="(value, key, index) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -107,7 +107,7 @@ describe('v-for', () => {
     test('skipped key', () => {
       const node = parse('<span v-for="(value,,index) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -124,7 +124,7 @@ describe('v-for', () => {
     test('skipped value and key', () => {
       const node = parse('<span v-for="(,,index) in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -141,7 +141,7 @@ describe('v-for', () => {
     test('unbracketed value', () => {
       const node = parse('<span v-for="item in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -157,7 +157,7 @@ describe('v-for', () => {
     test('unbracketed value and key', () => {
       const node = parse('<span v-for="item, key in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -174,7 +174,7 @@ describe('v-for', () => {
     test('unbracketed value, key and index', () => {
       const node = parse('<span v-for="value, key, index in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -192,7 +192,7 @@ describe('v-for', () => {
     test('unbracketed skipped key', () => {
       const node = parse('<span v-for="value, , index in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -209,7 +209,7 @@ describe('v-for', () => {
     test('unbracketed skipped value and key', () => {
       const node = parse('<span v-for=", , index in items" />')
 
-      transform(node, { transforms: [transformFor] })
+      transform(node, { nodeTransforms: [transformFor] })
 
       expect(node.children.length).toBe(1)
 
@@ -226,7 +226,7 @@ describe('v-for', () => {
     test('missing expression', () => {
       const node = parse('<span v-for />')
       const onError = jest.fn()
-      transform(node, { transforms: [transformFor], onError })
+      transform(node, { nodeTransforms: [transformFor], onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -239,7 +239,7 @@ describe('v-for', () => {
     test('empty expression', () => {
       const node = parse('<span v-for="" />')
       const onError = jest.fn()
-      transform(node, { transforms: [transformFor], onError })
+      transform(node, { nodeTransforms: [transformFor], onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -252,7 +252,7 @@ describe('v-for', () => {
     test('invalid expression', () => {
       const node = parse('<span v-for="items" />')
       const onError = jest.fn()
-      transform(node, { transforms: [transformFor], onError })
+      transform(node, { nodeTransforms: [transformFor], onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -265,7 +265,7 @@ describe('v-for', () => {
     test('missing source', () => {
       const node = parse('<span v-for="item in" />')
       const onError = jest.fn()
-      transform(node, { transforms: [transformFor], onError })
+      transform(node, { nodeTransforms: [transformFor], onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -278,7 +278,7 @@ describe('v-for', () => {
     test('missing value', () => {
       const node = parse('<span v-for="in items" />')
       const onError = jest.fn()
-      transform(node, { transforms: [transformFor], onError })
+      transform(node, { nodeTransforms: [transformFor], onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
@@ -293,7 +293,7 @@ describe('v-for', () => {
         const source = '<span v-for="item in items" />'
         const node = parse(source)
 
-        transform(node, { transforms: [transformFor] })
+        transform(node, { nodeTransforms: [transformFor] })
 
         expect(node.children.length).toBe(1)
 
@@ -328,7 +328,7 @@ describe('v-for', () => {
         const source = '<span v-for="( item ) in items" />'
         const node = parse(source)
 
-        transform(node, { transforms: [transformFor] })
+        transform(node, { nodeTransforms: [transformFor] })
 
         expect(node.children.length).toBe(1)
 
@@ -363,7 +363,7 @@ describe('v-for', () => {
         const source = '<span v-for="(  { id, key })in items" />'
         const node = parse(source)
 
-        transform(node, { transforms: [transformFor] })
+        transform(node, { nodeTransforms: [transformFor] })
 
         expect(node.children.length).toBe(1)
 
@@ -398,7 +398,7 @@ describe('v-for', () => {
         const source = '<span v-for="( item, key, index ) in items" />'
         const node = parse(source)
 
-        transform(node, { transforms: [transformFor] })
+        transform(node, { nodeTransforms: [transformFor] })
 
         expect(node.children.length).toBe(1)
 
@@ -455,7 +455,7 @@ describe('v-for', () => {
         const source = '<span v-for="( item,, index ) in items" />'
         const node = parse(source)
 
-        transform(node, { transforms: [transformFor] })
+        transform(node, { nodeTransforms: [transformFor] })
 
         expect(node.children.length).toBe(1)
 

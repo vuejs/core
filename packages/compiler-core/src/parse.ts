@@ -376,8 +376,7 @@ function parseTag(
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
-  const attrs = []
-  const directives = []
+  const props = []
   const ns = context.options.getNamespace(tag, parent)
 
   advanceBy(context, match[0].length)
@@ -402,11 +401,7 @@ function parseTag(
 
     const attr = parseAttribute(context, attributeNames)
     if (type === TagType.Start) {
-      if (attr.type === NodeTypes.DIRECTIVE) {
-        directives.push(attr)
-      } else {
-        attrs.push(attr)
-      }
+      props.push(attr)
     }
 
     if (/^[^\t\r\n\f />]/.test(context.source)) {
@@ -438,11 +433,11 @@ function parseTag(
     ns,
     tag,
     tagType,
-    attrs,
-    directives,
+    props,
     isSelfClosing,
     children: [],
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
+    codegenNode: undefined // to be created during transform phase
   }
 }
 

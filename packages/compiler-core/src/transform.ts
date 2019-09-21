@@ -4,27 +4,45 @@ import {
   ParentNode,
   ChildNode,
   ElementNode,
-  DirectiveNode
+  DirectiveNode,
+  Property
 } from './ast'
 import { isString } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 
-export type Transform = (node: ChildNode, context: TransformContext) => void
+// There are two types of transforms:
+//
+// - NodeTransform:
+//   Transforms that operate directly on a ChildNode. NodeTransforms may mutate,
+//   replace or remove the node being processed.
+export type NodeTransform = (node: ChildNode, context: TransformContext) => void
 
+// - DirectiveTransform:
+//   Transforms that handles a single directive attribute on an element.
+//   It translates the raw directive into actual props for the VNode.
 export type DirectiveTransform = (
+  dir: DirectiveNode,
+  context: TransformContext
+) => {
+  props: Property | Property[]
+  needRuntime: boolean
+}
+
+// A structural directive transform is a techically a NodeTransform;
+// Only v-if and v-for fall into this category.
+export type StructuralDirectiveTransform = (
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext
-) => false | void
+) => void
 
 export interface TransformOptions {
-  transforms?: Transform[]
+  nodeTransforms?: NodeTransform[]
+  directiveTransforms?: { [name: string]: DirectiveTransform }
   onError?: (error: CompilerError) => void
 }
 
-export interface TransformContext {
-  transforms: Transform[]
-  emitError: (error: CompilerError) => void
+export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
@@ -44,8 +62,9 @@ function createTransformContext(
   options: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
-    transforms: options.transforms || [],
-    emitError: options.onError || defaultOnError,
+    nodeTransforms: options.nodeTransforms || [],
+    directiveTransforms: options.directiveTransforms || {},
+    onError: options.onError || defaultOnError,
     parent: root,
     ancestors: [],
     childIndex: 0,
@@ -109,9 +128,9 @@ function traverseNode(
   ancestors: ParentNode[]
 ) {
   // apply transform plugins
-  const { transforms } = context
-  for (let i = 0; i < transforms.length; i++) {
-    const plugin = transforms[i]
+  const { nodeTransforms } = context
+  for (let i = 0; i < nodeTransforms.length; i++) {
+    const plugin = nodeTransforms[i]
     plugin(node, context)
     if (!context.currentNode) {
       return
@@ -135,33 +154,26 @@ function traverseNode(
   }
 }
 
-const identity = <T>(_: T): T => _
-
-export function createDirectiveTransform(
+export function createStructuralDirectiveTransform(
   name: string | RegExp,
-  fn: DirectiveTransform
-): Transform {
+  fn: StructuralDirectiveTransform
+): NodeTransform {
   const matches = isString(name)
     ? (n: string) => n === name
     : (n: string) => name.test(n)
 
   return (node, context) => {
     if (node.type === NodeTypes.ELEMENT) {
-      const dirs = node.directives
-      let didRemove = false
-      for (let i = 0; i < dirs.length; i++) {
-        if (matches(dirs[i].name)) {
-          const res = fn(node, dirs[i], context)
-          // Directives are removed after transformation by default. A transform
-          // returning false means the directive should not be removed.
-          if (res !== false) {
-            ;(dirs as any)[i] = undefined
-            didRemove = true
-          }
+      const { props } = node
+      for (let i = 0; i < props.length; i++) {
+        const prop = props[i]
+        if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
+          fn(node, prop, context)
+          // structural directives are removed after being processed
+          // to avoid infinite recursion
+          props.splice(i, 1)
+          i--
         }
-      }
-      if (didRemove) {
-        node.directives = dirs.filter(identity)
       }
     }
   }

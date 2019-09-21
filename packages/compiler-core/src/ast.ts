@@ -73,8 +73,7 @@ export interface ElementNode extends Node {
   tag: string
   tagType: ElementTypes
   isSelfClosing: boolean
-  attrs: AttributeNode[]
-  directives: DirectiveNode[]
+  props: Array<AttributeNode | DirectiveNode>
   children: ChildNode[]
   codegenNode: CallExpression | undefined
 }
@@ -160,4 +159,65 @@ export interface Property extends Node {
 export interface ArrayExpression extends Node {
   type: NodeTypes.ARRAY_EXPRESSION
   elements: Array<CodegenNode>
+}
+
+export function createArrayExpression(
+  elements: ArrayExpression['elements'],
+  loc: SourceLocation
+): ArrayExpression {
+  return {
+    type: NodeTypes.ARRAY_EXPRESSION,
+    loc,
+    elements
+  }
+}
+
+export function createObjectExpression(
+  properties: Property[],
+  loc: SourceLocation
+): ObjectExpression {
+  return {
+    type: NodeTypes.OBJECT_EXPRESSION,
+    loc,
+    properties
+  }
+}
+
+export function createObjectProperty(
+  key: ExpressionNode,
+  value: ExpressionNode,
+  loc: SourceLocation
+): Property {
+  return {
+    type: NodeTypes.PROPERTY,
+    loc,
+    key,
+    value
+  }
+}
+
+export function createExpression(
+  content: string,
+  isStatic: boolean,
+  loc: SourceLocation
+): ExpressionNode {
+  return {
+    type: NodeTypes.EXPRESSION,
+    loc,
+    content,
+    isStatic
+  }
+}
+
+export function createCallExpression(
+  callee: string,
+  args: CallExpression['arguments'],
+  loc: SourceLocation
+): CallExpression {
+  return {
+    type: NodeTypes.CALL_EXPRESSION,
+    loc,
+    callee,
+    arguments: args
+  }
 }

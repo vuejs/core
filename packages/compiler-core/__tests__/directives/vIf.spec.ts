@@ -1,6 +1,6 @@
 import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
-import { transformIf } from '../../src/directives/vIf'
+import { transformIf } from '../../src/transforms/vIf'
 import {
   IfNode,
   NodeTypes,
@@ -15,7 +15,7 @@ describe('compiler: v-if', () => {
     test('basic v-if', () => {
       const ast = parse(`<div v-if="ok"/>`)
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       const node = ast.children[0] as IfNode
       expect(node.type).toBe(NodeTypes.IF)
@@ -29,7 +29,7 @@ describe('compiler: v-if', () => {
     test('template v-if', () => {
       const ast = parse(`<template v-if="ok"><div/>hello<p/></template>`)
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       const node = ast.children[0] as IfNode
       expect(node.type).toBe(NodeTypes.IF)
@@ -47,7 +47,7 @@ describe('compiler: v-if', () => {
     test('v-if + v-else', () => {
       const ast = parse(`<div v-if="ok"/><p v-else/>`)
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       // should fold branches
       expect(ast.children.length).toBe(1)
@@ -72,7 +72,7 @@ describe('compiler: v-if', () => {
     test('v-if + v-else-if', () => {
       const ast = parse(`<div v-if="ok"/><p v-else-if="orNot"/>`)
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       // should fold branches
       expect(ast.children.length).toBe(1)
@@ -99,7 +99,7 @@ describe('compiler: v-if', () => {
         `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`
       )
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       // should fold branches
       expect(ast.children.length).toBe(1)
@@ -136,7 +136,7 @@ describe('compiler: v-if', () => {
         <template v-else>fine</template>
       `)
       transform(ast, {
-        transforms: [transformIf]
+        nodeTransforms: [transformIf]
       })
       // should fold branches
       expect(ast.children.length).toBe(1)
@@ -172,7 +172,7 @@ describe('compiler: v-if', () => {
       const ast = parse(`<div v-else/>`)
       const spy = jest.fn()
       transform(ast, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy
       })
       expect(spy.mock.calls[0]).toMatchObject([
@@ -185,7 +185,7 @@ describe('compiler: v-if', () => {
       const ast2 = parse(`<div/><div v-else/>`)
       const spy2 = jest.fn()
       transform(ast2, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy2
       })
       expect(spy2.mock.calls[0]).toMatchObject([
@@ -198,7 +198,7 @@ describe('compiler: v-if', () => {
       const ast3 = parse(`<div/>foo<div v-else/>`)
       const spy3 = jest.fn()
       transform(ast3, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy3
       })
       expect(spy3.mock.calls[0]).toMatchObject([
@@ -213,7 +213,7 @@ describe('compiler: v-if', () => {
       const ast = parse(`<div v-else-if="foo"/>`)
       const spy = jest.fn()
       transform(ast, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy
       })
       expect(spy.mock.calls[0]).toMatchObject([
@@ -226,7 +226,7 @@ describe('compiler: v-if', () => {
       const ast2 = parse(`<div/><div v-else-if="foo"/>`)
       const spy2 = jest.fn()
       transform(ast2, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy2
       })
       expect(spy2.mock.calls[0]).toMatchObject([
@@ -239,7 +239,7 @@ describe('compiler: v-if', () => {
       const ast3 = parse(`<div/>foo<div v-else-if="foo"/>`)
       const spy3 = jest.fn()
       transform(ast3, {
-        transforms: [transformIf],
+        nodeTransforms: [transformIf],
         onError: spy3
       })
       expect(spy3.mock.calls[0]).toMatchObject([

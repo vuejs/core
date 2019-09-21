@@ -1,5 +1,5 @@
 import { parse } from '../src/parse'
-import { transform, Transform } from '../src/transform'
+import { transform, NodeTransform } from '../src/transform'
 import { ElementNode, NodeTypes } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 
@@ -10,12 +10,12 @@ describe('compiler: transform', () => {
     // manually store call arguments because context is mutable and shared
     // across calls
     const calls: any[] = []
-    const plugin: Transform = (node, context) => {
+    const plugin: NodeTransform = (node, context) => {
       calls.push([node, Object.assign({}, context)])
     }
 
     transform(ast, {
-      transforms: [plugin]
+      nodeTransforms: [plugin]
     })
 
     const div = ast.children[0] as ElementNode
@@ -48,7 +48,7 @@ describe('compiler: transform', () => {
 
   test('context.replaceNode', () => {
     const ast = parse(`<div/><span/>`)
-    const plugin: Transform = (node, context) => {
+    const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         // change the node to <p>
         context.replaceNode(
@@ -67,7 +67,7 @@ describe('compiler: transform', () => {
     }
     const spy = jest.fn(plugin)
     transform(ast, {
-      transforms: [spy]
+      nodeTransforms: [spy]
     })
 
     expect(ast.children.length).toBe(2)
@@ -85,14 +85,14 @@ describe('compiler: transform', () => {
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
-    const plugin: Transform = (node, context) => {
+    const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         context.removeNode()
       }
     }
     const spy = jest.fn(plugin)
     transform(ast, {
-      transforms: [spy]
+      nodeTransforms: [spy]
     })
 
     expect(ast.children.length).toBe(2)
@@ -111,7 +111,7 @@ describe('compiler: transform', () => {
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
-    const plugin: Transform = (node, context) => {
+    const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         context.removeNode()
         // remove previous sibling
@@ -120,7 +120,7 @@ describe('compiler: transform', () => {
     }
     const spy = jest.fn(plugin)
     transform(ast, {
-      transforms: [spy]
+      nodeTransforms: [spy]
     })
 
     expect(ast.children.length).toBe(1)
@@ -138,7 +138,7 @@ describe('compiler: transform', () => {
     const c1 = ast.children[0]
     const d1 = ast.children[1]
 
-    const plugin: Transform = (node, context) => {
+    const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         context.removeNode()
         // remove next sibling
@@ -147,7 +147,7 @@ describe('compiler: transform', () => {
     }
     const spy = jest.fn(plugin)
     transform(ast, {
-      transforms: [spy]
+      nodeTransforms: [spy]
     })
 
     expect(ast.children.length).toBe(1)
@@ -163,14 +163,14 @@ describe('compiler: transform', () => {
   test('onError option', () => {
     const ast = parse(`<div/>`)
     const loc = ast.children[0].loc.start
-    const plugin: Transform = (node, context) => {
-      context.emitError(
+    const plugin: NodeTransform = (node, context) => {
+      context.onError(
         createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc.start)
       )
     }
     const spy = jest.fn()
     transform(ast, {
-      transforms: [plugin],
+      nodeTransforms: [plugin],
       onError: spy
     })
     expect(spy.mock.calls[0]).toMatchObject([

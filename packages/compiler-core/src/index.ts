@@ -14,10 +14,14 @@ export function compile(
 
   transform(ast, {
     ...options,
-    transforms: [
+    nodeTransforms: [
       // TODO include built-in core transforms
-      ...(options.transforms || []) // user transforms
-    ]
+      ...(options.nodeTransforms || []) // user transforms
+    ],
+    directiveTransforms: {
+      // TODO include built-in directive transforms
+      ...(options.directiveTransforms || {}) // user transforms
+    }
   })
 
   return generate(ast, options)
@@ -27,11 +31,11 @@ export function compile(
 export { parse, ParserOptions, TextModes } from './parse'
 export {
   transform,
-  createDirectiveTransform,
+  createStructuralDirectiveTransform,
   TransformOptions,
   TransformContext,
-  Transform,
-  DirectiveTransform
+  NodeTransform as Transform,
+  StructuralDirectiveTransform
 } from './transform'
 export {
   generate,
@@ -41,3 +45,6 @@ export {
 } from './codegen'
 export { ErrorCodes, CompilerError, createCompilerError } from './errors'
 export * from './ast'
+
+// debug
+export { prepareElementForCodegen } from './transforms/element'

@@ -1,29 +1,43 @@
-import { Transform, TransformContext } from '../transform'
+import { NodeTransform, TransformContext } from '../transform'
 import {
   NodeTypes,
   ElementTypes,
   CallExpression,
   ObjectExpression,
-  ElementNode
+  ElementNode,
+  DirectiveNode,
+  ExpressionNode,
+  ArrayExpression,
+  createCallExpression,
+  createArrayExpression,
+  createObjectProperty,
+  createExpression,
+  createObjectExpression
 } from '../ast'
+import { isArray } from '@vue/shared'
+import { createCompilerError, ErrorCodes } from '../errors'
 
 // generate a JavaScript AST for this element's codegen
-export const prepareElementForCodegen: Transform = (node, context) => {
+export const prepareElementForCodegen: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT
     ) {
       const isComponent = node.tagType === ElementTypes.ELEMENT
-      const hasProps = node.attrs.length > 0 || node.directives.length > 0
+      const hasProps = node.props.length > 0
       const hasChildren = node.children.length > 0
+      let runtimeDirectives: DirectiveNode[] | undefined
 
       const args: CallExpression['arguments'] = [
+        // TODO inject resolveComponent dep to root
         isComponent ? node.tag : `"${node.tag}"`
       ]
       // props
       if (hasProps) {
-        args.push(buildProps(node))
+        const { props, directives } = buildProps(node, context)
+        args.push(props)
+        runtimeDirectives = directives
       }
       // children
       if (hasChildren) {
@@ -34,53 +48,155 @@ export const prepareElementForCodegen: Transform = (node, context) => {
         args.push(isComponent ? buildSlots(node, context) : node.children)
       }
 
-      node.codegenNode = {
-        type: NodeTypes.CALL_EXPRESSION,
-        loc: node.loc,
-        callee: `h`,
-        arguments: args
+      const { loc } = node
+      const vnode = createCallExpression(`h`, args, loc)
+
+      if (runtimeDirectives) {
+        node.codegenNode = createCallExpression(
+          `applyDirectives`,
+          [
+            vnode,
+            createArrayExpression(
+              runtimeDirectives.map(dir => {
+                return createDirectiveArgs(dir, context)
+              }),
+              loc
+            )
+          ],
+          loc
+        )
+      } else {
+        node.codegenNode = vnode
       }
+    } else if (node.tagType === ElementTypes.SLOT) {
+      // <slot [name="xxx"]/>
+      // TODO
+    } else if (node.tagType === ElementTypes.TEMPLATE) {
+      // do nothing
     }
   }
 }
 
-function buildProps({ loc, attrs }: ElementNode): ObjectExpression {
-  return {
-    type: NodeTypes.OBJECT_EXPRESSION,
-    loc,
-    // At this stage we will only process static attrs. Directive bindings will
-    // be handled by their respective transforms which adds/modifies the props.
-    properties: attrs.map(({ name, value, loc }) => {
-      return {
-        type: NodeTypes.PROPERTY,
-        loc,
-        key: {
-          type: NodeTypes.EXPRESSION,
-          loc,
-          content: name,
-          isStatic: true
-        },
-        value: {
-          type: NodeTypes.EXPRESSION,
-          loc: value ? value.loc : loc,
-          content: value ? value.content : '',
-          isStatic: true
+function buildProps(
+  { loc, props }: ElementNode,
+  context: TransformContext
+): {
+  props: ObjectExpression | CallExpression
+  directives: DirectiveNode[]
+} {
+  let properties: ObjectExpression['properties'] = []
+  const mergeArgs: Array<ObjectExpression | ExpressionNode> = []
+  const runtimeDirectives: DirectiveNode[] = []
+
+  for (let i = 0; i < props.length; i++) {
+    // static attribute
+    const prop = props[i]
+    if (prop.type === NodeTypes.ATTRIBUTE) {
+      const { loc, name, value } = prop
+      properties.push(
+        createObjectProperty(
+          createExpression(name, true, loc),
+          createExpression(
+            value ? value.content : '',
+            true,
+            value ? value.loc : loc
+          ),
+          loc
+        )
+      )
+    } else {
+      // directives
+      // special case for v-bind with no argument
+      if (prop.name === 'bind' && !prop.arg) {
+        if (prop.exp) {
+          if (properties.length) {
+            mergeArgs.push(createObjectExpression(properties, loc))
+            properties = []
+          }
+          mergeArgs.push(prop.exp)
+        } else {
+          context.onError(
+            createCompilerError(
+              ErrorCodes.X_V_BIND_NO_EXPRESSION,
+              prop.loc.start
+            )
+          )
         }
+        continue
       }
-    })
+
+      const directiveTransform = context.directiveTransforms[prop.name]
+      if (directiveTransform) {
+        const { props, needRuntime } = directiveTransform(prop, context)
+        if (isArray(props)) {
+          properties.push(...props)
+        } else {
+          properties.push(props)
+        }
+        if (needRuntime) {
+          runtimeDirectives.push(prop)
+        }
+      } else {
+        // no built-in transform, this is a user custom directive.
+        runtimeDirectives.push(prop)
+      }
+    }
   }
+
+  let ret: ObjectExpression | CallExpression
+
+  // has v-bind="object", wrap with mergeProps
+  if (mergeArgs.length) {
+    if (properties.length) {
+      mergeArgs.push(createObjectExpression(properties, loc))
+    }
+    if (mergeArgs.length > 1) {
+      ret = createCallExpression(`mergeProps`, mergeArgs, loc)
+    } else {
+      // single v-bind with nothing else - no need for a mergeProps call
+      ret = createObjectExpression(properties, loc)
+    }
+  } else {
+    ret = createObjectExpression(properties, loc)
+  }
+
+  return {
+    props: ret,
+    directives: runtimeDirectives
+  }
+}
+
+function createDirectiveArgs(
+  dir: DirectiveNode,
+  context: TransformContext
+): ArrayExpression {
+  // TODO inject resolveDirective dep to root
+  const dirArgs: ArrayExpression['elements'] = [dir.name]
+  const { loc } = dir
+  if (dir.exp) dirArgs.push(dir.exp)
+  if (dir.arg) dirArgs.push(dir.arg)
+  if (Object.keys(dir.modifiers).length) {
+    dirArgs.push(
+      createObjectExpression(
+        dir.modifiers.map(modifier =>
+          createObjectProperty(
+            createExpression(modifier, true, loc),
+            createExpression(`true`, false, loc),
+            loc
+          )
+        ),
+        loc
+      )
+    )
+  }
+  return createArrayExpression(dirArgs, dir.loc)
 }
 
 function buildSlots(
   { loc, children }: ElementNode,
   context: TransformContext
 ): ObjectExpression {
-  const slots: ObjectExpression = {
-    type: NodeTypes.OBJECT_EXPRESSION,
-    loc,
-    properties: []
-  }
-
+  const slots = createObjectExpression([], loc)
   // TODO
 
   return slots
