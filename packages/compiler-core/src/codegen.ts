@@ -287,16 +287,20 @@ function genIfBranch(
   context: CodegenContext
 ) {
   if (condition) {
+    const { push, indent, deindent, newline } = context
     // v-if or v-else-if
-    context.push(`(${condition.content})`, condition)
-    context.push(`?`)
+    push(`(${condition.content})`, condition)
+    indent()
+    push(`? `)
     genChildren(children, context)
-    context.push(`:`)
+    newline()
+    push(`: `)
     if (nextIndex < branches.length) {
       genIfBranch(branches[nextIndex], branches, nextIndex + 1, context)
     } else {
       context.push(`null`)
     }
+    deindent()
   } else {
     // v-else
     __DEV__ && assert(nextIndex === branches.length)

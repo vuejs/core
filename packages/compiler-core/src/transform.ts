@@ -132,12 +132,13 @@ function traverseNode(
   for (let i = 0; i < nodeTransforms.length; i++) {
     const plugin = nodeTransforms[i]
     plugin(node, context)
-    if (!context.currentNode) {
-      return
-    } else {
-      // node may have been replaced
-      node = context.currentNode
-    }
+    // node may have been replaced
+    node = context.currentNode || node
+  }
+
+  if (!context.currentNode) {
+    // node was removed
+    return
   }
 
   // further traverse downwards
