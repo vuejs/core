@@ -2,7 +2,8 @@ import {
   TextModes,
   ParserOptions,
   ElementNode,
-  Namespaces
+  Namespaces,
+  NodeTypes
 } from '@vue/compiler-core'
 
 export const enum DOMNamespaces {
@@ -22,8 +23,9 @@ export const parserOptionsMinimal: ParserOptions = {
           return DOMNamespaces.SVG
         }
         if (
-          parent.attrs.some(
+          parent.props.some(
             a =>
+              a.type === NodeTypes.ATTRIBUTE &&
               a.name === 'encoding' &&
               a.value != null &&
               (a.value.content === 'text/html' ||
