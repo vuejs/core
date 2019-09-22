@@ -20,10 +20,10 @@ export const enum NodeTypes {
   IF_BRANCH,
   FOR,
   // codegen
-  CALL_EXPRESSION,
-  OBJECT_EXPRESSION,
-  PROPERTY,
-  ARRAY_EXPRESSION
+  JS_CALL_EXPRESSION,
+  JS_OBJECT_EXPRESSION,
+  JS_PROPERTY,
+  JS_ARRAY_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -129,36 +129,35 @@ export interface ForNode extends Node {
   children: ChildNode[]
 }
 
-// We also include a subset of JavaScript AST for code generation
-// purposes. The AST is intentioanlly minimal just to meet the exact needs of
+// We also include a number of JavaScript AST nodes for code generation.
+// The AST is an intentioanlly minimal subset just to meet the exact needs of
 // Vue render function generation.
-type CodegenNode =
-  | string
+export type JSChildNode =
   | CallExpression
   | ObjectExpression
   | ArrayExpression
   | ExpressionNode
 
 export interface CallExpression extends Node {
-  type: NodeTypes.CALL_EXPRESSION
+  type: NodeTypes.JS_CALL_EXPRESSION
   callee: string // can only be imported runtime helpers, so no source location
-  arguments: Array<CodegenNode | ChildNode[]>
+  arguments: Array<string | JSChildNode | ChildNode[]>
 }
 
 export interface ObjectExpression extends Node {
-  type: NodeTypes.OBJECT_EXPRESSION
+  type: NodeTypes.JS_OBJECT_EXPRESSION
   properties: Array<Property>
 }
 
 export interface Property extends Node {
-  type: NodeTypes.PROPERTY
+  type: NodeTypes.JS_PROPERTY
   key: ExpressionNode
   value: ExpressionNode
 }
 
 export interface ArrayExpression extends Node {
-  type: NodeTypes.ARRAY_EXPRESSION
-  elements: Array<CodegenNode>
+  type: NodeTypes.JS_ARRAY_EXPRESSION
+  elements: Array<string | JSChildNode>
 }
 
 export function createArrayExpression(
@@ -166,7 +165,7 @@ export function createArrayExpression(
   loc: SourceLocation
 ): ArrayExpression {
   return {
-    type: NodeTypes.ARRAY_EXPRESSION,
+    type: NodeTypes.JS_ARRAY_EXPRESSION,
     loc,
     elements
   }
@@ -177,7 +176,7 @@ export function createObjectExpression(
   loc: SourceLocation
 ): ObjectExpression {
   return {
-    type: NodeTypes.OBJECT_EXPRESSION,
+    type: NodeTypes.JS_OBJECT_EXPRESSION,
     loc,
     properties
   }
@@ -189,7 +188,7 @@ export function createObjectProperty(
   loc: SourceLocation
 ): Property {
   return {
-    type: NodeTypes.PROPERTY,
+    type: NodeTypes.JS_PROPERTY,
     loc,
     key,
     value
@@ -215,7 +214,7 @@ export function createCallExpression(
   loc: SourceLocation
 ): CallExpression {
   return {
-    type: NodeTypes.CALL_EXPRESSION,
+    type: NodeTypes.JS_CALL_EXPRESSION,
     loc,
     callee,
     arguments: args

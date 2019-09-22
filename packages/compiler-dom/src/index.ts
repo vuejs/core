@@ -6,8 +6,6 @@ import {
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 
-export * from '@vue/compiler-core'
-
 export function compile(
   template: string,
   options: CompilerOptions = {}
@@ -21,3 +19,5 @@ export function compile(
     }
   })
 }
+
+export * from '@vue/compiler-core'

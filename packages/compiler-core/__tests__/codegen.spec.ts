@@ -8,15 +8,24 @@ describe('compiler: codegen', () => {
     const { code, map } = generate(ast, {
       filename: `foo.vue`
     })
-    expect(code).toBe(`["hello ", world]`)
+    expect(code).toBe(
+      `return function render() {
+  with (this) {
+    return [
+      "hello ",
+      world
+    ]
+  }
+}`
+    )
 
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
     const consumer = await new SourceMapConsumer(map as RawSourceMap)
     const pos = consumer.originalPositionFor({
-      line: 1,
-      column: 11
+      line: 5,
+      column: 6
     })
     expect(pos).toMatchObject({
       line: 1,

@@ -37,7 +37,8 @@ export {
 
 // Internal, for compiler generated code
 export { applyDirectives } from './directives'
-export { resolveComponent, resolveDirective } from './componentOptions'
+export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
+export { renderList } from './helpers/renderList'
 
 // Internal, for integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

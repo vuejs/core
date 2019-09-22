@@ -7,13 +7,17 @@ const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
+export const RENDER_LIST_HELPER = `renderList`
+
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     if (dir.exp) {
+      // TODO inject helper import
       const aliases = parseAliasExpressions(dir.exp.content)
 
       if (aliases) {
+        // TODO inject identifiers to context
         context.replaceNode({
           type: NodeTypes.FOR,
           loc: node.loc,

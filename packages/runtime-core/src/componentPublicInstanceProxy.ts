@@ -40,6 +40,7 @@ export const PublicInstanceProxyHandlers = {
       // return the value from propsProxy for ref unwrapping and readonly
       return (propsProxy as any)[key]
     } else {
+      // TODO simplify this?
       switch (key) {
         case '$data':
           return data
@@ -79,6 +80,7 @@ export const PublicInstanceProxyHandlers = {
   },
   has(target: ComponentInternalInstance, key: string): boolean {
     const { renderContext, data, props } = target
+    // TODO handle $xxx properties
     return (
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       hasOwn(renderContext, key) ||

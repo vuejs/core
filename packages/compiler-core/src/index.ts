@@ -3,6 +3,9 @@ import { transform, TransformOptions } from './transform'
 import { generate, CodegenOptions, CodegenResult } from './codegen'
 import { RootNode } from './ast'
 import { isString } from '@vue/shared'
+import { transformIf } from './transforms/vIf'
+import { transformFor } from './transforms/vFor'
+import { prepareElementForCodegen } from './transforms/element'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -15,7 +18,9 @@ export function compile(
   transform(ast, {
     ...options,
     nodeTransforms: [
-      // TODO include built-in core transforms
+      transformIf,
+      transformFor,
+      prepareElementForCodegen,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {

@@ -1,7 +1,6 @@
 import {
   ComponentInternalInstance,
   Data,
-  currentInstance,
   Component,
   SetupContext
 } from './component'
@@ -11,9 +10,7 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ,
-  capitalize,
-  camelize
+  EMPTY_OBJ
 } from '@vue/shared'
 import { computed } from './apiReactivity'
 import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
@@ -29,12 +26,10 @@ import {
   onUnmounted
 } from './apiLifecycle'
 import { DebuggerEvent, reactive } from '@vue/reactivity'
-import { warn } from './warning'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
 import { ComponentPublicInstance } from './componentPublicInstanceProxy'
-import { currentRenderingInstance } from './componentRenderUtils'
 
 interface ComponentOptionsBase<
   Props,
@@ -385,34 +380,5 @@ function applyMixins(
 ) {
   for (let i = 0; i < mixins.length; i++) {
     applyOptions(instance, mixins[i], true)
-  }
-}
-
-export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset('components', name) as any
-}
-
-export function resolveDirective(name: string): Directive | undefined {
-  return resolveAsset('directives', name) as any
-}
-
-function resolveAsset(type: 'components' | 'directives', name: string) {
-  const instance = currentRenderingInstance || currentInstance
-  if (instance) {
-    let camelized
-    const registry = instance[type]
-    const res =
-      registry[name] ||
-      registry[(camelized = camelize(name))] ||
-      registry[capitalize(camelized)]
-    if (__DEV__ && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
-    }
-    return res
-  } else if (__DEV__) {
-    warn(
-      `resolve${capitalize(type.slice(0, -1))} ` +
-        `can only be used in render() or setup().`
-    )
   }
 }

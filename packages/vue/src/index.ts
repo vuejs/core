@@ -8,7 +8,7 @@ function compileToFunction(
   options?: CompilerOptions
 ): RenderFunction {
   const { code } = compile(template, options)
-  return new Function(`with(this){return ${code}}`) as RenderFunction
+  return new Function(code)() as RenderFunction
 }
 
 registerRuntimeCompiler(compileToFunction)

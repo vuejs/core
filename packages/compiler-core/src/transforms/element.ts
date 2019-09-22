@@ -24,10 +24,15 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT
     ) {
-      const isComponent = node.tagType === ElementTypes.ELEMENT
+      const isComponent = node.tagType === ElementTypes.COMPONENT
       const hasProps = node.props.length > 0
       const hasChildren = node.children.length > 0
       let runtimeDirectives: DirectiveNode[] | undefined
+
+      if (isComponent) {
+        // TODO inject import for `resolveComponent`
+        // TODO inject statement for resolving component
+      }
 
       const args: CallExpression['arguments'] = [
         // TODO inject resolveComponent dep to root
@@ -49,9 +54,11 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
       }
 
       const { loc } = node
+      // TODO inject import for `h`
       const vnode = createCallExpression(`h`, args, loc)
 
-      if (runtimeDirectives) {
+      if (runtimeDirectives && runtimeDirectives.length) {
+        // TODO inject import for `applyDirectives`
         node.codegenNode = createCallExpression(
           `applyDirectives`,
           [
@@ -170,7 +177,8 @@ function createDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
-  // TODO inject resolveDirective dep to root
+  // TODO inject import for `resolveDirective`
+  // TODO inject statement for resolving directive
   const dirArgs: ArrayExpression['elements'] = [dir.name]
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
