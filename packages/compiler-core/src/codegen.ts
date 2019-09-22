@@ -48,7 +48,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   map?: SourceMapGenerator
   push(code: string, node?: CodegenNode): void
   indent(): void
-  deindent(): void
+  deindent(withoutNewLine?: boolean): void
   newline(): void
 }
 
@@ -100,8 +100,12 @@ function createCodegenContext(
     indent() {
       newline(++context.indentLevel)
     },
-    deindent() {
-      newline(--context.indentLevel)
+    deindent(withoutNewLine = false) {
+      if (withoutNewLine) {
+        --context.indentLevel
+      } else {
+        newline(--context.indentLevel)
+      }
     },
     newline() {
       newline(context.indentLevel)
@@ -300,7 +304,7 @@ function genIfBranch(
     } else {
       context.push(`null`)
     }
-    deindent()
+    deindent(true /* without newline */)
   } else {
     // v-else
     __DEV__ && assert(nextIndex === branches.length)
