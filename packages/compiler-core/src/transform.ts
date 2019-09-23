@@ -50,7 +50,7 @@ export interface TransformOptions {
 export interface TransformContext extends Required<TransformOptions> {
   imports: Set<string>
   statements: string[]
-  identifiers: { [name: string]: true }
+  identifiers: { [name: string]: number | undefined }
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
@@ -113,11 +113,15 @@ function createTransformContext(
       context.parent.children.splice(removalIndex, 1)
     },
     onNodeRemoved: () => {},
-    addIdentifier(exp) {
-      context.identifiers[exp.content] = true
+    addIdentifier({ content }) {
+      const { identifiers } = context
+      if (identifiers[content] === undefined) {
+        identifiers[content] = 0
+      }
+      ;(identifiers[content] as number)++
     },
-    removeIdentifier(exp) {
-      delete context.identifiers[exp.content]
+    removeIdentifier({ content }) {
+      ;(context.identifiers[content] as number)--
     }
   }
   return context
