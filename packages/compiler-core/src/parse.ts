@@ -82,6 +82,8 @@ export function parse(content: string, options: ParserOptions = {}): RootNode {
   return {
     type: NodeTypes.ROOT,
     children: parseChildren(context, TextModes.DATA, []),
+    imports: [],
+    statements: [],
     loc: getSelection(context, start)
   }
 }

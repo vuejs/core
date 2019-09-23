@@ -17,7 +17,7 @@ import {
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import { advancePositionWithMutation, assert } from './utils'
 import { isString, isArray } from '@vue/shared'
-import { RENDER_LIST_HELPER } from './transforms/vFor'
+import { RENDER_LIST } from './runtimeConstants'
 
 type CodegenNode = ChildNode | JSChildNode
 
@@ -43,8 +43,6 @@ export interface CodegenContext extends Required<CodegenOptions> {
   column: number
   offset: number
   indentLevel: number
-  imports: Set<string>
-  knownIdentifiers: Set<string>
   map?: SourceMapGenerator
   push(code: string, node?: CodegenNode): void
   indent(): void
@@ -70,8 +68,6 @@ function createCodegenContext(
     line: 1,
     offset: 0,
     indentLevel: 0,
-    imports: new Set(),
-    knownIdentifiers: new Set(),
 
     // lazy require source-map implementation, only in non-browser builds!
     map: __BROWSER__
@@ -123,16 +119,24 @@ export function generate(
   options: CodegenOptions = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
-  // TODO handle different output for module mode and IIFE mode
   const { mode, push, useWith, indent, deindent } = context
+  const imports = ast.imports.join(', ')
   if (mode === 'function') {
-    // TODO generate const declarations for helpers
+    // generate const declarations for helpers
+    if (imports) {
+      push(`const { ${imports} } = Vue\n\n`)
+    }
     push(`return `)
   } else {
-    // TODO generate import statements for helpers
+    // generate import statements for helpers
+    if (imports) {
+      push(`import { ${imports} } from 'vue'\n\n`)
+    }
     push(`export default `)
   }
   push(`function render() {`)
+  // generate asset resolution statements
+  ast.statements.forEach(s => push(s + `\n`))
   if (useWith) {
     indent()
     push(`with (this) {`)
@@ -317,7 +321,7 @@ function genIfBranch(
 function genFor(node: ForNode, context: CodegenContext) {
   const { push } = context
   const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
-  push(`${RENDER_LIST_HELPER}(`, node)
+  push(`${RENDER_LIST}(`, node)
   genExpression(source, context)
   push(`, (`)
   if (valueAlias) {

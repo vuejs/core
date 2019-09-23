@@ -43,6 +43,9 @@ export interface TransformOptions {
 }
 
 export interface TransformContext extends Required<TransformOptions> {
+  imports: Set<string>
+  statements: string[]
+  identifiers: { [name: string]: true }
   parent: ParentNode
   ancestors: ParentNode[]
   childIndex: number
@@ -52,16 +55,14 @@ export interface TransformContext extends Required<TransformOptions> {
   onNodeRemoved: () => void
 }
 
-export function transform(root: RootNode, options: TransformOptions) {
-  const context = createTransformContext(root, options)
-  traverseChildren(root, context)
-}
-
 function createTransformContext(
   root: RootNode,
   options: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
+    imports: new Set(),
+    statements: [],
+    identifiers: {},
     nodeTransforms: options.nodeTransforms || [],
     directiveTransforms: options.directiveTransforms || {},
     onError: options.onError || defaultOnError,
@@ -103,11 +104,21 @@ function createTransformContext(
   return context
 }
 
+export function transform(root: RootNode, options: TransformOptions) {
+  const context = createTransformContext(root, options)
+  traverseChildren(root, context)
+  root.imports = [...context.imports]
+  root.statements = context.statements
+}
+
 export function traverseChildren(
   parent: ParentNode,
   context: TransformContext
 ) {
+  // ancestors and identifiers need to be cached here since they may get
+  // replaced during a child's traversal
   const ancestors = context.ancestors.concat(parent)
+  const identifiers = context.identifiers
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -117,6 +128,7 @@ export function traverseChildren(
     context.ancestors = ancestors
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
+    context.identifiers = identifiers
     traverseNode((context.currentNode = parent.children[i]), context)
   }
 }

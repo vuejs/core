@@ -65,6 +65,8 @@ export type ChildNode =
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: ChildNode[]
+  imports: string[]
+  statements: string[]
 }
 
 export interface ElementNode extends Node {

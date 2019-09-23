@@ -16,6 +16,14 @@ import {
 } from '../ast'
 import { isArray } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
+import {
+  CREATE_ELEMENT,
+  APPLY_DIRECTIVES,
+  RESOLVE_DIRECTIVE,
+  RESOLVE_COMPONENT
+} from '../runtimeConstants'
+
+const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
 // generate a JavaScript AST for this element's codegen
 export const prepareElementForCodegen: NodeTransform = (node, context) => {
@@ -28,15 +36,20 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
       const hasProps = node.props.length > 0
       const hasChildren = node.children.length > 0
       let runtimeDirectives: DirectiveNode[] | undefined
+      let componentIdentifier: string | undefined
 
       if (isComponent) {
-        // TODO inject import for `resolveComponent`
-        // TODO inject statement for resolving component
+        context.imports.add(RESOLVE_COMPONENT)
+        componentIdentifier = `_component_${toValidId(node.tag)}`
+        context.statements.push(
+          `const ${componentIdentifier} = ${RESOLVE_COMPONENT}(${JSON.stringify(
+            node.tag
+          )})`
+        )
       }
 
       const args: CallExpression['arguments'] = [
-        // TODO inject resolveComponent dep to root
-        isComponent ? node.tag : `"${node.tag}"`
+        isComponent ? componentIdentifier! : `"${node.tag}"`
       ]
       // props
       if (hasProps) {
@@ -54,13 +67,13 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
       }
 
       const { loc } = node
-      // TODO inject import for `h`
-      const vnode = createCallExpression(`h`, args, loc)
+      context.imports.add(CREATE_ELEMENT)
+      const vnode = createCallExpression(CREATE_ELEMENT, args, loc)
 
       if (runtimeDirectives && runtimeDirectives.length) {
-        // TODO inject import for `applyDirectives`
+        context.imports.add(APPLY_DIRECTIVES)
         node.codegenNode = createCallExpression(
-          `applyDirectives`,
+          APPLY_DIRECTIVES,
           [
             vnode,
             createArrayExpression(
@@ -174,9 +187,16 @@ function createDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
-  // TODO inject import for `resolveDirective`
-  // TODO inject statement for resolving directive
-  const dirArgs: ArrayExpression['elements'] = [dir.name]
+  // inject import for `resolveDirective`
+  context.imports.add(RESOLVE_DIRECTIVE)
+  // inject statement for resolving directive
+  const dirIdentifier = `_directive_${toValidId(dir.name)}`
+  context.statements.push(
+    `const ${dirIdentifier} = _${RESOLVE_DIRECTIVE}(${JSON.stringify(
+      dir.name
+    )})`
+  )
+  const dirArgs: ArrayExpression['elements'] = [dirIdentifier]
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
   if (dir.arg) dirArgs.push(dir.arg)

@@ -39,6 +39,7 @@ export {
 export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
+export { capitalize } from '@vue/shared'
 
 // Internal, for integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

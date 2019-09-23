@@ -2,18 +2,17 @@ import { createStructuralDirectiveTransform } from '../transform'
 import { NodeTypes, ExpressionNode, createExpression } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
+import { RENDER_LIST } from '../runtimeConstants'
 
 const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
-export const RENDER_LIST_HELPER = `renderList`
-
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     if (dir.exp) {
-      // TODO inject helper import
+      context.imports.add(RENDER_LIST)
       const aliases = parseAliasExpressions(dir.exp.content)
 
       if (aliases) {
