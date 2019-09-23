@@ -54,7 +54,7 @@ export interface TransformContext extends Required<TransformOptions> {
 
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
-  traverseChildren(root, context, context.ancestors)
+  traverseChildren(root, context)
 }
 
 function createTransformContext(
@@ -103,12 +103,11 @@ function createTransformContext(
   return context
 }
 
-function traverseChildren(
+export function traverseChildren(
   parent: ParentNode,
-  context: TransformContext,
-  ancestors: ParentNode[]
+  context: TransformContext
 ) {
-  ancestors = ancestors.concat(parent)
+  const ancestors = context.ancestors.concat(parent)
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -118,39 +117,35 @@ function traverseChildren(
     context.ancestors = ancestors
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
-    traverseNode((context.currentNode = parent.children[i]), context, ancestors)
+    traverseNode((context.currentNode = parent.children[i]), context)
   }
 }
 
-function traverseNode(
-  node: ChildNode,
-  context: TransformContext,
-  ancestors: ParentNode[]
-) {
+export function traverseNode(node: ChildNode, context: TransformContext) {
   // apply transform plugins
   const { nodeTransforms } = context
   for (let i = 0; i < nodeTransforms.length; i++) {
     const plugin = nodeTransforms[i]
     plugin(node, context)
-    // node may have been replaced
-    node = context.currentNode || node
-  }
-
-  if (!context.currentNode) {
-    // node was removed
-    return
+    if (!context.currentNode) {
+      // node was removed
+      return
+    } else {
+      // node may have been replaced
+      node = context.currentNode
+    }
   }
 
   // further traverse downwards
   switch (node.type) {
     case NodeTypes.IF:
       for (let i = 0; i < node.branches.length; i++) {
-        traverseChildren(node.branches[i], context, ancestors)
+        traverseChildren(node.branches[i], context)
       }
       break
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
-      traverseChildren(node, context, ancestors)
+      traverseChildren(node, context)
       break
   }
 }
@@ -169,11 +164,12 @@ export function createStructuralDirectiveTransform(
       for (let i = 0; i < props.length; i++) {
         const prop = props[i]
         if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
-          fn(node, prop, context)
-          // structural directives are removed after being processed
-          // to avoid infinite recursion
+          // structural directives are removed to avoid infinite recursion
+          // also we remove them *before* applying so that it can further
+          // traverse itself in case it moves the node around
           props.splice(i, 1)
           i--
+          fn(node, prop, context)
         }
       }
     }

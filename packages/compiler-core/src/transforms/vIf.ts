@@ -1,4 +1,7 @@
-import { createStructuralDirectiveTransform } from '../transform'
+import {
+  createStructuralDirectiveTransform,
+  traverseChildren
+} from '../transform'
 import {
   NodeTypes,
   ElementTypes,
@@ -37,6 +40,9 @@ export const transformIf = createStructuralDirectiveTransform(
             branch.children = [...comments, ...branch.children]
           }
           sibling.branches.push(branch)
+          // since the branch was removed, it will not be traversed.
+          // make sure to traverse here.
+          traverseChildren(branch, context)
         } else {
           context.onError(
             createCompilerError(
