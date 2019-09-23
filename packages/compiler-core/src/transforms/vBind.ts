@@ -12,7 +12,7 @@ export const transformBind: DirectiveTransform = (dir, context) => {
     )
   }
   // TODO handle .prop modifier
-  // TODO handle .sync modifier
+  // TODO handle .camel modifier
   return {
     props: createObjectProperty(
       dir.arg!,
