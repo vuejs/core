@@ -1,8 +1,8 @@
-import { Position } from './ast'
+import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
   code: ErrorCodes
-  loc: Position
+  loc: SourceLocation
 }
 
 export function defaultOnError(error: CompilerError) {
@@ -11,12 +11,12 @@ export function defaultOnError(error: CompilerError) {
 
 export function createCompilerError(
   code: ErrorCodes,
-  loc: Position
+  loc: SourceLocation
 ): CompilerError {
   const error = new SyntaxError(
-    `${__DEV__ || !__BROWSER__ ? errorMessages[code] : code} (${loc.line}:${
-      loc.column
-    })`
+    `${__DEV__ || !__BROWSER__ ? errorMessages[code] : code} (${
+      loc.start.line
+    }:${loc.start.column})`
   ) as CompilerError
   error.code = code
   error.loc = loc

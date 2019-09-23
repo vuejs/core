@@ -123,10 +123,7 @@ function buildProps(
           mergeArgs.push(prop.exp)
         } else {
           context.onError(
-            createCompilerError(
-              ErrorCodes.X_V_BIND_NO_EXPRESSION,
-              prop.loc.start
-            )
+            createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc)
           )
         }
         continue

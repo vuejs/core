@@ -195,7 +195,9 @@ describe('compiler: parse', () => {
         [
           {
             code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-            loc: { offset: 4, line: 1, column: 5 }
+            loc: {
+              start: { offset: 4, line: 1, column: 5 }
+            }
           }
         ]
       ])
@@ -249,7 +251,9 @@ describe('compiler: parse', () => {
         [
           {
             code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-            loc: { offset: 45, line: 1, column: 46 }
+            loc: {
+              start: { offset: 45, line: 1, column: 46 }
+            }
           }
         ]
       ])
@@ -274,7 +278,9 @@ describe('compiler: parse', () => {
         [
           {
             code: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
-            loc: { offset: 0, line: 1, column: 1 }
+            loc: {
+              start: { offset: 0, line: 1, column: 1 }
+            }
           }
         ]
       ])
@@ -1254,9 +1260,11 @@ describe('compiler: parse', () => {
         {
           code: ErrorCodes.X_MISSING_END_TAG,
           loc: {
-            offset: 13,
-            line: 3,
-            column: 1
+            start: {
+              offset: 13,
+              line: 3,
+              column: 1
+            }
           }
         }
       ],
@@ -1264,9 +1272,11 @@ describe('compiler: parse', () => {
         {
           code: ErrorCodes.X_INVALID_END_TAG,
           loc: {
-            offset: 20,
-            line: 4,
-            column: 1
+            start: {
+              offset: 20,
+              line: 4,
+              column: 1
+            }
           }
         }
       ]
@@ -2386,7 +2396,7 @@ describe('compiler: parse', () => {
               expect(
                 spy.mock.calls.map(([err]) => ({
                   type: err.code,
-                  loc: err.loc
+                  loc: err.loc.start
                 }))
               ).toMatchObject(errors)
               expect(ast).toMatchSnapshot()

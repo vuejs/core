@@ -6,6 +6,8 @@ import { isString } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { prepareElementForCodegen } from './transforms/element'
+import { transformOn } from './transforms/vOn'
+import { transformBind } from './transforms/vBind'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -24,7 +26,8 @@ export function compile(
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
-      // TODO include built-in directive transforms
+      on: transformOn,
+      bind: transformBind,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })

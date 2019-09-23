@@ -366,7 +366,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   const { push, indent, deindent, newline } = context
   const { properties } = node
   const multilines = properties.length > 1
-  push(`{`, node)
+  push(multilines ? `{` : `{ `, node)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
     const { key, value } = properties[i]
@@ -385,7 +385,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     }
   }
   multilines && deindent()
-  push(`}`)
+  push(multilines ? `}` : ` }`)
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {

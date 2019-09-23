@@ -162,10 +162,10 @@ describe('compiler: transform', () => {
 
   test('onError option', () => {
     const ast = parse(`<div/>`)
-    const loc = ast.children[0].loc.start
+    const loc = ast.children[0].loc
     const plugin: NodeTransform = (node, context) => {
       context.onError(
-        createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc.start)
+        createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc)
       )
     }
     const spy = jest.fn()

@@ -842,7 +842,13 @@ function emitError(
     loc.offset += offset
     loc.column += offset
   }
-  context.options.onError(createCompilerError(code, loc))
+  context.options.onError(
+    createCompilerError(code, {
+      start: loc,
+      end: loc,
+      source: ''
+    })
+  )
 }
 
 function isEnd(

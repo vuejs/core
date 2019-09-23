@@ -49,7 +49,7 @@ export const transformIf = createStructuralDirectiveTransform(
               dir.name === 'else'
                 ? ErrorCodes.X_ELSE_NO_ADJACENT_IF
                 : ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-              node.loc.start
+              node.loc
             )
           )
         }
