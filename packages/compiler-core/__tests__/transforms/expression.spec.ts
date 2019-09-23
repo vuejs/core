@@ -9,7 +9,7 @@ test(`should work`, async () => {
     <p>{{ i }}</p>
     `,
     {
-      useWith: false
+      prefixIdentifiers: true
     }
   )
   console.log(code)

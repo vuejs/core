@@ -15,7 +15,7 @@ import { processExpression } from './expression'
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
-    if (!__BROWSER__ && !context.useWith && dir.exp) {
+    if (!__BROWSER__ && context.prefixIdentifiers && dir.exp) {
       processExpression(dir.exp, context)
     }
     if (dir.name === 'if') {

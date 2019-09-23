@@ -87,7 +87,7 @@ function parseForExpression(
       RHS.trim(),
       source.indexOf(RHS, LHS.length),
       context,
-      !context.useWith
+      context.prefixIdentifiers
     ),
     value: undefined,
     key: undefined,

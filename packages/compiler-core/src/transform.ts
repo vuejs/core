@@ -43,7 +43,7 @@ export type StructuralDirectiveTransform = (
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
-  useWith?: boolean
+  prefixIdentifiers?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -65,7 +65,7 @@ export interface TransformContext extends Required<TransformOptions> {
 function createTransformContext(
   root: RootNode,
   {
-    useWith = true,
+    prefixIdentifiers = false,
     nodeTransforms = [],
     directiveTransforms = {},
     onError = defaultOnError
@@ -75,7 +75,7 @@ function createTransformContext(
     imports: new Set(),
     statements: [],
     identifiers: {},
-    useWith,
+    prefixIdentifiers,
     nodeTransforms,
     directiveTransforms,
     onError,

@@ -18,21 +18,21 @@ export function compile(
   options: CompilerOptions = {}
 ): CodegenResult {
   const ast = isString(template) ? parse(template, options) : template
-  const useWith = __BROWSER__ || options.useWith !== false
+  const prefixIdentifiers = !__BROWSER__ && options.prefixIdentifiers === true
 
-  if (__BROWSER__ && options.useWith === false) {
+  if (__BROWSER__ && options.prefixIdentifiers === false) {
     ;(options.onError || defaultOnError)(
-      createCompilerError(ErrorCodes.X_STRIP_WITH_NOT_SUPPORTED)
+      createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED)
     )
   }
 
   transform(ast, {
     ...options,
-    useWith,
+    prefixIdentifiers,
     nodeTransforms: [
       transformIf,
       transformFor,
-      ...(useWith ? [] : [expressionTransform]),
+      ...(prefixIdentifiers ? [expressionTransform] : []),
       prepareElementForCodegen,
       ...(options.nodeTransforms || []) // user transforms
     ],

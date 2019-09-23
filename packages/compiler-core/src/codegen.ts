@@ -26,7 +26,7 @@ export interface CodegenOptions {
   // runtime helpers; otherwise will grab the helpers from global `Vue`.
   // default: false
   mode?: 'module' | 'function'
-  useWith?: boolean
+  prefixIdentifiers?: boolean
   // Filename for source map generation.
   filename?: string
 }
@@ -54,13 +54,13 @@ function createCodegenContext(
   ast: RootNode,
   {
     mode = 'function',
-    useWith = true,
+    prefixIdentifiers = false,
     filename = `template.vue.html`
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
     mode,
-    useWith,
+    prefixIdentifiers,
     filename,
     source: ast.loc.source,
     code: ``,
@@ -119,7 +119,7 @@ export function generate(
   options: CodegenOptions = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
-  const { mode, push, useWith, indent, deindent, newline } = context
+  const { mode, push, prefixIdentifiers, indent, deindent, newline } = context
   const imports = ast.imports.join(', ')
   if (mode === 'function') {
     // generate const declarations for helpers
@@ -144,13 +144,13 @@ export function generate(
     })
     newline()
   }
-  if (useWith) {
+  if (!prefixIdentifiers) {
     push(`with (this) {`)
     indent()
   }
   push(`return `)
   genChildren(ast.children, context)
-  if (useWith) {
+  if (!prefixIdentifiers) {
     deindent()
     push(`}`)
   }
