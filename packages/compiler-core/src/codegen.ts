@@ -348,17 +348,14 @@ function genFor(node: ForNode, context: CodegenContext) {
   genExpression(source, context)
   push(`, (`)
   if (valueAlias) {
-    // not using genExpression here because these aliases can only be code
-    // that is valid in the function argument position, so the parse rule can
-    // be off and they don't need identifier prefixing anyway.
-    push(valueAlias.content, valueAlias)
+    genExpression(valueAlias, context)
   }
   if (keyAlias) {
     if (!valueAlias) {
       push(`_`)
     }
     push(`, `)
-    push(keyAlias.content, keyAlias)
+    genExpression(keyAlias, context)
   }
   if (objectIndexAlias) {
     if (!keyAlias) {
@@ -369,7 +366,7 @@ function genFor(node: ForNode, context: CodegenContext) {
       }
     }
     push(`, `)
-    push(objectIndexAlias.content, objectIndexAlias)
+    genExpression(objectIndexAlias, context)
   }
   push(`) => `)
   genChildren(children, context)

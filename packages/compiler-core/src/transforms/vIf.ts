@@ -10,10 +10,14 @@ import {
   IfBranchNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
+import { processExpression } from './expression'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
+    if (!__BROWSER__ && !context.useWith && dir.exp) {
+      processExpression(dir.exp, context)
+    }
     if (dir.name === 'if') {
       context.replaceNode({
         type: NodeTypes.IF,

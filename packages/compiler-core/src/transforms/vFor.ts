@@ -1,8 +1,17 @@
-import { createStructuralDirectiveTransform } from '../transform'
-import { NodeTypes, ExpressionNode, createExpression } from '../ast'
+import {
+  createStructuralDirectiveTransform,
+  TransformContext
+} from '../transform'
+import {
+  NodeTypes,
+  ExpressionNode,
+  createExpression,
+  SourceLocation
+} from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
 import { RENDER_LIST } from '../runtimeConstants'
+import { processExpression } from './expression'
 
 const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
@@ -13,23 +22,35 @@ export const transformFor = createStructuralDirectiveTransform(
   (node, dir, context) => {
     if (dir.exp) {
       context.imports.add(RENDER_LIST)
-      const aliases = parseAliasExpressions(dir.exp.content)
+      const parseResult = parseForExpression(dir.exp, context)
 
-      if (aliases) {
-        // TODO inject identifiers to context
-        // and remove on exit
+      if (parseResult) {
+        const { source, value, key, index } = parseResult
+
         context.replaceNode({
           type: NodeTypes.FOR,
           loc: node.loc,
-          source: maybeCreateExpression(
-            aliases.source,
-            dir.exp
-          ) as ExpressionNode,
-          valueAlias: maybeCreateExpression(aliases.value, dir.exp),
-          keyAlias: maybeCreateExpression(aliases.key, dir.exp),
-          objectIndexAlias: maybeCreateExpression(aliases.index, dir.exp),
+          source,
+          valueAlias: value,
+          keyAlias: key,
+          objectIndexAlias: index,
           children: [node]
         })
+
+        // scope management
+        const { addIdentifier, removeIdentifier } = context
+
+        // inject identifiers to context
+        value && addIdentifier(value)
+        key && addIdentifier(key)
+        index && addIdentifier(index)
+
+        return () => {
+          // remove injected identifiers on exit
+          value && removeIdentifier(value)
+          key && removeIdentifier(key)
+          index && removeIdentifier(index)
+        }
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_FOR_MALFORMED_EXPRESSION, dir.loc)
@@ -43,28 +64,31 @@ export const transformFor = createStructuralDirectiveTransform(
   }
 )
 
-interface AliasExpression {
-  offset: number
-  content: string
+interface ForParseResult {
+  source: ExpressionNode
+  value: ExpressionNode | undefined
+  key: ExpressionNode | undefined
+  index: ExpressionNode | undefined
 }
 
-interface AliasExpressions {
-  source: AliasExpression
-  value: AliasExpression | undefined
-  key: AliasExpression | undefined
-  index: AliasExpression | undefined
-}
-
-function parseAliasExpressions(source: string): AliasExpressions | null {
+function parseForExpression(
+  input: ExpressionNode,
+  context: TransformContext
+): ForParseResult | null {
+  const loc = input.loc
+  const source = input.content
   const inMatch = source.match(forAliasRE)
   if (!inMatch) return null
 
   const [, LHS, RHS] = inMatch
-  const result: AliasExpressions = {
-    source: {
-      offset: source.indexOf(RHS, LHS.length),
-      content: RHS.trim()
-    },
+  const result: ForParseResult = {
+    source: createAliasExpression(
+      loc,
+      RHS.trim(),
+      source.indexOf(RHS, LHS.length),
+      context,
+      !context.useWith
+    ),
     value: undefined,
     key: undefined,
     index: undefined
@@ -80,49 +104,60 @@ function parseAliasExpressions(source: string): AliasExpressions | null {
     valueContent = valueContent.replace(forIteratorRE, '').trim()
 
     const keyContent = iteratorMatch[1].trim()
+    let keyOffset: number | undefined
     if (keyContent) {
-      result.key = {
-        offset: source.indexOf(keyContent, trimmedOffset + valueContent.length),
-        content: keyContent
-      }
+      keyOffset = source.indexOf(
+        keyContent,
+        trimmedOffset + valueContent.length
+      )
+      result.key = createAliasExpression(loc, keyContent, keyOffset, context)
     }
 
     if (iteratorMatch[2]) {
       const indexContent = iteratorMatch[2].trim()
 
       if (indexContent) {
-        result.index = {
-          offset: source.indexOf(
+        result.index = createAliasExpression(
+          loc,
+          indexContent,
+          source.indexOf(
             indexContent,
             result.key
-              ? result.key.offset + result.key.content.length
+              ? keyOffset! + keyContent.length
               : trimmedOffset + valueContent.length
           ),
-          content: indexContent
-        }
+          context
+        )
       }
     }
   }
 
   if (valueContent) {
-    result.value = {
-      offset: trimmedOffset,
-      content: valueContent
-    }
+    result.value = createAliasExpression(
+      loc,
+      valueContent,
+      trimmedOffset,
+      context
+    )
   }
 
   return result
 }
 
-function maybeCreateExpression(
-  alias: AliasExpression | undefined,
-  node: ExpressionNode
-): ExpressionNode | undefined {
-  if (alias) {
-    return createExpression(
-      alias.content,
-      false,
-      getInnerRange(node.loc, alias.offset, alias.content.length)
-    )
+function createAliasExpression(
+  range: SourceLocation,
+  content: string,
+  offset: number,
+  context: TransformContext,
+  process: boolean = false
+): ExpressionNode {
+  const exp = createExpression(
+    content,
+    false,
+    getInnerRange(range, offset, content.length)
+  )
+  if (!__BROWSER__ && process) {
+    processExpression(exp, context)
   }
+  return exp
 }

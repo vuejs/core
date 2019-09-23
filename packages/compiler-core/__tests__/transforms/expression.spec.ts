@@ -3,13 +3,16 @@ import { compile } from '../../src'
 
 test(`should work`, async () => {
   const { code, map } = compile(
-    `<div v-if="hello">{{ ({ a }, b) => a + b + c }}</div>`,
+    `<div v-for="i in foo">
+      {{ ({ a }, b) => a + b + i + c }} {{ i + 'fe' }} {{ i }}
+    </div>
+    <p>{{ i }}</p>
+    `,
     {
       useWith: false
     }
   )
   console.log(code)
-  console.log(map)
   const consumer = await new SourceMapConsumer(map!)
   const pos = consumer.originalPositionFor({
     line: 4,

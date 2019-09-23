@@ -5,9 +5,10 @@ import {
   ChildNode,
   ElementNode,
   DirectiveNode,
-  Property
+  Property,
+  ExpressionNode
 } from './ast'
-import { isString } from '@vue/shared'
+import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 
 // There are two types of transforms:
@@ -15,7 +16,10 @@ import { CompilerError, defaultOnError } from './errors'
 // - NodeTransform:
 //   Transforms that operate directly on a ChildNode. NodeTransforms may mutate,
 //   replace or remove the node being processed.
-export type NodeTransform = (node: ChildNode, context: TransformContext) => void
+export type NodeTransform = (
+  node: ChildNode,
+  context: TransformContext
+) => void | (() => void) | (() => void)[]
 
 // - DirectiveTransform:
 //   Transforms that handles a single directive attribute on an element.
@@ -34,11 +38,12 @@ export type StructuralDirectiveTransform = (
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext
-) => void
+) => void | (() => void)
 
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
+  useWith?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -53,19 +58,27 @@ export interface TransformContext extends Required<TransformOptions> {
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
   onNodeRemoved: () => void
+  addIdentifier(exp: ExpressionNode): void
+  removeIdentifier(exp: ExpressionNode): void
 }
 
 function createTransformContext(
   root: RootNode,
-  options: TransformOptions
+  {
+    useWith = true,
+    nodeTransforms = [],
+    directiveTransforms = {},
+    onError = defaultOnError
+  }: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
     imports: new Set(),
     statements: [],
     identifiers: {},
-    nodeTransforms: options.nodeTransforms || [],
-    directiveTransforms: options.directiveTransforms || {},
-    onError: options.onError || defaultOnError,
+    useWith,
+    nodeTransforms,
+    directiveTransforms,
+    onError,
     parent: root,
     ancestors: [],
     childIndex: 0,
@@ -99,7 +112,13 @@ function createTransformContext(
       }
       context.parent.children.splice(removalIndex, 1)
     },
-    onNodeRemoved: () => {}
+    onNodeRemoved: () => {},
+    addIdentifier(exp) {
+      context.identifiers[exp.content] = true
+    },
+    removeIdentifier(exp) {
+      delete context.identifiers[exp.content]
+    }
   }
   return context
 }
@@ -115,10 +134,7 @@ export function traverseChildren(
   parent: ParentNode,
   context: TransformContext
 ) {
-  // ancestors and identifiers need to be cached here since they may get
-  // replaced during a child's traversal
   const ancestors = context.ancestors.concat(parent)
-  const identifiers = context.identifiers
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -131,7 +147,6 @@ export function traverseChildren(
     context.ancestors = ancestors
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
-    context.identifiers = identifiers
     traverseNode(child, context)
   }
 }
@@ -139,9 +154,17 @@ export function traverseChildren(
 export function traverseNode(node: ChildNode, context: TransformContext) {
   // apply transform plugins
   const { nodeTransforms } = context
+  const exitFns = []
   for (let i = 0; i < nodeTransforms.length; i++) {
     const plugin = nodeTransforms[i]
-    plugin(node, context)
+    const onExit = plugin(node, context)
+    if (onExit) {
+      if (isArray(onExit)) {
+        exitFns.push(...onExit)
+      } else {
+        exitFns.push(onExit)
+      }
+    }
     if (!context.currentNode) {
       // node was removed
       return
@@ -163,6 +186,11 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
       traverseChildren(node, context)
       break
   }
+
+  // exit transforms
+  for (let i = 0; i < exitFns.length; i++) {
+    exitFns[i]()
+  }
 }
 
 export function createStructuralDirectiveTransform(
@@ -176,6 +204,7 @@ export function createStructuralDirectiveTransform(
   return (node, context) => {
     if (node.type === NodeTypes.ELEMENT) {
       const { props } = node
+      const exitFns = []
       for (let i = 0; i < props.length; i++) {
         const prop = props[i]
         if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
@@ -184,9 +213,11 @@ export function createStructuralDirectiveTransform(
           // traverse itself in case it moves the node around
           props.splice(i, 1)
           i--
-          fn(node, prop, context)
+          const onExit = fn(node, prop, context)
+          if (onExit) exitFns.push(onExit)
         }
       }
+      return exitFns
     }
   }
 }

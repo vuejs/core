@@ -2,7 +2,7 @@ import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
   code: ErrorCodes
-  loc: SourceLocation
+  loc?: SourceLocation
 }
 
 export function defaultOnError(error: CompilerError) {
@@ -11,13 +11,11 @@ export function defaultOnError(error: CompilerError) {
 
 export function createCompilerError(
   code: ErrorCodes,
-  loc: SourceLocation
+  loc?: SourceLocation
 ): CompilerError {
-  const error = new SyntaxError(
-    `${__DEV__ || !__BROWSER__ ? errorMessages[code] : code} (${
-      loc.start.line
-    }:${loc.start.column})`
-  ) as CompilerError
+  const msg = __DEV__ || !__BROWSER__ ? errorMessages[code] : code
+  const locInfo = loc ? ` (${loc.start.line}:${loc.start.column})` : ``
+  const error = new SyntaxError(msg + locInfo) as CompilerError
   error.code = code
   error.loc = loc
   return error
@@ -56,6 +54,8 @@ export const enum ErrorCodes {
   UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
   UNEXPECTED_SOLIDUS_IN_TAG,
   UNKNOWN_NAMED_CHARACTER_REFERENCE,
+
+  // Vue-specific parse errors
   X_INVALID_END_TAG,
   X_MISSING_END_TAG,
   X_MISSING_INTERPOLATION_END,
@@ -66,7 +66,10 @@ export const enum ErrorCodes {
   X_ELSE_NO_ADJACENT_IF,
   X_FOR_NO_EXPRESSION,
   X_FOR_MALFORMED_EXPRESSION,
-  X_V_BIND_NO_EXPRESSION
+  X_V_BIND_NO_EXPRESSION,
+
+  // generic errors
+  X_STRIP_WITH_NOT_SUPPORTED
 }
 
 export const errorMessages: { [code: number]: string } = {
@@ -116,14 +119,21 @@ export const errorMessages: { [code: number]: string } = {
     "'<?' is allowed only in XML context.",
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
   [ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE]: 'Unknown entity name.',
+
+  // Vue-specific parse errors
   [ErrorCodes.X_INVALID_END_TAG]: 'Invalid end tag.',
   [ErrorCodes.X_MISSING_END_TAG]: 'End tag was not found.',
   [ErrorCodes.X_MISSING_INTERPOLATION_END]:
     'Interpolation end sign was not found.',
+  [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
+    'End bracket for dynamic directive argument was not found.',
 
   // transform errors
   [ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF]: `v-else-if has no adjacent v-if`,
   [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else has no adjacent v-if`,
   [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for has no expression`,
-  [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression`
+  [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression`,
+
+  // generic errors
+  [ErrorCodes.X_STRIP_WITH_NOT_SUPPORTED]: `useWith: false is not supported in this build of compiler because it is optimized for payload size.`
 }

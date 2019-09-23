@@ -15,30 +15,56 @@ import { NodeTypes, createExpression, ExpressionNode } from '../ast'
 import { Node, Function, Identifier } from 'estree'
 import { advancePositionWithClone } from '../utils'
 
-export const rewriteExpression: NodeTransform = (node, context) => {
+export const expressionTransform: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.EXPRESSION && !node.isStatic) {
-    context.replaceNode(convertExpression(node, context))
+    processExpression(node, context)
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
       if (prop.type === NodeTypes.DIRECTIVE) {
         if (prop.exp) {
-          prop.exp = convertExpression(prop.exp, context)
+          processExpression(prop.exp, context)
         }
         if (prop.arg && !prop.arg.isStatic) {
-          prop.arg = convertExpression(prop.arg, context)
+          processExpression(prop.arg, context)
         }
       }
     }
   }
 }
 
-function convertExpression(
+const simpleIdRE = /^[a-zA-Z$_][\w$]*$/
+
+// cache node requires
+let _parseScript: typeof parseScript
+let _walk: typeof walk
+
+export function processExpression(
   node: ExpressionNode,
   context: TransformContext
-): ExpressionNode {
-  const ast = parseScript(`(${node.content})`, { ranges: true }) as any
+) {
+  // lazy require dependencies so that they don't end up in rollup's dep graph
+  // and thus can be tree-shaken in browser builds.
+  const parseScript =
+    _parseScript || (_parseScript = require('meriyah').parseScript)
+  const walk = _walk || (_walk = require('estree-walker').walk)
+
+  // fast path if expression is a simple identifier.
+  if (simpleIdRE.test(node.content)) {
+    if (!context.identifiers[node.content]) {
+      node.content = `_ctx.${node.content}`
+    }
+    return
+  }
+
+  let ast
+  try {
+    ast = parseScript(`(${node.content})`, { ranges: true }) as any
+  } catch (e) {
+    context.onError(e)
+    return
+  }
   const ids: Node[] = []
   const knownIds = Object.create(context.identifiers)
 
@@ -98,10 +124,7 @@ function convertExpression(
     }
   })
 
-  return {
-    ...node,
-    children
-  }
+  node.children = children
 }
 
 const globals = new Set(
