@@ -17,6 +17,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
       if (aliases) {
         // TODO inject identifiers to context
+        // and remove on exit
         context.replaceNode({
           type: NodeTypes.FOR,
           loc: node.loc,

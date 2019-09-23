@@ -21,9 +21,9 @@ export function compile(
   transform(ast, {
     ...options,
     nodeTransforms: [
+      ...(!__BROWSER__ && options.useWith === false ? [rewriteExpression] : []),
       transformIf,
       transformFor,
-      ...(!__BROWSER__ && options.useWith === false ? [rewriteExpression] : []),
       prepareElementForCodegen,
       ...(options.nodeTransforms || []) // user transforms
     ],

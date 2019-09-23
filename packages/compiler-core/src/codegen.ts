@@ -318,7 +318,9 @@ function genIfBranch(
   if (condition) {
     // v-if or v-else-if
     const { push, indent, deindent, newline } = context
-    push(`(${condition.content})`, condition)
+    push(`(`)
+    genExpression(condition, context)
+    push(`)`)
     indent()
     context.indentLevel++
     push(`? `)

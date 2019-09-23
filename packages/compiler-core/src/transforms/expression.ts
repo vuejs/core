@@ -31,9 +31,6 @@ export const rewriteExpression: NodeTransform = (node, context) => {
         }
       }
     }
-  } else if (node.type === NodeTypes.IF) {
-    for (let i = 0; i < node.branches.length; i++) {}
-  } else if (node.type === NodeTypes.FOR) {
   }
 }
 
@@ -102,10 +99,7 @@ function convertExpression(
   })
 
   return {
-    type: NodeTypes.EXPRESSION,
-    content: '',
-    isStatic: false,
-    loc: node.loc,
+    ...node,
     children
   }
 }
