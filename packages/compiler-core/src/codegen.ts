@@ -291,12 +291,14 @@ function genIfBranch(
   context: CodegenContext
 ) {
   if (condition) {
-    const { push, indent, deindent, newline } = context
     // v-if or v-else-if
+    const { push, indent, deindent, newline } = context
     push(`(${condition.content})`, condition)
     indent()
+    context.indentLevel++
     push(`? `)
     genChildren(children, context)
+    context.indentLevel--
     newline()
     push(`: `)
     if (nextIndex < branches.length) {
@@ -317,40 +319,41 @@ function genFor(node: ForNode, context: CodegenContext) {
   const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
   push(`${RENDER_LIST_HELPER}(`, node)
   genExpression(source, context)
-  context.push(`(`)
+  push(`, (`)
   if (valueAlias) {
     // not using genExpression here because these aliases can only be code
     // that is valid in the function argument position, so the parse rule can
     // be off and they don't need identifier prefixing anyway.
     push(valueAlias.content, valueAlias)
-    push(`, `)
   }
   if (keyAlias) {
     if (!valueAlias) {
-      push(`_, `)
+      push(`_`)
     }
-    push(keyAlias.content, keyAlias)
     push(`, `)
+    push(keyAlias.content, keyAlias)
   }
   if (objectIndexAlias) {
     if (!keyAlias) {
       if (!valueAlias) {
-        push(`_, `)
+        push(`_, __`)
+      } else {
+        push(`__`)
       }
-      push(`_, `)
     }
+    push(`, `)
     push(objectIndexAlias.content, objectIndexAlias)
   }
-  context.push(`) => `)
+  push(`) => `)
   genChildren(children, context)
-  context.push(`)`)
+  push(`)`)
 }
 
 // JavaScript
 function genCallExpression(
   node: CallExpression,
   context: CodegenContext,
-  multilines = node.arguments.length > 1
+  multilines = node.arguments.length > 2
 ) {
   context.push(node.callee + `(`, node)
   multilines && context.indent()
