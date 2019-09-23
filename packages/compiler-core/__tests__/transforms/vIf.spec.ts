@@ -9,14 +9,25 @@ import {
   CommentNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
+import { CompilerOptions } from '../../src'
+
+function transformWithIf(
+  template: string,
+  options: CompilerOptions = {},
+  returnIndex: number = 0
+): IfNode {
+  const node = parse(template, options)
+  transform(node, { nodeTransforms: [transformIf], ...options })
+  if (!options.onError) {
+    expect(node.children.length).toBe(1)
+    expect(node.children[0].type).toBe(NodeTypes.IF)
+  }
+  return node.children[returnIndex] as IfNode
+}
 
 describe('compiler: transform v-if', () => {
   test('basic v-if', () => {
-    const ast = parse(`<div v-if="ok"/>`)
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    const node = ast.children[0] as IfNode
+    const node = transformWithIf(`<div v-if="ok"/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(1)
     expect(node.branches[0].condition!.content).toBe(`ok`)
@@ -26,11 +37,9 @@ describe('compiler: transform v-if', () => {
   })
 
   test('template v-if', () => {
-    const ast = parse(`<template v-if="ok"><div/>hello<p/></template>`)
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    const node = ast.children[0] as IfNode
+    const node = transformWithIf(
+      `<template v-if="ok"><div/>hello<p/></template>`
+    )
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(1)
     expect(node.branches[0].condition!.content).toBe(`ok`)
@@ -44,14 +53,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else', () => {
-    const ast = parse(`<div v-if="ok"/><p v-else/>`)
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    // should fold branches
-    expect(ast.children.length).toBe(1)
-
-    const node = ast.children[0] as IfNode
+    const node = transformWithIf(`<div v-if="ok"/><p v-else/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(2)
 
@@ -69,14 +71,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else-if', () => {
-    const ast = parse(`<div v-if="ok"/><p v-else-if="orNot"/>`)
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    // should fold branches
-    expect(ast.children.length).toBe(1)
-
-    const node = ast.children[0] as IfNode
+    const node = transformWithIf(`<div v-if="ok"/><p v-else-if="orNot"/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(2)
 
@@ -94,16 +89,9 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else-if + v-else', () => {
-    const ast = parse(
+    const node = transformWithIf(
       `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`
     )
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    // should fold branches
-    expect(ast.children.length).toBe(1)
-
-    const node = ast.children[0] as IfNode
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(3)
 
@@ -127,20 +115,13 @@ describe('compiler: transform v-if', () => {
   })
 
   test('comment between branches', () => {
-    const ast = parse(`
+    const node = transformWithIf(`
       <div v-if="ok"/>
       <!--foo-->
       <p v-else-if="orNot"/>
       <!--bar-->
       <template v-else>fine</template>
     `)
-    transform(ast, {
-      nodeTransforms: [transformIf]
-    })
-    // should fold branches
-    expect(ast.children.length).toBe(1)
-
-    const node = ast.children[0] as IfNode
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(3)
 
@@ -168,83 +149,65 @@ describe('compiler: transform v-if', () => {
   })
 
   test('error on v-else missing adjacent v-if', () => {
-    const ast = parse(`<div v-else/>`)
-    const spy = jest.fn()
-    transform(ast, {
-      nodeTransforms: [transformIf],
-      onError: spy
-    })
-    expect(spy.mock.calls[0]).toMatchObject([
+    const onError = jest.fn()
+
+    const node1 = transformWithIf(`<div v-else/>`, { onError })
+    expect(onError.mock.calls[0]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: ast.children[0].loc
+        loc: node1.loc
       }
     ])
 
-    const ast2 = parse(`<div/><div v-else/>`)
-    const spy2 = jest.fn()
-    transform(ast2, {
-      nodeTransforms: [transformIf],
-      onError: spy2
-    })
-    expect(spy2.mock.calls[0]).toMatchObject([
+    const node2 = transformWithIf(`<div/><div v-else/>`, { onError }, 1)
+    expect(onError.mock.calls[1]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: ast2.children[1].loc
+        loc: node2.loc
       }
     ])
 
-    const ast3 = parse(`<div/>foo<div v-else/>`)
-    const spy3 = jest.fn()
-    transform(ast3, {
-      nodeTransforms: [transformIf],
-      onError: spy3
-    })
-    expect(spy3.mock.calls[0]).toMatchObject([
+    const node3 = transformWithIf(`<div/>foo<div v-else/>`, { onError }, 2)
+    expect(onError.mock.calls[2]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: ast3.children[2].loc
+        loc: node3.loc
       }
     ])
   })
 
   test('error on v-else-if missing adjacent v-if', () => {
-    const ast = parse(`<div v-else-if="foo"/>`)
-    const spy = jest.fn()
-    transform(ast, {
-      nodeTransforms: [transformIf],
-      onError: spy
-    })
-    expect(spy.mock.calls[0]).toMatchObject([
+    const onError = jest.fn()
+
+    const node1 = transformWithIf(`<div v-else-if="foo"/>`, { onError })
+    expect(onError.mock.calls[0]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: ast.children[0].loc
+        loc: node1.loc
       }
     ])
 
-    const ast2 = parse(`<div/><div v-else-if="foo"/>`)
-    const spy2 = jest.fn()
-    transform(ast2, {
-      nodeTransforms: [transformIf],
-      onError: spy2
-    })
-    expect(spy2.mock.calls[0]).toMatchObject([
+    const node2 = transformWithIf(
+      `<div/><div v-else-if="foo"/>`,
+      { onError },
+      1
+    )
+    expect(onError.mock.calls[1]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: ast2.children[1].loc
+        loc: node2.loc
       }
     ])
 
-    const ast3 = parse(`<div/>foo<div v-else-if="foo"/>`)
-    const spy3 = jest.fn()
-    transform(ast3, {
-      nodeTransforms: [transformIf],
-      onError: spy3
-    })
-    expect(spy3.mock.calls[0]).toMatchObject([
+    const node3 = transformWithIf(
+      `<div/>foo<div v-else-if="foo"/>`,
+      { onError },
+      2
+    )
+    expect(onError.mock.calls[2]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: ast3.children[2].loc
+        loc: node3.loc
       }
     ])
   })
