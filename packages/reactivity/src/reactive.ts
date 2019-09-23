@@ -1,4 +1,4 @@
-import { isObject } from '@vue/shared'
+import { isObject, toTypeString } from '@vue/shared'
 import { mutableHandlers, readonlyHandlers } from './baseHandlers'
 
 import {
@@ -35,7 +35,7 @@ const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
     !value._isVNode &&
-    observableValueRE.test(Object.prototype.toString.call(value)) &&
+    observableValueRE.test(toTypeString(value)) &&
     !nonReactiveValues.has(value)
   )
 }

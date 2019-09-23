@@ -296,6 +296,7 @@ describe('compiler: parse', () => {
         type: NodeTypes.EXPRESSION,
         content: 'message',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
@@ -312,6 +313,7 @@ describe('compiler: parse', () => {
         type: NodeTypes.EXPRESSION,
         content: 'a<b',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
@@ -329,6 +331,7 @@ describe('compiler: parse', () => {
         type: NodeTypes.EXPRESSION,
         content: 'a<b',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
@@ -339,6 +342,7 @@ describe('compiler: parse', () => {
         type: NodeTypes.EXPRESSION,
         content: 'c>d',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 9, line: 1, column: 10 },
           end: { offset: 18, line: 1, column: 19 },
@@ -356,6 +360,7 @@ describe('compiler: parse', () => {
         type: NodeTypes.EXPRESSION,
         content: '"</div>"',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 19, line: 1, column: 20 },
@@ -887,6 +892,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.EXPRESSION,
           content: 'a',
           isStatic: false,
+          isInterpolation: false,
           loc: {
             start: { offset: 10, line: 1, column: 11 },
             end: { offset: 13, line: 1, column: 14 },
@@ -909,9 +915,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'click',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'click',
             start: {
@@ -980,9 +987,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'click',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'click',
             start: {
@@ -1015,9 +1023,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'a',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'a',
             start: {
@@ -1037,6 +1046,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.EXPRESSION,
           content: 'b',
           isStatic: false,
+          isInterpolation: false,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
@@ -1059,9 +1069,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'a',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'a',
             start: {
@@ -1081,6 +1092,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.EXPRESSION,
           content: 'b',
           isStatic: false,
+          isInterpolation: false,
           loc: {
             start: { offset: 13, line: 1, column: 14 },
             end: { offset: 14, line: 1, column: 15 },
@@ -1103,9 +1115,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'a',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'a',
             start: {
@@ -1125,6 +1138,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.EXPRESSION,
           content: 'b',
           isStatic: false,
+          isInterpolation: false,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
@@ -1147,9 +1161,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: 4,
+          type: NodeTypes.EXPRESSION,
           content: 'a',
           isStatic: true,
+          isInterpolation: false,
           loc: {
             source: 'a',
             start: {
@@ -1169,6 +1184,7 @@ describe('compiler: parse', () => {
           type: NodeTypes.EXPRESSION,
           content: 'b',
           isStatic: false,
+          isInterpolation: false,
           loc: {
             start: { offset: 14, line: 1, column: 15 },
             end: { offset: 15, line: 1, column: 16 },

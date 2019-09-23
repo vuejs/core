@@ -3835,6 +3835,7 @@ Object {
       "children": Array [
         Object {
           "content": "a < b",
+          "isInterpolation": true,
           "isStatic": false,
           "loc": Object {
             "end": Object {
@@ -6873,6 +6874,7 @@ Object {
       "children": Array [
         Object {
           "content": "'</div>'",
+          "isInterpolation": true,
           "isStatic": false,
           "loc": Object {
             "end": Object {
@@ -7223,6 +7225,7 @@ Object {
   "children": Array [
     Object {
       "content": "",
+      "isInterpolation": true,
       "isStatic": true,
       "loc": Object {
         "end": Object {
@@ -7360,6 +7363,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7378,6 +7382,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7438,6 +7443,7 @@ Object {
         Object {
           "arg": Object {
             "content": "style",
+            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7456,6 +7462,7 @@ Object {
           },
           "exp": Object {
             "content": "{ color: 'red' }",
+            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7542,6 +7549,7 @@ Object {
             Object {
               "arg": Object {
                 "content": "style",
+                "isInterpolation": false,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -7560,6 +7568,7 @@ Object {
               },
               "exp": Object {
                 "content": "{ color: 'red' }",
+                "isInterpolation": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -7639,6 +7648,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7657,6 +7667,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {

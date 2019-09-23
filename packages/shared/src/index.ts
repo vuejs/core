@@ -30,6 +30,13 @@ export const isString = (val: any): val is string => typeof val === 'string'
 export const isObject = (val: any): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
+export const objectToString = Object.prototype.toString
+export const toTypeString = (value: unknown): string =>
+  objectToString.call(value)
+
+export const isPlainObject = (val: any): val is object =>
+  toTypeString(val) === '[object Object]'
+
 const vnodeHooksRE = /^vnode/
 export const isReservedProp = (key: string): boolean =>
   key === 'key' || key === 'ref' || vnodeHooksRE.test(key)

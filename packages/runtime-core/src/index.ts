@@ -36,9 +36,11 @@ export {
 } from './errorHandling'
 
 // Internal, for compiler generated code
+// should sync with '@vue/compiler-core/src/runtimeConstants.ts'
 export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
+export { toString } from './helpers/toString'
 export { capitalize } from '@vue/shared'
 
 // Internal, for integration with runtime compiler

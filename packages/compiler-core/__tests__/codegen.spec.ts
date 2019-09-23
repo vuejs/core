@@ -13,7 +13,7 @@ describe('compiler: codegen', () => {
   with (this) {
     return [
       "hello ",
-      world
+      toString(world)
     ]
   }
 }`
@@ -25,7 +25,7 @@ describe('compiler: codegen', () => {
     const consumer = await new SourceMapConsumer(map as RawSourceMap)
     const pos = consumer.originalPositionFor({
       line: 5,
-      column: 6
+      column: 15
     })
     expect(pos).toMatchObject({
       line: 1,

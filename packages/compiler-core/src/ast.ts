@@ -110,6 +110,7 @@ export interface ExpressionNode extends Node {
   type: NodeTypes.EXPRESSION
   content: string
   isStatic: boolean
+  isInterpolation: boolean
   children?: (ExpressionNode | string)[]
 }
 
@@ -208,7 +209,8 @@ export function createExpression(
     type: NodeTypes.EXPRESSION,
     loc,
     content,
-    isStatic
+    isStatic,
+    isInterpolation: false
   }
 }
 

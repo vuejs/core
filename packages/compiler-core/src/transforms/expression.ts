@@ -40,6 +40,9 @@ const simpleIdRE = /^[a-zA-Z$_][\w$]*$/
 let _parseScript: typeof parseScript
 let _walk: typeof walk
 
+// Important: since this function uses Node.js only dependencies, it should
+// always be used with a leading !__BROWSER__ check so that it can be
+// tree-shaken from the browser build.
 export function processExpression(
   node: ExpressionNode,
   context: TransformContext
@@ -73,7 +76,7 @@ export function processExpression(
       if (node.type === 'Identifier') {
         if (ids.indexOf(node) === -1) {
           ids.push(node)
-          if (!knownIds[node.name] && shouldPrependContext(node, parent)) {
+          if (!knownIds[node.name] && shouldPrefix(node, parent)) {
             node.name = `_ctx.${node.name}`
           }
         }
@@ -141,7 +144,7 @@ const globals = new Set(
 const isFunction = (node: Node): node is Function =>
   /Function(Expression|Declaration)$/.test(node.type)
 
-function shouldPrependContext(identifier: Identifier, parent: Node) {
+function shouldPrefix(identifier: Identifier, parent: Node) {
   if (
     // not id of a FunctionDeclaration
     !(parent.type === 'FunctionDeclaration' && parent.id === identifier) &&

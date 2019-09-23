@@ -17,7 +17,7 @@ import {
 import { isArray } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
-  CREATE_ELEMENT,
+  CREATE_VNODE,
   APPLY_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT
@@ -67,8 +67,8 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
       }
 
       const { loc } = node
-      context.imports.add(CREATE_ELEMENT)
-      const vnode = createCallExpression(CREATE_ELEMENT, args, loc)
+      context.imports.add(CREATE_VNODE)
+      const vnode = createCallExpression(CREATE_VNODE, args, loc)
 
       if (runtimeDirectives && runtimeDirectives.length) {
         context.imports.add(APPLY_DIRECTIVES)

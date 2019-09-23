@@ -523,6 +523,7 @@ function parseAttribute(
         type: NodeTypes.EXPRESSION,
         content,
         isStatic,
+        isInterpolation: false,
         loc
       }
     }
@@ -540,6 +541,7 @@ function parseAttribute(
         type: NodeTypes.EXPRESSION,
         content: value.content,
         isStatic: false,
+        isInterpolation: false,
         loc: value.loc
       },
       arg,
@@ -626,7 +628,8 @@ function parseInterpolation(
     type: NodeTypes.EXPRESSION,
     content,
     loc: getSelection(context, start),
-    isStatic: content === ''
+    isStatic: content === '',
+    isInterpolation: true
   }
 }
 

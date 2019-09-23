@@ -17,7 +17,7 @@ import {
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import { advancePositionWithMutation, assert } from './utils'
 import { isString, isArray } from '@vue/shared'
-import { RENDER_LIST } from './runtimeConstants'
+import { RENDER_LIST, TO_STRING } from './runtimeConstants'
 
 type CodegenNode = ChildNode | JSChildNode
 
@@ -149,7 +149,7 @@ export function generate(
     indent()
   }
   push(`return `)
-  genChildren(ast.children, context)
+  genChildren(ast.children, context, true /* asRoot */)
   if (!prefixIdentifiers) {
     deindent()
     push(`}`)
@@ -162,10 +162,23 @@ export function generate(
   }
 }
 
-// This will generate a single vnode call if the list has length === 1.
-function genChildren(children: ChildNode[], context: CodegenContext) {
-  if (children.length === 1) {
-    genNode(children[0], context)
+// This will generate a single vnode call if:
+// - The list has length === 1, AND:
+// - This is a root node, OR:
+// - The only child is a text or expression.
+function genChildren(
+  children: ChildNode[],
+  context: CodegenContext,
+  asRoot: boolean = false
+) {
+  const child = children[0]
+  if (
+    children.length === 1 &&
+    (asRoot ||
+      child.type === NodeTypes.TEXT ||
+      child.type == NodeTypes.EXPRESSION)
+  ) {
+    genNode(child, context)
   } else {
     genNodeListAsArray(children, context)
   }
@@ -192,14 +205,9 @@ function genNodeList(
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]
     if (isString(node)) {
-      // plain code string
-      // note not adding quotes here because this can be any code,
-      // not just plain strings.
       push(node)
     } else if (isArray(node)) {
-      // child VNodes in a h() call
-      // not using genChildren here because we want them to always be an array
-      genNodeListAsArray(node, context)
+      genChildren(node, context)
     } else {
       genNode(node, context)
     }
@@ -264,11 +272,19 @@ function genText(node: TextNode | ExpressionNode, context: CodegenContext) {
 }
 
 function genExpression(node: ExpressionNode, context: CodegenContext) {
-  if (node.children) {
-    return genCompoundExpression(node, context)
+  const { push } = context
+  const { content, children, isStatic, isInterpolation } = node
+  if (isInterpolation) {
+    push(`${TO_STRING}(`)
   }
-  const text = node.isStatic ? JSON.stringify(node.content) : node.content
-  context.push(text, node)
+  if (children) {
+    genCompoundExpression(node, context)
+  } else {
+    push(isStatic ? JSON.stringify(content) : content, node)
+  }
+  if (isInterpolation) {
+    push(`)`)
+  }
 }
 
 function genExpressionAsPropertyKey(

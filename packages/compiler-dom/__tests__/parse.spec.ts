@@ -115,6 +115,7 @@ describe('DOM parser', () => {
         type: NodeTypes.EXPRESSION,
         content: 'a < b',
         isStatic: false,
+        isInterpolation: true,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 19, line: 1, column: 20 },

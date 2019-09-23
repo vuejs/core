@@ -9,7 +9,8 @@ import {
   isArray,
   isObject,
   isReservedProp,
-  hasOwn
+  hasOwn,
+  toTypeString
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
@@ -374,7 +375,7 @@ function styleValue(value: any, type: string): string {
 }
 
 function toRawType(value: any): string {
-  return Object.prototype.toString.call(value).slice(8, -1)
+  return toTypeString(value).slice(8, -1)
 }
 
 function isExplicable(type: string): boolean {

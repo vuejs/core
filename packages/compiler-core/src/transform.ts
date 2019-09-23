@@ -10,6 +10,7 @@ import {
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
+import { TO_STRING } from './runtimeConstants'
 
 // There are two types of transforms:
 //
@@ -178,8 +179,15 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
     }
   }
 
-  // further traverse downwards
   switch (node.type) {
+    case NodeTypes.EXPRESSION:
+      // no need to traverse, but we need to inject toString helper
+      if (node.isInterpolation) {
+        context.imports.add(TO_STRING)
+      }
+      break
+
+    // for container types, further traverse downwards
     case NodeTypes.IF:
       for (let i = 0; i < node.branches.length; i++) {
         traverseChildren(node.branches[i], context)
