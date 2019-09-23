@@ -2627,6 +2627,11 @@ estree-walker@^0.6.1:
   resolved "https://registry.yarnpkg.com/estree-walker/-/estree-walker-0.6.1.tgz#53049143f40c6eb918b23671d1fe3219f3a1b362"
   integrity sha512-SqmZANLWS0mnatqbSfRP5g8OXZC12Fgg1IwNtLsyHDzJizORW4khDfjPqJZsemPWBB2uqykUah5YpQ6epsqC/w==
 
+estree-walker@^0.8.1:
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/estree-walker/-/estree-walker-0.8.1.tgz#6230ce2ec9a5cb03888afcaf295f97d90aa52b79"
+  integrity sha512-H6cJORkqvrNziu0KX2hqOMAlA2CiuAxHeGJXSIoKA/KLv229Dw806J3II6mKTm5xiDX1At1EXCfsOQPB+tMB+g==
+
 esutils@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/esutils/-/esutils-2.0.2.tgz#0abf4f1caa5bcb1f7a9d8acc6dea4faaa04bac9b"
@@ -4784,6 +4789,11 @@ merge2@^1.2.3:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.2.4.tgz#c9269589e6885a60cf80605d9522d4b67ca646e3"
   integrity sha512-FYE8xI+6pjFOhokZu0We3S5NKCirLbCzSh2Usf3qEyr4X8U+0jNg9P8RZ4qz+V2UoECLVwSyzU3LxXBaLGtD3A==
+
+meriyah@^1.7.2:
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/meriyah/-/meriyah-1.7.2.tgz#c47d07d8f1284577658827cd134b180e80ae4bef"
+  integrity sha512-bBXN6hJ9RHA0mEae5O2Ocr6giK0S87nsz/W7tnBRm4kpW04LEEpXSOfwaID9GZgPRVcn3rAHzHHDDD68DLQgWw==
 
 micromatch@^3.1.10, micromatch@^3.1.4:
   version "3.1.10"

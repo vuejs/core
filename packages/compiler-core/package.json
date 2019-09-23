@@ -10,7 +10,9 @@
   ],
   "types": "dist/compiler-core.d.ts",
   "buildOptions": {
-    "formats": ["cjs"]
+    "formats": [
+      "cjs"
+    ]
   },
   "repository": {
     "type": "git",
@@ -26,6 +28,8 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-core#readme",
   "dependencies": {
+    "estree-walker": "^0.8.1",
+    "meriyah": "^1.7.2",
     "source-map": "^0.7.3"
   }
 }

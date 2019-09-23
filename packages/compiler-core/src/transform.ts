@@ -79,7 +79,7 @@ function createTransformContext(
     removeNode(node) {
       const list = context.parent.children
       const removalIndex = node
-        ? list.indexOf(node)
+        ? list.indexOf(node as any)
         : context.currentNode
           ? context.childIndex
           : -1
@@ -124,12 +124,15 @@ export function traverseChildren(
     i--
   }
   for (; i < parent.children.length; i++) {
+    const child = parent.children[i]
+    if (isString(child)) continue
+    context.currentNode = child
     context.parent = parent
     context.ancestors = ancestors
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
     context.identifiers = identifiers
-    traverseNode((context.currentNode = parent.children[i]), context)
+    traverseNode(child, context)
   }
 }
 

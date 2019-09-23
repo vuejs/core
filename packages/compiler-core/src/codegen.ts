@@ -119,7 +119,7 @@ export function generate(
   options: CodegenOptions = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
-  const { mode, push, useWith, indent, deindent } = context
+  const { mode, push, useWith, indent, deindent, newline } = context
   const imports = ast.imports.join(', ')
   if (mode === 'function') {
     // generate const declarations for helpers
@@ -135,13 +135,19 @@ export function generate(
     push(`export default `)
   }
   push(`function render() {`)
-  // generate asset resolution statements
-  ast.statements.forEach(s => push(s + `\n`))
-  if (useWith) {
-    indent()
-    push(`with (this) {`)
-  }
   indent()
+  // generate asset resolution statements
+  if (ast.statements.length) {
+    ast.statements.forEach(s => {
+      push(s)
+      newline()
+    })
+    newline()
+  }
+  if (useWith) {
+    push(`with (this) {`)
+    indent()
+  }
   push(`return `)
   genChildren(ast.children, context)
   if (useWith) {
@@ -236,6 +242,10 @@ function genNode(node: CodegenNode, context: CodegenContext) {
       break
     case NodeTypes.JS_ARRAY_EXPRESSION:
       genArrayExpression(node, context)
+      break
+    default:
+      __DEV__ &&
+        assert(false, `unhandled codegen node type: ${(node as any).type}`)
   }
 }
 
@@ -254,9 +264,9 @@ function genText(node: TextNode | ExpressionNode, context: CodegenContext) {
 }
 
 function genExpression(node: ExpressionNode, context: CodegenContext) {
-  // if (node.codegenNode) {
-  //   TODO handle transformed expression
-  // }
+  if (node.children) {
+    return genCompoundExpression(node, context)
+  }
   const text = node.isStatic ? JSON.stringify(node.content) : node.content
   context.push(text, node)
 }
@@ -265,9 +275,9 @@ function genExpressionAsPropertyKey(
   node: ExpressionNode,
   context: CodegenContext
 ) {
-  // if (node.codegenNode) {
-  //   TODO handle transformed expression
-  // }
+  if (node.children) {
+    return genCompoundExpression(node, context)
+  }
   if (node.isStatic) {
     // only quote keys if necessary
     const text = /^\d|[^\w]/.test(node.content)
@@ -276,6 +286,17 @@ function genExpressionAsPropertyKey(
     context.push(text, node)
   } else {
     context.push(`[${node.content}]`, node)
+  }
+}
+
+function genCompoundExpression(node: ExpressionNode, context: CodegenContext) {
+  for (let i = 0; i < node.children!.length; i++) {
+    const child = node.children![i]
+    if (isString(child)) {
+      context.push(child)
+    } else {
+      genExpression(child, context)
+    }
   }
 }
 

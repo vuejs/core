@@ -192,9 +192,7 @@ function createDirectiveArgs(
   // inject statement for resolving directive
   const dirIdentifier = `_directive_${toValidId(dir.name)}`
   context.statements.push(
-    `const ${dirIdentifier} = _${RESOLVE_DIRECTIVE}(${JSON.stringify(
-      dir.name
-    )})`
+    `const ${dirIdentifier} = ${RESOLVE_DIRECTIVE}(${JSON.stringify(dir.name)})`
   )
   const dirArgs: ArrayExpression['elements'] = [dirIdentifier]
   const { loc } = dir

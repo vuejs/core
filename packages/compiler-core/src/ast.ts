@@ -16,6 +16,7 @@ export const enum NodeTypes {
   ATTRIBUTE,
   DIRECTIVE,
   // containers
+  COMPOUND_EXPRESSION,
   IF,
   IF_BRANCH,
   FOR,
@@ -109,6 +110,7 @@ export interface ExpressionNode extends Node {
   type: NodeTypes.EXPRESSION
   content: string
   isStatic: boolean
+  children?: (ExpressionNode | string)[]
 }
 
 export interface IfNode extends Node {

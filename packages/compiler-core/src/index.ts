@@ -8,6 +8,7 @@ import { transformFor } from './transforms/vFor'
 import { prepareElementForCodegen } from './transforms/element'
 import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
+import { rewriteExpression } from './transforms/expression'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -22,6 +23,7 @@ export function compile(
     nodeTransforms: [
       transformIf,
       transformFor,
+      ...(!__BROWSER__ && options.useWith === false ? [rewriteExpression] : []),
       prepareElementForCodegen,
       ...(options.nodeTransforms || []) // user transforms
     ],
@@ -31,7 +33,6 @@ export function compile(
       ...(options.directiveTransforms || {}) // user transforms
     }
   })
-
   return generate(ast, options)
 }
 
