@@ -5,16 +5,21 @@ import {
   ElementNode,
   DirectiveNode,
   NodeTypes,
-  ForNode
+  ForNode,
+  CompilerOptions
 } from '../../src'
 import { transformFor } from '../..//src/transforms/vFor'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
-function parseWithExpressionTransform(template: string) {
+function parseWithExpressionTransform(
+  template: string,
+  options: CompilerOptions = {}
+) {
   const ast = parse(template)
   transform(ast, {
     prefixIdentifiers: true,
-    nodeTransforms: [transformFor, transformExpression]
+    nodeTransforms: [transformFor, transformExpression],
+    ...options
   })
   return ast.children[0]
 }
@@ -296,5 +301,11 @@ describe('compiler: expression transform', () => {
       { content: 'baz' },
       `]`
     ])
+  })
+
+  test('should handle parse error', () => {
+    const onError = jest.fn()
+    parseWithExpressionTransform(`{{ a( }}`, { onError })
+    expect(onError.mock.calls[0][0].message).toMatch(`Expected ')'`)
   })
 })

@@ -199,6 +199,7 @@ function pushNode(
   node: ChildNode
 ): void {
   // ignore comments in production
+  /* istanbul ignore next */
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
     return
   }

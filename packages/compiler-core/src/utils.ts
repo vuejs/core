@@ -60,6 +60,7 @@ export function advancePositionWithMutation(
 }
 
 export function assert(condition: boolean, msg?: string) {
+  /* istanbul ignore if */
   if (!condition) {
     throw new Error(msg || `unexpected compiler condition`)
   }

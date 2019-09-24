@@ -80,6 +80,46 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('props + children', () => {
+    const { node } = parseWithElementTransform(`<div id="foo"><span/></div>`)
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments).toMatchObject([
+      `"div"`,
+      createStaticObjectMatcher({
+        id: 'foo'
+      }),
+      [
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'span',
+          codegenNode: {
+            callee: CREATE_VNODE,
+            arguments: [`"span"`]
+          }
+        }
+      ]
+    ])
+  })
+
+  test('0 placeholder for children with no props', () => {
+    const { node } = parseWithElementTransform(`<div><span/></div>`)
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments).toMatchObject([
+      `"div"`,
+      `0`,
+      [
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'span',
+          codegenNode: {
+            callee: CREATE_VNODE,
+            arguments: [`"span"`]
+          }
+        }
+      ]
+    ])
+  })
+
   test('v-bind="obj"', () => {
     const { root, node } = parseWithElementTransform(`<div v-bind="obj" />`)
     // single v-bind doesn't need mergeProps

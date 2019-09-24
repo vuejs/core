@@ -7,9 +7,11 @@ import {
   createExpression,
   Namespaces,
   ElementTypes,
+  CallExpression,
   createObjectExpression,
   createObjectProperty,
-  createArrayExpression
+  createArrayExpression,
+  ElementNode
 } from '../src'
 import { SourceMapConsumer, RawSourceMap } from 'source-map'
 import { CREATE_VNODE, COMMENT, TO_STRING } from '../src/runtimeConstants'
@@ -145,6 +147,25 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('compound expression', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.EXPRESSION,
+            content: 'foo',
+            isStatic: false,
+            isInterpolation: true,
+            loc: mockLoc,
+            children: [`_ctx.`, createExpression(`foo`, false, mockLoc)]
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`return toString(_ctx.foo)`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('ifNode', () => {
     const { code } = generate(
       createRoot({
@@ -202,6 +223,50 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('ifNode with no v-else', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.IF,
+            loc: mockLoc,
+            isRoot: true,
+            branches: [
+              {
+                type: NodeTypes.IF_BRANCH,
+                condition: createExpression('foo', false, mockLoc),
+                loc: mockLoc,
+                isRoot: true,
+                children: [
+                  {
+                    type: NodeTypes.TEXT,
+                    content: 'foo',
+                    isEmpty: false,
+                    loc: mockLoc
+                  }
+                ]
+              },
+              {
+                type: NodeTypes.IF_BRANCH,
+                condition: createExpression('bar', false, mockLoc),
+                loc: mockLoc,
+                isRoot: true,
+                children: [createExpression(`bye`, false, mockLoc, true)]
+              }
+            ]
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`
+    return (foo)
+      ? "foo"
+      : (bar)
+        ? ${TO_STRING}(bye)
+        : null`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('forNode', () => {
     const { code } = generate(
       createRoot({
@@ -222,63 +287,166 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('callExpression + objectExpression + arrayExpression', () => {
+  test('forNode w/ skipped value alias', () => {
     const { code } = generate(
       createRoot({
         children: [
           {
-            type: NodeTypes.ELEMENT,
+            type: NodeTypes.FOR,
             loc: mockLoc,
-            ns: Namespaces.HTML,
-            tag: 'div',
-            tagType: ElementTypes.ELEMENT,
-            isSelfClosing: false,
-            props: [],
-            children: [],
-            codegenNode: {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              loc: mockLoc,
-              callee: CREATE_VNODE,
-              arguments: [
-                `"div"`,
+            source: createExpression(`list`, false, mockLoc),
+            valueAlias: undefined,
+            keyAlias: createExpression(`k`, false, mockLoc),
+            objectIndexAlias: createExpression(`i`, false, mockLoc),
+            children: [createExpression(`v`, false, mockLoc, true)]
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`renderList(list, (__value, k, i) => toString(v))`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('forNode w/ skipped key alias', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.FOR,
+            loc: mockLoc,
+            source: createExpression(`list`, false, mockLoc),
+            valueAlias: createExpression(`v`, false, mockLoc),
+            keyAlias: undefined,
+            objectIndexAlias: createExpression(`i`, false, mockLoc),
+            children: [createExpression(`v`, false, mockLoc, true)]
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`renderList(list, (v, __key, i) => toString(v))`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('forNode w/ skipped value and key aliases', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.FOR,
+            loc: mockLoc,
+            source: createExpression(`list`, false, mockLoc),
+            valueAlias: undefined,
+            keyAlias: undefined,
+            objectIndexAlias: createExpression(`i`, false, mockLoc),
+            children: [createExpression(`v`, false, mockLoc, true)]
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`renderList(list, (__value, __key, i) => toString(v))`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('callExpression + objectExpression + arrayExpression', () => {
+    function createElementWithCodegen(
+      args: CallExpression['arguments']
+    ): ElementNode {
+      return {
+        type: NodeTypes.ELEMENT,
+        loc: mockLoc,
+        ns: Namespaces.HTML,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT,
+        isSelfClosing: false,
+        props: [],
+        children: [],
+        codegenNode: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          loc: mockLoc,
+          callee: CREATE_VNODE,
+          arguments: args
+        }
+      }
+    }
+
+    const { code } = generate(
+      createRoot({
+        children: [
+          createElementWithCodegen([
+            // string
+            `"div"`,
+            // ObjectExpression
+            createObjectExpression(
+              [
+                createObjectProperty(
+                  createExpression(`id`, true, mockLoc),
+                  createExpression(`foo`, true, mockLoc),
+                  mockLoc
+                ),
+                createObjectProperty(
+                  createExpression(`prop`, false, mockLoc),
+                  createExpression(`bar`, false, mockLoc),
+                  mockLoc
+                ),
+                // compound expression as computed key
+                createObjectProperty(
+                  {
+                    type: NodeTypes.EXPRESSION,
+                    content: ``,
+                    loc: mockLoc,
+                    isStatic: false,
+                    isInterpolation: false,
+                    children: [
+                      `foo + `,
+                      createExpression(`bar`, false, mockLoc)
+                    ]
+                  },
+                  createExpression(`bar`, false, mockLoc),
+                  mockLoc
+                )
+              ],
+              mockLoc
+            ),
+            // ChildNode[]
+            [
+              createElementWithCodegen([
+                `"p"`,
                 createObjectExpression(
                   [
                     createObjectProperty(
-                      createExpression(`id`, true, mockLoc),
+                      // should quote the key!
+                      createExpression(`some-key`, true, mockLoc),
                       createExpression(`foo`, true, mockLoc),
-                      mockLoc
-                    ),
-                    createObjectProperty(
-                      createExpression(`prop`, false, mockLoc),
-                      createExpression(`bar`, false, mockLoc),
                       mockLoc
                     )
                   ],
                   mockLoc
-                ),
-                createArrayExpression(
-                  [
-                    'foo',
-                    {
-                      type: NodeTypes.JS_CALL_EXPRESSION,
-                      loc: mockLoc,
-                      callee: CREATE_VNODE,
-                      arguments: [`"p"`]
-                    }
-                  ],
-                  mockLoc
                 )
-              ]
-            }
-          }
+              ])
+            ],
+            // ArrayExpression
+            createArrayExpression(
+              [
+                'foo',
+                {
+                  type: NodeTypes.JS_CALL_EXPRESSION,
+                  loc: mockLoc,
+                  callee: CREATE_VNODE,
+                  arguments: [`"p"`]
+                }
+              ],
+              mockLoc
+            )
+          ])
         ]
       })
     )
     expect(code).toMatch(`
     return ${CREATE_VNODE}("div", {
       id: "foo",
-      [prop]: bar
-    }, [
+      [prop]: bar,
+      [foo + bar]: bar
+    }, [${CREATE_VNODE}("p", { "some-key": "foo" })], [
       foo,
       ${CREATE_VNODE}("p")
     ])`)

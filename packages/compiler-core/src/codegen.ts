@@ -277,6 +277,7 @@ function genNode(node: CodegenNode, context: CodegenContext) {
       genArrayExpression(node, context)
       break
     default:
+      /* istanbul ignore next */
       __DEV__ &&
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
   }
@@ -399,7 +400,7 @@ function genFor(node: ForNode, context: CodegenContext) {
   }
   if (keyAlias) {
     if (!valueAlias) {
-      push(`_`)
+      push(`__value`)
     }
     push(`, `)
     genExpression(keyAlias, context)
@@ -407,9 +408,9 @@ function genFor(node: ForNode, context: CodegenContext) {
   if (objectIndexAlias) {
     if (!keyAlias) {
       if (!valueAlias) {
-        push(`_, __`)
+        push(`__value, __key`)
       } else {
-        push(`__`)
+        push(`, __key`)
       }
     }
     push(`, `)
@@ -447,12 +448,9 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     // value
     genExpression(value, context)
     if (i < properties.length - 1) {
-      if (multilines) {
-        push(`,`)
-        newline()
-      } else {
-        push(`, `)
-      }
+      // will only reach this if it's multilines
+      push(`,`)
+      newline()
     }
   }
   multilines && deindent()

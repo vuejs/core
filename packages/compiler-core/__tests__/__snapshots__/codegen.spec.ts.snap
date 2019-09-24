@@ -5,8 +5,9 @@ exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1
   with (this) {
     return createVNode(\\"div\\", {
       id: \\"foo\\",
-      [prop]: bar
-    }, [
+      [prop]: bar,
+      [foo + bar]: bar
+    }, [createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })], [
       foo,
       createVNode(\\"p\\")
     ])
@@ -22,10 +23,42 @@ exports[`compiler: codegen comment 1`] = `
 }"
 `;
 
+exports[`compiler: codegen compound expression 1`] = `
+"return function render() {
+  with (this) {
+    return toString(_ctx.foo)
+  }
+}"
+`;
+
 exports[`compiler: codegen forNode 1`] = `
 "return function render() {
   with (this) {
     return renderList(list, (v, k, i) => toString(v))
+  }
+}"
+`;
+
+exports[`compiler: codegen forNode w/ skipped key alias 1`] = `
+"return function render() {
+  with (this) {
+    return renderList(list, (v, __key, i) => toString(v))
+  }
+}"
+`;
+
+exports[`compiler: codegen forNode w/ skipped value alias 1`] = `
+"return function render() {
+  with (this) {
+    return renderList(list, (__value, k, i) => toString(v))
+  }
+}"
+`;
+
+exports[`compiler: codegen forNode w/ skipped value and key aliases 1`] = `
+"return function render() {
+  with (this) {
+    return renderList(list, (__value, __key, i) => toString(v))
   }
 }"
 `;
@@ -48,6 +81,18 @@ exports[`compiler: codegen ifNode 1`] = `
       : (bar)
         ? toString(bye)
         : createVNode(Comment, 0, \\"foo\\")
+  }
+}"
+`;
+
+exports[`compiler: codegen ifNode with no v-else 1`] = `
+"return function render() {
+  with (this) {
+    return (foo)
+      ? \\"foo\\"
+      : (bar)
+        ? toString(bye)
+        : null
   }
 }"
 `;

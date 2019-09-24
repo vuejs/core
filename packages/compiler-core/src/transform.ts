@@ -85,6 +85,7 @@ function createTransformContext(
     childIndex: 0,
     currentNode: null,
     replaceNode(node) {
+      /* istanbul ignore if */
       if (__DEV__ && !context.currentNode) {
         throw new Error(`node being replaced is already removed.`)
       }
@@ -97,6 +98,7 @@ function createTransformContext(
         : context.currentNode
           ? context.childIndex
           : -1
+      /* istanbul ignore if */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
       }
