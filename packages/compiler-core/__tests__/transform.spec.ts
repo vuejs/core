@@ -2,6 +2,7 @@ import { parse } from '../src/parse'
 import { transform, NodeTransform } from '../src/transform'
 import { ElementNode, NodeTypes } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
+import { TO_STRING, CREATE_VNODE, COMMENT } from '../src/runtimeConstants'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -179,5 +180,18 @@ describe('compiler: transform', () => {
         loc
       }
     ])
+  })
+
+  test('should inject toString helper for interpolations', () => {
+    const ast = parse(`{{ foo }}`)
+    transform(ast, {})
+    expect(ast.imports).toContain(TO_STRING)
+  })
+
+  test('should inject createVNode and Comment for comments', () => {
+    const ast = parse(`<!--foo-->`)
+    transform(ast, {})
+    expect(ast.imports).toContain(CREATE_VNODE)
+    expect(ast.imports).toContain(COMMENT)
   })
 })

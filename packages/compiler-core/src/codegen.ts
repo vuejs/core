@@ -17,17 +17,33 @@ import {
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import { advancePositionWithMutation, assert } from './utils'
 import { isString, isArray } from '@vue/shared'
-import { RENDER_LIST, TO_STRING } from './runtimeConstants'
+import {
+  RENDER_LIST,
+  TO_STRING,
+  CREATE_VNODE,
+  COMMENT
+} from './runtimeConstants'
 
 type CodegenNode = ChildNode | JSChildNode
 
 export interface CodegenOptions {
-  //  will generate import statements for
-  // runtime helpers; otherwise will grab the helpers from global `Vue`.
-  // default: false
+  // - Module mode will generate ES module import statements for helpers
+  //   and export the render function as the default export.
+  // - Function mode will generate a single `const { helpers... } = Vue`
+  //   statement and return the render function. It is meant to be used with
+  //   `new Function(code)()` to generate a render function at runtime.
+  // Default: 'function'
   mode?: 'module' | 'function'
+  // Prefix suitable identifiers with _ctx.
+  // If this option is false, the generated code will be wrapped in a
+  // `with (this) { ... }` block.
+  // Default: false
   prefixIdentifiers?: boolean
+  // Generate source map?
+  // Default: false
+  sourceMap?: boolean
   // Filename for source map generation.
+  // Default: `template.vue.html`
   filename?: string
 }
 
@@ -55,12 +71,14 @@ function createCodegenContext(
   {
     mode = 'function',
     prefixIdentifiers = false,
+    sourceMap = false,
     filename = `template.vue.html`
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
     mode,
     prefixIdentifiers,
+    sourceMap,
     filename,
     source: ast.loc.source,
     code: ``,
@@ -70,9 +88,10 @@ function createCodegenContext(
     indentLevel: 0,
 
     // lazy require source-map implementation, only in non-browser builds!
-    map: __BROWSER__
-      ? undefined
-      : new (require('source-map')).SourceMapGenerator(),
+    map:
+      __BROWSER__ || !sourceMap
+        ? undefined
+        : new (require('source-map')).SourceMapGenerator(),
 
     push(code, node?: CodegenNode) {
       context.code += code
@@ -108,8 +127,8 @@ function createCodegenContext(
     }
   }
   const newline = (n: number) => context.push('\n' + `  `.repeat(n))
-  if (!__BROWSER__) {
-    context.map!.setSourceContent(filename, context.source)
+  if (!__BROWSER__ && context.map) {
+    context.map.setSourceContent(filename, context.source)
   }
   return context
 }
@@ -174,6 +193,9 @@ function genChildren(
   context: CodegenContext,
   asRoot: boolean = false
 ) {
+  if (!children.length) {
+    return context.push(`null`)
+  }
   const child = children[0]
   if (
     children.length === 1 &&
@@ -321,7 +343,12 @@ function genCompoundExpression(node: ExpressionNode, context: CodegenContext) {
 }
 
 function genComment(node: CommentNode, context: CodegenContext) {
-  context.push(`<!--${node.content}-->`, node)
+  if (__DEV__) {
+    context.push(
+      `${CREATE_VNODE}(${COMMENT}, 0, ${JSON.stringify(node.content)})`,
+      node
+    )
+  }
 }
 
 // control flow
@@ -330,7 +357,7 @@ function genIf(node: IfNode, context: CodegenContext) {
 }
 
 function genIfBranch(
-  { condition, children }: IfBranchNode,
+  { condition, children, isRoot }: IfBranchNode,
   branches: IfBranchNode[],
   nextIndex: number,
   context: CodegenContext
@@ -344,7 +371,7 @@ function genIfBranch(
     indent()
     context.indentLevel++
     push(`? `)
-    genChildren(children, context)
+    genChildren(children, context, isRoot)
     context.indentLevel--
     newline()
     push(`: `)
@@ -357,7 +384,7 @@ function genIfBranch(
   } else {
     // v-else
     __DEV__ && assert(nextIndex === branches.length)
-    genChildren(children, context)
+    genChildren(children, context, isRoot)
   }
 }
 

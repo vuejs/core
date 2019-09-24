@@ -1,5 +1,10 @@
 // Name mapping constants for runtime helpers that need to be imported in
 // generated code. Make sure these are correctly exported in the runtime!
+export const FRAGMENT = `Fragment`
+export const PORTAL = `Portal`
+export const COMMENT = `Comment`
+export const TEXT = `Text`
+export const SUSPENSE = `Suspense`
 export const CREATE_VNODE = `createVNode`
 export const RESOLVE_COMPONENT = `resolveComponent`
 export const RESOLVE_DIRECTIVE = `resolveDirective`

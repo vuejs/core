@@ -10,7 +10,7 @@ import {
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
-import { TO_STRING } from './runtimeConstants'
+import { TO_STRING, COMMENT, CREATE_VNODE } from './runtimeConstants'
 
 // There are two types of transforms:
 //
@@ -49,11 +49,11 @@ export interface TransformOptions {
 }
 
 export interface TransformContext extends Required<TransformOptions> {
+  root: RootNode
   imports: Set<string>
   statements: string[]
   identifiers: { [name: string]: number | undefined }
   parent: ParentNode
-  ancestors: ParentNode[]
   childIndex: number
   currentNode: ChildNode | null
   replaceNode(node: ChildNode): void
@@ -73,6 +73,7 @@ function createTransformContext(
   }: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
+    root,
     imports: new Set(),
     statements: [],
     identifiers: {},
@@ -81,7 +82,6 @@ function createTransformContext(
     directiveTransforms,
     onError,
     parent: root,
-    ancestors: [],
     childIndex: 0,
     currentNode: null,
     replaceNode(node) {
@@ -139,7 +139,6 @@ export function traverseChildren(
   parent: ParentNode,
   context: TransformContext
 ) {
-  const ancestors = context.ancestors.concat(parent)
   let i = 0
   const nodeRemoved = () => {
     i--
@@ -149,7 +148,6 @@ export function traverseChildren(
     if (isString(child)) continue
     context.currentNode = child
     context.parent = parent
-    context.ancestors = ancestors
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
     traverseNode(child, context)
@@ -180,6 +178,12 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
   }
 
   switch (node.type) {
+    case NodeTypes.COMMENT:
+      context.imports.add(CREATE_VNODE)
+      // inject import for the Comment symbol, which is needed for creating
+      // comment nodes with `createVNode`
+      context.imports.add(COMMENT)
+      break
     case NodeTypes.EXPRESSION:
       // no need to traverse, but we need to inject toString helper
       if (node.isInterpolation) {
