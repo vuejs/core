@@ -1,7 +1,7 @@
 import {
   Text,
   Fragment,
-  Empty,
+  Comment,
   Portal,
   normalizeVNode,
   VNode,
@@ -191,8 +191,8 @@ export function createRenderer<
       case Text:
         processText(n1, n2, container, anchor)
         break
-      case Empty:
-        processEmptyNode(n1, n2, container, anchor)
+      case Comment:
+        processCommentNode(n1, n2, container, anchor)
         break
       case Fragment:
         processFragment(
@@ -283,15 +283,20 @@ export function createRenderer<
     }
   }
 
-  function processEmptyNode(
+  function processCommentNode(
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
     anchor: HostNode | null
   ) {
     if (n1 == null) {
-      hostInsert((n2.el = hostCreateComment('')), container, anchor)
+      hostInsert(
+        (n2.el = hostCreateComment((n2.children as string) || '')),
+        container,
+        anchor
+      )
     } else {
+      // there's no support for dynamic comments
       n2.el = n1.el
     }
   }
@@ -677,7 +682,7 @@ export function createRenderer<
       }
     }
     // insert an empty node as the placeholder for the portal
-    processEmptyNode(n1, n2, container, anchor)
+    processCommentNode(n1, n2, container, anchor)
   }
 
   function processSuspense(
@@ -1057,8 +1062,8 @@ export function createRenderer<
         })
 
       // give it a placeholder
-      const placeholder = (instance.subTree = createVNode(Empty))
-      processEmptyNode(null, placeholder, container, anchor)
+      const placeholder = (instance.subTree = createVNode(Comment))
+      processCommentNode(null, placeholder, container, anchor)
       initialVNode.el = placeholder.el
       return
     }

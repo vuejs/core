@@ -16,7 +16,7 @@ import { SuspenseBoundary } from './suspense'
 
 export const Fragment = __DEV__ ? Symbol('Fragment') : Symbol()
 export const Text = __DEV__ ? Symbol('Text') : Symbol()
-export const Empty = __DEV__ ? Symbol('Empty') : Symbol()
+export const Comment = __DEV__ ? Symbol('Empty') : Symbol()
 export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
 export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
 
@@ -27,7 +27,7 @@ export type VNodeTypes =
   | typeof Fragment
   | typeof Portal
   | typeof Text
-  | typeof Empty
+  | typeof Comment
   | typeof Suspense
 
 type VNodeChildAtom<HostNode, HostElement> =
@@ -245,7 +245,7 @@ export function cloneVNode(vnode: VNode): VNode {
 export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null) {
     // empty placeholder
-    return createVNode(Empty)
+    return createVNode(Comment)
   } else if (isArray(child)) {
     // fragment
     return createVNode(Fragment, null, child)
