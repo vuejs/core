@@ -6,9 +6,11 @@ import {
   DirectiveNode,
   NodeTypes,
   ForNode,
-  CompilerOptions
+  CompilerOptions,
+  IfNode
 } from '../../src'
-import { transformFor } from '../..//src/transforms/vFor'
+import { transformIf } from '../../src/transforms/vIf'
+import { transformFor } from '../../src/transforms/vFor'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithExpressionTransform(
@@ -18,7 +20,7 @@ function parseWithExpressionTransform(
   const ast = parse(template)
   transform(ast, {
     prefixIdentifiers: true,
-    nodeTransforms: [transformFor, transformExpression],
+    nodeTransforms: [transformIf, transformFor, transformExpression],
     ...options
   })
   return ast.children[0]
@@ -145,6 +147,21 @@ describe('compiler: expression transform', () => {
       },
       ` })`
     ])
+  })
+
+  test('should prefix v-if condition', () => {
+    const node = parseWithExpressionTransform(`<div v-if="ok"/>`) as IfNode
+    expect(node.branches[0].condition!.children).toMatchObject([
+      `_ctx.`,
+      { content: `ok` }
+    ])
+  })
+
+  test('should prefix v-for source', () => {
+    const node = parseWithExpressionTransform(
+      `<div v-for="i in list"/>`
+    ) as ForNode
+    expect(node.source.children).toMatchObject([`_ctx.`, { content: `list` }])
   })
 
   test('should not prefix v-for alias', () => {
