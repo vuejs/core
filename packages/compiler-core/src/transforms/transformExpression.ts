@@ -74,11 +74,13 @@ export function processExpression(
   walk(ast, {
     enter(node, parent) {
       if (node.type === 'Identifier') {
-        if (ids.indexOf(node) === -1) {
+        if (
+          ids.indexOf(node) === -1 &&
+          !knownIds[node.name] &&
+          shouldPrefix(node, parent)
+        ) {
+          node.name = `_ctx.${node.name}`
           ids.push(node)
-          if (!knownIds[node.name] && shouldPrefix(node, parent)) {
-            node.name = `_ctx.${node.name}`
-          }
         }
       } else if (isFunction(node)) {
         node.params.forEach(p =>
@@ -123,11 +125,13 @@ export function processExpression(
       })
     )
     if (i === ids.length - 1 && id.end < full.length - 1) {
-      children.push(full.slice(id.end))
+      children.push(full.slice(id.end - 1))
     }
   })
 
-  node.children = children
+  if (children.length) {
+    node.children = children
+  }
 }
 
 const globals = new Set(

@@ -294,17 +294,18 @@ function genExpressionAsPropertyKey(
   node: ExpressionNode,
   context: CodegenContext
 ) {
-  if (node.children) {
-    return genCompoundExpression(node, context)
-  }
-  if (node.isStatic) {
+  const { push } = context
+  const { content, children, isStatic } = node
+  if (children) {
+    push(`[`)
+    genCompoundExpression(node, context)
+    push(`]`)
+  } else if (isStatic) {
     // only quote keys if necessary
-    const text = /^\d|[^\w]/.test(node.content)
-      ? JSON.stringify(node.content)
-      : node.content
-    context.push(text, node)
+    const text = /^\d|[^\w]/.test(content) ? JSON.stringify(content) : content
+    push(text, node)
   } else {
-    context.push(`[${node.content}]`, node)
+    push(`[${content}]`, node)
   }
 }
 
