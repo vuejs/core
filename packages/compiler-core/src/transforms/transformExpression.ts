@@ -15,7 +15,7 @@ import { NodeTypes, createExpression, ExpressionNode } from '../ast'
 import { Node, Function, Identifier } from 'estree'
 import { advancePositionWithClone } from '../utils'
 
-export const expressionTransform: NodeTransform = (node, context) => {
+export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.EXPRESSION && !node.isStatic) {
     processExpression(node, context)
   } else if (node.type === NodeTypes.ELEMENT) {

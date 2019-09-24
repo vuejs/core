@@ -11,7 +11,7 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
 import { RENDER_LIST } from '../runtimeConstants'
-import { processExpression } from './expression'
+import { processExpression } from './transformExpression'
 
 const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/

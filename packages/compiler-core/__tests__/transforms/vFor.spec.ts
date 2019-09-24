@@ -5,7 +5,7 @@ import { ForNode, NodeTypes } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions } from '../../src'
 
-function transformWithFor(
+function parseWithForTransform(
   template: string,
   options: CompilerOptions = {}
 ): ForNode {
@@ -20,7 +20,7 @@ function transformWithFor(
 
 describe('compiler: transform v-for', () => {
   test('number expression', () => {
-    const forNode = transformWithFor('<span v-for="index in 5" />')
+    const forNode = parseWithForTransform('<span v-for="index in 5" />')
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('index')
@@ -28,7 +28,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('value', () => {
-    const forNode = transformWithFor('<span v-for="(item) in items" />')
+    const forNode = parseWithForTransform('<span v-for="(item) in items" />')
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
@@ -36,7 +36,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('object de-structured value', () => {
-    const forNode = transformWithFor(
+    const forNode = parseWithForTransform(
       '<span v-for="({ id, value }) in items" />'
     )
     expect(forNode.keyAlias).toBeUndefined()
@@ -46,7 +46,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('array de-structured value', () => {
-    const forNode = transformWithFor(
+    const forNode = parseWithForTransform(
       '<span v-for="([ id, value ]) in items" />'
     )
     expect(forNode.keyAlias).toBeUndefined()
@@ -56,7 +56,9 @@ describe('compiler: transform v-for', () => {
   })
 
   test('value and key', () => {
-    const forNode = transformWithFor('<span v-for="(item, key) in items" />')
+    const forNode = parseWithForTransform(
+      '<span v-for="(item, key) in items" />'
+    )
     expect(forNode.keyAlias).not.toBeUndefined()
     expect(forNode.keyAlias!.content).toBe('key')
     expect(forNode.objectIndexAlias).toBeUndefined()
@@ -65,7 +67,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('value, key and index', () => {
-    const forNode = transformWithFor(
+    const forNode = parseWithForTransform(
       '<span v-for="(value, key, index) in items" />'
     )
     expect(forNode.keyAlias).not.toBeUndefined()
@@ -77,7 +79,9 @@ describe('compiler: transform v-for', () => {
   })
 
   test('skipped key', () => {
-    const forNode = transformWithFor('<span v-for="(value,,index) in items" />')
+    const forNode = parseWithForTransform(
+      '<span v-for="(value,,index) in items" />'
+    )
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
@@ -86,7 +90,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('skipped value and key', () => {
-    const forNode = transformWithFor('<span v-for="(,,index) in items" />')
+    const forNode = parseWithForTransform('<span v-for="(,,index) in items" />')
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
@@ -95,7 +99,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('unbracketed value', () => {
-    const forNode = transformWithFor('<span v-for="item in items" />')
+    const forNode = parseWithForTransform('<span v-for="item in items" />')
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
@@ -103,7 +107,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('unbracketed value and key', () => {
-    const forNode = transformWithFor('<span v-for="item, key in items" />')
+    const forNode = parseWithForTransform('<span v-for="item, key in items" />')
     expect(forNode.keyAlias).not.toBeUndefined()
     expect(forNode.keyAlias!.content).toBe('key')
     expect(forNode.objectIndexAlias).toBeUndefined()
@@ -112,7 +116,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('unbracketed value, key and index', () => {
-    const forNode = transformWithFor(
+    const forNode = parseWithForTransform(
       '<span v-for="value, key, index in items" />'
     )
     expect(forNode.keyAlias).not.toBeUndefined()
@@ -124,7 +128,9 @@ describe('compiler: transform v-for', () => {
   })
 
   test('unbracketed skipped key', () => {
-    const forNode = transformWithFor('<span v-for="value, , index in items" />')
+    const forNode = parseWithForTransform(
+      '<span v-for="value, , index in items" />'
+    )
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
@@ -133,7 +139,7 @@ describe('compiler: transform v-for', () => {
   })
 
   test('unbracketed skipped value and key', () => {
-    const forNode = transformWithFor('<span v-for=", , index in items" />')
+    const forNode = parseWithForTransform('<span v-for=", , index in items" />')
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
@@ -143,7 +149,7 @@ describe('compiler: transform v-for', () => {
 
   test('missing expression', () => {
     const onError = jest.fn()
-    transformWithFor('<span v-for />', { onError })
+    parseWithForTransform('<span v-for />', { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
@@ -155,7 +161,7 @@ describe('compiler: transform v-for', () => {
 
   test('empty expression', () => {
     const onError = jest.fn()
-    transformWithFor('<span v-for="" />', { onError })
+    parseWithForTransform('<span v-for="" />', { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
@@ -167,7 +173,7 @@ describe('compiler: transform v-for', () => {
 
   test('invalid expression', () => {
     const onError = jest.fn()
-    transformWithFor('<span v-for="items" />', { onError })
+    parseWithForTransform('<span v-for="items" />', { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
@@ -179,7 +185,7 @@ describe('compiler: transform v-for', () => {
 
   test('missing source', () => {
     const onError = jest.fn()
-    transformWithFor('<span v-for="item in" />', { onError })
+    parseWithForTransform('<span v-for="item in" />', { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
@@ -191,7 +197,7 @@ describe('compiler: transform v-for', () => {
 
   test('missing value', () => {
     const onError = jest.fn()
-    transformWithFor('<span v-for="in items" />', { onError })
+    parseWithForTransform('<span v-for="in items" />', { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(
@@ -204,7 +210,7 @@ describe('compiler: transform v-for', () => {
   describe('source location', () => {
     test('value & source', () => {
       const source = '<span v-for="item in items" />'
-      const forNode = transformWithFor(source)
+      const forNode = parseWithForTransform(source)
 
       expect(forNode.valueAlias!.content).toBe('item')
       expect(forNode.valueAlias!.loc.start.offset).toBe(
@@ -227,7 +233,7 @@ describe('compiler: transform v-for', () => {
 
     test('bracketed value', () => {
       const source = '<span v-for="( item ) in items" />'
-      const forNode = transformWithFor(source)
+      const forNode = parseWithForTransform(source)
 
       expect(forNode.valueAlias!.content).toBe('item')
       expect(forNode.valueAlias!.loc.start.offset).toBe(
@@ -250,7 +256,7 @@ describe('compiler: transform v-for', () => {
 
     test('de-structured value', () => {
       const source = '<span v-for="(  { id, key })in items" />'
-      const forNode = transformWithFor(source)
+      const forNode = parseWithForTransform(source)
 
       expect(forNode.valueAlias!.content).toBe('{ id, key }')
       expect(forNode.valueAlias!.loc.start.offset).toBe(
@@ -275,7 +281,7 @@ describe('compiler: transform v-for', () => {
 
     test('bracketed value, key, index', () => {
       const source = '<span v-for="( item, key, index ) in items" />'
-      const forNode = transformWithFor(source)
+      const forNode = parseWithForTransform(source)
 
       expect(forNode.valueAlias!.content).toBe('item')
       expect(forNode.valueAlias!.loc.start.offset).toBe(
@@ -318,7 +324,7 @@ describe('compiler: transform v-for', () => {
 
     test('skipped key', () => {
       const source = '<span v-for="( item,, index ) in items" />'
-      const forNode = transformWithFor(source)
+      const forNode = parseWithForTransform(source)
 
       expect(forNode.valueAlias!.content).toBe('item')
       expect(forNode.valueAlias!.loc.start.offset).toBe(

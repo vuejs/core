@@ -10,7 +10,7 @@ import {
   IfBranchNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { processExpression } from './expression'
+import { processExpression } from './transformExpression'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,

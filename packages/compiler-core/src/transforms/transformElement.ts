@@ -20,13 +20,14 @@ import {
   CREATE_VNODE,
   APPLY_DIRECTIVES,
   RESOLVE_DIRECTIVE,
-  RESOLVE_COMPONENT
+  RESOLVE_COMPONENT,
+  MERGE_PROPS
 } from '../runtimeConstants'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
 // generate a JavaScript AST for this element's codegen
-export const prepareElementForCodegen: NodeTransform = (node, context) => {
+export const transformElement: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT ||
@@ -91,9 +92,8 @@ export const prepareElementForCodegen: NodeTransform = (node, context) => {
     } else if (node.tagType === ElementTypes.SLOT) {
       // <slot [name="xxx"]/>
       // TODO
-    } else if (node.tagType === ElementTypes.TEMPLATE) {
-      // do nothing
     }
+    // node.tagType can also be TEMPLATE, in which case nothing needs to be done
   }
 }
 
@@ -101,7 +101,7 @@ function buildProps(
   { loc, props }: ElementNode,
   context: TransformContext
 ): {
-  props: ObjectExpression | CallExpression
+  props: ObjectExpression | CallExpression | ExpressionNode
   directives: DirectiveNode[]
 } {
   let properties: ObjectExpression['properties'] = []
@@ -160,7 +160,7 @@ function buildProps(
     }
   }
 
-  let ret: ObjectExpression | CallExpression
+  let ret: ObjectExpression | CallExpression | ExpressionNode
 
   // has v-bind="object", wrap with mergeProps
   if (mergeArgs.length) {
@@ -168,10 +168,11 @@ function buildProps(
       mergeArgs.push(createObjectExpression(properties, loc))
     }
     if (mergeArgs.length > 1) {
-      ret = createCallExpression(`mergeProps`, mergeArgs, loc)
+      context.imports.add(MERGE_PROPS)
+      ret = createCallExpression(MERGE_PROPS, mergeArgs, loc)
     } else {
       // single v-bind with nothing else - no need for a mergeProps call
-      ret = createObjectExpression(properties, loc)
+      ret = mergeArgs[0]
     }
   } else {
     ret = createObjectExpression(properties, loc)

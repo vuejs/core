@@ -147,6 +147,9 @@ export function generate(
   if (!prefixIdentifiers) {
     push(`with (this) {`)
     indent()
+  } else {
+    push(`const _ctx = this`)
+    newline()
   }
   push(`return `)
   genChildren(ast.children, context, true /* asRoot */)

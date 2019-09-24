@@ -7,3 +7,4 @@ export const APPLY_DIRECTIVES = `applyDirectives`
 export const RENDER_LIST = `renderList`
 export const CAPITALIZE = `capitalize`
 export const TO_STRING = `toString`
+export const MERGE_PROPS = `mergeProps`

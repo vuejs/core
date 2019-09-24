@@ -5,10 +5,10 @@ import { RootNode } from './ast'
 import { isString } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
-import { prepareElementForCodegen } from './transforms/element'
+import { transformElement } from './transforms/transformElement'
 import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
-import { expressionTransform } from './transforms/expression'
+import { transformExpression } from './transforms/transformExpression'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
@@ -32,8 +32,8 @@ export function compile(
     nodeTransforms: [
       transformIf,
       transformFor,
-      ...(prefixIdentifiers ? [expressionTransform] : []),
-      prepareElementForCodegen,
+      ...(prefixIdentifiers ? [transformExpression] : []),
+      transformElement,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
@@ -65,4 +65,6 @@ export { ErrorCodes, CompilerError, createCompilerError } from './errors'
 export * from './ast'
 
 // debug
-export { prepareElementForCodegen } from './transforms/element'
+export {
+  transformElement as prepareElementForCodegen
+} from './transforms/transformElement'

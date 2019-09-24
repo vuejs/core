@@ -11,7 +11,7 @@ import {
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions } from '../../src'
 
-function transformWithIf(
+function parseWithIfTransform(
   template: string,
   options: CompilerOptions = {},
   returnIndex: number = 0
@@ -27,7 +27,7 @@ function transformWithIf(
 
 describe('compiler: transform v-if', () => {
   test('basic v-if', () => {
-    const node = transformWithIf(`<div v-if="ok"/>`)
+    const node = parseWithIfTransform(`<div v-if="ok"/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(1)
     expect(node.branches[0].condition!.content).toBe(`ok`)
@@ -37,7 +37,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('template v-if', () => {
-    const node = transformWithIf(
+    const node = parseWithIfTransform(
       `<template v-if="ok"><div/>hello<p/></template>`
     )
     expect(node.type).toBe(NodeTypes.IF)
@@ -53,7 +53,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else', () => {
-    const node = transformWithIf(`<div v-if="ok"/><p v-else/>`)
+    const node = parseWithIfTransform(`<div v-if="ok"/><p v-else/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(2)
 
@@ -71,7 +71,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else-if', () => {
-    const node = transformWithIf(`<div v-if="ok"/><p v-else-if="orNot"/>`)
+    const node = parseWithIfTransform(`<div v-if="ok"/><p v-else-if="orNot"/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(2)
 
@@ -89,7 +89,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('v-if + v-else-if + v-else', () => {
-    const node = transformWithIf(
+    const node = parseWithIfTransform(
       `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`
     )
     expect(node.type).toBe(NodeTypes.IF)
@@ -115,7 +115,7 @@ describe('compiler: transform v-if', () => {
   })
 
   test('comment between branches', () => {
-    const node = transformWithIf(`
+    const node = parseWithIfTransform(`
       <div v-if="ok"/>
       <!--foo-->
       <p v-else-if="orNot"/>
@@ -151,7 +151,7 @@ describe('compiler: transform v-if', () => {
   test('error on v-else missing adjacent v-if', () => {
     const onError = jest.fn()
 
-    const node1 = transformWithIf(`<div v-else/>`, { onError })
+    const node1 = parseWithIfTransform(`<div v-else/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
@@ -159,7 +159,7 @@ describe('compiler: transform v-if', () => {
       }
     ])
 
-    const node2 = transformWithIf(`<div/><div v-else/>`, { onError }, 1)
+    const node2 = parseWithIfTransform(`<div/><div v-else/>`, { onError }, 1)
     expect(onError.mock.calls[1]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
@@ -167,7 +167,7 @@ describe('compiler: transform v-if', () => {
       }
     ])
 
-    const node3 = transformWithIf(`<div/>foo<div v-else/>`, { onError }, 2)
+    const node3 = parseWithIfTransform(`<div/>foo<div v-else/>`, { onError }, 2)
     expect(onError.mock.calls[2]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
@@ -179,7 +179,7 @@ describe('compiler: transform v-if', () => {
   test('error on v-else-if missing adjacent v-if', () => {
     const onError = jest.fn()
 
-    const node1 = transformWithIf(`<div v-else-if="foo"/>`, { onError })
+    const node1 = parseWithIfTransform(`<div v-else-if="foo"/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
         code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
@@ -187,7 +187,7 @@ describe('compiler: transform v-if', () => {
       }
     ])
 
-    const node2 = transformWithIf(
+    const node2 = parseWithIfTransform(
       `<div/><div v-else-if="foo"/>`,
       { onError },
       1
@@ -199,7 +199,7 @@ describe('compiler: transform v-if', () => {
       }
     ])
 
-    const node3 = transformWithIf(
+    const node3 = parseWithIfTransform(
       `<div/>foo<div v-else-if="foo"/>`,
       { onError },
       2
