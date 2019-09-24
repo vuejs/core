@@ -25,7 +25,6 @@ describe('compiler: transform', () => {
       div,
       {
         parent: ast,
-        ancestors: [ast],
         currentNode: div
       }
     ])
@@ -33,7 +32,6 @@ describe('compiler: transform', () => {
       div.children[0],
       {
         parent: div,
-        ancestors: [ast, div],
         currentNode: div.children[0]
       }
     ])
@@ -41,7 +39,6 @@ describe('compiler: transform', () => {
       div.children[1],
       {
         parent: div,
-        ancestors: [ast, div],
         currentNode: div.children[1]
       }
     ])

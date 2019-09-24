@@ -1,1 +1,1 @@
-// TODO
+test.todo('v-bind')
