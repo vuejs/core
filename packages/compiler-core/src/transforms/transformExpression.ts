@@ -36,9 +36,18 @@ export const transformExpression: NodeTransform = (node, context) => {
 
 const simpleIdRE = /^[a-zA-Z$_][\w$]*$/
 
+const isFunction = (node: Node): node is Function =>
+  /Function(Expression|Declaration)$/.test(node.type)
+
 // cache node requires
 let _parseScript: typeof parseScript
 let _walk: typeof walk
+
+interface PrefixMeta {
+  prefix: string
+  start: number
+  end: number
+}
 
 // Important: since this function uses Node.js only dependencies, it should
 // always be used with a leading !__BROWSER__ check so that it can be
@@ -56,7 +65,7 @@ export function processExpression(
   // fast path if expression is a simple identifier.
   if (simpleIdRE.test(node.content)) {
     if (!context.identifiers[node.content]) {
-      node.content = `_ctx.${node.content}`
+      node.children = [`_ctx.`, createExpression(node.content, false, node.loc)]
     }
     return
   }
@@ -68,21 +77,35 @@ export function processExpression(
     context.onError(e)
     return
   }
-  const ids: Node[] = []
+
+  const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
 
+  // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walk(ast, {
-    enter(node, parent) {
+    enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
         if (
           ids.indexOf(node) === -1 &&
           !knownIds[node.name] &&
           shouldPrefix(node, parent)
         ) {
-          node.name = `_ctx.${node.name}`
+          if (
+            parent.type === 'Property' &&
+            parent.value === node &&
+            parent.key === node
+          ) {
+            // property shorthand like { foo }, we need to add the key since we
+            // rewrite the value
+            node.prefix = `${node.name}: _ctx.`
+          } else {
+            node.prefix = `_ctx.`
+          }
           ids.push(node)
         }
       } else if (isFunction(node)) {
+        // walk function expressions and add its arguments to known identifiers
+        // so that we don't prefix them
         node.params.forEach(p =>
           walk(p, {
             enter(child) {
@@ -107,24 +130,26 @@ export function processExpression(
     }
   })
 
+  // We break up the coumpound expression into an array of strings and sub
+  // expressions (for identifiers that have been prefixed). In codegen, if
+  // an ExpressionNode has the `.children` property, it will be used instead of
+  // `.content`.
   const full = node.content
   const children: ExpressionNode['children'] = []
-  ids.sort((a: any, b: any) => a.start - b.start)
-  ids.forEach((id: any, i) => {
+  ids.sort((a, b) => a.start - b.start)
+  ids.forEach((id, i) => {
     const last = ids[i - 1] as any
-    const text = full.slice(last ? last.end - 1 : 0, id.start - 1)
-    if (text.length) {
-      children.push(text)
-    }
-    const source = full.slice(id.start, id.end)
+    const leadingText = full.slice(last ? last.end - 1 : 0, id.start - 1)
+    children.push(leadingText + id.prefix)
+    const source = full.slice(id.start - 1, id.end - 1)
     children.push(
       createExpression(id.name, false, {
         source,
-        start: advancePositionWithClone(node.loc.start, source, id.start),
-        end: advancePositionWithClone(node.loc.start, source, id.end)
+        start: advancePositionWithClone(node.loc.start, source, id.start + 2),
+        end: advancePositionWithClone(node.loc.start, source, id.end + 2)
       })
     )
-    if (i === ids.length - 1 && id.end < full.length - 1) {
+    if (i === ids.length - 1 && id.end - 1 < full.length) {
       children.push(full.slice(id.end - 1))
     }
   })
@@ -145,20 +170,23 @@ const globals = new Set(
     .split(',')
 )
 
-const isFunction = (node: Node): node is Function =>
-  /Function(Expression|Declaration)$/.test(node.type)
-
 function shouldPrefix(identifier: Identifier, parent: Node) {
   if (
-    // not id of a FunctionDeclaration
-    !(parent.type === 'FunctionDeclaration' && parent.id === identifier) &&
-    // not a params of a function
-    !(isFunction(parent) && parent.params.indexOf(identifier) > -1) &&
+    !(
+      isFunction(parent) &&
+      // not id of a FunctionDeclaration
+      ((parent as any).id === identifier ||
+        // not a params of a function
+        parent.params.indexOf(identifier) > -1)
+    ) &&
     // not a key of Property
     !(
       parent.type === 'Property' &&
       parent.key === identifier &&
-      !parent.computed
+      // computed keys should be prefixed
+      !parent.computed &&
+      // shorthand keys should be prefixed
+      !(parent.value === identifier)
     ) &&
     // not a property of a MemberExpression
     !(
