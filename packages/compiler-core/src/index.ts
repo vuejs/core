@@ -17,22 +17,21 @@ export function compile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
-  const ast = isString(template) ? parse(template, options) : template
-  const prefixIdentifiers = !__BROWSER__ && options.prefixIdentifiers === true
-
-  if (__BROWSER__ && options.prefixIdentifiers === false) {
+  if (__BROWSER__ && options.prefixIdentifiers) {
     ;(options.onError || defaultOnError)(
       createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED)
     )
   }
 
+  const ast = isString(template) ? parse(template, options) : template
+
   transform(ast, {
     ...options,
-    prefixIdentifiers,
+    prefixIdentifiers: !__BROWSER__ && options.prefixIdentifiers === true,
     nodeTransforms: [
       transformIf,
       transformFor,
-      ...(prefixIdentifiers ? [transformExpression] : []),
+      transformExpression,
       transformElement,
       ...(options.nodeTransforms || []) // user transforms
     ],

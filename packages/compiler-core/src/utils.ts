@@ -1,5 +1,8 @@
 import { SourceLocation, Position } from './ast'
 
+export const isSimpleIdentifier = (name: string): boolean =>
+  !/^\d|[^\w]/.test(name)
+
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,

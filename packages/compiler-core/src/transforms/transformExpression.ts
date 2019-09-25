@@ -56,6 +56,9 @@ export function processExpression(
   node: ExpressionNode,
   context: TransformContext
 ) {
+  if (!context.prefixIdentifiers) {
+    return
+  }
   // lazy require dependencies so that they don't end up in rollup's dep graph
   // and thus can be tree-shaken in browser builds.
   const parseScript =
@@ -155,6 +158,9 @@ export function processExpression(
   })
 
   if (children.length) {
+    // mark it empty so that it's more noticeable in case another transform or
+    // codegen forget to handle `.children` first.
+    node.content = __DEV__ ? `[[REMOVED]]` : ``
     node.children = children
   }
 }

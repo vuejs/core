@@ -15,7 +15,11 @@ import {
   IfBranchNode
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
-import { advancePositionWithMutation, assert } from './utils'
+import {
+  advancePositionWithMutation,
+  assert,
+  isSimpleIdentifier
+} from './utils'
 import { isString, isArray } from '@vue/shared'
 import {
   RENDER_LIST,
@@ -325,7 +329,7 @@ function genExpressionAsPropertyKey(
     push(`]`)
   } else if (isStatic) {
     // only quote keys if necessary
-    const text = /^\d|[^\w]/.test(content) ? JSON.stringify(content) : content
+    const text = isSimpleIdentifier(content) ? content : JSON.stringify(content)
     push(text, node)
   } else {
     push(`[${content}]`, node)
@@ -366,9 +370,10 @@ function genIfBranch(
   if (condition) {
     // v-if or v-else-if
     const { push, indent, deindent, newline } = context
-    push(`(`)
+    const needsQuote = !isSimpleIdentifier(condition.content)
+    needsQuote && push(`(`)
     genExpression(condition, context)
-    push(`)`)
+    needsQuote && push(`)`)
     indent()
     context.indentLevel++
     push(`? `)

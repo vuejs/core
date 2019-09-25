@@ -191,7 +191,7 @@ describe('compiler: codegen', () => {
               },
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('bar', false, mockLoc),
+                condition: createExpression('a + b', false, mockLoc),
                 loc: mockLoc,
                 isRoot: true,
                 children: [createExpression(`bye`, false, mockLoc, true)]
@@ -215,9 +215,9 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`
-    return (foo)
+    return foo
       ? "foo"
-      : (bar)
+      : (a + b)
         ? ${TO_STRING}(bye)
         : ${CREATE_VNODE}(${COMMENT}, 0, "foo")`)
     expect(code).toMatchSnapshot()
@@ -248,7 +248,7 @@ describe('compiler: codegen', () => {
               },
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('bar', false, mockLoc),
+                condition: createExpression('a + b', false, mockLoc),
                 loc: mockLoc,
                 isRoot: true,
                 children: [createExpression(`bye`, false, mockLoc, true)]
@@ -259,9 +259,9 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`
-    return (foo)
+    return foo
       ? "foo"
-      : (bar)
+      : (a + b)
         ? ${TO_STRING}(bye)
         : null`)
     expect(code).toMatchSnapshot()

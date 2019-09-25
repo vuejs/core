@@ -76,9 +76,9 @@ return function render() {
 exports[`compiler: codegen ifNode 1`] = `
 "return function render() {
   with (this) {
-    return (foo)
+    return foo
       ? \\"foo\\"
-      : (bar)
+      : (a + b)
         ? toString(bye)
         : createVNode(Comment, 0, \\"foo\\")
   }
@@ -88,9 +88,9 @@ exports[`compiler: codegen ifNode 1`] = `
 exports[`compiler: codegen ifNode with no v-else 1`] = `
 "return function render() {
   with (this) {
-    return (foo)
+    return foo
       ? \\"foo\\"
-      : (bar)
+      : (a + b)
         ? toString(bye)
         : null
   }
