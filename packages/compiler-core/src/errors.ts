@@ -67,6 +67,7 @@ export const enum ErrorCodes {
   X_FOR_NO_EXPRESSION,
   X_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
+  X_V_ON_NO_EXPRESSION,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED
@@ -133,6 +134,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else has no adjacent v-if`,
   [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for has no expression`,
   [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression`,
+  [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression`,
+  [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler because it is optimized for payload size.`

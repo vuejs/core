@@ -21,7 +21,8 @@ import {
   APPLY_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
-  MERGE_PROPS
+  MERGE_PROPS,
+  TO_HANDLERS
 } from '../runtimeConstants'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
@@ -97,15 +98,17 @@ export const transformElement: NodeTransform = (node, context) => {
   }
 }
 
+type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
+
 function buildProps(
-  { loc, props }: ElementNode,
+  { loc: elementLoc, props }: ElementNode,
   context: TransformContext
 ): {
-  props: ObjectExpression | CallExpression | ExpressionNode
+  props: PropsExpression
   directives: DirectiveNode[]
 } {
   let properties: ObjectExpression['properties'] = []
-  const mergeArgs: Array<ObjectExpression | ExpressionNode> = []
+  const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
 
   for (let i = 0; i < props.length; i++) {
@@ -126,24 +129,43 @@ function buildProps(
       )
     } else {
       // directives
-      // special case for v-bind with no argument
-      if (prop.name === 'bind' && !prop.arg) {
-        if (prop.exp) {
+      const { name, arg, exp, loc } = prop
+      // special case for v-bind and v-on with no argument
+      const isBind = name === 'bind'
+      if (!arg && (isBind || name === 'on')) {
+        if (exp) {
           if (properties.length) {
-            mergeArgs.push(createObjectExpression(properties, loc))
+            mergeArgs.push(createObjectExpression(properties, elementLoc))
             properties = []
           }
-          mergeArgs.push(prop.exp)
+          if (isBind) {
+            mergeArgs.push(exp)
+          } else {
+            // v-on="obj" -> toHandlers(obj)
+            context.imports.add(TO_HANDLERS)
+            mergeArgs.push({
+              type: NodeTypes.JS_CALL_EXPRESSION,
+              loc,
+              callee: TO_HANDLERS,
+              arguments: [exp]
+            })
+          }
         } else {
           context.onError(
-            createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc)
+            createCompilerError(
+              isBind
+                ? ErrorCodes.X_V_BIND_NO_EXPRESSION
+                : ErrorCodes.X_V_ON_NO_EXPRESSION,
+              loc
+            )
           )
         }
         continue
       }
 
-      const directiveTransform = context.directiveTransforms[prop.name]
+      const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
+        // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, context)
         if (isArray(props)) {
           properties.push(...props)
@@ -160,26 +182,26 @@ function buildProps(
     }
   }
 
-  let ret: ObjectExpression | CallExpression | ExpressionNode
+  let propsExpression: PropsExpression
 
-  // has v-bind="object", wrap with mergeProps
+  // has v-bind="object" or v-on="object", wrap with mergeProps
   if (mergeArgs.length) {
     if (properties.length) {
-      mergeArgs.push(createObjectExpression(properties, loc))
+      mergeArgs.push(createObjectExpression(properties, elementLoc))
     }
     if (mergeArgs.length > 1) {
       context.imports.add(MERGE_PROPS)
-      ret = createCallExpression(MERGE_PROPS, mergeArgs, loc)
+      propsExpression = createCallExpression(MERGE_PROPS, mergeArgs, elementLoc)
     } else {
       // single v-bind with nothing else - no need for a mergeProps call
-      ret = mergeArgs[0]
+      propsExpression = mergeArgs[0]
     }
   } else {
-    ret = createObjectExpression(properties, loc)
+    propsExpression = createObjectExpression(properties, elementLoc)
   }
 
   return {
-    props: ret,
+    props: propsExpression,
     directives: runtimeDirectives
   }
 }

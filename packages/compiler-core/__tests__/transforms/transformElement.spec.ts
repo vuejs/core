@@ -11,7 +11,8 @@ import {
   CREATE_VNODE,
   MERGE_PROPS,
   RESOLVE_DIRECTIVE,
-  APPLY_DIRECTIVES
+  APPLY_DIRECTIVES,
+  TO_HANDLERS
 } from '../../src/runtimeConstants'
 import {
   CallExpression,
@@ -194,6 +195,67 @@ describe('compiler: element transform', () => {
         createStaticObjectMatcher({
           class: 'bar'
         })
+      ]
+    })
+  })
+
+  test('v-on="obj"', () => {
+    const { root, node } = parseWithElementTransform(
+      `<div id="foo" v-on="obj" class="bar" />`
+    )
+    expect(root.imports).toContain(MERGE_PROPS)
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments[1]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createStaticObjectMatcher({
+          id: 'foo'
+        }),
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: TO_HANDLERS,
+          arguments: [
+            {
+              type: NodeTypes.EXPRESSION,
+              content: `obj`
+            }
+          ]
+        },
+        createStaticObjectMatcher({
+          class: 'bar'
+        })
+      ]
+    })
+  })
+
+  test('v-on="obj" + v-bind="obj"', () => {
+    const { root, node } = parseWithElementTransform(
+      `<div id="foo" v-on="handlers" v-bind="obj" />`
+    )
+    expect(root.imports).toContain(MERGE_PROPS)
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments[1]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createStaticObjectMatcher({
+          id: 'foo'
+        }),
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: TO_HANDLERS,
+          arguments: [
+            {
+              type: NodeTypes.EXPRESSION,
+              content: `handlers`
+            }
+          ]
+        },
+        {
+          type: NodeTypes.EXPRESSION,
+          content: `obj`
+        }
       ]
     })
   })

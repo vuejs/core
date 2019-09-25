@@ -13,3 +13,4 @@ export const RENDER_LIST = `renderList`
 export const CAPITALIZE = `capitalize`
 export const TO_STRING = `toString`
 export const MERGE_PROPS = `mergeProps`
+export const TO_HANDLERS = `toHandlers`
