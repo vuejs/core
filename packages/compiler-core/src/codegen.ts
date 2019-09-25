@@ -53,6 +53,7 @@ export interface CodegenOptions {
 
 export interface CodegenResult {
   code: string
+  ast: RootNode
   map?: RawSourceMap
 }
 
@@ -183,6 +184,7 @@ export function generate(
   deindent()
   push(`}`)
   return {
+    ast,
     code: context.code,
     map: context.map ? context.map.toJSON() : undefined
   }
