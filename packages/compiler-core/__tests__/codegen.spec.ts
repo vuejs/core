@@ -1,5 +1,4 @@
 import {
-  parse,
   generate,
   NodeTypes,
   RootNode,
@@ -13,7 +12,6 @@ import {
   createArrayExpression,
   ElementNode
 } from '../src'
-import { SourceMapConsumer, RawSourceMap } from 'source-map'
 import { CREATE_VNODE, COMMENT, TO_STRING } from '../src/runtimeConstants'
 
 const mockLoc: SourceLocation = {
@@ -451,37 +449,5 @@ describe('compiler: codegen', () => {
       ${CREATE_VNODE}("p")
     ])`)
     expect(code).toMatchSnapshot()
-  })
-
-  test('basic source map support', async () => {
-    const source = `hello {{ world }}`
-    const ast = parse(source)
-    const { code, map } = generate(ast, {
-      sourceMap: true,
-      filename: `foo.vue`
-    })
-    expect(code).toMatch(
-      `return function render() {
-  with (this) {
-    return [
-      "hello ",
-      toString(world)
-    ]
-  }
-}`
-    )
-
-    expect(map!.sources).toEqual([`foo.vue`])
-    expect(map!.sourcesContent).toEqual([source])
-
-    const consumer = await new SourceMapConsumer(map as RawSourceMap)
-    const pos = consumer.originalPositionFor({
-      line: 5,
-      column: 15
-    })
-    expect(pos).toMatchObject({
-      line: 1,
-      column: 6
-    })
   })
 })
