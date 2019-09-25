@@ -1,5 +1,5 @@
 // Optimizations
-// - b -> normalize(b)
+// - b -> b (use runtime normalization)
 // - ['foo', b] -> 'foo' + normalize(b)
 // - { a, b: c } -> (a ? a : '') + (b ? c : '')
 // - ['a', b, { c }] -> 'a' + normalize(b) + (c ? c : '')
