@@ -87,7 +87,7 @@ describe('compiler: transform v-bind', () => {
 
   test('should error if no expression', () => {
     const onError = jest.fn()
-    parseWithVBind(`<div v-bind />`, { onError })
+    parseWithVBind(`<div v-bind:arg />`, { onError })
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
       loc: {
@@ -97,7 +97,7 @@ describe('compiler: transform v-bind', () => {
         },
         end: {
           line: 1,
-          column: 12
+          column: 16
         }
       }
     })

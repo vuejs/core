@@ -103,9 +103,9 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test('should error if no expression', () => {
+  test('should error if no expression AND no modifier', () => {
     const onError = jest.fn()
-    parseWithVOn(`<div v-on />`, { onError })
+    parseWithVOn(`<div v-on:click />`, { onError })
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_ON_NO_EXPRESSION,
       loc: {
@@ -115,10 +115,16 @@ describe('compiler: transform v-bind', () => {
         },
         end: {
           line: 1,
-          column: 10
+          column: 16
         }
       }
     })
+  })
+
+  test('should NOT error if no expression but has modifier', () => {
+    const onError = jest.fn()
+    parseWithVOn(`<div v-on:click.prevent />`, { onError })
+    expect(onError).not.toHaveBeenCalled()
   })
 
   test.todo('.once modifier')

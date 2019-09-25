@@ -7,8 +7,11 @@ import { isSimpleIdentifier } from '../utils'
 // v-on without arg is handled directly in ./element.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-on
 // *with* args.
-export const transformOn: DirectiveTransform = ({ arg, exp, loc }, context) => {
-  if (!exp) {
+export const transformOn: DirectiveTransform = (
+  { arg, exp, loc, modifiers },
+  context
+) => {
+  if (!exp && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
   const { content, children, isStatic, loc: argLoc } = arg!
