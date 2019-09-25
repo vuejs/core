@@ -9,10 +9,10 @@ test('basic source map support', async () => {
     filename: `foo.vue`
   })
   expect(code).toMatch(
-    `const { toString } = Vue
-
+    `const _Vue = Vue
 return function render() {
   with (this) {
+    const { toString } = _Vue
     return [
       "hello ",
       toString(world)

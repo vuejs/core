@@ -145,10 +145,20 @@ export function generate(
   const context = createCodegenContext(ast, options)
   const { mode, push, prefixIdentifiers, indent, deindent, newline } = context
   const imports = ast.imports.join(', ')
+
+  // preambles
   if (mode === 'function') {
-    // generate const declarations for helpers
+    // Generate const declaration for helpers
+    // In prefix mode, we place the const declaration at top so it's done
+    // only once; But if we not prefixing, we place the decalration inside the
+    // with block so it doesn't incur the `in` check cost for every helper access.
     if (imports) {
-      push(`const { ${imports} } = Vue\n`)
+      if (prefixIdentifiers) {
+        push(`const { ${imports} } = Vue\n`)
+      } else {
+        // save Vue in a separate variable to avoid collision
+        push(`const _Vue = Vue`)
+      }
     }
     genHoists(ast.hoists, context)
     push(`return `)
@@ -160,8 +170,24 @@ export function generate(
     genHoists(ast.hoists, context)
     push(`export default `)
   }
+
+  // enter render function
   push(`function render() {`)
   indent()
+
+  if (!prefixIdentifiers) {
+    push(`with (this) {`)
+    indent()
+    // function mode const declarations should be inside with block
+    if (mode === 'function' && imports) {
+      push(`const { ${imports} } = _Vue`)
+      newline()
+    }
+  } else {
+    push(`const _ctx = this`)
+    newline()
+  }
+
   // generate asset resolution statements
   if (ast.statements.length) {
     ast.statements.forEach(s => {
@@ -170,13 +196,8 @@ export function generate(
     })
     newline()
   }
-  if (!prefixIdentifiers) {
-    push(`with (this) {`)
-    indent()
-  } else {
-    push(`const _ctx = this`)
-    newline()
-  }
+
+  // generate the VNode tree expression
   push(`return `)
   genChildren(ast.children, context, true /* asRoot */)
   if (!prefixIdentifiers) {

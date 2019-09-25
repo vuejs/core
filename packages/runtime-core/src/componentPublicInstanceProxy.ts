@@ -82,9 +82,10 @@ export const PublicInstanceProxyHandlers = {
     const { renderContext, data, props } = target
     // TODO handle $xxx properties
     return (
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      hasOwn(renderContext, key) ||
-      hasOwn(props, key)
+      key[0] !== '_' &&
+      ((data !== EMPTY_OBJ && hasOwn(data, key)) ||
+        hasOwn(renderContext, key) ||
+        hasOwn(props, key))
     )
   },
   set(target: ComponentInternalInstance, key: string, value: any): boolean {

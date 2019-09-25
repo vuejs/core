@@ -71,10 +71,10 @@ return function render() {
 `;
 
 exports[`compiler: codegen function mode preamble 1`] = `
-"const { helperOne, helperTwo } = Vue
-
+"const _Vue = Vue
 return function render() {
   with (this) {
+    const { helperOne, helperTwo } = _Vue
     return null
   }
 }"
@@ -147,10 +147,10 @@ return function render() {
 exports[`compiler: codegen statements 1`] = `
 "
 return function render() {
-  const a = 1
-  const b = 2
-  
   with (this) {
+    const a = 1
+    const b = 2
+    
     return null
   }
 }"
