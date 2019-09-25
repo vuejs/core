@@ -71,25 +71,42 @@ describe('compiler: element transform', () => {
   })
 
   test('static props', () => {
-    const { node } = parseWithElementTransform(`<div id="foo" class="bar" />`)
+    const { root, node } = parseWithElementTransform(
+      `<div id="foo" class="bar" />`
+    )
     expect(node.callee).toBe(CREATE_VNODE)
-    expect(node.arguments).toMatchObject([
-      `"div"`,
+    // should hoist the static object
+    expect(root.hoists).toMatchObject([
       createStaticObjectMatcher({
         id: 'foo',
         class: 'bar'
       })
     ])
+    expect(node.arguments).toMatchObject([
+      `"div"`,
+      {
+        type: NodeTypes.EXPRESSION,
+        content: `_hoisted_1`
+      }
+    ])
   })
 
   test('props + children', () => {
-    const { node } = parseWithElementTransform(`<div id="foo"><span/></div>`)
+    const { root, node } = parseWithElementTransform(
+      `<div id="foo"><span/></div>`
+    )
     expect(node.callee).toBe(CREATE_VNODE)
-    expect(node.arguments).toMatchObject([
-      `"div"`,
+    expect(root.hoists).toMatchObject([
       createStaticObjectMatcher({
         id: 'foo'
-      }),
+      })
+    ])
+    expect(node.arguments).toMatchObject([
+      `"div"`,
+      {
+        type: NodeTypes.EXPRESSION,
+        content: `_hoisted_1`
+      },
       [
         {
           type: NodeTypes.ELEMENT,
@@ -452,7 +469,8 @@ describe('compiler: element transform', () => {
 
   test('props dedupe', () => {
     const { code } = compile(
-      `<div class="a" :class="b" @click.foo="a" @click.bar="b" style="color: red" :style="{fontSize: 14}" />`
+      `<div class="a" :class="b" @click.foo="a" @click.bar="b" style="color: red" />
+      <div id="foo"/>`
     )
     console.log(code)
   })

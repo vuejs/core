@@ -68,6 +68,7 @@ export interface RootNode extends Node {
   children: ChildNode[]
   imports: string[]
   statements: string[]
+  hoists: JSChildNode[]
 }
 
 export interface ElementNode extends Node {

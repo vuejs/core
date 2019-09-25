@@ -1,6 +1,11 @@
 import { parse } from '../src/parse'
 import { transform, NodeTransform } from '../src/transform'
-import { ElementNode, NodeTypes } from '../src/ast'
+import {
+  ElementNode,
+  NodeTypes,
+  DirectiveNode,
+  ExpressionNode
+} from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import { TO_STRING, CREATE_VNODE, COMMENT } from '../src/runtimeConstants'
 
@@ -156,6 +161,22 @@ describe('compiler: transform', () => {
     expect(spy.mock.calls[0][0]).toBe(c1)
     // should not traverse last span
     expect(spy.mock.calls[1][0]).toBe(d1)
+  })
+
+  test('context.hoist', () => {
+    const ast = parse(`<div :id="foo"/><div :id="bar"/>`)
+    const hoisted: ExpressionNode[] = []
+    const mock: NodeTransform = (node, context) => {
+      const dir = (node as ElementNode).props[0] as DirectiveNode
+      hoisted.push(dir.exp!)
+      dir.exp = context.hoist(dir.exp!)
+    }
+    transform(ast, {
+      nodeTransforms: [mock]
+    })
+    expect(ast.hoists).toMatchObject(hoisted)
+    expect((ast as any).children[0].props[0].exp.content).toBe(`_hoisted_1`)
+    expect((ast as any).children[1].props[0].exp.content).toBe(`_hoisted_2`)
   })
 
   test('onError option', () => {

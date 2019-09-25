@@ -1,7 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return createVNode(\\"div\\", {
       id: \\"foo\\",
@@ -16,7 +17,8 @@ exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1
 `;
 
 exports[`compiler: codegen comment 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return createVNode(Comment, 0, \\"foo\\")
   }
@@ -24,7 +26,8 @@ exports[`compiler: codegen comment 1`] = `
 `;
 
 exports[`compiler: codegen compound expression 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return toString(_ctx.foo)
   }
@@ -32,7 +35,8 @@ exports[`compiler: codegen compound expression 1`] = `
 `;
 
 exports[`compiler: codegen forNode 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return renderList(list, (v, k, i) => toString(v))
   }
@@ -40,7 +44,8 @@ exports[`compiler: codegen forNode 1`] = `
 `;
 
 exports[`compiler: codegen forNode w/ skipped key alias 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return renderList(list, (v, __key, i) => toString(v))
   }
@@ -48,7 +53,8 @@ exports[`compiler: codegen forNode w/ skipped key alias 1`] = `
 `;
 
 exports[`compiler: codegen forNode w/ skipped value alias 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return renderList(list, (__value, k, i) => toString(v))
   }
@@ -56,7 +62,8 @@ exports[`compiler: codegen forNode w/ skipped value alias 1`] = `
 `;
 
 exports[`compiler: codegen forNode w/ skipped value and key aliases 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return renderList(list, (__value, __key, i) => toString(v))
   }
@@ -73,8 +80,20 @@ return function render() {
 }"
 `;
 
+exports[`compiler: codegen hoists 1`] = `
+"const _hoisted_1 = hello
+const _hoisted_2 = { id: \\"foo\\" }
+
+return function render() {
+  with (this) {
+    return null
+  }
+}"
+`;
+
 exports[`compiler: codegen ifNode 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return foo
       ? \\"foo\\"
@@ -86,7 +105,8 @@ exports[`compiler: codegen ifNode 1`] = `
 `;
 
 exports[`compiler: codegen ifNode with no v-else 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return foo
       ? \\"foo\\"
@@ -98,7 +118,8 @@ exports[`compiler: codegen ifNode with no v-else 1`] = `
 `;
 
 exports[`compiler: codegen interpolation 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return toString(hello)
   }
@@ -116,14 +137,16 @@ export default function render() {
 `;
 
 exports[`compiler: codegen prefixIdentifiers: true should inject _ctx statement 1`] = `
-"return function render() {
+"
+return function render() {
   const _ctx = this
   return null
 }"
 `;
 
-exports[`compiler: codegen statement preambles 1`] = `
-"return function render() {
+exports[`compiler: codegen statements 1`] = `
+"
+return function render() {
   const a = 1
   const b = 2
   
@@ -134,7 +157,8 @@ exports[`compiler: codegen statement preambles 1`] = `
 `;
 
 exports[`compiler: codegen static text 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return \\"hello\\"
   }
@@ -142,7 +166,8 @@ exports[`compiler: codegen static text 1`] = `
 `;
 
 exports[`compiler: codegen text + comment + interpolation 1`] = `
-"return function render() {
+"
+return function render() {
   with (this) {
     return [
       \\"foo\\",

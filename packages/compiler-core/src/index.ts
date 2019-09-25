@@ -10,6 +10,7 @@ import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
 import { transformExpression } from './transforms/transformExpression'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
+import { transformStyle } from './transforms/transformStyle'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -33,6 +34,7 @@ export function compile(
       transformIf,
       transformFor,
       ...(prefixIdentifiers ? [transformExpression] : []),
+      transformStyle,
       transformElement,
       ...(options.nodeTransforms || []) // user transforms
     ],
@@ -53,7 +55,7 @@ export {
   createStructuralDirectiveTransform,
   TransformOptions,
   TransformContext,
-  NodeTransform as Transform,
+  NodeTransform,
   StructuralDirectiveTransform
 } from './transform'
 export {
@@ -64,8 +66,3 @@ export {
 } from './codegen'
 export { ErrorCodes, CompilerError, createCompilerError } from './errors'
 export * from './ast'
-
-// debug
-export {
-  transformElement as prepareElementForCodegen
-} from './transforms/transformElement'

@@ -6,7 +6,9 @@ import {
   ElementNode,
   DirectiveNode,
   Property,
-  ExpressionNode
+  ExpressionNode,
+  createExpression,
+  JSChildNode
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -52,6 +54,7 @@ export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
   imports: Set<string>
   statements: string[]
+  hoists: JSChildNode[]
   identifiers: { [name: string]: number | undefined }
   parent: ParentNode
   childIndex: number
@@ -61,6 +64,7 @@ export interface TransformContext extends Required<TransformOptions> {
   onNodeRemoved: () => void
   addIdentifier(exp: ExpressionNode): void
   removeIdentifier(exp: ExpressionNode): void
+  hoist(exp: JSChildNode): ExpressionNode
 }
 
 function createTransformContext(
@@ -76,6 +80,7 @@ function createTransformContext(
     root,
     imports: new Set(),
     statements: [],
+    hoists: [],
     identifiers: {},
     prefixIdentifiers,
     nodeTransforms,
@@ -125,6 +130,14 @@ function createTransformContext(
     },
     removeIdentifier({ content }) {
       ;(context.identifiers[content] as number)--
+    },
+    hoist(exp) {
+      context.hoists.push(exp)
+      return createExpression(
+        `_hoisted_${context.hoists.length}`,
+        false,
+        exp.loc
+      )
     }
   }
   return context
@@ -135,6 +148,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   traverseChildren(root, context)
   root.imports = [...context.imports]
   root.statements = context.statements
+  root.hoists = context.hoists
 }
 
 export function traverseChildren(

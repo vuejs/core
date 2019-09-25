@@ -108,6 +108,7 @@ function buildProps(
   props: PropsExpression
   directives: DirectiveNode[]
 } {
+  let isStatic = true
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -130,6 +131,7 @@ function buildProps(
       )
     } else {
       // directives
+      isStatic = false
       const { name, arg, exp, loc } = prop
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
@@ -208,6 +210,11 @@ function buildProps(
     )
   }
 
+  // hoist the object if it's fully static
+  if (isStatic) {
+    propsExpression = context.hoist(propsExpression)
+  }
+
   return {
     props: propsExpression,
     directives: runtimeDirectives
@@ -233,10 +240,8 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps[name]
     if (existing) {
-      if (name.startsWith('on')) {
+      if (name.startsWith('on') || name === 'style') {
         mergeAsArray(existing, prop)
-      } else if (name === 'style') {
-        mergeStyles(existing, prop)
       } else if (name === 'class') {
         mergeClasses(existing, prop)
       }
@@ -260,25 +265,9 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-// Merge dynamic and static style into a single prop
-export function mergeStyles(existing: Property, incoming: Property) {
-  if (
-    existing.value.type === NodeTypes.JS_OBJECT_EXPRESSION &&
-    incoming.value.type === NodeTypes.JS_OBJECT_EXPRESSION
-  ) {
-    // if both are objects, merge the object expressions.
-    // style="color: red" :style="{ a: b }"
-    // -> { color: "red", a: b }
-    existing.value.properties.push(...incoming.value.properties)
-  } else {
-    // otherwise merge as array
-    // style="color:red" :style="a"
-    // -> style: [{ color: "red" }, a]
-    mergeAsArray(existing, incoming)
-  }
-}
-
 // Merge dynamic and static class into a single prop
+// :class="expression" class="string"
+// -> class: expression + "string"
 function mergeClasses(existing: Property, incoming: Property) {
   const e = existing.value as ExpressionNode
   const children =
@@ -289,8 +278,6 @@ function mergeClasses(existing: Property, incoming: Property) {
         children: undefined
       }
     ])
-  // :class="expression" class="string"
-  // -> class: expression + "string"
   children.push(` + " " + `, incoming.value as ExpressionNode)
 }
 

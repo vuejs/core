@@ -28,12 +28,11 @@ export const transformExpression: NodeTransform = (node, context) => {
         if (prop.arg && !prop.arg.isStatic) {
           if (prop.name === 'class') {
             // TODO special expression optimization for classes
+            processExpression(prop.arg, context)
           } else {
             processExpression(prop.arg, context)
           }
         }
-      } else if (prop.name === 'style') {
-        // TODO parse inline CSS literals into objects
       }
     }
   }

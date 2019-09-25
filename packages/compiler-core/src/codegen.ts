@@ -148,14 +148,16 @@ export function generate(
   if (mode === 'function') {
     // generate const declarations for helpers
     if (imports) {
-      push(`const { ${imports} } = Vue\n\n`)
+      push(`const { ${imports} } = Vue\n`)
     }
+    genHoists(ast.hoists, context)
     push(`return `)
   } else {
     // generate import statements for helpers
     if (imports) {
-      push(`import { ${imports} } from 'vue'\n\n`)
+      push(`import { ${imports} } from 'vue'\n`)
     }
+    genHoists(ast.hoists, context)
     push(`export default `)
   }
   push(`function render() {`)
@@ -188,6 +190,15 @@ export function generate(
     code: context.code,
     map: context.map ? context.map.toJSON() : undefined
   }
+}
+
+function genHoists(hoists: JSChildNode[], context: CodegenContext) {
+  hoists.forEach((exp, i) => {
+    context.push(`const _hoisted_${i + 1} = `)
+    genNode(exp, context)
+    context.newline()
+  })
+  context.newline()
 }
 
 // This will generate a single vnode call if:

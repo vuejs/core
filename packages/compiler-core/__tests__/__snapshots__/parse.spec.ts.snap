@@ -45,6 +45,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -109,6 +110,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -173,6 +175,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -255,6 +258,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -337,6 +341,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -419,6 +424,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -501,6 +507,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -566,6 +573,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -631,6 +639,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -696,6 +705,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -761,6 +771,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -825,6 +836,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -914,6 +926,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -979,6 +992,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1044,6 +1058,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1109,6 +1124,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1250,6 +1266,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1320,6 +1337,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1390,6 +1408,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1455,6 +1474,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1520,6 +1540,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1590,6 +1611,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1679,6 +1701,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1743,6 +1766,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1807,6 +1831,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1871,6 +1896,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1935,6 +1961,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -1999,6 +2026,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2064,6 +2092,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2129,6 +2158,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2199,6 +2229,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2269,6 +2300,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2358,6 +2390,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2447,6 +2480,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2536,6 +2570,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2642,6 +2677,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2748,6 +2784,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2854,6 +2891,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -2960,6 +2998,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3066,6 +3105,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3172,6 +3212,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3278,6 +3319,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3384,6 +3426,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3448,6 +3491,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3488,6 +3532,7 @@ Object {
       "type": 3,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3552,6 +3597,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3616,6 +3662,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3680,6 +3727,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3744,6 +3792,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3809,6 +3858,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3875,6 +3925,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -3940,6 +3991,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4022,6 +4074,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4128,6 +4181,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4217,6 +4271,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4306,6 +4361,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4352,6 +4408,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4417,6 +4474,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4482,6 +4540,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4547,6 +4606,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4690,6 +4750,7 @@ class=\\"bar\\"></div></template>",
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4832,6 +4893,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4896,6 +4958,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -4960,6 +5023,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5024,6 +5088,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5088,6 +5153,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5153,6 +5219,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5218,6 +5285,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5283,6 +5351,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5348,6 +5417,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5454,6 +5524,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5560,6 +5631,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5666,6 +5738,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5772,6 +5845,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5878,6 +5952,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -5984,6 +6059,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6090,6 +6166,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6196,6 +6273,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6285,6 +6363,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6391,6 +6470,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6455,6 +6535,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6562,6 +6643,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6627,6 +6709,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6692,6 +6775,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6756,6 +6840,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6802,6 +6887,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6848,6 +6934,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6914,6 +7001,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -6979,6 +7067,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7049,6 +7138,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7119,6 +7209,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7160,6 +7251,7 @@ Object {
       "type": 2,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7201,6 +7293,7 @@ Object {
       "type": 2,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7243,6 +7336,7 @@ Object {
       "type": 4,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7316,6 +7410,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7502,6 +7597,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {
@@ -7707,6 +7803,7 @@ Object {
       "type": 1,
     },
   ],
+  "hoists": Array [],
   "imports": Array [],
   "loc": Object {
     "end": Object {

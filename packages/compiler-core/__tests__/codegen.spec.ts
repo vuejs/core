@@ -34,6 +34,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     children: [],
     imports: [],
     statements: [],
+    hoists: [],
     loc: mockLoc,
     ...options
   }
@@ -58,13 +59,35 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('statement preambles', () => {
+  test('statements', () => {
     const root = createRoot({
       statements: [`const a = 1`, `const b = 2`]
     })
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const a = 1\n`)
     expect(code).toMatch(`const b = 2\n`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('hoists', () => {
+    const root = createRoot({
+      hoists: [
+        createExpression(`hello`, false, mockLoc),
+        createObjectExpression(
+          [
+            createObjectProperty(
+              createExpression(`id`, true, mockLoc),
+              createExpression(`foo`, true, mockLoc),
+              mockLoc
+            )
+          ],
+          mockLoc
+        )
+      ]
+    })
+    const { code } = generate(root)
+    expect(code).toMatch(`const _hoisted_1 = hello`)
+    expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
     expect(code).toMatchSnapshot()
   })
 
