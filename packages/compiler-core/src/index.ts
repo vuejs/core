@@ -17,7 +17,7 @@ export function compile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
-  if (__BROWSER__ && options.prefixIdentifiers) {
+  if (__BROWSER__ && options.prefixIdentifiers === false) {
     ;(options.onError || defaultOnError)(
       createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED)
     )
@@ -25,13 +25,14 @@ export function compile(
 
   const ast = isString(template) ? parse(template, options) : template
 
+  const prefixIdentifiers = !__BROWSER__ && options.prefixIdentifiers === true
   transform(ast, {
     ...options,
-    prefixIdentifiers: !__BROWSER__ && options.prefixIdentifiers === true,
+    prefixIdentifiers,
     nodeTransforms: [
       transformIf,
       transformFor,
-      transformExpression,
+      ...(prefixIdentifiers ? [transformExpression] : []),
       transformElement,
       ...(options.nodeTransforms || []) // user transforms
     ],
@@ -41,6 +42,7 @@ export function compile(
       ...(options.directiveTransforms || {}) // user transforms
     }
   })
+
   return generate(ast, options)
 }
 
