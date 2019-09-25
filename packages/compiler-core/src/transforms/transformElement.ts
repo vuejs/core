@@ -42,12 +42,11 @@ export const transformElement: NodeTransform = (node, context) => {
       let componentIdentifier: string | undefined
 
       if (isComponent) {
-        context.imports.add(RESOLVE_COMPONENT)
         componentIdentifier = `_component_${toValidId(node.tag)}`
         context.statements.push(
-          `const ${componentIdentifier} = ${RESOLVE_COMPONENT}(${JSON.stringify(
-            node.tag
-          )})`
+          `const ${componentIdentifier} = ${context.helper(
+            RESOLVE_COMPONENT
+          )}(${JSON.stringify(node.tag)})`
         )
       }
 
@@ -70,13 +69,15 @@ export const transformElement: NodeTransform = (node, context) => {
       }
 
       const { loc } = node
-      context.imports.add(CREATE_VNODE)
-      const vnode = createCallExpression(CREATE_VNODE, args, loc)
+      const vnode = createCallExpression(
+        context.helper(CREATE_VNODE),
+        args,
+        loc
+      )
 
       if (runtimeDirectives && runtimeDirectives.length) {
-        context.imports.add(APPLY_DIRECTIVES)
         node.codegenNode = createCallExpression(
-          APPLY_DIRECTIVES,
+          context.helper(APPLY_DIRECTIVES),
           [
             vnode,
             createArrayExpression(
@@ -147,11 +148,10 @@ function buildProps(
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
-            context.imports.add(TO_HANDLERS)
             mergeArgs.push({
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
-              callee: TO_HANDLERS,
+              callee: context.helper(TO_HANDLERS),
               arguments: [exp]
             })
           }
@@ -197,8 +197,11 @@ function buildProps(
       )
     }
     if (mergeArgs.length > 1) {
-      context.imports.add(MERGE_PROPS)
-      propsExpression = createCallExpression(MERGE_PROPS, mergeArgs, elementLoc)
+      propsExpression = createCallExpression(
+        context.helper(MERGE_PROPS),
+        mergeArgs,
+        elementLoc
+      )
     } else {
       // single v-bind with nothing else - no need for a mergeProps call
       propsExpression = mergeArgs[0]
@@ -285,12 +288,12 @@ function createDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
-  // inject import for `resolveDirective`
-  context.imports.add(RESOLVE_DIRECTIVE)
   // inject statement for resolving directive
   const dirIdentifier = `_directive_${toValidId(dir.name)}`
   context.statements.push(
-    `const ${dirIdentifier} = ${RESOLVE_DIRECTIVE}(${JSON.stringify(dir.name)})`
+    `const ${dirIdentifier} = ${context.helper(
+      RESOLVE_DIRECTIVE
+    )}(${JSON.stringify(dir.name)})`
   )
   const dirArgs: ArrayExpression['elements'] = [dirIdentifier]
   const { loc } = dir

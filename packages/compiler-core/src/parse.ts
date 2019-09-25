@@ -479,7 +479,14 @@ function parseAttribute(
   advanceBy(context, name.length)
 
   // Value
-  let value: { content: string; loc: SourceLocation } | undefined = undefined
+  let value:
+    | {
+        content: string
+        isQuoted: boolean
+        loc: SourceLocation
+      }
+    | undefined = undefined
+
   if (/^[\t\r\n\f ]*=/.test(context.source)) {
     advanceSpaces(context)
     advanceBy(context, 1)
@@ -530,6 +537,13 @@ function parseAttribute(
       }
     }
 
+    if (value && value.isQuoted) {
+      const valueLoc = value.loc
+      valueLoc.start.offset++
+      valueLoc.start.column++
+      valueLoc.end = advancePositionWithClone(valueLoc.start, value.content)
+    }
+
     return {
       type: NodeTypes.DIRECTIVE,
       name:
@@ -567,13 +581,20 @@ function parseAttribute(
 
 function parseAttributeValue(
   context: ParserContext
-): { content: string; loc: SourceLocation } | undefined {
+):
+  | {
+      content: string
+      isQuoted: boolean
+      loc: SourceLocation
+    }
+  | undefined {
   const start = getCursor(context)
   let content: string
 
-  if (/^["']/.test(context.source)) {
+  const quote = context.source[0]
+  const isQuoted = quote === `"` || quote === `'`
+  if (isQuoted) {
     // Quoted value.
-    const quote = context.source[0]
     advanceBy(context, 1)
 
     const endIndex = context.source.indexOf(quote)
@@ -605,7 +626,7 @@ function parseAttributeValue(
     content = parseTextData(context, match[0].length, TextModes.ATTRIBUTE_VALUE)
   }
 
-  return { content, loc: getSelection(context, start) }
+  return { content, isQuoted, loc: getSelection(context, start) }
 }
 
 function parseInterpolation(

@@ -118,14 +118,12 @@ export interface ExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  isRoot: boolean
 }
 
 export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
   condition: ExpressionNode | undefined // else
   children: ChildNode[]
-  isRoot: boolean
 }
 
 export interface ForNode extends Node {

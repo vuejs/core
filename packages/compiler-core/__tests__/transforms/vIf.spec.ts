@@ -29,9 +29,7 @@ describe('compiler: transform v-if', () => {
   test('basic v-if', () => {
     const node = parseWithIfTransform(`<div v-if="ok"/>`)
     expect(node.type).toBe(NodeTypes.IF)
-    expect(node.isRoot).toBe(true)
     expect(node.branches.length).toBe(1)
-    expect(node.branches[0].isRoot).toBe(true)
     expect(node.branches[0].condition!.content).toBe(`ok`)
     expect(node.branches[0].children.length).toBe(1)
     expect(node.branches[0].children[0].type).toBe(NodeTypes.ELEMENT)

@@ -3,8 +3,7 @@ import {
   CompilerOptions,
   parse,
   transform,
-  ErrorCodes,
-  compile
+  ErrorCodes
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import {
@@ -74,7 +73,7 @@ describe('compiler: element transform', () => {
     const { root, node } = parseWithElementTransform(
       `<div id="foo" class="bar" />`
     )
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     // should hoist the static object
     expect(root.hoists).toMatchObject([
       createStaticObjectMatcher({
@@ -95,7 +94,7 @@ describe('compiler: element transform', () => {
     const { root, node } = parseWithElementTransform(
       `<div id="foo"><span/></div>`
     )
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(root.hoists).toMatchObject([
       createStaticObjectMatcher({
         id: 'foo'
@@ -112,7 +111,7 @@ describe('compiler: element transform', () => {
           type: NodeTypes.ELEMENT,
           tag: 'span',
           codegenNode: {
-            callee: CREATE_VNODE,
+            callee: `_${CREATE_VNODE}`,
             arguments: [`"span"`]
           }
         }
@@ -122,7 +121,7 @@ describe('compiler: element transform', () => {
 
   test('0 placeholder for children with no props', () => {
     const { node } = parseWithElementTransform(`<div><span/></div>`)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments).toMatchObject([
       `"div"`,
       `0`,
@@ -131,7 +130,7 @@ describe('compiler: element transform', () => {
           type: NodeTypes.ELEMENT,
           tag: 'span',
           codegenNode: {
-            callee: CREATE_VNODE,
+            callee: `_${CREATE_VNODE}`,
             arguments: [`"span"`]
           }
         }
@@ -143,7 +142,7 @@ describe('compiler: element transform', () => {
     const { root, node } = parseWithElementTransform(`<div v-bind="obj" />`)
     // single v-bind doesn't need mergeProps
     expect(root.imports).not.toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     // should directly use `obj` in props position
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.EXPRESSION,
@@ -156,10 +155,10 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" />`
     )
     expect(root.imports).toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: MERGE_PROPS,
+      callee: `_${MERGE_PROPS}`,
       arguments: [
         createStaticObjectMatcher({
           id: 'foo'
@@ -177,10 +176,10 @@ describe('compiler: element transform', () => {
       `<div v-bind="obj" id="foo" />`
     )
     expect(root.imports).toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: MERGE_PROPS,
+      callee: `_${MERGE_PROPS}`,
       arguments: [
         {
           type: NodeTypes.EXPRESSION,
@@ -198,10 +197,10 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" class="bar" />`
     )
     expect(root.imports).toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: MERGE_PROPS,
+      callee: `_${MERGE_PROPS}`,
       arguments: [
         createStaticObjectMatcher({
           id: 'foo'
@@ -222,17 +221,17 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-on="obj" class="bar" />`
     )
     expect(root.imports).toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: MERGE_PROPS,
+      callee: `_${MERGE_PROPS}`,
       arguments: [
         createStaticObjectMatcher({
           id: 'foo'
         }),
         {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: TO_HANDLERS,
+          callee: `_${TO_HANDLERS}`,
           arguments: [
             {
               type: NodeTypes.EXPRESSION,
@@ -252,17 +251,17 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-on="handlers" v-bind="obj" />`
     )
     expect(root.imports).toContain(MERGE_PROPS)
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: MERGE_PROPS,
+      callee: `_${MERGE_PROPS}`,
       arguments: [
         createStaticObjectMatcher({
           id: 'foo'
         }),
         {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: TO_HANDLERS,
+          callee: `_${TO_HANDLERS}`,
           arguments: [
             {
               type: NodeTypes.EXPRESSION,
@@ -301,7 +300,7 @@ describe('compiler: element transform', () => {
         }
       }
     })
-    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments[1]).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
       properties: [
@@ -333,11 +332,11 @@ describe('compiler: element transform', () => {
     expect(root.imports).toContain(RESOLVE_DIRECTIVE)
     expect(root.statements[0]).toMatch(`${RESOLVE_DIRECTIVE}("foo")`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(`_${APPLY_DIRECTIVES}`)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: CREATE_VNODE,
+        callee: `_${CREATE_VNODE}`,
         arguments: [
           `"div"`,
           {
@@ -388,7 +387,7 @@ describe('compiler: element transform', () => {
     expect(root.statements[1]).toMatch(`${RESOLVE_DIRECTIVE}("bar")`)
     expect(root.statements[2]).toMatch(`${RESOLVE_DIRECTIVE}("baz")`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(`_${APPLY_DIRECTIVES}`)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION
@@ -467,13 +466,7 @@ describe('compiler: element transform', () => {
     ])
   })
 
-  test('props dedupe', () => {
-    const { code } = compile(
-      `<div class="a" :class="b" @click.foo="a" @click.bar="b" style="color: red" />
-      <div id="foo"/>`
-    )
-    console.log(code)
-  })
+  test.todo(`props dedupe`)
 
   test.todo('slot outlets')
 })

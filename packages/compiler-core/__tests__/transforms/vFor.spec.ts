@@ -212,150 +212,155 @@ describe('compiler: transform v-for', () => {
       const source = '<span v-for="item in items" />'
       const forNode = parseWithForTransform(source)
 
+      const itemOffset = source.indexOf('item')
       expect(forNode.valueAlias!.content).toBe('item')
-      expect(forNode.valueAlias!.loc.start.offset).toBe(
-        source.indexOf('item') - 1
-      )
+      expect(forNode.valueAlias!.loc.start.offset).toBe(itemOffset)
       expect(forNode.valueAlias!.loc.start.line).toBe(1)
-      expect(forNode.valueAlias!.loc.start.column).toBe(source.indexOf('item'))
+      expect(forNode.valueAlias!.loc.start.column).toBe(itemOffset + 1)
       expect(forNode.valueAlias!.loc.end.line).toBe(1)
       expect(forNode.valueAlias!.loc.end.column).toBe(
-        source.indexOf('item') + 4
+        itemOffset + 1 + `item`.length
       )
 
+      const itemsOffset = source.indexOf('items')
       expect(forNode.source.content).toBe('items')
-      expect(forNode.source.loc.start.offset).toBe(source.indexOf('items') - 1)
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
-      expect(forNode.source.loc.start.column).toBe(source.indexOf('items'))
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
       expect(forNode.source.loc.end.line).toBe(1)
-      expect(forNode.source.loc.end.column).toBe(source.indexOf('items') + 5)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `items`.length
+      )
     })
 
     test('bracketed value', () => {
       const source = '<span v-for="( item ) in items" />'
       const forNode = parseWithForTransform(source)
 
+      const itemOffset = source.indexOf('item')
       expect(forNode.valueAlias!.content).toBe('item')
-      expect(forNode.valueAlias!.loc.start.offset).toBe(
-        source.indexOf('item') - 1
-      )
+      expect(forNode.valueAlias!.loc.start.offset).toBe(itemOffset)
       expect(forNode.valueAlias!.loc.start.line).toBe(1)
-      expect(forNode.valueAlias!.loc.start.column).toBe(source.indexOf('item'))
+      expect(forNode.valueAlias!.loc.start.column).toBe(itemOffset + 1)
       expect(forNode.valueAlias!.loc.end.line).toBe(1)
       expect(forNode.valueAlias!.loc.end.column).toBe(
-        source.indexOf('item') + 4
+        itemOffset + 1 + `item`.length
       )
 
+      const itemsOffset = source.indexOf('items')
       expect(forNode.source.content).toBe('items')
-      expect(forNode.source.loc.start.offset).toBe(source.indexOf('items') - 1)
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
-      expect(forNode.source.loc.start.column).toBe(source.indexOf('items'))
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
       expect(forNode.source.loc.end.line).toBe(1)
-      expect(forNode.source.loc.end.column).toBe(source.indexOf('items') + 5)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `items`.length
+      )
     })
 
     test('de-structured value', () => {
       const source = '<span v-for="(  { id, key })in items" />'
       const forNode = parseWithForTransform(source)
 
+      const valueIndex = source.indexOf('{ id, key }')
       expect(forNode.valueAlias!.content).toBe('{ id, key }')
-      expect(forNode.valueAlias!.loc.start.offset).toBe(
-        source.indexOf('{ id, key }') - 1
-      )
+      expect(forNode.valueAlias!.loc.start.offset).toBe(valueIndex)
       expect(forNode.valueAlias!.loc.start.line).toBe(1)
-      expect(forNode.valueAlias!.loc.start.column).toBe(
-        source.indexOf('{ id, key }')
-      )
+      expect(forNode.valueAlias!.loc.start.column).toBe(valueIndex + 1)
       expect(forNode.valueAlias!.loc.end.line).toBe(1)
       expect(forNode.valueAlias!.loc.end.column).toBe(
-        source.indexOf('{ id, key }') + '{ id, key }'.length
+        valueIndex + 1 + '{ id, key }'.length
       )
 
+      const itemsOffset = source.indexOf('items')
       expect(forNode.source.content).toBe('items')
-      expect(forNode.source.loc.start.offset).toBe(source.indexOf('items') - 1)
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
-      expect(forNode.source.loc.start.column).toBe(source.indexOf('items'))
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
       expect(forNode.source.loc.end.line).toBe(1)
-      expect(forNode.source.loc.end.column).toBe(source.indexOf('items') + 5)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `items`.length
+      )
     })
 
     test('bracketed value, key, index', () => {
       const source = '<span v-for="( item, key, index ) in items" />'
       const forNode = parseWithForTransform(source)
 
+      const itemOffset = source.indexOf('item')
       expect(forNode.valueAlias!.content).toBe('item')
-      expect(forNode.valueAlias!.loc.start.offset).toBe(
-        source.indexOf('item') - 1
-      )
+      expect(forNode.valueAlias!.loc.start.offset).toBe(itemOffset)
       expect(forNode.valueAlias!.loc.start.line).toBe(1)
-      expect(forNode.valueAlias!.loc.start.column).toBe(source.indexOf('item'))
+      expect(forNode.valueAlias!.loc.start.column).toBe(itemOffset + 1)
       expect(forNode.valueAlias!.loc.end.line).toBe(1)
       expect(forNode.valueAlias!.loc.end.column).toBe(
-        source.indexOf('item') + 4
+        itemOffset + 1 + `item`.length
       )
 
+      const keyOffset = source.indexOf('key')
       expect(forNode.keyAlias!.content).toBe('key')
-      expect(forNode.keyAlias!.loc.start.offset).toBe(source.indexOf('key') - 1)
+      expect(forNode.keyAlias!.loc.start.offset).toBe(keyOffset)
       expect(forNode.keyAlias!.loc.start.line).toBe(1)
-      expect(forNode.keyAlias!.loc.start.column).toBe(source.indexOf('key'))
+      expect(forNode.keyAlias!.loc.start.column).toBe(keyOffset + 1)
       expect(forNode.keyAlias!.loc.end.line).toBe(1)
-      expect(forNode.keyAlias!.loc.end.column).toBe(source.indexOf('key') + 3)
+      expect(forNode.keyAlias!.loc.end.column).toBe(
+        keyOffset + 1 + `key`.length
+      )
 
+      const indexOffset = source.indexOf('index')
       expect(forNode.objectIndexAlias!.content).toBe('index')
-      expect(forNode.objectIndexAlias!.loc.start.offset).toBe(
-        source.indexOf('index') - 1
-      )
+      expect(forNode.objectIndexAlias!.loc.start.offset).toBe(indexOffset)
       expect(forNode.objectIndexAlias!.loc.start.line).toBe(1)
-      expect(forNode.objectIndexAlias!.loc.start.column).toBe(
-        source.indexOf('index')
-      )
+      expect(forNode.objectIndexAlias!.loc.start.column).toBe(indexOffset + 1)
       expect(forNode.objectIndexAlias!.loc.end.line).toBe(1)
       expect(forNode.objectIndexAlias!.loc.end.column).toBe(
-        source.indexOf('index') + 5
+        indexOffset + 1 + `index`.length
       )
 
+      const itemsOffset = source.indexOf('items')
       expect(forNode.source.content).toBe('items')
-      expect(forNode.source.loc.start.offset).toBe(source.indexOf('items') - 1)
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
-      expect(forNode.source.loc.start.column).toBe(source.indexOf('items'))
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
       expect(forNode.source.loc.end.line).toBe(1)
-      expect(forNode.source.loc.end.column).toBe(source.indexOf('items') + 5)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `items`.length
+      )
     })
 
     test('skipped key', () => {
       const source = '<span v-for="( item,, index ) in items" />'
       const forNode = parseWithForTransform(source)
 
+      const itemOffset = source.indexOf('item')
       expect(forNode.valueAlias!.content).toBe('item')
-      expect(forNode.valueAlias!.loc.start.offset).toBe(
-        source.indexOf('item') - 1
-      )
+      expect(forNode.valueAlias!.loc.start.offset).toBe(itemOffset)
       expect(forNode.valueAlias!.loc.start.line).toBe(1)
-      expect(forNode.valueAlias!.loc.start.column).toBe(source.indexOf('item'))
+      expect(forNode.valueAlias!.loc.start.column).toBe(itemOffset + 1)
       expect(forNode.valueAlias!.loc.end.line).toBe(1)
       expect(forNode.valueAlias!.loc.end.column).toBe(
-        source.indexOf('item') + 4
+        itemOffset + 1 + `item`.length
       )
 
+      const indexOffset = source.indexOf('index')
       expect(forNode.objectIndexAlias!.content).toBe('index')
-      expect(forNode.objectIndexAlias!.loc.start.offset).toBe(
-        source.indexOf('index') - 1
-      )
+      expect(forNode.objectIndexAlias!.loc.start.offset).toBe(indexOffset)
       expect(forNode.objectIndexAlias!.loc.start.line).toBe(1)
-      expect(forNode.objectIndexAlias!.loc.start.column).toBe(
-        source.indexOf('index')
-      )
+      expect(forNode.objectIndexAlias!.loc.start.column).toBe(indexOffset + 1)
       expect(forNode.objectIndexAlias!.loc.end.line).toBe(1)
       expect(forNode.objectIndexAlias!.loc.end.column).toBe(
-        source.indexOf('index') + 5
+        indexOffset + 1 + `index`.length
       )
 
+      const itemsOffset = source.indexOf('items')
       expect(forNode.source.content).toBe('items')
-      expect(forNode.source.loc.start.offset).toBe(source.indexOf('items') - 1)
+      expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
-      expect(forNode.source.loc.start.column).toBe(source.indexOf('items'))
+      expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
       expect(forNode.source.loc.end.line).toBe(1)
-      expect(forNode.source.loc.end.column).toBe(source.indexOf('items') + 5)
+      expect(forNode.source.loc.end.column).toBe(
+        itemsOffset + 1 + `items`.length
+      )
     })
   })
 })

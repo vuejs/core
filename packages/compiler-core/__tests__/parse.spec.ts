@@ -894,8 +894,8 @@ describe('compiler: parse', () => {
           isStatic: false,
           isInterpolation: false,
           loc: {
-            start: { offset: 10, line: 1, column: 11 },
-            end: { offset: 13, line: 1, column: 14 },
+            start: { offset: 11, line: 1, column: 12 },
+            end: { offset: 12, line: 1, column: 13 },
             source: '"a"'
           }
         },
@@ -1303,25 +1303,27 @@ describe('compiler: parse', () => {
 
   test('parse with correct location info', () => {
     const [foo, bar, but, baz] = parse(
-      'foo \n is {{ bar }} but {{ baz }}'
+      `
+foo
+ is {{ bar }} but {{ baz }}`.trim()
     ).children
 
     let offset = 0
     expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
     offset += foo.loc.source.length
-    expect(foo.loc.end).toEqual({ line: 2, column: 4, offset })
+    expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
 
-    expect(bar.loc.start).toEqual({ line: 2, column: 4, offset })
+    expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
     offset += bar.loc.source.length
-    expect(bar.loc.end).toEqual({ line: 2, column: 13, offset })
+    expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
 
-    expect(but.loc.start).toEqual({ line: 2, column: 13, offset })
+    expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
     offset += but.loc.source.length
-    expect(but.loc.end).toEqual({ line: 2, column: 18, offset })
+    expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
 
-    expect(baz.loc.start).toEqual({ line: 2, column: 18, offset })
+    expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
     offset += baz.loc.source.length
-    expect(baz.loc.end).toEqual({ line: 2, column: 27, offset })
+    expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
   })
 
   describe('namedCharacterReferences option', () => {

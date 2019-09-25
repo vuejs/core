@@ -50,11 +50,11 @@ describe('compiler: transform v-bind', () => {
         loc: {
           start: {
             line: 1,
-            column: 17
+            column: 18
           },
           end: {
             line: 1,
-            column: 26
+            column: 25
           }
         }
       },

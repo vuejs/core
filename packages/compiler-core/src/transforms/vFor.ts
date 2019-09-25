@@ -24,7 +24,7 @@ export const transformFor = createStructuralDirectiveTransform(
       const parseResult = parseForExpression(dir.exp, context)
 
       if (parseResult) {
-        context.imports.add(RENDER_LIST)
+        context.helper(RENDER_LIST)
         const { source, value, key, index } = parseResult
 
         context.replaceNode({

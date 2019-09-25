@@ -28,7 +28,7 @@ describe('advancePositionWithClone', () => {
     const pos = p(1, 1, 0)
     const newPos = advancePositionWithClone(pos, 'foo\nbar\nbaz', 10)
 
-    expect(newPos.column).toBe(2)
+    expect(newPos.column).toBe(3)
     expect(newPos.line).toBe(3)
     expect(newPos.offset).toBe(10)
   })
@@ -62,7 +62,7 @@ describe('getInnerRange', () => {
     expect(loc2.start.column).toBe(1)
     expect(loc2.start.line).toBe(2)
     expect(loc2.start.offset).toBe(4)
-    expect(loc2.end.column).toBe(3)
+    expect(loc2.end.column).toBe(4)
     expect(loc2.end.line).toBe(2)
     expect(loc2.end.offset).toBe(7)
   })

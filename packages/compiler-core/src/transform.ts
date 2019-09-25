@@ -59,6 +59,7 @@ export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode
   childIndex: number
   currentNode: ChildNode | null
+  helper(name: string): string
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
   onNodeRemoved: () => void
@@ -89,6 +90,10 @@ function createTransformContext(
     parent: root,
     childIndex: 0,
     currentNode: null,
+    helper(name) {
+      context.imports.add(name)
+      return prefixIdentifiers ? name : `_${name}`
+    },
     replaceNode(node) {
       /* istanbul ignore if */
       if (__DEV__ && !context.currentNode) {
@@ -195,15 +200,15 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
 
   switch (node.type) {
     case NodeTypes.COMMENT:
-      context.imports.add(CREATE_VNODE)
+      context.helper(CREATE_VNODE)
       // inject import for the Comment symbol, which is needed for creating
       // comment nodes with `createVNode`
-      context.imports.add(COMMENT)
+      context.helper(COMMENT)
       break
     case NodeTypes.EXPRESSION:
       // no need to traverse, but we need to inject toString helper
       if (node.isInterpolation) {
-        context.imports.add(TO_STRING)
+        context.helper(TO_STRING)
       }
       break
 

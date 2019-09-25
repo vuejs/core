@@ -65,6 +65,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   offset: number
   indentLevel: number
   map?: SourceMapGenerator
+  helper(name: string): string
   push(code: string, node?: CodegenNode): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
@@ -98,11 +99,14 @@ function createCodegenContext(
         ? undefined
         : new (require('source-map')).SourceMapGenerator(),
 
+    helper(name) {
+      return prefixIdentifiers ? name : `_${name}`
+    },
     push(code, node?: CodegenNode) {
       context.code += code
       if (context.map) {
         if (node) {
-          context.map.addMapping({
+          const mapping = {
             source: context.filename,
             original: {
               line: node.loc.start.line,
@@ -112,9 +116,10 @@ function createCodegenContext(
               line: context.line,
               column: context.column - 1
             }
-          })
+          }
+          context.map.addMapping(mapping)
         }
-        advancePositionWithMutation(context, code, code.length)
+        advancePositionWithMutation(context, code)
       }
     },
     indent() {
@@ -144,7 +149,7 @@ export function generate(
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
   const { mode, push, prefixIdentifiers, indent, deindent, newline } = context
-  const imports = ast.imports.join(', ')
+  const hasImports = ast.imports.length
 
   // preambles
   if (mode === 'function') {
@@ -152,9 +157,9 @@ export function generate(
     // In prefix mode, we place the const declaration at top so it's done
     // only once; But if we not prefixing, we place the decalration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
-    if (imports) {
+    if (hasImports) {
       if (prefixIdentifiers) {
-        push(`const { ${imports} } = Vue\n`)
+        push(`const { ${ast.imports.join(', ')} } = Vue\n`)
       } else {
         // save Vue in a separate variable to avoid collision
         push(`const _Vue = Vue`)
@@ -164,8 +169,8 @@ export function generate(
     push(`return `)
   } else {
     // generate import statements for helpers
-    if (imports) {
-      push(`import { ${imports} } from 'vue'\n`)
+    if (hasImports) {
+      push(`import { ${ast.imports.join(', ')} } from 'vue'\n`)
     }
     genHoists(ast.hoists, context)
     push(`export default `)
@@ -179,8 +184,9 @@ export function generate(
     push(`with (this) {`)
     indent()
     // function mode const declarations should be inside with block
-    if (mode === 'function' && imports) {
-      push(`const { ${imports} } = _Vue`)
+    // also they should be renamed to avoid collision with user properties
+    if (mode === 'function' && hasImports) {
+      push(`const { ${ast.imports.map(n => `${n}: _${n}`).join(', ')} } = _Vue`)
       newline()
     }
   } else {
@@ -199,7 +205,7 @@ export function generate(
 
   // generate the VNode tree expression
   push(`return `)
-  genChildren(ast.children, context, true /* asRoot */)
+  genChildren(ast.children, context, true)
   if (!prefixIdentifiers) {
     deindent()
     push(`}`)
@@ -223,13 +229,12 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 }
 
 // This will generate a single vnode call if:
-// - The list has length === 1, AND:
-// - This is a root node, OR:
-// - The only child is a text or expression.
+// - The target position explicitly allows a single node (root, if, for)
+// - The list has length === 1, AND The only child is a text or expression.
 function genChildren(
   children: ChildNode[],
   context: CodegenContext,
-  asRoot: boolean = false
+  allowSingle: boolean = false
 ) {
   if (!children.length) {
     return context.push(`null`)
@@ -237,7 +242,7 @@ function genChildren(
   const child = children[0]
   if (
     children.length === 1 &&
-    (asRoot ||
+    (allowSingle ||
       child.type === NodeTypes.TEXT ||
       child.type == NodeTypes.EXPRESSION)
   ) {
@@ -336,10 +341,10 @@ function genText(node: TextNode | ExpressionNode, context: CodegenContext) {
 }
 
 function genExpression(node: ExpressionNode, context: CodegenContext) {
-  const { push } = context
+  const { push, helper } = context
   const { content, children, isStatic, isInterpolation } = node
   if (isInterpolation) {
-    push(`${TO_STRING}(`)
+    push(`${helper(TO_STRING)}(`)
   }
   if (children) {
     genCompoundExpression(node, context)
@@ -383,8 +388,11 @@ function genCompoundExpression(node: ExpressionNode, context: CodegenContext) {
 
 function genComment(node: CommentNode, context: CodegenContext) {
   if (__DEV__) {
-    context.push(
-      `${CREATE_VNODE}(${COMMENT}, 0, ${JSON.stringify(node.content)})`,
+    const { push, helper } = context
+    push(
+      `${helper(CREATE_VNODE)}(${helper(COMMENT)}, 0, ${JSON.stringify(
+        node.content
+      )})`,
       node
     )
   }
@@ -396,7 +404,7 @@ function genIf(node: IfNode, context: CodegenContext) {
 }
 
 function genIfBranch(
-  { condition, children, isRoot }: IfBranchNode,
+  { condition, children }: IfBranchNode,
   branches: IfBranchNode[],
   nextIndex: number,
   context: CodegenContext
@@ -411,7 +419,7 @@ function genIfBranch(
     indent()
     context.indentLevel++
     push(`? `)
-    genChildren(children, context, isRoot)
+    genChildren(children, context, true)
     context.indentLevel--
     newline()
     push(`: `)
@@ -424,14 +432,14 @@ function genIfBranch(
   } else {
     // v-else
     __DEV__ && assert(nextIndex === branches.length)
-    genChildren(children, context, isRoot)
+    genChildren(children, context, true)
   }
 }
 
 function genFor(node: ForNode, context: CodegenContext) {
-  const { push } = context
+  const { push, helper, indent, deindent } = context
   const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
-  push(`${RENDER_LIST}(`, node)
+  push(`${helper(RENDER_LIST)}(`, node)
   genExpression(source, context)
   push(`, (`)
   if (valueAlias) {
@@ -455,9 +463,12 @@ function genFor(node: ForNode, context: CodegenContext) {
     push(`, `)
     genExpression(objectIndexAlias, context)
   }
-  push(`) => `)
-  genChildren(children, context)
-  push(`)`)
+  push(`) => {`)
+  indent()
+  push(`return `)
+  genChildren(children, context, true)
+  deindent()
+  push(`})`)
 }
 
 // JavaScript

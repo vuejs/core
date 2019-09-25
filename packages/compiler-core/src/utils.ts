@@ -31,7 +31,7 @@ export function getInnerRange(
 export function advancePositionWithClone(
   pos: Position,
   source: string,
-  numberOfCharacters: number
+  numberOfCharacters: number = source.length
 ): Position {
   return advancePositionWithMutation({ ...pos }, source, numberOfCharacters)
 }
@@ -41,7 +41,7 @@ export function advancePositionWithClone(
 export function advancePositionWithMutation(
   pos: Position,
   source: string,
-  numberOfCharacters: number
+  numberOfCharacters: number = source.length
 ): Position {
   let linesCount = 0
   let lastNewLinePos = -1
@@ -57,7 +57,7 @@ export function advancePositionWithMutation(
   pos.column =
     lastNewLinePos === -1
       ? pos.column + numberOfCharacters
-      : Math.max(1, numberOfCharacters - lastNewLinePos - 1)
+      : Math.max(1, numberOfCharacters - lastNewLinePos)
 
   return pos
 }

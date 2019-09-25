@@ -20,7 +20,7 @@ exports[`compiler: codegen comment 1`] = `
 "
 return function render() {
   with (this) {
-    return createVNode(Comment, 0, \\"foo\\")
+    return _createVNode(_Comment, 0, \\"foo\\")
   }
 }"
 `;
@@ -29,7 +29,7 @@ exports[`compiler: codegen compound expression 1`] = `
 "
 return function render() {
   with (this) {
-    return toString(_ctx.foo)
+    return _toString(_ctx.foo)
   }
 }"
 `;
@@ -38,8 +38,20 @@ exports[`compiler: codegen forNode 1`] = `
 "
 return function render() {
   with (this) {
-    return renderList(list, (v, k, i) => toString(v))
+    return _renderList(list, (v, k, i) => {
+      return _toString(v)
+    })
   }
+}"
+`;
+
+exports[`compiler: codegen forNode w/ prefixIdentifiers: true 1`] = `
+"
+return function render() {
+  const _ctx = this
+  return renderList(list, (v, k, i) => {
+    return toString(v)
+  })
 }"
 `;
 
@@ -47,7 +59,9 @@ exports[`compiler: codegen forNode w/ skipped key alias 1`] = `
 "
 return function render() {
   with (this) {
-    return renderList(list, (v, __key, i) => toString(v))
+    return _renderList(list, (v, __key, i) => {
+      return _toString(v)
+    })
   }
 }"
 `;
@@ -56,7 +70,9 @@ exports[`compiler: codegen forNode w/ skipped value alias 1`] = `
 "
 return function render() {
   with (this) {
-    return renderList(list, (__value, k, i) => toString(v))
+    return _renderList(list, (__value, k, i) => {
+      return _toString(v)
+    })
   }
 }"
 `;
@@ -65,7 +81,9 @@ exports[`compiler: codegen forNode w/ skipped value and key aliases 1`] = `
 "
 return function render() {
   with (this) {
-    return renderList(list, (__value, __key, i) => toString(v))
+    return _renderList(list, (__value, __key, i) => {
+      return _toString(v)
+    })
   }
 }"
 `;
@@ -74,9 +92,18 @@ exports[`compiler: codegen function mode preamble 1`] = `
 "const _Vue = Vue
 return function render() {
   with (this) {
-    const { helperOne, helperTwo } = _Vue
+    const { helperOne: _helperOne, helperTwo: _helperTwo } = _Vue
     return null
   }
+}"
+`;
+
+exports[`compiler: codegen function mode preamble w/ prefixIdentifiers: true 1`] = `
+"const { helperOne, helperTwo } = Vue
+
+return function render() {
+  const _ctx = this
+  return null
 }"
 `;
 
@@ -98,8 +125,8 @@ return function render() {
     return foo
       ? \\"foo\\"
       : (a + b)
-        ? toString(bye)
-        : createVNode(Comment, 0, \\"foo\\")
+        ? _toString(bye)
+        : _createVNode(_Comment, 0, \\"foo\\")
   }
 }"
 `;
@@ -111,7 +138,7 @@ return function render() {
     return foo
       ? \\"foo\\"
       : (a + b)
-        ? toString(bye)
+        ? _toString(bye)
         : null
   }
 }"
@@ -121,7 +148,7 @@ exports[`compiler: codegen interpolation 1`] = `
 "
 return function render() {
   with (this) {
-    return toString(hello)
+    return _toString(hello)
   }
 }"
 `;
@@ -171,9 +198,21 @@ return function render() {
   with (this) {
     return [
       \\"foo\\",
-      toString(hello),
-      createVNode(Comment, 0, \\"foo\\")
+      _toString(hello),
+      _createVNode(_Comment, 0, \\"foo\\")
     ]
   }
+}"
+`;
+
+exports[`compiler: codegen text + comment + interpolation w/ prefixIdentifiers: true 1`] = `
+"
+return function render() {
+  const _ctx = this
+  return [
+    \\"foo\\",
+    toString(hello),
+    createVNode(Comment, 0, \\"foo\\")
+  ]
 }"
 `;

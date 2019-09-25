@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`function mode 1`] = `
+"const _Vue = Vue
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, toString: _toString, renderList: _renderList } = _Vue
+    return _createVNode(\\"div\\", {
+      id: \\"foo\\",
+      class: bar
+    }, [
+      _toString(world),
+      ok
+        ? _createVNode(\\"div\\", 0, \\"yes\\")
+        : \\"no\\",
+      _renderList(list, (i, j) => {
+        return _createVNode(\\"div\\", 0, [_createVNode(\\"span\\", 0, _toString(i + j))])
+      })
+    ])
+  }
+}"
+`;

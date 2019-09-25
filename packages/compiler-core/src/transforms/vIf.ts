@@ -19,14 +19,10 @@ export const transformIf = createStructuralDirectiveTransform(
       processExpression(dir.exp, context)
     }
     if (dir.name === 'if') {
-      // check if this v-if is root - so that in codegen we can avoid generating
-      // arrays for each branch
-      const isRoot = context.parent === context.root
       context.replaceNode({
         type: NodeTypes.IF,
         loc: node.loc,
-        branches: [createIfBranch(node, dir, isRoot)],
-        isRoot
+        branches: [createIfBranch(node, dir)]
       })
     } else {
       // locate the adjacent v-if
@@ -43,7 +39,7 @@ export const transformIf = createStructuralDirectiveTransform(
         if (sibling && sibling.type === NodeTypes.IF) {
           // move the node to the if node's branches
           context.removeNode()
-          const branch = createIfBranch(node, dir, sibling.isRoot)
+          const branch = createIfBranch(node, dir)
           if (__DEV__ && comments.length) {
             branch.children = [...comments, ...branch.children]
           }
@@ -67,16 +63,11 @@ export const transformIf = createStructuralDirectiveTransform(
   }
 )
 
-function createIfBranch(
-  node: ElementNode,
-  dir: DirectiveNode,
-  isRoot: boolean
-): IfBranchNode {
+function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
   return {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node],
-    isRoot
+    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
   }
 }

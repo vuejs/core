@@ -7481,15 +7481,15 @@ Object {
             "isStatic": false,
             "loc": Object {
               "end": Object {
-                "column": 34,
+                "column": 33,
                 "line": 1,
-                "offset": 33,
+                "offset": 32,
               },
               "source": "\\"{ some: condition }\\"",
               "start": Object {
-                "column": 13,
+                "column": 14,
                 "line": 1,
-                "offset": 12,
+                "offset": 13,
               },
             },
             "type": 4,
@@ -7561,15 +7561,15 @@ Object {
             "isStatic": false,
             "loc": Object {
               "end": Object {
-                "column": 35,
+                "column": 34,
                 "line": 2,
-                "offset": 71,
+                "offset": 70,
               },
               "source": "\\"{ color: 'red' }\\"",
               "start": Object {
-                "column": 17,
+                "column": 18,
                 "line": 2,
-                "offset": 53,
+                "offset": 54,
               },
             },
             "type": 4,
@@ -7629,13 +7629,13 @@ Object {
           "isSelfClosing": true,
           "loc": Object {
             "end": Object {
-              "column": 38,
+              "column": 39,
               "line": 2,
               "offset": 73,
             },
             "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
             "start": Object {
-              "column": 2,
+              "column": 3,
               "line": 2,
               "offset": 37,
             },
@@ -7649,13 +7649,13 @@ Object {
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
-                    "column": 17,
+                    "column": 18,
                     "line": 2,
                     "offset": 52,
                   },
                   "source": "style",
                   "start": Object {
-                    "column": 12,
+                    "column": 13,
                     "line": 2,
                     "offset": 47,
                   },
@@ -7670,26 +7670,26 @@ Object {
                   "end": Object {
                     "column": 36,
                     "line": 2,
-                    "offset": 71,
+                    "offset": 70,
                   },
                   "source": "\\"{ color: 'red' }\\"",
                   "start": Object {
-                    "column": 18,
+                    "column": 20,
                     "line": 2,
-                    "offset": 53,
+                    "offset": 54,
                   },
                 },
                 "type": 4,
               },
               "loc": Object {
                 "end": Object {
-                  "column": 36,
+                  "column": 37,
                   "line": 2,
                   "offset": 71,
                 },
                 "source": "v-bind:style=\\"{ color: 'red' }\\"",
                 "start": Object {
-                  "column": 5,
+                  "column": 6,
                   "line": 2,
                   "offset": 40,
                 },
@@ -7707,13 +7707,13 @@ Object {
           "content": " a comment with <html> inside it ",
           "loc": Object {
             "end": Object {
-              "column": 42,
+              "column": 43,
               "line": 3,
               "offset": 116,
             },
             "source": "<!-- a comment with <html> inside it -->",
             "start": Object {
-              "column": 2,
+              "column": 3,
               "line": 3,
               "offset": 76,
             },
@@ -7767,15 +7767,15 @@ Object {
             "isStatic": false,
             "loc": Object {
               "end": Object {
-                "column": 34,
+                "column": 33,
                 "line": 1,
-                "offset": 33,
+                "offset": 32,
               },
               "source": "\\"{ some: condition }\\"",
               "start": Object {
-                "column": 13,
+                "column": 14,
                 "line": 1,
-                "offset": 12,
+                "offset": 13,
               },
             },
             "type": 4,
