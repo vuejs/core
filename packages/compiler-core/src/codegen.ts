@@ -453,7 +453,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     genExpressionAsPropertyKey(key, context)
     push(`: `)
     // value
-    genExpression(value, context)
+    genNode(value, context)
     if (i < properties.length - 1) {
       // will only reach this if it's multilines
       push(`,`)

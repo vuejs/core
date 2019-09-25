@@ -14,7 +14,6 @@ import { NodeTransform, TransformContext } from '../transform'
 import { NodeTypes, createExpression, ExpressionNode } from '../ast'
 import { Node, Function, Identifier } from 'estree'
 import { advancePositionWithClone } from '../utils'
-
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.EXPRESSION && !node.isStatic) {
     processExpression(node, context)
@@ -27,8 +26,14 @@ export const transformExpression: NodeTransform = (node, context) => {
           processExpression(prop.exp, context)
         }
         if (prop.arg && !prop.arg.isStatic) {
-          processExpression(prop.arg, context)
+          if (prop.name === 'class') {
+            // TODO special expression optimization for classes
+          } else {
+            processExpression(prop.arg, context)
+          }
         }
+      } else if (prop.name === 'style') {
+        // TODO parse inline CSS literals into objects
       }
     }
   }

@@ -3,7 +3,8 @@ import {
   CompilerOptions,
   parse,
   transform,
-  ErrorCodes
+  ErrorCodes,
+  compile
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import {
@@ -305,10 +306,7 @@ describe('compiler: element transform', () => {
           foo(dir) {
             _dir = dir
             return {
-              props: [
-                createObjectProperty(dir.arg!, dir.exp!, dir.loc),
-                createObjectProperty(dir.arg!, dir.exp!, dir.loc)
-              ],
+              props: [createObjectProperty(dir.arg!, dir.exp!, dir.loc)],
               needRuntime: true
             }
           }
@@ -328,11 +326,6 @@ describe('compiler: element transform', () => {
           {
             type: NodeTypes.JS_OBJECT_EXPRESSION,
             properties: [
-              {
-                type: NodeTypes.JS_PROPERTY,
-                key: _dir!.arg,
-                value: _dir!.exp
-              },
               {
                 type: NodeTypes.JS_PROPERTY,
                 key: _dir!.arg,
@@ -455,6 +448,13 @@ describe('compiler: element transform', () => {
         ]
       }
     ])
+  })
+
+  test('props dedupe', () => {
+    const { code } = compile(
+      `<div class="a" :class="b" @click.foo="a" @click.bar="b" style="color: red" :style="{fontSize: 14}" />`
+    )
+    console.log(code)
   })
 
   test.todo('slot outlets')

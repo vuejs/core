@@ -159,7 +159,7 @@ export interface ObjectExpression extends Node {
 export interface Property extends Node {
   type: NodeTypes.JS_PROPERTY
   key: ExpressionNode
-  value: ExpressionNode
+  value: JSChildNode
 }
 
 export interface ArrayExpression extends Node {

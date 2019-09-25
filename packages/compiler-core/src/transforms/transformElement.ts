@@ -12,7 +12,8 @@ import {
   createArrayExpression,
   createObjectProperty,
   createExpression,
-  createObjectExpression
+  createObjectExpression,
+  Property
 } from '../ast'
 import { isArray } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -135,7 +136,9 @@ function buildProps(
       if (!arg && (isBind || name === 'on')) {
         if (exp) {
           if (properties.length) {
-            mergeArgs.push(createObjectExpression(properties, elementLoc))
+            mergeArgs.push(
+              createObjectExpression(dedupeProperties(properties), elementLoc)
+            )
             properties = []
           }
           if (isBind) {
@@ -187,7 +190,9 @@ function buildProps(
   // has v-bind="object" or v-on="object", wrap with mergeProps
   if (mergeArgs.length) {
     if (properties.length) {
-      mergeArgs.push(createObjectExpression(properties, elementLoc))
+      mergeArgs.push(
+        createObjectExpression(dedupeProperties(properties), elementLoc)
+      )
     }
     if (mergeArgs.length > 1) {
       context.imports.add(MERGE_PROPS)
@@ -197,13 +202,96 @@ function buildProps(
       propsExpression = mergeArgs[0]
     }
   } else {
-    propsExpression = createObjectExpression(properties, elementLoc)
+    propsExpression = createObjectExpression(
+      dedupeProperties(properties),
+      elementLoc
+    )
   }
 
   return {
     props: propsExpression,
     directives: runtimeDirectives
   }
+}
+
+// Dedupe props in an object literal.
+// Literal duplicated attributes would have been warned during the parse phase,
+// however, it's possible to encounter duplicated `onXXX` handlers with different
+// modifiers. We also need to merge static and dynamic class / style attributes.
+// - onXXX handlers / style: merge into array
+// - class: merge into single expression with concatenation
+function dedupeProperties(properties: Property[]): Property[] {
+  const knownProps: Record<string, Property> = {}
+  const deduped: Property[] = []
+  for (let i = 0; i < properties.length; i++) {
+    const prop = properties[i]
+    // dynamic key named are always allowed
+    if (!prop.key.isStatic) {
+      deduped.push(prop)
+      continue
+    }
+    const name = prop.key.content
+    const existing = knownProps[name]
+    if (existing) {
+      if (name.startsWith('on')) {
+        mergeAsArray(existing, prop)
+      } else if (name === 'style') {
+        mergeStyles(existing, prop)
+      } else if (name === 'class') {
+        mergeClasses(existing, prop)
+      }
+      // unexpected duplicate, should have emitted error during parse
+    } else {
+      knownProps[name] = prop
+      deduped.push(prop)
+    }
+  }
+  return deduped
+}
+
+function mergeAsArray(existing: Property, incoming: Property) {
+  if (existing.value.type === NodeTypes.JS_ARRAY_EXPRESSION) {
+    existing.value.elements.push(incoming.value)
+  } else {
+    existing.value = createArrayExpression(
+      [existing.value, incoming.value],
+      existing.loc
+    )
+  }
+}
+
+// Merge dynamic and static style into a single prop
+export function mergeStyles(existing: Property, incoming: Property) {
+  if (
+    existing.value.type === NodeTypes.JS_OBJECT_EXPRESSION &&
+    incoming.value.type === NodeTypes.JS_OBJECT_EXPRESSION
+  ) {
+    // if both are objects, merge the object expressions.
+    // style="color: red" :style="{ a: b }"
+    // -> { color: "red", a: b }
+    existing.value.properties.push(...incoming.value.properties)
+  } else {
+    // otherwise merge as array
+    // style="color:red" :style="a"
+    // -> style: [{ color: "red" }, a]
+    mergeAsArray(existing, incoming)
+  }
+}
+
+// Merge dynamic and static class into a single prop
+function mergeClasses(existing: Property, incoming: Property) {
+  const e = existing.value as ExpressionNode
+  const children =
+    e.children ||
+    (e.children = [
+      {
+        ...e,
+        children: undefined
+      }
+    ])
+  // :class="expression" class="string"
+  // -> class: expression + "string"
+  children.push(` + " " + `, incoming.value as ExpressionNode)
 }
 
 function createDirectiveArgs(
