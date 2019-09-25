@@ -86,7 +86,7 @@ export function processExpression(
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
         if (
-          ids.indexOf(node) === -1 &&
+          !ids.includes(node) &&
           !knownIds[node.name] &&
           shouldPrefix(node, parent)
         ) {
@@ -177,7 +177,7 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
       // not id of a FunctionDeclaration
       ((parent as any).id === identifier ||
         // not a params of a function
-        parent.params.indexOf(identifier) > -1)
+        parent.params.includes(identifier))
     ) &&
     // not a key of Property
     !(
