@@ -51,7 +51,7 @@ describe('compiler: codegen', () => {
       imports: [`helperOne`, `helperTwo`]
     })
     const { code } = generate(root, { mode: 'module' })
-    expect(code).toMatch(`import { helperOne, helperTwo } from 'vue'`)
+    expect(code).toMatch(`import { helperOne, helperTwo } from "vue"`)
     expect(code).toMatchSnapshot()
   })
 

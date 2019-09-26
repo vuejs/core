@@ -29,26 +29,17 @@ function parseWithExpressionTransform(
 describe('compiler: expression transform', () => {
   test('interpolation (root)', () => {
     const node = parseWithExpressionTransform(`{{ foo }}`) as ExpressionNode
-    expect(node.children).toMatchObject([
-      `_ctx.`,
-      {
-        content: `foo`,
-        loc: node.loc
-      }
-    ])
+    expect(node.children).toBeUndefined()
+    expect(node.content).toBe(`_ctx.foo`)
   })
 
   test('interpolation (children)', () => {
-    const node = parseWithExpressionTransform(
+    const el = parseWithExpressionTransform(
       `<div>{{ foo }}</div>`
     ) as ElementNode
-    expect((node.children[0] as ExpressionNode).children).toMatchObject([
-      `_ctx.`,
-      {
-        content: `foo`,
-        loc: node.children[0].loc
-      }
-    ])
+    const node = el.children[0] as ExpressionNode
+    expect(node.children).toBeUndefined()
+    expect(node.content).toBe(`_ctx.foo`)
   })
 
   test('directive value', () => {
@@ -57,13 +48,8 @@ describe('compiler: expression transform', () => {
     ) as ElementNode
     expect((node.props[0] as DirectiveNode).arg!.children).toBeUndefined()
     const exp = (node.props[0] as DirectiveNode).exp!
-    expect(exp.children).toMatchObject([
-      `_ctx.`,
-      {
-        content: `baz`,
-        loc: exp.loc
-      }
-    ])
+    expect(exp.children).toBeUndefined()
+    expect(exp.content).toBe(`_ctx.baz`)
   })
 
   test('dynamic directive arg', () => {
@@ -72,20 +58,10 @@ describe('compiler: expression transform', () => {
     ) as ElementNode
     const arg = (node.props[0] as DirectiveNode).arg!
     const exp = (node.props[0] as DirectiveNode).exp!
-    expect(arg.children).toMatchObject([
-      `_ctx.`,
-      {
-        content: `arg`,
-        loc: arg.loc
-      }
-    ])
-    expect(exp.children).toMatchObject([
-      `_ctx.`,
-      {
-        content: `baz`,
-        loc: exp.loc
-      }
-    ])
+    expect(arg.children).toBeUndefined()
+    expect(arg.content).toBe(`_ctx.arg`)
+    expect(exp.children).toBeUndefined()
+    expect(exp.content).toBe(`_ctx.baz`)
   })
 
   test('should prefix complex expressions', () => {
@@ -94,9 +70,8 @@ describe('compiler: expression transform', () => {
     ) as ExpressionNode
     // should parse into compound expression
     expect(node.children).toMatchObject([
-      `_ctx.`,
       {
-        content: `foo`,
+        content: `_ctx.foo`,
         loc: {
           source: `foo`,
           start: {
@@ -111,9 +86,9 @@ describe('compiler: expression transform', () => {
           }
         }
       },
-      `(_ctx.`,
+      `(`,
       {
-        content: `baz`,
+        content: `_ctx.baz`,
         loc: {
           source: `baz`,
           start: {
@@ -128,9 +103,9 @@ describe('compiler: expression transform', () => {
           }
         }
       },
-      ` + 1, { key: _ctx.`,
+      ` + 1, { key: `,
       {
-        content: `kuz`,
+        content: `_ctx.kuz`,
         loc: {
           source: `kuz`,
           start: {
@@ -151,17 +126,16 @@ describe('compiler: expression transform', () => {
 
   test('should prefix v-if condition', () => {
     const node = parseWithExpressionTransform(`<div v-if="ok"/>`) as IfNode
-    expect(node.branches[0].condition!.children).toMatchObject([
-      `_ctx.`,
-      { content: `ok` }
-    ])
+    expect(node.branches[0].condition!.children).toBeUndefined()
+    expect(node.branches[0].condition!.content).toBe(`_ctx.ok`)
   })
 
   test('should prefix v-for source', () => {
     const node = parseWithExpressionTransform(
       `<div v-for="i in list"/>`
     ) as ForNode
-    expect(node.source.children).toMatchObject([`_ctx.`, { content: `list` }])
+    expect(node.source.children).toBeUndefined()
+    expect(node.source.content).toBe(`_ctx.list`)
   })
 
   test('should not prefix v-for alias', () => {
@@ -177,7 +151,8 @@ describe('compiler: expression transform', () => {
 
     const j = div.children[1] as ExpressionNode
     expect(j.type).toBe(NodeTypes.EXPRESSION)
-    expect(j.children).toMatchObject([`_ctx.`, { content: `j` }])
+    expect(j.children).toBeUndefined()
+    expect(j.content).toBe(`_ctx.j`)
   })
 
   test('should not prefix v-for aliases (multiple)', () => {
@@ -188,12 +163,19 @@ describe('compiler: expression transform', () => {
 
     const exp = div.children[0] as ExpressionNode
     expect(exp.type).toBe(NodeTypes.EXPRESSION)
-    expect(exp.content).toBe(`i + j + k`)
-    expect(exp.children).toBeUndefined()
+    // parsed for better source-map support
+    expect(exp.children).toMatchObject([
+      { content: `i` },
+      ` + `,
+      { content: `j` },
+      ` + `,
+      { content: `k` }
+    ])
 
     const l = div.children[1] as ExpressionNode
     expect(l.type).toBe(NodeTypes.EXPRESSION)
-    expect(l.children).toMatchObject([`_ctx.`, { content: `l` }])
+    expect(l.children).toBeUndefined()
+    expect(l.content).toBe(`_ctx.l`)
   })
 
   test('should prefix id outside of v-for', () => {
@@ -202,8 +184,8 @@ describe('compiler: expression transform', () => {
     ) as ElementNode
     const exp = node.children[1] as ExpressionNode
     expect(exp.type).toBe(NodeTypes.EXPRESSION)
-    expect(exp.content).toBe(`i`)
-    expect(exp.children).toMatchObject([`_ctx.`, { content: `i` }])
+    expect(exp.children).toBeUndefined()
+    expect(exp.content).toBe(`_ctx.i`)
   })
 
   test('nested v-for', () => {
@@ -217,7 +199,11 @@ describe('compiler: expression transform', () => {
     const innerExp = (innerFor.children[0] as ElementNode)
       .children[0] as ExpressionNode
     expect(innerExp.type).toBe(NodeTypes.EXPRESSION)
-    expect(innerExp.children).toMatchObject([`i + _ctx.`, { content: `j` }])
+    expect(innerExp.children).toMatchObject([
+      { content: 'i' },
+      ` + `,
+      { content: `_ctx.j` }
+    ])
 
     // when an inner v-for shadows a variable of an outer v-for and exit,
     // it should not cause the outer v-for's alias to be removed from known ids
@@ -232,8 +218,12 @@ describe('compiler: expression transform', () => {
       `{{ Math.max(1, 2) }}`
     ) as ExpressionNode
     expect(node.type).toBe(NodeTypes.EXPRESSION)
-    expect(node.content).toBe(`Math.max(1, 2)`)
-    expect(node.children).toBeUndefined()
+    expect(node.children).toMatchObject([
+      { content: `Math` },
+      `.`,
+      { content: `max` },
+      `(1, 2)`
+    ])
   })
 
   test('should not prefix id of a function declaration', () => {
@@ -242,8 +232,10 @@ describe('compiler: expression transform', () => {
     ) as ExpressionNode
     expect(node.type).toBe(NodeTypes.EXPRESSION)
     expect(node.children).toMatchObject([
-      `function foo() { return _ctx.`,
-      { content: `bar` },
+      `function `,
+      { content: `foo` },
+      `() { return `,
+      { content: `_ctx.bar` },
       ` }`
     ])
   })
@@ -254,8 +246,11 @@ describe('compiler: expression transform', () => {
     ) as ExpressionNode
     expect(node.type).toBe(NodeTypes.EXPRESSION)
     expect(node.children).toMatchObject([
-      `foo => foo + _ctx.`,
-      { content: `bar` }
+      { content: `foo` },
+      ` => `,
+      { content: `foo` },
+      ` + `,
+      { content: `_ctx.bar` }
     ])
   })
 
@@ -265,8 +260,8 @@ describe('compiler: expression transform', () => {
     ) as ExpressionNode
     expect(node.type).toBe(NodeTypes.EXPRESSION)
     expect(node.children).toMatchObject([
-      `{ foo: _ctx.`,
-      { content: `bar` },
+      `{ foo: `,
+      { content: `_ctx.bar` },
       ` }`
     ])
   })
@@ -277,10 +272,10 @@ describe('compiler: expression transform', () => {
     ) as ExpressionNode
     expect(node.type).toBe(NodeTypes.EXPRESSION)
     expect(node.children).toMatchObject([
-      `{ [_ctx.`,
-      { content: `foo` },
-      `]: _ctx.`,
-      { content: `bar` },
+      `{ [`,
+      { content: `_ctx.foo` },
+      `]: `,
+      { content: `_ctx.bar` },
       ` }`
     ])
   })
@@ -288,8 +283,8 @@ describe('compiler: expression transform', () => {
   test('should prefix object property shorthand value', () => {
     const node = parseWithExpressionTransform(`{{ { foo } }}`) as ExpressionNode
     expect(node.children).toMatchObject([
-      `{ foo: _ctx.`,
-      { content: `foo` },
+      `{ foo: `,
+      { content: `_ctx.foo` },
       ` }`
     ])
   })
@@ -299,9 +294,11 @@ describe('compiler: expression transform', () => {
       `{{ foo.bar.baz }}`
     ) as ExpressionNode
     expect(node.children).toMatchObject([
-      `_ctx.`,
-      { content: `foo` },
-      `.bar.baz`
+      { content: `_ctx.foo` },
+      `.`,
+      { content: `bar` },
+      `.`,
+      { content: `baz` }
     ])
   })
 
@@ -310,12 +307,11 @@ describe('compiler: expression transform', () => {
       `{{ foo[bar][baz] }}`
     ) as ExpressionNode
     expect(node.children).toMatchObject([
-      `_ctx.`,
-      { content: `foo` },
-      `[_ctx.`,
-      { content: `bar` },
-      `][_ctx.`,
-      { content: 'baz' },
+      { content: `_ctx.foo` },
+      `[`,
+      { content: `_ctx.bar` },
+      `][`,
+      { content: '_ctx.baz' },
       `]`
     ])
   })

@@ -154,12 +154,11 @@ return function render() {
 `;
 
 exports[`compiler: codegen module mode preamble 1`] = `
-"import { helperOne, helperTwo } from 'vue'
+"import { helperOne, helperTwo } from \\"vue\\"
 
 export default function render() {
-  with (this) {
-    return null
-  }
+  const _ctx = this
+  return null
 }"
 `;
 

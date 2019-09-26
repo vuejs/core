@@ -70,7 +70,8 @@ export const enum ErrorCodes {
   X_V_ON_NO_EXPRESSION,
 
   // generic errors
-  X_PREFIX_ID_NOT_SUPPORTED
+  X_PREFIX_ID_NOT_SUPPORTED,
+  X_MODULE_MODE_NOT_SUPPORTED
 }
 
 export const errorMessages: { [code: number]: string } = {
@@ -138,5 +139,6 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression`,
 
   // generic errors
-  [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler because it is optimized for payload size.`
+  [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
+  [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`
 }

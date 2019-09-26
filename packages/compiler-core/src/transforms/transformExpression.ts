@@ -12,7 +12,7 @@ import { parseScript } from 'meriyah'
 import { walk } from 'estree-walker'
 import { NodeTransform, TransformContext } from '../transform'
 import { NodeTypes, createExpression, ExpressionNode } from '../ast'
-import { Node, Function, Identifier } from 'estree'
+import { Node, Function, Identifier, Property } from 'estree'
 import { advancePositionWithClone } from '../utils'
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.EXPRESSION && !node.isStatic) {
@@ -43,12 +43,15 @@ const simpleIdRE = /^[a-zA-Z$_][\w$]*$/
 const isFunction = (node: Node): node is Function =>
   /Function(Expression|Declaration)$/.test(node.type)
 
+const isPropertyKey = (node: Node, parent: Node) =>
+  parent.type === 'Property' && parent.key === node && !parent.computed
+
 // cache node requires
 let _parseScript: typeof parseScript
 let _walk: typeof walk
 
 interface PrefixMeta {
-  prefix: string
+  prefix?: string
   start: number
   end: number
 }
@@ -72,7 +75,7 @@ export function processExpression(
   // fast path if expression is a simple identifier.
   if (simpleIdRE.test(node.content)) {
     if (!context.identifiers[node.content]) {
-      node.children = [`_ctx.`, createExpression(node.content, false, node.loc)]
+      node.content = `_ctx.${node.content}`
     }
     return
   }
@@ -92,23 +95,23 @@ export function processExpression(
   walk(ast, {
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
-        if (
-          !ids.includes(node) &&
-          !knownIds[node.name] &&
-          shouldPrefix(node, parent)
-        ) {
-          if (
-            parent.type === 'Property' &&
-            parent.value === node &&
-            parent.key === node
-          ) {
-            // property shorthand like { foo }, we need to add the key since we
-            // rewrite the value
-            node.prefix = `${node.name}: _ctx.`
-          } else {
-            node.prefix = `_ctx.`
+        if (!ids.includes(node)) {
+          if (!knownIds[node.name] && shouldPrefix(node, parent)) {
+            if (
+              isPropertyKey(node, parent) &&
+              (parent as Property).value === node
+            ) {
+              // property shorthand like { foo }, we need to add the key since we
+              // rewrite the value
+              node.prefix = `${node.name}: `
+            }
+            node.name = `_ctx.${node.name}`
+            ids.push(node)
+          } else if (!isPropertyKey(node, parent)) {
+            // also generate sub-expressioms for other identifiers for better
+            // source map support. (except for property keys which are static)
+            ids.push(node)
           }
-          ids.push(node)
         }
       } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
@@ -147,7 +150,9 @@ export function processExpression(
   ids.forEach((id, i) => {
     const last = ids[i - 1] as any
     const leadingText = full.slice(last ? last.end - 1 : 0, id.start - 1)
-    children.push(leadingText + id.prefix)
+    if (leadingText.length || id.prefix) {
+      children.push(leadingText + (id.prefix || ``))
+    }
     const source = full.slice(id.start - 1, id.end - 1)
     children.push(
       createExpression(id.name, false, {
@@ -191,12 +196,9 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
     ) &&
     // not a key of Property
     !(
-      parent.type === 'Property' &&
-      parent.key === identifier &&
-      // computed keys should be prefixed
-      !parent.computed &&
+      isPropertyKey(identifier, parent) &&
       // shorthand keys should be prefixed
-      !(parent.value === identifier)
+      !((parent as Property).value === identifier)
     ) &&
     // not a property of a MemberExpression
     !(

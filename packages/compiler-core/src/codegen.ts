@@ -150,6 +150,7 @@ export function generate(
   const context = createCodegenContext(ast, options)
   const { mode, push, prefixIdentifiers, indent, deindent, newline } = context
   const hasImports = ast.imports.length
+  const useWithBlock = !prefixIdentifiers && mode !== 'module'
 
   // preambles
   if (mode === 'function') {
@@ -170,7 +171,7 @@ export function generate(
   } else {
     // generate import statements for helpers
     if (hasImports) {
-      push(`import { ${ast.imports.join(', ')} } from 'vue'\n`)
+      push(`import { ${ast.imports.join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
     push(`export default `)
@@ -180,12 +181,12 @@ export function generate(
   push(`function render() {`)
   indent()
 
-  if (!prefixIdentifiers) {
+  if (useWithBlock) {
     push(`with (this) {`)
     indent()
     // function mode const declarations should be inside with block
     // also they should be renamed to avoid collision with user properties
-    if (mode === 'function' && hasImports) {
+    if (hasImports) {
       push(`const { ${ast.imports.map(n => `${n}: _${n}`).join(', ')} } = _Vue`)
       newline()
     }
@@ -206,10 +207,12 @@ export function generate(
   // generate the VNode tree expression
   push(`return `)
   genChildren(ast.children, context, true)
-  if (!prefixIdentifiers) {
+
+  if (useWithBlock) {
     deindent()
     push(`}`)
   }
+
   deindent()
   push(`}`)
   return {

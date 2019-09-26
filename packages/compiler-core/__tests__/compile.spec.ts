@@ -1,139 +1,227 @@
 import { compile } from '../src'
 import { SourceMapConsumer, RawSourceMap } from 'source-map'
 
-// Integration tests for parser + transform + codegen
-test('function mode', async () => {
+describe('compiler: integration tests', () => {
   const source = `
 <div id="foo" :class="bar">
   {{ world }}
   <div v-if="ok">yes</div>
   <template v-else>no</template>
-  <div v-for="(i, j) in list"><span>{{ i + j }}</span></div>
+  <div v-for="(value, index) in list"><span>{{ value + index }}</span></div>
 </div>
 `.trim()
-  const { code, map } = compile(source, {
-    sourceMap: true,
-    filename: `foo.vue`
+
+  function getPositionInCode(code: string, token: string) {
+    const generatedOffset = code.indexOf(token)
+    let line = 1
+    let lastNewLinePos = -1
+    for (let i = 0; i < generatedOffset; i++) {
+      if (code.charCodeAt(i) === 10 /* newline char code */) {
+        line++
+        lastNewLinePos = i
+      }
+    }
+    return {
+      line,
+      column:
+        lastNewLinePos === -1
+          ? generatedOffset
+          : generatedOffset - lastNewLinePos - 1
+    }
+  }
+
+  test('function mode', async () => {
+    const { code, map } = compile(source, {
+      sourceMap: true,
+      filename: `foo.vue`
+    })
+
+    expect(code).toMatch(
+      `const { createVNode: _createVNode, toString: _toString, renderList: _renderList } = _Vue`
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(map!.sources).toEqual([`foo.vue`])
+    expect(map!.sourcesContent).toEqual([source])
+
+    const consumer = await new SourceMapConsumer(map as RawSourceMap)
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `id`))
+    ).toMatchObject(getPositionInCode(source, `id`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `"foo"`))
+    ).toMatchObject(getPositionInCode(source, `"foo"`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `class:`))
+    ).toMatchObject(getPositionInCode(source, `class=`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `bar`))
+    ).toMatchObject(getPositionInCode(source, `bar`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `world`))
+    ).toMatchObject(getPositionInCode(source, `{{ world }}`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `ok`))
+    ).toMatchObject(getPositionInCode(source, `ok`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `list`))
+    ).toMatchObject(getPositionInCode(source, `list`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value`))
+    ).toMatchObject(getPositionInCode(source, `value`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `index`))
+    ).toMatchObject(getPositionInCode(source, `index`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value + index`))
+    ).toMatchObject(getPositionInCode(source, `{{ value + index }}`))
   })
 
-  expect(code).toMatchSnapshot()
-  expect(map!.sources).toEqual([`foo.vue`])
-  expect(map!.sourcesContent).toEqual([source])
-
-  const consumer = await new SourceMapConsumer(map as RawSourceMap)
-
-  // id=
-  expect(
-    consumer.originalPositionFor({
-      line: 6,
-      column: 6
+  test('function mode w/ prefixIdentifiers: true', async () => {
+    const { code, map } = compile(source, {
+      sourceMap: true,
+      filename: `foo.vue`,
+      prefixIdentifiers: true
     })
-  ).toMatchObject({
-    line: 1,
-    column: 5
+
+    expect(code).toMatch(`const { createVNode, toString, renderList } = Vue`)
+
+    expect(code).toMatchSnapshot()
+    expect(map!.sources).toEqual([`foo.vue`])
+    expect(map!.sourcesContent).toEqual([source])
+
+    const consumer = await new SourceMapConsumer(map as RawSourceMap)
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `id`))
+    ).toMatchObject(getPositionInCode(source, `id`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `"foo"`))
+    ).toMatchObject(getPositionInCode(source, `"foo"`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `class:`))
+    ).toMatchObject(getPositionInCode(source, `class=`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `bar`))
+    ).toMatchObject(getPositionInCode(source, `bar`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.bar`))
+    ).toMatchObject(getPositionInCode(source, `bar`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `world`))
+    ).toMatchObject(getPositionInCode(source, `{{ world }}`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.world`))
+    ).toMatchObject(getPositionInCode(source, `{{ world }}`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `ok`))
+    ).toMatchObject(getPositionInCode(source, `ok`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.ok`))
+    ).toMatchObject(getPositionInCode(source, `ok`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `list`))
+    ).toMatchObject(getPositionInCode(source, `list`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.list`))
+    ).toMatchObject(getPositionInCode(source, `list`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value`))
+    ).toMatchObject(getPositionInCode(source, `value`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `index`))
+    ).toMatchObject(getPositionInCode(source, `index`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value + index`))
+    ).toMatchObject(getPositionInCode(source, `value + index`))
   })
 
-  // "foo"
-  expect(
-    consumer.originalPositionFor({
-      line: 6,
-      column: 10
+  test('module mode', async () => {
+    const { code, map } = compile(source, {
+      mode: 'module',
+      sourceMap: true,
+      filename: `foo.vue`
     })
-  ).toMatchObject({
-    line: 1,
-    column: 8
-  })
 
-  // :class=
-  expect(
-    consumer.originalPositionFor({
-      line: 7,
-      column: 6
-    })
-  ).toMatchObject({
-    line: 1,
-    column: 15
-  })
-  // bar
-  expect(
-    consumer.originalPositionFor({
-      line: 7,
-      column: 13
-    })
-  ).toMatchObject({
-    line: 1,
-    column: 22
-  })
+    expect(code).toMatch(
+      `import { createVNode, toString, renderList } from "vue"`
+    )
 
-  // {{ world }}
-  expect(
-    consumer.originalPositionFor({
-      line: 9,
-      column: 16
-    })
-  ).toMatchObject({
-    line: 2,
-    column: 2
-  })
+    expect(code).toMatchSnapshot()
+    expect(map!.sources).toEqual([`foo.vue`])
+    expect(map!.sourcesContent).toEqual([source])
 
-  // ok
-  expect(
-    consumer.originalPositionFor({
-      line: 10,
-      column: 6
-    })
-  ).toMatchObject({
-    line: 3,
-    column: 13
-  })
+    const consumer = await new SourceMapConsumer(map as RawSourceMap)
 
-  // i
-  expect(
-    consumer.originalPositionFor({
-      line: 13,
-      column: 25
-    })
-  ).toMatchObject({
-    line: 5,
-    column: 15
-  })
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `id`))
+    ).toMatchObject(getPositionInCode(source, `id`))
 
-  // j
-  expect(
-    consumer.originalPositionFor({
-      line: 13,
-      column: 28
-    })
-  ).toMatchObject({
-    line: 5,
-    column: 18
-  })
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `"foo"`))
+    ).toMatchObject(getPositionInCode(source, `"foo"`))
 
-  // list
-  expect(
-    consumer.originalPositionFor({
-      line: 13,
-      column: 18
-    })
-  ).toMatchObject({
-    line: 5,
-    column: 24
-  })
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `class:`))
+    ).toMatchObject(getPositionInCode(source, `class=`))
 
-  // i + j
-  expect(
-    consumer.originalPositionFor({
-      line: 14,
-      column: 81
-    })
-  ).toMatchObject({
-    line: 5,
-    column: 36
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `bar`))
+    ).toMatchObject(getPositionInCode(source, `bar`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.bar`))
+    ).toMatchObject(getPositionInCode(source, `bar`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `world`))
+    ).toMatchObject(getPositionInCode(source, `{{ world }}`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.world`))
+    ).toMatchObject(getPositionInCode(source, `{{ world }}`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `ok`))
+    ).toMatchObject(getPositionInCode(source, `ok`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.ok`))
+    ).toMatchObject(getPositionInCode(source, `ok`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `list`))
+    ).toMatchObject(getPositionInCode(source, `list`))
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `_ctx.list`))
+    ).toMatchObject(getPositionInCode(source, `list`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value`))
+    ).toMatchObject(getPositionInCode(source, `value`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `index`))
+    ).toMatchObject(getPositionInCode(source, `index`))
+
+    expect(
+      consumer.originalPositionFor(getPositionInCode(code, `value + index`))
+    ).toMatchObject(getPositionInCode(source, `value + index`))
   })
 })
-
-test.todo('function mode w/ prefixIdentifiers: true')
-
-test.todo('module mode')
-
-test.todo('module mode w/ prefixIdentifiers: true')

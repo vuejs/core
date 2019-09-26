@@ -25,7 +25,7 @@ function parseWithVOn(
   return ast.children[0] as ElementNode
 }
 
-describe('compiler: transform v-bind', () => {
+describe('compiler: transform v-on', () => {
   test('basic', () => {
     const node = parseWithVOn(`<div v-on:click="onClick"/>`)
     const props = node.codegenNode!.arguments[1] as ObjectExpression
@@ -76,8 +76,8 @@ describe('compiler: transform v-bind', () => {
     const props = node.codegenNode!.arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        content: `"on" + event`,
-        isStatic: false
+        isStatic: false,
+        children: [`"on" + `, { content: `event` }]
       },
       value: {
         content: `handler`,
@@ -94,10 +94,10 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         isStatic: false,
-        children: [`"on" + `, `_ctx.`, { content: `event` }]
+        children: [`"on" + `, { content: `_ctx.event` }]
       },
       value: {
-        content: `handler`,
+        content: `_ctx.handler`,
         isStatic: false
       }
     })

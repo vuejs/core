@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`function mode 1`] = `
+exports[`compiler: integration tests function mode 1`] = `
 "const _Vue = Vue
 return function render() {
   with (this) {
@@ -13,10 +13,50 @@ return function render() {
       ok
         ? _createVNode(\\"div\\", 0, \\"yes\\")
         : \\"no\\",
-      _renderList(list, (i, j) => {
-        return _createVNode(\\"div\\", 0, [_createVNode(\\"span\\", 0, _toString(i + j))])
+      _renderList(list, (value, index) => {
+        return _createVNode(\\"div\\", 0, [_createVNode(\\"span\\", 0, _toString(value + index))])
       })
     ])
   }
+}"
+`;
+
+exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
+"const { createVNode, toString, renderList } = Vue
+
+return function render() {
+  const _ctx = this
+  return createVNode(\\"div\\", {
+    id: \\"foo\\",
+    class: _ctx.bar
+  }, [
+    toString(_ctx.world),
+    (_ctx.ok)
+      ? createVNode(\\"div\\", 0, \\"yes\\")
+      : \\"no\\",
+    renderList(_ctx.list, (value, index) => {
+      return createVNode(\\"div\\", 0, [createVNode(\\"span\\", 0, toString(value + index))])
+    })
+  ])
+}"
+`;
+
+exports[`compiler: integration tests module mode 1`] = `
+"import { createVNode, toString, renderList } from \\"vue\\"
+
+export default function render() {
+  const _ctx = this
+  return createVNode(\\"div\\", {
+    id: \\"foo\\",
+    class: _ctx.bar
+  }, [
+    _toString(_ctx.world),
+    (_ctx.ok)
+      ? createVNode(\\"div\\", 0, \\"yes\\")
+      : \\"no\\",
+    _renderList(_ctx.list, (value, index) => {
+      return createVNode(\\"div\\", 0, [createVNode(\\"span\\", 0, _toString(value + index))])
+    })
+  ])
 }"
 `;

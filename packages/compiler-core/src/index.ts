@@ -18,15 +18,21 @@ export function compile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
-  if (__BROWSER__ && options.prefixIdentifiers === false) {
-    ;(options.onError || defaultOnError)(
-      createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED)
-    )
+  if (__BROWSER__) {
+    const onError = options.onError || defaultOnError
+    if (options.prefixIdentifiers === true) {
+      onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
+    } else if (options.mode === 'module') {
+      onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
+    }
   }
 
   const ast = isString(template) ? parse(template, options) : template
 
-  const prefixIdentifiers = !__BROWSER__ && options.prefixIdentifiers === true
+  const prefixIdentifiers =
+    !__BROWSER__ &&
+    (options.prefixIdentifiers === true || options.mode === 'module')
+
   transform(ast, {
     ...options,
     prefixIdentifiers,
