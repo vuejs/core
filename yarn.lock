@@ -1037,20 +1037,20 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@microsoft/api-extractor-model@7.4.2":
-  version "7.4.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.4.2.tgz#e7dea5aa6717fdbeb2745df57f3b118163a2e510"
-  integrity sha512-VlboZFGViNCqwUKCxHwaJX1hq7X+1zpfpqSecY/lZowrUJZx8IQ+bT8vZGpy6Qmm9+ay3O3hwUqW47Z/Mr0yMA==
+"@microsoft/api-extractor-model@7.5.0":
+  version "7.5.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.5.0.tgz#34269510e06ae77554750d6983edf5ed9be3f6dc"
+  integrity sha512-L3fjAQLJIoBmv64ZXTjp96v2TnHHLICucEkrKnsi8mItCVY4vkw8B1irEk4zBsTcvO7bM+cS97UUzGqpqr5L1w==
   dependencies:
     "@microsoft/node-core-library" "3.15.0"
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.4.4"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.4.4.tgz#f7810c2b1bf171fcdc5c821172be7779f33e75b4"
-  integrity sha512-qemjsGUzVHfIuRyergBEQpogj73Jnrc12F8XsjuXak+oRHIl3n1nrcy7MyjxDNSoNQ5ARay2eP1zzeIKVxN7Rw==
+  version "7.4.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.4.5.tgz#e3f3fbae2b19242fe305090d01737f41ad4d33f2"
+  integrity sha512-KZ6zuzKscSI4gU9yfUSvb1oP2tqWjeIlVlP8lZIg8nI/NwbESKBlndInk8c6Tit+JV0LnQATTJJUj+zMTgD3cA==
   dependencies:
-    "@microsoft/api-extractor-model" "7.4.2"
+    "@microsoft/api-extractor-model" "7.5.0"
     "@microsoft/node-core-library" "3.15.0"
     "@microsoft/ts-command-line" "4.3.1"
     "@microsoft/tsdoc" "0.12.14"
