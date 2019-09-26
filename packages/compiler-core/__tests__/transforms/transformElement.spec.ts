@@ -5,7 +5,6 @@ import {
   transform,
   ErrorCodes
 } from '../../src'
-import { transformElement } from '../../src/transforms/transformElement'
 import {
   RESOLVE_COMPONENT,
   CREATE_VNODE,
@@ -21,6 +20,10 @@ import {
   DirectiveNode,
   RootNode
 } from '../../src/ast'
+import { transformElement } from '../../src/transforms/transformElement'
+import { transformOn } from '../../src/transforms/vOn'
+import { transformStyle } from '../../src/transforms/transformStyle'
+import { transformBind } from '../../src/transforms/vBind'
 
 function parseWithElementTransform(
   template: string,
@@ -466,7 +469,84 @@ describe('compiler: element transform', () => {
     ])
   })
 
-  test.todo(`props dedupe`)
+  test(`props merging: event handlers`, () => {
+    const { node } = parseWithElementTransform(
+      `<div @click.foo="a" @click.bar="b" />`,
+      {
+        directiveTransforms: {
+          on: transformOn
+        }
+      }
+    )
+    expect(node.arguments[1]).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.EXPRESSION,
+            content: `onClick`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              {
+                type: NodeTypes.EXPRESSION,
+                content: `a`,
+                isStatic: false
+              },
+              {
+                type: NodeTypes.EXPRESSION,
+                content: `b`,
+                isStatic: false
+              }
+            ]
+          }
+        }
+      ]
+    })
+  })
+
+  test(`props merging: style`, () => {
+    const { node } = parseWithElementTransform(
+      `<div style="color: red" :style="{ color: 'red' }" />`,
+      {
+        nodeTransforms: [transformStyle, transformElement],
+        directiveTransforms: {
+          bind: transformBind
+        }
+      }
+    )
+    expect(node.arguments[1]).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.EXPRESSION,
+            content: `style`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              {
+                type: NodeTypes.EXPRESSION,
+                content: `_hoisted_1`,
+                isStatic: false
+              },
+              {
+                type: NodeTypes.EXPRESSION,
+                content: `{ color: 'red' }`,
+                isStatic: false
+              }
+            ]
+          }
+        }
+      ]
+    })
+  })
 
   test.todo('slot outlets')
 })
