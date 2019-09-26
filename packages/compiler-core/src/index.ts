@@ -14,7 +14,9 @@ import { transformStyle } from './transforms/transformStyle'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
-export function compile(
+// we name it `baseCompile` so that higher order compilers like @vue/compiler-dom
+// can export `compile` while re-exporting everything else.
+export function baseCompile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {

@@ -1,8 +1,4 @@
-import {
-  compile as baseCompile,
-  CompilerOptions,
-  CodegenResult
-} from '@vue/compiler-core'
+import { baseCompile, CompilerOptions, CodegenResult } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 

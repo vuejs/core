@@ -1,4 +1,4 @@
-import { compile } from '../src'
+import { baseCompile as compile } from '../src'
 import { SourceMapConsumer, RawSourceMap } from 'source-map'
 
 describe('compiler: integration tests', () => {
