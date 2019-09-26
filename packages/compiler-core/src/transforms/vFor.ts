@@ -25,7 +25,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
         context.replaceNode({
           type: NodeTypes.FOR,
-          loc: node.loc,
+          loc: dir.loc,
           source,
           valueAlias: value,
           keyAlias: key,

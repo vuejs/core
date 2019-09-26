@@ -25,6 +25,7 @@ import {
   MERGE_PROPS,
   TO_HANDLERS
 } from '../runtimeConstants'
+import { getInnerRange } from '../utils'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
@@ -121,7 +122,7 @@ function buildProps(
       const { loc, name, value } = prop
       properties.push(
         createObjectProperty(
-          createExpression(name, true, loc),
+          createExpression(name, true, getInnerRange(loc, 0, name.length)),
           createExpression(
             value ? value.content : '',
             true,
