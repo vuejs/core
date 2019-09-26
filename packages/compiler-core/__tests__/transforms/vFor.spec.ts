@@ -259,7 +259,7 @@ describe('compiler: transform v-for', () => {
     })
 
     test('de-structured value', () => {
-      const source = '<span v-for="(  { id, key })in items" />'
+      const source = '<span v-for="(  { id, key }) in items" />'
       const forNode = parseWithForTransform(source)
 
       const valueIndex = source.indexOf('{ id, key }')

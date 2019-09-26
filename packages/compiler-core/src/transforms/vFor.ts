@@ -13,10 +13,6 @@ import { getInnerRange } from '../utils'
 import { RENDER_LIST } from '../runtimeConstants'
 import { processExpression } from './transformExpression'
 
-const forAliasRE = /([\s\S]*?)(?:(?<=\))|\s+)(?:in|of)\s+([\s\S]*)/
-const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
-const stripParensRE = /^\(|\)$/g
-
 export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
@@ -63,6 +59,10 @@ export const transformFor = createStructuralDirectiveTransform(
     }
   }
 )
+
+const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+const stripParensRE = /^\(|\)$/g
 
 interface ForParseResult {
   source: ExpressionNode
