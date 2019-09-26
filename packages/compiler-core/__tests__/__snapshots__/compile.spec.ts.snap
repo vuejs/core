@@ -21,6 +21,25 @@ return function render() {
 }"
 `;
 
+exports[`compiler: integration tests function mode 2`] = `
+Object {
+  "mappings": ";;;;WAAA,oBAAA;MAAK,IAAG;MAAO,OAAO;;gBACpB;MACW;UAAX,uBAAe;UACE;MACjB,YAA8B,OAAjB,OAAO;eAApB,wBAAoC,kCAAM",
+  "names": Array [],
+  "sources": Array [
+    "foo.vue",
+  ],
+  "sourcesContent": Array [
+    "<div id=\\"foo\\" :class=\\"bar\\">
+  {{ world }}
+  <div v-if=\\"ok\\">yes</div>
+  <template v-else>no</template>
+  <div v-for=\\"(value, index) in list\\"><span>{{ value + index }}</span></div>
+</div>",
+  ],
+  "version": 3,
+}
+`;
+
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
 "const { createVNode, toString, renderList } = Vue
 
@@ -39,6 +58,30 @@ return function render() {
     })
   ])
 }"
+`;
+
+exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 2`] = `
+Object {
+  "mappings": ";;;;SAAA,mBAAA;IAAK,IAAG;IAAO,OAAOA;;aACpBC;KACWC;QAAX,sBAAe;QACE;IACjB,WAA8BC,YAAjB,OAAO;aAApB,uBAAoC,gCAAS,QAAQ",
+  "names": Array [
+    "bar",
+    "world",
+    "ok",
+    "list",
+  ],
+  "sources": Array [
+    "foo.vue",
+  ],
+  "sourcesContent": Array [
+    "<div id=\\"foo\\" :class=\\"bar\\">
+  {{ world }}
+  <div v-if=\\"ok\\">yes</div>
+  <template v-else>no</template>
+  <div v-for=\\"(value, index) in list\\"><span>{{ value + index }}</span></div>
+</div>",
+  ],
+  "version": 3,
+}
 `;
 
 exports[`compiler: integration tests module mode 1`] = `

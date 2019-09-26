@@ -1,7 +1,12 @@
 import { NodeTransform } from '../transform'
 import { NodeTypes, createExpression } from '../ast'
 
-// prase inline CSS strings for static style attributes into an object
+// Parse inline CSS strings for static style attributes into an object.
+// This is a NodeTransform since it works on the static `style` attribute and
+// converts it into a dynamic equivalent:
+// style="color: red" -> :style='{ "color": "red" }'
+// It is then processed by `transformElement` and included in the generated
+// props.
 export const transformStyle: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     node.props.forEach((p, i) => {

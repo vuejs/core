@@ -106,7 +106,19 @@ function createCodegenContext(
       context.code += code
       if (context.map) {
         if (node) {
-          const mapping = {
+          let name
+          if (
+            node.type === NodeTypes.EXPRESSION &&
+            !node.children &&
+            !node.isStatic
+          ) {
+            const content = node.content.replace(/^_ctx\./, '')
+            if (content !== node.content && isSimpleIdentifier(content)) {
+              name = content
+            }
+          }
+          context.map.addMapping({
+            name,
             source: context.filename,
             original: {
               line: node.loc.start.line,
@@ -116,8 +128,7 @@ function createCodegenContext(
               line: context.line,
               column: context.column - 1
             }
-          }
-          context.map.addMapping(mapping)
+          })
         }
         advancePositionWithMutation(context, code)
       }
