@@ -117,9 +117,9 @@ describe('DOM parser', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '{{ a &lt; b }}'
+          start: { offset: 8, line: 1, column: 9 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'a &lt; b'
         }
       })
     })

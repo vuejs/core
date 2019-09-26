@@ -298,9 +298,9 @@ describe('compiler: parse', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '{{message}}'
+          start: { offset: 2, line: 1, column: 3 },
+          end: { offset: 9, line: 1, column: 10 },
+          source: 'message'
         }
       })
     })
@@ -315,9 +315,9 @@ describe('compiler: parse', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
+          start: { offset: 3, line: 1, column: 4 },
+          end: { offset: 6, line: 1, column: 7 },
+          source: 'a<b'
         }
       })
     })
@@ -333,9 +333,9 @@ describe('compiler: parse', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
+          start: { offset: 3, line: 1, column: 4 },
+          end: { offset: 6, line: 1, column: 7 },
+          source: 'a<b'
         }
       })
       expect(interpolation2).toStrictEqual({
@@ -344,9 +344,9 @@ describe('compiler: parse', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 9, line: 1, column: 10 },
-          end: { offset: 18, line: 1, column: 19 },
-          source: '{{ c>d }}'
+          start: { offset: 12, line: 1, column: 13 },
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'c>d'
         }
       })
     })
@@ -362,9 +362,9 @@ describe('compiler: parse', () => {
         isStatic: false,
         isInterpolation: true,
         loc: {
-          start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '{{ "</div>" }}'
+          start: { offset: 8, line: 1, column: 9 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: '"</div>"'
         }
       })
     })
@@ -896,7 +896,7 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 11, line: 1, column: 12 },
             end: { offset: 12, line: 1, column: 13 },
-            source: '"a"'
+            source: 'a'
           }
         },
         loc: {
@@ -1313,17 +1313,20 @@ foo
     offset += foo.loc.source.length
     expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
 
-    expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
+    offset += 3
+    expect(bar.loc.start).toEqual({ line: 2, column: 8, offset })
     offset += bar.loc.source.length
-    expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
+    expect(bar.loc.end).toEqual({ line: 2, column: 11, offset })
+    offset += 3
 
     expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
     offset += but.loc.source.length
     expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
 
-    expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
+    offset += 3
+    expect(baz.loc.start).toEqual({ line: 2, column: 22, offset })
     offset += baz.loc.source.length
-    expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
+    expect(baz.loc.end).toEqual({ line: 2, column: 25, offset })
   })
 
   describe('namedCharacterReferences option', () => {

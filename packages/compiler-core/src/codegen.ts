@@ -66,7 +66,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   indentLevel: number
   map?: SourceMapGenerator
   helper(name: string): string
-  push(code: string, node?: CodegenNode): void
+  push(code: string, node?: CodegenNode, openOnly?: boolean): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -102,7 +102,7 @@ function createCodegenContext(
     helper(name) {
       return prefixIdentifiers ? name : `_${name}`
     },
-    push(code, node?: CodegenNode) {
+    push(code, node, openOnly) {
       context.code += code
       if (context.map) {
         if (node) {
@@ -131,6 +131,19 @@ function createCodegenContext(
           })
         }
         advancePositionWithMutation(context, code)
+        if (node && !openOnly) {
+          context.map.addMapping({
+            source: context.filename,
+            original: {
+              line: node.loc.end.line,
+              column: node.loc.end.column - 1
+            },
+            generated: {
+              line: context.line,
+              column: context.column - 1
+            }
+          })
+        }
       }
     },
     indent() {
@@ -453,7 +466,7 @@ function genIfBranch(
 function genFor(node: ForNode, context: CodegenContext) {
   const { push, helper, indent, deindent } = context
   const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
-  push(`${helper(RENDER_LIST)}(`, node)
+  push(`${helper(RENDER_LIST)}(`, node, true)
   genExpression(source, context)
   push(`, (`)
   if (valueAlias) {
@@ -491,7 +504,7 @@ function genCallExpression(
   context: CodegenContext,
   multilines = node.arguments.length > 2
 ) {
-  context.push(node.callee + `(`, node)
+  context.push(node.callee + `(`, node, true)
   multilines && context.indent()
   genNodeList(node.arguments, context, multilines)
   multilines && context.deindent()
@@ -502,7 +515,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   const { push, indent, deindent, newline } = context
   const { properties } = node
   const multilines = properties.length > 1
-  push(multilines ? `{` : `{ `, node)
+  push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
     const { key, value } = properties[i]

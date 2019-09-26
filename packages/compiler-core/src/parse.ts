@@ -542,6 +542,7 @@ function parseAttribute(
       valueLoc.start.offset++
       valueLoc.start.column++
       valueLoc.end = advancePositionWithClone(valueLoc.start, value.content)
+      valueLoc.source = valueLoc.source.slice(1, -1)
     }
 
     return {
@@ -642,15 +643,26 @@ function parseInterpolation(
     return undefined
   }
 
-  const start = getCursor(context)
   advanceBy(context, open.length)
-  const content = parseTextData(context, closeIndex - open.length, mode).trim()
+  const start = getCursor(context)
+  const end = getCursor(context)
+  const rawContentLength = closeIndex - open.length
+  const rawContent = context.source.slice(0, rawContentLength)
+  const preTrimContent = parseTextData(context, rawContentLength, mode)
+  const content = preTrimContent.trim()
+  const startOffset = preTrimContent.indexOf(content)
+  if (startOffset > 0) {
+    advancePositionWithMutation(start, rawContent, startOffset)
+  }
+  const endOffset =
+    rawContentLength - (preTrimContent.length - content.length - startOffset)
+  advancePositionWithMutation(end, rawContent, endOffset)
   advanceBy(context, close.length)
 
   return {
     type: NodeTypes.EXPRESSION,
     content,
-    loc: getSelection(context, start),
+    loc: getSelection(context, start, end),
     isStatic: content === '',
     isInterpolation: true
   }

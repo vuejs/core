@@ -157,8 +157,8 @@ export function processExpression(
     children.push(
       createExpression(id.name, false, {
         source,
-        start: advancePositionWithClone(node.loc.start, source, id.start + 2),
-        end: advancePositionWithClone(node.loc.start, source, id.end + 2)
+        start: advancePositionWithClone(node.loc.start, source, id.start - 1),
+        end: advancePositionWithClone(node.loc.start, source, id.end - 1)
       })
     )
     if (i === ids.length - 1 && id.end - 1 < full.length) {

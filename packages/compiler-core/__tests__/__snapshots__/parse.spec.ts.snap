@@ -3889,15 +3889,15 @@ Object {
           "isStatic": false,
           "loc": Object {
             "end": Object {
-              "column": 20,
+              "column": 18,
               "line": 1,
-              "offset": 19,
+              "offset": 17,
             },
-            "source": "{{a < b}}",
+            "source": "a < b",
             "start": Object {
-              "column": 11,
+              "column": 13,
               "line": 1,
-              "offset": 10,
+              "offset": 12,
             },
           },
           "type": 4,
@@ -6965,15 +6965,15 @@ Object {
           "isStatic": false,
           "loc": Object {
             "end": Object {
-              "column": 23,
+              "column": 21,
               "line": 1,
-              "offset": 22,
+              "offset": 20,
             },
-            "source": "{{'</div>'}}",
+            "source": "'</div>'",
             "start": Object {
-              "column": 11,
+              "column": 13,
               "line": 1,
-              "offset": 10,
+              "offset": 12,
             },
           },
           "type": 4,
@@ -7322,15 +7322,15 @@ Object {
       "isStatic": true,
       "loc": Object {
         "end": Object {
-          "column": 5,
+          "column": 3,
           "line": 1,
-          "offset": 4,
+          "offset": 2,
         },
-        "source": "{{}}",
+        "source": "",
         "start": Object {
-          "column": 1,
+          "column": 3,
           "line": 1,
-          "offset": 0,
+          "offset": 2,
         },
       },
       "type": 4,
@@ -7485,7 +7485,7 @@ Object {
                 "line": 1,
                 "offset": 32,
               },
-              "source": "\\"{ some: condition }\\"",
+              "source": "{ some: condition }",
               "start": Object {
                 "column": 14,
                 "line": 1,
@@ -7565,7 +7565,7 @@ Object {
                 "line": 2,
                 "offset": 70,
               },
-              "source": "\\"{ color: 'red' }\\"",
+              "source": "{ color: 'red' }",
               "start": Object {
                 "column": 18,
                 "line": 2,
@@ -7672,7 +7672,7 @@ Object {
                     "line": 2,
                     "offset": 70,
                   },
-                  "source": "\\"{ color: 'red' }\\"",
+                  "source": "{ color: 'red' }",
                   "start": Object {
                     "column": 20,
                     "line": 2,
@@ -7771,7 +7771,7 @@ Object {
                 "line": 1,
                 "offset": 32,
               },
-              "source": "\\"{ some: condition }\\"",
+              "source": "{ some: condition }",
               "start": Object {
                 "column": 14,
                 "line": 1,
