@@ -5,8 +5,9 @@ import {
 import {
   NodeTypes,
   ExpressionNode,
-  createExpression,
-  SourceLocation
+  createSimpleExpression,
+  SourceLocation,
+  SimpleExpressionNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
@@ -17,7 +18,12 @@ export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     if (dir.exp) {
-      const parseResult = parseForExpression(dir.exp, context)
+      const parseResult = parseForExpression(
+        // can only be simple expression because vFor transform is applied
+        // before expression transform.
+        dir.exp as SimpleExpressionNode,
+        context
+      )
 
       if (parseResult) {
         context.helper(RENDER_LIST)
@@ -66,29 +72,33 @@ const stripParensRE = /^\(|\)$/g
 
 interface ForParseResult {
   source: ExpressionNode
-  value: ExpressionNode | undefined
-  key: ExpressionNode | undefined
-  index: ExpressionNode | undefined
+  value: SimpleExpressionNode | undefined
+  key: SimpleExpressionNode | undefined
+  index: SimpleExpressionNode | undefined
 }
 
 function parseForExpression(
-  input: ExpressionNode,
+  input: SimpleExpressionNode,
   context: TransformContext
 ): ForParseResult | null {
   const loc = input.loc
-  const source = input.content
-  const inMatch = source.match(forAliasRE)
+  const exp = input.content
+  const inMatch = exp.match(forAliasRE)
   if (!inMatch) return null
 
   const [, LHS, RHS] = inMatch
+
+  let source: ExpressionNode = createAliasExpression(
+    loc,
+    RHS.trim(),
+    exp.indexOf(RHS, LHS.length)
+  )
+  if (!__BROWSER__ && context.prefixIdentifiers) {
+    source = processExpression(source, context)
+  }
+
   const result: ForParseResult = {
-    source: createAliasExpression(
-      loc,
-      RHS.trim(),
-      source.indexOf(RHS, LHS.length),
-      context,
-      context.prefixIdentifiers
-    ),
+    source,
     value: undefined,
     key: undefined,
     index: undefined
@@ -106,11 +116,8 @@ function parseForExpression(
     const keyContent = iteratorMatch[1].trim()
     let keyOffset: number | undefined
     if (keyContent) {
-      keyOffset = source.indexOf(
-        keyContent,
-        trimmedOffset + valueContent.length
-      )
-      result.key = createAliasExpression(loc, keyContent, keyOffset, context)
+      keyOffset = exp.indexOf(keyContent, trimmedOffset + valueContent.length)
+      result.key = createAliasExpression(loc, keyContent, keyOffset)
     }
 
     if (iteratorMatch[2]) {
@@ -120,25 +127,19 @@ function parseForExpression(
         result.index = createAliasExpression(
           loc,
           indexContent,
-          source.indexOf(
+          exp.indexOf(
             indexContent,
             result.key
               ? keyOffset! + keyContent.length
               : trimmedOffset + valueContent.length
-          ),
-          context
+          )
         )
       }
     }
   }
 
   if (valueContent) {
-    result.value = createAliasExpression(
-      loc,
-      valueContent,
-      trimmedOffset,
-      context
-    )
+    result.value = createAliasExpression(loc, valueContent, trimmedOffset)
   }
 
   return result
@@ -147,17 +148,11 @@ function parseForExpression(
 function createAliasExpression(
   range: SourceLocation,
   content: string,
-  offset: number,
-  context: TransformContext,
-  process: boolean = false
-): ExpressionNode {
-  const exp = createExpression(
+  offset: number
+): SimpleExpressionNode {
+  return createSimpleExpression(
     content,
     false,
     getInnerRange(range, offset, content.length)
   )
-  if (!__BROWSER__ && process) {
-    processExpression(exp, context)
-  }
-  return exp
 }

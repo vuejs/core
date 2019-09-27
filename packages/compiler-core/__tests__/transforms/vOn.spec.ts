@@ -4,7 +4,8 @@ import {
   ElementNode,
   ObjectExpression,
   CompilerOptions,
-  ErrorCodes
+  ErrorCodes,
+  NodeTypes
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -76,10 +77,11 @@ describe('compiler: transform v-on', () => {
     const props = node.codegenNode!.arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        isStatic: false,
-        children: [`"on" + `, { content: `event` }]
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [`"on" + (`, { content: `event` }, `)`]
       },
       value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `handler`,
         isStatic: false
       }
@@ -93,10 +95,36 @@ describe('compiler: transform v-on', () => {
     const props = node.codegenNode!.arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        isStatic: false,
-        children: [`"on" + `, { content: `_ctx.event` }]
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [`"on" + (`, { content: `_ctx.event` }, `)`]
       },
       value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: `_ctx.handler`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('dynamic arg with complex exp prefixing', () => {
+    const node = parseWithVOn(`<div v-on:[event(foo)]="handler"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `"on" + (`,
+          { content: `_ctx.event` },
+          `(`,
+          { content: `_ctx.foo` },
+          `)`,
+          `)`
+        ]
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `_ctx.handler`,
         isStatic: false
       }

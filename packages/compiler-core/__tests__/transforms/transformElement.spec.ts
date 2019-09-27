@@ -52,12 +52,12 @@ function createStaticObjectMatcher(obj: any) {
     properties: Object.keys(obj).map(key => ({
       type: NodeTypes.JS_PROPERTY,
       key: {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: key,
         isStatic: true
       },
       value: {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: obj[key],
         isStatic: true
       }
@@ -87,7 +87,7 @@ describe('compiler: element transform', () => {
     expect(node.arguments).toMatchObject([
       `"div"`,
       {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `_hoisted_1`
       }
     ])
@@ -106,7 +106,7 @@ describe('compiler: element transform', () => {
     expect(node.arguments).toMatchObject([
       `"div"`,
       {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `_hoisted_1`
       },
       [
@@ -148,7 +148,7 @@ describe('compiler: element transform', () => {
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
     // should directly use `obj` in props position
     expect(node.arguments[1]).toMatchObject({
-      type: NodeTypes.EXPRESSION,
+      type: NodeTypes.SIMPLE_EXPRESSION,
       content: `obj`
     })
   })
@@ -167,7 +167,7 @@ describe('compiler: element transform', () => {
           id: 'foo'
         }),
         {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         }
       ]
@@ -185,7 +185,7 @@ describe('compiler: element transform', () => {
       callee: `_${MERGE_PROPS}`,
       arguments: [
         {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         },
         createStaticObjectMatcher({
@@ -209,7 +209,7 @@ describe('compiler: element transform', () => {
           id: 'foo'
         }),
         {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         },
         createStaticObjectMatcher({
@@ -237,7 +237,7 @@ describe('compiler: element transform', () => {
           callee: `_${TO_HANDLERS}`,
           arguments: [
             {
-              type: NodeTypes.EXPRESSION,
+              type: NodeTypes.SIMPLE_EXPRESSION,
               content: `obj`
             }
           ]
@@ -267,13 +267,13 @@ describe('compiler: element transform', () => {
           callee: `_${TO_HANDLERS}`,
           arguments: [
             {
-              type: NodeTypes.EXPRESSION,
+              type: NodeTypes.SIMPLE_EXPRESSION,
               content: `handlers`
             }
           ]
         },
         {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         }
       ]
@@ -363,14 +363,13 @@ describe('compiler: element transform', () => {
               `_directive_foo`,
               // exp
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `hello`,
-                isStatic: false,
-                isInterpolation: false
+                isStatic: false
               },
               // arg
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `bar`,
                 isStatic: true
               }
@@ -408,7 +407,7 @@ describe('compiler: element transform', () => {
               `_directive_bar`,
               // exp
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `x`
               }
             ]
@@ -419,14 +418,13 @@ describe('compiler: element transform', () => {
               `_directive_baz`,
               // exp
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `y`,
-                isStatic: false,
-                isInterpolation: false
+                isStatic: false
               },
               // arg
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `arg`,
                 isStatic: false
               },
@@ -437,12 +435,12 @@ describe('compiler: element transform', () => {
                   {
                     type: NodeTypes.JS_PROPERTY,
                     key: {
-                      type: NodeTypes.EXPRESSION,
+                      type: NodeTypes.SIMPLE_EXPRESSION,
                       content: `mod`,
                       isStatic: true
                     },
                     value: {
-                      type: NodeTypes.EXPRESSION,
+                      type: NodeTypes.SIMPLE_EXPRESSION,
                       content: `true`,
                       isStatic: false
                     }
@@ -450,12 +448,12 @@ describe('compiler: element transform', () => {
                   {
                     type: NodeTypes.JS_PROPERTY,
                     key: {
-                      type: NodeTypes.EXPRESSION,
+                      type: NodeTypes.SIMPLE_EXPRESSION,
                       content: `mad`,
                       isStatic: true
                     },
                     value: {
-                      type: NodeTypes.EXPRESSION,
+                      type: NodeTypes.SIMPLE_EXPRESSION,
                       content: `true`,
                       isStatic: false
                     }
@@ -484,7 +482,7 @@ describe('compiler: element transform', () => {
         {
           type: NodeTypes.JS_PROPERTY,
           key: {
-            type: NodeTypes.EXPRESSION,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: `onClick`,
             isStatic: true
           },
@@ -492,12 +490,12 @@ describe('compiler: element transform', () => {
             type: NodeTypes.JS_ARRAY_EXPRESSION,
             elements: [
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `a`,
                 isStatic: false
               },
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `b`,
                 isStatic: false
               }
@@ -524,7 +522,7 @@ describe('compiler: element transform', () => {
         {
           type: NodeTypes.JS_PROPERTY,
           key: {
-            type: NodeTypes.EXPRESSION,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: `style`,
             isStatic: true
           },
@@ -532,12 +530,12 @@ describe('compiler: element transform', () => {
             type: NodeTypes.JS_ARRAY_EXPRESSION,
             elements: [
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `_hoisted_1`,
                 isStatic: false
               },
               {
-                type: NodeTypes.EXPRESSION,
+                type: NodeTypes.SIMPLE_EXPRESSION,
                 content: `{ color: 'red' }`,
                 isStatic: false
               }

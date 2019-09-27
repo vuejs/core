@@ -1,5 +1,5 @@
 import { NodeTransform } from '../transform'
-import { NodeTypes, createExpression } from '../ast'
+import { NodeTypes, createSimpleExpression } from '../ast'
 
 // Parse inline CSS strings for static style attributes into an object.
 // This is a NodeTransform since it works on the static `style` attribute and
@@ -13,11 +13,11 @@ export const transformStyle: NodeTransform = (node, context) => {
       if (p.type === NodeTypes.ATTRIBUTE && p.name === 'style' && p.value) {
         // replace p with an expression node
         const parsed = JSON.stringify(parseInlineCSS(p.value.content))
-        const exp = context.hoist(createExpression(parsed, false, p.loc))
+        const exp = context.hoist(createSimpleExpression(parsed, false, p.loc))
         node.props[i] = {
           type: NodeTypes.DIRECTIVE,
           name: `bind`,
-          arg: createExpression(`style`, true, p.loc),
+          arg: createSimpleExpression(`style`, true, p.loc),
           exp,
           modifiers: [],
           loc: p.loc

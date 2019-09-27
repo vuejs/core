@@ -11,7 +11,7 @@ import {
   createCallExpression,
   createArrayExpression,
   createObjectProperty,
-  createExpression,
+  createSimpleExpression,
   createObjectExpression,
   Property
 } from '../ast'
@@ -122,8 +122,12 @@ function buildProps(
       const { loc, name, value } = prop
       properties.push(
         createObjectProperty(
-          createExpression(name, true, getInnerRange(loc, 0, name.length)),
-          createExpression(
+          createSimpleExpression(
+            name,
+            true,
+            getInnerRange(loc, 0, name.length)
+          ),
+          createSimpleExpression(
             value ? value.content : '',
             true,
             value ? value.loc : loc
@@ -236,8 +240,8 @@ function dedupeProperties(properties: Property[]): Property[] {
   const deduped: Property[] = []
   for (let i = 0; i < properties.length; i++) {
     const prop = properties[i]
-    // dynamic key named are always allowed
-    if (!prop.key.isStatic) {
+    // dynamic keys are always allowed
+    if (prop.key.type === NodeTypes.COMPOUND_EXPRESSION || !prop.key.isStatic) {
       deduped.push(prop)
       continue
     }
@@ -273,16 +277,7 @@ function mergeAsArray(existing: Property, incoming: Property) {
 // :class="expression" class="string"
 // -> class: expression + "string"
 function mergeClasses(existing: Property, incoming: Property) {
-  const e = existing.value as ExpressionNode
-  const children =
-    e.children ||
-    (e.children = [
-      {
-        ...e,
-        children: undefined
-      }
-    ])
-  children.push(` + " " + `, incoming.value as ExpressionNode)
+  // TODO
 }
 
 function createDirectiveArgs(
@@ -305,8 +300,8 @@ function createDirectiveArgs(
       createObjectExpression(
         dir.modifiers.map(modifier =>
           createObjectProperty(
-            createExpression(modifier, true, loc),
-            createExpression(`true`, false, loc),
+            createSimpleExpression(modifier, true, loc),
+            createSimpleExpression(`true`, false, loc),
             loc
           )
         ),

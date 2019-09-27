@@ -232,7 +232,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 5,
+          "type": 6,
           "value": Object {
             "content": "c",
             "isEmpty": false,
@@ -315,7 +315,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 5,
+          "type": 6,
           "value": Object {
             "content": "&#a;",
             "isEmpty": false,
@@ -398,7 +398,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 5,
+          "type": 6,
           "value": Object {
             "content": "ÿ",
             "isEmpty": false,
@@ -481,7 +481,7 @@ Object {
             },
           },
           "name": "attr",
-          "type": 5,
+          "type": 6,
           "value": Object {
             "content": "&#xg;",
             "isEmpty": false,
@@ -1183,7 +1183,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -1218,7 +1218,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -2359,7 +2359,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -2449,7 +2449,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -2539,7 +2539,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -2629,7 +2629,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2736,7 +2736,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2843,7 +2843,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -2950,7 +2950,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3057,7 +3057,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3164,7 +3164,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3271,7 +3271,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3378,7 +3378,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "abc",
                 "isEmpty": false,
@@ -3884,23 +3884,38 @@ Object {
     Object {
       "children": Array [
         Object {
-          "content": "a < b",
-          "isInterpolation": true,
-          "isStatic": false,
+          "content": Object {
+            "content": "a < b",
+            "isStatic": false,
+            "loc": Object {
+              "end": Object {
+                "column": 18,
+                "line": 1,
+                "offset": 17,
+              },
+              "source": "a < b",
+              "start": Object {
+                "column": 13,
+                "line": 1,
+                "offset": 12,
+              },
+            },
+            "type": 4,
+          },
           "loc": Object {
             "end": Object {
-              "column": 18,
+              "column": 20,
               "line": 1,
-              "offset": 17,
+              "offset": 19,
             },
-            "source": "a < b",
+            "source": "{{a < b}}",
             "start": Object {
-              "column": 13,
+              "column": 11,
               "line": 1,
-              "offset": 12,
+              "offset": 10,
             },
           },
-          "type": 4,
+          "type": 5,
         },
       ],
       "codegenNode": undefined,
@@ -4133,7 +4148,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "/",
                 "isEmpty": false,
@@ -4240,7 +4255,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -4330,7 +4345,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -4666,7 +4681,7 @@ class=\\"bar\\"></div>",
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "foo",
                 "isEmpty": false,
@@ -4701,7 +4716,7 @@ class=\\"bar\\"></div>",
                 },
               },
               "name": "class",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -4810,7 +4825,7 @@ Object {
                 },
               },
               "name": "id",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "foo",
                 "isEmpty": false,
@@ -4845,7 +4860,7 @@ Object {
                 },
               },
               "name": "class",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -5476,7 +5491,7 @@ Object {
                 },
               },
               "name": "a\\"bc",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5583,7 +5598,7 @@ Object {
                 },
               },
               "name": "a'bc",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5690,7 +5705,7 @@ Object {
                 },
               },
               "name": "a<bc",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "",
                 "isEmpty": true,
@@ -5797,7 +5812,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar\\"",
                 "isEmpty": false,
@@ -5904,7 +5919,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar'",
                 "isEmpty": false,
@@ -6011,7 +6026,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar<div",
                 "isEmpty": false,
@@ -6118,7 +6133,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar=baz",
                 "isEmpty": false,
@@ -6225,7 +6240,7 @@ Object {
                 },
               },
               "name": "foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar\`",
                 "isEmpty": false,
@@ -6332,7 +6347,7 @@ Object {
                 },
               },
               "name": "=",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -6422,7 +6437,7 @@ Object {
                 },
               },
               "name": "=foo",
-              "type": 5,
+              "type": 6,
               "value": Object {
                 "content": "bar",
                 "isEmpty": false,
@@ -6594,7 +6609,7 @@ Object {
                 },
               },
               "name": "a",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
             Object {
@@ -6612,7 +6627,7 @@ Object {
                 },
               },
               "name": "b",
-              "type": 5,
+              "type": 6,
               "value": undefined,
             },
           ],
@@ -6960,23 +6975,38 @@ Object {
     Object {
       "children": Array [
         Object {
-          "content": "'</div>'",
-          "isInterpolation": true,
-          "isStatic": false,
+          "content": Object {
+            "content": "'</div>'",
+            "isStatic": false,
+            "loc": Object {
+              "end": Object {
+                "column": 21,
+                "line": 1,
+                "offset": 20,
+              },
+              "source": "'</div>'",
+              "start": Object {
+                "column": 13,
+                "line": 1,
+                "offset": 12,
+              },
+            },
+            "type": 4,
+          },
           "loc": Object {
             "end": Object {
-              "column": 21,
+              "column": 23,
               "line": 1,
-              "offset": 20,
+              "offset": 22,
             },
-            "source": "'</div>'",
+            "source": "{{'</div>'}}",
             "start": Object {
-              "column": 13,
+              "column": 11,
               "line": 1,
-              "offset": 12,
+              "offset": 10,
             },
           },
-          "type": 4,
+          "type": 5,
         },
       ],
       "codegenNode": undefined,
@@ -7317,23 +7347,38 @@ exports[`compiler: parse Errors X_MISSING_INTERPOLATION_END {{}} 1`] = `
 Object {
   "children": Array [
     Object {
-      "content": "",
-      "isInterpolation": true,
-      "isStatic": true,
+      "content": Object {
+        "content": "",
+        "isStatic": false,
+        "loc": Object {
+          "end": Object {
+            "column": 3,
+            "line": 1,
+            "offset": 2,
+          },
+          "source": "",
+          "start": Object {
+            "column": 3,
+            "line": 1,
+            "offset": 2,
+          },
+        },
+        "type": 4,
+      },
       "loc": Object {
         "end": Object {
-          "column": 3,
+          "column": 5,
           "line": 1,
-          "offset": 2,
+          "offset": 4,
         },
-        "source": "",
+        "source": "{{}}",
         "start": Object {
-          "column": 3,
+          "column": 1,
           "line": 1,
-          "offset": 2,
+          "offset": 0,
         },
       },
-      "type": 4,
+      "type": 5,
     },
   ],
   "hoists": Array [],
@@ -7458,7 +7503,6 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
-            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7477,7 +7521,6 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
-            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7509,7 +7552,7 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 6,
+          "type": 7,
         },
       ],
       "tag": "div",
@@ -7538,7 +7581,6 @@ Object {
         Object {
           "arg": Object {
             "content": "style",
-            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7557,7 +7599,6 @@ Object {
           },
           "exp": Object {
             "content": "{ color: 'red' }",
-            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7589,7 +7630,7 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 6,
+          "type": 7,
         },
       ],
       "tag": "p",
@@ -7645,7 +7686,6 @@ Object {
             Object {
               "arg": Object {
                 "content": "style",
-                "isInterpolation": false,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -7664,7 +7704,6 @@ Object {
               },
               "exp": Object {
                 "content": "{ color: 'red' }",
-                "isInterpolation": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -7696,7 +7735,7 @@ Object {
               },
               "modifiers": Array [],
               "name": "bind",
-              "type": 6,
+              "type": 7,
             },
           ],
           "tag": "p",
@@ -7744,7 +7783,6 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
-            "isInterpolation": false,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7763,7 +7801,6 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
-            "isInterpolation": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7795,7 +7832,7 @@ Object {
           },
           "modifiers": Array [],
           "name": "bind",
-          "type": 6,
+          "type": 7,
         },
       ],
       "tag": "div",

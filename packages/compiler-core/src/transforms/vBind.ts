@@ -1,27 +1,36 @@
 import { DirectiveTransform } from '../transform'
-import { createObjectProperty, createExpression } from '../ast'
+import { createObjectProperty, createSimpleExpression, NodeTypes } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
+import { CAMELIZE } from '../runtimeConstants'
 
 // v-bind without arg is handled directly in ./element.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
-export const transformBind: DirectiveTransform = (
-  { exp, arg, modifiers, loc },
-  context
-) => {
+export const transformBind: DirectiveTransform = (dir, context) => {
+  const { exp, modifiers, loc } = dir
+  const arg = dir.arg!
   if (!exp) {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
   }
   // .prop is no longer necessary due to new patch behavior
   // .sync is replced by v-model:arg
   if (modifiers.includes('camel')) {
-    arg!.content = camelize(arg!.content)
+    if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+      if (arg.isStatic) {
+        arg.content = camelize(arg.content)
+      } else {
+        arg.content = `${context.helper(CAMELIZE)}(${arg.content})`
+      }
+    } else {
+      arg.children.unshift(`${context.helper(CAMELIZE)}(`)
+      arg.children.push(`)`)
+    }
   }
   return {
     props: createObjectProperty(
       arg!,
-      exp || createExpression('', true, loc),
+      exp || createSimpleExpression('', true, loc),
       loc
     ),
     needRuntime: false

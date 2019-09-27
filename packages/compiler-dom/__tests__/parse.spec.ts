@@ -4,8 +4,8 @@ import {
   ElementNode,
   TextNode,
   ErrorCodes,
-  ExpressionNode,
-  ElementTypes
+  ElementTypes,
+  InterpolationNode
 } from '@vue/compiler-core'
 import {
   parserOptionsMinimal as parserOptions,
@@ -109,17 +109,24 @@ describe('DOM parser', () => {
     test('HTML entities in interpolation should be translated for backward compatibility.', () => {
       const ast = parse('<div>{{ a &lt; b }}</div>', parserOptions)
       const element = ast.children[0] as ElementNode
-      const interpolation = element.children[0] as ExpressionNode
+      const interpolation = element.children[0] as InterpolationNode
 
       expect(interpolation).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'a < b',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `a < b`,
+          isStatic: false,
+          loc: {
+            start: { offset: 8, line: 1, column: 9 },
+            end: { offset: 16, line: 1, column: 17 },
+            source: 'a &lt; b'
+          }
+        },
         loc: {
-          start: { offset: 8, line: 1, column: 9 },
-          end: { offset: 16, line: 1, column: 17 },
-          source: 'a &lt; b'
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 19, line: 1, column: 20 },
+          source: '{{ a &lt; b }}'
         }
       })
     })

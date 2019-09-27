@@ -14,7 +14,10 @@ import {
   ObjectExpression,
   IfBranchNode,
   SourceLocation,
-  Position
+  Position,
+  InterpolationNode,
+  CompoundExpressionNode,
+  SimpleExpressionNode
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -110,11 +113,7 @@ function createCodegenContext(
       if (!__BROWSER__ && context.map) {
         if (node) {
           let name
-          if (
-            node.type === NodeTypes.EXPRESSION &&
-            !node.children &&
-            !node.isStatic
-          ) {
+          if (node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic) {
             const content = node.content.replace(/^_ctx\./, '')
             if (content !== node.content && isSimpleIdentifier(content)) {
               name = content
@@ -263,7 +262,7 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 
 // This will generate a single vnode call if:
 // - The target position explicitly allows a single node (root, if, for)
-// - The list has length === 1, AND The only child is a text or expression.
+// - The list has length === 1, AND The only child is a text, expression or comment.
 function genChildren(
   children: ChildNode[],
   context: CodegenContext,
@@ -277,7 +276,8 @@ function genChildren(
     children.length === 1 &&
     (allowSingle ||
       child.type === NodeTypes.TEXT ||
-      child.type == NodeTypes.EXPRESSION)
+      child.type === NodeTypes.INTERPOLATION ||
+      child.type === NodeTypes.COMMENT)
   ) {
     genNode(child, context)
   } else {
@@ -331,8 +331,14 @@ function genNode(node: CodegenNode, context: CodegenContext) {
     case NodeTypes.TEXT:
       genText(node, context)
       break
-    case NodeTypes.EXPRESSION:
+    case NodeTypes.SIMPLE_EXPRESSION:
       genExpression(node, context)
+      break
+    case NodeTypes.INTERPOLATION:
+      genInterpolation(node, context)
+      break
+    case NodeTypes.COMPOUND_EXPRESSION:
+      genCompoundExpression(node, context)
       break
     case NodeTypes.COMMENT:
       genComment(node, context)
@@ -369,23 +375,36 @@ function genElement(node: ElementNode, context: CodegenContext) {
   genCallExpression(node.codegenNode!, context, false)
 }
 
-function genText(node: TextNode | ExpressionNode, context: CodegenContext) {
+function genText(
+  node: TextNode | SimpleExpressionNode,
+  context: CodegenContext
+) {
   context.push(JSON.stringify(node.content), node)
 }
 
-function genExpression(node: ExpressionNode, context: CodegenContext) {
+function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
+  const { content, isStatic } = node
+  context.push(isStatic ? JSON.stringify(content) : content, node)
+}
+
+function genInterpolation(node: InterpolationNode, context: CodegenContext) {
   const { push, helper } = context
-  const { content, children, isStatic, isInterpolation } = node
-  if (isInterpolation) {
-    push(`${helper(TO_STRING)}(`)
-  }
-  if (children) {
-    genCompoundExpression(node, context)
-  } else {
-    push(isStatic ? JSON.stringify(content) : content, node)
-  }
-  if (isInterpolation) {
-    push(`)`)
+  push(`${helper(TO_STRING)}(`)
+  genNode(node.content, context)
+  push(`)`)
+}
+
+function genCompoundExpression(
+  node: CompoundExpressionNode,
+  context: CodegenContext
+) {
+  for (let i = 0; i < node.children!.length; i++) {
+    const child = node.children![i]
+    if (isString(child)) {
+      context.push(child)
+    } else {
+      genExpression(child, context)
+    }
   }
 }
 
@@ -394,28 +413,18 @@ function genExpressionAsPropertyKey(
   context: CodegenContext
 ) {
   const { push } = context
-  const { content, children, isStatic } = node
-  if (children) {
+  if (node.type === NodeTypes.COMPOUND_EXPRESSION) {
     push(`[`)
     genCompoundExpression(node, context)
     push(`]`)
-  } else if (isStatic) {
+  } else if (node.isStatic) {
     // only quote keys if necessary
-    const text = isSimpleIdentifier(content) ? content : JSON.stringify(content)
+    const text = isSimpleIdentifier(node.content)
+      ? node.content
+      : JSON.stringify(node.content)
     push(text, node)
   } else {
-    push(`[${content}]`, node)
-  }
-}
-
-function genCompoundExpression(node: ExpressionNode, context: CodegenContext) {
-  for (let i = 0; i < node.children!.length; i++) {
-    const child = node.children![i]
-    if (isString(child)) {
-      context.push(child)
-    } else {
-      genExpression(child, context)
-    }
+    push(`[${node.content}]`, node)
   }
 }
 
@@ -445,10 +454,14 @@ function genIfBranch(
   if (condition) {
     // v-if or v-else-if
     const { push, indent, deindent, newline } = context
-    const needsQuote = !isSimpleIdentifier(condition.content)
-    needsQuote && push(`(`)
-    genExpression(condition, context)
-    needsQuote && push(`)`)
+    if (condition.type === NodeTypes.SIMPLE_EXPRESSION) {
+      const needsQuote = !isSimpleIdentifier(condition.content)
+      needsQuote && push(`(`)
+      genExpression(condition, context)
+      needsQuote && push(`)`)
+    } else {
+      genCompoundExpression(condition, context)
+    }
     indent()
     context.indentLevel++
     push(`? `)
@@ -473,7 +486,7 @@ function genFor(node: ForNode, context: CodegenContext) {
   const { push, helper, indent, deindent } = context
   const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
   push(`${helper(RENDER_LIST)}(`, node, true)
-  genExpression(source, context)
+  genNode(source, context)
   push(`, (`)
   if (valueAlias) {
     genExpression(valueAlias, context)

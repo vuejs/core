@@ -3,14 +3,16 @@ import {
   NodeTypes,
   RootNode,
   SourceLocation,
-  createExpression,
+  createSimpleExpression,
   Namespaces,
   ElementTypes,
   CallExpression,
   createObjectExpression,
   createObjectProperty,
   createArrayExpression,
-  ElementNode
+  ElementNode,
+  createCompoundExpression,
+  createInterpolation
 } from '../src'
 import {
   CREATE_VNODE,
@@ -93,12 +95,12 @@ describe('compiler: codegen', () => {
   test('hoists', () => {
     const root = createRoot({
       hoists: [
-        createExpression(`hello`, false, mockLoc),
+        createSimpleExpression(`hello`, false, mockLoc),
         createObjectExpression(
           [
             createObjectProperty(
-              createExpression(`id`, true, mockLoc),
-              createExpression(`foo`, true, mockLoc),
+              createSimpleExpression(`id`, true, mockLoc),
+              createSimpleExpression(`foo`, true, mockLoc),
               mockLoc
             )
           ],
@@ -138,7 +140,7 @@ describe('compiler: codegen', () => {
   test('interpolation', () => {
     const { code } = generate(
       createRoot({
-        children: [createExpression(`hello`, false, mockLoc, true)]
+        children: [createInterpolation(`hello`, mockLoc)]
       })
     )
     expect(code).toMatch(`return _${TO_STRING}(hello)`)
@@ -171,7 +173,7 @@ describe('compiler: codegen', () => {
             isEmpty: false,
             loc: mockLoc
           },
-          createExpression(`hello`, false, mockLoc, true),
+          createInterpolation(`hello`, mockLoc),
           {
             type: NodeTypes.COMMENT,
             content: 'foo',
@@ -199,7 +201,7 @@ describe('compiler: codegen', () => {
             isEmpty: false,
             loc: mockLoc
           },
-          createExpression(`hello`, false, mockLoc, true),
+          createInterpolation(`hello`, mockLoc),
           {
             type: NodeTypes.COMMENT,
             content: 'foo',
@@ -224,14 +226,13 @@ describe('compiler: codegen', () => {
     const { code } = generate(
       createRoot({
         children: [
-          {
-            type: NodeTypes.EXPRESSION,
-            content: 'foo',
-            isStatic: false,
-            isInterpolation: true,
-            loc: mockLoc,
-            children: [`_ctx.`, createExpression(`foo`, false, mockLoc)]
-          }
+          createInterpolation(
+            createCompoundExpression(
+              [`_ctx.`, createSimpleExpression(`foo`, false, mockLoc)],
+              mockLoc
+            ),
+            mockLoc
+          )
         ]
       })
     )
@@ -249,7 +250,7 @@ describe('compiler: codegen', () => {
             branches: [
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('foo', false, mockLoc),
+                condition: createSimpleExpression('foo', false, mockLoc),
                 loc: mockLoc,
                 children: [
                   {
@@ -262,9 +263,9 @@ describe('compiler: codegen', () => {
               },
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('a + b', false, mockLoc),
+                condition: createSimpleExpression('a + b', false, mockLoc),
                 loc: mockLoc,
-                children: [createExpression(`bye`, false, mockLoc, true)]
+                children: [createInterpolation(`bye`, mockLoc)]
               },
               {
                 type: NodeTypes.IF_BRANCH,
@@ -302,7 +303,7 @@ describe('compiler: codegen', () => {
             branches: [
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('foo', false, mockLoc),
+                condition: createSimpleExpression('foo', false, mockLoc),
                 loc: mockLoc,
                 children: [
                   {
@@ -315,9 +316,9 @@ describe('compiler: codegen', () => {
               },
               {
                 type: NodeTypes.IF_BRANCH,
-                condition: createExpression('a + b', false, mockLoc),
+                condition: createSimpleExpression('a + b', false, mockLoc),
                 loc: mockLoc,
-                children: [createExpression(`bye`, false, mockLoc, true)]
+                children: [createInterpolation(`bye`, mockLoc)]
               }
             ]
           }
@@ -340,11 +341,11 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.FOR,
             loc: mockLoc,
-            source: createExpression(`list`, false, mockLoc),
-            valueAlias: createExpression(`v`, false, mockLoc),
-            keyAlias: createExpression(`k`, false, mockLoc),
-            objectIndexAlias: createExpression(`i`, false, mockLoc),
-            children: [createExpression(`v`, false, mockLoc, true)]
+            source: createSimpleExpression(`list`, false, mockLoc),
+            valueAlias: createSimpleExpression(`v`, false, mockLoc),
+            keyAlias: createSimpleExpression(`k`, false, mockLoc),
+            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
+            children: [createInterpolation(`v`, mockLoc)]
           }
         ]
       })
@@ -364,11 +365,11 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.FOR,
             loc: mockLoc,
-            source: createExpression(`list`, false, mockLoc),
-            valueAlias: createExpression(`v`, false, mockLoc),
-            keyAlias: createExpression(`k`, false, mockLoc),
-            objectIndexAlias: createExpression(`i`, false, mockLoc),
-            children: [createExpression(`v`, false, mockLoc, true)]
+            source: createSimpleExpression(`list`, false, mockLoc),
+            valueAlias: createSimpleExpression(`v`, false, mockLoc),
+            keyAlias: createSimpleExpression(`k`, false, mockLoc),
+            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
+            children: [createInterpolation(`v`, mockLoc)]
           }
         ]
       }),
@@ -391,11 +392,11 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.FOR,
             loc: mockLoc,
-            source: createExpression(`list`, false, mockLoc),
+            source: createSimpleExpression(`list`, false, mockLoc),
             valueAlias: undefined,
-            keyAlias: createExpression(`k`, false, mockLoc),
-            objectIndexAlias: createExpression(`i`, false, mockLoc),
-            children: [createExpression(`v`, false, mockLoc, true)]
+            keyAlias: createSimpleExpression(`k`, false, mockLoc),
+            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
+            children: [createInterpolation(`v`, mockLoc)]
           }
         ]
       })
@@ -415,11 +416,11 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.FOR,
             loc: mockLoc,
-            source: createExpression(`list`, false, mockLoc),
-            valueAlias: createExpression(`v`, false, mockLoc),
+            source: createSimpleExpression(`list`, false, mockLoc),
+            valueAlias: createSimpleExpression(`v`, false, mockLoc),
             keyAlias: undefined,
-            objectIndexAlias: createExpression(`i`, false, mockLoc),
-            children: [createExpression(`v`, false, mockLoc, true)]
+            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
+            children: [createInterpolation(`v`, mockLoc)]
           }
         ]
       })
@@ -439,11 +440,11 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.FOR,
             loc: mockLoc,
-            source: createExpression(`list`, false, mockLoc),
+            source: createSimpleExpression(`list`, false, mockLoc),
             valueAlias: undefined,
             keyAlias: undefined,
-            objectIndexAlias: createExpression(`i`, false, mockLoc),
-            children: [createExpression(`v`, false, mockLoc, true)]
+            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
+            children: [createInterpolation(`v`, mockLoc)]
           }
         ]
       })
@@ -488,29 +489,26 @@ describe('compiler: codegen', () => {
             createObjectExpression(
               [
                 createObjectProperty(
-                  createExpression(`id`, true, mockLoc),
-                  createExpression(`foo`, true, mockLoc),
+                  createSimpleExpression(`id`, true, mockLoc),
+                  createSimpleExpression(`foo`, true, mockLoc),
                   mockLoc
                 ),
                 createObjectProperty(
-                  createExpression(`prop`, false, mockLoc),
-                  createExpression(`bar`, false, mockLoc),
+                  createSimpleExpression(`prop`, false, mockLoc),
+                  createSimpleExpression(`bar`, false, mockLoc),
                   mockLoc
                 ),
                 // compound expression as computed key
                 createObjectProperty(
                   {
-                    type: NodeTypes.EXPRESSION,
-                    content: ``,
+                    type: NodeTypes.COMPOUND_EXPRESSION,
                     loc: mockLoc,
-                    isStatic: false,
-                    isInterpolation: false,
                     children: [
                       `foo + `,
-                      createExpression(`bar`, false, mockLoc)
+                      createSimpleExpression(`bar`, false, mockLoc)
                     ]
                   },
-                  createExpression(`bar`, false, mockLoc),
+                  createSimpleExpression(`bar`, false, mockLoc),
                   mockLoc
                 )
               ],
@@ -524,8 +522,8 @@ describe('compiler: codegen', () => {
                   [
                     createObjectProperty(
                       // should quote the key!
-                      createExpression(`some-key`, true, mockLoc),
-                      createExpression(`foo`, true, mockLoc),
+                      createSimpleExpression(`some-key`, true, mockLoc),
+                      createSimpleExpression(`foo`, true, mockLoc),
                       mockLoc
                     )
                   ],

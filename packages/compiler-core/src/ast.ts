@@ -1,3 +1,5 @@
+import { isString } from '@vue/shared'
+
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
 // compilers.
@@ -12,7 +14,8 @@ export const enum NodeTypes {
   ELEMENT,
   TEXT,
   COMMENT,
-  EXPRESSION,
+  SIMPLE_EXPRESSION,
+  INTERPOLATION,
   ATTRIBUTE,
   DIRECTIVE,
   // containers
@@ -55,9 +58,11 @@ export interface Position {
 
 export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
 
+export type ExpressionNode = SimpleExpressionNode | CompoundExpressionNode
+
 export type ChildNode =
   | ElementNode
-  | ExpressionNode
+  | InterpolationNode
   | TextNode
   | CommentNode
   | IfNode
@@ -107,12 +112,21 @@ export interface DirectiveNode extends Node {
   modifiers: string[]
 }
 
-export interface ExpressionNode extends Node {
-  type: NodeTypes.EXPRESSION
+export interface SimpleExpressionNode extends Node {
+  type: NodeTypes.SIMPLE_EXPRESSION
   content: string
   isStatic: boolean
-  isInterpolation: boolean
-  children?: (ExpressionNode | string)[]
+}
+
+export interface InterpolationNode extends Node {
+  type: NodeTypes.INTERPOLATION
+  content: ExpressionNode
+}
+
+// always dynamic
+export interface CompoundExpressionNode extends Node {
+  type: NodeTypes.COMPOUND_EXPRESSION
+  children: (SimpleExpressionNode | string)[]
 }
 
 export interface IfNode extends Node {
@@ -129,9 +143,9 @@ export interface IfBranchNode extends Node {
 export interface ForNode extends Node {
   type: NodeTypes.FOR
   source: ExpressionNode
-  valueAlias: ExpressionNode | undefined
-  keyAlias: ExpressionNode | undefined
-  objectIndexAlias: ExpressionNode | undefined
+  valueAlias: SimpleExpressionNode | undefined
+  keyAlias: SimpleExpressionNode | undefined
+  objectIndexAlias: SimpleExpressionNode | undefined
   children: ChildNode[]
 }
 
@@ -190,7 +204,7 @@ export function createObjectExpression(
 
 export function createObjectProperty(
   key: ExpressionNode,
-  value: ExpressionNode,
+  value: JSChildNode,
   loc: SourceLocation
 ): Property {
   return {
@@ -201,18 +215,40 @@ export function createObjectProperty(
   }
 }
 
-export function createExpression(
+export function createSimpleExpression(
   content: string,
   isStatic: boolean,
-  loc: SourceLocation,
-  isInterpolation = false
-): ExpressionNode {
+  loc: SourceLocation
+): SimpleExpressionNode {
   return {
-    type: NodeTypes.EXPRESSION,
+    type: NodeTypes.SIMPLE_EXPRESSION,
     loc,
     content,
-    isStatic,
-    isInterpolation
+    isStatic
+  }
+}
+
+export function createInterpolation(
+  content: string | CompoundExpressionNode,
+  loc: SourceLocation
+): InterpolationNode {
+  return {
+    type: NodeTypes.INTERPOLATION,
+    loc,
+    content: isString(content)
+      ? createSimpleExpression(content, false, loc)
+      : content
+  }
+}
+
+export function createCompoundExpression(
+  children: CompoundExpressionNode['children'],
+  loc: SourceLocation
+): CompoundExpressionNode {
+  return {
+    type: NodeTypes.COMPOUND_EXPRESSION,
+    loc,
+    children
   }
 }
 

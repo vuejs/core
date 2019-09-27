@@ -31,7 +31,7 @@ describe('compiler: style transform', () => {
     )
     expect(root.hoists).toMatchObject([
       {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `{"color":"red"}`,
         isStatic: false
       }
@@ -40,12 +40,12 @@ describe('compiler: style transform', () => {
       type: NodeTypes.DIRECTIVE,
       name: `bind`,
       arg: {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `style`,
         isStatic: true
       },
       exp: {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: `_hoisted_1`,
         isStatic: false
       }
@@ -64,12 +64,12 @@ describe('compiler: style transform', () => {
       properties: [
         {
           key: {
-            type: NodeTypes.EXPRESSION,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: `style`,
             isStatic: true
           },
           value: {
-            type: NodeTypes.EXPRESSION,
+            type: NodeTypes.SIMPLE_EXPRESSION,
             content: `_hoisted_1`,
             isStatic: false
           }

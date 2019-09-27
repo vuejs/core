@@ -23,7 +23,8 @@ import {
   RootNode,
   SourceLocation,
   TextNode,
-  ChildNode
+  ChildNode,
+  InterpolationNode
 } from './ast'
 
 export interface ParserOptions {
@@ -122,7 +123,7 @@ function parseChildren(
   while (!isEnd(context, mode, ancestors)) {
     __DEV__ && assert(context.source.length > 0)
     const s = context.source
-    let node: any = null
+    let node: ChildNode | ChildNode[] | undefined = undefined
 
     if (startsWith(s, context.options.delimiters[0])) {
       // '{{'
@@ -529,10 +530,9 @@ function parseAttribute(
       }
 
       arg = {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
-        isInterpolation: false,
         loc
       }
     }
@@ -555,10 +555,9 @@ function parseAttribute(
             ? 'on'
             : 'slot'),
       exp: value && {
-        type: NodeTypes.EXPRESSION,
+        type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
-        isInterpolation: false,
         loc: value.loc
       },
       arg,
@@ -633,7 +632,7 @@ function parseAttributeValue(
 function parseInterpolation(
   context: ParserContext,
   mode: TextModes
-): ExpressionNode | undefined {
+): InterpolationNode | undefined {
   const [open, close] = context.options.delimiters
   __DEV__ && assert(startsWith(context.source, open))
 
@@ -643,28 +642,32 @@ function parseInterpolation(
     return undefined
   }
 
-  advanceBy(context, open.length)
   const start = getCursor(context)
-  const end = getCursor(context)
+  advanceBy(context, open.length)
+  const innerStart = getCursor(context)
+  const innerEnd = getCursor(context)
   const rawContentLength = closeIndex - open.length
   const rawContent = context.source.slice(0, rawContentLength)
   const preTrimContent = parseTextData(context, rawContentLength, mode)
   const content = preTrimContent.trim()
   const startOffset = preTrimContent.indexOf(content)
   if (startOffset > 0) {
-    advancePositionWithMutation(start, rawContent, startOffset)
+    advancePositionWithMutation(innerStart, rawContent, startOffset)
   }
   const endOffset =
     rawContentLength - (preTrimContent.length - content.length - startOffset)
-  advancePositionWithMutation(end, rawContent, endOffset)
+  advancePositionWithMutation(innerEnd, rawContent, endOffset)
   advanceBy(context, close.length)
 
   return {
-    type: NodeTypes.EXPRESSION,
-    content,
-    loc: getSelection(context, start, end),
-    isStatic: content === '',
-    isInterpolation: true
+    type: NodeTypes.INTERPOLATION,
+    content: {
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      isStatic: false,
+      content,
+      loc: getSelection(context, innerStart, innerEnd)
+    },
+    loc: getSelection(context, start)
   }
 }
 

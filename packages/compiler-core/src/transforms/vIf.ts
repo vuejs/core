@@ -7,7 +7,8 @@ import {
   ElementTypes,
   ElementNode,
   DirectiveNode,
-  IfBranchNode
+  IfBranchNode,
+  SimpleExpressionNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -16,7 +17,9 @@ export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     if (!__BROWSER__ && context.prefixIdentifiers && dir.exp) {
-      processExpression(dir.exp, context)
+      // dir.exp can only be simple expression because vIf transform is applied
+      // before expression transform.
+      processExpression(dir.exp as SimpleExpressionNode, context)
     }
     if (dir.name === 'if') {
       context.replaceNode({

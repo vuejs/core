@@ -8,6 +8,8 @@ import {
 } from '../../src'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
+import { CAMELIZE } from '../../src/runtimeConstants'
+import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithVBind(
   template: string,
@@ -15,7 +17,10 @@ function parseWithVBind(
 ): ElementNode {
   const ast = parse(template)
   transform(ast, {
-    nodeTransforms: [transformElement],
+    nodeTransforms: [
+      ...(options.prefixIdentifiers ? [transformExpression] : []),
+      transformElement
+    ],
     directiveTransforms: {
       bind: transformBind
     },
@@ -113,6 +118,44 @@ describe('compiler: transform v-bind', () => {
       },
       value: {
         content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.camel modifier w/ dynamic arg', () => {
+    const node = parseWithVBind(`<div v-bind:[foo].camel="id"/>`)
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `_${CAMELIZE}(foo)`,
+        isStatic: false
+      },
+      value: {
+        content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.camel modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const node = parseWithVBind(`<div v-bind:[foo(bar)].camel="id"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        children: [
+          `${CAMELIZE}(`,
+          { content: `_ctx.foo` },
+          `(`,
+          { content: `_ctx.bar` },
+          `)`,
+          `)`
+        ]
+      },
+      value: {
+        content: `_ctx.id`,
         isStatic: false
       }
     })

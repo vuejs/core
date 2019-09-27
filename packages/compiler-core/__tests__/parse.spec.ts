@@ -4,12 +4,12 @@ import {
   CommentNode,
   ElementNode,
   ElementTypes,
-  ExpressionNode,
   Namespaces,
   NodeTypes,
   Position,
   TextNode,
-  AttributeNode
+  AttributeNode,
+  InterpolationNode
 } from '../src/ast'
 
 describe('compiler: parse', () => {
@@ -290,63 +290,92 @@ describe('compiler: parse', () => {
   describe('Interpolation', () => {
     test('simple interpolation', () => {
       const ast = parse('{{message}}')
-      const interpolation = ast.children[0] as ExpressionNode
+      const interpolation = ast.children[0] as InterpolationNode
 
       expect(interpolation).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'message',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `message`,
+          isStatic: false,
+          loc: {
+            start: { offset: 2, line: 1, column: 3 },
+            end: { offset: 9, line: 1, column: 10 },
+            source: `message`
+          }
+        },
         loc: {
-          start: { offset: 2, line: 1, column: 3 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: 'message'
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 11, line: 1, column: 12 },
+          source: '{{message}}'
         }
       })
     })
 
     test('it can have tag-like notation', () => {
       const ast = parse('{{ a<b }}')
-      const interpolation = ast.children[0] as ExpressionNode
+      const interpolation = ast.children[0] as InterpolationNode
 
       expect(interpolation).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'a<b',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `a<b`,
+          isStatic: false,
+          loc: {
+            start: { offset: 3, line: 1, column: 4 },
+            end: { offset: 6, line: 1, column: 7 },
+            source: 'a<b'
+          }
+        },
         loc: {
-          start: { offset: 3, line: 1, column: 4 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: 'a<b'
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 9, line: 1, column: 10 },
+          source: '{{ a<b }}'
         }
       })
     })
 
     test('it can have tag-like notation (2)', () => {
       const ast = parse('{{ a<b }}{{ c>d }}')
-      const interpolation1 = ast.children[0] as ExpressionNode
-      const interpolation2 = ast.children[1] as ExpressionNode
+      const interpolation1 = ast.children[0] as InterpolationNode
+      const interpolation2 = ast.children[1] as InterpolationNode
 
       expect(interpolation1).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'a<b',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `a<b`,
+          isStatic: false,
+          loc: {
+            start: { offset: 3, line: 1, column: 4 },
+            end: { offset: 6, line: 1, column: 7 },
+            source: 'a<b'
+          }
+        },
         loc: {
-          start: { offset: 3, line: 1, column: 4 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: 'a<b'
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 9, line: 1, column: 10 },
+          source: '{{ a<b }}'
         }
       })
+
       expect(interpolation2).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: 'c>d',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          isStatic: false,
+          content: 'c>d',
+          loc: {
+            start: { offset: 12, line: 1, column: 13 },
+            end: { offset: 15, line: 1, column: 16 },
+            source: 'c>d'
+          }
+        },
         loc: {
-          start: { offset: 12, line: 1, column: 13 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: 'c>d'
+          start: { offset: 9, line: 1, column: 10 },
+          end: { offset: 18, line: 1, column: 19 },
+          source: '{{ c>d }}'
         }
       })
     })
@@ -354,17 +383,24 @@ describe('compiler: parse', () => {
     test('it can have tag-like notation (3)', () => {
       const ast = parse('<div>{{ "</div>" }}</div>')
       const element = ast.children[0] as ElementNode
-      const interpolation = element.children[0] as ExpressionNode
+      const interpolation = element.children[0] as InterpolationNode
 
       expect(interpolation).toStrictEqual({
-        type: NodeTypes.EXPRESSION,
-        content: '"</div>"',
-        isStatic: false,
-        isInterpolation: true,
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          isStatic: false,
+          content: '"</div>"',
+          loc: {
+            start: { offset: 8, line: 1, column: 9 },
+            end: { offset: 16, line: 1, column: 17 },
+            source: '"</div>"'
+          }
+        },
         loc: {
-          start: { offset: 8, line: 1, column: 9 },
-          end: { offset: 16, line: 1, column: 17 },
-          source: '"</div>"'
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 19, line: 1, column: 20 },
+          source: '{{ "</div>" }}'
         }
       })
     })
@@ -889,10 +925,9 @@ describe('compiler: parse', () => {
         arg: undefined,
         modifiers: [],
         exp: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: false,
-          isInterpolation: false,
           loc: {
             start: { offset: 11, line: 1, column: 12 },
             end: { offset: 12, line: 1, column: 13 },
@@ -915,10 +950,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'click',
             start: {
@@ -987,10 +1022,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'click',
             start: {
@@ -1023,10 +1058,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'a',
             start: {
@@ -1043,10 +1078,10 @@ describe('compiler: parse', () => {
         },
         modifiers: [],
         exp: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isInterpolation: false,
+
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
@@ -1069,10 +1104,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'a',
             start: {
@@ -1089,10 +1124,10 @@ describe('compiler: parse', () => {
         },
         modifiers: ['sync'],
         exp: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isInterpolation: false,
+
           loc: {
             start: { offset: 13, line: 1, column: 14 },
             end: { offset: 14, line: 1, column: 15 },
@@ -1115,10 +1150,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'a',
             start: {
@@ -1135,10 +1170,10 @@ describe('compiler: parse', () => {
         },
         modifiers: [],
         exp: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isInterpolation: false,
+
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
@@ -1161,10 +1196,10 @@ describe('compiler: parse', () => {
         type: NodeTypes.DIRECTIVE,
         name: 'on',
         arg: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
-          isInterpolation: false,
+
           loc: {
             source: 'a',
             start: {
@@ -1181,10 +1216,10 @@ describe('compiler: parse', () => {
         },
         modifiers: ['enter'],
         exp: {
-          type: NodeTypes.EXPRESSION,
+          type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'b',
           isStatic: false,
-          isInterpolation: false,
+
           loc: {
             start: { offset: 14, line: 1, column: 15 },
             end: { offset: 15, line: 1, column: 16 },
@@ -1313,20 +1348,27 @@ foo
     offset += foo.loc.source.length
     expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
 
+    expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
+    const barInner = (bar as InterpolationNode).content
     offset += 3
-    expect(bar.loc.start).toEqual({ line: 2, column: 8, offset })
-    offset += bar.loc.source.length
-    expect(bar.loc.end).toEqual({ line: 2, column: 11, offset })
+    expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
+    offset += barInner.loc.source.length
+    expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
     offset += 3
+    expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
 
     expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
     offset += but.loc.source.length
     expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
 
+    expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
+    const bazInner = (baz as InterpolationNode).content
     offset += 3
-    expect(baz.loc.start).toEqual({ line: 2, column: 22, offset })
-    offset += baz.loc.source.length
-    expect(baz.loc.end).toEqual({ line: 2, column: 25, offset })
+    expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
+    offset += bazInner.loc.source.length
+    expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
+    offset += 3
+    expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
   })
 
   describe('namedCharacterReferences option', () => {

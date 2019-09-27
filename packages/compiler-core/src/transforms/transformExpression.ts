@@ -11,26 +11,39 @@
 import { parseScript } from 'meriyah'
 import { walk } from 'estree-walker'
 import { NodeTransform, TransformContext } from '../transform'
-import { NodeTypes, createExpression, ExpressionNode } from '../ast'
+import {
+  NodeTypes,
+  createSimpleExpression,
+  ExpressionNode,
+  SimpleExpressionNode,
+  CompoundExpressionNode,
+  createCompoundExpression
+} from '../ast'
 import { Node, Function, Identifier, Property } from 'estree'
 import { advancePositionWithClone } from '../utils'
+
 export const transformExpression: NodeTransform = (node, context) => {
-  if (node.type === NodeTypes.EXPRESSION && !node.isStatic) {
-    processExpression(node, context)
+  if (node.type === NodeTypes.INTERPOLATION) {
+    node.content = processExpression(
+      node.content as SimpleExpressionNode,
+      context
+    )
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
       if (prop.type === NodeTypes.DIRECTIVE) {
-        if (prop.exp) {
-          processExpression(prop.exp, context)
+        const exp = prop.exp as SimpleExpressionNode | undefined
+        const arg = prop.arg as SimpleExpressionNode | undefined
+        if (exp) {
+          prop.exp = processExpression(exp, context)
         }
-        if (prop.arg && !prop.arg.isStatic) {
+        if (arg && !arg.isStatic) {
           if (prop.name === 'class') {
             // TODO special expression optimization for classes
-            processExpression(prop.arg, context)
+            prop.arg = processExpression(arg, context)
           } else {
-            processExpression(prop.arg, context)
+            prop.arg = processExpression(arg, context)
           }
         }
       }
@@ -60,32 +73,33 @@ interface PrefixMeta {
 // always be used with a leading !__BROWSER__ check so that it can be
 // tree-shaken from the browser build.
 export function processExpression(
-  node: ExpressionNode,
+  node: SimpleExpressionNode,
   context: TransformContext
-) {
+): ExpressionNode {
   if (!context.prefixIdentifiers) {
-    return
+    return node
   }
-  // lazy require dependencies so that they don't end up in rollup's dep graph
-  // and thus can be tree-shaken in browser builds.
-  const parseScript =
-    _parseScript || (_parseScript = require('meriyah').parseScript)
-  const walk = _walk || (_walk = require('estree-walker').walk)
 
   // fast path if expression is a simple identifier.
   if (simpleIdRE.test(node.content)) {
     if (!context.identifiers[node.content]) {
       node.content = `_ctx.${node.content}`
     }
-    return
+    return node
   }
+
+  // lazy require dependencies so that they don't end up in rollup's dep graph
+  // and thus can be tree-shaken in browser builds.
+  const parseScript =
+    _parseScript || (_parseScript = require('meriyah').parseScript)
+  const walk = _walk || (_walk = require('estree-walker').walk)
 
   let ast
   try {
     ast = parseScript(`(${node.content})`, { ranges: true }) as any
   } catch (e) {
     context.onError(e)
-    return
+    return node
   }
 
   const ids: (Identifier & PrefixMeta)[] = []
@@ -145,7 +159,7 @@ export function processExpression(
   // an ExpressionNode has the `.children` property, it will be used instead of
   // `.content`.
   const full = node.content
-  const children: ExpressionNode['children'] = []
+  const children: CompoundExpressionNode['children'] = []
   ids.sort((a, b) => a.start - b.start)
   ids.forEach((id, i) => {
     const last = ids[i - 1] as any
@@ -155,7 +169,7 @@ export function processExpression(
     }
     const source = full.slice(id.start - 1, id.end - 1)
     children.push(
-      createExpression(id.name, false, {
+      createSimpleExpression(id.name, false, {
         source,
         start: advancePositionWithClone(node.loc.start, source, id.start - 1),
         end: advancePositionWithClone(node.loc.start, source, id.end - 1)
@@ -167,10 +181,9 @@ export function processExpression(
   })
 
   if (children.length) {
-    // mark it empty so that it's more noticeable in case another transform or
-    // codegen forget to handle `.children` first.
-    node.content = __DEV__ ? `[[REMOVED]]` : ``
-    node.children = children
+    return createCompoundExpression(children, node.loc)
+  } else {
+    return node
   }
 }
 

@@ -1,7 +1,7 @@
 import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformFor } from '../../src/transforms/vFor'
-import { ForNode, NodeTypes } from '../../src/ast'
+import { ForNode, NodeTypes, SimpleExpressionNode } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions } from '../../src'
 
@@ -24,7 +24,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('index')
-    expect(forNode.source.content).toBe('5')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('5')
   })
 
   test('value', () => {
@@ -32,7 +32,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('object de-structured value', () => {
@@ -42,7 +42,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('{ id, value }')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('array de-structured value', () => {
@@ -52,7 +52,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('[ id, value ]')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('value and key', () => {
@@ -63,7 +63,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias!.content).toBe('key')
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('value, key and index', () => {
@@ -75,7 +75,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias!.content).toBe('value')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('skipped key', () => {
@@ -86,7 +86,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias!.content).toBe('value')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('skipped value and key', () => {
@@ -95,7 +95,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias).toBeUndefined()
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('unbracketed value', () => {
@@ -103,7 +103,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias).toBeUndefined()
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('unbracketed value and key', () => {
@@ -112,7 +112,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.keyAlias!.content).toBe('key')
     expect(forNode.objectIndexAlias).toBeUndefined()
     expect(forNode.valueAlias!.content).toBe('item')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('unbracketed value, key and index', () => {
@@ -124,7 +124,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias!.content).toBe('value')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('unbracketed skipped key', () => {
@@ -135,7 +135,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias!.content).toBe('value')
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('unbracketed skipped value and key', () => {
@@ -144,7 +144,7 @@ describe('compiler: transform v-for', () => {
     expect(forNode.objectIndexAlias).not.toBeUndefined()
     expect(forNode.objectIndexAlias!.content).toBe('index')
     expect(forNode.valueAlias).toBeUndefined()
-    expect(forNode.source.content).toBe('items')
+    expect((forNode.source as SimpleExpressionNode).content).toBe('items')
   })
 
   test('missing expression', () => {
@@ -223,7 +223,7 @@ describe('compiler: transform v-for', () => {
       )
 
       const itemsOffset = source.indexOf('items')
-      expect(forNode.source.content).toBe('items')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('items')
       expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
       expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
@@ -248,7 +248,7 @@ describe('compiler: transform v-for', () => {
       )
 
       const itemsOffset = source.indexOf('items')
-      expect(forNode.source.content).toBe('items')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('items')
       expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
       expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
@@ -273,7 +273,7 @@ describe('compiler: transform v-for', () => {
       )
 
       const itemsOffset = source.indexOf('items')
-      expect(forNode.source.content).toBe('items')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('items')
       expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
       expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
@@ -318,7 +318,7 @@ describe('compiler: transform v-for', () => {
       )
 
       const itemsOffset = source.indexOf('items')
-      expect(forNode.source.content).toBe('items')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('items')
       expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
       expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)
@@ -353,7 +353,7 @@ describe('compiler: transform v-for', () => {
       )
 
       const itemsOffset = source.indexOf('items')
-      expect(forNode.source.content).toBe('items')
+      expect((forNode.source as SimpleExpressionNode).content).toBe('items')
       expect(forNode.source.loc.start.offset).toBe(itemsOffset)
       expect(forNode.source.loc.start.line).toBe(1)
       expect(forNode.source.loc.start.column).toBe(itemsOffset + 1)

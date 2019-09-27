@@ -42,6 +42,7 @@ export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
 export { toString } from './helpers/toString'
 export { toHandlers } from './helpers/toHandlers'
+export { capitalize, camelize } from '@vue/shared'
 
 // Internal, for integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

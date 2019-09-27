@@ -7,8 +7,9 @@ import {
   DirectiveNode,
   Property,
   ExpressionNode,
-  createExpression,
-  JSChildNode
+  createSimpleExpression,
+  JSChildNode,
+  SimpleExpressionNode
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -63,8 +64,8 @@ export interface TransformContext extends Required<TransformOptions> {
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
   onNodeRemoved: () => void
-  addIdentifier(exp: ExpressionNode): void
-  removeIdentifier(exp: ExpressionNode): void
+  addIdentifier(exp: SimpleExpressionNode): void
+  removeIdentifier(exp: SimpleExpressionNode): void
   hoist(exp: JSChildNode): ExpressionNode
 }
 
@@ -138,7 +139,7 @@ function createTransformContext(
     },
     hoist(exp) {
       context.hoists.push(exp)
-      return createExpression(
+      return createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc
@@ -205,11 +206,9 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
       // comment nodes with `createVNode`
       context.helper(COMMENT)
       break
-    case NodeTypes.EXPRESSION:
+    case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper
-      if (node.isInterpolation) {
-        context.helper(TO_STRING)
-      }
+      context.helper(TO_STRING)
       break
 
     // for container types, further traverse downwards

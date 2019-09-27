@@ -6,7 +6,8 @@ import {
   NodeTypes,
   ElementNode,
   TextNode,
-  CommentNode
+  CommentNode,
+  SimpleExpressionNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions } from '../../src'
@@ -30,7 +31,9 @@ describe('compiler: transform v-if', () => {
     const node = parseWithIfTransform(`<div v-if="ok"/>`)
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(1)
-    expect(node.branches[0].condition!.content).toBe(`ok`)
+    expect((node.branches[0].condition as SimpleExpressionNode).content).toBe(
+      `ok`
+    )
     expect(node.branches[0].children.length).toBe(1)
     expect(node.branches[0].children[0].type).toBe(NodeTypes.ELEMENT)
     expect((node.branches[0].children[0] as ElementNode).tag).toBe(`div`)
@@ -42,7 +45,9 @@ describe('compiler: transform v-if', () => {
     )
     expect(node.type).toBe(NodeTypes.IF)
     expect(node.branches.length).toBe(1)
-    expect(node.branches[0].condition!.content).toBe(`ok`)
+    expect((node.branches[0].condition as SimpleExpressionNode).content).toBe(
+      `ok`
+    )
     expect(node.branches[0].children.length).toBe(3)
     expect(node.branches[0].children[0].type).toBe(NodeTypes.ELEMENT)
     expect((node.branches[0].children[0] as ElementNode).tag).toBe(`div`)
@@ -58,7 +63,7 @@ describe('compiler: transform v-if', () => {
     expect(node.branches.length).toBe(2)
 
     const b1 = node.branches[0]
-    expect(b1.condition!.content).toBe(`ok`)
+    expect((b1.condition as SimpleExpressionNode).content).toBe(`ok`)
     expect(b1.children.length).toBe(1)
     expect(b1.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b1.children[0] as ElementNode).tag).toBe(`div`)
@@ -76,13 +81,13 @@ describe('compiler: transform v-if', () => {
     expect(node.branches.length).toBe(2)
 
     const b1 = node.branches[0]
-    expect(b1.condition!.content).toBe(`ok`)
+    expect((b1.condition as SimpleExpressionNode).content).toBe(`ok`)
     expect(b1.children.length).toBe(1)
     expect(b1.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b1.children[0] as ElementNode).tag).toBe(`div`)
 
     const b2 = node.branches[1]
-    expect(b2.condition!.content).toBe(`orNot`)
+    expect((b2.condition as SimpleExpressionNode).content).toBe(`orNot`)
     expect(b2.children.length).toBe(1)
     expect(b2.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b2.children[0] as ElementNode).tag).toBe(`p`)
@@ -96,13 +101,13 @@ describe('compiler: transform v-if', () => {
     expect(node.branches.length).toBe(3)
 
     const b1 = node.branches[0]
-    expect(b1.condition!.content).toBe(`ok`)
+    expect((b1.condition as SimpleExpressionNode).content).toBe(`ok`)
     expect(b1.children.length).toBe(1)
     expect(b1.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b1.children[0] as ElementNode).tag).toBe(`div`)
 
     const b2 = node.branches[1]
-    expect(b2.condition!.content).toBe(`orNot`)
+    expect((b2.condition as SimpleExpressionNode).content).toBe(`orNot`)
     expect(b2.children.length).toBe(1)
     expect(b2.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b2.children[0] as ElementNode).tag).toBe(`p`)
@@ -126,13 +131,13 @@ describe('compiler: transform v-if', () => {
     expect(node.branches.length).toBe(3)
 
     const b1 = node.branches[0]
-    expect(b1.condition!.content).toBe(`ok`)
+    expect((b1.condition as SimpleExpressionNode).content).toBe(`ok`)
     expect(b1.children.length).toBe(1)
     expect(b1.children[0].type).toBe(NodeTypes.ELEMENT)
     expect((b1.children[0] as ElementNode).tag).toBe(`div`)
 
     const b2 = node.branches[1]
-    expect(b2.condition!.content).toBe(`orNot`)
+    expect((b2.condition as SimpleExpressionNode).content).toBe(`orNot`)
     expect(b2.children.length).toBe(2)
     expect(b2.children[0].type).toBe(NodeTypes.COMMENT)
     expect((b2.children[0] as CommentNode).content).toBe(`foo`)
