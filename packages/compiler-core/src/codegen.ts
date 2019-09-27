@@ -12,7 +12,9 @@ import {
   CallExpression,
   ArrayExpression,
   ObjectExpression,
-  IfBranchNode
+  IfBranchNode,
+  SourceLocation,
+  Position
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -67,6 +69,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   map?: SourceMapGenerator
   helper(name: string): string
   push(code: string, node?: CodegenNode, openOnly?: boolean): void
+  resetMapping(loc: SourceLocation): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -104,7 +107,7 @@ function createCodegenContext(
     },
     push(code, node, openOnly) {
       context.code += code
-      if (context.map) {
+      if (!__BROWSER__ && context.map) {
         if (node) {
           let name
           if (
@@ -117,33 +120,17 @@ function createCodegenContext(
               name = content
             }
           }
-          context.map.addMapping({
-            name,
-            source: context.filename,
-            original: {
-              line: node.loc.start.line,
-              column: node.loc.start.column - 1 // source-map column is 0 based
-            },
-            generated: {
-              line: context.line,
-              column: context.column - 1
-            }
-          })
+          addMapping(node.loc.start, name)
         }
-        if (code) advancePositionWithMutation(context, code)
+        advancePositionWithMutation(context, code)
         if (node && !openOnly) {
-          context.map.addMapping({
-            source: context.filename,
-            original: {
-              line: node.loc.end.line,
-              column: node.loc.end.column - 1
-            },
-            generated: {
-              line: context.line,
-              column: context.column - 1
-            }
-          })
+          addMapping(node.loc.end)
         }
+      }
+    },
+    resetMapping(loc: SourceLocation) {
+      if (!__BROWSER__ && context.map) {
+        addMapping(loc.start)
       }
     },
     indent() {
@@ -160,7 +147,26 @@ function createCodegenContext(
       newline(context.indentLevel)
     }
   }
-  const newline = (n: number) => context.push('\n' + `  `.repeat(n))
+
+  function newline(n: number) {
+    context.push('\n' + `  `.repeat(n))
+  }
+
+  function addMapping(loc: Position, name?: string) {
+    context.map!.addMapping({
+      name,
+      source: context.filename,
+      original: {
+        line: loc.line,
+        column: loc.column - 1 // source-map column is 0 based
+      },
+      generated: {
+        line: context.line,
+        column: context.column - 1
+      }
+    })
+  }
+
   if (!__BROWSER__ && context.map) {
     context.map.setSourceContent(filename, context.source)
   }
@@ -512,14 +518,14 @@ function genCallExpression(
 }
 
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
-  const { push, indent, deindent, newline } = context
+  const { push, indent, deindent, newline, resetMapping } = context
   const { properties } = node
   const multilines = properties.length > 1
   push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
     const { key, value, loc } = properties[i]
-    push('', { loc } as any, true) // resets source mapping for every property.
+    resetMapping(loc) // reset source mapping for every property.
     // key
     genExpressionAsPropertyKey(key, context)
     push(`: `)
