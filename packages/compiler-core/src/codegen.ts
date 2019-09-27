@@ -130,7 +130,7 @@ function createCodegenContext(
             }
           })
         }
-        advancePositionWithMutation(context, code)
+        if (code) advancePositionWithMutation(context, code)
         if (node && !openOnly) {
           context.map.addMapping({
             source: context.filename,
@@ -518,7 +518,8 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
-    const { key, value } = properties[i]
+    const { key, value, loc } = properties[i]
+    push('', { loc } as any, true) // resets source mapping for every property.
     // key
     genExpressionAsPropertyKey(key, context)
     push(`: `)
