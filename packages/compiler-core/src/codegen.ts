@@ -509,14 +509,14 @@ function genFor(node: ForNode, context: CodegenContext) {
   genNode(source, context)
   push(`, (`)
   if (valueAlias) {
-    genExpression(valueAlias, context)
+    genNode(valueAlias, context)
   }
   if (keyAlias) {
     if (!valueAlias) {
       push(`__value`)
     }
     push(`, `)
-    genExpression(keyAlias, context)
+    genNode(keyAlias, context)
   }
   if (objectIndexAlias) {
     if (!keyAlias) {
@@ -527,7 +527,7 @@ function genFor(node: ForNode, context: CodegenContext) {
       }
     }
     push(`, `)
-    genExpression(objectIndexAlias, context)
+    genNode(objectIndexAlias, context)
   }
   push(`) => {`)
   indent()

@@ -31,12 +31,9 @@ export const trackSlotScopes: NodeTransform = (node, context) => {
   ) {
     const vSlot = node.props.find(isVSlot)
     if (vSlot && vSlot.exp) {
-      const { identifiers } = vSlot.exp
-      if (identifiers) {
-        identifiers.forEach(context.addIdentifier)
-        return () => {
-          identifiers.forEach(context.removeIdentifier)
-        }
+      context.addIdentifiers(vSlot.exp)
+      return () => {
+        context.removeIdentifiers(vSlot.exp!)
       }
     }
   }

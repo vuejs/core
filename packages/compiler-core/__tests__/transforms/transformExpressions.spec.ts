@@ -4,13 +4,11 @@ import {
   ElementNode,
   DirectiveNode,
   NodeTypes,
-  ForNode,
   CompilerOptions,
   IfNode,
   InterpolationNode
 } from '../../src'
 import { transformIf } from '../../src/transforms/vIf'
-import { transformFor } from '../../src/transforms/vFor'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithExpressionTransform(
@@ -20,7 +18,7 @@ function parseWithExpressionTransform(
   const ast = parse(template)
   transform(ast, {
     prefixIdentifiers: true,
-    nodeTransforms: [transformIf, transformFor, transformExpression],
+    nodeTransforms: [transformIf, transformExpression],
     ...options
   })
   return ast.children[0]
@@ -169,103 +167,6 @@ describe('compiler: expression transform', () => {
     })
   })
 
-  test('should prefix v-for source', () => {
-    const node = parseWithExpressionTransform(
-      `<div v-for="i in list"/>`
-    ) as ForNode
-    expect(node.source).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_ctx.list`
-    })
-  })
-
-  test('should prefix v-for source w/ complex expression', () => {
-    const node = parseWithExpressionTransform(
-      `<div v-for="i in list.concat([foo])"/>`
-    ) as ForNode
-    expect(node.source).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        { content: `_ctx.list` },
-        `.`,
-        { content: `concat` },
-        `([`,
-        { content: `_ctx.foo` },
-        `])`
-      ]
-    })
-  })
-
-  test('should not prefix v-for alias', () => {
-    const node = parseWithExpressionTransform(
-      `<div v-for="i in list">{{ i }}{{ j }}</div>`
-    ) as ForNode
-    const div = node.children[0] as ElementNode
-    expect((div.children[0] as InterpolationNode).content).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `i`
-    })
-    expect((div.children[1] as InterpolationNode).content).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_ctx.j`
-    })
-  })
-
-  test('should not prefix v-for aliases (multiple)', () => {
-    const node = parseWithExpressionTransform(
-      `<div v-for="(i, j, k) in list">{{ i + j + k }}{{ l }}</div>`
-    ) as ForNode
-    const div = node.children[0] as ElementNode
-    expect((div.children[0] as InterpolationNode).content).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        { content: `i` },
-        ` + `,
-        { content: `j` },
-        ` + `,
-        { content: `k` }
-      ]
-    })
-    expect((div.children[1] as InterpolationNode).content).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_ctx.l`
-    })
-  })
-
-  test('should prefix id outside of v-for', () => {
-    const node = parseWithExpressionTransform(
-      `<div><div v-for="i in list" />{{ i }}</div>`
-    ) as ElementNode
-    expect((node.children[1] as InterpolationNode).content).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_ctx.i`
-    })
-  })
-
-  test('nested v-for', () => {
-    const node = parseWithExpressionTransform(
-      `<div v-for="i in list">
-        <div v-for="i in list">{{ i + j }}</div>{{ i }}
-      </div>`
-    ) as ForNode
-    const outerDiv = node.children[0] as ElementNode
-    const innerFor = outerDiv.children[0] as ForNode
-    const innerExp = (innerFor.children[0] as ElementNode)
-      .children[0] as InterpolationNode
-    expect(innerExp.content).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [{ content: 'i' }, ` + `, { content: `_ctx.j` }]
-    })
-
-    // when an inner v-for shadows a variable of an outer v-for and exit,
-    // it should not cause the outer v-for's alias to be removed from known ids
-    const outerExp = outerDiv.children[1] as InterpolationNode
-    expect(outerExp.content).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `i`
-    })
-  })
-
   test('should not prefix whitelisted globals', () => {
     const node = parseWithExpressionTransform(
       `{{ Math.max(1, 2) }}`
@@ -334,7 +235,9 @@ describe('compiler: expression transform', () => {
     expect(node.content).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
-        `({ foo }) => `,
+        `({ `,
+        { content: `foo` },
+        ` }) => `,
         { content: `foo` },
         ` + `,
         { content: `_ctx.bar` }

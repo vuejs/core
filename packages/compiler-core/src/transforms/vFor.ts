@@ -39,19 +39,20 @@ export const transformFor = createStructuralDirectiveTransform(
           children: [node]
         })
 
-        // scope management
-        const { addIdentifier, removeIdentifier } = context
+        if (!__BROWSER__) {
+          // scope management
+          const { addIdentifiers, removeIdentifiers } = context
 
-        // inject identifiers to context
-        value && addIdentifier(value.content)
-        key && addIdentifier(key.content)
-        index && addIdentifier(index.content)
+          // inject identifiers to context
+          value && addIdentifiers(value)
+          key && addIdentifiers(key)
+          index && addIdentifiers(index)
 
-        return () => {
-          // remove injected identifiers on exit
-          value && removeIdentifier(value.content)
-          key && removeIdentifier(key.content)
-          index && removeIdentifier(index.content)
+          return () => {
+            value && removeIdentifiers(value)
+            key && removeIdentifiers(key)
+            index && removeIdentifiers(index)
+          }
         }
       } else {
         context.onError(
@@ -67,14 +68,16 @@ export const transformFor = createStructuralDirectiveTransform(
 )
 
 const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+// This regex doesn't cover the case if key or index aliases have destructuring,
+// but those do not make sense in the first place, so this works in practice.
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
 interface ForParseResult {
   source: ExpressionNode
-  value: SimpleExpressionNode | undefined
-  key: SimpleExpressionNode | undefined
-  index: SimpleExpressionNode | undefined
+  value: ExpressionNode | undefined
+  key: ExpressionNode | undefined
+  index: ExpressionNode | undefined
 }
 
 function parseForExpression(
@@ -88,20 +91,21 @@ function parseForExpression(
 
   const [, LHS, RHS] = inMatch
 
-  let source: ExpressionNode = createAliasExpression(
-    loc,
-    RHS.trim(),
-    exp.indexOf(RHS, LHS.length)
-  )
-  if (!__BROWSER__ && context.prefixIdentifiers) {
-    source = processExpression(source, context)
-  }
-
   const result: ForParseResult = {
-    source,
+    source: createAliasExpression(
+      loc,
+      RHS.trim(),
+      exp.indexOf(RHS, LHS.length)
+    ),
     value: undefined,
     key: undefined,
     index: undefined
+  }
+  if (!__BROWSER__ && context.prefixIdentifiers) {
+    result.source = processExpression(
+      result.source as SimpleExpressionNode,
+      context
+    )
   }
 
   let valueContent = LHS.trim()
@@ -118,6 +122,9 @@ function parseForExpression(
     if (keyContent) {
       keyOffset = exp.indexOf(keyContent, trimmedOffset + valueContent.length)
       result.key = createAliasExpression(loc, keyContent, keyOffset)
+      if (!__BROWSER__ && context.prefixIdentifiers) {
+        result.key = processExpression(result.key, context, true)
+      }
     }
 
     if (iteratorMatch[2]) {
@@ -134,12 +141,18 @@ function parseForExpression(
               : trimmedOffset + valueContent.length
           )
         )
+        if (!__BROWSER__ && context.prefixIdentifiers) {
+          result.index = processExpression(result.index, context, true)
+        }
       }
     }
   }
 
   if (valueContent) {
     result.value = createAliasExpression(loc, valueContent, trimmedOffset)
+    if (!__BROWSER__ && context.prefixIdentifiers) {
+      result.value = processExpression(result.value, context, true)
+    }
   }
 
   return result

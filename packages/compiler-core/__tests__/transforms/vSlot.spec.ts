@@ -83,9 +83,8 @@ describe('compiler: transform component slots', () => {
         default: {
           type: NodeTypes.JS_SLOT_FUNCTION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ foo }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
           },
           returns: [
             {
@@ -266,9 +265,8 @@ describe('compiler: transform component slots', () => {
                     default: {
                       type: NodeTypes.JS_SLOT_FUNCTION,
                       params: {
-                        type: NodeTypes.SIMPLE_EXPRESSION,
-                        content: `{ bar }`,
-                        isStatic: false
+                        type: NodeTypes.COMPOUND_EXPRESSION,
+                        children: [`{ `, { content: `bar` }, ` }`]
                       },
                       returns: [
                         {

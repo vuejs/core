@@ -67,6 +67,8 @@ interface PrefixMeta {
 export function processExpression(
   node: SimpleExpressionNode,
   context: TransformContext,
+  // some expressions like v-slot props & v-for aliases should be parsed as
+  // function params
   asParams: boolean = false
 ): ExpressionNode {
   if (!context.prefixIdentifiers) {
@@ -75,7 +77,7 @@ export function processExpression(
 
   // fast path if expression is a simple identifier.
   if (isSimpleIdentifier(node.content)) {
-    if (!context.identifiers[node.content]) {
+    if (!asParams && !context.identifiers[node.content]) {
       node.content = `_ctx.${node.content}`
     }
     return node
@@ -107,17 +109,14 @@ export function processExpression(
       if (node.type === 'Identifier') {
         if (!ids.includes(node)) {
           if (!knownIds[node.name] && shouldPrefix(node, parent)) {
-            if (
-              isPropertyKey(node, parent) &&
-              (parent as Property).value === node
-            ) {
+            if (isPropertyShorthand(node, parent)) {
               // property shorthand like { foo }, we need to add the key since we
               // rewrite the value
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
             ids.push(node)
-          } else if (!isPropertyKey(node, parent)) {
+          } else if (!isStaticPropertyKey(node, parent)) {
             // also generate sub-expressioms for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
@@ -131,9 +130,11 @@ export function processExpression(
             enter(child, parent) {
               if (
                 child.type === 'Identifier' &&
-                !// do not keep as scope variable if this is a default value
-                // assignment of a param
-                (
+                // do not record as scope variable if is a destrcuture key
+                !isStaticPropertyKey(child, parent) &&
+                // do not record if this is a default value
+                // assignment of a destructured variable
+                !(
                   parent &&
                   parent.type === 'AssignmentPattern' &&
                   parent.right === child
@@ -213,7 +214,16 @@ const isFunction = (node: Node): node is Function =>
   /Function(Expression|Declaration)$/.test(node.type)
 
 const isPropertyKey = (node: Node, parent: Node) =>
-  parent.type === 'Property' && parent.key === node && !parent.computed
+  parent &&
+  parent.type === 'Property' &&
+  parent.key === node &&
+  !parent.computed
+
+const isPropertyShorthand = (node: Node, parent: Node) =>
+  isPropertyKey(node, parent) && (parent as Property).value === node
+
+const isStaticPropertyKey = (node: Node, parent: Node) =>
+  isPropertyKey(node, parent) && (parent as Property).value !== node
 
 const globals = new Set(
   (
@@ -236,11 +246,7 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
         parent.params.includes(identifier))
     ) &&
     // not a key of Property
-    !(
-      isPropertyKey(identifier, parent) &&
-      // shorthand keys should be prefixed
-      !((parent as Property).value === identifier)
-    ) &&
+    !isStaticPropertyKey(identifier, parent) &&
     // not a property of a MemberExpression
     !(
       parent.type === 'MemberExpression' &&

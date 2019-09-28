@@ -63,8 +63,8 @@ export interface TransformContext extends Required<TransformOptions> {
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
   onNodeRemoved: () => void
-  addIdentifier(id: string): void
-  removeIdentifier(id: string): void
+  addIdentifiers(exp: ExpressionNode): void
+  removeIdentifiers(exp: ExpressionNode): void
   hoist(exp: JSChildNode): ExpressionNode
 }
 
@@ -126,15 +126,24 @@ function createTransformContext(
       context.parent.children.splice(removalIndex, 1)
     },
     onNodeRemoved: () => {},
-    addIdentifier(id) {
-      const { identifiers } = context
-      if (identifiers[id] === undefined) {
-        identifiers[id] = 0
+    addIdentifiers(exp) {
+      // identifier tracking only happens in non-browser builds.
+      if (!__BROWSER__) {
+        if (exp.identifiers) {
+          exp.identifiers.forEach(addId)
+        } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+          addId(exp.content)
+        }
       }
-      ;(identifiers[id] as number)++
     },
-    removeIdentifier(id) {
-      ;(context.identifiers[id] as number)--
+    removeIdentifiers(exp) {
+      if (!__BROWSER__) {
+        if (exp.identifiers) {
+          exp.identifiers.forEach(removeId)
+        } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+          removeId(exp.content)
+        }
+      }
     },
     hoist(exp) {
       context.hoists.push(exp)
@@ -145,6 +154,19 @@ function createTransformContext(
       )
     }
   }
+
+  function addId(id: string) {
+    const { identifiers } = context
+    if (identifiers[id] === undefined) {
+      identifiers[id] = 0
+    }
+    ;(identifiers[id] as number)++
+  }
+
+  function removeId(id: string) {
+    ;(context.identifiers[id] as number)--
+  }
+
   return context
 }
 
