@@ -8,7 +8,9 @@ return function render() {
       id: \\"foo\\",
       [prop]: bar,
       [foo + bar]: bar
-    }, [createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })], [
+    }, [
+      createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
+    ], [
       foo,
       createVNode(\\"p\\")
     ])

@@ -27,7 +27,7 @@ import {
   TO_HANDLERS
 } from '../runtimeConstants'
 import { getInnerRange } from '../utils'
-import { buildSlotOutlet, buildSlots } from './vSlot'
+import { buildSlots } from './vSlot'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
@@ -95,10 +95,7 @@ export const transformElement: NodeTransform = (node, context) => {
       } else {
         node.codegenNode = vnode
       }
-    } else if (node.tagType === ElementTypes.SLOT) {
-      buildSlotOutlet(node, context)
     }
-    // node.tagType can also be TEMPLATE, in which case nothing needs to be done
   }
 }
 

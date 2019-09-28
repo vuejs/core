@@ -43,15 +43,15 @@ export const transformFor = createStructuralDirectiveTransform(
         const { addIdentifier, removeIdentifier } = context
 
         // inject identifiers to context
-        value && addIdentifier(value)
-        key && addIdentifier(key)
-        index && addIdentifier(index)
+        value && addIdentifier(value.content)
+        key && addIdentifier(key.content)
+        index && addIdentifier(index.content)
 
         return () => {
           // remove injected identifiers on exit
-          value && removeIdentifier(value)
-          key && removeIdentifier(key)
-          index && removeIdentifier(index)
+          value && removeIdentifier(value.content)
+          key && removeIdentifier(key.content)
+          index && removeIdentifier(index.content)
         }
       } else {
         context.onError(

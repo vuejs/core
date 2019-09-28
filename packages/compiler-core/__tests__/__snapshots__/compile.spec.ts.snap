@@ -14,7 +14,9 @@ return function render() {
         ? _createVNode(\\"div\\", 0, \\"yes\\")
         : \\"no\\",
       _renderList(list, (value, index) => {
-        return _createVNode(\\"div\\", 0, [_createVNode(\\"span\\", 0, _toString(value + index))])
+        return _createVNode(\\"div\\", 0, [
+          _createVNode(\\"span\\", 0, _toString(value + index))
+        ])
       })
     ])
   }
@@ -35,7 +37,9 @@ return function render() {
       ? createVNode(\\"div\\", 0, \\"yes\\")
       : \\"no\\",
     renderList(_ctx.list, (value, index) => {
-      return createVNode(\\"div\\", 0, [createVNode(\\"span\\", 0, toString(value + index))])
+      return createVNode(\\"div\\", 0, [
+        createVNode(\\"span\\", 0, toString(value + index))
+      ])
     })
   ])
 }"
@@ -55,7 +59,9 @@ export default function render() {
       ? createVNode(\\"div\\", 0, \\"yes\\")
       : \\"no\\",
     _renderList(_ctx.list, (value, index) => {
-      return createVNode(\\"div\\", 0, [createVNode(\\"span\\", 0, _toString(value + index))])
+      return createVNode(\\"div\\", 0, [
+        createVNode(\\"span\\", 0, _toString(value + index))
+      ])
     })
   ])
 }"

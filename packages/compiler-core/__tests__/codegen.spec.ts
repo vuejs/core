@@ -553,7 +553,9 @@ describe('compiler: codegen', () => {
       id: "foo",
       [prop]: bar,
       [foo + bar]: bar
-    }, [${CREATE_VNODE}("p", { "some-key": "foo" })], [
+    }, [
+      ${CREATE_VNODE}("p", { "some-key": "foo" })
+    ], [
       foo,
       ${CREATE_VNODE}("p")
     ])`)

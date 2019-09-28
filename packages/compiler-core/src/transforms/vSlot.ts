@@ -3,10 +3,6 @@ import {
   ObjectExpression,
   createObjectExpression,
   NodeTypes,
-  createCompoundExpression,
-  createCallExpression,
-  CompoundExpressionNode,
-  CallExpression,
   createObjectProperty,
   createSimpleExpression,
   createFunctionExpression,
@@ -17,16 +13,37 @@ import {
   ChildNode,
   SourceLocation
 } from '../ast'
-import { TransformContext } from '../transform'
-import { buildProps } from './transformElement'
+import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { isSimpleIdentifier } from '../utils'
-import { RENDER_SLOT } from '../runtimeConstants'
 import { isString } from '@vue/shared'
 
 const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
   p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
 
+// A NodeTransform that tracks scope identifiers for scoped slots so that they
+// don't get prefixed by transformExpression. This transform is only applied
+// in non-browser builds with { prefixIdentifiers: true }
+export const trackSlotScopes: NodeTransform = (node, context) => {
+  if (
+    node.type === NodeTypes.ELEMENT &&
+    (node.tagType === ElementTypes.COMPONENT ||
+      node.tagType === ElementTypes.TEMPLATE)
+  ) {
+    const vSlot = node.props.find(isVSlot)
+    if (vSlot && vSlot.exp) {
+      const { identifiers } = vSlot.exp
+      if (identifiers) {
+        identifiers.forEach(context.addIdentifier)
+        return () => {
+          identifiers.forEach(context.removeIdentifier)
+        }
+      }
+    }
+  }
+}
+
+// Instead of being a DirectiveTransform, v-slot processing is called during
+// transformElement to build the slots object for a component.
 export function buildSlots(
   { props, children, loc }: ElementNode,
   context: TransformContext
@@ -125,89 +142,6 @@ function buildSlot(
       children,
       children.length ? children[0].loc : loc
     ),
-    loc
-  )
-}
-
-export function buildSlotOutlet(node: ElementNode, context: TransformContext) {
-  const { props, children, loc } = node
-  const $slots = context.prefixIdentifiers ? `_ctx.$slots` : `$slots`
-  let slot: string | CompoundExpressionNode = $slots + `.default`
-
-  // check for <slot name="xxx" OR :name="xxx" />
-  let nameIndex: number = -1
-  for (let i = 0; i < props.length; i++) {
-    const prop = props[i]
-    if (prop.type === NodeTypes.ATTRIBUTE) {
-      if (prop.name === `name` && prop.value) {
-        // static name="xxx"
-        const name = prop.value.content
-        const accessor = isSimpleIdentifier(name)
-          ? `.${name}`
-          : `[${JSON.stringify(name)}]`
-        slot = `${$slots}${accessor}`
-        nameIndex = i
-        break
-      }
-    } else if (prop.name === `bind`) {
-      const { arg, exp } = prop
-      if (
-        arg &&
-        exp &&
-        arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-        arg.isStatic &&
-        arg.content === `name`
-      ) {
-        // dynamic :name="xxx"
-        slot = createCompoundExpression(
-          [
-            $slots + `[`,
-            ...(exp.type === NodeTypes.SIMPLE_EXPRESSION
-              ? [exp]
-              : exp.children),
-            `]`
-          ],
-          loc
-        )
-        nameIndex = i
-        break
-      }
-    }
-  }
-
-  const slotArgs: CallExpression['arguments'] = [slot]
-  const propsWithoutName =
-    nameIndex > -1
-      ? props.slice(0, nameIndex).concat(props.slice(nameIndex + 1))
-      : props
-  const hasProps = propsWithoutName.length
-  if (hasProps) {
-    const { props: propsExpression, directives } = buildProps(
-      propsWithoutName,
-      loc,
-      context
-    )
-    if (directives.length) {
-      context.onError(
-        createCompilerError(
-          ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-          directives[0].loc
-        )
-      )
-    }
-    slotArgs.push(propsExpression)
-  }
-
-  if (children.length) {
-    if (!hasProps) {
-      slotArgs.push(`{}`)
-    }
-    slotArgs.push(children)
-  }
-
-  node.codegenNode = createCallExpression(
-    context.helper(RENDER_SLOT),
-    slotArgs,
     loc
   )
 }

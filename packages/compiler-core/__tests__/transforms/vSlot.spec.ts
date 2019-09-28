@@ -1,23 +1,17 @@
-import {
-  CompilerOptions,
-  parse,
-  transform,
-  ElementNode,
-  NodeTypes,
-  generate
-} from '../../src'
+import { CompilerOptions, parse, transform, generate } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformExpression } from '../../src/transforms/transformExpression'
-import { RENDER_SLOT } from '../../src/runtimeConstants'
+import { trackSlotScopes } from '../../src/transforms/vSlot'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
-      ...(options.prefixIdentifiers ? [transformExpression] : []),
-      // slot transform is part of transformElement
+      ...(options.prefixIdentifiers
+        ? [transformExpression, trackSlotScopes]
+        : []),
       transformElement
     ],
     directiveTransforms: {
@@ -29,302 +23,19 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
   return ast
 }
 
-describe('compiler: transform slots', () => {
-  test('default slot outlet', () => {
-    const ast = parseWithSlots(`<slot/>`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [`$slots.default`]
-    })
-  })
-
-  test('statically named slot outlet', () => {
-    const ast = parseWithSlots(`<slot name="foo" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [`$slots.foo`]
-    })
-  })
-
-  test('statically named slot outlet w/ name that needs quotes', () => {
-    const ast = parseWithSlots(`<slot name="foo-bar" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [`$slots["foo-bar"]`]
-    })
-  })
-
-  test('dynamically named slot outlet', () => {
-    const ast = parseWithSlots(`<slot :name="foo" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        {
-          type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [
-            `$slots[`,
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `foo`,
-              isStatic: false
-            },
-            `]`
-          ]
-        }
-      ]
-    })
-  })
-
-  test('dynamically named slot outlet w/ prefixIdentifiers: true', () => {
-    const ast = parseWithSlots(`<slot :name="foo + bar" />`, {
-      prefixIdentifiers: true
-    })
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: RENDER_SLOT,
-      arguments: [
-        {
-          type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [
-            `_ctx.$slots[`,
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_ctx.foo`,
-              isStatic: false
-            },
-            ` + `,
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_ctx.bar`,
-              isStatic: false
-            },
-            `]`
-          ]
-        }
-      ]
-    })
-  })
-
-  test('default slot outlet with props', () => {
-    const ast = parseWithSlots(`<slot foo="bar" :baz="qux" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.default`,
-        {
-          type: NodeTypes.JS_OBJECT_EXPRESSION,
-          properties: [
-            {
-              key: {
-                content: `foo`,
-                isStatic: true
-              },
-              value: {
-                content: `bar`,
-                isStatic: true
-              }
-            },
-            {
-              key: {
-                content: `baz`,
-                isStatic: true
-              },
-              value: {
-                content: `qux`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
-    })
-  })
-
-  test('statically named slot outlet with props', () => {
-    const ast = parseWithSlots(`<slot name="foo" foo="bar" :baz="qux" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.foo`,
-        {
-          type: NodeTypes.JS_OBJECT_EXPRESSION,
-          // props should not include name
-          properties: [
-            {
-              key: {
-                content: `foo`,
-                isStatic: true
-              },
-              value: {
-                content: `bar`,
-                isStatic: true
-              }
-            },
-            {
-              key: {
-                content: `baz`,
-                isStatic: true
-              },
-              value: {
-                content: `qux`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
-    })
-  })
-
-  test('dynamically named slot outlet with props', () => {
-    const ast = parseWithSlots(`<slot :name="foo" foo="bar" :baz="qux" />`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        {
-          type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$slots[`, { content: `foo` }, `]`]
-        },
-        {
-          type: NodeTypes.JS_OBJECT_EXPRESSION,
-          // props should not include name
-          properties: [
-            {
-              key: {
-                content: `foo`,
-                isStatic: true
-              },
-              value: {
-                content: `bar`,
-                isStatic: true
-              }
-            },
-            {
-              key: {
-                content: `baz`,
-                isStatic: true
-              },
-              value: {
-                content: `qux`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
-    })
-  })
-
-  test('default slot outlet with fallback', () => {
-    const ast = parseWithSlots(`<slot><div/></slot>`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.default`,
-        `{}`,
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
-      ]
-    })
-  })
-
-  test('named slot outlet with fallback', () => {
-    const ast = parseWithSlots(`<slot name="foo"><div/></slot>`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.foo`,
-        `{}`,
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
-      ]
-    })
-  })
-
-  test('default slot outlet with props & fallback', () => {
-    const ast = parseWithSlots(`<slot :foo="bar"><div/></slot>`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.default`,
-        {
-          type: NodeTypes.JS_OBJECT_EXPRESSION,
-          properties: [
-            {
-              key: {
-                content: `foo`,
-                isStatic: true
-              },
-              value: {
-                content: `bar`,
-                isStatic: false
-              }
-            }
-          ]
-        },
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
-      ]
-    })
-  })
-
-  test('named slot outlet with props & fallback', () => {
-    const ast = parseWithSlots(`<slot name="foo" :foo="bar"><div/></slot>`)
-    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${RENDER_SLOT}`,
-      arguments: [
-        `$slots.foo`,
-        {
-          type: NodeTypes.JS_OBJECT_EXPRESSION,
-          properties: [
-            {
-              key: {
-                content: `foo`,
-                isStatic: true
-              },
-              value: {
-                content: `bar`,
-                isStatic: false
-              }
-            }
-          ]
-        },
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            tag: `div`
-          }
-        ]
-      ]
-    })
-  })
-
+describe('compiler: transform component slots', () => {
   test('generate slot', () => {
-    const ast = parseWithSlots(`<Comp><div/></Comp>`)
-    const { code } = generate(ast)
+    const ast = parseWithSlots(
+      `
+<Comp>
+  <Comp v-slot="{ dur }">
+    hello {{ dur }}
+  </Comp>
+</Comp>
+`,
+      { prefixIdentifiers: true }
+    )
+    const { code } = generate(ast, { prefixIdentifiers: true })
     console.log(code)
   })
 })

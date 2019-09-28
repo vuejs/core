@@ -8,8 +8,7 @@ import {
   Property,
   ExpressionNode,
   createSimpleExpression,
-  JSChildNode,
-  SimpleExpressionNode
+  JSChildNode
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -64,8 +63,8 @@ export interface TransformContext extends Required<TransformOptions> {
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
   onNodeRemoved: () => void
-  addIdentifier(exp: SimpleExpressionNode): void
-  removeIdentifier(exp: SimpleExpressionNode): void
+  addIdentifier(id: string): void
+  removeIdentifier(id: string): void
   hoist(exp: JSChildNode): ExpressionNode
 }
 
@@ -127,15 +126,15 @@ function createTransformContext(
       context.parent.children.splice(removalIndex, 1)
     },
     onNodeRemoved: () => {},
-    addIdentifier({ content }) {
+    addIdentifier(id) {
       const { identifiers } = context
-      if (identifiers[content] === undefined) {
-        identifiers[content] = 0
+      if (identifiers[id] === undefined) {
+        identifiers[id] = 0
       }
-      ;(identifiers[content] as number)++
+      ;(identifiers[id] as number)++
     },
-    removeIdentifier({ content }) {
-      ;(context.identifiers[content] as number)--
+    removeIdentifier(id) {
+      ;(context.identifiers[id] as number)--
     },
     hoist(exp) {
       context.hoists.push(exp)

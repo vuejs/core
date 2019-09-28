@@ -5,12 +5,14 @@ import { RootNode } from './ast'
 import { isString } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
+import { transformExpression } from './transforms/transformExpression'
+import { transformStyle } from './transforms/transformStyle'
+import { transformSlotOutlet } from './transforms/transfromSlotOutlet'
 import { transformElement } from './transforms/transformElement'
 import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
-import { transformExpression } from './transforms/transformExpression'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
-import { transformStyle } from './transforms/transformStyle'
+import { trackSlotScopes } from './transforms/vSlot'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -41,8 +43,9 @@ export function baseCompile(
     nodeTransforms: [
       transformIf,
       transformFor,
-      ...(prefixIdentifiers ? [transformExpression] : []),
+      ...(prefixIdentifiers ? [transformExpression, trackSlotScopes] : []),
       transformStyle,
+      transformSlotOutlet,
       transformElement,
       ...(options.nodeTransforms || []) // user transforms
     ],

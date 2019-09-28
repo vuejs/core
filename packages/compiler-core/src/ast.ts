@@ -117,6 +117,9 @@ export interface SimpleExpressionNode extends Node {
   type: NodeTypes.SIMPLE_EXPRESSION
   content: string
   isStatic: boolean
+  // an expression parsed as the params of a function will track
+  // the identifiers declared inside the function body.
+  identifiers?: string[]
 }
 
 export interface InterpolationNode extends Node {
@@ -128,6 +131,9 @@ export interface InterpolationNode extends Node {
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
   children: (SimpleExpressionNode | string)[]
+  // an expression parsed as the params of a function will track
+  // the identifiers declared inside the function body.
+  identifiers?: string[]
 }
 
 export interface IfNode extends Node {

@@ -87,12 +87,12 @@ export function processExpression(
     _parseScript || (_parseScript = require('meriyah').parseScript)
   const walk = _walk || (_walk = require('estree-walker').walk)
 
-  let ast
+  let ast: any
   // if the expression is supposed to be used in a function params position
   // we need to parse it differently.
   const source = `(${node.content})${asParams ? `=>{}` : ``}`
   try {
-    ast = parseScript(source, { ranges: true }) as any
+    ast = parseScript(source, { ranges: true })
   } catch (e) {
     context.onError(e)
     return node
@@ -139,11 +139,22 @@ export function processExpression(
                   parent.right === child
                 )
               ) {
-                knownIds[child.name] = true
+                const { name } = child
+                if (
+                  (node as any)._scopeIds &&
+                  (node as any)._scopeIds.has(name)
+                ) {
+                  return
+                }
+                if (name in knownIds) {
+                  knownIds[name]++
+                } else {
+                  knownIds[name] = 1
+                }
                 ;(
                   (node as any)._scopeIds ||
                   ((node as any)._scopeIds = new Set())
-                ).add(child.name)
+                ).add(name)
               }
             }
           })
@@ -151,9 +162,12 @@ export function processExpression(
       }
     },
     leave(node: any) {
-      if (node._scopeIds) {
+      if (node !== ast.body[0].expression && node._scopeIds) {
         node._scopeIds.forEach((id: string) => {
-          delete knownIds[id]
+          knownIds[id]--
+          if (knownIds[id] === 0) {
+            delete knownIds[id]
+          }
         })
       }
     }
@@ -185,11 +199,14 @@ export function processExpression(
     }
   })
 
+  let ret
   if (children.length) {
-    return createCompoundExpression(children, node.loc)
+    ret = createCompoundExpression(children, node.loc)
   } else {
-    return node
+    ret = node
   }
+  ret.identifiers = Object.keys(knownIds)
+  return ret
 }
 
 const isFunction = (node: Node): node is Function =>
