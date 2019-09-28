@@ -384,6 +384,11 @@ function parseTag(
   const props = []
   const ns = context.options.getNamespace(tag, parent)
 
+  let tagType = ElementTypes.ELEMENT
+  if (tag === 'slot') tagType = ElementTypes.SLOT
+  else if (tag === 'template') tagType = ElementTypes.TEMPLATE
+  else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
+
   advanceBy(context, match[0].length)
   advanceSpaces(context)
 
@@ -426,12 +431,6 @@ function parseTag(
     }
     advanceBy(context, isSelfClosing ? 2 : 1)
   }
-
-  let tagType = ElementTypes.ELEMENT
-
-  if (tag === 'slot') tagType = ElementTypes.SLOT
-  else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-  else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
 
   return {
     type: NodeTypes.ELEMENT,

@@ -64,7 +64,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       nameIndex > -1
         ? props.slice(0, nameIndex).concat(props.slice(nameIndex + 1))
         : props
-    const hasProps = propsWithoutName.length
+    let hasProps = propsWithoutName.length > 0
     if (hasProps) {
       const { props: propsExpression, directives } = buildProps(
         propsWithoutName,
@@ -79,7 +79,11 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
           )
         )
       }
-      slotArgs.push(propsExpression)
+      if (propsExpression) {
+        slotArgs.push(propsExpression)
+      } else {
+        hasProps = false
+      }
     }
 
     if (children.length) {

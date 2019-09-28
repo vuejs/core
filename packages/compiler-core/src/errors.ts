@@ -73,6 +73,7 @@ export const enum ErrorCodes {
   X_MIXED_SLOT_USAGE,
   X_DUPLICATE_SLOT_NAMES,
   X_EXTRANEOUS_NON_SLOT_CHILDREN,
+  X_MISPLACED_V_SLOT,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -155,6 +156,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN]:
     `Extraneous children found when component has explicit slots. ` +
     `These children will be ignored.`,
+  [ErrorCodes.X_MISPLACED_V_SLOT]: `v-slot can only be used on components or <template> tags.`,
+
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`

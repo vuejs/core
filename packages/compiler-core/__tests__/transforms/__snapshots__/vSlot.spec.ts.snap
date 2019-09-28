@@ -1,0 +1,97 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: transform component slots dynamically named slots 1`] = `
+"const { resolveComponent, createVNode, toString } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return createVNode(_component_Comp, 0, {
+    [_ctx.one]: ({ foo }) => [
+      toString(foo),
+      toString(_ctx.bar)
+    ],
+    [_ctx.two]: ({ bar }) => [
+      toString(_ctx.foo),
+      toString(bar)
+    ]
+  })
+}"
+`;
+
+exports[`compiler: transform component slots explicit default slot 1`] = `
+"const { resolveComponent, createVNode, toString } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return createVNode(_component_Comp, 0, {
+    default: ({ foo }) => [
+      toString(foo),
+      toString(_ctx.bar)
+    ]
+  })
+}"
+`;
+
+exports[`compiler: transform component slots implicit default slot 1`] = `
+"const { resolveComponent, createVNode } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return createVNode(_component_Comp, 0, {
+    default: () => [
+      createVNode(\\"div\\")
+    ]
+  })
+}"
+`;
+
+exports[`compiler: transform component slots named slots 1`] = `
+"const { resolveComponent, createVNode, toString } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return createVNode(_component_Comp, 0, {
+    one: ({ foo }) => [
+      toString(foo),
+      toString(_ctx.bar)
+    ],
+    two: ({ bar }) => [
+      toString(_ctx.foo),
+      toString(bar)
+    ]
+  })
+}"
+`;
+
+exports[`compiler: transform component slots nested slots scoping 1`] = `
+"const { resolveComponent, createVNode, toString } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  const _component_Inner = resolveComponent(\\"Inner\\")
+  
+  return createVNode(_component_Comp, 0, {
+    default: ({ foo }) => [
+      createVNode(_component_Inner, 0, {
+        default: ({ bar }) => [
+          toString(foo),
+          toString(bar),
+          toString(_ctx.baz)
+        ]
+      }),
+      toString(foo),
+      toString(_ctx.bar),
+      toString(_ctx.baz)
+    ]
+  })
+}"
+`;

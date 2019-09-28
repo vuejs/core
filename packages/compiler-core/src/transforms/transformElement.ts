@@ -39,7 +39,7 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.COMPONENT
     ) {
       const isComponent = node.tagType === ElementTypes.COMPONENT
-      const hasProps = node.props.length > 0
+      let hasProps = node.props.length > 0
       const hasChildren = node.children.length > 0
       let runtimeDirectives: DirectiveNode[] | undefined
       let componentIdentifier: string | undefined
@@ -58,9 +58,18 @@ export const transformElement: NodeTransform = (node, context) => {
       ]
       // props
       if (hasProps) {
-        const { props, directives } = buildProps(node.props, node.loc, context)
-        args.push(props)
+        const { props, directives } = buildProps(
+          node.props,
+          node.loc,
+          context,
+          isComponent
+        )
         runtimeDirectives = directives
+        if (!props) {
+          hasProps = false
+        } else {
+          args.push(props)
+        }
       }
       // children
       if (hasChildren) {
@@ -104,9 +113,10 @@ type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   props: ElementNode['props'],
   elementLoc: SourceLocation,
-  context: TransformContext
+  context: TransformContext,
+  isComponent: boolean = false
 ): {
-  props: PropsExpression
+  props: PropsExpression | undefined
   directives: DirectiveNode[]
 } {
   let isStatic = true
@@ -141,6 +151,11 @@ export function buildProps(
 
       // skip v-slot - it is handled by its dedicated transform.
       if (name === 'slot') {
+        if (!isComponent) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_MISPLACED_V_SLOT, loc)
+          )
+        }
         continue
       }
 
@@ -197,7 +212,7 @@ export function buildProps(
     }
   }
 
-  let propsExpression: PropsExpression
+  let propsExpression: PropsExpression | undefined = undefined
 
   // has v-bind="object" or v-on="object", wrap with mergeProps
   if (mergeArgs.length) {
@@ -216,7 +231,7 @@ export function buildProps(
       // single v-bind with nothing else - no need for a mergeProps call
       propsExpression = mergeArgs[0]
     }
-  } else {
+  } else if (properties.length) {
     propsExpression = createObjectExpression(
       dedupeProperties(properties),
       elementLoc
@@ -224,7 +239,7 @@ export function buildProps(
   }
 
   // hoist the object if it's fully static
-  if (isStatic) {
+  if (isStatic && propsExpression) {
     propsExpression = context.hoist(propsExpression)
   }
 

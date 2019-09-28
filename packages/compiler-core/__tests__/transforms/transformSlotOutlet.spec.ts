@@ -3,7 +3,8 @@ import {
   parse,
   transform,
   ElementNode,
-  NodeTypes
+  NodeTypes,
+  ErrorCodes
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -319,6 +320,29 @@ describe('compiler: transform <slot> outlets', () => {
           }
         ]
       ]
+    })
+  })
+
+  test(`error on unexpected custom directive on <slot>`, () => {
+    const onError = jest.fn()
+    const source = `<slot v-foo />`
+    parseWithSlots(source, { onError })
+    const index = source.indexOf('v-foo')
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+      loc: {
+        source: `v-foo`,
+        start: {
+          offset: index,
+          line: 1,
+          column: index + 1
+        },
+        end: {
+          offset: index + 5,
+          line: 1,
+          column: index + 6
+        }
+      }
     })
   })
 })

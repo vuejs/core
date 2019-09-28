@@ -1234,6 +1234,50 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('v-slot shorthand', () => {
+      const ast = parse('<Comp #a="{ b }" />')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toStrictEqual({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'a',
+          isStatic: true,
+          loc: {
+            source: 'a',
+            start: {
+              column: 8,
+              line: 1,
+              offset: 7
+            },
+            end: {
+              column: 9,
+              line: 1,
+              offset: 8
+            }
+          }
+        },
+        modifiers: [],
+        exp: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: '{ b }',
+          isStatic: false,
+          loc: {
+            start: { offset: 10, line: 1, column: 11 },
+            end: { offset: 15, line: 1, column: 16 },
+            source: '{ b }'
+          }
+        },
+        loc: {
+          start: { offset: 6, line: 1, column: 7 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: '#a="{ b }"'
+        }
+      })
+    })
+
     test('end tags are case-insensitive.', () => {
       const ast = parse('<div>hello</DIV>after')
       const element = ast.children[0] as ElementNode
