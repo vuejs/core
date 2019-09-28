@@ -17,7 +17,8 @@ import {
   Position,
   InterpolationNode,
   CompoundExpressionNode,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  ElementTypes
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -262,7 +263,10 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 
 // This will generate a single vnode call if:
 // - The target position explicitly allows a single node (root, if, for)
-// - The list has length === 1, AND The only child is a text, expression or comment.
+// - The list has length === 1, AND The only child is a:
+//   - text
+//   - expression
+//   - <slot> outlet, which always produces an array
 function genChildren(
   children: ChildNode[],
   context: CodegenContext,
@@ -272,12 +276,14 @@ function genChildren(
     return context.push(`null`)
   }
   const child = children[0]
+  const type = child.type
   if (
     children.length === 1 &&
     (allowSingle ||
-      child.type === NodeTypes.TEXT ||
-      child.type === NodeTypes.INTERPOLATION ||
-      child.type === NodeTypes.COMMENT)
+      type === NodeTypes.TEXT ||
+      type === NodeTypes.INTERPOLATION ||
+      (type === NodeTypes.ELEMENT &&
+        (child as ElementNode).tagType === ElementTypes.SLOT))
   ) {
     genNode(child, context)
   } else {
@@ -523,7 +529,12 @@ function genCallExpression(
   context: CodegenContext,
   multilines = node.arguments.length > 2
 ) {
-  context.push(node.callee + `(`, node, true)
+  if (isString(node.callee)) {
+    context.push(node.callee + `(`, node, true)
+  } else {
+    genNode(node.callee, context)
+    context.push(`(`)
+  }
   multilines && context.indent()
   genNodeList(node.arguments, context, multilines)
   multilines && context.deindent()

@@ -68,6 +68,7 @@ export const enum ErrorCodes {
   X_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
+  X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -138,6 +139,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression`,
+  [ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `unexpected custom directive on <slot> outlet`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

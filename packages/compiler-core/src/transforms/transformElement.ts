@@ -13,7 +13,8 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createObjectExpression,
-  Property
+  Property,
+  SourceLocation
 } from '../ast'
 import { isArray } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -26,6 +27,7 @@ import {
   TO_HANDLERS
 } from '../runtimeConstants'
 import { getInnerRange } from '../utils'
+import { buildSlotOutlet, buildSlots } from './vSlot'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
@@ -56,7 +58,7 @@ export const transformElement: NodeTransform = (node, context) => {
       ]
       // props
       if (hasProps) {
-        const { props, directives } = buildProps(node, context)
+        const { props, directives } = buildProps(node.props, node.loc, context)
         args.push(props)
         runtimeDirectives = directives
       }
@@ -94,8 +96,7 @@ export const transformElement: NodeTransform = (node, context) => {
         node.codegenNode = vnode
       }
     } else if (node.tagType === ElementTypes.SLOT) {
-      // <slot [name="xxx"]/>
-      // TODO
+      buildSlotOutlet(node, context)
     }
     // node.tagType can also be TEMPLATE, in which case nothing needs to be done
   }
@@ -103,8 +104,9 @@ export const transformElement: NodeTransform = (node, context) => {
 
 type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 
-function buildProps(
-  { loc: elementLoc, props }: ElementNode,
+export function buildProps(
+  props: ElementNode['props'],
+  elementLoc: SourceLocation,
   context: TransformContext
 ): {
   props: PropsExpression
@@ -310,14 +312,4 @@ function createDirectiveArgs(
     )
   }
   return createArrayExpression(dirArgs, dir.loc)
-}
-
-function buildSlots(
-  { loc, children }: ElementNode,
-  context: TransformContext
-): ObjectExpression {
-  const slots = createObjectExpression([], loc)
-  // TODO
-
-  return slots
 }

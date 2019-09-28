@@ -1,10 +1,16 @@
 import { ComponentInternalInstance, currentInstance } from './component'
-import { VNode, NormalizedChildren, normalizeVNode, VNodeChild } from './vnode'
+import {
+  VNode,
+  NormalizedChildren,
+  normalizeVNode,
+  VNodeChild,
+  VNodeChildren
+} from './vnode'
 import { isArray, isFunction } from '@vue/shared'
 import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
 
-export type Slot = (...args: any[]) => VNode[]
+export type Slot = (...args: any[]) => VNodeChildren
 export type Slots = Readonly<{
   [name: string]: Slot
 }>
