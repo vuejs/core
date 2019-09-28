@@ -308,6 +308,59 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('should prefix default value of a function expression param', () => {
+    const node = parseWithExpressionTransform(
+      `{{ (foo = baz) => foo + bar }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `(`,
+        { content: `foo` },
+        ` = `,
+        { content: `_ctx.baz` },
+        `) => `,
+        { content: `foo` },
+        ` + `,
+        { content: `_ctx.bar` }
+      ]
+    })
+  })
+
+  test('should not prefix function param destructuring', () => {
+    const node = parseWithExpressionTransform(
+      `{{ ({ foo }) => foo + bar }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `({ foo }) => `,
+        { content: `foo` },
+        ` + `,
+        { content: `_ctx.bar` }
+      ]
+    })
+  })
+
+  test('should prefix default value of function param destructuring', () => {
+    const node = parseWithExpressionTransform(
+      `{{ ({ foo = bar }) => foo + bar }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `({ `,
+        { content: `foo` },
+        ` = `,
+        { content: `_ctx.bar` },
+        ` }) => `,
+        { content: `foo` },
+        ` + `,
+        { content: `_ctx.bar` }
+      ]
+    })
+  })
+
   test('should not prefix an object property key', () => {
     const node = parseWithExpressionTransform(
       `{{ { foo: bar } }}`

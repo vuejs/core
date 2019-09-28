@@ -20,7 +20,7 @@ import {
   createCompoundExpression
 } from '../ast'
 import { Node, Function, Identifier, Property } from 'estree'
-import { advancePositionWithClone } from '../utils'
+import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -31,33 +31,25 @@ export const transformExpression: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
     for (let i = 0; i < node.props.length; i++) {
-      const prop = node.props[i]
-      if (prop.type === NodeTypes.DIRECTIVE) {
-        const exp = prop.exp as SimpleExpressionNode | undefined
-        const arg = prop.arg as SimpleExpressionNode | undefined
+      const dir = node.props[i]
+      if (dir.type === NodeTypes.DIRECTIVE) {
+        const exp = dir.exp as SimpleExpressionNode | undefined
+        const arg = dir.arg as SimpleExpressionNode | undefined
         if (exp) {
-          prop.exp = processExpression(exp, context)
+          dir.exp = processExpression(exp, context, dir.name === 'slot')
         }
         if (arg && !arg.isStatic) {
-          if (prop.name === 'class') {
+          if (dir.name === 'class') {
             // TODO special expression optimization for classes
-            prop.arg = processExpression(arg, context)
+            dir.arg = processExpression(arg, context)
           } else {
-            prop.arg = processExpression(arg, context)
+            dir.arg = processExpression(arg, context)
           }
         }
       }
     }
   }
 }
-
-const simpleIdRE = /^[a-zA-Z$_][\w$]*$/
-
-const isFunction = (node: Node): node is Function =>
-  /Function(Expression|Declaration)$/.test(node.type)
-
-const isPropertyKey = (node: Node, parent: Node) =>
-  parent.type === 'Property' && parent.key === node && !parent.computed
 
 // cache node requires
 let _parseScript: typeof parseScript
@@ -74,14 +66,15 @@ interface PrefixMeta {
 // tree-shaken from the browser build.
 export function processExpression(
   node: SimpleExpressionNode,
-  context: TransformContext
+  context: TransformContext,
+  asParams: boolean = false
 ): ExpressionNode {
   if (!context.prefixIdentifiers) {
     return node
   }
 
   // fast path if expression is a simple identifier.
-  if (simpleIdRE.test(node.content)) {
+  if (isSimpleIdentifier(node.content)) {
     if (!context.identifiers[node.content]) {
       node.content = `_ctx.${node.content}`
     }
@@ -95,8 +88,11 @@ export function processExpression(
   const walk = _walk || (_walk = require('estree-walker').walk)
 
   let ast
+  // if the expression is supposed to be used in a function params position
+  // we need to parse it differently.
+  const source = `(${node.content})${asParams ? `=>{}` : ``}`
   try {
-    ast = parseScript(`(${node.content})`, { ranges: true }) as any
+    ast = parseScript(source, { ranges: true }) as any
   } catch (e) {
     context.onError(e)
     return node
@@ -132,8 +128,17 @@ export function processExpression(
         // so that we don't prefix them
         node.params.forEach(p =>
           walk(p, {
-            enter(child) {
-              if (child.type === 'Identifier') {
+            enter(child, parent) {
+              if (
+                child.type === 'Identifier' &&
+                !// do not keep as scope variable if this is a default value
+                // assignment of a param
+                (
+                  parent &&
+                  parent.type === 'AssignmentPattern' &&
+                  parent.right === child
+                )
+              ) {
                 knownIds[child.name] = true
                 ;(
                   (node as any)._scopeIds ||
@@ -186,6 +191,12 @@ export function processExpression(
     return node
   }
 }
+
+const isFunction = (node: Node): node is Function =>
+  /Function(Expression|Declaration)$/.test(node.type)
+
+const isPropertyKey = (node: Node, parent: Node) =>
+  parent.type === 'Property' && parent.key === node && !parent.computed
 
 const globals = new Set(
   (
