@@ -22,6 +22,7 @@ export function baseCompile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
+  /* istanbul ignore if */
   if (__BROWSER__) {
     const onError = options.onError || defaultOnError
     if (options.prefixIdentifiers === true) {

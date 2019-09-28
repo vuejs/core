@@ -7117,6 +7117,109 @@ Object {
 }
 `;
 
+exports[`compiler: parse Errors X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END <div v-foo:[sef fsef] /> 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": Object {
+        "end": Object {
+          "column": 25,
+          "line": 1,
+          "offset": 24,
+        },
+        "source": "<div v-foo:[sef fsef] />",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": Array [
+        Object {
+          "arg": Object {
+            "content": "se",
+            "isStatic": false,
+            "loc": Object {
+              "end": Object {
+                "column": 16,
+                "line": 1,
+                "offset": 15,
+              },
+              "source": "[sef",
+              "start": Object {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+            },
+            "type": 4,
+          },
+          "exp": undefined,
+          "loc": Object {
+            "end": Object {
+              "column": 16,
+              "line": 1,
+              "offset": 15,
+            },
+            "source": "v-foo:[sef",
+            "start": Object {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": Array [],
+          "name": "foo",
+          "type": 7,
+        },
+        Object {
+          "loc": Object {
+            "end": Object {
+              "column": 22,
+              "line": 1,
+              "offset": 21,
+            },
+            "source": "fsef]",
+            "start": Object {
+              "column": 17,
+              "line": 1,
+              "offset": 16,
+            },
+          },
+          "name": "fsef]",
+          "type": 6,
+          "value": undefined,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "hoists": Array [],
+  "imports": Array [],
+  "loc": Object {
+    "end": Object {
+      "column": 25,
+      "line": 1,
+      "offset": 24,
+    },
+    "source": "<div v-foo:[sef fsef] />",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "statements": Array [],
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse Errors X_MISSING_END_TAG <template><div> 1`] = `
 Object {
   "children": Array [

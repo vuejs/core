@@ -342,6 +342,24 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('function params should not affect out of scope identifiers', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { a: foo => foo, b: foo } }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `{ a: `,
+        { content: `foo` },
+        ` => `,
+        { content: `foo` },
+        `, b: `,
+        { content: `_ctx.foo` },
+        ` }`
+      ]
+    })
+  })
+
   test('should prefix default value of function param destructuring', () => {
     const node = parseWithExpressionTransform(
       `{{ ({ foo = bar }) => foo + bar }}`

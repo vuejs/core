@@ -2464,6 +2464,17 @@ foo
           code: '{{}}',
           errors: []
         }
+      ],
+      X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END: [
+        {
+          code: `<div v-foo:[sef fsef] />`,
+          errors: [
+            {
+              type: ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
+              loc: { offset: 15, line: 1, column: 16 }
+            }
+          ]
+        }
       ]
     }
 

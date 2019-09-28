@@ -374,8 +374,8 @@ function genNode(node: CodegenNode, context: CodegenContext) {
     case NodeTypes.JS_SLOT_FUNCTION:
       genSlotFunction(node, context)
       break
+    /* istanbul ignore next */
     default:
-      /* istanbul ignore if */
       if (__DEV__) {
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
         // make sure we exhaust all possible types
