@@ -66,57 +66,54 @@ export function buildSlots(
   // 2. Iterate through children and check for template slots
   //    <template v-slot:foo="{ prop }">
   let hasTemplateSlots = false
+  let extraneousChild: ChildNode | undefined = undefined
   const seenSlotNames = new Set<string>()
-  const nonSlotChildren: ChildNode[] = []
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
+    let slotDir
     if (
       child.type === NodeTypes.ELEMENT &&
-      child.tagType === ElementTypes.TEMPLATE
+      child.tagType === ElementTypes.TEMPLATE &&
+      (slotDir = child.props.find(isVSlot))
     ) {
-      const { props, children, loc: nodeLoc } = child
-      const slotDir = props.find(isVSlot)
-      if (slotDir) {
-        hasTemplateSlots = true
-        const { arg: slotName, exp: slotProps, loc: dirLoc } = slotDir
-        if (explicitDefaultSlot) {
-          // already has on-component default slot - this is incorrect usage.
-          context.onError(
-            createCompilerError(ErrorCodes.X_MIXED_SLOT_USAGE, dirLoc)
-          )
-          break
-        } else {
-          // check duplicate slot names
-          if (
-            !slotName ||
-            (slotName.type === NodeTypes.SIMPLE_EXPRESSION && slotName.isStatic)
-          ) {
-            const name = slotName ? slotName.content : `default`
-            if (seenSlotNames.has(name)) {
-              context.onError(
-                createCompilerError(ErrorCodes.X_DUPLICATE_SLOT_NAMES, dirLoc)
-              )
-              continue
-            }
-            seenSlotNames.add(name)
-          }
-          slots.push(
-            buildSlot(slotName || `default`, slotProps, children, nodeLoc)
-          )
-        }
+      hasTemplateSlots = true
+      const { children, loc: nodeLoc } = child
+      const { arg: slotName, exp: slotProps, loc: dirLoc } = slotDir
+      if (explicitDefaultSlot) {
+        // already has on-component default slot - this is incorrect usage.
+        context.onError(
+          createCompilerError(ErrorCodes.X_MIXED_SLOT_USAGE, dirLoc)
+        )
+        break
       } else {
-        nonSlotChildren.push(child)
+        // check duplicate slot names
+        if (
+          !slotName ||
+          (slotName.type === NodeTypes.SIMPLE_EXPRESSION && slotName.isStatic)
+        ) {
+          const name = slotName ? slotName.content : `default`
+          if (seenSlotNames.has(name)) {
+            context.onError(
+              createCompilerError(ErrorCodes.X_DUPLICATE_SLOT_NAMES, dirLoc)
+            )
+            continue
+          }
+          seenSlotNames.add(name)
+        }
+        slots.push(
+          buildSlot(slotName || `default`, slotProps, children, nodeLoc)
+        )
       }
-    } else {
-      nonSlotChildren.push(child)
+    } else if (!extraneousChild) {
+      extraneousChild = child
     }
   }
 
-  if (hasTemplateSlots && nonSlotChildren.length) {
+  if (hasTemplateSlots && extraneousChild) {
     context.onError(
       createCompilerError(
         ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN,
-        nonSlotChildren[0].loc
+        extraneousChild.loc
       )
     )
   }
