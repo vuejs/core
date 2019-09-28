@@ -457,6 +457,80 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('SlotFunctionExpression', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.ELEMENT,
+            tagType: ElementTypes.COMPONENT,
+            ns: Namespaces.HTML,
+            isSelfClosing: false,
+            tag: `Comp`,
+            loc: mockLoc,
+            props: [],
+            children: [],
+            codegenNode: {
+              type: NodeTypes.JS_CALL_EXPRESSION,
+              loc: mockLoc,
+              callee: `_${CREATE_VNODE}`,
+              arguments: [
+                `Comp`,
+                `0`,
+                {
+                  type: NodeTypes.JS_OBJECT_EXPRESSION,
+                  loc: mockLoc,
+                  properties: [
+                    {
+                      type: NodeTypes.JS_PROPERTY,
+                      loc: mockLoc,
+                      key: {
+                        type: NodeTypes.SIMPLE_EXPRESSION,
+                        isStatic: true,
+                        content: `default`,
+                        loc: mockLoc
+                      },
+                      value: {
+                        type: NodeTypes.JS_SLOT_FUNCTION,
+                        loc: mockLoc,
+                        params: {
+                          type: NodeTypes.SIMPLE_EXPRESSION,
+                          isStatic: false,
+                          content: `{ foo }`,
+                          loc: mockLoc
+                        },
+                        returns: [
+                          {
+                            type: NodeTypes.INTERPOLATION,
+                            loc: mockLoc,
+                            content: {
+                              type: NodeTypes.SIMPLE_EXPRESSION,
+                              isStatic: false,
+                              content: `foo`,
+                              loc: mockLoc
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(
+      `return _createVNode(Comp, 0, {
+      default: ({ foo }) => [
+        _toString(foo)
+      ]
+    })`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
   test('callExpression + objectExpression + arrayExpression', () => {
     function createElementWithCodegen(
       args: CallExpression['arguments']

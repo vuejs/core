@@ -1,5 +1,18 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: codegen SlotFunctionExpression 1`] = `
+"
+return function render() {
+  with (this) {
+    return _createVNode(Comp, 0, {
+      default: ({ foo }) => [
+        _toString(foo)
+      ]
+    })
+  }
+}"
+`;
+
 exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1`] = `
 "
 return function render() {
