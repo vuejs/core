@@ -296,7 +296,13 @@ function genNodeListAsArray(
   nodes: (string | CodegenNode | ChildNode[])[],
   context: CodegenContext
 ) {
-  const multilines = nodes.length > 1
+  const multilines =
+    nodes.length > 1 ||
+    ((!__BROWSER__ || __DEV__) &&
+      nodes.some(
+        n =>
+          isArray(n) || (!isString(n) && n.type !== NodeTypes.SIMPLE_EXPRESSION)
+      ))
   context.push(`[`)
   multilines && context.indent()
   genNodeList(nodes, context, multilines)
@@ -552,7 +558,10 @@ function genCallExpression(
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   const { push, indent, deindent, newline, resetMapping } = context
   const { properties } = node
-  const multilines = properties.length > 1
+  const multilines =
+    properties.length > 1 ||
+    ((!__BROWSER__ || __DEV__) &&
+      properties.some(p => p.value.type !== NodeTypes.SIMPLE_EXPRESSION))
   push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
@@ -570,7 +579,8 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     }
   }
   multilines && deindent()
-  push(multilines ? `}` : ` }`)
+  const lastChar = context.code[context.code.length - 1]
+  push(multilines || /[\])}]/.test(lastChar) ? `}` : ` }`)
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {

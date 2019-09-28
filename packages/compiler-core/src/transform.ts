@@ -54,7 +54,7 @@ export interface TransformOptions {
 export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
   imports: Set<string>
-  statements: string[]
+  statements: Set<string>
   hoists: JSChildNode[]
   identifiers: { [name: string]: number | undefined }
   parent: ParentNode
@@ -81,7 +81,7 @@ function createTransformContext(
   const context: TransformContext = {
     root,
     imports: new Set(),
-    statements: [],
+    statements: new Set(),
     hoists: [],
     identifiers: {},
     prefixIdentifiers,
@@ -153,7 +153,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseChildren(root, context)
   root.imports = [...context.imports]
-  root.statements = context.statements
+  root.statements = [...context.statements]
   root.hoists = context.hoists
 }
 

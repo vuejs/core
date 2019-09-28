@@ -46,7 +46,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
       if (isComponent) {
         componentIdentifier = `_component_${toValidId(node.tag)}`
-        context.statements.push(
+        context.statements.add(
           `const ${componentIdentifier} = ${context.helper(
             RESOLVE_COMPONENT
           )}(${JSON.stringify(node.tag)})`
@@ -294,7 +294,7 @@ function createDirectiveArgs(
 ): ArrayExpression {
   // inject statement for resolving directive
   const dirIdentifier = `_directive_${toValidId(dir.name)}`
-  context.statements.push(
+  context.statements.add(
     `const ${dirIdentifier} = ${context.helper(
       RESOLVE_DIRECTIVE
     )}(${JSON.stringify(dir.name)})`
