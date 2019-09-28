@@ -3,7 +3,8 @@ import {
   parse,
   transform,
   ElementNode,
-  NodeTypes
+  NodeTypes,
+  generate
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -319,5 +320,11 @@ describe('compiler: transform slots', () => {
         ]
       ]
     })
+  })
+
+  test('generate slot', () => {
+    const ast = parseWithSlots(`<Comp><div/></Comp>`)
+    const { code } = generate(ast)
+    console.log(code)
   })
 })

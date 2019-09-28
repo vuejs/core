@@ -27,7 +27,8 @@ export const enum NodeTypes {
   JS_CALL_EXPRESSION,
   JS_OBJECT_EXPRESSION,
   JS_PROPERTY,
-  JS_ARRAY_EXPRESSION
+  JS_ARRAY_EXPRESSION,
+  JS_SLOT_FUNCTION
 }
 
 export const enum ElementTypes {
@@ -157,6 +158,7 @@ export type JSChildNode =
   | ObjectExpression
   | ArrayExpression
   | ExpressionNode
+  | SlotFunctionExpression
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
@@ -178,6 +180,12 @@ export interface Property extends Node {
 export interface ArrayExpression extends Node {
   type: NodeTypes.JS_ARRAY_EXPRESSION
   elements: Array<string | JSChildNode>
+}
+
+export interface SlotFunctionExpression extends Node {
+  type: NodeTypes.JS_SLOT_FUNCTION
+  params: ExpressionNode | undefined
+  returns: ChildNode[]
 }
 
 export function createArrayExpression(
@@ -262,5 +270,18 @@ export function createCallExpression(
     loc,
     callee,
     arguments: args
+  }
+}
+
+export function createFunctionExpression(
+  params: ExpressionNode | undefined,
+  returns: ChildNode[],
+  loc: SourceLocation
+): SlotFunctionExpression {
+  return {
+    type: NodeTypes.JS_SLOT_FUNCTION,
+    params,
+    returns,
+    loc
   }
 }

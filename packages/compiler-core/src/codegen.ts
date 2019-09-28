@@ -18,7 +18,8 @@ import {
   InterpolationNode,
   CompoundExpressionNode,
   SimpleExpressionNode,
-  ElementTypes
+  ElementTypes,
+  SlotFunctionExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -364,10 +365,17 @@ function genNode(node: CodegenNode, context: CodegenContext) {
     case NodeTypes.JS_ARRAY_EXPRESSION:
       genArrayExpression(node, context)
       break
+    case NodeTypes.JS_SLOT_FUNCTION:
+      genSlotFunction(node, context)
+      break
     default:
-      /* istanbul ignore next */
-      __DEV__ &&
+      /* istanbul ignore if */
+      if (__DEV__) {
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
+        // make sure we exhaust all possible types
+        const exhaustiveCheck: never = node
+        return exhaustiveCheck
+      }
   }
 }
 
@@ -567,4 +575,15 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
   genNodeListAsArray(node.elements, context)
+}
+
+function genSlotFunction(
+  node: SlotFunctionExpression,
+  context: CodegenContext
+) {
+  context.push(`(`, node)
+  if (node.params) genNode(node.params, context)
+  context.push(`) => `)
+  // pre-normalized slots should always return arrays
+  genNodeListAsArray(node.returns, context)
 }

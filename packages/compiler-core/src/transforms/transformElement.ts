@@ -141,6 +141,12 @@ export function buildProps(
       // directives
       isStatic = false
       const { name, arg, exp, loc } = prop
+
+      // skip v-slot - it is handled by its dedicated transform.
+      if (name === 'slot') {
+        continue
+      }
+
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
       if (!arg && (isBind || name === 'on')) {
