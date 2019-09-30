@@ -6129,9 +6129,9 @@ rimraf@^2.6.3:
     glob "^7.1.3"
 
 rollup-plugin-alias@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-alias/-/rollup-plugin-alias-2.0.0.tgz#eea77466a8a8a063007c8edb2e9d7a3d06cbb889"
-  integrity sha512-JVwxV9nwzjc0q7JmrV9jvZlJ8FykNd5r7RmYps8i/7v+vcmmVpeMvXrljhCboYErf4VZ2z9FEj+fP7eJlEGfug==
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/rollup-plugin-alias/-/rollup-plugin-alias-2.0.1.tgz#2f11b0a09e0bab1bbd1f130536fe99ef8f35c0dd"
+  integrity sha512-/wOySYmFzR1TPijsiNBOAV12HYPs7GZtAuim2LKdk5V6RnQSZ34ueVgkFfjJffe/HIFR6Jdwc4+7YOlY5uty4w==
   dependencies:
     slash "^3.0.0"
 
