@@ -268,10 +268,8 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps[name]
     if (existing) {
-      if (name.startsWith('on') || name === 'style') {
+      if (name.startsWith('on') || name === 'style' || name === 'class') {
         mergeAsArray(existing, prop)
-      } else if (name === 'class') {
-        mergeClasses(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
     } else {
@@ -291,13 +289,6 @@ function mergeAsArray(existing: Property, incoming: Property) {
       existing.loc
     )
   }
-}
-
-// Merge dynamic and static class into a single prop
-// :class="expression" class="string"
-// -> class: expression + "string"
-function mergeClasses(existing: Property, incoming: Property) {
-  // TODO
 }
 
 function createDirectiveArgs(

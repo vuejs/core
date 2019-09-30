@@ -7,9 +7,6 @@
 // - This transform is only applied in non-browser builds because it relies on
 //   an additional JavaScript parser. In the browser, there is no source-map
 //   support and the code is wrapped in `with (this) { ... }`.
-
-import { parseScript } from 'meriyah'
-import { walk } from 'estree-walker'
 import { NodeTransform, TransformContext } from '../transform'
 import {
   NodeTypes,
@@ -20,7 +17,12 @@ import {
   createCompoundExpression
 } from '../ast'
 import { Node, Function, Identifier, Property } from 'estree'
-import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
+import {
+  advancePositionWithClone,
+  isSimpleIdentifier,
+  parseJS,
+  walkJS
+} from '../utils'
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -39,21 +41,12 @@ export const transformExpression: NodeTransform = (node, context) => {
           dir.exp = processExpression(exp, context, dir.name === 'slot')
         }
         if (arg && !arg.isStatic) {
-          if (dir.name === 'class') {
-            // TODO special expression optimization for classes
-            dir.arg = processExpression(arg, context)
-          } else {
-            dir.arg = processExpression(arg, context)
-          }
+          dir.arg = processExpression(arg, context)
         }
       }
     }
   }
 }
-
-// cache node requires
-let _parseScript: typeof parseScript
-let _walk: typeof walk
 
 interface PrefixMeta {
   prefix?: string
@@ -83,18 +76,12 @@ export function processExpression(
     return node
   }
 
-  // lazy require dependencies so that they don't end up in rollup's dep graph
-  // and thus can be tree-shaken in browser builds.
-  const parseScript =
-    _parseScript || (_parseScript = require('meriyah').parseScript)
-  const walk = _walk || (_walk = require('estree-walker').walk)
-
   let ast: any
   // if the expression is supposed to be used in a function params position
   // we need to parse it differently.
   const source = `(${node.content})${asParams ? `=>{}` : ``}`
   try {
-    ast = parseScript(source, { ranges: true })
+    ast = parseJS(source, { ranges: true })
   } catch (e) {
     context.onError(e)
     return node
@@ -104,7 +91,7 @@ export function processExpression(
   const knownIds = Object.create(context.identifiers)
 
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
-  walk(ast, {
+  walkJS(ast, {
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
         if (!ids.includes(node)) {
@@ -126,7 +113,7 @@ export function processExpression(
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
-          walk(p, {
+          walkJS(p, {
             enter(child, parent) {
               if (
                 child.type === 'Identifier' &&
@@ -182,21 +169,24 @@ export function processExpression(
   const children: CompoundExpressionNode['children'] = []
   ids.sort((a, b) => a.start - b.start)
   ids.forEach((id, i) => {
+    // range is offset by -1 due to the wrapping parens when parsed
+    const start = id.start - 1
+    const end = id.end - 1
     const last = ids[i - 1] as any
-    const leadingText = full.slice(last ? last.end - 1 : 0, id.start - 1)
+    const leadingText = full.slice(last ? last.end - 1 : 0, start)
     if (leadingText.length || id.prefix) {
       children.push(leadingText + (id.prefix || ``))
     }
-    const source = full.slice(id.start - 1, id.end - 1)
+    const source = full.slice(start, end)
     children.push(
       createSimpleExpression(id.name, false, {
         source,
-        start: advancePositionWithClone(node.loc.start, source, id.start - 1),
-        end: advancePositionWithClone(node.loc.start, source, id.end - 1)
+        start: advancePositionWithClone(node.loc.start, source, start),
+        end: advancePositionWithClone(node.loc.start, source, end)
       })
     )
-    if (i === ids.length - 1 && id.end - 1 < full.length) {
-      children.push(full.slice(id.end - 1))
+    if (i === ids.length - 1 && end < full.length) {
+      children.push(full.slice(end))
     }
   })
 

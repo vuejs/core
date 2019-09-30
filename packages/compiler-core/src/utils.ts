@@ -1,4 +1,30 @@
 import { SourceLocation, Position } from './ast'
+import { parseScript } from 'meriyah'
+import { walk } from 'estree-walker'
+
+// cache node requires
+// lazy require dependencies so that they don't end up in rollup's dep graph
+// and thus can be tree-shaken in browser builds.
+let _parseScript: typeof parseScript
+let _walk: typeof walk
+
+export const parseJS: typeof parseScript = (code: string, options: any) => {
+  assert(
+    !__BROWSER__,
+    `Expression AST analysis can only be performed in non-browser builds.`
+  )
+  const parse = _parseScript || (_parseScript = require('meriyah').parseScript)
+  return parse(code, options)
+}
+
+export const walkJS: typeof walk = (ast, walker) => {
+  assert(
+    !__BROWSER__,
+    `Expression AST analysis can only be performed in non-browser builds.`
+  )
+  const walk = _walk || (_walk = require('estree-walker').walk)
+  return walk(ast, walker)
+}
 
 export const isSimpleIdentifier = (name: string): boolean =>
   !/^\d|[^\w]/.test(name)
