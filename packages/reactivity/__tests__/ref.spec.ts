@@ -1,7 +1,7 @@
 import { ref, effect, reactive, isRef, toRefs } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 
-describe('reactivity/value', () => {
+describe('reactivity/ref', () => {
   it('should hold a value', () => {
     const a = ref(1)
     expect(a.value).toBe(1)

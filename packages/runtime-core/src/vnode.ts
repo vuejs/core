@@ -126,7 +126,7 @@ export function createBlock(
 }
 
 export function isVNode(value: any): boolean {
-  return value && value._isVNode
+  return value ? value._isVNode === true : false
 }
 
 export function createVNode(

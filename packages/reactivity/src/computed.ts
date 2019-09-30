@@ -1,15 +1,15 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs, isRefSymbol, knownRefs } from './ref'
+import { UnwrapNestedRefs } from './ref'
 import { isFunction } from '@vue/shared'
 
 export interface ComputedRef<T> {
-  [isRefSymbol]: true
+  _isRef: true
   readonly value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
 
 export interface WritableComputedRef<T> {
-  [isRefSymbol]: true
+  _isRef: true
   value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
@@ -45,7 +45,8 @@ export function computed<T>(
       dirty = true
     }
   })
-  const computedRef = {
+  return {
+    _isRef: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
@@ -67,8 +68,6 @@ export function computed<T>(
       }
     }
   }
-  knownRefs.add(computedRef)
-  return computedRef
 }
 
 function trackChildRun(childRunner: ReactiveEffect) {

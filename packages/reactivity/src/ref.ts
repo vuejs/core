@@ -3,14 +3,8 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
-export const knownRefs = new WeakSet()
-
-export const isRefSymbol = Symbol()
-
 export interface Ref<T> {
-  // this is a type-only field to avoid objects with 'value' property being
-  // treated as a ref by TypeScript
-  [isRefSymbol]: true
+  _isRef: true
   value: UnwrapNestedRefs<T>
 }
 
@@ -21,6 +15,7 @@ const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 export function ref<T>(raw: T): Ref<T> {
   raw = convert(raw)
   const v = {
+    _isRef: true,
     get value() {
       track(v, OperationTypes.GET, '')
       return raw
@@ -30,12 +25,11 @@ export function ref<T>(raw: T): Ref<T> {
       trigger(v, OperationTypes.SET, '')
     }
   }
-  knownRefs.add(v)
   return v as Ref<T>
 }
 
 export function isRef(v: any): v is Ref<any> {
-  return knownRefs.has(v)
+  return v ? v._isRef === true : false
 }
 
 export function toRefs<T extends object>(
@@ -53,6 +47,7 @@ function toProxyRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   const v = {
+    _isRef: true,
     get value() {
       return object[key]
     },
@@ -60,7 +55,6 @@ function toProxyRef<T extends object, K extends keyof T>(
       object[key] = newVal
     }
   }
-  knownRefs.add(v)
   return v as Ref<T[K]>
 }
 
