@@ -1,13 +1,21 @@
-import { CompilerOptions, parse, transform, NodeTypes } from '../../src'
+import {
+  CompilerOptions,
+  parse,
+  transform,
+  NodeTypes,
+  generate
+} from '../../src'
 import { optimizeText } from '../../src/transforms/optimizeText'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { transformElement } from '../../src/transforms/transformElement'
 
 function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
       ...(options.prefixIdentifiers ? [transformExpression] : []),
-      optimizeText
+      optimizeText,
+      transformElement
     ],
     ...options
   })
@@ -23,6 +31,7 @@ describe('compiler: optimize interpolation', () => {
         content: `foo`
       }
     })
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('consecutive text', () => {
@@ -38,6 +47,7 @@ describe('compiler: optimize interpolation', () => {
         { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
       ]
     })
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('consecutive text between elements', () => {
@@ -55,6 +65,7 @@ describe('compiler: optimize interpolation', () => {
       ]
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('consecutive text mixed with elements', () => {
@@ -85,6 +96,7 @@ describe('compiler: optimize interpolation', () => {
       ]
     })
     expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('with prefixIdentifiers: true', () => {
@@ -108,5 +120,10 @@ describe('compiler: optimize interpolation', () => {
         }
       ]
     })
+    expect(
+      generate(root, {
+        prefixIdentifiers: true
+      }).code
+    ).toMatchSnapshot()
   })
 })
