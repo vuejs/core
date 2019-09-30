@@ -13,6 +13,7 @@ import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 import { trackSlotScopes } from './transforms/vSlot'
+import { optimizeText } from './transforms/optimizeText'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -45,6 +46,7 @@ export function baseCompile(
       transformIf,
       transformFor,
       ...(prefixIdentifiers ? [transformExpression, trackSlotScopes] : []),
+      optimizeText,
       transformStyle,
       transformSlotOutlet,
       transformElement,

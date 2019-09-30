@@ -25,22 +25,29 @@ describe('compiler: transform', () => {
     })
 
     const div = ast.children[0] as ElementNode
-    expect(calls.length).toBe(3)
+    expect(calls.length).toBe(4)
     expect(calls[0]).toMatchObject([
+      ast,
+      {
+        parent: null,
+        currentNode: ast
+      }
+    ])
+    expect(calls[1]).toMatchObject([
       div,
       {
         parent: ast,
         currentNode: div
       }
     ])
-    expect(calls[1]).toMatchObject([
+    expect(calls[2]).toMatchObject([
       div.children[0],
       {
         parent: div,
         currentNode: div.children[0]
       }
     ])
-    expect(calls[2]).toMatchObject([
+    expect(calls[3]).toMatchObject([
       div.children[1],
       {
         parent: div,
@@ -76,11 +83,11 @@ describe('compiler: transform', () => {
     expect(ast.children.length).toBe(2)
     const newElement = ast.children[0] as ElementNode
     expect(newElement.tag).toBe('p')
-    expect(spy).toHaveBeenCalledTimes(3)
+    expect(spy).toHaveBeenCalledTimes(4)
     // should traverse the children of replaced node
-    expect(spy.mock.calls[1][0]).toBe(newElement.children[0])
+    expect(spy.mock.calls[2][0]).toBe(newElement.children[0])
     // should traverse the node after the replaced node
-    expect(spy.mock.calls[2][0]).toBe(ast.children[1])
+    expect(spy.mock.calls[3][0]).toBe(ast.children[1])
   })
 
   test('context.removeNode', () => {
@@ -103,10 +110,10 @@ describe('compiler: transform', () => {
     expect(ast.children[1]).toBe(c2)
 
     // should not traverse children of remove node
-    expect(spy).toHaveBeenCalledTimes(3)
+    expect(spy).toHaveBeenCalledTimes(4)
     // should traverse nodes around removed
-    expect(spy.mock.calls[0][0]).toBe(c1)
-    expect(spy.mock.calls[2][0]).toBe(c2)
+    expect(spy.mock.calls[1][0]).toBe(c1)
+    expect(spy.mock.calls[3][0]).toBe(c2)
   })
 
   test('context.removeNode (prev sibling)', () => {
@@ -118,7 +125,7 @@ describe('compiler: transform', () => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         context.removeNode()
         // remove previous sibling
-        context.removeNode(context.parent.children[0])
+        context.removeNode(context.parent!.children[0])
       }
     }
     const spy = jest.fn(plugin)
@@ -129,11 +136,11 @@ describe('compiler: transform', () => {
     expect(ast.children.length).toBe(1)
     expect(ast.children[0]).toBe(c2)
 
-    expect(spy).toHaveBeenCalledTimes(3)
+    expect(spy).toHaveBeenCalledTimes(4)
     // should still traverse first span before removal
-    expect(spy.mock.calls[0][0]).toBe(c1)
+    expect(spy.mock.calls[1][0]).toBe(c1)
     // should still traverse last span
-    expect(spy.mock.calls[2][0]).toBe(c2)
+    expect(spy.mock.calls[3][0]).toBe(c2)
   })
 
   test('context.removeNode (next sibling)', () => {
@@ -145,7 +152,7 @@ describe('compiler: transform', () => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         context.removeNode()
         // remove next sibling
-        context.removeNode(context.parent.children[1])
+        context.removeNode(context.parent!.children[1])
       }
     }
     const spy = jest.fn(plugin)
@@ -156,20 +163,22 @@ describe('compiler: transform', () => {
     expect(ast.children.length).toBe(1)
     expect(ast.children[0]).toBe(c1)
 
-    expect(spy).toHaveBeenCalledTimes(2)
+    expect(spy).toHaveBeenCalledTimes(3)
     // should still traverse first span before removal
-    expect(spy.mock.calls[0][0]).toBe(c1)
+    expect(spy.mock.calls[1][0]).toBe(c1)
     // should not traverse last span
-    expect(spy.mock.calls[1][0]).toBe(d1)
+    expect(spy.mock.calls[2][0]).toBe(d1)
   })
 
   test('context.hoist', () => {
     const ast = parse(`<div :id="foo"/><div :id="bar"/>`)
     const hoisted: ExpressionNode[] = []
     const mock: NodeTransform = (node, context) => {
-      const dir = (node as ElementNode).props[0] as DirectiveNode
-      hoisted.push(dir.exp!)
-      dir.exp = context.hoist(dir.exp!)
+      if (node.type === NodeTypes.ELEMENT) {
+        const dir = node.props[0] as DirectiveNode
+        hoisted.push(dir.exp!)
+        dir.exp = context.hoist(dir.exp!)
+      }
     }
     transform(ast, {
       nodeTransforms: [mock]

@@ -283,6 +283,7 @@ function genChildren(
     (allowSingle ||
       type === NodeTypes.TEXT ||
       type === NodeTypes.INTERPOLATION ||
+      type === NodeTypes.COMPOUND_EXPRESSION ||
       (type === NodeTypes.ELEMENT &&
         (child as ElementNode).tagType === ElementTypes.SLOT))
   ) {
@@ -423,7 +424,7 @@ function genCompoundExpression(
     if (isString(child)) {
       context.push(child)
     } else {
-      genExpression(child, context)
+      genNode(child, context)
     }
   }
 }

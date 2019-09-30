@@ -20,7 +20,7 @@ import { TO_STRING, COMMENT, CREATE_VNODE } from './runtimeConstants'
 //   Transforms that operate directly on a ChildNode. NodeTransforms may mutate,
 //   replace or remove the node being processed.
 export type NodeTransform = (
-  node: ChildNode,
+  node: RootNode | ChildNode,
   context: TransformContext
 ) => void | (() => void) | (() => void)[]
 
@@ -56,9 +56,9 @@ export interface TransformContext extends Required<TransformOptions> {
   statements: Set<string>
   hoists: JSChildNode[]
   identifiers: { [name: string]: number | undefined }
-  parent: ParentNode
+  parent: ParentNode | null
   childIndex: number
-  currentNode: ChildNode | null
+  currentNode: RootNode | ChildNode | null
   helper(name: string): string
   replaceNode(node: ChildNode): void
   removeNode(node?: ChildNode): void
@@ -87,22 +87,30 @@ function createTransformContext(
     nodeTransforms,
     directiveTransforms,
     onError,
-    parent: root,
+    parent: null,
+    currentNode: root,
     childIndex: 0,
-    currentNode: null,
     helper(name) {
       context.imports.add(name)
       return prefixIdentifiers ? name : `_${name}`
     },
     replaceNode(node) {
       /* istanbul ignore if */
-      if (__DEV__ && !context.currentNode) {
-        throw new Error(`node being replaced is already removed.`)
+      if (__DEV__) {
+        if (!context.currentNode) {
+          throw new Error(`Node being replaced is already removed.`)
+        }
+        if (!context.parent) {
+          throw new Error(`Cannot replace root node.`)
+        }
       }
-      context.parent.children[context.childIndex] = context.currentNode = node
+      context.parent!.children[context.childIndex] = context.currentNode = node
     },
     removeNode(node) {
-      const list = context.parent.children
+      if (__DEV__ && !context.parent) {
+        throw new Error(`Cannot remove root node.`)
+      }
+      const list = context.parent!.children
       const removalIndex = node
         ? list.indexOf(node as any)
         : context.currentNode
@@ -123,7 +131,7 @@ function createTransformContext(
           context.onNodeRemoved()
         }
       }
-      context.parent.children.splice(removalIndex, 1)
+      context.parent!.children.splice(removalIndex, 1)
     },
     onNodeRemoved: () => {},
     addIdentifiers(exp) {
@@ -172,7 +180,7 @@ function createTransformContext(
 
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
-  traverseChildren(root, context)
+  traverseNode(root, context)
   root.imports = [...context.imports]
   root.statements = [...context.statements]
   root.hoists = context.hoists
@@ -197,7 +205,10 @@ export function traverseChildren(
   }
 }
 
-export function traverseNode(node: ChildNode, context: TransformContext) {
+export function traverseNode(
+  node: RootNode | ChildNode,
+  context: TransformContext
+) {
   // apply transform plugins
   const { nodeTransforms } = context
   const exitFns = []
@@ -240,6 +251,7 @@ export function traverseNode(node: ChildNode, context: TransformContext) {
       break
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
+    case NodeTypes.ROOT:
       traverseChildren(node, context)
       break
   }

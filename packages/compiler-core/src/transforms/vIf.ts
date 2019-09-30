@@ -29,7 +29,7 @@ export const transformIf = createStructuralDirectiveTransform(
       })
     } else {
       // locate the adjacent v-if
-      const siblings = context.parent.children
+      const siblings = context.parent!.children
       const comments = []
       let i = siblings.indexOf(node as any)
       while (i-- >= -1) {

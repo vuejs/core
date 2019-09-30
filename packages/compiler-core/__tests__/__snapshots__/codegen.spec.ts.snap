@@ -44,7 +44,7 @@ exports[`compiler: codegen compound expression 1`] = `
 "
 return function render() {
   with (this) {
-    return _toString(_ctx.foo)
+    return _ctx.foo + _toString(bar)
   }
 }"
 `;

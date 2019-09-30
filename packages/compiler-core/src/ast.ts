@@ -64,6 +64,7 @@ export type ExpressionNode = SimpleExpressionNode | CompoundExpressionNode
 export type ChildNode =
   | ElementNode
   | InterpolationNode
+  | CompoundExpressionNode
   | TextNode
   | CommentNode
   | IfNode
@@ -130,7 +131,7 @@ export interface InterpolationNode extends Node {
 // always dynamic
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
-  children: (SimpleExpressionNode | string)[]
+  children: (SimpleExpressionNode | InterpolationNode | TextNode | string)[]
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]

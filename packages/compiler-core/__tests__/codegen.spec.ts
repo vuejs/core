@@ -226,17 +226,23 @@ describe('compiler: codegen', () => {
     const { code } = generate(
       createRoot({
         children: [
-          createInterpolation(
-            createCompoundExpression(
-              [`_ctx.`, createSimpleExpression(`foo`, false, mockLoc)],
-              mockLoc
-            ),
+          createCompoundExpression(
+            [
+              `_ctx.`,
+              createSimpleExpression(`foo`, false, mockLoc),
+              ` + `,
+              {
+                type: NodeTypes.INTERPOLATION,
+                loc: mockLoc,
+                content: createSimpleExpression(`bar`, false, mockLoc)
+              }
+            ],
             mockLoc
           )
         ]
       })
     )
-    expect(code).toMatch(`return _${TO_STRING}(_ctx.foo)`)
+    expect(code).toMatch(`return _ctx.foo + _${TO_STRING}(bar)`)
     expect(code).toMatchSnapshot()
   })
 
