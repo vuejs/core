@@ -55,6 +55,7 @@ export type NormalizedChildren<HostNode = any, HostElement = any> =
   | null
 
 export interface VNode<HostNode = any, HostElement = any> {
+  _isVNode: true
   type: VNodeTypes
   props: Record<any, any> | null
   key: string | number | null
@@ -124,10 +125,8 @@ export function createBlock(
   return vnode
 }
 
-const knownVNodes = new WeakSet<VNode>()
-
 export function isVNode(value: any): boolean {
-  return knownVNodes.has(value)
+  return value && value._isVNode
 }
 
 export function createVNode(
@@ -172,6 +171,7 @@ export function createVNode(
         : 0
 
   const vnode: VNode = {
+    _isVNode: true,
     type,
     props,
     key: (props && props.key) || null,
@@ -204,10 +204,6 @@ export function createVNode(
     trackDynamicNode(vnode)
   }
 
-  if (__DEV__) {
-    knownVNodes.add(vnode)
-  }
-
   return vnode
 }
 
@@ -220,6 +216,7 @@ function trackDynamicNode(vnode: VNode) {
 
 export function cloneVNode(vnode: VNode): VNode {
   return {
+    _isVNode: true,
     type: vnode.type,
     props: vnode.props,
     key: vnode.key,
