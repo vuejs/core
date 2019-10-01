@@ -12,7 +12,6 @@ import {
   CallExpression,
   ArrayExpression,
   ObjectExpression,
-  IfBranchNode,
   SourceLocation,
   Position,
   InterpolationNode,
@@ -196,7 +195,7 @@ export function generate(
         push(`const { ${ast.imports.join(', ')} } = Vue\n`)
       } else {
         // save Vue in a separate variable to avoid collision
-        push(`const _Vue = Vue`)
+        push(`const _Vue = Vue\n`)
       }
     }
     genHoists(ast.hoists, context)
@@ -221,6 +220,7 @@ export function generate(
     // also they should be renamed to avoid collision with user properties
     if (hasImports) {
       push(`const { ${ast.imports.map(n => `${n}: _${n}`).join(', ')} } = _Vue`)
+      newline()
       newline()
     }
   } else {
@@ -471,44 +471,7 @@ function genComment(node: CommentNode, context: CodegenContext) {
 
 // control flow
 function genIf(node: IfNode, context: CodegenContext) {
-  genIfBranch(node.branches[0], node.branches, 1, context)
-}
-
-function genIfBranch(
-  { condition, children }: IfBranchNode,
-  branches: IfBranchNode[],
-  nextIndex: number,
-  context: CodegenContext
-) {
-  if (condition) {
-    // v-if or v-else-if
-    const { push, indent, deindent, newline } = context
-    if (condition.type === NodeTypes.SIMPLE_EXPRESSION) {
-      const needsQuote = !isSimpleIdentifier(condition.content)
-      needsQuote && push(`(`)
-      genExpression(condition, context)
-      needsQuote && push(`)`)
-    } else {
-      genCompoundExpression(condition, context)
-    }
-    indent()
-    context.indentLevel++
-    push(`? `)
-    genChildren(children, context, true)
-    context.indentLevel--
-    newline()
-    push(`: `)
-    if (nextIndex < branches.length) {
-      genIfBranch(branches[nextIndex], branches, nextIndex + 1, context)
-    } else {
-      context.push(`null`)
-    }
-    deindent(true /* without newline */)
-  } else {
-    // v-else
-    __DEV__ && assert(nextIndex === branches.length)
-    genChildren(children, context, true)
-  }
+  genNode(node.codegenNode, context)
 }
 
 function genFor(node: ForNode, context: CodegenContext) {
@@ -623,7 +586,14 @@ function genConditionalExpression(
   context.indentLevel--
   newline()
   push(`: `)
+  const isNested = alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+  if (!isNested) {
+    context.indentLevel++
+  }
   genNode(alternate, context)
+  if (!isNested) {
+    context.indentLevel--
+  }
   deindent(true /* without newline */)
 }
 

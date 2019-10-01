@@ -74,42 +74,25 @@ describe('compiler: element transform', () => {
   })
 
   test('static props', () => {
-    const { root, node } = parseWithElementTransform(
-      `<div id="foo" class="bar" />`
-    )
+    const { node } = parseWithElementTransform(`<div id="foo" class="bar" />`)
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
-    // should hoist the static object
-    expect(root.hoists).toMatchObject([
+    expect(node.arguments).toMatchObject([
+      `"div"`,
       createStaticObjectMatcher({
         id: 'foo',
         class: 'bar'
       })
     ])
-    expect(node.arguments).toMatchObject([
-      `"div"`,
-      {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: `_hoisted_1`
-      }
-    ])
   })
 
   test('props + children', () => {
-    const { root, node } = parseWithElementTransform(
-      `<div id="foo"><span/></div>`
-    )
+    const { node } = parseWithElementTransform(`<div id="foo"><span/></div>`)
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
-    expect(root.hoists).toMatchObject([
-      createStaticObjectMatcher({
-        id: 'foo'
-      })
-    ])
     expect(node.arguments).toMatchObject([
       `"div"`,
-      {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: `_hoisted_1`
-      },
+      createStaticObjectMatcher({
+        id: 'foo'
+      }),
       [
         {
           type: NodeTypes.ELEMENT,
@@ -298,7 +281,7 @@ describe('compiler: element transform', () => {
         foo(dir) {
           _dir = dir
           return {
-            props: createObjectProperty(dir.arg!, dir.exp!, dir.loc),
+            props: createObjectProperty(dir.arg!, dir.exp!),
             needRuntime: false
           }
         }
@@ -326,7 +309,7 @@ describe('compiler: element transform', () => {
           foo(dir) {
             _dir = dir
             return {
-              props: [createObjectProperty(dir.arg!, dir.exp!, dir.loc)],
+              props: [createObjectProperty(dir.arg!, dir.exp!)],
               needRuntime: true
             }
           }

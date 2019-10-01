@@ -1,6 +1,7 @@
 import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformElement } from '../../src/transforms/transformElement'
 import {
   IfNode,
   NodeTypes,
@@ -18,7 +19,10 @@ function parseWithIfTransform(
   returnIndex: number = 0
 ): IfNode {
   const node = parse(template, options)
-  transform(node, { nodeTransforms: [transformIf], ...options })
+  transform(node, {
+    nodeTransforms: [transformIf, transformElement],
+    ...options
+  })
   if (!options.onError) {
     expect(node.children.length).toBe(1)
     expect(node.children[0].type).toBe(NodeTypes.IF)
@@ -153,67 +157,87 @@ describe('compiler: transform v-if', () => {
     expect((b3.children[1] as TextNode).content).toBe(`fine`)
   })
 
-  test('error on v-else missing adjacent v-if', () => {
-    const onError = jest.fn()
-
-    const node1 = parseWithIfTransform(`<div v-else/>`, { onError })
-    expect(onError.mock.calls[0]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: node1.loc
-      }
-    ])
-
-    const node2 = parseWithIfTransform(`<div/><div v-else/>`, { onError }, 1)
-    expect(onError.mock.calls[1]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: node2.loc
-      }
-    ])
-
-    const node3 = parseWithIfTransform(`<div/>foo<div v-else/>`, { onError }, 2)
-    expect(onError.mock.calls[2]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
-        loc: node3.loc
-      }
-    ])
+  test('should prefix v-if condition', () => {
+    const node = parseWithIfTransform(`<div v-if="ok"/>`, {
+      prefixIdentifiers: true
+    }) as IfNode
+    expect(node.branches[0].condition).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `_ctx.ok`
+    })
   })
 
-  test('error on v-else-if missing adjacent v-if', () => {
-    const onError = jest.fn()
+  describe('codegen', () => {
+    // TODO
+  })
 
-    const node1 = parseWithIfTransform(`<div v-else-if="foo"/>`, { onError })
-    expect(onError.mock.calls[0]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: node1.loc
-      }
-    ])
+  describe('errors', () => {
+    test('error on v-else missing adjacent v-if', () => {
+      const onError = jest.fn()
 
-    const node2 = parseWithIfTransform(
-      `<div/><div v-else-if="foo"/>`,
-      { onError },
-      1
-    )
-    expect(onError.mock.calls[1]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: node2.loc
-      }
-    ])
+      const node1 = parseWithIfTransform(`<div v-else/>`, { onError })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          loc: node1.loc
+        }
+      ])
 
-    const node3 = parseWithIfTransform(
-      `<div/>foo<div v-else-if="foo"/>`,
-      { onError },
-      2
-    )
-    expect(onError.mock.calls[2]).toMatchObject([
-      {
-        code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-        loc: node3.loc
-      }
-    ])
+      const node2 = parseWithIfTransform(`<div/><div v-else/>`, { onError }, 1)
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          loc: node2.loc
+        }
+      ])
+
+      const node3 = parseWithIfTransform(
+        `<div/>foo<div v-else/>`,
+        { onError },
+        2
+      )
+      expect(onError.mock.calls[2]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          loc: node3.loc
+        }
+      ])
+    })
+
+    test('error on v-else-if missing adjacent v-if', () => {
+      const onError = jest.fn()
+
+      const node1 = parseWithIfTransform(`<div v-else-if="foo"/>`, { onError })
+      expect(onError.mock.calls[0]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          loc: node1.loc
+        }
+      ])
+
+      const node2 = parseWithIfTransform(
+        `<div/><div v-else-if="foo"/>`,
+        { onError },
+        1
+      )
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          loc: node2.loc
+        }
+      ])
+
+      const node3 = parseWithIfTransform(
+        `<div/>foo<div v-else-if="foo"/>`,
+        { onError },
+        2
+      )
+      expect(onError.mock.calls[2]).toMatchObject([
+        {
+          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          loc: node3.loc
+        }
+      ])
+    })
   })
 })

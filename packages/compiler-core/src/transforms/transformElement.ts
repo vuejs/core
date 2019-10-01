@@ -148,7 +148,6 @@ export function buildProps(
   patchFlag: number
   dynamicPropNames: string[]
 } {
-  let isStatic = true
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -180,13 +179,11 @@ export function buildProps(
             value ? value.content : '',
             true,
             value ? value.loc : loc
-          ),
-          loc
+          )
         )
       )
     } else {
       // directives
-      isStatic = false
       const { name, arg, exp, loc } = prop
 
       // skip v-slot - it is handled by its dedicated transform.
@@ -297,11 +294,6 @@ export function buildProps(
     )
   }
 
-  // hoist the object if it's fully static
-  if (isStatic && propsExpression) {
-    propsExpression = context.hoist(propsExpression)
-  }
-
   // determine the flags to add
   if (hasDynammicKeys) {
     patchFlag |= PatchFlags.FULL_PROPS
@@ -391,8 +383,7 @@ function createDirectiveArgs(
         dir.modifiers.map(modifier =>
           createObjectProperty(
             createSimpleExpression(modifier, true, loc),
-            createSimpleExpression(`true`, false, loc),
-            loc
+            createSimpleExpression(`true`, false, loc)
           )
         ),
         loc

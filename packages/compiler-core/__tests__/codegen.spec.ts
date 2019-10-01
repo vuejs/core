@@ -12,7 +12,8 @@ import {
   createArrayExpression,
   ElementNode,
   createCompoundExpression,
-  createInterpolation
+  createInterpolation,
+  createSequenceExpression
 } from '../src'
 import {
   CREATE_VNODE,
@@ -100,8 +101,7 @@ describe('compiler: codegen', () => {
           [
             createObjectProperty(
               createSimpleExpression(`id`, true, mockLoc),
-              createSimpleExpression(`foo`, true, mockLoc),
-              mockLoc
+              createSimpleExpression(`foo`, true, mockLoc)
             )
           ],
           mockLoc
@@ -226,19 +226,16 @@ describe('compiler: codegen', () => {
     const { code } = generate(
       createRoot({
         children: [
-          createCompoundExpression(
-            [
-              `_ctx.`,
-              createSimpleExpression(`foo`, false, mockLoc),
-              ` + `,
-              {
-                type: NodeTypes.INTERPOLATION,
-                loc: mockLoc,
-                content: createSimpleExpression(`bar`, false, mockLoc)
-              }
-            ],
-            mockLoc
-          )
+          createCompoundExpression([
+            `_ctx.`,
+            createSimpleExpression(`foo`, false, mockLoc),
+            ` + `,
+            {
+              type: NodeTypes.INTERPOLATION,
+              loc: mockLoc,
+              content: createSimpleExpression(`bar`, false, mockLoc)
+            }
+          ])
         ]
       })
     )
@@ -253,90 +250,16 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.IF,
             loc: mockLoc,
-            branches: [
-              {
-                type: NodeTypes.IF_BRANCH,
-                condition: createSimpleExpression('foo', false, mockLoc),
-                loc: mockLoc,
-                children: [
-                  {
-                    type: NodeTypes.TEXT,
-                    content: 'foo',
-                    isEmpty: false,
-                    loc: mockLoc
-                  }
-                ]
-              },
-              {
-                type: NodeTypes.IF_BRANCH,
-                condition: createSimpleExpression('a + b', false, mockLoc),
-                loc: mockLoc,
-                children: [createInterpolation(`bye`, mockLoc)]
-              },
-              {
-                type: NodeTypes.IF_BRANCH,
-                condition: undefined,
-                loc: mockLoc,
-                children: [
-                  {
-                    type: NodeTypes.COMMENT,
-                    content: 'foo',
-                    loc: mockLoc
-                  }
-                ]
-              }
-            ]
+            branches: [],
+            codegenNode: createSequenceExpression([
+              createSimpleExpression('foo', false),
+              createSimpleExpression('bar', false)
+            ])
           }
         ]
       })
     )
-    expect(code).toMatch(`
-    return foo
-      ? "foo"
-      : (a + b)
-        ? _${TO_STRING}(bye)
-        : _${CREATE_VNODE}(_${COMMENT}, 0, "foo")`)
-    expect(code).toMatchSnapshot()
-  })
-
-  test('ifNode with no v-else', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.IF,
-            loc: mockLoc,
-            branches: [
-              {
-                type: NodeTypes.IF_BRANCH,
-                condition: createSimpleExpression('foo', false, mockLoc),
-                loc: mockLoc,
-                children: [
-                  {
-                    type: NodeTypes.TEXT,
-                    content: 'foo',
-                    isEmpty: false,
-                    loc: mockLoc
-                  }
-                ]
-              },
-              {
-                type: NodeTypes.IF_BRANCH,
-                condition: createSimpleExpression('a + b', false, mockLoc),
-                loc: mockLoc,
-                children: [createInterpolation(`bye`, mockLoc)]
-              }
-            ]
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(`
-    return foo
-      ? "foo"
-      : (a + b)
-        ? _${TO_STRING}(bye)
-        : null`)
+    expect(code).toMatch(`return (foo, bar)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -570,13 +493,11 @@ describe('compiler: codegen', () => {
               [
                 createObjectProperty(
                   createSimpleExpression(`id`, true, mockLoc),
-                  createSimpleExpression(`foo`, true, mockLoc),
-                  mockLoc
+                  createSimpleExpression(`foo`, true, mockLoc)
                 ),
                 createObjectProperty(
                   createSimpleExpression(`prop`, false, mockLoc),
-                  createSimpleExpression(`bar`, false, mockLoc),
-                  mockLoc
+                  createSimpleExpression(`bar`, false, mockLoc)
                 ),
                 // compound expression as computed key
                 createObjectProperty(
@@ -588,8 +509,7 @@ describe('compiler: codegen', () => {
                       createSimpleExpression(`bar`, false, mockLoc)
                     ]
                   },
-                  createSimpleExpression(`bar`, false, mockLoc),
-                  mockLoc
+                  createSimpleExpression(`bar`, false, mockLoc)
                 )
               ],
               mockLoc
@@ -603,8 +523,7 @@ describe('compiler: codegen', () => {
                     createObjectProperty(
                       // should quote the key!
                       createSimpleExpression(`some-key`, true, mockLoc),
-                      createSimpleExpression(`foo`, true, mockLoc),
-                      mockLoc
+                      createSimpleExpression(`foo`, true, mockLoc)
                     )
                   ],
                   mockLoc
@@ -641,4 +560,8 @@ describe('compiler: codegen', () => {
     ])`)
     expect(code).toMatchSnapshot()
   })
+
+  test.todo('SequenceExpression')
+
+  test.todo('ConditionalExpression')
 })

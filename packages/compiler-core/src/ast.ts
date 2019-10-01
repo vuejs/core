@@ -142,7 +142,7 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  codegenNode: JSChildNode | undefined
+  codegenNode: SequenceExpression
 }
 
 export interface IfBranchNode extends Node {
@@ -212,9 +212,20 @@ export interface ConditionalExpression extends Node {
   alternate: JSChildNode
 }
 
+// AST Utilities ---------------------------------------------------------------
+
+// Some expressions, e.g. sequence and conditional expressions, are never
+// associated with template nodes, so their source locations are just a stub.
+// Container types like CompoundExpression also don't need a real location.
+const locStub: SourceLocation = {
+  source: '',
+  start: { line: 1, column: 1, offset: 0 },
+  end: { line: 1, column: 1, offset: 0 }
+}
+
 export function createArrayExpression(
   elements: ArrayExpression['elements'],
-  loc: SourceLocation
+  loc: SourceLocation = locStub
 ): ArrayExpression {
   return {
     type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -225,7 +236,7 @@ export function createArrayExpression(
 
 export function createObjectExpression(
   properties: Property[],
-  loc: SourceLocation
+  loc: SourceLocation = locStub
 ): ObjectExpression {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
@@ -236,12 +247,11 @@ export function createObjectExpression(
 
 export function createObjectProperty(
   key: ExpressionNode,
-  value: JSChildNode,
-  loc: SourceLocation
+  value: JSChildNode
 ): Property {
   return {
     type: NodeTypes.JS_PROPERTY,
-    loc,
+    loc: locStub,
     key,
     value
   }
@@ -250,7 +260,7 @@ export function createObjectProperty(
 export function createSimpleExpression(
   content: string,
   isStatic: boolean,
-  loc: SourceLocation
+  loc: SourceLocation = locStub
 ): SimpleExpressionNode {
   return {
     type: NodeTypes.SIMPLE_EXPRESSION,
@@ -274,20 +284,19 @@ export function createInterpolation(
 }
 
 export function createCompoundExpression(
-  children: CompoundExpressionNode['children'],
-  loc: SourceLocation
+  children: CompoundExpressionNode['children']
 ): CompoundExpressionNode {
   return {
     type: NodeTypes.COMPOUND_EXPRESSION,
-    loc,
+    loc: locStub,
     children
   }
 }
 
 export function createCallExpression(
   callee: string,
-  args: CallExpression['arguments'],
-  loc: SourceLocation
+  args: CallExpression['arguments'] = [],
+  loc: SourceLocation = locStub
 ): CallExpression {
   return {
     type: NodeTypes.JS_CALL_EXPRESSION,
@@ -300,7 +309,7 @@ export function createCallExpression(
 export function createFunctionExpression(
   params: ExpressionNode | undefined,
   returns: TemplateChildNode[],
-  loc: SourceLocation
+  loc: SourceLocation = locStub
 ): SlotFunctionExpression {
   return {
     type: NodeTypes.JS_SLOT_FUNCTION,
@@ -310,15 +319,9 @@ export function createFunctionExpression(
   }
 }
 
-// sequence and conditional expressions are never associated with template nodes,
-// so their source locations are just a stub.
-const locStub: SourceLocation = {
-  source: '',
-  start: { line: 1, column: 1, offset: 0 },
-  end: { line: 1, column: 1, offset: 0 }
-}
-
-export function createSequenceExpression(expressions: JSChildNode[]) {
+export function createSequenceExpression(
+  expressions: JSChildNode[]
+): SequenceExpression {
   return {
     type: NodeTypes.JS_SEQUENCE_EXPRESSION,
     expressions,
@@ -330,7 +333,7 @@ export function createConditionalExpression(
   test: ExpressionNode,
   consequent: JSChildNode,
   alternate: JSChildNode
-) {
+): ConditionalExpression {
   return {
     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
     test,

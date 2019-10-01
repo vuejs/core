@@ -2,9 +2,11 @@
 
 exports[`compiler: optimize interpolation consecutive text 1`] = `
 "const _Vue = Vue
+
 return function render() {
   with (this) {
     const { toString: _toString } = _Vue
+    
     return _toString(foo) + \\" bar \\" + _toString(baz)
   }
 }"
@@ -12,9 +14,11 @@ return function render() {
 
 exports[`compiler: optimize interpolation consecutive text between elements 1`] = `
 "const _Vue = Vue
+
 return function render() {
   with (this) {
     const { createVNode: _createVNode, toString: _toString } = _Vue
+    
     return [
       _createVNode(\\"div\\"),
       _toString(foo) + \\" bar \\" + _toString(baz),
@@ -26,9 +30,11 @@ return function render() {
 
 exports[`compiler: optimize interpolation consecutive text mixed with elements 1`] = `
 "const _Vue = Vue
+
 return function render() {
   with (this) {
     const { createVNode: _createVNode, toString: _toString } = _Vue
+    
     return [
       _createVNode(\\"div\\"),
       _toString(foo) + \\" bar \\" + _toString(baz),
@@ -42,9 +48,11 @@ return function render() {
 
 exports[`compiler: optimize interpolation no consecutive text 1`] = `
 "const _Vue = Vue
+
 return function render() {
   with (this) {
     const { toString: _toString } = _Vue
+    
     return _toString(foo)
   }
 }"

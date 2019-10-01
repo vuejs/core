@@ -144,7 +144,6 @@ function buildSlot(
       slotProps,
       children,
       children.length ? children[0].loc : loc
-    ),
-    loc
+    )
   )
 }

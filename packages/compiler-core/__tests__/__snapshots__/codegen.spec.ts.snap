@@ -105,9 +105,11 @@ return function render() {
 
 exports[`compiler: codegen function mode preamble 1`] = `
 "const _Vue = Vue
+
 return function render() {
   with (this) {
     const { helperOne: _helperOne, helperTwo: _helperTwo } = _Vue
+    
     return null
   }
 }"
@@ -137,24 +139,7 @@ exports[`compiler: codegen ifNode 1`] = `
 "
 return function render() {
   with (this) {
-    return foo
-      ? \\"foo\\"
-      : (a + b)
-        ? _toString(bye)
-        : _createVNode(_Comment, 0, \\"foo\\")
-  }
-}"
-`;
-
-exports[`compiler: codegen ifNode with no v-else 1`] = `
-"
-return function render() {
-  with (this) {
-    return foo
-      ? \\"foo\\"
-      : (a + b)
-        ? _toString(bye)
-        : null
+    return (foo, bar)
   }
 }"
 `;

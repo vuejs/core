@@ -62,6 +62,7 @@ export const enum ErrorCodes {
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
+  X_IF_NO_EXPRESSION,
   X_ELSE_IF_NO_ADJACENT_IF,
   X_ELSE_NO_ADJACENT_IF,
   X_FOR_NO_EXPRESSION,
@@ -138,9 +139,10 @@ export const errorMessages: { [code: number]: string } = {
     'Note that dynamic directive argument connot contain spaces.',
 
   // transform errors
+  [ErrorCodes.X_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
   [ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF]: `v-else-if has no adjacent v-if.`,
   [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else has no adjacent v-if.`,
-  [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for has no expression.`,
+  [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,

@@ -5,7 +5,6 @@ import {
   DirectiveNode,
   NodeTypes,
   CompilerOptions,
-  IfNode,
   InterpolationNode
 } from '../../src'
 import { transformIf } from '../../src/transforms/vIf'
@@ -156,14 +155,6 @@ describe('compiler: expression transform', () => {
         },
         ` })`
       ]
-    })
-  })
-
-  test('should prefix v-if condition', () => {
-    const node = parseWithExpressionTransform(`<div v-if="ok"/>`) as IfNode
-    expect(node.branches[0].condition).toMatchObject({
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: `_ctx.ok`
     })
   })
 

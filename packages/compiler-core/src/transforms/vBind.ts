@@ -30,8 +30,7 @@ export const transformBind: DirectiveTransform = (dir, context) => {
   return {
     props: createObjectProperty(
       arg!,
-      exp || createSimpleExpression('', true, loc),
-      loc
+      exp || createSimpleExpression('', true, loc)
     ),
     needRuntime: false
   }

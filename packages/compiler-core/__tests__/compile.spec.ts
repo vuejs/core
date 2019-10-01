@@ -50,10 +50,6 @@ describe('compiler: integration tests', () => {
       filename: `foo.vue`
     })
 
-    expect(code).toMatch(
-      `const { createVNode: _createVNode, toString: _toString, renderList: _renderList } = _Vue`
-    )
-
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
@@ -119,8 +115,6 @@ describe('compiler: integration tests', () => {
       filename: `foo.vue`,
       prefixIdentifiers: true
     })
-
-    expect(code).toMatch(`const { createVNode, toString, renderList } = Vue`)
 
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])
@@ -196,10 +190,6 @@ describe('compiler: integration tests', () => {
       sourceMap: true,
       filename: `foo.vue`
     })
-
-    expect(code).toMatch(
-      `import { createVNode, toString, renderList } from "vue"`
-    )
 
     expect(code).toMatchSnapshot()
     expect(map!.sources).toEqual([`foo.vue`])

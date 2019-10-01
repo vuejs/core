@@ -58,16 +58,6 @@ describe('compiler: transform v-on', () => {
             column: 25
           }
         }
-      },
-      loc: {
-        start: {
-          line: 1,
-          column: 6
-        },
-        end: {
-          line: 1,
-          column: 26
-        }
       }
     })
   })

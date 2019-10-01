@@ -43,16 +43,13 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
           arg.content === `name`
         ) {
           // dynamic :name="xxx"
-          slot = createCompoundExpression(
-            [
-              $slots + `[`,
-              ...(exp.type === NodeTypes.SIMPLE_EXPRESSION
-                ? [exp]
-                : exp.children),
-              `]`
-            ],
-            loc
-          )
+          slot = createCompoundExpression([
+            $slots + `[`,
+            ...(exp.type === NodeTypes.SIMPLE_EXPRESSION
+              ? [exp]
+              : exp.children),
+            `]`
+          ])
           nameIndex = i
           break
         }

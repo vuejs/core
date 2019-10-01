@@ -27,7 +27,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
         arg.loc
       )
     } else {
-      eventName = createCompoundExpression([`"on" + (`, arg, `)`], arg.loc)
+      eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }
   } else {
     // already a compound epxression.
@@ -40,8 +40,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
   return {
     props: createObjectProperty(
       eventName,
-      exp || createSimpleExpression(`() => {}`, false, loc),
-      loc
+      exp || createSimpleExpression(`() => {}`, false, loc)
     ),
     needRuntime: false
   }
