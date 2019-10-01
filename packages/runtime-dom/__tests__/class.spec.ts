@@ -1,10 +1,10 @@
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/directives/class.spec.js
 
-import { h, render, ref, Ref, reactive, ComponentOptions } from '../src'
+import { h, render, ComponentOptions } from '../src'
 
 function assertClass(assertions: Array<Array<any>>) {
   const root = document.createElement('div')
-  const dynamic = ref('')
+  const dynamic = { value: '' }
   const wrapper = () => h('div', { class: ['foo', dynamic.value] })
 
   for (const [input, expected] of assertions) {
@@ -63,12 +63,14 @@ describe('class', () => {
 
   test('class merge between parent and child', () => {
     const root = document.createElement('div')
-    type ClassRef = Ref<string | object | string[]>
-    const childClass: ClassRef = ref('d')
+    type ClassItem = {
+      value: string | object | string[]
+    }
+    const childClass: ClassItem = { value: 'd' }
 
     const child = () => h('div', { class: ['c', childClass.value] })
 
-    const parentClass: ClassRef = ref('b')
+    const parentClass: ClassItem = { value: 'b' }
     const parent = () => h(child, { class: ['a', parentClass.value] })
 
     render(h(parent), root)
@@ -91,12 +93,14 @@ describe('class', () => {
     const component1: ComponentOptions = {
       render() {
         // FIXME: how to type this?
+        // @ts-ignore
         return this.$slots.default()
       }
     }
 
     const component2: ComponentOptions = {
       render() {
+        // @ts-ignore
         return this.$slots.default()
       }
     }
@@ -108,15 +112,16 @@ describe('class', () => {
           {
             class: 'staticClass'
           },
+          // @ts-ignore
           this.$slots.default()
         )
       }
     }
 
     const root = document.createElement('div')
-    const componentClass1 = ref('componentClass1')
-    const componentClass2 = ref('componentClass2')
-    const componentClass3 = ref('componentClass3')
+    const componentClass1 = { value: 'componentClass1' }
+    const componentClass2 = { value: 'componentClass2' }
+    const componentClass3 = { value: 'componentClass3' }
 
     const wrapper = () =>
       h(component1, { class: componentClass1.value }, [
@@ -147,10 +152,10 @@ describe('class', () => {
 
   test('deep update', () => {
     const root = document.createElement('div')
-    const test = reactive({
+    const test = {
       a: true,
       b: false
-    })
+    }
 
     const wrapper = () => h('div', { class: test })
     render(wrapper(), root)
@@ -165,7 +170,7 @@ describe('class', () => {
   // same tag next to each other, and toggling them.
   test('properly remove staticClass for toggling un-keyed children', done => {
     const root = document.createElement('div')
-    const ok = ref(true)
+    const ok = { value: true }
     const wrapper = () =>
       h('div', [ok.value ? h('div', { class: 'a' }) : h('div')])
 
