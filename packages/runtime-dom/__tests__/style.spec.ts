@@ -297,6 +297,7 @@ describe('style', () => {
     const test: ComponentOptions = {
       render() {
         // FIXME: how to type this?
+        // @ts-ignore
         return h('div', [this.$slots.default()])
       }
     }
