@@ -59,7 +59,7 @@ describe('compiler: transform component slots', () => {
     expect(slots).toMatchObject(
       createSlotMatcher({
         default: {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: undefined,
           returns: [
             {
@@ -81,7 +81,7 @@ describe('compiler: transform component slots', () => {
     expect(slots).toMatchObject(
       createSlotMatcher({
         default: {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [`{ `, { content: `foo` }, ` }`]
@@ -121,7 +121,7 @@ describe('compiler: transform component slots', () => {
     expect(slots).toMatchObject(
       createSlotMatcher({
         one: {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{ foo }`,
@@ -143,7 +143,7 @@ describe('compiler: transform component slots', () => {
           ]
         },
         two: {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{ bar }`,
@@ -184,7 +184,7 @@ describe('compiler: transform component slots', () => {
     expect(slots).toMatchObject(
       createSlotMatcher({
         '[_ctx.one]': {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{ foo }`,
@@ -206,7 +206,7 @@ describe('compiler: transform component slots', () => {
           ]
         },
         '[_ctx.two]': {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{ bar }`,
@@ -247,7 +247,7 @@ describe('compiler: transform component slots', () => {
     expect(slots).toMatchObject(
       createSlotMatcher({
         default: {
-          type: NodeTypes.JS_SLOT_FUNCTION,
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{ foo }`,
@@ -263,7 +263,7 @@ describe('compiler: transform component slots', () => {
                   `null`,
                   createSlotMatcher({
                     default: {
-                      type: NodeTypes.JS_SLOT_FUNCTION,
+                      type: NodeTypes.JS_FUNCTION_EXPRESSION,
                       params: {
                         type: NodeTypes.COMPOUND_EXPRESSION,
                         children: [`{ `, { content: `bar` }, ` }`]

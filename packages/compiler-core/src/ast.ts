@@ -28,7 +28,7 @@ export const enum NodeTypes {
   JS_OBJECT_EXPRESSION,
   JS_PROPERTY,
   JS_ARRAY_EXPRESSION,
-  JS_SLOT_FUNCTION,
+  JS_FUNCTION_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_CONDITIONAL_EXPRESSION
 }
@@ -158,6 +158,7 @@ export interface ForNode extends Node {
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
+  codegenNode: SequenceExpression
 }
 
 // We also include a number of JavaScript AST nodes for code generation.
@@ -168,7 +169,7 @@ export type JSChildNode =
   | ObjectExpression
   | ArrayExpression
   | ExpressionNode
-  | SlotFunctionExpression
+  | FunctionExpression
   | ConditionalExpression
   | SequenceExpression
 
@@ -194,10 +195,11 @@ export interface ArrayExpression extends Node {
   elements: Array<string | JSChildNode>
 }
 
-export interface SlotFunctionExpression extends Node {
-  type: NodeTypes.JS_SLOT_FUNCTION
-  params: ExpressionNode | undefined
-  returns: TemplateChildNode[]
+export interface FunctionExpression extends Node {
+  type: NodeTypes.JS_FUNCTION_EXPRESSION
+  params: ExpressionNode | ExpressionNode[] | undefined
+  returns: TemplateChildNode | TemplateChildNode[]
+  newline: boolean
 }
 
 export interface SequenceExpression extends Node {
@@ -235,7 +237,7 @@ export function createArrayExpression(
 }
 
 export function createObjectExpression(
-  properties: Property[],
+  properties: ObjectExpression['properties'],
   loc: SourceLocation = locStub
 ): ObjectExpression {
   return {
@@ -246,8 +248,8 @@ export function createObjectExpression(
 }
 
 export function createObjectProperty(
-  key: ExpressionNode,
-  value: JSChildNode
+  key: Property['key'],
+  value: Property['value']
 ): Property {
   return {
     type: NodeTypes.JS_PROPERTY,
@@ -258,8 +260,8 @@ export function createObjectProperty(
 }
 
 export function createSimpleExpression(
-  content: string,
-  isStatic: boolean,
+  content: SimpleExpressionNode['content'],
+  isStatic: SimpleExpressionNode['isStatic'],
   loc: SourceLocation = locStub
 ): SimpleExpressionNode {
   return {
@@ -271,7 +273,7 @@ export function createSimpleExpression(
 }
 
 export function createInterpolation(
-  content: string | CompoundExpressionNode,
+  content: InterpolationNode['content'] | string,
   loc: SourceLocation
 ): InterpolationNode {
   return {
@@ -294,7 +296,7 @@ export function createCompoundExpression(
 }
 
 export function createCallExpression(
-  callee: string,
+  callee: CallExpression['callee'],
   args: CallExpression['arguments'] = [],
   loc: SourceLocation = locStub
 ): CallExpression {
@@ -307,20 +309,22 @@ export function createCallExpression(
 }
 
 export function createFunctionExpression(
-  params: ExpressionNode | undefined,
-  returns: TemplateChildNode[],
+  params: FunctionExpression['params'],
+  returns: FunctionExpression['returns'],
+  newline: boolean = false,
   loc: SourceLocation = locStub
-): SlotFunctionExpression {
+): FunctionExpression {
   return {
-    type: NodeTypes.JS_SLOT_FUNCTION,
+    type: NodeTypes.JS_FUNCTION_EXPRESSION,
     params,
     returns,
+    newline,
     loc
   }
 }
 
 export function createSequenceExpression(
-  expressions: JSChildNode[]
+  expressions: SequenceExpression['expressions']
 ): SequenceExpression {
   return {
     type: NodeTypes.JS_SEQUENCE_EXPRESSION,
@@ -330,9 +334,9 @@ export function createSequenceExpression(
 }
 
 export function createConditionalExpression(
-  test: ExpressionNode,
-  consequent: JSChildNode,
-  alternate: JSChildNode
+  test: ConditionalExpression['test'],
+  consequent: ConditionalExpression['consequent'],
+  alternate: ConditionalExpression['alternate']
 ): ConditionalExpression {
   return {
     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,

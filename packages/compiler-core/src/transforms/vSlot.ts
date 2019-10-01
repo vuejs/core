@@ -143,6 +143,7 @@ function buildSlot(
     createFunctionExpression(
       slotProps,
       children,
+      false,
       children.length ? children[0].loc : loc
     )
   )

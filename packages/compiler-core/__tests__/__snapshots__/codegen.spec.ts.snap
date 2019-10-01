@@ -22,19 +22,6 @@ return function render() {
 }"
 `;
 
-exports[`compiler: codegen SlotFunctionExpression 1`] = `
-"
-return function render() {
-  with (this) {
-    return _createVNode(Comp, 0, {
-      default: ({ foo }) => [
-        _toString(foo)
-      ]
-    })
-  }
-}"
-`;
-
 exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1`] = `
 "
 return function render() {
@@ -67,60 +54,6 @@ exports[`compiler: codegen compound expression 1`] = `
 return function render() {
   with (this) {
     return _ctx.foo + _toString(bar)
-  }
-}"
-`;
-
-exports[`compiler: codegen forNode 1`] = `
-"
-return function render() {
-  with (this) {
-    return _renderList(list, (v, k, i) => {
-      return _toString(v)
-    })
-  }
-}"
-`;
-
-exports[`compiler: codegen forNode w/ prefixIdentifiers: true 1`] = `
-"
-return function render() {
-  const _ctx = this
-  return renderList(list, (v, k, i) => {
-    return toString(v)
-  })
-}"
-`;
-
-exports[`compiler: codegen forNode w/ skipped key alias 1`] = `
-"
-return function render() {
-  with (this) {
-    return _renderList(list, (v, __key, i) => {
-      return _toString(v)
-    })
-  }
-}"
-`;
-
-exports[`compiler: codegen forNode w/ skipped value alias 1`] = `
-"
-return function render() {
-  with (this) {
-    return _renderList(list, (__value, k, i) => {
-      return _toString(v)
-    })
-  }
-}"
-`;
-
-exports[`compiler: codegen forNode w/ skipped value and key aliases 1`] = `
-"
-return function render() {
-  with (this) {
-    return _renderList(list, (__value, __key, i) => {
-      return _toString(v)
-    })
   }
 }"
 `;

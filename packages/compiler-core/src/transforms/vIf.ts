@@ -20,7 +20,9 @@ import {
   ObjectExpression,
   createObjectProperty,
   Property,
-  ExpressionNode
+  ExpressionNode,
+  TemplateChildNode,
+  FunctionExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -68,7 +70,7 @@ export const transformIf = createStructuralDirectiveTransform(
       // transformed.
       return () => {
         codegenNode.expressions.push(
-          createCodegenNodeForBranch(node, branch, 0, context)
+          createCodegenNodeForBranch(branch, 0, context)
         )
       }
     } else {
@@ -105,7 +107,6 @@ export const transformIf = createStructuralDirectiveTransform(
               parentCondition = parentCondition.alternate
             } else {
               parentCondition.alternate = createCodegenNodeForBranch(
-                node,
                 branch,
                 sibling.branches.length - 1,
                 context
@@ -139,7 +140,6 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
 }
 
 function createCodegenNodeForBranch(
-  node: ElementNode,
   branch: IfBranchNode,
   index: number,
   context: TransformContext
@@ -147,41 +147,50 @@ function createCodegenNodeForBranch(
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(node, branch, index, context),
+      createChildrenCodegenNode(branch, index, context),
       createCallExpression(context.helper(CREATE_BLOCK), [
         context.helper(EMPTY)
       ])
     )
   } else {
-    return createChildrenCodegenNode(node, branch, index, context)
+    return createChildrenCodegenNode(branch, index, context)
   }
 }
 
 function createChildrenCodegenNode(
-  node: ElementNode,
   branch: IfBranchNode,
   index: number,
   { helper }: TransformContext
 ): CallExpression {
-  const isTemplate = node.tagType === ElementTypes.TEMPLATE
   const keyExp = `{ key: ${index} }`
-  if (isTemplate) {
+  const { children } = branch
+  const child = children[0]
+  const needFragmentWrapper =
+    children.length > 1 || child.type !== NodeTypes.ELEMENT
+  if (needFragmentWrapper) {
+    let fragmentChildren: TemplateChildNode[] | FunctionExpression = children
+    // optimize away nested fragments when child is a ForNode
+    if (children.length === 1 && child.type === NodeTypes.FOR) {
+      fragmentChildren = (child.codegenNode.expressions[1] as CallExpression)
+        .arguments[2] as FunctionExpression
+    }
     return createCallExpression(helper(CREATE_BLOCK), [
       helper(FRAGMENT),
       keyExp,
-      branch.children
+      fragmentChildren
     ])
   } else {
-    let childCodegen = node.codegenNode!
-    if (childCodegen.callee.includes(APPLY_DIRECTIVES)) {
-      childCodegen = childCodegen.arguments[0] as CallExpression
+    const childCodegen = (child as ElementNode).codegenNode!
+    let vnodeCall = childCodegen
+    if (vnodeCall.callee.includes(APPLY_DIRECTIVES)) {
+      vnodeCall = vnodeCall.arguments[0] as CallExpression
     }
     // change child to a block
-    childCodegen.callee = helper(CREATE_BLOCK)
+    vnodeCall.callee = helper(CREATE_BLOCK)
     // branch key
-    const existingProps = childCodegen.arguments[1]
+    const existingProps = vnodeCall.arguments[1]
     if (!existingProps || existingProps === `null`) {
-      childCodegen.arguments[1] = keyExp
+      vnodeCall.arguments[1] = keyExp
     } else {
       // inject branch key if not already have a key
       const props = existingProps as
@@ -202,13 +211,13 @@ function createChildrenCodegenNode(
         props.properties.unshift(createKeyProperty(index))
       } else {
         // single v-bind with expression
-        childCodegen.arguments[1] = createCallExpression(helper(MERGE_PROPS), [
+        vnodeCall.arguments[1] = createCallExpression(helper(MERGE_PROPS), [
           keyExp,
           props
         ])
       }
     }
-    return node.codegenNode!
+    return childCodegen
   }
 }
 

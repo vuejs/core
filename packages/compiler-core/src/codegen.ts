@@ -2,8 +2,6 @@ import {
   RootNode,
   TemplateChildNode,
   ElementNode,
-  IfNode,
-  ForNode,
   TextNode,
   CommentNode,
   ExpressionNode,
@@ -18,7 +16,7 @@ import {
   CompoundExpressionNode,
   SimpleExpressionNode,
   ElementTypes,
-  SlotFunctionExpression,
+  FunctionExpression,
   SequenceExpression,
   ConditionalExpression
 } from './ast'
@@ -29,12 +27,7 @@ import {
   isSimpleIdentifier
 } from './utils'
 import { isString, isArray } from '@vue/shared'
-import {
-  RENDER_LIST,
-  TO_STRING,
-  CREATE_VNODE,
-  COMMENT
-} from './runtimeConstants'
+import { TO_STRING, CREATE_VNODE, COMMENT } from './runtimeConstants'
 
 type CodegenNode = TemplateChildNode | JSChildNode
 
@@ -342,7 +335,15 @@ function genNodeList(
 function genNode(node: CodegenNode, context: CodegenContext) {
   switch (node.type) {
     case NodeTypes.ELEMENT:
-      genElement(node, context)
+    case NodeTypes.IF:
+    case NodeTypes.FOR:
+      __DEV__ &&
+        assert(
+          node.codegenNode != null,
+          `Codegen node is missing for element/if/for node. ` +
+            `Apply appropriate transforms first.`
+        )
+      genNode(node.codegenNode!, context)
       break
     case NodeTypes.TEXT:
       genText(node, context)
@@ -359,12 +360,6 @@ function genNode(node: CodegenNode, context: CodegenContext) {
     case NodeTypes.COMMENT:
       genComment(node, context)
       break
-    case NodeTypes.IF:
-      genIf(node, context)
-      break
-    case NodeTypes.FOR:
-      genFor(node, context)
-      break
     case NodeTypes.JS_CALL_EXPRESSION:
       genCallExpression(node, context)
       break
@@ -374,8 +369,8 @@ function genNode(node: CodegenNode, context: CodegenContext) {
     case NodeTypes.JS_ARRAY_EXPRESSION:
       genArrayExpression(node, context)
       break
-    case NodeTypes.JS_SLOT_FUNCTION:
-      genSlotFunction(node, context)
+    case NodeTypes.JS_FUNCTION_EXPRESSION:
+      genFunctionExpression(node, context)
       break
     case NodeTypes.JS_SEQUENCE_EXPRESSION:
       genSequenceExpression(node, context)
@@ -392,16 +387,6 @@ function genNode(node: CodegenNode, context: CodegenContext) {
         return exhaustiveCheck
       }
   }
-}
-
-function genElement(node: ElementNode, context: CodegenContext) {
-  __DEV__ &&
-    assert(
-      node.codegenNode != null,
-      `AST is not transformed for codegen. ` +
-        `Apply appropriate transforms first.`
-    )
-  genCallExpression(node.codegenNode!, context, false)
 }
 
 function genText(
@@ -469,56 +454,10 @@ function genComment(node: CommentNode, context: CodegenContext) {
   }
 }
 
-// control flow
-function genIf(node: IfNode, context: CodegenContext) {
-  genNode(node.codegenNode, context)
-}
-
-function genFor(node: ForNode, context: CodegenContext) {
-  const { push, helper, indent, deindent } = context
-  const { source, keyAlias, valueAlias, objectIndexAlias, children } = node
-  push(`${helper(RENDER_LIST)}(`, node, true)
-  genNode(source, context)
-  push(`, (`)
-  if (valueAlias) {
-    genNode(valueAlias, context)
-  }
-  if (keyAlias) {
-    if (!valueAlias) {
-      push(`__value`)
-    }
-    push(`, `)
-    genNode(keyAlias, context)
-  }
-  if (objectIndexAlias) {
-    if (!keyAlias) {
-      if (!valueAlias) {
-        push(`__value, __key`)
-      } else {
-        push(`, __key`)
-      }
-    }
-    push(`, `)
-    genNode(objectIndexAlias, context)
-  }
-  push(`) => {`)
-  indent()
-  push(`return `)
-  genChildren(children, context, true)
-  deindent()
-  push(`})`)
-}
-
 // JavaScript
-function genCallExpression(
-  node: CallExpression,
-  context: CodegenContext,
-  multilines = false
-) {
+function genCallExpression(node: CallExpression, context: CodegenContext) {
   context.push(node.callee + `(`, node, true)
-  multilines && context.indent()
-  genNodeList(node.arguments, context, multilines)
-  multilines && context.deindent()
+  genNodeList(node.arguments, context)
   context.push(`)`)
 }
 
@@ -554,15 +493,33 @@ function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
   genNodeListAsArray(node.elements, context)
 }
 
-function genSlotFunction(
-  node: SlotFunctionExpression,
+function genFunctionExpression(
+  node: FunctionExpression,
   context: CodegenContext
 ) {
-  context.push(`(`, node)
-  if (node.params) genNode(node.params, context)
-  context.push(`) => `)
-  // pre-normalized slots should always return arrays
-  genNodeListAsArray(node.returns, context)
+  const { push, indent, deindent } = context
+  const { params, returns, newline } = node
+  push(`(`, node)
+  if (isArray(params)) {
+    genNodeList(params, context)
+  } else if (params) {
+    genNode(params, context)
+  }
+  push(`) => `)
+  if (newline) {
+    push(`{`)
+    indent()
+    push(`return `)
+  }
+  if (isArray(returns)) {
+    genNodeListAsArray(returns, context)
+  } else {
+    genNode(returns, context)
+  }
+  if (newline) {
+    deindent()
+    push(`}`)
+  }
 }
 
 function genConditionalExpression(

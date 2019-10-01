@@ -7,11 +7,20 @@ import {
   ExpressionNode,
   createSimpleExpression,
   SourceLocation,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  createSequenceExpression,
+  createCallExpression,
+  createFunctionExpression,
+  ElementTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange } from '../utils'
-import { RENDER_LIST } from '../runtimeConstants'
+import {
+  RENDER_LIST,
+  OPEN_BLOCK,
+  CREATE_BLOCK,
+  FRAGMENT
+} from '../runtimeConstants'
 import { processExpression } from './transformExpression'
 
 export const transformFor = createStructuralDirectiveTransform(
@@ -26,8 +35,13 @@ export const transformFor = createStructuralDirectiveTransform(
       )
 
       if (parseResult) {
-        context.helper(RENDER_LIST)
+        const { helper, addIdentifiers, removeIdentifiers } = context
         const { source, value, key, index } = parseResult
+
+        const codegenNode = createSequenceExpression([
+          createCallExpression(helper(OPEN_BLOCK))
+          // to be filled in on exit after children traverse
+        ])
 
         context.replaceNode({
           type: NodeTypes.FOR,
@@ -36,19 +50,52 @@ export const transformFor = createStructuralDirectiveTransform(
           valueAlias: value,
           keyAlias: key,
           objectIndexAlias: index,
-          children: [node]
+          children: [node],
+          codegenNode
         })
 
         if (!__BROWSER__) {
           // scope management
-          const { addIdentifiers, removeIdentifiers } = context
-
           // inject identifiers to context
           value && addIdentifiers(value)
           key && addIdentifiers(key)
           index && addIdentifiers(index)
+        }
 
-          return () => {
+        return () => {
+          const params: ExpressionNode[] = []
+          if (value) {
+            params.push(value)
+          }
+          if (key) {
+            if (!value) {
+              params.push(createSimpleExpression(`_`, false))
+            }
+            params.push(key)
+          }
+          if (index) {
+            if (!key) {
+              params.push(createSimpleExpression(`__`, false))
+            }
+            params.push(index)
+          }
+
+          codegenNode.expressions.push(
+            createCallExpression(helper(CREATE_BLOCK), [
+              helper(FRAGMENT),
+              `null`,
+              createCallExpression(helper(RENDER_LIST), [
+                source,
+                createFunctionExpression(
+                  params,
+                  node.tagType === ElementTypes.TEMPLATE ? node.children : node,
+                  true /* force newline to make it more readable */
+                )
+              ])
+            ])
+          )
+
+          if (!__BROWSER__) {
             value && removeIdentifiers(value)
             key && removeIdentifiers(key)
             index && removeIdentifiers(index)

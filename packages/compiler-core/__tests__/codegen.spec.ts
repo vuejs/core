@@ -4,8 +4,6 @@ import {
   NodeTypes,
   RootNode,
   createSimpleExpression,
-  Namespaces,
-  ElementTypes,
   createObjectExpression,
   createObjectProperty,
   createArrayExpression,
@@ -15,12 +13,7 @@ import {
   createCallExpression,
   createConditionalExpression
 } from '../src'
-import {
-  CREATE_VNODE,
-  COMMENT,
-  TO_STRING,
-  RENDER_LIST
-} from '../src/runtimeConstants'
+import { CREATE_VNODE, COMMENT, TO_STRING } from '../src/runtimeConstants'
 import { createElementWithCodegen } from './testUtils'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
@@ -250,202 +243,202 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('forNode', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.FOR,
-            loc: locStub,
-            source: createSimpleExpression(`list`, false, locStub),
-            valueAlias: createSimpleExpression(`v`, false, locStub),
-            keyAlias: createSimpleExpression(`k`, false, locStub),
-            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
-            children: [createInterpolation(`v`, locStub)]
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(
-      `return _${RENDER_LIST}(list, (v, k, i) => {
-      return _${TO_STRING}(v)
-    })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('forNode', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.FOR,
+  //           loc: locStub,
+  //           source: createSimpleExpression(`list`, false, locStub),
+  //           valueAlias: createSimpleExpression(`v`, false, locStub),
+  //           keyAlias: createSimpleExpression(`k`, false, locStub),
+  //           objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+  //           children: [createInterpolation(`v`, locStub)]
+  //         }
+  //       ]
+  //     })
+  //   )
+  //   expect(code).toMatch(
+  //     `return _${RENDER_LIST}(list, (v, k, i) => {
+  //     return _${TO_STRING}(v)
+  //   })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
-  test('forNode w/ prefixIdentifiers: true', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.FOR,
-            loc: locStub,
-            source: createSimpleExpression(`list`, false, locStub),
-            valueAlias: createSimpleExpression(`v`, false, locStub),
-            keyAlias: createSimpleExpression(`k`, false, locStub),
-            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
-            children: [createInterpolation(`v`, locStub)]
-          }
-        ]
-      }),
-      {
-        prefixIdentifiers: true
-      }
-    )
-    expect(code).toMatch(
-      `return ${RENDER_LIST}(list, (v, k, i) => {
-    return ${TO_STRING}(v)
-  })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('forNode w/ prefixIdentifiers: true', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.FOR,
+  //           loc: locStub,
+  //           source: createSimpleExpression(`list`, false, locStub),
+  //           valueAlias: createSimpleExpression(`v`, false, locStub),
+  //           keyAlias: createSimpleExpression(`k`, false, locStub),
+  //           objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+  //           children: [createInterpolation(`v`, locStub)]
+  //         }
+  //       ]
+  //     }),
+  //     {
+  //       prefixIdentifiers: true
+  //     }
+  //   )
+  //   expect(code).toMatch(
+  //     `return ${RENDER_LIST}(list, (v, k, i) => {
+  //   return ${TO_STRING}(v)
+  // })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
-  test('forNode w/ skipped value alias', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.FOR,
-            loc: locStub,
-            source: createSimpleExpression(`list`, false, locStub),
-            valueAlias: undefined,
-            keyAlias: createSimpleExpression(`k`, false, locStub),
-            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
-            children: [createInterpolation(`v`, locStub)]
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(
-      `return _${RENDER_LIST}(list, (__value, k, i) => {
-      return _${TO_STRING}(v)
-    })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('forNode w/ skipped value alias', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.FOR,
+  //           loc: locStub,
+  //           source: createSimpleExpression(`list`, false, locStub),
+  //           valueAlias: undefined,
+  //           keyAlias: createSimpleExpression(`k`, false, locStub),
+  //           objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+  //           children: [createInterpolation(`v`, locStub)]
+  //         }
+  //       ]
+  //     })
+  //   )
+  //   expect(code).toMatch(
+  //     `return _${RENDER_LIST}(list, (__value, k, i) => {
+  //     return _${TO_STRING}(v)
+  //   })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
-  test('forNode w/ skipped key alias', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.FOR,
-            loc: locStub,
-            source: createSimpleExpression(`list`, false, locStub),
-            valueAlias: createSimpleExpression(`v`, false, locStub),
-            keyAlias: undefined,
-            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
-            children: [createInterpolation(`v`, locStub)]
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(
-      `return _${RENDER_LIST}(list, (v, __key, i) => {
-      return _${TO_STRING}(v)
-    })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('forNode w/ skipped key alias', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.FOR,
+  //           loc: locStub,
+  //           source: createSimpleExpression(`list`, false, locStub),
+  //           valueAlias: createSimpleExpression(`v`, false, locStub),
+  //           keyAlias: undefined,
+  //           objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+  //           children: [createInterpolation(`v`, locStub)]
+  //         }
+  //       ]
+  //     })
+  //   )
+  //   expect(code).toMatch(
+  //     `return _${RENDER_LIST}(list, (v, __key, i) => {
+  //     return _${TO_STRING}(v)
+  //   })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
-  test('forNode w/ skipped value and key aliases', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.FOR,
-            loc: locStub,
-            source: createSimpleExpression(`list`, false, locStub),
-            valueAlias: undefined,
-            keyAlias: undefined,
-            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
-            children: [createInterpolation(`v`, locStub)]
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(
-      `return _${RENDER_LIST}(list, (__value, __key, i) => {
-      return _${TO_STRING}(v)
-    })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('forNode w/ skipped value and key aliases', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.FOR,
+  //           loc: locStub,
+  //           source: createSimpleExpression(`list`, false, locStub),
+  //           valueAlias: undefined,
+  //           keyAlias: undefined,
+  //           objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+  //           children: [createInterpolation(`v`, locStub)]
+  //         }
+  //       ]
+  //     })
+  //   )
+  //   expect(code).toMatch(
+  //     `return _${RENDER_LIST}(list, (__value, __key, i) => {
+  //     return _${TO_STRING}(v)
+  //   })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
-  test('SlotFunctionExpression', () => {
-    const { code } = generate(
-      createRoot({
-        children: [
-          {
-            type: NodeTypes.ELEMENT,
-            tagType: ElementTypes.COMPONENT,
-            ns: Namespaces.HTML,
-            isSelfClosing: false,
-            tag: `Comp`,
-            loc: locStub,
-            props: [],
-            children: [],
-            codegenNode: {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              loc: locStub,
-              callee: `_${CREATE_VNODE}`,
-              arguments: [
-                `Comp`,
-                `0`,
-                {
-                  type: NodeTypes.JS_OBJECT_EXPRESSION,
-                  loc: locStub,
-                  properties: [
-                    {
-                      type: NodeTypes.JS_PROPERTY,
-                      loc: locStub,
-                      key: {
-                        type: NodeTypes.SIMPLE_EXPRESSION,
-                        isStatic: true,
-                        content: `default`,
-                        loc: locStub
-                      },
-                      value: {
-                        type: NodeTypes.JS_SLOT_FUNCTION,
-                        loc: locStub,
-                        params: {
-                          type: NodeTypes.SIMPLE_EXPRESSION,
-                          isStatic: false,
-                          content: `{ foo }`,
-                          loc: locStub
-                        },
-                        returns: [
-                          {
-                            type: NodeTypes.INTERPOLATION,
-                            loc: locStub,
-                            content: {
-                              type: NodeTypes.SIMPLE_EXPRESSION,
-                              isStatic: false,
-                              content: `foo`,
-                              loc: locStub
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ]
-      })
-    )
-    expect(code).toMatch(
-      `return _createVNode(Comp, 0, {
-      default: ({ foo }) => [
-        _toString(foo)
-      ]
-    })`
-    )
-    expect(code).toMatchSnapshot()
-  })
+  // test('SlotFunctionExpression', () => {
+  //   const { code } = generate(
+  //     createRoot({
+  //       children: [
+  //         {
+  //           type: NodeTypes.ELEMENT,
+  //           tagType: ElementTypes.COMPONENT,
+  //           ns: Namespaces.HTML,
+  //           isSelfClosing: false,
+  //           tag: `Comp`,
+  //           loc: locStub,
+  //           props: [],
+  //           children: [],
+  //           codegenNode: {
+  //             type: NodeTypes.JS_CALL_EXPRESSION,
+  //             loc: locStub,
+  //             callee: `_${CREATE_VNODE}`,
+  //             arguments: [
+  //               `Comp`,
+  //               `0`,
+  //               {
+  //                 type: NodeTypes.JS_OBJECT_EXPRESSION,
+  //                 loc: locStub,
+  //                 properties: [
+  //                   {
+  //                     type: NodeTypes.JS_PROPERTY,
+  //                     loc: locStub,
+  //                     key: {
+  //                       type: NodeTypes.SIMPLE_EXPRESSION,
+  //                       isStatic: true,
+  //                       content: `default`,
+  //                       loc: locStub
+  //                     },
+  //                     value: {
+  //                       type: NodeTypes.JS_FUNCTION_EXPRESSION,
+  //                       loc: locStub,
+  //                       params: {
+  //                         type: NodeTypes.SIMPLE_EXPRESSION,
+  //                         isStatic: false,
+  //                         content: `{ foo }`,
+  //                         loc: locStub
+  //                       },
+  //                       returns: [
+  //                         {
+  //                           type: NodeTypes.INTERPOLATION,
+  //                           loc: locStub,
+  //                           content: {
+  //                             type: NodeTypes.SIMPLE_EXPRESSION,
+  //                             isStatic: false,
+  //                             content: `foo`,
+  //                             loc: locStub
+  //                           }
+  //                         }
+  //                       ]
+  //                     }
+  //                   }
+  //                 ]
+  //               }
+  //             ]
+  //           }
+  //         }
+  //       ]
+  //     })
+  //   )
+  //   expect(code).toMatch(
+  //     `return _createVNode(Comp, 0, {
+  //     default: ({ foo }) => [
+  //       _toString(foo)
+  //     ]
+  //   })`
+  //   )
+  //   expect(code).toMatchSnapshot()
+  // })
 
   test('callExpression + objectExpression + arrayExpression', () => {
     const { code } = generate(
