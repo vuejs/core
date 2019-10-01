@@ -1,6 +1,6 @@
 import {
   RootNode,
-  ChildNode,
+  TemplateChildNode,
   ElementNode,
   IfNode,
   ForNode,
@@ -19,7 +19,9 @@ import {
   CompoundExpressionNode,
   SimpleExpressionNode,
   ElementTypes,
-  SlotFunctionExpression
+  SlotFunctionExpression,
+  SequenceExpression,
+  ConditionalExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -35,7 +37,7 @@ import {
   COMMENT
 } from './runtimeConstants'
 
-type CodegenNode = ChildNode | JSChildNode
+type CodegenNode = TemplateChildNode | JSChildNode
 
 export interface CodegenOptions {
   // - Module mode will generate ES module import statements for helpers
@@ -269,7 +271,7 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 //   - expression
 //   - <slot> outlet, which always produces an array
 function genChildren(
-  children: ChildNode[],
+  children: TemplateChildNode[],
   context: CodegenContext,
   allowSingle: boolean = false
 ) {
@@ -294,7 +296,7 @@ function genChildren(
 }
 
 function genNodeListAsArray(
-  nodes: (string | CodegenNode | ChildNode[])[],
+  nodes: (string | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext
 ) {
   const multilines =
@@ -312,7 +314,7 @@ function genNodeListAsArray(
 }
 
 function genNodeList(
-  nodes: (string | CodegenNode | ChildNode[])[],
+  nodes: (string | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
   multilines: boolean = false
 ) {
@@ -374,6 +376,12 @@ function genNode(node: CodegenNode, context: CodegenContext) {
       break
     case NodeTypes.JS_SLOT_FUNCTION:
       genSlotFunction(node, context)
+      break
+    case NodeTypes.JS_SEQUENCE_EXPRESSION:
+      genSequenceExpression(node, context)
+      break
+    case NodeTypes.JS_CONDITIONAL_EXPRESSION:
+      genConditionalExpression(node, context)
       break
     /* istanbul ignore next */
     default:
@@ -592,4 +600,38 @@ function genSlotFunction(
   context.push(`) => `)
   // pre-normalized slots should always return arrays
   genNodeListAsArray(node.returns, context)
+}
+
+function genConditionalExpression(
+  node: ConditionalExpression,
+  context: CodegenContext
+) {
+  const { test, consequent, alternate } = node
+  const { push, indent, deindent, newline } = context
+  if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
+    const needsQuote = !isSimpleIdentifier(test.content)
+    needsQuote && push(`(`)
+    genExpression(test, context)
+    needsQuote && push(`)`)
+  } else {
+    genCompoundExpression(test, context)
+  }
+  indent()
+  context.indentLevel++
+  push(`? `)
+  genNode(consequent, context)
+  context.indentLevel--
+  newline()
+  push(`: `)
+  genNode(alternate, context)
+  deindent(true /* without newline */)
+}
+
+function genSequenceExpression(
+  node: SequenceExpression,
+  context: CodegenContext
+) {
+  context.push(`(`)
+  genNodeList(node.expressions, context)
+  context.push(`)`)
 }

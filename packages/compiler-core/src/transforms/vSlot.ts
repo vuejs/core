@@ -10,7 +10,7 @@ import {
   ElementTypes,
   ExpressionNode,
   Property,
-  ChildNode,
+  TemplateChildNode,
   SourceLocation
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
@@ -67,7 +67,7 @@ export function buildSlots(
   // 2. Iterate through children and check for template slots
   //    <template v-slot:foo="{ prop }">
   let hasTemplateSlots = false
-  let extraneousChild: ChildNode | undefined = undefined
+  let extraneousChild: TemplateChildNode | undefined = undefined
   const seenSlotNames = new Set<string>()
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -135,7 +135,7 @@ export function buildSlots(
 function buildSlot(
   name: string | ExpressionNode,
   slotProps: ExpressionNode | undefined,
-  children: ChildNode[],
+  children: TemplateChildNode[],
   loc: SourceLocation
 ): Property {
   return createObjectProperty(

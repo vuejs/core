@@ -2,7 +2,7 @@ import {
   RootNode,
   NodeTypes,
   ParentNode,
-  ChildNode,
+  TemplateChildNode,
   ElementNode,
   DirectiveNode,
   Property,
@@ -21,7 +21,7 @@ import { TO_STRING, COMMENT, CREATE_VNODE } from './runtimeConstants'
 //   Transforms that operate directly on a ChildNode. NodeTransforms may mutate,
 //   replace or remove the node being processed.
 export type NodeTransform = (
-  node: RootNode | ChildNode,
+  node: RootNode | TemplateChildNode,
   context: TransformContext
 ) => void | (() => void) | (() => void)[]
 
@@ -59,10 +59,10 @@ export interface TransformContext extends Required<TransformOptions> {
   identifiers: { [name: string]: number | undefined }
   parent: ParentNode | null
   childIndex: number
-  currentNode: RootNode | ChildNode | null
+  currentNode: RootNode | TemplateChildNode | null
   helper(name: string): string
-  replaceNode(node: ChildNode): void
-  removeNode(node?: ChildNode): void
+  replaceNode(node: TemplateChildNode): void
+  removeNode(node?: TemplateChildNode): void
   onNodeRemoved: () => void
   addIdentifiers(exp: ExpressionNode): void
   removeIdentifiers(exp: ExpressionNode): void
@@ -207,7 +207,7 @@ export function traverseChildren(
 }
 
 export function traverseNode(
-  node: RootNode | ChildNode,
+  node: RootNode | TemplateChildNode,
   context: TransformContext
 ) {
   // apply transform plugins

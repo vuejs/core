@@ -23,7 +23,7 @@ import {
   RootNode,
   SourceLocation,
   TextNode,
-  ChildNode,
+  TemplateChildNode,
   InterpolationNode
 } from './ast'
 
@@ -115,15 +115,15 @@ function parseChildren(
   context: ParserContext,
   mode: TextModes,
   ancestors: ElementNode[]
-): ChildNode[] {
+): TemplateChildNode[] {
   const parent = last(ancestors)
   const ns = parent ? parent.ns : Namespaces.HTML
-  const nodes: ChildNode[] = []
+  const nodes: TemplateChildNode[] = []
 
   while (!isEnd(context, mode, ancestors)) {
     __DEV__ && assert(context.source.length > 0)
     const s = context.source
-    let node: ChildNode | ChildNode[] | undefined = undefined
+    let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (startsWith(s, context.options.delimiters[0])) {
       // '{{'
@@ -197,8 +197,8 @@ function parseChildren(
 
 function pushNode(
   context: ParserContext,
-  nodes: ChildNode[],
-  node: ChildNode
+  nodes: TemplateChildNode[],
+  node: TemplateChildNode
 ): void {
   // ignore comments in production
   /* istanbul ignore next */
@@ -234,7 +234,7 @@ function pushNode(
 function parseCDATA(
   context: ParserContext,
   ancestors: ElementNode[]
-): ChildNode[] {
+): TemplateChildNode[] {
   __DEV__ &&
     assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
   __DEV__ && assert(startsWith(context.source, '<![CDATA['))

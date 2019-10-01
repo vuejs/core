@@ -1,13 +1,15 @@
 import { NodeTransform } from '../transform'
 import {
   NodeTypes,
-  ChildNode,
+  TemplateChildNode,
   TextNode,
   InterpolationNode,
   CompoundExpressionNode
 } from '../ast'
 
-const isText = (node: ChildNode): node is TextNode | InterpolationNode =>
+const isText = (
+  node: TemplateChildNode
+): node is TextNode | InterpolationNode =>
   node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 
 // Merge adjacent text nodes and expressions into a single expression

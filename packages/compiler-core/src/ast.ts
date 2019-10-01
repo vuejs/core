@@ -28,7 +28,9 @@ export const enum NodeTypes {
   JS_OBJECT_EXPRESSION,
   JS_PROPERTY,
   JS_ARRAY_EXPRESSION,
-  JS_SLOT_FUNCTION
+  JS_SLOT_FUNCTION,
+  JS_SEQUENCE_EXPRESSION,
+  JS_CONDITIONAL_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -61,7 +63,7 @@ export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
 
 export type ExpressionNode = SimpleExpressionNode | CompoundExpressionNode
 
-export type ChildNode =
+export type TemplateChildNode =
   | ElementNode
   | InterpolationNode
   | CompoundExpressionNode
@@ -72,7 +74,7 @@ export type ChildNode =
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
-  children: ChildNode[]
+  children: TemplateChildNode[]
   imports: string[]
   statements: string[]
   hoists: JSChildNode[]
@@ -85,7 +87,7 @@ export interface ElementNode extends Node {
   tagType: ElementTypes
   isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
-  children: ChildNode[]
+  children: TemplateChildNode[]
   codegenNode: CallExpression | undefined
 }
 
@@ -140,12 +142,13 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
+  codegenNode: JSChildNode | undefined
 }
 
 export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
   condition: ExpressionNode | undefined // else
-  children: ChildNode[]
+  children: TemplateChildNode[]
 }
 
 export interface ForNode extends Node {
@@ -154,7 +157,7 @@ export interface ForNode extends Node {
   valueAlias: ExpressionNode | undefined
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
-  children: ChildNode[]
+  children: TemplateChildNode[]
 }
 
 // We also include a number of JavaScript AST nodes for code generation.
@@ -166,11 +169,13 @@ export type JSChildNode =
   | ArrayExpression
   | ExpressionNode
   | SlotFunctionExpression
+  | ConditionalExpression
+  | SequenceExpression
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
   callee: string
-  arguments: (string | JSChildNode | ChildNode[])[]
+  arguments: (string | JSChildNode | TemplateChildNode[])[]
 }
 
 export interface ObjectExpression extends Node {
@@ -192,7 +197,19 @@ export interface ArrayExpression extends Node {
 export interface SlotFunctionExpression extends Node {
   type: NodeTypes.JS_SLOT_FUNCTION
   params: ExpressionNode | undefined
-  returns: ChildNode[]
+  returns: TemplateChildNode[]
+}
+
+export interface SequenceExpression extends Node {
+  type: NodeTypes.JS_SEQUENCE_EXPRESSION
+  expressions: JSChildNode[]
+}
+
+export interface ConditionalExpression extends Node {
+  type: NodeTypes.JS_CONDITIONAL_EXPRESSION
+  test: ExpressionNode
+  consequent: JSChildNode
+  alternate: JSChildNode
 }
 
 export function createArrayExpression(
@@ -282,7 +299,7 @@ export function createCallExpression(
 
 export function createFunctionExpression(
   params: ExpressionNode | undefined,
-  returns: ChildNode[],
+  returns: TemplateChildNode[],
   loc: SourceLocation
 ): SlotFunctionExpression {
   return {
@@ -290,5 +307,35 @@ export function createFunctionExpression(
     params,
     returns,
     loc
+  }
+}
+
+// sequence and conditional expressions are never associated with template nodes,
+// so their source locations are just a stub.
+const locStub: SourceLocation = {
+  source: '',
+  start: { line: 1, column: 1, offset: 0 },
+  end: { line: 1, column: 1, offset: 0 }
+}
+
+export function createSequenceExpression(expressions: JSChildNode[]) {
+  return {
+    type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+    expressions,
+    loc: locStub
+  }
+}
+
+export function createConditionalExpression(
+  test: ExpressionNode,
+  consequent: JSChildNode,
+  alternate: JSChildNode
+) {
+  return {
+    type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+    test,
+    consequent,
+    alternate,
+    loc: locStub
   }
 }
