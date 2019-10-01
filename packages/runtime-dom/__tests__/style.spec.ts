@@ -43,6 +43,7 @@ describe('style', () => {
 
   test('ignore unsupported property', () => {
     const el = renderWithStyle({ foo: 'bar' })
+    // @ts-ignore
     expect(el.style.foo).not.toBe('bar')
   })
 
