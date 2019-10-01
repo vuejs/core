@@ -19,7 +19,8 @@ import {
   JSChildNode,
   ObjectExpression,
   createObjectProperty,
-  Property
+  Property,
+  ExpressionNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -28,7 +29,8 @@ import {
   CREATE_BLOCK,
   EMPTY,
   FRAGMENT,
-  APPLY_DIRECTIVES
+  APPLY_DIRECTIVES,
+  MERGE_PROPS
 } from '../runtimeConstants'
 import { isString } from '@vue/shared'
 
@@ -51,14 +53,14 @@ export const transformIf = createStructuralDirectiveTransform(
     }
 
     if (dir.name === 'if') {
+      const branch = createIfBranch(node, dir)
       const codegenNode = createSequenceExpression([
         createCallExpression(context.helper(OPEN_BLOCK))
       ])
-
       context.replaceNode({
         type: NodeTypes.IF,
         loc: node.loc,
-        branches: [createIfBranch(node, dir)],
+        branches: [branch],
         codegenNode
       })
 
@@ -66,7 +68,7 @@ export const transformIf = createStructuralDirectiveTransform(
       // transformed.
       return () => {
         codegenNode.expressions.push(
-          createCodegenNodeForBranch(node, dir, 0, context)
+          createCodegenNodeForBranch(node, branch, 0, context)
         )
       }
     } else {
@@ -104,7 +106,7 @@ export const transformIf = createStructuralDirectiveTransform(
             } else {
               parentCondition.alternate = createCodegenNodeForBranch(
                 node,
-                dir,
+                branch,
                 sibling.branches.length - 1,
                 context
               )
@@ -138,25 +140,26 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
 
 function createCodegenNodeForBranch(
   node: ElementNode,
-  dir: DirectiveNode,
+  branch: IfBranchNode,
   index: number,
   context: TransformContext
 ): ConditionalExpression | CallExpression {
-  if (dir.exp) {
+  if (branch.condition) {
     return createConditionalExpression(
-      dir.exp,
-      createChildrenCodegenNode(node, index, context),
+      branch.condition,
+      createChildrenCodegenNode(node, branch, index, context),
       createCallExpression(context.helper(CREATE_BLOCK), [
         context.helper(EMPTY)
       ])
     )
   } else {
-    return createChildrenCodegenNode(node, index, context)
+    return createChildrenCodegenNode(node, branch, index, context)
   }
 }
 
 function createChildrenCodegenNode(
   node: ElementNode,
+  branch: IfBranchNode,
   index: number,
   { helper }: TransformContext
 ): CallExpression {
@@ -166,11 +169,11 @@ function createChildrenCodegenNode(
     return createCallExpression(helper(CREATE_BLOCK), [
       helper(FRAGMENT),
       keyExp,
-      node.children
+      branch.children
     ])
   } else {
     let childCodegen = node.codegenNode!
-    if (childCodegen.callee === helper(APPLY_DIRECTIVES)) {
+    if (childCodegen.callee.includes(APPLY_DIRECTIVES)) {
       childCodegen = childCodegen.arguments[0] as CallExpression
     }
     // change child to a block
@@ -181,7 +184,10 @@ function createChildrenCodegenNode(
       childCodegen.arguments[1] = keyExp
     } else {
       // inject branch key if not already have a key
-      const props = existingProps as CallExpression | ObjectExpression
+      const props = existingProps as
+        | CallExpression
+        | ObjectExpression
+        | ExpressionNode
       if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
         // merged props... add ours
         // only inject key to object literal if it's the first argument so that
@@ -192,11 +198,17 @@ function createChildrenCodegenNode(
         } else {
           props.arguments.unshift(keyExp)
         }
-      } else {
+      } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
         props.properties.unshift(createKeyProperty(index))
+      } else {
+        // single v-bind with expression
+        childCodegen.arguments[1] = createCallExpression(helper(MERGE_PROPS), [
+          keyExp,
+          props
+        ])
       }
     }
-    return childCodegen
+    return node.codegenNode!
   }
 }
 

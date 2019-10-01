@@ -25,6 +25,7 @@ import { transformOn } from '../../src/transforms/vOn'
 import { transformStyle } from '../../src/transforms/transformStyle'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
+import { createObjectMatcher } from '../testUtils'
 
 function parseWithElementTransform(
   template: string,
@@ -47,25 +48,6 @@ function parseWithElementTransform(
   }
 }
 
-function createStaticObjectMatcher(obj: any) {
-  return {
-    type: NodeTypes.JS_OBJECT_EXPRESSION,
-    properties: Object.keys(obj).map(key => ({
-      type: NodeTypes.JS_PROPERTY,
-      key: {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: key,
-        isStatic: true
-      },
-      value: {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: obj[key],
-        isStatic: true
-      }
-    }))
-  }
-}
-
 describe('compiler: element transform', () => {
   test('import + resovle component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
@@ -78,7 +60,7 @@ describe('compiler: element transform', () => {
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments).toMatchObject([
       `"div"`,
-      createStaticObjectMatcher({
+      createObjectMatcher({
         id: 'foo',
         class: 'bar'
       })
@@ -90,7 +72,7 @@ describe('compiler: element transform', () => {
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments).toMatchObject([
       `"div"`,
-      createStaticObjectMatcher({
+      createObjectMatcher({
         id: 'foo'
       }),
       [
@@ -147,7 +129,7 @@ describe('compiler: element transform', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${MERGE_PROPS}`,
       arguments: [
-        createStaticObjectMatcher({
+        createObjectMatcher({
           id: 'foo'
         }),
         {
@@ -172,7 +154,7 @@ describe('compiler: element transform', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         },
-        createStaticObjectMatcher({
+        createObjectMatcher({
           id: 'foo'
         })
       ]
@@ -189,14 +171,14 @@ describe('compiler: element transform', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${MERGE_PROPS}`,
       arguments: [
-        createStaticObjectMatcher({
+        createObjectMatcher({
           id: 'foo'
         }),
         {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `obj`
         },
-        createStaticObjectMatcher({
+        createObjectMatcher({
           class: 'bar'
         })
       ]
@@ -213,7 +195,7 @@ describe('compiler: element transform', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${MERGE_PROPS}`,
       arguments: [
-        createStaticObjectMatcher({
+        createObjectMatcher({
           id: 'foo'
         }),
         {
@@ -226,7 +208,7 @@ describe('compiler: element transform', () => {
             }
           ]
         },
-        createStaticObjectMatcher({
+        createObjectMatcher({
           class: 'bar'
         })
       ]
@@ -243,7 +225,7 @@ describe('compiler: element transform', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${MERGE_PROPS}`,
       arguments: [
-        createStaticObjectMatcher({
+        createObjectMatcher({
           id: 'foo'
         }),
         {

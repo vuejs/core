@@ -1,0 +1,28 @@
+import { NodeTypes } from '../src'
+
+const leadingBracketRE = /^\[/
+const bracketsRE = /^\[|\]$/g
+
+// Create a matcher for an object
+// where non-static expressions should be wrapped in []
+// e.g.
+// - createObjectMatcher({ 'foo': '[bar]' }) matches { foo: bar }
+// - createObjectMatcher({ '[foo]': 'bar' }) matches { [foo]: "bar" }
+export function createObjectMatcher(obj: any) {
+  return {
+    type: NodeTypes.JS_OBJECT_EXPRESSION,
+    properties: Object.keys(obj).map(key => ({
+      type: NodeTypes.JS_PROPERTY,
+      key: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: key.replace(bracketsRE, ''),
+        isStatic: !leadingBracketRE.test(key)
+      },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: obj[key].replace(bracketsRE, ''),
+        isStatic: !leadingBracketRE.test(obj[key])
+      }
+    }))
+  }
+}

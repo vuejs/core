@@ -300,7 +300,7 @@ function genNodeListAsArray(
   context: CodegenContext
 ) {
   const multilines =
-    nodes.length > 1 ||
+    nodes.length > 3 ||
     ((!__BROWSER__ || __DEV__) &&
       nodes.some(
         n =>
@@ -513,7 +513,7 @@ function genFor(node: ForNode, context: CodegenContext) {
 function genCallExpression(
   node: CallExpression,
   context: CodegenContext,
-  multilines = node.arguments.length > 2
+  multilines = false
 ) {
   context.push(node.callee + `(`, node, true)
   multilines && context.indent()
