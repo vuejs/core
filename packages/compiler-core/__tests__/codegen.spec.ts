@@ -1,19 +1,19 @@
 import {
+  locStub,
   generate,
   NodeTypes,
   RootNode,
-  SourceLocation,
   createSimpleExpression,
   Namespaces,
   ElementTypes,
-  CallExpression,
   createObjectExpression,
   createObjectProperty,
   createArrayExpression,
-  ElementNode,
   createCompoundExpression,
   createInterpolation,
-  createSequenceExpression
+  createSequenceExpression,
+  createCallExpression,
+  createConditionalExpression
 } from '../src'
 import {
   CREATE_VNODE,
@@ -21,20 +21,7 @@ import {
   TO_STRING,
   RENDER_LIST
 } from '../src/runtimeConstants'
-
-const mockLoc: SourceLocation = {
-  source: ``,
-  start: {
-    offset: 0,
-    line: 1,
-    column: 1
-  },
-  end: {
-    offset: 3,
-    line: 1,
-    column: 4
-  }
-}
+import { createElementWithCodegen } from './testUtils'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
@@ -43,7 +30,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     imports: [],
     statements: [],
     hoists: [],
-    loc: mockLoc,
+    loc: locStub,
     ...options
   }
 }
@@ -96,15 +83,15 @@ describe('compiler: codegen', () => {
   test('hoists', () => {
     const root = createRoot({
       hoists: [
-        createSimpleExpression(`hello`, false, mockLoc),
+        createSimpleExpression(`hello`, false, locStub),
         createObjectExpression(
           [
             createObjectProperty(
-              createSimpleExpression(`id`, true, mockLoc),
-              createSimpleExpression(`foo`, true, mockLoc)
+              createSimpleExpression(`id`, true, locStub),
+              createSimpleExpression(`foo`, true, locStub)
             )
           ],
-          mockLoc
+          locStub
         )
       ]
     })
@@ -128,7 +115,7 @@ describe('compiler: codegen', () => {
             type: NodeTypes.TEXT,
             content: 'hello',
             isEmpty: false,
-            loc: mockLoc
+            loc: locStub
           }
         ]
       })
@@ -140,7 +127,7 @@ describe('compiler: codegen', () => {
   test('interpolation', () => {
     const { code } = generate(
       createRoot({
-        children: [createInterpolation(`hello`, mockLoc)]
+        children: [createInterpolation(`hello`, locStub)]
       })
     )
     expect(code).toMatch(`return _${TO_STRING}(hello)`)
@@ -154,7 +141,7 @@ describe('compiler: codegen', () => {
           {
             type: NodeTypes.COMMENT,
             content: 'foo',
-            loc: mockLoc
+            loc: locStub
           }
         ]
       })
@@ -171,13 +158,13 @@ describe('compiler: codegen', () => {
             type: NodeTypes.TEXT,
             content: 'foo',
             isEmpty: false,
-            loc: mockLoc
+            loc: locStub
           },
-          createInterpolation(`hello`, mockLoc),
+          createInterpolation(`hello`, locStub),
           {
             type: NodeTypes.COMMENT,
             content: 'foo',
-            loc: mockLoc
+            loc: locStub
           }
         ]
       })
@@ -199,13 +186,13 @@ describe('compiler: codegen', () => {
             type: NodeTypes.TEXT,
             content: 'foo',
             isEmpty: false,
-            loc: mockLoc
+            loc: locStub
           },
-          createInterpolation(`hello`, mockLoc),
+          createInterpolation(`hello`, locStub),
           {
             type: NodeTypes.COMMENT,
             content: 'foo',
-            loc: mockLoc
+            loc: locStub
           }
         ]
       }),
@@ -228,12 +215,12 @@ describe('compiler: codegen', () => {
         children: [
           createCompoundExpression([
             `_ctx.`,
-            createSimpleExpression(`foo`, false, mockLoc),
+            createSimpleExpression(`foo`, false, locStub),
             ` + `,
             {
               type: NodeTypes.INTERPOLATION,
-              loc: mockLoc,
-              content: createSimpleExpression(`bar`, false, mockLoc)
+              loc: locStub,
+              content: createSimpleExpression(`bar`, false, locStub)
             }
           ])
         ]
@@ -249,7 +236,7 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.IF,
-            loc: mockLoc,
+            loc: locStub,
             branches: [],
             codegenNode: createSequenceExpression([
               createSimpleExpression('foo', false),
@@ -269,12 +256,12 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.FOR,
-            loc: mockLoc,
-            source: createSimpleExpression(`list`, false, mockLoc),
-            valueAlias: createSimpleExpression(`v`, false, mockLoc),
-            keyAlias: createSimpleExpression(`k`, false, mockLoc),
-            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
-            children: [createInterpolation(`v`, mockLoc)]
+            loc: locStub,
+            source: createSimpleExpression(`list`, false, locStub),
+            valueAlias: createSimpleExpression(`v`, false, locStub),
+            keyAlias: createSimpleExpression(`k`, false, locStub),
+            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+            children: [createInterpolation(`v`, locStub)]
           }
         ]
       })
@@ -293,12 +280,12 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.FOR,
-            loc: mockLoc,
-            source: createSimpleExpression(`list`, false, mockLoc),
-            valueAlias: createSimpleExpression(`v`, false, mockLoc),
-            keyAlias: createSimpleExpression(`k`, false, mockLoc),
-            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
-            children: [createInterpolation(`v`, mockLoc)]
+            loc: locStub,
+            source: createSimpleExpression(`list`, false, locStub),
+            valueAlias: createSimpleExpression(`v`, false, locStub),
+            keyAlias: createSimpleExpression(`k`, false, locStub),
+            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+            children: [createInterpolation(`v`, locStub)]
           }
         ]
       }),
@@ -320,12 +307,12 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.FOR,
-            loc: mockLoc,
-            source: createSimpleExpression(`list`, false, mockLoc),
+            loc: locStub,
+            source: createSimpleExpression(`list`, false, locStub),
             valueAlias: undefined,
-            keyAlias: createSimpleExpression(`k`, false, mockLoc),
-            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
-            children: [createInterpolation(`v`, mockLoc)]
+            keyAlias: createSimpleExpression(`k`, false, locStub),
+            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+            children: [createInterpolation(`v`, locStub)]
           }
         ]
       })
@@ -344,12 +331,12 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.FOR,
-            loc: mockLoc,
-            source: createSimpleExpression(`list`, false, mockLoc),
-            valueAlias: createSimpleExpression(`v`, false, mockLoc),
+            loc: locStub,
+            source: createSimpleExpression(`list`, false, locStub),
+            valueAlias: createSimpleExpression(`v`, false, locStub),
             keyAlias: undefined,
-            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
-            children: [createInterpolation(`v`, mockLoc)]
+            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+            children: [createInterpolation(`v`, locStub)]
           }
         ]
       })
@@ -368,12 +355,12 @@ describe('compiler: codegen', () => {
         children: [
           {
             type: NodeTypes.FOR,
-            loc: mockLoc,
-            source: createSimpleExpression(`list`, false, mockLoc),
+            loc: locStub,
+            source: createSimpleExpression(`list`, false, locStub),
             valueAlias: undefined,
             keyAlias: undefined,
-            objectIndexAlias: createSimpleExpression(`i`, false, mockLoc),
-            children: [createInterpolation(`v`, mockLoc)]
+            objectIndexAlias: createSimpleExpression(`i`, false, locStub),
+            children: [createInterpolation(`v`, locStub)]
           }
         ]
       })
@@ -396,47 +383,47 @@ describe('compiler: codegen', () => {
             ns: Namespaces.HTML,
             isSelfClosing: false,
             tag: `Comp`,
-            loc: mockLoc,
+            loc: locStub,
             props: [],
             children: [],
             codegenNode: {
               type: NodeTypes.JS_CALL_EXPRESSION,
-              loc: mockLoc,
+              loc: locStub,
               callee: `_${CREATE_VNODE}`,
               arguments: [
                 `Comp`,
                 `0`,
                 {
                   type: NodeTypes.JS_OBJECT_EXPRESSION,
-                  loc: mockLoc,
+                  loc: locStub,
                   properties: [
                     {
                       type: NodeTypes.JS_PROPERTY,
-                      loc: mockLoc,
+                      loc: locStub,
                       key: {
                         type: NodeTypes.SIMPLE_EXPRESSION,
                         isStatic: true,
                         content: `default`,
-                        loc: mockLoc
+                        loc: locStub
                       },
                       value: {
                         type: NodeTypes.JS_SLOT_FUNCTION,
-                        loc: mockLoc,
+                        loc: locStub,
                         params: {
                           type: NodeTypes.SIMPLE_EXPRESSION,
                           isStatic: false,
                           content: `{ foo }`,
-                          loc: mockLoc
+                          loc: locStub
                         },
                         returns: [
                           {
                             type: NodeTypes.INTERPOLATION,
-                            loc: mockLoc,
+                            loc: locStub,
                             content: {
                               type: NodeTypes.SIMPLE_EXPRESSION,
                               isStatic: false,
                               content: `foo`,
-                              loc: mockLoc
+                              loc: locStub
                             }
                           }
                         ]
@@ -461,27 +448,6 @@ describe('compiler: codegen', () => {
   })
 
   test('callExpression + objectExpression + arrayExpression', () => {
-    function createElementWithCodegen(
-      args: CallExpression['arguments']
-    ): ElementNode {
-      return {
-        type: NodeTypes.ELEMENT,
-        loc: mockLoc,
-        ns: Namespaces.HTML,
-        tag: 'div',
-        tagType: ElementTypes.ELEMENT,
-        isSelfClosing: false,
-        props: [],
-        children: [],
-        codegenNode: {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          loc: mockLoc,
-          callee: CREATE_VNODE,
-          arguments: args
-        }
-      }
-    }
-
     const { code } = generate(
       createRoot({
         children: [
@@ -492,27 +458,27 @@ describe('compiler: codegen', () => {
             createObjectExpression(
               [
                 createObjectProperty(
-                  createSimpleExpression(`id`, true, mockLoc),
-                  createSimpleExpression(`foo`, true, mockLoc)
+                  createSimpleExpression(`id`, true, locStub),
+                  createSimpleExpression(`foo`, true, locStub)
                 ),
                 createObjectProperty(
-                  createSimpleExpression(`prop`, false, mockLoc),
-                  createSimpleExpression(`bar`, false, mockLoc)
+                  createSimpleExpression(`prop`, false, locStub),
+                  createSimpleExpression(`bar`, false, locStub)
                 ),
                 // compound expression as computed key
                 createObjectProperty(
                   {
                     type: NodeTypes.COMPOUND_EXPRESSION,
-                    loc: mockLoc,
+                    loc: locStub,
                     children: [
                       `foo + `,
-                      createSimpleExpression(`bar`, false, mockLoc)
+                      createSimpleExpression(`bar`, false, locStub)
                     ]
                   },
-                  createSimpleExpression(`bar`, false, mockLoc)
+                  createSimpleExpression(`bar`, false, locStub)
                 )
               ],
-              mockLoc
+              locStub
             ),
             // ChildNode[]
             [
@@ -522,11 +488,11 @@ describe('compiler: codegen', () => {
                   [
                     createObjectProperty(
                       // should quote the key!
-                      createSimpleExpression(`some-key`, true, mockLoc),
-                      createSimpleExpression(`foo`, true, mockLoc)
+                      createSimpleExpression(`some-key`, true, locStub),
+                      createSimpleExpression(`foo`, true, locStub)
                     )
                   ],
-                  mockLoc
+                  locStub
                 )
               ])
             ],
@@ -536,12 +502,12 @@ describe('compiler: codegen', () => {
                 'foo',
                 {
                   type: NodeTypes.JS_CALL_EXPRESSION,
-                  loc: mockLoc,
+                  loc: locStub,
                   callee: CREATE_VNODE,
                   arguments: [`"p"`]
                 }
               ],
-              mockLoc
+              locStub
             )
           ])
         ]
@@ -561,7 +527,57 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test.todo('SequenceExpression')
+  test('SequenceExpression', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.IF,
+            loc: locStub,
+            branches: [],
+            codegenNode: createSequenceExpression([
+              createSimpleExpression(`foo`, false),
+              createCallExpression(`bar`, [`baz`])
+            ])
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(`return (foo, bar(baz))`)
+    expect(code).toMatchSnapshot()
+  })
 
-  test.todo('ConditionalExpression')
+  test('ConditionalExpression', () => {
+    const { code } = generate(
+      createRoot({
+        children: [
+          {
+            type: NodeTypes.IF,
+            loc: locStub,
+            branches: [],
+            codegenNode: createSequenceExpression([
+              createSimpleExpression(`foo`, false),
+              createConditionalExpression(
+                createSimpleExpression(`ok`, false),
+                createCallExpression(`foo`),
+                createConditionalExpression(
+                  createSimpleExpression(`orNot`, false),
+                  createCallExpression(`bar`),
+                  createCallExpression(`baz`)
+                )
+              )
+            ])
+          }
+        ]
+      })
+    )
+    expect(code).toMatch(
+      `return (foo, ok
+      ? foo()
+      : orNot
+        ? bar()
+        : baz())`
+    )
+    expect(code).toMatchSnapshot()
+  })
 })

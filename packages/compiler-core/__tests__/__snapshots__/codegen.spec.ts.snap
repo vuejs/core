@@ -1,5 +1,27 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: codegen ConditionalExpression 1`] = `
+"
+return function render() {
+  with (this) {
+    return (foo, ok
+      ? foo()
+      : orNot
+        ? bar()
+        : baz())
+  }
+}"
+`;
+
+exports[`compiler: codegen SequenceExpression 1`] = `
+"
+return function render() {
+  with (this) {
+    return (foo, bar(baz))
+  }
+}"
+`;
+
 exports[`compiler: codegen SlotFunctionExpression 1`] = `
 "
 return function render() {

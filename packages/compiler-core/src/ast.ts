@@ -217,7 +217,7 @@ export interface ConditionalExpression extends Node {
 // Some expressions, e.g. sequence and conditional expressions, are never
 // associated with template nodes, so their source locations are just a stub.
 // Container types like CompoundExpression also don't need a real location.
-const locStub: SourceLocation = {
+export const locStub: SourceLocation = {
   source: '',
   start: { line: 1, column: 1, offset: 0 },
   end: { line: 1, column: 1, offset: 0 }

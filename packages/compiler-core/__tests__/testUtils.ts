@@ -1,4 +1,12 @@
-import { NodeTypes } from '../src'
+import {
+  NodeTypes,
+  CallExpression,
+  ElementNode,
+  locStub,
+  Namespaces,
+  ElementTypes
+} from '../src'
+import { CREATE_VNODE } from '../src/runtimeConstants'
 
 const leadingBracketRE = /^\[/
 const bracketsRE = /^\[|\]$/g
@@ -24,5 +32,26 @@ export function createObjectMatcher(obj: any) {
         isStatic: !leadingBracketRE.test(obj[key])
       }
     }))
+  }
+}
+
+export function createElementWithCodegen(
+  args: CallExpression['arguments']
+): ElementNode {
+  return {
+    type: NodeTypes.ELEMENT,
+    loc: locStub,
+    ns: Namespaces.HTML,
+    tag: 'div',
+    tagType: ElementTypes.ELEMENT,
+    isSelfClosing: false,
+    props: [],
+    children: [],
+    codegenNode: {
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      loc: locStub,
+      callee: CREATE_VNODE,
+      arguments: args
+    }
   }
 }
