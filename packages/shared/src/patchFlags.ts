@@ -47,12 +47,11 @@ export const enum PatchFlags {
   // value.
   NEED_PATCH = 1 << 5,
 
-  // Indicates a fragment or element with keyed or partially-keyed v-for
-  // children
-  KEYED = 1 << 6,
+  // Indicates a v-for fragment with keyed or partially keyed children
+  KEYED_V_FOR = 1 << 6,
 
-  // Indicates a fragment or element that contains unkeyed v-for children
-  UNKEYED = 1 << 7,
+  // Indicates a v-for fragment with unkeyed children.
+  UNKEYED_V_FOR = 1 << 7,
 
   // Indicates a component with dynamic slots (e.g. slot that references a v-for
   // iterated value, or dynamic slot names).
@@ -68,6 +67,20 @@ export const PublicPatchFlags = {
   PROPS: PatchFlags.PROPS,
   NEED_PATCH: PatchFlags.NEED_PATCH,
   FULL_PROPS: PatchFlags.FULL_PROPS,
-  KEYED: PatchFlags.KEYED,
-  UNKEYED: PatchFlags.UNKEYED
+  KEYED_V_FOR: PatchFlags.KEYED_V_FOR,
+  UNKEYED_V_FOR: PatchFlags.UNKEYED_V_FOR,
+  DYNAMIC_SLOTS: PatchFlags.DYNAMIC_SLOTS
+}
+
+// dev only flag -> name mapping
+export const PatchFlagNames = {
+  [PatchFlags.TEXT]: `TEXT`,
+  [PatchFlags.CLASS]: `CLASS`,
+  [PatchFlags.STYLE]: `STYLE`,
+  [PatchFlags.PROPS]: `PROPS`,
+  [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
+  [PatchFlags.FULL_PROPS]: `FULL_PROPS`,
+  [PatchFlags.KEYED_V_FOR]: `KEYED_V_FOR`,
+  [PatchFlags.UNKEYED_V_FOR]: `UNKEYED_V_FOR`,
+  [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`
 }

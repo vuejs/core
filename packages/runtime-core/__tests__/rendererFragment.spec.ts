@@ -107,7 +107,12 @@ describe('renderer: fragment', () => {
   it('patch fragment children (compiler generated, unkeyed)', () => {
     const root = nodeOps.createElement('div')
     render(
-      createVNode(Fragment, null, [h('div', 'one'), 'two'], PatchFlags.UNKEYED),
+      createVNode(
+        Fragment,
+        null,
+        [h('div', 'one'), 'two'],
+        PatchFlags.UNKEYED_V_FOR
+      ),
       root
     )
     expect(serializeInner(root)).toBe(`<!----><div>one</div>two<!---->`)
@@ -117,7 +122,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', 'foo'), 'bar', 'baz'],
-        PatchFlags.UNKEYED
+        PatchFlags.UNKEYED_V_FOR
       ),
       root
     )
@@ -132,7 +137,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')],
-        PatchFlags.KEYED
+        PatchFlags.KEYED_V_FOR
       ),
       root
     )
@@ -146,7 +151,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')],
-        PatchFlags.KEYED
+        PatchFlags.KEYED_V_FOR
       ),
       root
     )

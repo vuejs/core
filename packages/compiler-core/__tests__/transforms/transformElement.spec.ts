@@ -319,7 +319,7 @@ describe('compiler: element transform', () => {
             ]
           },
           `null`,
-          String(PatchFlags.NEED_PATCH) // should generate appropriate flag
+          `${PatchFlags.NEED_PATCH} /* NEED_PATCH */` // should generate appropriate flag
         ]
       },
       {
@@ -565,19 +565,19 @@ describe('compiler: element transform', () => {
     test('CLASS', () => {
       const { node } = parseWithBind(`<div :class="foo" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.CLASS))
+      expect(node.arguments[3]).toBe(`${PatchFlags.CLASS} /* CLASS */`)
     })
 
     test('STYLE', () => {
       const { node } = parseWithBind(`<div :style="foo" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.STYLE))
+      expect(node.arguments[3]).toBe(`${PatchFlags.STYLE} /* STYLE */`)
     })
 
     test('PROPS', () => {
       const { node } = parseWithBind(`<div id="foo" :foo="bar" :baz="qux" />`)
       expect(node.arguments.length).toBe(5)
-      expect(node.arguments[3]).toBe(String(PatchFlags.PROPS))
+      expect(node.arguments[3]).toBe(`${PatchFlags.PROPS} /* PROPS */`)
       expect(node.arguments[4]).toBe(`["foo", "baz"]`)
     })
 
@@ -587,7 +587,9 @@ describe('compiler: element transform', () => {
       )
       expect(node.arguments.length).toBe(5)
       expect(node.arguments[3]).toBe(
-        String(PatchFlags.PROPS | PatchFlags.CLASS | PatchFlags.STYLE)
+        `${PatchFlags.PROPS |
+          PatchFlags.CLASS |
+          PatchFlags.STYLE} /* CLASS, STYLE, PROPS */`
       )
       expect(node.arguments[4]).toBe(`["foo", "baz"]`)
     })
@@ -595,13 +597,17 @@ describe('compiler: element transform', () => {
     test('FULL_PROPS (v-bind)', () => {
       const { node } = parseWithBind(`<div v-bind="foo" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+      expect(node.arguments[3]).toBe(
+        `${PatchFlags.FULL_PROPS} /* FULL_PROPS */`
+      )
     })
 
     test('FULL_PROPS (dynamic key)', () => {
       const { node } = parseWithBind(`<div :[foo]="bar" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+      expect(node.arguments[3]).toBe(
+        `${PatchFlags.FULL_PROPS} /* FULL_PROPS */`
+      )
     })
 
     test('FULL_PROPS (w/ others)', () => {
@@ -609,26 +615,34 @@ describe('compiler: element transform', () => {
         `<div id="foo" v-bind="bar" :class="cls" />`
       )
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+      expect(node.arguments[3]).toBe(
+        `${PatchFlags.FULL_PROPS} /* FULL_PROPS */`
+      )
     })
 
     test('NEED_PATCH (static ref)', () => {
       const { node } = parseWithBind(`<div ref="foo" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+      expect(node.arguments[3]).toBe(
+        `${PatchFlags.NEED_PATCH} /* NEED_PATCH */`
+      )
     })
 
     test('NEED_PATCH (dynamic ref)', () => {
       const { node } = parseWithBind(`<div :ref="foo" />`)
       expect(node.arguments.length).toBe(4)
-      expect(node.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+      expect(node.arguments[3]).toBe(
+        `${PatchFlags.NEED_PATCH} /* NEED_PATCH */`
+      )
     })
 
     test('NEED_PATCH (custom directives)', () => {
       const { node } = parseWithBind(`<div v-foo />`)
       const vnodeCall = node.arguments[0] as CallExpression
       expect(vnodeCall.arguments.length).toBe(4)
-      expect(vnodeCall.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+      expect(vnodeCall.arguments[3]).toBe(
+        `${PatchFlags.NEED_PATCH} /* NEED_PATCH */`
+      )
     })
   })
 })

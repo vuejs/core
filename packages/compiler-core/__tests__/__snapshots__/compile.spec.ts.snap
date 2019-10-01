@@ -20,7 +20,7 @@ return function render() {
           _createVNode(\\"span\\", null, _toString(value + index))
         ])
       })))
-    ], 2)
+    ], 2 /* CLASS */)
   }
 }"
 `;
@@ -43,7 +43,7 @@ return function render() {
         createVNode(\\"span\\", null, toString(value + index))
       ])
     })))
-  ], 2)
+  ], 2 /* CLASS */)
 }"
 `;
 
@@ -65,6 +65,6 @@ export default function render() {
         createVNode(\\"span\\", null, _toString(value + index))
       ])
     })))
-  ], 2)
+  ], 2 /* CLASS */)
 }"
 `;

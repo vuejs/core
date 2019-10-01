@@ -16,7 +16,7 @@ return function render() {
       toString(_ctx.foo),
       toString(bar)
     ]
-  }, 256)
+  }, 256 /* DYNAMIC_SLOTS */)
 }"
 `;
 

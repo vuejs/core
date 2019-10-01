@@ -16,7 +16,7 @@ import {
   Property,
   SourceLocation
 } from '../ast'
-import { isArray, PatchFlags } from '@vue/shared'
+import { isArray, PatchFlags, PatchFlagNames } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
@@ -99,7 +99,15 @@ export const transformElement: NodeTransform = (node, context) => {
           }
           args.push(`null`)
         }
-        args.push(String(patchFlag))
+        if (__DEV__) {
+          const flagNames = Object.keys(PatchFlagNames)
+            .filter(n => patchFlag & Number(n))
+            .map(n => PatchFlagNames[n as any])
+            .join(`, `)
+          args.push(patchFlag + ` /* ${flagNames} */`)
+        } else {
+          args.push(patchFlag + '')
+        }
         if (dynamicPropNames && dynamicPropNames.length) {
           args.push(
             `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
