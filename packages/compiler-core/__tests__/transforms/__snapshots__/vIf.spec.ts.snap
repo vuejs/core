@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`compiler: transform v-if codegen basic v-if 1`] = `
+exports[`compiler: v-if codegen basic v-if 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -14,7 +14,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: transform v-if codegen template v-if 1`] = `
+exports[`compiler: v-if codegen template v-if 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -32,7 +32,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: transform v-if codegen v-if + v-else 1`] = `
+exports[`compiler: v-if codegen v-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -46,7 +46,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: transform v-if codegen v-if + v-else-if + v-else 1`] = `
+exports[`compiler: v-if codegen v-if + v-else-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -62,7 +62,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: transform v-if codegen v-if + v-else-if 1`] = `
+exports[`compiler: v-if codegen v-if + v-else-if 1`] = `
 "const _Vue = Vue
 
 return function render() {
