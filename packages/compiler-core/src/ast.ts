@@ -169,7 +169,7 @@ export type JSChildNode =
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
-  callee: string | ExpressionNode
+  callee: string
   arguments: (string | JSChildNode | ChildNode[])[]
 }
 
@@ -268,7 +268,7 @@ export function createCompoundExpression(
 }
 
 export function createCallExpression(
-  callee: string | ExpressionNode,
+  callee: string,
   args: CallExpression['arguments'],
   loc: SourceLocation
 ): CallExpression {

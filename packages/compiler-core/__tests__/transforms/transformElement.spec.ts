@@ -24,6 +24,7 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformStyle } from '../../src/transforms/transformStyle'
 import { transformBind } from '../../src/transforms/vBind'
+import { PatchFlags } from '@vue/shared'
 
 function parseWithElementTransform(
   template: string,
@@ -127,7 +128,7 @@ describe('compiler: element transform', () => {
     expect(node.callee).toBe(`_${CREATE_VNODE}`)
     expect(node.arguments).toMatchObject([
       `"div"`,
-      `0`,
+      `null`,
       [
         {
           type: NodeTypes.ELEMENT,
@@ -351,7 +352,9 @@ describe('compiler: element transform', () => {
                 value: _dir!.exp
               }
             ]
-          }
+          },
+          `null`,
+          String(PatchFlags.NEED_PATCH) // should generate appropriate flag
         ]
       },
       {
@@ -546,5 +549,121 @@ describe('compiler: element transform', () => {
     })
   })
 
-  test.todo('slot outlets')
+  test(`props merging: class`, () => {
+    const { node } = parseWithElementTransform(
+      `<div class="foo" :class="{ bar: isBar }" />`,
+      {
+        directiveTransforms: {
+          bind: transformBind
+        }
+      }
+    )
+    expect(node.arguments[1]).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `class`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: `foo`,
+                isStatic: true
+              },
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: `{ bar: isBar }`,
+                isStatic: false
+              }
+            ]
+          }
+        }
+      ]
+    })
+  })
+
+  describe('patchFlag analysis', () => {
+    function parseWithBind(template: string) {
+      return parseWithElementTransform(template, {
+        directiveTransforms: {
+          bind: transformBind
+        }
+      })
+    }
+
+    test('CLASS', () => {
+      const { node } = parseWithBind(`<div :class="foo" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.CLASS))
+    })
+
+    test('STYLE', () => {
+      const { node } = parseWithBind(`<div :style="foo" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.STYLE))
+    })
+
+    test('PROPS', () => {
+      const { node } = parseWithBind(`<div id="foo" :foo="bar" :baz="qux" />`)
+      expect(node.arguments.length).toBe(5)
+      expect(node.arguments[3]).toBe(String(PatchFlags.PROPS))
+      expect(node.arguments[4]).toBe(`["foo", "baz"]`)
+    })
+
+    test('CLASS + STYLE + PROPS', () => {
+      const { node } = parseWithBind(
+        `<div id="foo" :class="cls" :style="styl" :foo="bar" :baz="qux"/>`
+      )
+      expect(node.arguments.length).toBe(5)
+      expect(node.arguments[3]).toBe(
+        String(PatchFlags.PROPS | PatchFlags.CLASS | PatchFlags.STYLE)
+      )
+      expect(node.arguments[4]).toBe(`["foo", "baz"]`)
+    })
+
+    test('FULL_PROPS (v-bind)', () => {
+      const { node } = parseWithBind(`<div v-bind="foo" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+    })
+
+    test('FULL_PROPS (dynamic key)', () => {
+      const { node } = parseWithBind(`<div :[foo]="bar" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+    })
+
+    test('FULL_PROPS (w/ others)', () => {
+      const { node } = parseWithBind(
+        `<div id="foo" v-bind="bar" :class="cls" />`
+      )
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.FULL_PROPS))
+    })
+
+    test('NEED_PATCH (static ref)', () => {
+      const { node } = parseWithBind(`<div ref="foo" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+    })
+
+    test('NEED_PATCH (dynamic ref)', () => {
+      const { node } = parseWithBind(`<div :ref="foo" />`)
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+    })
+
+    test('NEED_PATCH (custom directives)', () => {
+      const { node } = parseWithBind(`<div v-foo />`)
+      const vnodeCall = node.arguments[0] as CallExpression
+      expect(vnodeCall.arguments.length).toBe(4)
+      expect(vnodeCall.arguments[3]).toBe(String(PatchFlags.NEED_PATCH))
+    })
+  })
 })

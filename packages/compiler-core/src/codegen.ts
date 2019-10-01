@@ -544,12 +544,7 @@ function genCallExpression(
   context: CodegenContext,
   multilines = node.arguments.length > 2
 ) {
-  if (isString(node.callee)) {
-    context.push(node.callee + `(`, node, true)
-  } else {
-    genNode(node.callee, context)
-    context.push(`(`)
-  }
+  context.push(node.callee + `(`, node, true)
   multilines && context.indent()
   genNodeList(node.arguments, context, multilines)
   multilines && context.deindent()

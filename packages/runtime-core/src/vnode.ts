@@ -4,11 +4,11 @@ import {
   isString,
   isObject,
   EMPTY_ARR,
-  extend
+  extend,
+  PatchFlags
 } from '@vue/shared'
 import { ComponentInternalInstance, Data, SetupProxySymbol } from './component'
 import { RawSlots } from './componentSlots'
-import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
@@ -131,14 +131,11 @@ export function isVNode(value: any): boolean {
 
 export function createVNode(
   type: VNodeTypes,
-  props: { [key: string]: any } | null | 0 = null,
-  children: any = null,
+  props: { [key: string]: any } | null = null,
+  children: unknown = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null
 ): VNode {
-  // Allow passing 0 for props, this can save bytes on generated code.
-  props = props || null
-
   // class & style normalization.
   if (props !== null) {
     // for reactive or proxy objects, we need to clone it to enable mutation.

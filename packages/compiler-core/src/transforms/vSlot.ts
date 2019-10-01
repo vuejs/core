@@ -44,8 +44,12 @@ export const trackSlotScopes: NodeTransform = (node, context) => {
 export function buildSlots(
   { props, children, loc }: ElementNode,
   context: TransformContext
-): ObjectExpression {
+): {
+  slots: ObjectExpression
+  hasDynamicSlotName: boolean
+} {
   const slots: Property[] = []
+  let hasDynamicSlotName = false
 
   // 1. Check for default slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>
@@ -83,11 +87,11 @@ export function buildSlots(
         )
         break
       } else {
-        // check duplicate slot names
         if (
           !slotName ||
           (slotName.type === NodeTypes.SIMPLE_EXPRESSION && slotName.isStatic)
         ) {
+          // check duplicate slot names
           const name = slotName ? slotName.content : `default`
           if (seenSlotNames.has(name)) {
             context.onError(
@@ -96,6 +100,8 @@ export function buildSlots(
             continue
           }
           seenSlotNames.add(name)
+        } else {
+          hasDynamicSlotName = true
         }
         slots.push(
           buildSlot(slotName || `default`, slotProps, children, nodeLoc)
@@ -120,7 +126,10 @@ export function buildSlots(
     slots.push(buildSlot(`default`, undefined, children, loc))
   }
 
-  return createObjectExpression(slots, loc)
+  return {
+    slots: createObjectExpression(slots, loc),
+    hasDynamicSlotName
+  }
 }
 
 function buildSlot(

@@ -16,7 +16,7 @@ import {
   Property,
   SourceLocation
 } from '../ast'
-import { isArray } from '@vue/shared'
+import { isArray, PatchFlags } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
@@ -41,7 +41,9 @@ export const transformElement: NodeTransform = (node, context) => {
       const isComponent = node.tagType === ElementTypes.COMPONENT
       let hasProps = node.props.length > 0
       const hasChildren = node.children.length > 0
+      let patchFlag: number = 0
       let runtimeDirectives: DirectiveNode[] | undefined
+      let dynamicPropNames: string[] | undefined
       let componentIdentifier: string | undefined
 
       if (isComponent) {
@@ -58,26 +60,51 @@ export const transformElement: NodeTransform = (node, context) => {
       ]
       // props
       if (hasProps) {
-        const { props, directives } = buildProps(
+        const propsBuildResult = buildProps(
           node.props,
           node.loc,
           context,
           isComponent
         )
-        runtimeDirectives = directives
-        if (!props) {
+        patchFlag = propsBuildResult.patchFlag
+        dynamicPropNames = propsBuildResult.dynamicPropNames
+        runtimeDirectives = propsBuildResult.directives
+        if (!propsBuildResult.props) {
           hasProps = false
         } else {
-          args.push(props)
+          args.push(propsBuildResult.props)
         }
       }
       // children
       if (hasChildren) {
         if (!hasProps) {
-          // placeholder for null props, but use `0` for more condense code
-          args.push(`0`)
+          args.push(`null`)
         }
-        args.push(isComponent ? buildSlots(node, context) : node.children)
+        if (isComponent) {
+          const { slots, hasDynamicSlotName } = buildSlots(node, context)
+          args.push(slots)
+          if (hasDynamicSlotName) {
+            patchFlag |= PatchFlags.DYNAMIC_SLOTS
+          }
+        } else {
+          // only v-for fragments will have keyed/unkeyed flags
+          args.push(node.children)
+        }
+      }
+      // patchFlag & dynamicPropNames
+      if (patchFlag !== 0) {
+        if (!hasChildren) {
+          if (!hasProps) {
+            args.push(`null`)
+          }
+          args.push(`null`)
+        }
+        args.push(String(patchFlag))
+        if (dynamicPropNames && dynamicPropNames.length) {
+          args.push(
+            `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
+          )
+        }
       }
 
       const { loc } = node
@@ -118,17 +145,30 @@ export function buildProps(
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
+  patchFlag: number
+  dynamicPropNames: string[]
 } {
   let isStatic = true
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
 
+  // patchFlag analysis
+  let patchFlag = 0
+  const dynamicPropNames: string[] = []
+  let hasDynammicKeys = false
+  let hasClassBinding = false
+  let hasStyleBinding = false
+  let hasRef = false
+
   for (let i = 0; i < props.length; i++) {
     // static attribute
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, value } = prop
+      if (name === 'ref') {
+        hasRef = true
+      }
       properties.push(
         createObjectProperty(
           createSimpleExpression(
@@ -162,6 +202,7 @@ export function buildProps(
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
       if (!arg && (isBind || name === 'on')) {
+        hasDynammicKeys = true
         if (exp) {
           if (properties.length) {
             mergeArgs.push(
@@ -191,6 +232,24 @@ export function buildProps(
           )
         }
         continue
+      }
+
+      // patchFlag analysis
+      if (isBind && arg) {
+        if (arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic) {
+          const name = arg.content
+          if (name === 'ref') {
+            hasRef = true
+          } else if (name === 'class') {
+            hasClassBinding = true
+          } else if (name === 'style') {
+            hasStyleBinding = true
+          } else {
+            dynamicPropNames.push(name)
+          }
+        } else {
+          hasDynammicKeys = true
+        }
       }
 
       const directiveTransform = context.directiveTransforms[name]
@@ -243,9 +302,29 @@ export function buildProps(
     propsExpression = context.hoist(propsExpression)
   }
 
+  // determine the flags to add
+  if (hasDynammicKeys) {
+    patchFlag |= PatchFlags.FULL_PROPS
+  } else {
+    if (hasClassBinding) {
+      patchFlag |= PatchFlags.CLASS
+    }
+    if (hasStyleBinding) {
+      patchFlag |= PatchFlags.STYLE
+    }
+    if (dynamicPropNames.length) {
+      patchFlag |= PatchFlags.PROPS
+    }
+  }
+  if (patchFlag === 0 && (hasRef || runtimeDirectives.length > 0)) {
+    patchFlag |= PatchFlags.NEED_PATCH
+  }
+
   return {
     props: propsExpression,
-    directives: runtimeDirectives
+    directives: runtimeDirectives,
+    patchFlag,
+    dynamicPropNames
   }
 }
 

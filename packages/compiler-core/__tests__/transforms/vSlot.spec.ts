@@ -260,7 +260,7 @@ describe('compiler: transform component slots', () => {
                 type: NodeTypes.JS_CALL_EXPRESSION,
                 arguments: [
                   `_component_Inner`,
-                  `0`,
+                  `null`,
                   createSlotMatcher({
                     default: {
                       type: NodeTypes.JS_SLOT_FUNCTION,

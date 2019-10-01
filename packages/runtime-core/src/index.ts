@@ -21,8 +21,8 @@ export {
 // VNode type symbols
 export { Text, Comment, Fragment, Portal, Suspense } from './vnode'
 // VNode flags
-export { PublicPatchFlags as PatchFlags } from './patchFlags'
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
+export { PublicPatchFlags as PatchFlags } from '@vue/shared'
 
 // For advanced plugins
 export { getCurrentInstance } from './component'

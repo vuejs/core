@@ -10,11 +10,11 @@ import {
   isObject,
   isReservedProp,
   hasOwn,
-  toTypeString
+  toTypeString,
+  PatchFlags
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
-import { PatchFlags } from './patchFlags'
 
 export type ComponentPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null

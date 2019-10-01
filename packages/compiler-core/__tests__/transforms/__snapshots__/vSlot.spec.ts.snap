@@ -7,7 +7,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return createVNode(_component_Comp, 0, {
+  return createVNode(_component_Comp, null, {
     [_ctx.one]: ({ foo }) => [
       toString(foo),
       toString(_ctx.bar)
@@ -16,7 +16,7 @@ return function render() {
       toString(_ctx.foo),
       toString(bar)
     ]
-  })
+  }, 256)
 }"
 `;
 
@@ -27,7 +27,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return createVNode(_component_Comp, 0, {
+  return createVNode(_component_Comp, null, {
     default: ({ foo }) => [
       toString(foo),
       toString(_ctx.bar)
@@ -43,7 +43,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return createVNode(_component_Comp, 0, {
+  return createVNode(_component_Comp, null, {
     default: () => [
       createVNode(\\"div\\")
     ]
@@ -58,7 +58,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return createVNode(_component_Comp, 0, {
+  return createVNode(_component_Comp, null, {
     one: ({ foo }) => [
       toString(foo),
       toString(_ctx.bar)
@@ -79,9 +79,9 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   const _component_Inner = resolveComponent(\\"Inner\\")
   
-  return createVNode(_component_Comp, 0, {
+  return createVNode(_component_Comp, null, {
     default: ({ foo }) => [
-      createVNode(_component_Inner, 0, {
+      createVNode(_component_Inner, null, {
         default: ({ bar }) => [
           toString(foo),
           toString(bar),

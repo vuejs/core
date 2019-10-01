@@ -6,7 +6,7 @@ import {
 import { VNode, normalizeVNode, createVNode, Comment } from './vnode'
 import { ShapeFlags } from './shapeFlags'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags } from './patchFlags'
+import { PatchFlags } from '@vue/shared'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render

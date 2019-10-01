@@ -8,7 +8,8 @@ import {
   Property,
   ExpressionNode,
   createSimpleExpression,
-  JSChildNode
+  JSChildNode,
+  SimpleExpressionNode
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -65,7 +66,7 @@ export interface TransformContext extends Required<TransformOptions> {
   onNodeRemoved: () => void
   addIdentifiers(exp: ExpressionNode): void
   removeIdentifiers(exp: ExpressionNode): void
-  hoist(exp: JSChildNode): ExpressionNode
+  hoist(exp: JSChildNode): SimpleExpressionNode
 }
 
 function createTransformContext(

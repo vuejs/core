@@ -17,12 +17,7 @@ export const enum PatchFlags {
   // Indicates an element with dynamic textContent (children fast path)
   TEXT = 1,
 
-  // Indicates an element with dynamic class.
-  // The compiler also pre-normalizes the :class binding:
-  // - b -> normalize(b)
-  // - ['foo', b] -> 'foo' + normalize(b)
-  // - { a, b: c } -> (a ? a : '') + (b ? c : '')
-  // - ['a', b, { c }] -> 'a' + normalize(b) + (c ? c : '')
+  // Indicates an element with dynamic class binding.
   CLASS = 1 << 1,
 
   // Indicates an element with dynamic style
@@ -48,6 +43,8 @@ export const enum PatchFlags {
   // Indicates an element that only needs non-props patching, e.g. ref or
   // directives (vnodeXXX hooks). It simply marks the vnode as "need patch",
   // since every pathced vnode checks for refs and vnodeXXX hooks.
+  // This flag is never directly matched against, it simply serves as a non-zero
+  // value.
   NEED_PATCH = 1 << 5,
 
   // Indicates a fragment or element with keyed or partially-keyed v-for

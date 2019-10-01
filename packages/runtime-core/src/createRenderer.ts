@@ -25,7 +25,8 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  isArray
+  isArray,
+  PatchFlags
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
@@ -38,7 +39,6 @@ import {
 } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
-import { PatchFlags } from './patchFlags'
 import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
