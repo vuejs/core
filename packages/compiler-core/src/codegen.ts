@@ -261,7 +261,6 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 // - The target position explicitly allows a single node (root, if, for)
 // - The list has length === 1, AND The only child is a:
 //   - text
-//   - expression
 //   - <slot> outlet, which always produces an array
 function genChildren(
   children: TemplateChildNode[],

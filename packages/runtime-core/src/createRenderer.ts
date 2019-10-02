@@ -1230,7 +1230,7 @@ export function createRenderer<
     // fast path
     const { patchFlag, shapeFlag } = n2
     if (patchFlag) {
-      if (patchFlag & PatchFlags.KEYED_V_FOR) {
+      if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
         patchKeyedChildren(
@@ -1244,7 +1244,7 @@ export function createRenderer<
           optimized
         )
         return
-      } else if (patchFlag & PatchFlags.UNKEYED_V_FOR) {
+      } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) {
         // unkeyed
         patchUnkeyedChildren(
           c1 as HostVNode[],

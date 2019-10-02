@@ -19,7 +19,7 @@ exports[`compiler: v-if codegen template v-if 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, Empty: _Empty } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(_Fragment, { key: 0 }, [

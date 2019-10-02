@@ -20,9 +20,7 @@ import {
   ObjectExpression,
   createObjectProperty,
   Property,
-  ExpressionNode,
-  TemplateChildNode,
-  FunctionExpression
+  ExpressionNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -168,17 +166,19 @@ function createChildrenCodegenNode(
   const needFragmentWrapper =
     children.length > 1 || child.type !== NodeTypes.ELEMENT
   if (needFragmentWrapper) {
-    let fragmentChildren: TemplateChildNode[] | FunctionExpression = children
-    // optimize away nested fragments when child is a ForNode
-    if (children.length === 1 && child.type === NodeTypes.FOR) {
-      fragmentChildren = (child.codegenNode.expressions[1] as CallExpression)
-        .arguments[2] as FunctionExpression
-    }
-    return createCallExpression(helper(CREATE_BLOCK), [
+    const blockArgs: CallExpression['arguments'] = [
       helper(FRAGMENT),
       keyExp,
-      fragmentChildren
-    ])
+      children
+    ]
+    // optimize away nested fragments when child is a ForNode
+    if (children.length === 1 && child.type === NodeTypes.FOR) {
+      const forBlockExp = child.codegenNode
+      // directly use the for block's children and patchFlag
+      blockArgs[2] = forBlockExp.arguments[2]
+      blockArgs[3] = forBlockExp.arguments[3]
+    }
+    return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
     const childCodegen = (child as ElementNode).codegenNode!
     let vnodeCall = childCodegen

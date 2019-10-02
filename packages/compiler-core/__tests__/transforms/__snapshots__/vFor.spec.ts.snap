@@ -5,11 +5,42 @@ exports[`compiler: v-for codegen basic v-for 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return _createVNode(\\"span\\")
-    })))
+    return _createVNode(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(\\"span\\"))
+    }), 128 /* UNKEYED_FRAGMENT */)
+  }
+}"
+`;
+
+exports[`compiler: v-for codegen keyed template v-for 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    
+    return _createVNode(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(_Fragment, { key: item }, [
+        \\"hello\\",
+        _createVNode(\\"span\\")
+      ]))
+    }), 64 /* KEYED_FRAGMENT */)
+  }
+}"
+`;
+
+exports[`compiler: v-for codegen keyed v-for 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return _createVNode(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(\\"span\\", { key: item }))
+    }), 64 /* KEYED_FRAGMENT */)
   }
 }"
 `;
@@ -19,11 +50,11 @@ exports[`compiler: v-for codegen skipped key 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (value, __, index) => {
-      return _createVNode(\\"span\\")
-    })))
+    return _createVNode(_Fragment, null, _renderList(items, (item, __, index) => {
+      return (_openBlock(), _createBlock(\\"span\\"))
+    }), 128 /* UNKEYED_FRAGMENT */)
   }
 }"
 `;
@@ -33,11 +64,11 @@ exports[`compiler: v-for codegen skipped value & key 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (_, __, index) => {
-      return _createVNode(\\"span\\")
-    })))
+    return _createVNode(_Fragment, null, _renderList(items, (_, __, index) => {
+      return (_openBlock(), _createBlock(\\"span\\"))
+    }), 128 /* UNKEYED_FRAGMENT */)
   }
 }"
 `;
@@ -47,11 +78,11 @@ exports[`compiler: v-for codegen skipped value 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (_, key, index) => {
-      return _createVNode(\\"span\\")
-    })))
+    return _createVNode(_Fragment, null, _renderList(items, (_, key, index) => {
+      return (_openBlock(), _createBlock(\\"span\\"))
+    }), 128 /* UNKEYED_FRAGMENT */)
   }
 }"
 `;
@@ -61,14 +92,14 @@ exports[`compiler: v-for codegen template v-for 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return [
+    return _createVNode(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(_Fragment, null, [
         \\"hello\\",
         _createVNode(\\"span\\")
-      ]
-    })))
+      ]))
+    }), 128 /* UNKEYED_FRAGMENT */)
   }
 }"
 `;
@@ -78,12 +109,12 @@ exports[`compiler: v-for codegen v-if + v-for 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, Empty: _Empty } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
-          return _createVNode(\\"div\\")
-        }))
+          return (_openBlock(), _createBlock(\\"div\\"))
+        }), 128 /* UNKEYED_FRAGMENT */)
       : _createBlock(_Empty))
   }
 }"
@@ -94,11 +125,11 @@ exports[`compiler: v-for codegen value + key + index 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
-    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (item, key, index) => {
-      return _createVNode(\\"span\\")
-    })))
+    return _createVNode(_Fragment, null, _renderList(items, (item, key, index) => {
+      return (_openBlock(), _createBlock(\\"span\\"))
+    }), 128 /* UNKEYED_FRAGMENT */)
   }
 }"
 `;

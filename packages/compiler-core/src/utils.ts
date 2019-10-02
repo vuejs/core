@@ -1,4 +1,4 @@
-import { SourceLocation, Position } from './ast'
+import { SourceLocation, Position, ElementNode, NodeTypes } from './ast'
 import { parseScript } from 'meriyah'
 import { walk } from 'estree-walker'
 
@@ -92,5 +92,27 @@ export function assert(condition: boolean, msg?: string) {
   /* istanbul ignore if */
   if (!condition) {
     throw new Error(msg || `unexpected compiler condition`)
+  }
+}
+
+export function findProp(
+  props: ElementNode['props'],
+  name: string
+): ElementNode['props'][0] | undefined {
+  for (let i = 0; i < props.length; i++) {
+    const p = props[i]
+    if (p.type === NodeTypes.ATTRIBUTE) {
+      if (p.name === name && p.value && !p.value.isEmpty) {
+        return p
+      }
+    } else if (
+      p.arg &&
+      p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+      p.arg.isStatic &&
+      p.arg.content === name &&
+      p.exp
+    ) {
+      return p
+    }
   }
 }

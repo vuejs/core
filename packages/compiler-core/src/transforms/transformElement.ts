@@ -163,7 +163,7 @@ export function buildProps(
   // patchFlag analysis
   let patchFlag = 0
   const dynamicPropNames: string[] = []
-  let hasDynammicKeys = false
+  let hasDynamicKeys = false
   let hasClassBinding = false
   let hasStyleBinding = false
   let hasRef = false
@@ -207,7 +207,7 @@ export function buildProps(
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
       if (!arg && (isBind || name === 'on')) {
-        hasDynammicKeys = true
+        hasDynamicKeys = true
         if (exp) {
           if (properties.length) {
             mergeArgs.push(
@@ -249,11 +249,11 @@ export function buildProps(
             hasClassBinding = true
           } else if (name === 'style') {
             hasStyleBinding = true
-          } else {
+          } else if (name !== 'key') {
             dynamicPropNames.push(name)
           }
         } else {
-          hasDynammicKeys = true
+          hasDynamicKeys = true
         }
       }
 
@@ -303,7 +303,7 @@ export function buildProps(
   }
 
   // determine the flags to add
-  if (hasDynammicKeys) {
+  if (hasDynamicKeys) {
     patchFlag |= PatchFlags.FULL_PROPS
   } else {
     if (hasClassBinding) {

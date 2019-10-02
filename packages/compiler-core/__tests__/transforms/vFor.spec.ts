@@ -2,25 +2,29 @@ import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
+import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
+import { transformExpression } from '../../src/transforms/transformExpression'
 import {
   ForNode,
   NodeTypes,
   SimpleExpressionNode,
   ElementNode,
   InterpolationNode,
-  SequenceExpression,
   CallExpression
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
-import { transformExpression } from '../../src/transforms/transformExpression'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
-  RENDER_LIST
+  RENDER_LIST,
+  CREATE_VNODE
 } from '../../src/runtimeConstants'
+import { PatchFlags } from '@vue/runtime-dom'
+import { PatchFlagNames } from '@vue/shared'
+import { createObjectMatcher } from '../testUtils'
 
 function parseWithForTransform(
   template: string,
@@ -34,6 +38,9 @@ function parseWithForTransform(
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformElement
     ],
+    directiveTransforms: {
+      bind: transformBind
+    },
     ...options
   })
   return {
@@ -555,31 +562,51 @@ describe('compiler: v-for', () => {
   })
 
   describe('codegen', () => {
-    function assertSharedCodegen(node: SequenceExpression) {
+    function assertSharedCodegen(node: CallExpression, keyed: boolean = false) {
       expect(node).toMatchObject({
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: `_${CREATE_VNODE}`,
+        arguments: [
+          `_${FRAGMENT}`,
+          `null`,
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${OPEN_BLOCK}`,
-            arguments: []
-          },
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${CREATE_BLOCK}`,
+            callee: `_${RENDER_LIST}`,
             arguments: [
-              `_${FRAGMENT}`,
-              `null`,
+              {}, // to be asserted by each test
               {
-                type: NodeTypes.JS_CALL_EXPRESSION,
-                callee: `_${RENDER_LIST}`
+                type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                returns: {
+                  type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+                  expressions: [
+                    {
+                      type: NodeTypes.JS_CALL_EXPRESSION,
+                      callee: `_${OPEN_BLOCK}`
+                    },
+                    {
+                      type: NodeTypes.JS_CALL_EXPRESSION,
+                      callee: `_${CREATE_BLOCK}`
+                    }
+                  ]
+                }
               }
             ]
-          }
+          },
+          keyed
+            ? `${PatchFlags.KEYED_FRAGMENT} /* ${
+                PatchFlagNames[PatchFlags.KEYED_FRAGMENT]
+              } */`
+            : `${PatchFlags.UNKEYED_FRAGMENT} /* ${
+                PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
+              } */`
         ]
       })
-      return (node.expressions[1] as CallExpression)
-        .arguments[2] as CallExpression
+      const renderListArgs = (node.arguments[2] as CallExpression).arguments
+      return {
+        source: renderListArgs[0] as SimpleExpressionNode,
+        params: (renderListArgs[1] as any).params,
+        blockArgs: (renderListArgs[1] as any).returns.expressions[1].arguments
+      }
     }
 
     test('basic v-for', () => {
@@ -587,17 +614,11 @@ describe('compiler: v-for', () => {
         root,
         node: { codegenNode }
       } = parseWithForTransform('<span v-for="(item) in items" />')
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [{ content: `item` }],
-          returns: {
-            type: NodeTypes.ELEMENT,
-            tag: `span`
-          }
-        }
-      ])
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        blockArgs: [`"span"`]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -606,17 +627,10 @@ describe('compiler: v-for', () => {
         root,
         node: { codegenNode }
       } = parseWithForTransform('<span v-for="(item, key, index) in items" />')
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [
-            { content: `item` },
-            { content: `key` },
-            { content: `index` }
-          ]
-        }
-      ])
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }, { content: `key` }, { content: `index` }]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -624,14 +638,11 @@ describe('compiler: v-for', () => {
       const {
         root,
         node: { codegenNode }
-      } = parseWithForTransform('<span v-for="(,key,index) in items" />')
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [{ content: `_` }, { content: `key` }, { content: `index` }]
-        }
-      ])
+      } = parseWithForTransform('<span v-for="(, key, index) in items" />')
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `_` }, { content: `key` }, { content: `index` }]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -639,18 +650,11 @@ describe('compiler: v-for', () => {
       const {
         root,
         node: { codegenNode }
-      } = parseWithForTransform('<span v-for="(value,,index) in items" />')
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [
-            { content: `value` },
-            { content: `__` },
-            { content: `index` }
-          ]
-        }
-      ])
+      } = parseWithForTransform('<span v-for="(item,,index) in items" />')
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }, { content: `__` }, { content: `index` }]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -659,13 +663,10 @@ describe('compiler: v-for', () => {
         root,
         node: { codegenNode }
       } = parseWithForTransform('<span v-for="(,,index) in items" />')
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [{ content: `_` }, { content: `__` }, { content: `index` }]
-        }
-      ])
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `_` }, { content: `__` }, { content: `index` }]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -676,17 +677,60 @@ describe('compiler: v-for', () => {
       } = parseWithForTransform(
         '<template v-for="item in items">hello<span/></template>'
       )
-      expect(assertSharedCodegen(codegenNode).arguments).toMatchObject([
-        { content: `items` },
-        {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: [{ content: `item` }],
-          returns: [
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        blockArgs: [
+          `_${FRAGMENT}`,
+          `null`,
+          [
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` }
           ]
-        }
-      ])
+        ]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('keyed v-for', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<span v-for="(item) in items" :key="item" />')
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        blockArgs: [
+          `"span"`,
+          createObjectMatcher({
+            key: `[item]`
+          })
+        ]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('keyed template v-for', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="item">hello<span/></template>'
+      )
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        blockArgs: [
+          `_${FRAGMENT}`,
+          createObjectMatcher({
+            key: `[item]`
+          }),
+          [
+            { type: NodeTypes.TEXT, content: `hello` },
+            { type: NodeTypes.ELEMENT, tag: `span` }
+          ]
+        ]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -722,12 +766,25 @@ describe('compiler: v-for', () => {
                       type: NodeTypes.JS_FUNCTION_EXPRESSION,
                       params: [{ content: `i` }],
                       returns: {
-                        type: NodeTypes.ELEMENT,
-                        tag: `div`
+                        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+                        expressions: [
+                          {
+                            type: NodeTypes.JS_CALL_EXPRESSION,
+                            callee: `_${OPEN_BLOCK}`
+                          },
+                          {
+                            type: NodeTypes.JS_CALL_EXPRESSION,
+                            callee: `_${CREATE_BLOCK}`,
+                            arguments: [`"div"`]
+                          }
+                        ]
                       }
                     }
                   ]
-                }
+                },
+                `${PatchFlags.UNKEYED_FRAGMENT} /* ${
+                  PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
+                } */`
               ]
             }
           }

@@ -158,7 +158,7 @@ export interface ForNode extends Node {
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
-  codegenNode: SequenceExpression
+  codegenNode: CallExpression
 }
 
 // We also include a number of JavaScript AST nodes for code generation.
@@ -198,7 +198,7 @@ export interface ArrayExpression extends Node {
 export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
   params: ExpressionNode | ExpressionNode[] | undefined
-  returns: TemplateChildNode | TemplateChildNode[]
+  returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
   newline: boolean
 }
 

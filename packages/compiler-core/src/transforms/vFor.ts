@@ -11,17 +11,22 @@ import {
   createSequenceExpression,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes
+  ElementTypes,
+  ObjectExpression,
+  createObjectExpression,
+  createObjectProperty
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { getInnerRange } from '../utils'
+import { getInnerRange, findProp } from '../utils'
 import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE
 } from '../runtimeConstants'
 import { processExpression } from './transformExpression'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -38,9 +43,19 @@ export const transformFor = createStructuralDirectiveTransform(
         const { helper, addIdentifiers, removeIdentifiers } = context
         const { source, value, key, index } = parseResult
 
-        const codegenNode = createSequenceExpression([
-          createCallExpression(helper(OPEN_BLOCK))
-          // to be filled in on exit after children traverse
+        // create the loop render function expression now, and add the
+        // iterator on exit after all children have been traversed
+        const renderExp = createCallExpression(helper(RENDER_LIST), [source])
+        const keyProp = findProp(node.props, `key`)
+        const fragmentFlag = keyProp
+          ? PatchFlags.KEYED_FRAGMENT
+          : PatchFlags.UNKEYED_FRAGMENT
+        const codegenNode = createCallExpression(helper(CREATE_VNODE), [
+          helper(FRAGMENT),
+          `null`,
+          renderExp,
+          fragmentFlag +
+            (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
         ])
 
         context.replaceNode({
@@ -63,6 +78,13 @@ export const transformFor = createStructuralDirectiveTransform(
         }
 
         return () => {
+          if (!__BROWSER__ && context.prefixIdentifiers) {
+            value && removeIdentifiers(value)
+            key && removeIdentifiers(key)
+            index && removeIdentifiers(index)
+          }
+
+          // finish the codegen now that all children have been traversed
           const params: ExpressionNode[] = []
           if (value) {
             params.push(value)
@@ -83,26 +105,46 @@ export const transformFor = createStructuralDirectiveTransform(
             params.push(index)
           }
 
-          codegenNode.expressions.push(
-            createCallExpression(helper(CREATE_BLOCK), [
-              helper(FRAGMENT),
-              `null`,
-              createCallExpression(helper(RENDER_LIST), [
-                source,
-                createFunctionExpression(
-                  params,
-                  node.tagType === ElementTypes.TEMPLATE ? node.children : node,
-                  true /* force newline to make it more readable */
+          let childBlock
+          if (node.tagType === ElementTypes.TEMPLATE) {
+            // <template v-for="...">
+            // should genereate a fragment block for each loop
+            let childBlockProps: string | ObjectExpression = `null`
+            if (keyProp) {
+              childBlockProps = createObjectExpression([
+                createObjectProperty(
+                  createSimpleExpression(`key`, true),
+                  keyProp.type === NodeTypes.ATTRIBUTE
+                    ? createSimpleExpression(keyProp.value!.content, true)
+                    : keyProp.exp!
                 )
               ])
+            }
+            childBlock = createSequenceExpression([
+              createCallExpression(helper(OPEN_BLOCK)),
+              createCallExpression(helper(CREATE_BLOCK), [
+                helper(FRAGMENT),
+                childBlockProps,
+                node.children
+              ])
             ])
-          )
-
-          if (!__BROWSER__ && context.prefixIdentifiers) {
-            value && removeIdentifiers(value)
-            key && removeIdentifiers(key)
-            index && removeIdentifiers(index)
+          } else {
+            // Normal element v-for. Directly use the child's codegenNode,
+            // but replace createVNode() with createBlock()
+            node.codegenNode!.callee = helper(CREATE_BLOCK)
+            childBlock = createSequenceExpression([
+              createCallExpression(helper(OPEN_BLOCK)),
+              node.codegenNode!
+            ])
           }
+
+          renderExp.arguments.push(
+            createFunctionExpression(
+              params,
+              childBlock,
+              true /* force newline */
+            )
+          )
         }
       } else {
         context.onError(
