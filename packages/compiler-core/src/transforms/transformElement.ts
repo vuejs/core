@@ -38,65 +38,72 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT
     ) {
-      const isComponent = node.tagType === ElementTypes.COMPONENT
-      let hasProps = node.props.length > 0
-      const hasChildren = node.children.length > 0
-      let patchFlag: number = 0
-      let runtimeDirectives: DirectiveNode[] | undefined
-      let dynamicPropNames: string[] | undefined
-      let componentIdentifier: string | undefined
+      // perform the work on exit, after all child expressions have been
+      // processed and merged.
+      return () => {
+        const isComponent = node.tagType === ElementTypes.COMPONENT
+        let hasProps = node.props.length > 0
+        const hasChildren = node.children.length > 0
+        let patchFlag: number = 0
+        let runtimeDirectives: DirectiveNode[] | undefined
+        let dynamicPropNames: string[] | undefined
+        let componentIdentifier: string | undefined
 
-      if (isComponent) {
-        componentIdentifier = `_component_${toValidId(node.tag)}`
-        context.statements.add(
-          `const ${componentIdentifier} = ${context.helper(
-            RESOLVE_COMPONENT
-          )}(${JSON.stringify(node.tag)})`
-        )
-      }
-
-      const args: CallExpression['arguments'] = [
-        isComponent ? componentIdentifier! : `"${node.tag}"`
-      ]
-      // props
-      if (hasProps) {
-        const propsBuildResult = buildProps(
-          node.props,
-          node.loc,
-          context,
-          isComponent
-        )
-        patchFlag = propsBuildResult.patchFlag
-        dynamicPropNames = propsBuildResult.dynamicPropNames
-        runtimeDirectives = propsBuildResult.directives
-        if (!propsBuildResult.props) {
-          hasProps = false
-        } else {
-          args.push(propsBuildResult.props)
-        }
-      }
-      // children
-      if (hasChildren) {
-        if (!hasProps) {
-          args.push(`null`)
-        }
         if (isComponent) {
-          const { slots, hasDynamicSlotName } = buildSlots(node, context)
-          args.push(slots)
-          if (hasDynamicSlotName) {
-            patchFlag |= PatchFlags.DYNAMIC_SLOTS
+          componentIdentifier = `_component_${toValidId(node.tag)}`
+          context.statements.add(
+            `const ${componentIdentifier} = ${context.helper(
+              RESOLVE_COMPONENT
+            )}(${JSON.stringify(node.tag)})`
+          )
+        }
+
+        const args: CallExpression['arguments'] = [
+          isComponent ? componentIdentifier! : `"${node.tag}"`
+        ]
+        // props
+        if (hasProps) {
+          const propsBuildResult = buildProps(
+            node.props,
+            node.loc,
+            context,
+            isComponent
+          )
+          patchFlag = propsBuildResult.patchFlag
+          dynamicPropNames = propsBuildResult.dynamicPropNames
+          runtimeDirectives = propsBuildResult.directives
+          if (!propsBuildResult.props) {
+            hasProps = false
+          } else {
+            args.push(propsBuildResult.props)
           }
-        } else {
-          if (node.children.length === 1) {
+        }
+        // children
+        if (hasChildren) {
+          if (!hasProps) {
+            args.push(`null`)
+          }
+          if (isComponent) {
+            const { slots, hasDynamicSlotName } = buildSlots(node, context)
+            args.push(slots)
+            if (hasDynamicSlotName) {
+              patchFlag |= PatchFlags.DYNAMIC_SLOTS
+            }
+          } else if (node.children.length === 1) {
             const child = node.children[0]
             const type = child.type
+            const hasDynamicTextChild =
+              type === NodeTypes.INTERPOLATION ||
+              type === NodeTypes.COMPOUND_EXPRESSION
+            if (hasDynamicTextChild) {
+              patchFlag |= PatchFlags.TEXT
+            }
             // pass directly if the only child is one of:
             // - text (plain / interpolation / expression)
             // - <slot> outlet (already an array)
             if (
               type === NodeTypes.TEXT ||
-              type === NodeTypes.INTERPOLATION ||
-              type === NodeTypes.COMPOUND_EXPRESSION ||
+              hasDynamicTextChild ||
               (type === NodeTypes.ELEMENT &&
                 (child as ElementNode).tagType === ElementTypes.SLOT)
             ) {
@@ -108,54 +115,54 @@ export const transformElement: NodeTransform = (node, context) => {
             args.push(node.children)
           }
         }
-      }
-      // patchFlag & dynamicPropNames
-      if (patchFlag !== 0) {
-        if (!hasChildren) {
-          if (!hasProps) {
+        // patchFlag & dynamicPropNames
+        if (patchFlag !== 0) {
+          if (!hasChildren) {
+            if (!hasProps) {
+              args.push(`null`)
+            }
             args.push(`null`)
           }
-          args.push(`null`)
-        }
-        if (__DEV__) {
-          const flagNames = Object.keys(PatchFlagNames)
-            .filter(n => patchFlag & Number(n))
-            .map(n => PatchFlagNames[n as any])
-            .join(`, `)
-          args.push(patchFlag + ` /* ${flagNames} */`)
-        } else {
-          args.push(patchFlag + '')
-        }
-        if (dynamicPropNames && dynamicPropNames.length) {
-          args.push(
-            `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
-          )
-        }
-      }
-
-      const { loc } = node
-      const vnode = createCallExpression(
-        context.helper(CREATE_VNODE),
-        args,
-        loc
-      )
-
-      if (runtimeDirectives && runtimeDirectives.length) {
-        node.codegenNode = createCallExpression(
-          context.helper(APPLY_DIRECTIVES),
-          [
-            vnode,
-            createArrayExpression(
-              runtimeDirectives.map(dir => {
-                return createDirectiveArgs(dir, context)
-              }),
-              loc
+          if (__DEV__) {
+            const flagNames = Object.keys(PatchFlagNames)
+              .filter(n => patchFlag & Number(n))
+              .map(n => PatchFlagNames[n as any])
+              .join(`, `)
+            args.push(patchFlag + ` /* ${flagNames} */`)
+          } else {
+            args.push(patchFlag + '')
+          }
+          if (dynamicPropNames && dynamicPropNames.length) {
+            args.push(
+              `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
             )
-          ],
+          }
+        }
+
+        const { loc } = node
+        const vnode = createCallExpression(
+          context.helper(CREATE_VNODE),
+          args,
           loc
         )
-      } else {
-        node.codegenNode = vnode
+
+        if (runtimeDirectives && runtimeDirectives.length) {
+          node.codegenNode = createCallExpression(
+            context.helper(APPLY_DIRECTIVES),
+            [
+              vnode,
+              createArrayExpression(
+                runtimeDirectives.map(dir => {
+                  return createDirectiveArgs(dir, context)
+                }),
+                loc
+              )
+            ],
+            loc
+          )
+        } else {
+          node.codegenNode = vnode
+        }
       }
     }
   }

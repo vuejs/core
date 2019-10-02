@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: transform component slots dynamically named slots 1`] = `
-"const { resolveComponent, createVNode, toString } = Vue
+"const { toString, resolveComponent, createVNode } = Vue
 
 return function render() {
   const _ctx = this
@@ -21,7 +21,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots explicit default slot 1`] = `
-"const { resolveComponent, createVNode, toString } = Vue
+"const { toString, resolveComponent, createVNode } = Vue
 
 return function render() {
   const _ctx = this
@@ -37,7 +37,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots implicit default slot 1`] = `
-"const { resolveComponent, createVNode } = Vue
+"const { createVNode, resolveComponent } = Vue
 
 return function render() {
   const _ctx = this
@@ -52,7 +52,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots named slots 1`] = `
-"const { resolveComponent, createVNode, toString } = Vue
+"const { toString, resolveComponent, createVNode } = Vue
 
 return function render() {
   const _ctx = this
@@ -72,12 +72,12 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots nested slots scoping 1`] = `
-"const { resolveComponent, createVNode, toString } = Vue
+"const { toString, resolveComponent, createVNode } = Vue
 
 return function render() {
   const _ctx = this
-  const _component_Comp = resolveComponent(\\"Comp\\")
   const _component_Inner = resolveComponent(\\"Inner\\")
+  const _component_Comp = resolveComponent(\\"Comp\\")
   
   return createVNode(_component_Comp, null, {
     default: ({ foo }) => [

@@ -26,6 +26,7 @@ import { transformStyle } from '../../src/transforms/transformStyle'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
+import { optimizeText } from '../../src/transforms/optimizeText'
 
 function parseWithElementTransform(
   template: string,
@@ -36,7 +37,7 @@ function parseWithElementTransform(
 } {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformElement],
+    nodeTransforms: [optimizeText, transformElement],
     ...options
   })
   const codegenNode = (ast.children[0] as ElementNode)
@@ -561,6 +562,20 @@ describe('compiler: element transform', () => {
         }
       })
     }
+
+    test('TEXT', () => {
+      const { node } = parseWithBind(`<div>foo</div>`)
+      expect(node.arguments.length).toBe(3)
+
+      const { node: node2 } = parseWithBind(`<div>{{ foo }}</div>`)
+      expect(node2.arguments.length).toBe(4)
+      expect(node2.arguments[3]).toBe(`${PatchFlags.TEXT} /* TEXT */`)
+
+      // multiple nodes, merged with optimze text
+      const { node: node3 } = parseWithBind(`<div>foo {{ bar }} baz</div>`)
+      expect(node3.arguments.length).toBe(4)
+      expect(node3.arguments[3]).toBe(`${PatchFlags.TEXT} /* TEXT */`)
+    })
 
     test('CLASS', () => {
       const { node } = parseWithBind(`<div :class="foo" />`)

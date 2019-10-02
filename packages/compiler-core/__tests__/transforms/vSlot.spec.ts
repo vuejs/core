@@ -123,9 +123,8 @@ describe('compiler: transform component slots', () => {
         one: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ foo }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
           },
           returns: [
             {
@@ -145,9 +144,8 @@ describe('compiler: transform component slots', () => {
         two: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ bar }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `bar` }, ` }`]
           },
           returns: [
             {
@@ -186,9 +184,8 @@ describe('compiler: transform component slots', () => {
         '[_ctx.one]': {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ foo }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
           },
           returns: [
             {
@@ -208,9 +205,8 @@ describe('compiler: transform component slots', () => {
         '[_ctx.two]': {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ bar }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `bar` }, ` }`]
           },
           returns: [
             {
@@ -249,9 +245,8 @@ describe('compiler: transform component slots', () => {
         default: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `{ foo }`,
-            isStatic: false
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
           },
           returns: [
             {
