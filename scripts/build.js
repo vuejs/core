@@ -20,19 +20,21 @@ const zlib = require('zlib')
 const chalk = require('chalk')
 const execa = require('execa')
 const { compress } = require('brotli')
-const { targets, fuzzyMatchTarget } = require('./utils')
+const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
 
 const args = require('minimist')(process.argv.slice(2))
-const target = args._[0]
+const targets = args._
 const formats = args.formats || args.f
+const devOnly = args.devOnly || args.d
+const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildAllMatching = args.all || args.a
 ;(async () => {
-  if (!target) {
-    await buildAll(targets)
-    checkAllSizes(targets)
+  if (!targets.length) {
+    await buildAll(allTargets)
+    checkAllSizes(allTargets)
   } else {
-    await buildAll(fuzzyMatchTarget(target, buildAllMatching))
-    checkAllSizes(fuzzyMatchTarget(target, buildAllMatching))
+    await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
+    checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
   }
 })()
 
@@ -53,11 +55,11 @@ async function build(target) {
     [
       '-c',
       '--environment',
-      `NODE_ENV:production,` +
+      `NODE_ENV:${devOnly ? 'development' : 'production'},` +
         `TARGET:${target}` +
         (formats ? `,FORMATS:${formats}` : ``) +
         (args.types ? `,TYPES:true` : ``) +
-        (args.p ? `,PROD_ONLY:true` : ``)
+        (prodOnly ? `,PROD_ONLY:true` : ``)
     ],
     { stdio: 'inherit' }
   )
