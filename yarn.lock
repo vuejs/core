@@ -4780,11 +4780,6 @@ merge2@^1.2.3:
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.2.4.tgz#c9269589e6885a60cf80605d9522d4b67ca646e3"
   integrity sha512-FYE8xI+6pjFOhokZu0We3S5NKCirLbCzSh2Usf3qEyr4X8U+0jNg9P8RZ4qz+V2UoECLVwSyzU3LxXBaLGtD3A==
 
-meriyah@^1.7.2:
-  version "1.7.2"
-  resolved "https://registry.yarnpkg.com/meriyah/-/meriyah-1.7.2.tgz#c47d07d8f1284577658827cd134b180e80ae4bef"
-  integrity sha512-bBXN6hJ9RHA0mEae5O2Ocr6giK0S87nsz/W7tnBRm4kpW04LEEpXSOfwaID9GZgPRVcn3rAHzHHDDD68DLQgWw==
-
 micromatch@^3.1.10, micromatch@^3.1.4:
   version "3.1.10"
   resolved "https://registry.yarnpkg.com/micromatch/-/micromatch-3.1.10.tgz#70859bc95c9840952f359a068a3fc49f9ecfac23"

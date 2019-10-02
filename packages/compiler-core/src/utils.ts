@@ -1,19 +1,19 @@
 import { SourceLocation, Position, ElementNode, NodeTypes } from './ast'
-import { parseScript } from 'meriyah'
+import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
 // and thus can be tree-shaken in browser builds.
-let _parseScript: typeof parseScript
+let _parse: typeof parse
 let _walk: typeof walk
 
-export const parseJS: typeof parseScript = (code: string, options: any) => {
+export const parseJS: typeof parse = (code: string, options: any) => {
   assert(
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`
   )
-  const parse = _parseScript || (_parseScript = require('meriyah').parseScript)
+  const parse = _parse || (_parse = require('acorn').parse)
   return parse(code, options)
 }
 

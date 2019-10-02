@@ -28,8 +28,8 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-core#readme",
   "dependencies": {
+    "acorn": "^7.1.0",
     "estree-walker": "^0.8.1",
-    "meriyah": "^1.7.2",
     "source-map": "^0.7.3"
   }
 }
