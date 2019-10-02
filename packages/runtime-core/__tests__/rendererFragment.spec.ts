@@ -111,7 +111,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', 'one'), 'two'],
-        PatchFlags.UNKEYED_V_FOR
+        PatchFlags.UNKEYED_FRAGMENT
       ),
       root
     )
@@ -122,7 +122,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', 'foo'), 'bar', 'baz'],
-        PatchFlags.UNKEYED_V_FOR
+        PatchFlags.KEYED_FRAGMENT
       ),
       root
     )
@@ -137,7 +137,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')],
-        PatchFlags.KEYED_V_FOR
+        PatchFlags.KEYED_FRAGMENT
       ),
       root
     )
@@ -151,7 +151,7 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')],
-        PatchFlags.KEYED_V_FOR
+        PatchFlags.KEYED_FRAGMENT
       ),
       root
     )
