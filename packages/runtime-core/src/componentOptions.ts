@@ -23,7 +23,8 @@ import {
   onErrorCaptured,
   onRenderTracked,
   onBeforeUnmount,
-  onUnmounted
+  onUnmounted,
+  onRenderTriggered
 } from './apiLifecycle'
 import { DebuggerEvent, reactive } from '@vue/reactivity'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
@@ -330,7 +331,7 @@ export function applyOptions(
     onRenderTracked(renderTracked.bind(ctx))
   }
   if (renderTriggered) {
-    onRenderTracked(renderTriggered.bind(ctx))
+    onRenderTriggered(renderTriggered.bind(ctx))
   }
   if (beforeUnmount) {
     onBeforeUnmount(beforeUnmount.bind(ctx))
