@@ -24,8 +24,7 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT,
-  CREATE_VNODE
+  FRAGMENT
 } from '../runtimeConstants'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -52,12 +51,15 @@ export const transformFor = createStructuralDirectiveTransform(
         const fragmentFlag = keyProp
           ? PatchFlags.KEYED_FRAGMENT
           : PatchFlags.UNKEYED_FRAGMENT
-        const codegenNode = createCallExpression(helper(CREATE_VNODE), [
-          helper(FRAGMENT),
-          `null`,
-          renderExp,
-          fragmentFlag +
-            (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
+        const codegenNode = createSequenceExpression([
+          createCallExpression(helper(OPEN_BLOCK)),
+          createCallExpression(helper(CREATE_BLOCK), [
+            helper(FRAGMENT),
+            `null`,
+            renderExp,
+            fragmentFlag +
+              (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
+          ])
         ])
 
         context.replaceNode({

@@ -158,7 +158,7 @@ export interface ForNode extends Node {
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
-  codegenNode: CallExpression
+  codegenNode: SequenceExpression
 }
 
 // We also include a number of JavaScript AST nodes for code generation.

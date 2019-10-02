@@ -176,7 +176,8 @@ function createChildrenCodegenNode(
     if (children.length === 1) {
       // optimize away nested fragments when child is a ForNode
       if (child.type === NodeTypes.FOR) {
-        const forBlockArgs = child.codegenNode.arguments
+        const forBlockArgs = (child.codegenNode
+          .expressions[1] as CallExpression).arguments
         // directly use the for block's children and patchFlag
         blockArgs[2] = forBlockArgs[2]
         blockArgs[3] = forBlockArgs[3]

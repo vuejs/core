@@ -12,7 +12,8 @@ import {
   SimpleExpressionNode,
   ElementNode,
   InterpolationNode,
-  CallExpression
+  CallExpression,
+  SequenceExpression
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -21,7 +22,6 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_LIST,
-  CREATE_VNODE,
   RENDER_SLOT
 } from '../../src/runtimeConstants'
 import { PatchFlags } from '@vue/runtime-dom'
@@ -565,46 +565,59 @@ describe('compiler: v-for', () => {
   })
 
   describe('codegen', () => {
-    function assertSharedCodegen(node: CallExpression, keyed: boolean = false) {
+    function assertSharedCodegen(
+      node: SequenceExpression,
+      keyed: boolean = false
+    ) {
       expect(node).toMatchObject({
-        type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: `_${CREATE_VNODE}`,
-        arguments: [
-          `_${FRAGMENT}`,
-          `null`,
+        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+        expressions: [
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${RENDER_LIST}`,
-            arguments: [
-              {}, // to be asserted by each test
-              {
-                type: NodeTypes.JS_FUNCTION_EXPRESSION,
-                returns: {
-                  type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-                  expressions: [
-                    {
-                      type: NodeTypes.JS_CALL_EXPRESSION,
-                      callee: `_${OPEN_BLOCK}`
-                    },
-                    {
-                      type: NodeTypes.JS_CALL_EXPRESSION,
-                      callee: `_${CREATE_BLOCK}`
-                    }
-                  ]
-                }
-              }
-            ]
+            callee: `_${OPEN_BLOCK}`
           },
-          keyed
-            ? `${PatchFlags.KEYED_FRAGMENT} /* ${
-                PatchFlagNames[PatchFlags.KEYED_FRAGMENT]
-              } */`
-            : `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-                PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
-              } */`
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: `_${CREATE_BLOCK}`,
+            arguments: [
+              `_${FRAGMENT}`,
+              `null`,
+              {
+                type: NodeTypes.JS_CALL_EXPRESSION,
+                callee: `_${RENDER_LIST}`,
+                arguments: [
+                  {}, // to be asserted by each test
+                  {
+                    type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                    returns: {
+                      type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+                      expressions: [
+                        {
+                          type: NodeTypes.JS_CALL_EXPRESSION,
+                          callee: `_${OPEN_BLOCK}`
+                        },
+                        {
+                          type: NodeTypes.JS_CALL_EXPRESSION,
+                          callee: `_${CREATE_BLOCK}`
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              keyed
+                ? `${PatchFlags.KEYED_FRAGMENT} /* ${
+                    PatchFlagNames[PatchFlags.KEYED_FRAGMENT]
+                  } */`
+                : `${PatchFlags.UNKEYED_FRAGMENT} /* ${
+                    PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
+                  } */`
+            ]
+          }
         ]
       })
-      const renderListArgs = (node.arguments[2] as CallExpression).arguments
+      const renderListArgs = ((node.expressions[1] as CallExpression)
+        .arguments[2] as CallExpression).arguments
       return {
         source: renderListArgs[0] as SimpleExpressionNode,
         params: (renderListArgs[1] as any).params,
