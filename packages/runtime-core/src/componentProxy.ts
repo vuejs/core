@@ -1,7 +1,7 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn } from '@vue/shared'
+import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
 import { ExtracComputedReturns } from './apiOptions'
 import { UnwrapRef } from '@vue/reactivity'
 
@@ -78,15 +78,10 @@ export const PublicInstanceProxyHandlers = {
       }
     }
   },
-  has(target: ComponentInternalInstance, key: string): boolean {
-    const { renderContext, data, props } = target
-    // TODO handle $xxx properties
-    return (
-      key[0] !== '_' &&
-      ((data !== EMPTY_OBJ && hasOwn(data, key)) ||
-        hasOwn(renderContext, key) ||
-        hasOwn(props, key))
-    )
+  // this trap is only called in browser-compiled render functions that use
+  // `with (this) {}`
+  has(_: any, key: string): boolean {
+    return key[0] !== '_' && !globalsWhitelist.has(key)
   },
   set(target: ComponentInternalInstance, key: string, value: any): boolean {
     const { data, renderContext } = target

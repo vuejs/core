@@ -23,6 +23,7 @@ import {
   parseJS,
   walkJS
 } from '../utils'
+import { globalsWhitelist } from '@vue/shared'
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -215,17 +216,6 @@ const isPropertyShorthand = (node: Node, parent: Node) =>
 const isStaticPropertyKey = (node: Node, parent: Node) =>
   isPropertyKey(node, parent) && (parent as Property).value !== node
 
-const globals = new Set(
-  (
-    'Infinity,undefined,NaN,isFinite,isNaN,' +
-    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
-    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
-    'require,' + // for webpack
-    'arguments,'
-  ) // parsed as identifier but is a special keyword...
-    .split(',')
-)
-
 function shouldPrefix(identifier: Identifier, parent: Node) {
   if (
     !(
@@ -245,8 +235,12 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
     ) &&
     // not in an Array destructure pattern
     !(parent.type === 'ArrayPattern') &&
-    // skip globals + commonly used shorthands
-    !globals.has(identifier.name)
+    // skip whitelisted globals
+    !globalsWhitelist.has(identifier.name) &&
+    // special case for webpack compilation
+    identifier.name !== `require` &&
+    // is a special keyword but parsed as identifier
+    identifier.name !== `arguments`
   ) {
     return true
   }
