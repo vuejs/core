@@ -86,6 +86,7 @@ export function parse(content: string, options: ParserOptions = {}): RootNode {
     imports: [],
     statements: [],
     hoists: [],
+    codegenNode: undefined,
     loc: getSelection(context, start)
   }
 }

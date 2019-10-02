@@ -230,8 +230,11 @@ export function generate(
 
   // generate the VNode tree expression
   push(`return `)
-
-  genRoot(ast, context)
+  if (ast.codegenNode) {
+    genNode(ast.codegenNode, context)
+  } else {
+    push(`null`)
+  }
 
   if (useWithBlock) {
     deindent()
@@ -254,18 +257,6 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
     context.newline()
   })
   context.newline()
-}
-
-function genRoot(root: RootNode, context: CodegenContext) {
-  // TODO handle blocks
-  const { children } = root
-  if (children.length === 0) {
-    context.push(`null`)
-  } else if (children.length === 1) {
-    genNode(children[0], context)
-  } else {
-    genNodeListAsArray(children, context)
-  }
 }
 
 function genNodeListAsArray(

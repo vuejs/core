@@ -4,25 +4,16 @@ exports[`compiler: codegen ConditionalExpression 1`] = `
 "
 return function render() {
   with (this) {
-    return (foo, ok
+    return ok
       ? foo()
       : orNot
         ? bar()
-        : baz())
+        : baz()
   }
 }"
 `;
 
-exports[`compiler: codegen SequenceExpression 1`] = `
-"
-return function render() {
-  with (this) {
-    return (foo, bar(baz))
-  }
-}"
-`;
-
-exports[`compiler: codegen callExpression + objectExpression + arrayExpression 1`] = `
+exports[`compiler: codegen Element (callExpression + objectExpression + arrayExpression) 1`] = `
 "
 return function render() {
   with (this) {
@@ -36,6 +27,15 @@ return function render() {
       foo,
       createVNode(\\"p\\")
     ])
+  }
+}"
+`;
+
+exports[`compiler: codegen SequenceExpression 1`] = `
+"
+return function render() {
+  with (this) {
+    return (foo, bar(baz))
   }
 }"
 `;
@@ -54,6 +54,15 @@ exports[`compiler: codegen compound expression 1`] = `
 return function render() {
   with (this) {
     return _ctx.foo + _toString(bar)
+  }
+}"
+`;
+
+exports[`compiler: codegen forNode 1`] = `
+"
+return function render() {
+  with (this) {
+    return (foo, bar)
   }
 }"
 `;
@@ -143,30 +152,5 @@ return function render() {
   with (this) {
     return \\"hello\\"
   }
-}"
-`;
-
-exports[`compiler: codegen text + comment + interpolation 1`] = `
-"
-return function render() {
-  with (this) {
-    return [
-      \\"foo\\",
-      _toString(hello),
-      _createVNode(_Comment, 0, \\"foo\\")
-    ]
-  }
-}"
-`;
-
-exports[`compiler: codegen text + comment + interpolation w/ prefixIdentifiers: true 1`] = `
-"
-return function render() {
-  const _ctx = this
-  return [
-    \\"foo\\",
-    toString(hello),
-    createVNode(Comment, 0, \\"foo\\")
-  ]
 }"
 `;

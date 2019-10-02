@@ -9,11 +9,13 @@ import {
   ExpressionNode,
   createSimpleExpression,
   JSChildNode,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  ElementTypes
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
-import { TO_STRING, COMMENT, CREATE_VNODE } from './runtimeConstants'
+import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
+import { createBlockExpression } from './utils'
 
 // There are two types of transforms:
 //
@@ -182,6 +184,42 @@ function createTransformContext(
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
+  finalizeRoot(root, context)
+}
+
+function finalizeRoot(root: RootNode, context: TransformContext) {
+  const { helper } = context
+  const { children } = root
+  if (children.length === 1) {
+    const child = children[0]
+    if (child.type === NodeTypes.ELEMENT && child.codegenNode) {
+      // only child is a <slot/> - it needs to be in a fragment block.
+      if (child.tagType === ElementTypes.SLOT) {
+        root.codegenNode = createBlockExpression(
+          [helper(FRAGMENT), `null`, child.codegenNode],
+          context
+        )
+      } else {
+        // turn root element into a block
+        root.codegenNode = createBlockExpression(
+          child.codegenNode.arguments,
+          context
+        )
+      }
+    } else {
+      // IfNode, ForNode, TextNodes or transform calls without transformElement.
+      // Just generate the node as-is
+      root.codegenNode = child
+    }
+  } else if (children.length > 1) {
+    // root has multiple nodes - return a fragment block.
+    root.codegenNode = createBlockExpression(
+      [helper(FRAGMENT), `null`, root.children],
+      context
+    )
+  }
+
+  // finalize meta information
   root.imports = [...context.imports]
   root.statements = [...context.statements]
   root.hoists = context.hoists
@@ -214,8 +252,7 @@ export function traverseNode(
   const { nodeTransforms } = context
   const exitFns = []
   for (let i = 0; i < nodeTransforms.length; i++) {
-    const plugin = nodeTransforms[i]
-    const onExit = plugin(node, context)
+    const onExit = nodeTransforms[i](node, context)
     if (onExit) {
       if (isArray(onExit)) {
         exitFns.push(...onExit)
@@ -234,9 +271,9 @@ export function traverseNode(
 
   switch (node.type) {
     case NodeTypes.COMMENT:
-      context.helper(CREATE_VNODE)
       // inject import for the Comment symbol, which is needed for creating
       // comment nodes with `createVNode`
+      context.helper(CREATE_VNODE)
       context.helper(COMMENT)
       break
     case NodeTypes.INTERPOLATION:

@@ -19,7 +19,7 @@ import {
   CallExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { getInnerRange, findProp } from '../utils'
+import { getInnerRange, findProp, createBlockExpression } from '../utils'
 import {
   RENDER_LIST,
   OPEN_BLOCK,
@@ -69,7 +69,8 @@ export const transformFor = createStructuralDirectiveTransform(
           valueAlias: value,
           keyAlias: key,
           objectIndexAlias: index,
-          children: [node],
+          children:
+            node.tagType === ElementTypes.TEMPLATE ? node.children : [node],
           codegenNode
         })
 
@@ -126,6 +127,8 @@ export const transformFor = createStructuralDirectiveTransform(
             }
             let childBlockChildren: TemplateChildNode[] | CallExpression =
               node.children
+            // if the only child is a <slot/>, use it directly as fragment
+            // children since it already returns an array.
             if (childBlockChildren.length === 1) {
               const child = childBlockChildren[0]
               if (
@@ -135,22 +138,17 @@ export const transformFor = createStructuralDirectiveTransform(
                 childBlockChildren = child.codegenNode!
               }
             }
-            childBlock = createSequenceExpression([
-              createCallExpression(helper(OPEN_BLOCK)),
-              createCallExpression(helper(CREATE_BLOCK), [
-                helper(FRAGMENT),
-                childBlockProps,
-                childBlockChildren
-              ])
-            ])
+            childBlock = createBlockExpression(
+              [helper(FRAGMENT), childBlockProps, childBlockChildren],
+              context
+            )
           } else {
-            // Normal element v-for. Directly use the child's codegenNode,
+            // Normal element v-for. Directly use the child's codegenNode arguments,
             // but replace createVNode() with createBlock()
-            node.codegenNode!.callee = helper(CREATE_BLOCK)
-            childBlock = createSequenceExpression([
-              createCallExpression(helper(OPEN_BLOCK)),
-              node.codegenNode!
-            ])
+            childBlock = createBlockExpression(
+              node.codegenNode!.arguments,
+              context
+            )
           }
 
           renderExp.arguments.push(

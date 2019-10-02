@@ -1,6 +1,17 @@
-import { SourceLocation, Position, ElementNode, NodeTypes } from './ast'
+import {
+  SourceLocation,
+  Position,
+  ElementNode,
+  NodeTypes,
+  CallExpression,
+  SequenceExpression,
+  createSequenceExpression,
+  createCallExpression
+} from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
+import { TransformContext } from './transform'
+import { OPEN_BLOCK, CREATE_BLOCK } from './runtimeConstants'
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -115,4 +126,14 @@ export function findProp(
       return p
     }
   }
+}
+
+export function createBlockExpression(
+  args: CallExpression['arguments'],
+  context: TransformContext
+): SequenceExpression {
+  return createSequenceExpression([
+    createCallExpression(context.helper(OPEN_BLOCK)),
+    createCallExpression(context.helper(CREATE_BLOCK), args)
+  ])
 }

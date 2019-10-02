@@ -17,7 +17,7 @@ import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { isString } from '@vue/shared'
 
-const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
+export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
   p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
 
 // A NodeTransform that tracks scope identifiers for scoped slots so that they

@@ -27,7 +27,7 @@ import {
   TO_HANDLERS
 } from '../runtimeConstants'
 import { getInnerRange } from '../utils'
-import { buildSlots } from './vSlot'
+import { buildSlots, isVSlot } from './vSlot'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
@@ -36,7 +36,10 @@ export const transformElement: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (
       node.tagType === ElementTypes.ELEMENT ||
-      node.tagType === ElementTypes.COMPONENT
+      node.tagType === ElementTypes.COMPONENT ||
+      // <template> with v-if or v-for are ignored during traversal.
+      // <template> without v-slot should be treated as a normal element.
+      (node.tagType === ElementTypes.TEMPLATE && !node.props.some(isVSlot))
     ) {
       // perform the work on exit, after all child expressions have been
       // processed and merged.

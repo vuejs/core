@@ -78,6 +78,7 @@ export interface RootNode extends Node {
   imports: string[]
   statements: string[]
   hoists: JSChildNode[]
+  codegenNode: TemplateChildNode | JSChildNode | undefined
 }
 
 export interface ElementNode extends Node {

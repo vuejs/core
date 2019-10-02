@@ -247,6 +247,17 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('should handle plain <template> as normal element', () => {
+    const { node } = parseWithElementTransform(`<template id="foo" />`)
+    expect(node.callee).toBe(`_${CREATE_VNODE}`)
+    expect(node.arguments).toMatchObject([
+      `"template"`,
+      createObjectMatcher({
+        id: 'foo'
+      })
+    ])
+  })
+
   test('error on v-bind with no argument', () => {
     const onError = jest.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })

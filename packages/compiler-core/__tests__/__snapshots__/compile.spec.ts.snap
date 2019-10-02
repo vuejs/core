@@ -7,7 +7,7 @@ return function render() {
   with (this) {
     const { toString: _toString, openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty, Fragment: _Fragment, renderList: _renderList } = _Vue
     
-    return _createVNode(\\"div\\", {
+    return (_openBlock(), _createBlock(\\"div\\", {
       id: \\"foo\\",
       class: bar.baz
     }, [
@@ -22,7 +22,7 @@ return function render() {
           _createVNode(\\"span\\", null, _toString(value + index), 1 /* TEXT */)
         ]))
       }), 128 /* UNKEYED_FRAGMENT */))
-    ], 2 /* CLASS */)
+    ], 2 /* CLASS */))
   }
 }"
 `;
@@ -32,7 +32,7 @@ exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`
 
 return function render() {
   const _ctx = this
-  return createVNode(\\"div\\", {
+  return (openBlock(), createBlock(\\"div\\", {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
@@ -47,7 +47,7 @@ return function render() {
         createVNode(\\"span\\", null, toString(value + index), 1 /* TEXT */)
       ]))
     }), 128 /* UNKEYED_FRAGMENT */))
-  ], 2 /* CLASS */)
+  ], 2 /* CLASS */))
 }"
 `;
 
@@ -56,7 +56,7 @@ exports[`compiler: integration tests module mode 1`] = `
 
 export default function render() {
   const _ctx = this
-  return createVNode(\\"div\\", {
+  return (openBlock(), createBlock(\\"div\\", {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
@@ -71,6 +71,6 @@ export default function render() {
         createVNode(\\"span\\", null, _toString(value + index), 1 /* TEXT */)
       ]))
     }), 128 /* UNKEYED_FRAGMENT */))
-  ], 2 /* CLASS */)
+  ], 2 /* CLASS */))
 }"
 `;
