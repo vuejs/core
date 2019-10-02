@@ -196,13 +196,13 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       // only child is a <slot/> - it needs to be in a fragment block.
       if (child.tagType === ElementTypes.SLOT) {
         root.codegenNode = createBlockExpression(
-          [helper(FRAGMENT), `null`, child.codegenNode],
+          [helper(FRAGMENT), `null`, child.codegenNode!],
           context
         )
       } else {
         // turn root element into a block
         root.codegenNode = createBlockExpression(
-          child.codegenNode.arguments,
+          child.codegenNode!.arguments,
           context
         )
       }

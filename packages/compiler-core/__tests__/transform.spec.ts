@@ -7,7 +7,20 @@ import {
   ExpressionNode
 } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
-import { TO_STRING, CREATE_VNODE, COMMENT } from '../src/runtimeConstants'
+import {
+  TO_STRING,
+  CREATE_VNODE,
+  COMMENT,
+  OPEN_BLOCK,
+  CREATE_BLOCK,
+  FRAGMENT,
+  RENDER_SLOT
+} from '../src/runtimeConstants'
+import { transformIf } from '../src/transforms/vIf'
+import { transformFor } from '../src/transforms/vFor'
+import { transformElement } from '../src/transforms/transformElement'
+import { transformSlotOutlet } from '../src/transforms/transfromSlotOutlet'
+import { optimizeText } from '../src/transforms/optimizeText'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -220,5 +233,111 @@ describe('compiler: transform', () => {
     transform(ast, {})
     expect(ast.imports).toContain(CREATE_VNODE)
     expect(ast.imports).toContain(COMMENT)
+  })
+
+  describe('root codegenNode', () => {
+    function transformWithCodegen(template: string) {
+      const ast = parse(template)
+      transform(ast, {
+        nodeTransforms: [
+          transformIf,
+          transformFor,
+          optimizeText,
+          transformSlotOutlet,
+          transformElement
+        ]
+      })
+      return ast
+    }
+
+    function createBlockMatcher(args: any[]) {
+      return {
+        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+        expressions: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: `_${OPEN_BLOCK}`
+          },
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: `_${CREATE_BLOCK}`,
+            arguments: args
+          }
+        ]
+      }
+    }
+
+    test('no chidlren', () => {
+      const ast = transformWithCodegen(``)
+      expect(ast.codegenNode).toBeUndefined()
+    })
+
+    test('single <slot/>', () => {
+      const ast = transformWithCodegen(`<slot/>`)
+      expect(ast.codegenNode).toMatchObject(
+        createBlockMatcher([
+          `_${FRAGMENT}`,
+          `null`,
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: `_${RENDER_SLOT}`
+          }
+        ])
+      )
+    })
+
+    test('single element', () => {
+      const ast = transformWithCodegen(`<div/>`)
+      expect(ast.codegenNode).toMatchObject(createBlockMatcher([`"div"`]))
+    })
+
+    test('root v-if', () => {
+      const ast = transformWithCodegen(`<div v-if="ok" />`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.IF
+      })
+    })
+
+    test('root v-for', () => {
+      const ast = transformWithCodegen(`<div v-for="i in list" />`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.FOR
+      })
+    })
+
+    test('single text', () => {
+      const ast = transformWithCodegen(`hello`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.TEXT
+      })
+    })
+
+    test('single interpolation', () => {
+      const ast = transformWithCodegen(`{{ foo }}`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.INTERPOLATION
+      })
+    })
+
+    test('single CompoundExpression', () => {
+      const ast = transformWithCodegen(`{{ foo }} bar baz`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.COMPOUND_EXPRESSION
+      })
+    })
+
+    test('multiple children', () => {
+      const ast = transformWithCodegen(`<div/><div/>`)
+      expect(ast.codegenNode).toMatchObject(
+        createBlockMatcher([
+          `_${FRAGMENT}`,
+          `null`,
+          [
+            { type: NodeTypes.ELEMENT, tag: `div` },
+            { type: NodeTypes.ELEMENT, tag: `div` }
+          ]
+        ])
+      )
+    })
   })
 })
