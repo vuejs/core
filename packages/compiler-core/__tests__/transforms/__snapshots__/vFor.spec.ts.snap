@@ -104,6 +104,20 @@ return function render() {
 }"
 `;
 
+exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, createVNode: _createVNode, Fragment: _Fragment, renderSlot: _renderSlot, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    
+    return _createVNode(_Fragment, null, _renderList(items, (item) => {
+      return (_openBlock(), _createBlock(_Fragment, null, _renderSlot($slots.default)))
+    }), 128 /* UNKEYED_FRAGMENT */)
+  }
+}"
+`;
+
 exports[`compiler: v-for codegen v-if + v-for 1`] = `
 "const _Vue = Vue
 

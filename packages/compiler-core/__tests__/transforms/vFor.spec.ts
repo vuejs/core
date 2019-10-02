@@ -4,6 +4,7 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
+import { transformSlotOutlet } from '../../src/transforms/transfromSlotOutlet'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import {
   ForNode,
@@ -20,7 +21,8 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_LIST,
-  CREATE_VNODE
+  CREATE_VNODE,
+  RENDER_SLOT
 } from '../../src/runtimeConstants'
 import { PatchFlags } from '@vue/runtime-dom'
 import { PatchFlagNames } from '@vue/shared'
@@ -36,6 +38,7 @@ function parseWithForTransform(
       transformIf,
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
+      transformSlotOutlet,
       transformElement
     ],
     directiveTransforms: {
@@ -687,6 +690,28 @@ describe('compiler: v-for', () => {
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` }
           ]
+        ]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-for w/ <slot/>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items"><slot/></template>'
+      )
+      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        blockArgs: [
+          `_${FRAGMENT}`,
+          `null`,
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: `_${RENDER_SLOT}`
+          }
         ]
       })
       expect(generate(root).code).toMatchSnapshot()

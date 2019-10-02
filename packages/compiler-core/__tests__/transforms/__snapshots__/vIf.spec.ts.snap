@@ -32,6 +32,20 @@ return function render() {
 }"
 `;
 
+exports[`compiler: v-if codegen template v-if w/ single <slot/> child 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { openBlock: _openBlock, renderSlot: _renderSlot, Fragment: _Fragment, createBlock: _createBlock, Empty: _Empty } = _Vue
+    
+    return (_openBlock(), ok
+      ? _createBlock(_Fragment, { key: 0 }, _renderSlot($slots.default))
+      : _createBlock(_Empty))
+  }
+}"
+`;
+
 exports[`compiler: v-if codegen v-if + v-else 1`] = `
 "const _Vue = Vue
 
@@ -57,7 +71,9 @@ return function render() {
       ? _createBlock(\\"div\\", { key: 0 })
       : orNot
         ? _createBlock(\\"p\\", { key: 1 })
-        : _createBlock(_Fragment, { key: 2 }, \\"fine\\"))
+        : _createBlock(_Fragment, { key: 2 }, [
+            \\"fine\\"
+          ]))
   }
 }"
 `;

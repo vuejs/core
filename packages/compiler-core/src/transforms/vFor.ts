@@ -14,7 +14,9 @@ import {
   ElementTypes,
   ObjectExpression,
   createObjectExpression,
-  createObjectProperty
+  createObjectProperty,
+  TemplateChildNode,
+  CallExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { getInnerRange, findProp } from '../utils'
@@ -120,12 +122,23 @@ export const transformFor = createStructuralDirectiveTransform(
                 )
               ])
             }
+            let childBlockChildren: TemplateChildNode[] | CallExpression =
+              node.children
+            if (childBlockChildren.length === 1) {
+              const child = childBlockChildren[0]
+              if (
+                child.type === NodeTypes.ELEMENT &&
+                child.tagType === ElementTypes.SLOT
+              ) {
+                childBlockChildren = child.codegenNode!
+              }
+            }
             childBlock = createSequenceExpression([
               createCallExpression(helper(OPEN_BLOCK)),
               createCallExpression(helper(CREATE_BLOCK), [
                 helper(FRAGMENT),
                 childBlockProps,
-                node.children
+                childBlockChildren
               ])
             ])
           } else {

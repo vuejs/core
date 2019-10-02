@@ -1,7 +1,6 @@
 import {
   RootNode,
   TemplateChildNode,
-  ElementNode,
   TextNode,
   CommentNode,
   ExpressionNode,
@@ -15,7 +14,6 @@ import {
   InterpolationNode,
   CompoundExpressionNode,
   SimpleExpressionNode,
-  ElementTypes,
   FunctionExpression,
   SequenceExpression,
   ConditionalExpression
@@ -232,7 +230,8 @@ export function generate(
 
   // generate the VNode tree expression
   push(`return `)
-  genChildren(ast.children, context, true)
+
+  genRoot(ast, context)
 
   if (useWithBlock) {
     deindent()
@@ -257,31 +256,13 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   context.newline()
 }
 
-// This will generate a single vnode call if:
-// - The target position explicitly allows a single node (root, if, for)
-// - The list has length === 1, AND The only child is a:
-//   - text
-//   - <slot> outlet, which always produces an array
-function genChildren(
-  children: TemplateChildNode[],
-  context: CodegenContext,
-  allowSingle: boolean = false
-) {
-  if (!children.length) {
-    return context.push(`null`)
-  }
-  const child = children[0]
-  const type = child.type
-  if (
-    children.length === 1 &&
-    (allowSingle ||
-      type === NodeTypes.TEXT ||
-      type === NodeTypes.INTERPOLATION ||
-      type === NodeTypes.COMPOUND_EXPRESSION ||
-      (type === NodeTypes.ELEMENT &&
-        (child as ElementNode).tagType === ElementTypes.SLOT))
-  ) {
-    genNode(child, context)
+function genRoot(root: RootNode, context: CodegenContext) {
+  // TODO handle blocks
+  const { children } = root
+  if (children.length === 0) {
+    context.push(`null`)
+  } else if (children.length === 1) {
+    genNode(children[0], context)
   } else {
     genNodeListAsArray(children, context)
   }
@@ -316,7 +297,7 @@ function genNodeList(
     if (isString(node)) {
       push(node)
     } else if (isArray(node)) {
-      genChildren(node, context)
+      genNodeListAsArray(node, context)
     } else {
       genNode(node, context)
     }

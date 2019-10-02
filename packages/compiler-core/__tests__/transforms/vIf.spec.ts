@@ -2,6 +2,7 @@ import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
+import { transformSlotOutlet } from '../../src/transforms/transfromSlotOutlet'
 import {
   IfNode,
   NodeTypes,
@@ -21,7 +22,8 @@ import {
   EMPTY,
   FRAGMENT,
   MERGE_PROPS,
-  APPLY_DIRECTIVES
+  APPLY_DIRECTIVES,
+  RENDER_SLOT
 } from '../../src/runtimeConstants'
 import { createObjectMatcher } from '../testUtils'
 
@@ -32,7 +34,7 @@ function parseWithIfTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformIf, transformElement],
+    nodeTransforms: [transformIf, transformSlotOutlet, transformElement],
     ...options
   })
   if (!options.onError) {
@@ -341,6 +343,25 @@ describe('compiler: v-if', () => {
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
       expect(branch2.arguments).toMatchObject([`_${EMPTY}`])
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-if w/ single <slot/> child', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithIfTransform(`<template v-if="ok"><slot/></template>`)
+      assertSharedCodegen(codegenNode)
+      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
+        .consequent as CallExpression
+      expect(branch1.arguments).toMatchObject([
+        `_${FRAGMENT}`,
+        `{ key: 0 }`,
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: `_${RENDER_SLOT}`
+        }
+      ])
       expect(generate(root).code).toMatchSnapshot()
     })
 

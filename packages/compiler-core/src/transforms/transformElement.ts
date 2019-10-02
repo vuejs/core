@@ -87,8 +87,26 @@ export const transformElement: NodeTransform = (node, context) => {
             patchFlag |= PatchFlags.DYNAMIC_SLOTS
           }
         } else {
-          // only v-for fragments will have keyed/unkeyed flags
-          args.push(node.children)
+          if (node.children.length === 1) {
+            const child = node.children[0]
+            const type = child.type
+            // pass directly if the only child is one of:
+            // - text (plain / interpolation / expression)
+            // - <slot> outlet (already an array)
+            if (
+              type === NodeTypes.TEXT ||
+              type === NodeTypes.INTERPOLATION ||
+              type === NodeTypes.COMPOUND_EXPRESSION ||
+              (type === NodeTypes.ELEMENT &&
+                (child as ElementNode).tagType === ElementTypes.SLOT)
+            ) {
+              args.push(child)
+            } else {
+              args.push(node.children)
+            }
+          } else {
+            args.push(node.children)
+          }
         }
       }
       // patchFlag & dynamicPropNames

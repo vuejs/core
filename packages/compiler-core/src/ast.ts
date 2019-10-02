@@ -176,7 +176,7 @@ export type JSChildNode =
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
   callee: string
-  arguments: (string | JSChildNode | TemplateChildNode[])[]
+  arguments: (string | JSChildNode | TemplateChildNode | TemplateChildNode[])[]
 }
 
 export interface ObjectExpression extends Node {

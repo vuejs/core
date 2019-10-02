@@ -164,19 +164,30 @@ function createChildrenCodegenNode(
   const { children } = branch
   const child = children[0]
   const needFragmentWrapper =
-    children.length > 1 || child.type !== NodeTypes.ELEMENT
+    children.length !== 1 ||
+    child.type !== NodeTypes.ELEMENT ||
+    child.tagType === ElementTypes.SLOT
   if (needFragmentWrapper) {
     const blockArgs: CallExpression['arguments'] = [
       helper(FRAGMENT),
       keyExp,
       children
     ]
-    // optimize away nested fragments when child is a ForNode
-    if (children.length === 1 && child.type === NodeTypes.FOR) {
-      const forBlockExp = child.codegenNode
-      // directly use the for block's children and patchFlag
-      blockArgs[2] = forBlockExp.arguments[2]
-      blockArgs[3] = forBlockExp.arguments[3]
+    if (children.length === 1) {
+      // optimize away nested fragments when child is a ForNode
+      if (child.type === NodeTypes.FOR) {
+        const forBlockArgs = child.codegenNode.arguments
+        // directly use the for block's children and patchFlag
+        blockArgs[2] = forBlockArgs[2]
+        blockArgs[3] = forBlockArgs[3]
+      } else if (
+        child.type === NodeTypes.ELEMENT &&
+        child.tagType === ElementTypes.SLOT
+      ) {
+        // <template v-if="..."><slot/></template>
+        // since slot always returns array, use it directly as the fragment children.
+        blockArgs[2] = child.codegenNode!
+      }
     }
     return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
