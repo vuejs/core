@@ -6,12 +6,17 @@ import {
   CallExpression,
   SequenceExpression,
   createSequenceExpression,
-  createCallExpression
+  createCallExpression,
+  ExpressionNode,
+  CompoundExpressionNode,
+  createCompoundExpression,
+  DirectiveNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import { OPEN_BLOCK, CREATE_BLOCK } from './runtimeConstants'
+import { isString } from '@vue/shared'
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -106,12 +111,28 @@ export function assert(condition: boolean, msg?: string) {
   }
 }
 
+export function findNonEmptyDir(
+  node: ElementNode,
+  name: string | RegExp
+): DirectiveNode | undefined {
+  for (let i = 0; i < node.props.length; i++) {
+    const p = node.props[i]
+    if (
+      p.type === NodeTypes.DIRECTIVE &&
+      p.exp &&
+      (isString(name) ? p.name === name : name.test(p.name))
+    ) {
+      return p
+    }
+  }
+}
+
 export function findProp(
-  props: ElementNode['props'],
+  node: ElementNode,
   name: string
 ): ElementNode['props'][0] | undefined {
-  for (let i = 0; i < props.length; i++) {
-    const p = props[i]
+  for (let i = 0; i < node.props.length; i++) {
+    const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (p.name === name && p.value && !p.value.isEmpty) {
         return p
@@ -136,4 +157,19 @@ export function createBlockExpression(
     createCallExpression(context.helper(OPEN_BLOCK)),
     createCallExpression(context.helper(CREATE_BLOCK), args)
   ])
+}
+
+export function mergeExpressions(
+  ...args: (string | ExpressionNode)[]
+): CompoundExpressionNode {
+  const children: CompoundExpressionNode['children'] = []
+  for (let i = 0; i < args.length; i++) {
+    const exp = args[i]
+    if (isString(exp) || exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+      children.push(exp)
+    } else {
+      children.push(...exp.children)
+    }
+  }
+  return createCompoundExpression(children)
 }

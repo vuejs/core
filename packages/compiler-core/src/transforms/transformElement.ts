@@ -87,9 +87,9 @@ export const transformElement: NodeTransform = (node, context) => {
             args.push(`null`)
           }
           if (isComponent) {
-            const { slots, hasDynamicSlotName } = buildSlots(node, context)
+            const { slots, hasDynamicSlots } = buildSlots(node, context)
             args.push(slots)
-            if (hasDynamicSlotName) {
+            if (hasDynamicSlots) {
               patchFlag |= PatchFlags.DYNAMIC_SLOTS
             }
           } else if (node.children.length === 1) {

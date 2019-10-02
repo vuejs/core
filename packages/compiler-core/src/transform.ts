@@ -16,6 +16,7 @@ import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
 import { createBlockExpression } from './utils'
+import { isVSlot } from './transforms/vSlot'
 
 // There are two types of transforms:
 //
@@ -311,6 +312,11 @@ export function createStructuralDirectiveTransform(
   return (node, context) => {
     if (node.type === NodeTypes.ELEMENT) {
       const { props } = node
+      // structural directive transforms are not concerned with slots
+      // as they are handled separately in vSlot.ts
+      if (node.tagType === ElementTypes.TEMPLATE && props.some(isVSlot)) {
+        return
+      }
       const exitFns = []
       for (let i = 0; i < props.length; i++) {
         const prop = props[i]

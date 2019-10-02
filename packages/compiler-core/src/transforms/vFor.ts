@@ -47,7 +47,7 @@ export const transformFor = createStructuralDirectiveTransform(
         // create the loop render function expression now, and add the
         // iterator on exit after all children have been traversed
         const renderExp = createCallExpression(helper(RENDER_LIST), [source])
-        const keyProp = findProp(node.props, `key`)
+        const keyProp = findProp(node, `key`)
         const fragmentFlag = keyProp
           ? PatchFlags.KEYED_FRAGMENT
           : PatchFlags.UNKEYED_FRAGMENT

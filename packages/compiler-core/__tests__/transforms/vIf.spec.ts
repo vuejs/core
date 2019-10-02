@@ -233,7 +233,7 @@ describe('compiler: v-if', () => {
       })
       expect(onError.mock.calls[0]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
           loc: node1.loc
         }
       ])
@@ -245,7 +245,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[1]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
           loc: node2.loc
         }
       ])
@@ -257,7 +257,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[2]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
+          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
         }
       ])

@@ -51,7 +51,7 @@ export function resolveSlots(
         let value = (children as RawSlots)[key]
         if (isFunction(value)) {
           ;(slots as any)[key] = normalizeSlot(key, value)
-        } else {
+        } else if (value != null) {
           if (__DEV__) {
             warn(
               `Non-function value encountered for slot "${key}". ` +

@@ -114,12 +114,7 @@ export const transformIf = createStructuralDirectiveTransform(
           }
         } else {
           context.onError(
-            createCompilerError(
-              dir.name === 'else'
-                ? ErrorCodes.X_ELSE_NO_ADJACENT_IF
-                : ErrorCodes.X_ELSE_IF_NO_ADJACENT_IF,
-              node.loc
-            )
+            createCompilerError(ErrorCodes.X_ELSE_NO_ADJACENT_IF, node.loc)
           )
         }
         break
