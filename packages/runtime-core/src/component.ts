@@ -3,7 +3,7 @@ import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
   ComponentPublicInstance
-} from './componentPublicInstanceProxy'
+} from './componentProxy'
 import { ComponentPropsOptions } from './componentProps'
 import { Slots } from './componentSlots'
 import { warn } from './warning'
@@ -14,7 +14,7 @@ import {
 } from './errorHandling'
 import { AppContext, createAppContext } from './apiApp'
 import { Directive } from './directives'
-import { applyOptions, ComponentOptions } from './componentOptions'
+import { applyOptions, ComponentOptions } from './apiOptions'
 import {
   EMPTY_OBJ,
   isFunction,

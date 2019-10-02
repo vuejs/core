@@ -64,9 +64,9 @@ export {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
-} from './componentOptions'
+} from './apiOptions'
 
-export { ComponentPublicInstance } from './componentPublicInstanceProxy'
+export { ComponentPublicInstance } from './componentProxy'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
 export { Prop, PropType, ComponentPropsOptions } from './componentProps'

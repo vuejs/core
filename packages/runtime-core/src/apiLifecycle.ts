@@ -4,7 +4,7 @@ import {
   currentInstance,
   setCurrentInstance
 } from './component'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentPublicInstance } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'

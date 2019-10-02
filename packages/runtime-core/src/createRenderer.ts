@@ -42,7 +42,7 @@ import { resolveSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentPublicInstance } from './componentProxy'
 import { App, createAppAPI } from './apiApp'
 import {
   SuspenseBoundary,

@@ -4,10 +4,10 @@ import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithProps
-} from './componentOptions'
+} from './apiOptions'
 import { SetupContext } from './component'
 import { VNodeChild } from './vnode'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes } from './componentProps'
 import { isFunction } from '@vue/shared'
 

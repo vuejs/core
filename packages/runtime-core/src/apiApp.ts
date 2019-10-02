@@ -1,6 +1,6 @@
 import { Component, Data, ComponentInternalInstance } from './component'
-import { ComponentOptions } from './componentOptions'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentOptions } from './apiOptions'
+import { ComponentPublicInstance } from './componentProxy'
 import { Directive } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'

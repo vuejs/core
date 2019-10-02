@@ -17,7 +17,7 @@ import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentPublicInstance } from './componentProxy'
 
 export interface DirectiveBinding {
   instance: ComponentPublicInstance | null

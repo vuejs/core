@@ -30,7 +30,8 @@ import { DebuggerEvent, reactive } from '@vue/reactivity'
 import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
-import { ComponentPublicInstance } from './componentPublicInstanceProxy'
+import { ComponentPublicInstance } from './componentProxy'
+import { warn } from './warning'
 
 interface ComponentOptionsBase<
   Props,
@@ -231,11 +232,15 @@ export function applyOptions(
 
   // state options
   if (dataOptions) {
-    const data =
-      instance.data === EMPTY_OBJ
-        ? (instance.data = reactive({}))
-        : instance.data
-    extend(data, isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions)
+    const data = isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions
+    if (!isObject(data)) {
+      __DEV__ && warn(`data() should return an object.`)
+    } else if (instance.data === EMPTY_OBJ) {
+      instance.data = reactive(data)
+    } else {
+      // existing data: this is a mixin or extends.
+      extend(instance.data, data)
+    }
   }
   if (computedOptions) {
     for (const key in computedOptions) {

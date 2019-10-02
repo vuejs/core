@@ -2,7 +2,7 @@ import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn } from '@vue/shared'
-import { ExtracComputedReturns } from './componentOptions'
+import { ExtracComputedReturns } from './apiOptions'
 import { UnwrapRef } from '@vue/reactivity'
 
 // public properties exposed on the proxy, which is used as the render context
