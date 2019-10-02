@@ -54,7 +54,7 @@ export const transformFor = createStructuralDirectiveTransform(
           codegenNode
         })
 
-        if (!__BROWSER__) {
+        if (!__BROWSER__ && context.prefixIdentifiers) {
           // scope management
           // inject identifiers to context
           value && addIdentifiers(value)
@@ -75,6 +75,9 @@ export const transformFor = createStructuralDirectiveTransform(
           }
           if (index) {
             if (!key) {
+              if (!value) {
+                params.push(createSimpleExpression(`_`, false))
+              }
               params.push(createSimpleExpression(`__`, false))
             }
             params.push(index)
@@ -95,7 +98,7 @@ export const transformFor = createStructuralDirectiveTransform(
             ])
           )
 
-          if (!__BROWSER__) {
+          if (!__BROWSER__ && context.prefixIdentifiers) {
             value && removeIdentifiers(value)
             key && removeIdentifiers(key)
             index && removeIdentifiers(index)
