@@ -111,16 +111,17 @@ export function assert(condition: boolean, msg?: string) {
   }
 }
 
-export function findNonEmptyDir(
+export function findDir(
   node: ElementNode,
-  name: string | RegExp
+  name: string | RegExp,
+  allowEmpty: boolean = false
 ): DirectiveNode | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (
       p.type === NodeTypes.DIRECTIVE &&
-      p.exp &&
-      (isString(name) ? p.name === name : name.test(p.name))
+      (allowEmpty || p.exp) &&
+      p.name.match(name)
     ) {
       return p
     }

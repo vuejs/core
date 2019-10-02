@@ -19,7 +19,7 @@ import {
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { mergeExpressions, findNonEmptyDir } from '../utils'
+import { mergeExpressions, findDir } from '../utils'
 
 export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
   p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
@@ -28,6 +28,9 @@ const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
+
+const hasSameName = (slot: Property, name: string): boolean =>
+  isStaticExp(slot.key) && slot.key.content === name
 
 // A NodeTransform that tracks scope identifiers for scoped slots so that they
 // don't get prefixed by transformExpression. This transform is only applied
@@ -109,7 +112,7 @@ export function buildSlots(
     } = slotDir
 
     // check if name is dynamic.
-    let staticSlotName
+    let staticSlotName: string | undefined
     if (isStaticExp(slotName)) {
       staticSlotName = slotName ? slotName.content : `default`
     } else {
@@ -124,9 +127,9 @@ export function buildSlots(
     )
 
     // check if this slot is conditional (v-if/else/else-if)
-    let vIf
-    let vElse
-    if ((vIf = findNonEmptyDir(slotElement, 'if'))) {
+    let vIf: DirectiveNode | undefined
+    let vElse: DirectiveNode | undefined
+    if ((vIf = findDir(slotElement, 'if'))) {
       hasDynamicSlots = true
       slots.push(
         createObjectProperty(
@@ -134,58 +137,65 @@ export function buildSlots(
           createConditionalExpression(vIf.exp!, slotFunction, defaultFallback)
         )
       )
-    } else if ((vElse = findNonEmptyDir(slotElement, /^else(-if)?$/))) {
+    } else if (
+      (vElse = findDir(slotElement, /^else(-if)?$/, true /* allow empty */))
+    ) {
       hasDynamicSlots = true
+
       // find adjacent v-if slot
-      let vIfBase
+      let baseIfSlot: Property | undefined
+      let baseIfSlotWithSameName: Property | undefined
       let i = slots.length
       while (i--) {
         if (slots[i].value.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
-          vIfBase = slots[i]
-          break
+          baseIfSlot = slots[i]
+          if (staticSlotName && hasSameName(baseIfSlot, staticSlotName)) {
+            baseIfSlotWithSameName = baseIfSlot
+            break
+          }
         }
       }
-      if (vIfBase) {
-        // check if the v-else and the base v-if has the same slot name
-        if (
-          isStaticExp(vIfBase.key) &&
-          vIfBase.key.content === staticSlotName
-        ) {
-          let conditional = vIfBase.value as ConditionalExpression
-          while (
-            conditional.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
-          ) {
-            conditional = conditional.alternate
-          }
-          conditional.alternate = vElse.exp
-            ? createConditionalExpression(
-                vElse.exp,
-                slotFunction,
-                defaultFallback
-              )
-            : slotFunction
-        } else {
-          // not the same slot name. generate a separate property.
-          slots.push(
-            createObjectProperty(
-              slotName,
-              createConditionalExpression(
-                // negate baseVIf
-                mergeExpressions(
-                  `!(`,
-                  (vIfBase.value as ConditionalExpression).test,
-                  `)`,
-                  ...(vElse.exp ? [` && (`, vElse.exp, `)`] : [])
-                ),
-                slotFunction,
-                defaultFallback
-              )
-            )
-          )
-        }
-      } else {
+      if (!baseIfSlot) {
         context.onError(
           createCompilerError(ErrorCodes.X_ELSE_NO_ADJACENT_IF, vElse.loc)
+        )
+        continue
+      }
+
+      if (baseIfSlotWithSameName) {
+        // v-else branch has same slot name with base v-if branch
+        let conditional = baseIfSlotWithSameName.value as ConditionalExpression
+        // locate the deepest conditional in case we have nested ones
+        while (
+          conditional.alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
+        ) {
+          conditional = conditional.alternate
+        }
+        // attach the v-else branch to the base v-if's conditional expression
+        conditional.alternate = vElse.exp
+          ? createConditionalExpression(
+              vElse.exp,
+              slotFunction,
+              defaultFallback
+            )
+          : slotFunction
+      } else {
+        // not the same slot name. generate a separate property.
+        slots.push(
+          createObjectProperty(
+            slotName,
+            createConditionalExpression(
+              // negate base branch condition
+              mergeExpressions(
+                `!(`,
+                (baseIfSlot.value as ConditionalExpression).test,
+                `)`,
+                ...(vElse.exp ? [` && (`, vElse.exp, `)`] : [])
+              ),
+              slotFunction,
+              defaultFallback
+            )
+          )
         )
       }
     } else {
