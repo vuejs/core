@@ -59,6 +59,12 @@ export interface TransformContext extends Required<TransformOptions> {
   statements: Set<string>
   hoists: JSChildNode[]
   identifiers: { [name: string]: number | undefined }
+  scopes: {
+    vFor: number
+    vSlot: number
+    vPre: number
+    vOnce: number
+  }
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
@@ -86,6 +92,12 @@ function createTransformContext(
     statements: new Set(),
     hoists: [],
     identifiers: {},
+    scopes: {
+      vFor: 0,
+      vSlot: 0,
+      vPre: 0,
+      vOnce: 0
+    },
     prefixIdentifiers,
     nodeTransforms,
     directiveTransforms,

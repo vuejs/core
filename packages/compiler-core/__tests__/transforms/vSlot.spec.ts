@@ -5,7 +5,8 @@ import {
   generate,
   ElementNode,
   NodeTypes,
-  ErrorCodes
+  ErrorCodes,
+  ForNode
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -17,15 +18,20 @@ import {
 } from '../../src/transforms/vSlot'
 import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeConstants'
 import { createObjectMatcher } from '../testUtils'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { transformFor } from '../../src/transforms/vFor'
+import { transformIf } from '../../src/transforms/vIf'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
+      transformIf,
+      transformFor,
       ...(options.prefixIdentifiers
-        ? [trackVForSlotScopes, transformExpression, trackSlotScopes]
+        ? [trackVForSlotScopes, transformExpression]
         : []),
+      trackSlotScopes,
       transformElement
     ],
     directiveTransforms: {
@@ -36,7 +42,10 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
   })
   return {
     root: ast,
-    slots: (ast.children[0] as ElementNode).codegenNode!.arguments[2]
+    slots:
+      ast.children[0].type === NodeTypes.ELEMENT
+        ? ast.children[0].codegenNode!.arguments[2]
+        : null
   }
 }
 
@@ -295,7 +304,12 @@ describe('compiler: transform component slots', () => {
                         }
                       ]
                     }
-                  })
+                  }),
+                  // nested slot should be forced dynamic, since scope variables
+                  // are not tracked as dependencies of the slot.
+                  `${PatchFlags.DYNAMIC_SLOTS} /* ${
+                    PatchFlagNames[PatchFlags.DYNAMIC_SLOTS]
+                  } */`
                 ]
               }
             },
@@ -323,6 +337,18 @@ describe('compiler: transform component slots', () => {
       })
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  test('should force dynamic when inside v-for', () => {
+    const { root } = parseWithSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar">foo</Comp>
+      </div>`
+    )
+    const div = ((root.children[0] as ForNode).children[0] as ElementNode)
+      .codegenNode as any
+    const comp = div.arguments[2][0]
+    expect(comp.codegenNode.arguments[3]).toMatch(PatchFlags.DYNAMIC_SLOTS + '')
   })
 
   test('named slot with v-if', () => {

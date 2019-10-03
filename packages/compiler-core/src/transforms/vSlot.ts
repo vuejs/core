@@ -32,22 +32,33 @@ const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
-// A NodeTransform that tracks scope identifiers for scoped slots so that they
-// don't get prefixed by transformExpression. This transform is only applied
-// in non-browser builds with { prefixIdentifiers: true }
+// A NodeTransform that:
+// 1. Tracks scope identifiers for scoped slots so that they don't get prefixed
+//    by transformExpression. This is only applied in non-browser builds with
+//    { prefixIdentifiers: true }.
+// 2. Track v-slot depths so that we know a slot is inside another slot.
+//    Note the exit callback is executed before buildSlots() on the same node,
+//    so only nested slots see positive numbers.
 export const trackSlotScopes: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.COMPONENT ||
       node.tagType === ElementTypes.TEMPLATE)
   ) {
+    // We are only checking non-empty v-slot here
+    // since we only care about slots that introduce scope variables.
     const vSlot = findDir(node, 'slot')
     if (vSlot) {
-      const { addIdentifiers, removeIdentifiers } = context
       const slotProps = vSlot.exp
-      slotProps && addIdentifiers(slotProps)
+      if (!__BROWSER__ && context.prefixIdentifiers) {
+        slotProps && context.addIdentifiers(slotProps)
+      }
+      context.scopes.vSlot++
       return () => {
-        slotProps && removeIdentifiers(slotProps)
+        if (!__BROWSER__ && context.prefixIdentifiers) {
+          slotProps && context.removeIdentifiers(slotProps)
+        }
+        context.scopes.vSlot--
       }
     }
   }
@@ -94,7 +105,12 @@ export function buildSlots(
   const { children, loc } = node
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
-  let hasDynamicSlots = false
+
+  // If the slot is inside a v-for or another v-slot, force it to be dynamic
+  // since it likely uses a scope variable.
+  // TODO: This can be further optimized to only make it dynamic when the slot
+  // actually uses the scope variables.
+  let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
 
   // 1. Check for default slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>

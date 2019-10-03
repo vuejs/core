@@ -49,10 +49,10 @@ export function baseCompile(
         ? [
             // order is important
             trackVForSlotScopes,
-            transformExpression,
-            trackSlotScopes
+            transformExpression
           ]
         : []),
+      trackSlotScopes,
       optimizeText,
       transformStyle,
       transformSlotOutlet,

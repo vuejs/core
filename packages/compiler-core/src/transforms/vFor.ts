@@ -46,7 +46,7 @@ export const transformFor = createStructuralDirectiveTransform(
       )
 
       if (parseResult) {
-        const { helper, addIdentifiers, removeIdentifiers } = context
+        const { helper, addIdentifiers, removeIdentifiers, scopes } = context
         const { source, value, key, index } = parseResult
 
         // create the loop render function expression now, and add the
@@ -79,6 +79,8 @@ export const transformFor = createStructuralDirectiveTransform(
           codegenNode
         })
 
+        // bookkeeping
+        scopes.vFor++
         if (!__BROWSER__ && context.prefixIdentifiers) {
           // scope management
           // inject identifiers to context
@@ -88,6 +90,7 @@ export const transformFor = createStructuralDirectiveTransform(
         }
 
         return () => {
+          scopes.vFor--
           if (!__BROWSER__ && context.prefixIdentifiers) {
             value && removeIdentifiers(value)
             key && removeIdentifiers(key)
