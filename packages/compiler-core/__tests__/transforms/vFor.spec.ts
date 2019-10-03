@@ -567,7 +567,8 @@ describe('compiler: v-for', () => {
   describe('codegen', () => {
     function assertSharedCodegen(
       node: SequenceExpression,
-      keyed: boolean = false
+      keyed: boolean = false,
+      customReturn: boolean = false
     ) {
       expect(node).toMatchObject({
         type: NodeTypes.JS_SEQUENCE_EXPRESSION,
@@ -589,19 +590,21 @@ describe('compiler: v-for', () => {
                   {}, // to be asserted by each test
                   {
                     type: NodeTypes.JS_FUNCTION_EXPRESSION,
-                    returns: {
-                      type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-                      expressions: [
-                        {
-                          type: NodeTypes.JS_CALL_EXPRESSION,
-                          callee: `_${OPEN_BLOCK}`
-                        },
-                        {
-                          type: NodeTypes.JS_CALL_EXPRESSION,
-                          callee: `_${CREATE_BLOCK}`
+                    returns: customReturn
+                      ? {}
+                      : {
+                          type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+                          expressions: [
+                            {
+                              type: NodeTypes.JS_CALL_EXPRESSION,
+                              callee: `_${OPEN_BLOCK}`
+                            },
+                            {
+                              type: NodeTypes.JS_CALL_EXPRESSION,
+                              callee: `_${CREATE_BLOCK}`
+                            }
+                          ]
                         }
-                      ]
-                    }
                   }
                 ]
               },
@@ -621,7 +624,10 @@ describe('compiler: v-for', () => {
       return {
         source: renderListArgs[0] as SimpleExpressionNode,
         params: (renderListArgs[1] as any).params,
-        blockArgs: (renderListArgs[1] as any).returns.expressions[1].arguments
+        returns: (renderListArgs[1] as any).returns,
+        blockArgs: customReturn
+          ? null
+          : (renderListArgs[1] as any).returns.expressions[1].arguments
       }
     }
 
@@ -715,17 +721,33 @@ describe('compiler: v-for', () => {
       } = parseWithForTransform(
         '<template v-for="item in items"><slot/></template>'
       )
-      expect(assertSharedCodegen(codegenNode)).toMatchObject({
+      expect(
+        assertSharedCodegen(codegenNode, false, true /* custom return */)
+      ).toMatchObject({
         source: { content: `items` },
         params: [{ content: `item` }],
-        blockArgs: [
-          `_${FRAGMENT}`,
-          `null`,
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${RENDER_SLOT}`
-          }
-        ]
+        returns: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: `_${RENDER_SLOT}`
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-for on <slot/>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<slot v-for="item in items"></slot>')
+      expect(
+        assertSharedCodegen(codegenNode, false, true /* custom return */)
+      ).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        returns: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: `_${RENDER_SLOT}`
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -794,7 +816,7 @@ describe('compiler: v-for', () => {
               // should optimize v-if + v-for into a single Fragment block
               arguments: [
                 `_${FRAGMENT}`,
-                `{ key: 0 }`,
+                createObjectMatcher({ key: `[0]` }),
                 {
                   type: NodeTypes.JS_CALL_EXPRESSION,
                   callee: `_${RENDER_LIST}`,

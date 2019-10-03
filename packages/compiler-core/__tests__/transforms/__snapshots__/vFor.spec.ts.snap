@@ -112,7 +112,21 @@ return function render() {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createBlock(_Fragment, null, _renderSlot($slots.default)))
+      return _renderSlot($slots.default)
+    }), 128 /* UNKEYED_FRAGMENT */))
+  }
+}"
+`;
+
+exports[`compiler: v-for codegen v-for on <slot/> 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
+    
+    return (_openBlock(), _createBlock(_Fragment, null, _renderList(items, (item) => {
+      return _renderSlot($slots.default)
     }), 128 /* UNKEYED_FRAGMENT */))
   }
 }"

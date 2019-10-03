@@ -1,19 +1,18 @@
 import { NodeTransform } from '../transform'
 import {
   NodeTypes,
-  ElementTypes,
   CompoundExpressionNode,
   createCompoundExpression,
   CallExpression,
   createCallExpression
 } from '../ast'
-import { isSimpleIdentifier } from '../utils'
+import { isSimpleIdentifier, isSlotOutlet } from '../utils'
 import { buildProps } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeConstants'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
-  if (node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT) {
+  if (isSlotOutlet(node)) {
     const { props, children, loc } = node
     const $slots = context.prefixIdentifiers ? `_ctx.$slots` : `$slots`
     let slot: string | CompoundExpressionNode = $slots + `.default`

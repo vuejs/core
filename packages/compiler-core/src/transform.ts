@@ -15,7 +15,7 @@ import {
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
-import { isVSlot, createBlockExpression } from './utils'
+import { isVSlot, createBlockExpression, isSlotOutlet } from './utils'
 
 // There are two types of transforms:
 //
@@ -192,22 +192,20 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   const { children } = root
   if (children.length === 1) {
     const child = children[0]
-    if (child.type === NodeTypes.ELEMENT && child.codegenNode) {
-      // only child is a <slot/> - it needs to be in a fragment block.
-      if (child.tagType === ElementTypes.SLOT) {
-        root.codegenNode = createBlockExpression(
-          [helper(FRAGMENT), `null`, child.codegenNode!],
-          context
-        )
-      } else {
-        // turn root element into a block
-        root.codegenNode = createBlockExpression(
-          child.codegenNode!.arguments,
-          context
-        )
-      }
+    if (
+      child.type === NodeTypes.ELEMENT &&
+      !isSlotOutlet(child) &&
+      child.codegenNode
+    ) {
+      // turn root element into a block
+      root.codegenNode = createBlockExpression(
+        child.codegenNode!.arguments,
+        context
+      )
     } else {
-      // IfNode, ForNode, TextNodes or transform calls without transformElement.
+      // - single <slot/>, IfNode, ForNode: already blocks.
+      // - single text node: always patched.
+      // - transform calls without transformElement (only during tests)
       // Just generate the node as-is
       root.codegenNode = child
     }

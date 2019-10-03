@@ -101,15 +101,9 @@ export const transformElement: NodeTransform = (node, context) => {
             if (hasDynamicTextChild) {
               patchFlag |= PatchFlags.TEXT
             }
-            // pass directly if the only child is one of:
-            // - text (plain / interpolation / expression)
-            // - <slot> outlet (already an array)
-            if (
-              type === NodeTypes.TEXT ||
-              hasDynamicTextChild ||
-              (type === NodeTypes.ELEMENT &&
-                (child as ElementNode).tagType === ElementTypes.SLOT)
-            ) {
+            // pass directly if the only child is a text node
+            // (plain / interpolation / expression)
+            if (hasDynamicTextChild || type === NodeTypes.TEXT) {
               args.push(child)
             } else {
               args.push(node.children)
@@ -171,7 +165,7 @@ export const transformElement: NodeTransform = (node, context) => {
   }
 }
 
-type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
+export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 
 export function buildProps(
   props: ElementNode['props'],

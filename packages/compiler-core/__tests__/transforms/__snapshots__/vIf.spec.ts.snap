@@ -37,10 +37,10 @@ exports[`compiler: v-if codegen template v-if w/ single <slot/> child 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, renderSlot: _renderSlot, Fragment: _Fragment, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Empty: _Empty } = _Vue
     
     return (_openBlock(), ok
-      ? _createBlock(_Fragment, { key: 0 }, _renderSlot($slots.default))
+      ? _renderSlot($slots.default, { key: 0 })
       : _createBlock(_Empty))
   }
 }"

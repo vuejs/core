@@ -12,14 +12,18 @@ import {
   createCallExpression,
   createFunctionExpression,
   ElementTypes,
-  ObjectExpression,
   createObjectExpression,
-  createObjectProperty,
-  TemplateChildNode,
-  CallExpression
+  createObjectProperty
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { getInnerRange, findProp, createBlockExpression } from '../utils'
+import {
+  getInnerRange,
+  findProp,
+  createBlockExpression,
+  isTemplateNode,
+  isSlotOutlet,
+  injectProp
+} from '../utils'
 import {
   RENDER_LIST,
   OPEN_BLOCK,
@@ -28,6 +32,7 @@ import {
 } from '../runtimeConstants'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { PropsExpression } from './transformElement'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -91,40 +96,52 @@ export const transformFor = createStructuralDirectiveTransform(
 
           // finish the codegen now that all children have been traversed
           let childBlock
-          if (node.tagType === ElementTypes.TEMPLATE) {
+          const isTemplate = isTemplateNode(node)
+          const slotOutlet = isSlotOutlet(node)
+            ? node
+            : isTemplate &&
+              node.children.length === 1 &&
+              isSlotOutlet(node.children[0])
+              ? node.children[0]
+              : null
+          const keyProperty = keyProp
+            ? createObjectProperty(
+                `key`,
+                keyProp.type === NodeTypes.ATTRIBUTE
+                  ? createSimpleExpression(keyProp.value!.content, true)
+                  : keyProp.exp!
+              )
+            : null
+          if (slotOutlet) {
+            // <slot v-for="..."> or <template v-for="..."><slot/></template>
+            childBlock = slotOutlet.codegenNode!
+            if (isTemplate && keyProperty) {
+              // <template v-for="..." :key="..."><slot/></template>
+              // we need to inject the key to the renderSlot() call.
+              const existingProps = childBlock.arguments[1] as
+                | PropsExpression
+                | undefined
+                | 'null'
+              childBlock.arguments[1] = injectProp(
+                existingProps,
+                keyProperty,
+                context
+              )
+            }
+          } else if (isTemplate) {
             // <template v-for="...">
             // should genereate a fragment block for each loop
-            let childBlockProps: string | ObjectExpression = `null`
-            if (keyProp) {
-              childBlockProps = createObjectExpression([
-                createObjectProperty(
-                  `key`,
-                  keyProp.type === NodeTypes.ATTRIBUTE
-                    ? createSimpleExpression(keyProp.value!.content, true)
-                    : keyProp.exp!
-                )
-              ])
-            }
-            let childBlockChildren: TemplateChildNode[] | CallExpression =
-              node.children
-            // if the only child is a <slot/>, use it directly as fragment
-            // children since it already returns an array.
-            if (childBlockChildren.length === 1) {
-              const child = childBlockChildren[0]
-              if (
-                child.type === NodeTypes.ELEMENT &&
-                child.tagType === ElementTypes.SLOT
-              ) {
-                childBlockChildren = child.codegenNode!
-              }
-            }
             childBlock = createBlockExpression(
-              [helper(FRAGMENT), childBlockProps, childBlockChildren],
+              [
+                helper(FRAGMENT),
+                keyProperty ? createObjectExpression([keyProperty]) : `null`,
+                node.children
+              ],
               context
             )
           } else {
-            // Normal element v-for. Directly use the child's codegenNode arguments,
-            // but replace createVNode() with createBlock()
+            // Normal element v-for. Directly use the child's codegenNode
+            // arguments, but replace createVNode() with createBlock()
             childBlock = createBlockExpression(
               node.codegenNode!.arguments,
               context

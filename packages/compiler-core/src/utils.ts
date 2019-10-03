@@ -10,13 +10,18 @@ import {
   DirectiveNode,
   ElementTypes,
   TemplateChildNode,
-  RootNode
+  RootNode,
+  ObjectExpression,
+  Property,
+  JSChildNode,
+  createObjectExpression
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
-import { OPEN_BLOCK, CREATE_BLOCK } from './runtimeConstants'
+import { OPEN_BLOCK, CREATE_BLOCK, MERGE_PROPS } from './runtimeConstants'
 import { isString } from '@vue/shared'
+import { PropsExpression } from './transforms/transformElement'
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -165,5 +170,40 @@ export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
 
 export const isTemplateNode = (
   node: RootNode | TemplateChildNode
-): node is ElementNode =>
+): node is ElementNode & { tagType: ElementTypes.TEMPLATE } =>
   node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+
+export const isSlotOutlet = (
+  node: RootNode | TemplateChildNode
+): node is ElementNode & { tagType: ElementTypes.SLOT } =>
+  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+
+export function injectProp(
+  props: PropsExpression | undefined | 'null',
+  prop: Property,
+  context: TransformContext
+): ObjectExpression | CallExpression {
+  if (props == null || props === `null`) {
+    return createObjectExpression([prop])
+  } else if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
+    // merged props... add ours
+    // only inject key to object literal if it's the first argument so that
+    // if doesn't override user provided keys
+    const first = props.arguments[0] as string | JSChildNode
+    if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+      first.properties.unshift(prop)
+    } else {
+      props.arguments.unshift(createObjectExpression([prop]))
+    }
+    return props
+  } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
+    props.properties.unshift(prop)
+    return props
+  } else {
+    // single v-bind with expression, return a merged replacement
+    return createCallExpression(context.helper(MERGE_PROPS), [
+      createObjectExpression([prop]),
+      props
+    ])
+  }
+}

@@ -16,11 +16,8 @@ import {
   ConditionalExpression,
   CallExpression,
   createSimpleExpression,
-  JSChildNode,
-  ObjectExpression,
   createObjectProperty,
-  Property,
-  ExpressionNode
+  createObjectExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -30,9 +27,10 @@ import {
   EMPTY,
   FRAGMENT,
   APPLY_DIRECTIVES,
-  MERGE_PROPS
+  CREATE_VNODE
 } from '../runtimeConstants'
-import { isString } from '@vue/shared'
+import { injectProp } from '../utils'
+import { PropsExpression } from './transformElement'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -153,81 +151,52 @@ function createCodegenNodeForBranch(
 function createChildrenCodegenNode(
   branch: IfBranchNode,
   index: number,
-  { helper }: TransformContext
+  context: TransformContext
 ): CallExpression {
-  const keyExp = `{ key: ${index} }`
+  const { helper } = context
+  const keyProperty = createObjectProperty(
+    `key`,
+    createSimpleExpression(index + '', false)
+  )
   const { children } = branch
   const child = children[0]
   const needFragmentWrapper =
-    children.length !== 1 ||
-    child.type !== NodeTypes.ELEMENT ||
-    child.tagType === ElementTypes.SLOT
+    children.length !== 1 || child.type !== NodeTypes.ELEMENT
   if (needFragmentWrapper) {
     const blockArgs: CallExpression['arguments'] = [
       helper(FRAGMENT),
-      keyExp,
+      createObjectExpression([keyProperty]),
       children
     ]
-    if (children.length === 1) {
+    if (children.length === 1 && child.type === NodeTypes.FOR) {
       // optimize away nested fragments when child is a ForNode
-      if (child.type === NodeTypes.FOR) {
-        const forBlockArgs = (child.codegenNode
-          .expressions[1] as CallExpression).arguments
-        // directly use the for block's children and patchFlag
-        blockArgs[2] = forBlockArgs[2]
-        blockArgs[3] = forBlockArgs[3]
-      } else if (
-        child.type === NodeTypes.ELEMENT &&
-        child.tagType === ElementTypes.SLOT
-      ) {
-        // <template v-if="..."><slot/></template>
-        // since slot always returns array, use it directly as the fragment children.
-        blockArgs[2] = child.codegenNode!
-      }
+      const forBlockArgs = (child.codegenNode.expressions[1] as CallExpression)
+        .arguments
+      // directly use the for block's children and patchFlag
+      blockArgs[2] = forBlockArgs[2]
+      blockArgs[3] = forBlockArgs[3]
     }
     return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
     const childCodegen = (child as ElementNode).codegenNode!
     let vnodeCall = childCodegen
+    // Element with custom directives. Locate the actual createVNode() call.
     if (vnodeCall.callee.includes(APPLY_DIRECTIVES)) {
       vnodeCall = vnodeCall.arguments[0] as CallExpression
     }
-    // change child to a block
-    vnodeCall.callee = helper(CREATE_BLOCK)
-    // branch key
-    const existingProps = vnodeCall.arguments[1]
-    if (!existingProps || existingProps === `null`) {
-      vnodeCall.arguments[1] = keyExp
-    } else {
-      // inject branch key if not already have a key
-      const props = existingProps as
-        | CallExpression
-        | ObjectExpression
-        | ExpressionNode
-      if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
-        // merged props... add ours
-        // only inject key to object literal if it's the first argument so that
-        // if doesn't override user provided keys
-        const first = props.arguments[0] as string | JSChildNode
-        if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-          first.properties.unshift(createKeyProperty(index))
-        } else {
-          props.arguments.unshift(keyExp)
-        }
-      } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-        props.properties.unshift(createKeyProperty(index))
-      } else {
-        // single v-bind with expression
-        vnodeCall.arguments[1] = createCallExpression(helper(MERGE_PROPS), [
-          keyExp,
-          props
-        ])
-      }
+    // Change createVNode to createBlock.
+    // It's possible to have renderSlot() here as well - which already produces
+    // a block, so no need to change the callee. renderSlot() also accepts props
+    // as the 2nd argument, so the key injection logic below works for it too.
+    if (vnodeCall.callee.includes(CREATE_VNODE)) {
+      vnodeCall.callee = helper(CREATE_BLOCK)
     }
+    // inject branch key
+    const existingProps = vnodeCall.arguments[1] as
+      | PropsExpression
+      | undefined
+      | 'null'
+    vnodeCall.arguments[1] = injectProp(existingProps, keyProperty, context)
     return childCodegen
   }
-}
-
-function createKeyProperty(index: number): Property {
-  return createObjectProperty(`key`, createSimpleExpression(index + '', false))
 }

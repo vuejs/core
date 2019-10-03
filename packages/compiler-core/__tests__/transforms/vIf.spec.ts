@@ -316,7 +316,10 @@ describe('compiler: v-if', () => {
       assertSharedCodegen(codegenNode)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([`"div"`, `{ key: 0 }`])
+      expect(branch1.arguments).toMatchObject([
+        `"div"`,
+        createObjectMatcher({ key: `[0]` })
+      ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
       expect(branch2.arguments).toMatchObject([`_${EMPTY}`])
@@ -333,7 +336,7 @@ describe('compiler: v-if', () => {
         .consequent as CallExpression
       expect(branch1.arguments).toMatchObject([
         `_${FRAGMENT}`,
-        `{ key: 0 }`,
+        createObjectMatcher({ key: `[0]` }),
         [
           { type: NodeTypes.ELEMENT, tag: 'div' },
           { type: NodeTypes.TEXT, content: `hello` },
@@ -351,17 +354,14 @@ describe('compiler: v-if', () => {
         root,
         node: { codegenNode }
       } = parseWithIfTransform(`<template v-if="ok"><slot/></template>`)
-      assertSharedCodegen(codegenNode)
+      // assertSharedCodegen(codegenNode)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        `_${FRAGMENT}`,
-        `{ key: 0 }`,
-        {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`
-        }
-      ])
+      expect(branch1).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: `_${RENDER_SLOT}`,
+        arguments: ['$slots.default', createObjectMatcher({ key: `[0]` })]
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -373,10 +373,16 @@ describe('compiler: v-if', () => {
       assertSharedCodegen(codegenNode)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([`"div"`, `{ key: 0 }`])
+      expect(branch1.arguments).toMatchObject([
+        `"div"`,
+        createObjectMatcher({ key: `[0]` })
+      ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([`"p"`, `{ key: 1 }`])
+      expect(branch2.arguments).toMatchObject([
+        `"p"`,
+        createObjectMatcher({ key: `[1]` })
+      ])
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -388,12 +394,15 @@ describe('compiler: v-if', () => {
       assertSharedCodegen(codegenNode, 1)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([`"div"`, `{ key: 0 }`])
+      expect(branch1.arguments).toMatchObject([
+        `"div"`,
+        createObjectMatcher({ key: `[0]` })
+      ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as ConditionalExpression
       expect((branch2.consequent as CallExpression).arguments).toMatchObject([
         `"p"`,
-        `{ key: 1 }`
+        createObjectMatcher({ key: `[1]` })
       ])
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -408,16 +417,19 @@ describe('compiler: v-if', () => {
       assertSharedCodegen(codegenNode, 1)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([`"div"`, `{ key: 0 }`])
+      expect(branch1.arguments).toMatchObject([
+        `"div"`,
+        createObjectMatcher({ key: `[0]` })
+      ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as ConditionalExpression
       expect((branch2.consequent as CallExpression).arguments).toMatchObject([
         `"p"`,
-        `{ key: 1 }`
+        createObjectMatcher({ key: `[1]` })
       ])
       expect((branch2.alternate as CallExpression).arguments).toMatchObject([
         `_${FRAGMENT}`,
-        `{ key: 2 }`,
+        createObjectMatcher({ key: `[2]` }),
         [
           {
             type: NodeTypes.TEXT,
@@ -437,7 +449,7 @@ describe('compiler: v-if', () => {
       expect(branch1.arguments[1]).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: `_${MERGE_PROPS}`,
-        arguments: [`{ key: 0 }`, { content: `obj` }]
+        arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
       })
     })
 
@@ -470,7 +482,7 @@ describe('compiler: v-if', () => {
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: `_${MERGE_PROPS}`,
         arguments: [
-          `{ key: 0 }`,
+          createObjectMatcher({ key: `[0]` }),
           { content: `obj` },
           createObjectMatcher({
             id: 'foo'
@@ -487,9 +499,11 @@ describe('compiler: v-if', () => {
         .consequent as CallExpression
       expect(branch1.callee).toBe(`_${APPLY_DIRECTIVES}`)
       const realBranch = branch1.arguments[0] as CallExpression
-      expect(realBranch.arguments[1]).toBe(`{ key: 0 }`)
+      expect(realBranch.arguments[1]).toMatchObject(
+        createObjectMatcher({ key: `[0]` })
+      )
     })
 
-    test('with comments', () => {})
+    test.todo('with comments')
   })
 })

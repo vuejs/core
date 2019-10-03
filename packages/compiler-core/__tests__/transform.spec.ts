@@ -274,16 +274,13 @@ describe('compiler: transform', () => {
 
     test('single <slot/>', () => {
       const ast = transformWithCodegen(`<slot/>`)
-      expect(ast.codegenNode).toMatchObject(
-        createBlockMatcher([
-          `_${FRAGMENT}`,
-          `null`,
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${RENDER_SLOT}`
-          }
-        ])
-      )
+      expect(ast.codegenNode).toMatchObject({
+        codegenNode: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: `_${RENDER_SLOT}`,
+          arguments: ['$slots.default']
+        }
+      })
     })
 
     test('single element', () => {
