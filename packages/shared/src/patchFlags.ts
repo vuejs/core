@@ -56,7 +56,13 @@ export const enum PatchFlags {
   // Indicates a component with dynamic slots (e.g. slot that references a v-for
   // iterated value, or dynamic slot names).
   // Components with this flag are always force updated.
-  DYNAMIC_SLOTS = 1 << 8
+  DYNAMIC_SLOTS = 1 << 8,
+
+  // A special flag that indicates that the diffing algorithm should bail out
+  // of optimized mode. This is only on block fragments created by renderSlot()
+  // when encountering non-compiler generated slots (i.e. manually written
+  // render functions, which should always be fully diffed)
+  BAIL = -1
 }
 
 // runtime object for public consumption
@@ -69,7 +75,8 @@ export const PublicPatchFlags = {
   FULL_PROPS: PatchFlags.FULL_PROPS,
   KEYED_FRAGMENT: PatchFlags.KEYED_FRAGMENT,
   UNKEYED_FRAGMENT: PatchFlags.UNKEYED_FRAGMENT,
-  DYNAMIC_SLOTS: PatchFlags.DYNAMIC_SLOTS
+  DYNAMIC_SLOTS: PatchFlags.DYNAMIC_SLOTS,
+  BAIL: PatchFlags.BAIL
 }
 
 // dev only flag -> name mapping
@@ -82,5 +89,6 @@ export const PatchFlagNames = {
   [PatchFlags.FULL_PROPS]: `FULL_PROPS`,
   [PatchFlags.KEYED_FRAGMENT]: `KEYED_FRAGMENT`,
   [PatchFlags.UNKEYED_FRAGMENT]: `UNKEYED_FRAGMENT`,
-  [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`
+  [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
+  [PatchFlags.BAIL]: `BAIL`
 }

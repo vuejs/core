@@ -58,7 +58,7 @@ export function shouldUpdateComponent(
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
-  if (patchFlag) {
+  if (patchFlag > 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for
