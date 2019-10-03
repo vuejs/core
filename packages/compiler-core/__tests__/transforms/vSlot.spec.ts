@@ -43,17 +43,22 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
 function createSlotMatcher(obj: Record<string, any>) {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
-    properties: Object.keys(obj).map(key => {
-      return {
-        type: NodeTypes.JS_PROPERTY,
-        key: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          isStatic: !/^\[/.test(key),
-          content: key.replace(/^\[|\]$/g, '')
-        },
-        value: obj[key]
-      }
-    })
+    properties: Object.keys(obj)
+      .map(key => {
+        return {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: !/^\[/.test(key),
+            content: key.replace(/^\[|\]$/g, '')
+          },
+          value: obj[key]
+        } as any
+      })
+      .concat({
+        key: { content: `_compiled` },
+        value: { content: `true` }
+      })
   }
 }
 
@@ -330,7 +335,9 @@ describe('compiler: transform component slots', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${CREATE_SLOTS}`,
       arguments: [
-        createObjectMatcher({}),
+        createObjectMatcher({
+          _compiled: `[true]`
+        }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
           elements: [
@@ -370,7 +377,9 @@ describe('compiler: transform component slots', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
-        createObjectMatcher({}),
+        createObjectMatcher({
+          _compiled: `[true]`
+        }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
           elements: [
@@ -417,7 +426,9 @@ describe('compiler: transform component slots', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: `_${CREATE_SLOTS}`,
       arguments: [
-        createObjectMatcher({}),
+        createObjectMatcher({
+          _compiled: `[true]`
+        }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
           elements: [
@@ -474,7 +485,9 @@ describe('compiler: transform component slots', () => {
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: CREATE_SLOTS,
       arguments: [
-        createObjectMatcher({}),
+        createObjectMatcher({
+          _compiled: `[true]`
+        }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
           elements: [

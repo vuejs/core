@@ -9,7 +9,8 @@ return function render() {
   
   return (openBlock(), createBlock(_component_Comp, null, {
     [_ctx.one]: ({ foo }) => [toString(foo), toString(_ctx.bar)],
-    [_ctx.two]: ({ bar }) => [toString(_ctx.foo), toString(bar)]
+    [_ctx.two]: ({ bar }) => [toString(_ctx.foo), toString(bar)],
+    _compiled: true
   }, 256 /* DYNAMIC_SLOTS */))
 }"
 `;
@@ -22,7 +23,8 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    default: ({ foo }) => [toString(foo), toString(_ctx.bar)]
+    default: ({ foo }) => [toString(foo), toString(_ctx.bar)],
+    _compiled: true
   }))
 }"
 `;
@@ -37,7 +39,8 @@ return function render() {
   return (openBlock(), createBlock(_component_Comp, null, {
     default: () => [
       createVNode(\\"div\\")
-    ]
+    ],
+    _compiled: true
   }))
 }"
 `;
@@ -49,7 +52,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return (openBlock(), createBlock(_component_Comp, null, createSlots({}, [
+  return (openBlock(), createBlock(_component_Comp, null, createSlots({ _compiled: true }, [
     renderList(_ctx.list, (name) => {
       return {
         name: name,
@@ -67,7 +70,7 @@ return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
-  return (openBlock(), createBlock(_component_Comp, null, createSlots({}, [
+  return (openBlock(), createBlock(_component_Comp, null, createSlots({ _compiled: true }, [
     (_ctx.ok)
       ? {
           name: \\"one\\",
@@ -87,7 +90,7 @@ return function render() {
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
     
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({}, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
       ok
         ? {
             name: \\"one\\",
@@ -116,7 +119,7 @@ return function render() {
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
     
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({}, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
       ok
         ? {
             name: \\"one\\",
@@ -137,7 +140,8 @@ return function render() {
   
   return (openBlock(), createBlock(_component_Comp, null, {
     one: ({ foo }) => [toString(foo), toString(_ctx.bar)],
-    two: ({ bar }) => [toString(_ctx.foo), toString(bar)]
+    two: ({ bar }) => [toString(_ctx.foo), toString(bar)],
+    _compiled: true
   }))
 }"
 `;
@@ -153,12 +157,14 @@ return function render() {
   return (openBlock(), createBlock(_component_Comp, null, {
     default: ({ foo }) => [
       createVNode(_component_Inner, null, {
-        default: ({ bar }) => [toString(foo), toString(bar), toString(_ctx.baz)]
+        default: ({ bar }) => [toString(foo), toString(bar), toString(_ctx.baz)],
+        _compiled: true
       }),
       toString(foo),
       toString(_ctx.bar),
       toString(_ctx.baz)
-    ]
+    ],
+    _compiled: true
   }))
 }"
 `;

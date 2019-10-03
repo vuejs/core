@@ -264,7 +264,9 @@ export function buildSlots(
   }
 
   let slots: ObjectExpression | CallExpression = createObjectExpression(
-    slotsProperties,
+    slotsProperties.concat(
+      createObjectProperty(`_compiled`, createSimpleExpression(`true`, false))
+    ),
     loc
   )
   if (dynamicSlots.length) {
