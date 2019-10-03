@@ -259,17 +259,23 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   context.newline()
 }
 
+function isText(n: string | CodegenNode) {
+  return (
+    isString(n) ||
+    n.type === NodeTypes.SIMPLE_EXPRESSION ||
+    n.type === NodeTypes.TEXT ||
+    n.type === NodeTypes.INTERPOLATION ||
+    n.type === NodeTypes.COMPOUND_EXPRESSION
+  )
+}
+
 function genNodeListAsArray(
   nodes: (string | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext
 ) {
   const multilines =
     nodes.length > 3 ||
-    ((!__BROWSER__ || __DEV__) &&
-      nodes.some(
-        n =>
-          isArray(n) || (!isString(n) && n.type !== NodeTypes.SIMPLE_EXPRESSION)
-      ))
+    ((!__BROWSER__ || __DEV__) && nodes.some(n => isArray(n) || !isText(n)))
   context.push(`[`)
   multilines && context.indent()
   genNodeList(nodes, context, multilines)
@@ -435,6 +441,10 @@ function genCallExpression(node: CallExpression, context: CodegenContext) {
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   const { push, indent, deindent, newline, resetMapping } = context
   const { properties } = node
+  if (!properties.length) {
+    push(`{}`, node)
+    return
+  }
   const multilines =
     properties.length > 1 ||
     ((!__BROWSER__ || __DEV__) &&

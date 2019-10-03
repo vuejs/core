@@ -7,6 +7,7 @@ import {
   ElementTypes
 } from '../src'
 import { CREATE_VNODE } from '../src/runtimeConstants'
+import { isString } from '@vue/shared'
 
 const leadingBracketRE = /^\[/
 const bracketsRE = /^\[|\]$/g
@@ -26,11 +27,13 @@ export function createObjectMatcher(obj: any) {
         content: key.replace(bracketsRE, ''),
         isStatic: !leadingBracketRE.test(key)
       },
-      value: {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: obj[key].replace(bracketsRE, ''),
-        isStatic: !leadingBracketRE.test(obj[key])
-      }
+      value: isString(obj[key])
+        ? {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: obj[key].replace(bracketsRE, ''),
+            isStatic: !leadingBracketRE.test(obj[key])
+          }
+        : obj[key]
     }))
   }
 }

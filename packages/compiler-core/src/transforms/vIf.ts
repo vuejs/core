@@ -229,8 +229,5 @@ function createChildrenCodegenNode(
 }
 
 function createKeyProperty(index: number): Property {
-  return createObjectProperty(
-    createSimpleExpression(`key`, true),
-    createSimpleExpression(index + '', false)
-  )
+  return createObjectProperty(`key`, createSimpleExpression(index + '', false))
 }

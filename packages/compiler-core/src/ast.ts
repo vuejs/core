@@ -1,4 +1,5 @@
 import { isString } from '@vue/shared'
+import { ForParseResult } from './transforms/vFor'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -115,6 +116,8 @@ export interface DirectiveNode extends Node {
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
   modifiers: string[]
+  // optional property to cache the expression parse result for v-for
+  parseResult?: ForParseResult
 }
 
 export interface SimpleExpressionNode extends Node {
@@ -249,13 +252,13 @@ export function createObjectExpression(
 }
 
 export function createObjectProperty(
-  key: Property['key'],
+  key: Property['key'] | string,
   value: Property['value']
 ): Property {
   return {
     type: NodeTypes.JS_PROPERTY,
     loc: locStub,
-    key,
+    key: isString(key) ? createSimpleExpression(key, true) : key,
     value
   }
 }

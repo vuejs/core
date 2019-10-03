@@ -26,8 +26,8 @@ import {
   MERGE_PROPS,
   TO_HANDLERS
 } from '../runtimeConstants'
-import { getInnerRange } from '../utils'
-import { buildSlots, isVSlot } from './vSlot'
+import { getInnerRange, isVSlot } from '../utils'
+import { buildSlots } from './vSlot'
 
 const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
@@ -418,7 +418,7 @@ function createDirectiveArgs(
       createObjectExpression(
         dir.modifiers.map(modifier =>
           createObjectProperty(
-            createSimpleExpression(modifier, true, loc),
+            modifier,
             createSimpleExpression(`true`, false, loc)
           )
         ),

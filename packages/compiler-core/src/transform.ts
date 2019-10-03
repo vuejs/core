@@ -15,8 +15,7 @@ import {
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
-import { createBlockExpression } from './utils'
-import { isVSlot } from './transforms/vSlot'
+import { isVSlot, createBlockExpression } from './utils'
 
 // There are two types of transforms:
 //

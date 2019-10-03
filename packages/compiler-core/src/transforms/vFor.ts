@@ -90,26 +90,6 @@ export const transformFor = createStructuralDirectiveTransform(
           }
 
           // finish the codegen now that all children have been traversed
-          const params: ExpressionNode[] = []
-          if (value) {
-            params.push(value)
-          }
-          if (key) {
-            if (!value) {
-              params.push(createSimpleExpression(`_`, false))
-            }
-            params.push(key)
-          }
-          if (index) {
-            if (!key) {
-              if (!value) {
-                params.push(createSimpleExpression(`_`, false))
-              }
-              params.push(createSimpleExpression(`__`, false))
-            }
-            params.push(index)
-          }
-
           let childBlock
           if (node.tagType === ElementTypes.TEMPLATE) {
             // <template v-for="...">
@@ -118,7 +98,7 @@ export const transformFor = createStructuralDirectiveTransform(
             if (keyProp) {
               childBlockProps = createObjectExpression([
                 createObjectProperty(
-                  createSimpleExpression(`key`, true),
+                  `key`,
                   keyProp.type === NodeTypes.ATTRIBUTE
                     ? createSimpleExpression(keyProp.value!.content, true)
                     : keyProp.exp!
@@ -153,7 +133,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
           renderExp.arguments.push(
             createFunctionExpression(
-              params,
+              createForLoopParams(parseResult),
               childBlock,
               true /* force newline */
             )
@@ -178,21 +158,21 @@ const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
-interface ForParseResult {
+export interface ForParseResult {
   source: ExpressionNode
   value: ExpressionNode | undefined
   key: ExpressionNode | undefined
   index: ExpressionNode | undefined
 }
 
-function parseForExpression(
+export function parseForExpression(
   input: SimpleExpressionNode,
   context: TransformContext
-): ForParseResult | null {
+): ForParseResult | undefined {
   const loc = input.loc
   const exp = input.content
   const inMatch = exp.match(forAliasRE)
-  if (!inMatch) return null
+  if (!inMatch) return
 
   const [, LHS, RHS] = inMatch
 
@@ -273,4 +253,31 @@ function createAliasExpression(
     false,
     getInnerRange(range, offset, content.length)
   )
+}
+
+export function createForLoopParams({
+  value,
+  key,
+  index
+}: ForParseResult): ExpressionNode[] {
+  const params: ExpressionNode[] = []
+  if (value) {
+    params.push(value)
+  }
+  if (key) {
+    if (!value) {
+      params.push(createSimpleExpression(`_`, false))
+    }
+    params.push(key)
+  }
+  if (index) {
+    if (!key) {
+      if (!value) {
+        params.push(createSimpleExpression(`_`, false))
+      }
+      params.push(createSimpleExpression(`__`, false))
+    }
+    params.push(index)
+  }
+  return params
 }

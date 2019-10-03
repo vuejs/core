@@ -14,6 +14,7 @@ export const RESOLVE_DIRECTIVE = `resolveDirective`
 export const APPLY_DIRECTIVES = `applyDirectives`
 export const RENDER_LIST = `renderList`
 export const RENDER_SLOT = `renderSlot`
+export const CREATE_SLOTS = `createSlots`
 export const TO_STRING = `toString`
 export const MERGE_PROPS = `mergeProps`
 export const TO_HANDLERS = `toHandlers`

@@ -7,10 +7,10 @@ import {
   SequenceExpression,
   createSequenceExpression,
   createCallExpression,
-  ExpressionNode,
-  CompoundExpressionNode,
-  createCompoundExpression,
-  DirectiveNode
+  DirectiveNode,
+  ElementTypes,
+  TemplateChildNode,
+  RootNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
@@ -121,7 +121,7 @@ export function findDir(
     if (
       p.type === NodeTypes.DIRECTIVE &&
       (allowEmpty || p.exp) &&
-      p.name.match(name)
+      (isString(name) ? p.name === name : name.test(p.name))
     ) {
       return p
     }
@@ -160,17 +160,10 @@ export function createBlockExpression(
   ])
 }
 
-export function mergeExpressions(
-  ...args: (string | ExpressionNode)[]
-): CompoundExpressionNode {
-  const children: CompoundExpressionNode['children'] = []
-  for (let i = 0; i < args.length; i++) {
-    const exp = args[i]
-    if (isString(exp) || exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-      children.push(exp)
-    } else {
-      children.push(...exp.children)
-    }
-  }
-  return createCompoundExpression(children)
-}
+export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
+  p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+
+export const isTemplateNode = (
+  node: RootNode | TemplateChildNode
+): node is ElementNode =>
+  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE

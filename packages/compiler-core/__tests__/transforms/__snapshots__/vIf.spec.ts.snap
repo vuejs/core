@@ -71,9 +71,7 @@ return function render() {
       ? _createBlock(\\"div\\", { key: 0 })
       : orNot
         ? _createBlock(\\"p\\", { key: 1 })
-        : _createBlock(_Fragment, { key: 2 }, [
-            \\"fine\\"
-          ]))
+        : _createBlock(_Fragment, { key: 2 }, [\\"fine\\"]))
   }
 }"
 `;

@@ -8,14 +8,8 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    [_ctx.one]: ({ foo }) => [
-      toString(foo),
-      toString(_ctx.bar)
-    ],
-    [_ctx.two]: ({ bar }) => [
-      toString(_ctx.foo),
-      toString(bar)
-    ]
+    [_ctx.one]: ({ foo }) => [toString(foo), toString(_ctx.bar)],
+    [_ctx.two]: ({ bar }) => [toString(_ctx.foo), toString(bar)]
   }, 256 /* DYNAMIC_SLOTS */))
 }"
 `;
@@ -28,10 +22,7 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    default: ({ foo }) => [
-      toString(foo),
-      toString(_ctx.bar)
-    ]
+    default: ({ foo }) => [toString(foo), toString(_ctx.bar)]
   }))
 }"
 `;
@@ -51,6 +42,92 @@ return function render() {
 }"
 `;
 
+exports[`compiler: transform component slots named slot with v-for w/ prefixIdentifiers: true 1`] = `
+"const { toString, resolveComponent, renderList, createSlots, createVNode, openBlock, createBlock } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return (openBlock(), createBlock(_component_Comp, null, createSlots({}, [
+    renderList(_ctx.list, (name) => {
+      return {
+        name: name,
+        fn: () => [toString(name)]
+      }
+    })
+  ]), 256 /* DYNAMIC_SLOTS */))
+}"
+`;
+
+exports[`compiler: transform component slots named slot with v-if + prefixIdentifiers: true 1`] = `
+"const { toString, resolveComponent, createSlots, createVNode, openBlock, createBlock } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return (openBlock(), createBlock(_component_Comp, null, createSlots({}, [
+    (_ctx.ok)
+      ? {
+          name: \\"one\\",
+          fn: (props) => [toString(props)]
+        }
+      : undefined
+  ]), 256 /* DYNAMIC_SLOTS */))
+}"
+`;
+
+exports[`compiler: transform component slots named slot with v-if + v-else-if + v-else 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    
+    const _component_Comp = _resolveComponent(\\"Comp\\")
+    
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({}, [
+      ok
+        ? {
+            name: \\"one\\",
+            fn: () => [\\"foo\\"]
+          }
+        : orNot
+          ? {
+              name: \\"two\\",
+              fn: (props) => [\\"bar\\"]
+            }
+          : {
+              name: \\"one\\",
+              fn: () => [\\"baz\\"]
+            }
+    ]), 256 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
+exports[`compiler: transform component slots named slot with v-if 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    
+    const _component_Comp = _resolveComponent(\\"Comp\\")
+    
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({}, [
+      ok
+        ? {
+            name: \\"one\\",
+            fn: () => [\\"hello\\"]
+          }
+        : undefined
+    ]), 256 /* DYNAMIC_SLOTS */))
+  }
+}"
+`;
+
 exports[`compiler: transform component slots named slots 1`] = `
 "const { toString, resolveComponent, createVNode, openBlock, createBlock } = Vue
 
@@ -59,14 +136,8 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    one: ({ foo }) => [
-      toString(foo),
-      toString(_ctx.bar)
-    ],
-    two: ({ bar }) => [
-      toString(_ctx.foo),
-      toString(bar)
-    ]
+    one: ({ foo }) => [toString(foo), toString(_ctx.bar)],
+    two: ({ bar }) => [toString(_ctx.foo), toString(bar)]
   }))
 }"
 `;
@@ -82,11 +153,7 @@ return function render() {
   return (openBlock(), createBlock(_component_Comp, null, {
     default: ({ foo }) => [
       createVNode(_component_Inner, null, {
-        default: ({ bar }) => [
-          toString(foo),
-          toString(bar),
-          toString(_ctx.baz)
-        ]
+        default: ({ bar }) => [toString(foo), toString(bar), toString(_ctx.baz)]
       }),
       toString(foo),
       toString(_ctx.bar),

@@ -12,7 +12,7 @@ import { transformElement } from './transforms/transformElement'
 import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
-import { trackSlotScopes } from './transforms/vSlot'
+import { trackSlotScopes, trackVForSlotScopes } from './transforms/vSlot'
 import { optimizeText } from './transforms/optimizeText'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
@@ -45,7 +45,14 @@ export function baseCompile(
     nodeTransforms: [
       transformIf,
       transformFor,
-      ...(prefixIdentifiers ? [transformExpression, trackSlotScopes] : []),
+      ...(prefixIdentifiers
+        ? [
+            // order is important
+            trackVForSlotScopes,
+            transformExpression,
+            trackSlotScopes
+          ]
+        : []),
       optimizeText,
       transformStyle,
       transformSlotOutlet,
