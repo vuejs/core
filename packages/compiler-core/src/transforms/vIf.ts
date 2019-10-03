@@ -27,7 +27,8 @@ import {
   EMPTY,
   FRAGMENT,
   APPLY_DIRECTIVES,
-  CREATE_VNODE
+  CREATE_VNODE,
+  RENDER_SLOT
 } from '../runtimeConstants'
 import { injectProp } from '../utils'
 import { PropsExpression } from './transformElement'
@@ -185,18 +186,24 @@ function createChildrenCodegenNode(
       vnodeCall = vnodeCall.arguments[0] as CallExpression
     }
     // Change createVNode to createBlock.
-    // It's possible to have renderSlot() here as well - which already produces
-    // a block, so no need to change the callee. renderSlot() also accepts props
-    // as the 2nd argument, so the key injection logic below works for it too.
     if (vnodeCall.callee.includes(CREATE_VNODE)) {
       vnodeCall.callee = helper(CREATE_BLOCK)
     }
+    // It's possible to have renderSlot() here as well - which already produces
+    // a block, so no need to change the callee. However it accepts props at
+    // a different arg index so make sure to check for so that the key injection
+    // logic below works for it too.
+    const propsIndex = vnodeCall.callee.includes(RENDER_SLOT) ? 2 : 1
     // inject branch key
-    const existingProps = vnodeCall.arguments[1] as
+    const existingProps = vnodeCall.arguments[propsIndex] as
       | PropsExpression
       | undefined
       | 'null'
-    vnodeCall.arguments[1] = injectProp(existingProps, keyProperty, context)
+    vnodeCall.arguments[propsIndex] = injectProp(
+      existingProps,
+      keyProperty,
+      context
+    )
     return childCodegen
   }
 }

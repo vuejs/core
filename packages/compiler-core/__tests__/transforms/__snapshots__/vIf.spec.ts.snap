@@ -40,7 +40,7 @@ return function render() {
     const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Empty: _Empty } = _Vue
     
     return (_openBlock(), ok
-      ? _renderSlot($slots.default, { key: 0 })
+      ? _renderSlot($slots, \\"default\\", { key: 0 })
       : _createBlock(_Empty))
   }
 }"
@@ -88,6 +88,20 @@ return function render() {
       : orNot
         ? _createBlock(\\"p\\", { key: 1 })
         : _createBlock(_Empty))
+  }
+}"
+`;
+
+exports[`compiler: v-if codegen v-if on <slot/> 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Empty: _Empty } = _Vue
+    
+    return (_openBlock(), ok
+      ? _renderSlot($slots, \\"default\\", { key: 0 })
+      : _createBlock(_Empty))
   }
 }"
 `;

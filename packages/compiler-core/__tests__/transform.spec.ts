@@ -277,8 +277,7 @@ describe('compiler: transform', () => {
       expect(ast.codegenNode).toMatchObject({
         codegenNode: {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`,
-          arguments: ['$slots.default']
+          callee: `_${RENDER_SLOT}`
         }
       })
     })

@@ -360,7 +360,23 @@ describe('compiler: v-if', () => {
       expect(branch1).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: `_${RENDER_SLOT}`,
-        arguments: ['$slots.default', createObjectMatcher({ key: `[0]` })]
+        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-if on <slot/>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithIfTransform(`<slot v-if="ok"></slot>`)
+      // assertSharedCodegen(codegenNode)
+      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
+        .consequent as CallExpression
+      expect(branch1).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: `_${RENDER_SLOT}`,
+        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })]
       })
       expect(generate(root).code).toMatchSnapshot()
     })

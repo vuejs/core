@@ -118,11 +118,12 @@ export const transformFor = createStructuralDirectiveTransform(
             if (isTemplate && keyProperty) {
               // <template v-for="..." :key="..."><slot/></template>
               // we need to inject the key to the renderSlot() call.
-              const existingProps = childBlock.arguments[1] as
+              // the props for renderSlot is passed as the 3rd argument.
+              const existingProps = childBlock.arguments[2] as
                 | PropsExpression
                 | undefined
                 | 'null'
-              childBlock.arguments[1] = injectProp(
+              childBlock.arguments[2] = injectProp(
                 existingProps,
                 keyProperty,
                 context

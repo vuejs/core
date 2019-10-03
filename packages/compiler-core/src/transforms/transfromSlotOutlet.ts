@@ -1,12 +1,11 @@
 import { NodeTransform } from '../transform'
 import {
   NodeTypes,
-  CompoundExpressionNode,
-  createCompoundExpression,
   CallExpression,
-  createCallExpression
+  createCallExpression,
+  ExpressionNode
 } from '../ast'
-import { isSimpleIdentifier, isSlotOutlet } from '../utils'
+import { isSlotOutlet } from '../utils'
 import { buildProps } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeConstants'
@@ -15,7 +14,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
     const { props, children, loc } = node
     const $slots = context.prefixIdentifiers ? `_ctx.$slots` : `$slots`
-    let slot: string | CompoundExpressionNode = $slots + `.default`
+    let slotName: string | ExpressionNode = `"default"`
 
     // check for <slot name="xxx" OR :name="xxx" />
     let nameIndex: number = -1
@@ -24,11 +23,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       if (prop.type === NodeTypes.ATTRIBUTE) {
         if (prop.name === `name` && prop.value) {
           // static name="xxx"
-          const name = prop.value.content
-          const accessor = isSimpleIdentifier(name)
-            ? `.${name}`
-            : `[${JSON.stringify(name)}]`
-          slot = `${$slots}${accessor}`
+          slotName = JSON.stringify(prop.value.content)
           nameIndex = i
           break
         }
@@ -42,20 +37,14 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
           arg.content === `name`
         ) {
           // dynamic :name="xxx"
-          slot = createCompoundExpression([
-            $slots + `[`,
-            ...(exp.type === NodeTypes.SIMPLE_EXPRESSION
-              ? [exp]
-              : exp.children),
-            `]`
-          ])
+          slotName = exp
           nameIndex = i
           break
         }
       }
     }
 
-    const slotArgs: CallExpression['arguments'] = [slot]
+    const slotArgs: CallExpression['arguments'] = [$slots, slotName]
     const propsWithoutName =
       nameIndex > -1
         ? props.slice(0, nameIndex).concat(props.slice(nameIndex + 1))
