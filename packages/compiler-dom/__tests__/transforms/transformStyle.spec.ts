@@ -4,10 +4,10 @@ import {
   CompilerOptions,
   ElementNode,
   NodeTypes
-} from '../../src'
+} from '@vue/compiler-core'
+import { transformBind } from '../../../compiler-core/src/transforms/vBind'
+import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformStyle } from '../../src/transforms/transformStyle'
-import { transformBind } from '../../src/transforms/vBind'
-import { transformElement } from '../../src/transforms/transformElement'
 
 function transformWithStyleTransform(
   template: string,

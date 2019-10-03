@@ -6,7 +6,6 @@ import { isString } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { transformExpression } from './transforms/transformExpression'
-import { transformStyle } from './transforms/transformStyle'
 import { transformSlotOutlet } from './transforms/transfromSlotOutlet'
 import { transformElement } from './transforms/transformElement'
 import { transformOn } from './transforms/vOn'
@@ -54,7 +53,6 @@ export function baseCompile(
         : []),
       trackSlotScopes,
       optimizeText,
-      transformStyle,
       transformSlotOutlet,
       transformElement,
       ...(options.nodeTransforms || []) // user transforms

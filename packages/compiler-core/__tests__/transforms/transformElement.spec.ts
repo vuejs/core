@@ -21,8 +21,8 @@ import {
   RootNode
 } from '../../src/ast'
 import { transformElement } from '../../src/transforms/transformElement'
+import { transformStyle } from '../../../compiler-dom/src/transforms/transformStyle'
 import { transformOn } from '../../src/transforms/vOn'
-import { transformStyle } from '../../src/transforms/transformStyle'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'

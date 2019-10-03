@@ -1,5 +1,8 @@
-import { NodeTransform } from '../transform'
-import { NodeTypes, createSimpleExpression } from '../ast'
+import {
+  NodeTransform,
+  NodeTypes,
+  createSimpleExpression
+} from '@vue/compiler-core'
 
 // Parse inline CSS strings for static style attributes into an object.
 // This is a NodeTransform since it works on the static `style` attribute and
