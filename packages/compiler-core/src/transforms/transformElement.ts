@@ -122,8 +122,9 @@ export const transformElement: NodeTransform = (node, context) => {
           }
           if (__DEV__) {
             const flagNames = Object.keys(PatchFlagNames)
-              .filter(n => patchFlag & Number(n))
-              .map(n => PatchFlagNames[n as any])
+              .map(Number)
+              .filter(n => n > 0 && patchFlag & n)
+              .map(n => PatchFlagNames[n])
               .join(`, `)
             args.push(patchFlag + ` /* ${flagNames} */`)
           } else {
