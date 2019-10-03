@@ -121,6 +121,73 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should wrap as function if expression is inline statement', () => {
+    const node = parseWithVOn(`<div @click="i++"/>`)
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [`$event => (`, { content: `i++` }, `)`]
+      }
+    })
+  })
+
+  test('inline statement w/ prefixIdentifiers: true', () => {
+    const node = parseWithVOn(`<div @click="foo($event)"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `$event => (`,
+          { content: `_ctx.foo` },
+          `(`,
+          // should NOT prefix $event
+          { content: `$event` },
+          `)`,
+          `)`
+        ]
+      }
+    })
+  })
+
+  test('should NOT wrap as function if expression is already function expression', () => {
+    const node = parseWithVOn(`<div @click="$event => foo($event)"/>`)
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: `$event => foo($event)`
+      }
+    })
+  })
+
+  test('function expression w/ prefixIdentifiers: true', () => {
+    const node = parseWithVOn(`<div @click="e => foo(e)"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          { content: `e` },
+          ` => `,
+          { content: `_ctx.foo` },
+          `(`,
+          { content: `e` },
+          `)`
+        ]
+      }
+    })
+  })
+
   test('should error if no expression AND no modifier', () => {
     const onError = jest.fn()
     parseWithVOn(`<div v-on:click />`, { onError })

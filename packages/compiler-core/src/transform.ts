@@ -72,8 +72,8 @@ export interface TransformContext extends Required<TransformOptions> {
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
   onNodeRemoved: () => void
-  addIdentifiers(exp: ExpressionNode): void
-  removeIdentifiers(exp: ExpressionNode): void
+  addIdentifiers(exp: ExpressionNode | string): void
+  removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
 }
 
@@ -152,7 +152,9 @@ function createTransformContext(
     addIdentifiers(exp) {
       // identifier tracking only happens in non-browser builds.
       if (!__BROWSER__) {
-        if (exp.identifiers) {
+        if (isString(exp)) {
+          addId(exp)
+        } else if (exp.identifiers) {
           exp.identifiers.forEach(addId)
         } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
           addId(exp.content)
@@ -161,7 +163,9 @@ function createTransformContext(
     },
     removeIdentifiers(exp) {
       if (!__BROWSER__) {
-        if (exp.identifiers) {
+        if (isString(exp)) {
+          removeId(exp)
+        } else if (exp.identifiers) {
           exp.identifiers.forEach(removeId)
         } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
           removeId(exp.content)

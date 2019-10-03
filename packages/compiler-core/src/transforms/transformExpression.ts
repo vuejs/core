@@ -35,11 +35,13 @@ export const transformExpression: NodeTransform = (node, context) => {
     // handle directives on element
     for (let i = 0; i < node.props.length; i++) {
       const dir = node.props[i]
-      // do not process for v-for since it's special handled
+      // do not process for v-on & v-for since they are special handled
       if (dir.type === NodeTypes.DIRECTIVE && dir.name !== 'for') {
         const exp = dir.exp as SimpleExpressionNode | undefined
         const arg = dir.arg as SimpleExpressionNode | undefined
-        if (exp) {
+        // do not process exp if this is v-on:arg - we need special handling
+        // for wrapping inline statements.
+        if (exp && !(dir.name === 'on' && arg)) {
           dir.exp = processExpression(
             exp,
             context,
