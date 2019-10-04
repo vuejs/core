@@ -185,11 +185,30 @@ export function buildProps(
 
   // patchFlag analysis
   let patchFlag = 0
-  const dynamicPropNames: string[] = []
-  let hasDynamicKeys = false
+  let hasRef = false
   let hasClassBinding = false
   let hasStyleBinding = false
-  let hasRef = false
+  let hasDynamicKeys = false
+  const dynamicPropNames: string[] = []
+
+  const anaylizePatchFlag = ({ key, value }: Property) => {
+    if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+      if (value.type !== NodeTypes.SIMPLE_EXPRESSION || !value.isStatic) {
+        const name = key.content
+        if (name === 'ref') {
+          hasRef = true
+        } else if (name === 'class') {
+          hasClassBinding = true
+        } else if (name === 'style') {
+          hasStyleBinding = true
+        } else if (name !== 'key') {
+          dynamicPropNames.push(key.content)
+        }
+      }
+    } else {
+      hasDynamicKeys = true
+    }
+  }
 
   for (let i = 0; i < props.length; i++) {
     // static attribute
@@ -229,7 +248,8 @@ export function buildProps(
 
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
-      if (!arg && (isBind || name === 'on')) {
+      const isOn = name === 'on'
+      if (!arg && (isBind || isOn)) {
         hasDynamicKeys = true
         if (exp) {
           if (properties.length) {
@@ -262,32 +282,16 @@ export function buildProps(
         continue
       }
 
-      // patchFlag analysis
-      if (isBind && arg) {
-        if (arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic) {
-          const name = arg.content
-          if (name === 'ref') {
-            hasRef = true
-          } else if (name === 'class') {
-            hasClassBinding = true
-          } else if (name === 'style') {
-            hasStyleBinding = true
-          } else if (name !== 'key') {
-            dynamicPropNames.push(name)
-          }
-        } else {
-          hasDynamicKeys = true
-        }
-      }
-
       const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, context)
         if (isArray(props)) {
           properties.push(...props)
+          properties.forEach(anaylizePatchFlag)
         } else {
           properties.push(props)
+          anaylizePatchFlag(props)
         }
         if (needRuntime) {
           runtimeDirectives.push(prop)
@@ -325,7 +329,7 @@ export function buildProps(
     )
   }
 
-  // determine the flags to add
+  // patchFlag analysis
   if (hasDynamicKeys) {
     patchFlag |= PatchFlags.FULL_PROPS
   } else {

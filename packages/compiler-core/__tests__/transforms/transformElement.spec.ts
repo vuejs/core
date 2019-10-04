@@ -292,18 +292,20 @@ describe('compiler: element transform', () => {
         }
       ]
     })
+    // should factor in props returned by custom directive transforms
+    // in patchFlag analysis
+    expect(node.arguments[3]).toMatch(PatchFlags.PROPS + '')
+    expect(node.arguments[4]).toMatch(`"bar"`)
   })
 
   test('directiveTransform with needRuntime: true', () => {
-    let _dir: DirectiveNode
     const { root, node } = parseWithElementTransform(
       `<div v-foo:bar="hello" />`,
       {
         directiveTransforms: {
-          foo(dir) {
-            _dir = dir
+          foo() {
             return {
-              props: [createObjectProperty(dir.arg!, dir.exp!)],
+              props: [],
               needRuntime: true
             }
           }
@@ -320,16 +322,7 @@ describe('compiler: element transform', () => {
         callee: `_${CREATE_VNODE}`,
         arguments: [
           `"div"`,
-          {
-            type: NodeTypes.JS_OBJECT_EXPRESSION,
-            properties: [
-              {
-                type: NodeTypes.JS_PROPERTY,
-                key: _dir!.arg,
-                value: _dir!.exp
-              }
-            ]
-          },
+          `null`,
           `null`,
           `${PatchFlags.NEED_PATCH} /* NEED_PATCH */` // should generate appropriate flag
         ]
