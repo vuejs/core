@@ -19,6 +19,7 @@ const path = require('path')
 const zlib = require('zlib')
 const chalk = require('chalk')
 const execa = require('execa')
+const { gzipSync } = require('zlib')
 const { compress } = require('brotli')
 const { targets: allTargets, fuzzyMatchTarget } = require('./utils')
 
@@ -112,12 +113,14 @@ function checkSize(target) {
   if (fs.existsSync(esmProdBuild)) {
     const file = fs.readFileSync(esmProdBuild)
     const minSize = (file.length / 1024).toFixed(2) + 'kb'
+    const gzipped = gzipSync(file)
+    const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
     const compressed = compress(file)
     const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
     console.log(
       `${chalk.gray(
         chalk.bold(target)
-      )} min:${minSize} / brotli:${compressedSize}`
+      )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
     )
   }
 }
