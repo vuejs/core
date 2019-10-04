@@ -29,7 +29,7 @@ import { PropsExpression } from './transforms/transformElement'
 let _parse: typeof parse
 let _walk: typeof walk
 
-function loadDep(name: string) {
+export function loadDep(name: string) {
   if (typeof process !== 'undefined' && isFunction(require)) {
     return require(name)
   } else {

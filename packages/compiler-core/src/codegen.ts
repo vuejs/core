@@ -22,7 +22,8 @@ import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
-  isSimpleIdentifier
+  isSimpleIdentifier,
+  loadDep
 } from './utils'
 import { isString, isArray } from '@vue/shared'
 import { TO_STRING, CREATE_VNODE, COMMENT } from './runtimeConstants'
@@ -97,7 +98,7 @@ function createCodegenContext(
     map:
       __BROWSER__ || !sourceMap
         ? undefined
-        : new (require('source-map')).SourceMapGenerator(),
+        : new (loadDep('source-map')).SourceMapGenerator(),
 
     helper(name) {
       return prefixIdentifiers ? name : `_${name}`

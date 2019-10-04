@@ -41,7 +41,9 @@ export const transformIf = createStructuralDirectiveTransform(
       (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())
     ) {
       const loc = dir.exp ? dir.exp.loc : node.loc
-      context.onError(createCompilerError(ErrorCodes.X_IF_NO_EXPRESSION, loc))
+      context.onError(
+        createCompilerError(ErrorCodes.X_IF_NO_EXPRESSION, dir.loc)
+      )
       dir.exp = createSimpleExpression(`true`, false, loc)
     }
 
