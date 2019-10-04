@@ -1,7 +1,7 @@
 /*
-Produce prodcution builds and stitch toegether d.ts files.
+Produces production builds and stitches together d.ts files.
 
-To specific the package to build, simply pass its name and the desired build
+To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
 or "esm,cjs"):
 
