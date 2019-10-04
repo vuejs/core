@@ -5,7 +5,7 @@ const targets = (exports.targets = fs.readdirSync('packages').filter(f => {
     return false
   }
   const pkg = require(`../packages/${f}/package.json`)
-  if (pkg.private) {
+  if (pkg.private && !pkg.buildOptions) {
     return false
   }
   return true
@@ -26,6 +26,6 @@ exports.fuzzyMatchTarget = (partialTargets, includeAllMatching) => {
   if (matched.length) {
     return matched
   } else {
-    throw new Error(`Target ${partialTarget} not found!`)
+    throw new Error(`Target ${partialTargets} not found!`)
   }
 }

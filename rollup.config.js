@@ -119,7 +119,8 @@ function createConfig(output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBunlderESMBuild,
-        isGlobalBuild || isBrowserESMBuild
+        (isGlobalBuild || isBrowserESMBuild) &&
+          !packageOptions.enableNonBrowserBranches
       ),
       ...plugins
     ],

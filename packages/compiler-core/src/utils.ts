@@ -20,7 +20,7 @@ import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import { OPEN_BLOCK, CREATE_BLOCK, MERGE_PROPS } from './runtimeConstants'
-import { isString } from '@vue/shared'
+import { isString, isFunction } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 
 // cache node requires
@@ -29,12 +29,22 @@ import { PropsExpression } from './transforms/transformElement'
 let _parse: typeof parse
 let _walk: typeof walk
 
+function loadDep(name: string) {
+  if (typeof process !== 'undefined' && isFunction(require)) {
+    return require(name)
+  } else {
+    // This is only used when we are building a dev-only build of the compiler
+    // which runs in the browser but also uses Node deps.
+    return (window as any)._deps[name]
+  }
+}
+
 export const parseJS: typeof parse = (code: string, options: any) => {
   assert(
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`
   )
-  const parse = _parse || (_parse = require('acorn').parse)
+  const parse = _parse || (_parse = loadDep('acorn').parse)
   return parse(code, options)
 }
 
@@ -43,7 +53,7 @@ export const walkJS: typeof walk = (ast, walker) => {
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`
   )
-  const walk = _walk || (_walk = require('estree-walker').walk)
+  const walk = _walk || (_walk = loadDep('estree-walker').walk)
   return walk(ast, walker)
 }
 

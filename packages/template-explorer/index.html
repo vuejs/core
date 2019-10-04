@@ -1,0 +1,43 @@
+<link rel="stylesheet" data-name="vs/editor/editor.main" href="../../node_modules/monaco-editor/min/vs/editor/editor.main.css">
+<style>
+body {
+  margin: 0;
+}
+.editor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+}
+#source {
+  left: 0;
+  width: 40%;
+}
+#output {
+  left: 40%;
+  width: 60%;
+}
+</style>
+
+<div id="source" class="editor"></div>
+<div id="output" class="editor"></div>
+
+<script src="../../node_modules/acorn/dist/acorn.js"></script>
+<script src="../../node_modules/estree-walker/dist/estree-walker.umd.js"></script>
+<script src="../../node_modules/monaco-editor/min/vs/loader.js"></script>
+<script src="./dist/template-explorer.global.js"></script>
+<script>
+window._deps = {
+  acorn,
+  'estree-walker': estreeWalker
+}
+
+require.config({
+  paths: {
+    'vs': '../../node_modules/monaco-editor/min/vs'
+  }
+})
+</script>
+<script>
+require(['vs/editor/editor.main'], init /* injected by build */)
+</script>

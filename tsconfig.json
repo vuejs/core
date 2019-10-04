@@ -27,7 +27,8 @@
       "@vue/reactivity": ["packages/reactivity/src"],
       "@vue/compiler-core": ["packages/compiler-core/src"],
       "@vue/compiler-dom": ["packages/compiler-dom/src"],
-      "@vue/server-renderer": ["packages/server-renderer/src"]
+      "@vue/server-renderer": ["packages/server-renderer/src"],
+      "@vue/template-explorer": ["packages/template-explorer/src"]
     }
   },
   "include": [

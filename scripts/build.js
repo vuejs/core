@@ -51,12 +51,16 @@ async function build(target) {
 
   await fs.remove(`${pkgDir}/dist`)
 
+  const env =
+    (pkg.buildOptions && pkg.buildOptions.env) ||
+    (devOnly ? 'development' : 'production')
+
   await execa(
     'rollup',
     [
       '-c',
       '--environment',
-      `NODE_ENV:${devOnly ? 'development' : 'production'},` +
+      `NODE_ENV:${env},` +
         `TARGET:${target}` +
         (formats ? `,FORMATS:${formats}` : ``) +
         (args.types ? `,TYPES:true` : ``) +
