@@ -63,8 +63,11 @@ export function computed<T>(
     set value(newValue) {
       if (setter) {
         setter(newValue)
+        return
       } else {
-        // TODO warn attempting to mutate readonly computed value
+        if (__DEV__) {
+          console.warn('attempting to mutate readonly computed value')
+        }
       }
     }
   }
