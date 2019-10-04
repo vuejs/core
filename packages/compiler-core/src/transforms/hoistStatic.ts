@@ -3,79 +3,96 @@ import {
   NodeTypes,
   TemplateChildNode,
   CallExpression,
-  ElementNode
+  ElementNode,
+  ElementTypes
 } from '../ast'
 import { TransformContext } from '../transform'
-import { CREATE_VNODE } from '../runtimeConstants'
+import { APPLY_DIRECTIVES } from '../runtimeConstants'
 import { PropsExpression } from './transformElement'
+import { PatchFlags } from '@vue/runtime-dom'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
-  walk(root.children, context, new Set<TemplateChildNode>())
+  walk(root.children, context, new Map<TemplateChildNode, boolean>())
 }
 
 function walk(
   children: TemplateChildNode[],
   context: TransformContext,
-  knownStaticNodes: Set<TemplateChildNode>
+  resultCache: Map<TemplateChildNode, boolean>
 ) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if (child.type === NodeTypes.ELEMENT) {
-      if (isStaticNode(child, knownStaticNodes)) {
+    // only plain elements are eligible for hoisting.
+    if (
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT
+    ) {
+      if (isStaticNode(child, resultCache)) {
         // whole tree is static
         child.codegenNode = context.hoist(child.codegenNode!)
         continue
-      } else if (!getPatchFlag(child)) {
-        // has dynamic children, but self props are static, hoist props instead
-        const props = (child.codegenNode as CallExpression).arguments[1] as
-          | PropsExpression
-          | `null`
-        if (props !== `null`) {
-          ;(child.codegenNode as CallExpression).arguments[1] = context.hoist(
-            props
-          )
+      } else {
+        // node may contain dynamic children, but its props may be eligible for
+        // hoisting.
+        const flag = getPatchFlag(child)
+        if (!flag || flag === PatchFlags.NEED_PATCH) {
+          let codegenNode = child.codegenNode as CallExpression
+          if (codegenNode.callee.includes(APPLY_DIRECTIVES)) {
+            codegenNode = codegenNode.arguments[0] as CallExpression
+          }
+          const props = codegenNode.arguments[1] as
+            | PropsExpression
+            | `null`
+            | undefined
+          if (props && props !== `null`) {
+            ;(child.codegenNode as CallExpression).arguments[1] = context.hoist(
+              props
+            )
+          }
         }
       }
     }
     if (child.type === NodeTypes.ELEMENT || child.type === NodeTypes.FOR) {
-      walk(child.children, context, knownStaticNodes)
+      walk(child.children, context, resultCache)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
-        walk(child.branches[i].children, context, knownStaticNodes)
+        walk(child.branches[i].children, context, resultCache)
       }
     }
   }
 }
 
 function getPatchFlag(node: ElementNode): number | undefined {
-  const codegenNode = node.codegenNode as CallExpression
-  if (
-    // callee is createVNode (i.e. no runtime directives)
-    codegenNode.callee.includes(CREATE_VNODE)
-  ) {
-    const flag = codegenNode.arguments[3]
-    return flag ? parseInt(flag as string, 10) : undefined
+  let codegenNode = node.codegenNode as CallExpression
+  if (codegenNode.callee.includes(APPLY_DIRECTIVES)) {
+    codegenNode = codegenNode.arguments[0] as CallExpression
   }
+  const flag = codegenNode.arguments[3]
+  return flag ? parseInt(flag as string, 10) : undefined
 }
 
 function isStaticNode(
   node: TemplateChildNode,
-  knownStaticNodes: Set<TemplateChildNode>
+  resultCache: Map<TemplateChildNode, boolean>
 ): boolean {
   switch (node.type) {
     case NodeTypes.ELEMENT:
-      if (knownStaticNodes.has(node)) {
-        return true
+      if (node.tagType !== ElementTypes.ELEMENT) {
+        return false
+      }
+      if (resultCache.has(node)) {
+        return resultCache.get(node) as boolean
       }
       const flag = getPatchFlag(node)
       if (!flag) {
         // element self is static. check its children.
         for (let i = 0; i < node.children.length; i++) {
-          if (!isStaticNode(node.children[i], knownStaticNodes)) {
+          if (!isStaticNode(node.children[i], resultCache)) {
+            resultCache.set(node, false)
             return false
           }
         }
-        knownStaticNodes.add(node)
+        resultCache.set(node, true)
         return true
       } else {
         return false

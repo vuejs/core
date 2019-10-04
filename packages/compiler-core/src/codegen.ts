@@ -197,6 +197,7 @@ export function generate(
       }
     }
     genHoists(ast.hoists, context)
+    context.newline()
     push(`return `)
   } else {
     // generate import statements for helpers
@@ -204,6 +205,7 @@ export function generate(
       push(`import { ${ast.imports.join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
+    context.newline()
     push(`export default `)
   }
 
@@ -258,12 +260,15 @@ export function generate(
 }
 
 function genHoists(hoists: JSChildNode[], context: CodegenContext) {
+  if (!hoists.length) {
+    return
+  }
+  context.newline()
   hoists.forEach((exp, i) => {
     context.push(`const _hoisted_${i + 1} = `)
     genNode(exp, context)
     context.newline()
   })
-  context.newline()
 }
 
 function isText(n: string | CodegenNode) {
@@ -316,7 +321,11 @@ function genNodeList(
   }
 }
 
-function genNode(node: CodegenNode, context: CodegenContext) {
+function genNode(node: CodegenNode | string, context: CodegenContext) {
+  if (isString(node)) {
+    context.push(node)
+    return
+  }
   switch (node.type) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
@@ -517,12 +526,13 @@ function genConditionalExpression(
   const { test, consequent, alternate } = node
   const { push, indent, deindent, newline } = context
   if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
-    const needsQuote = !isSimpleIdentifier(test.content)
-    needsQuote && push(`(`)
+    const needsParens = !isSimpleIdentifier(test.content)
     genExpression(test, context)
-    needsQuote && push(`)`)
+    needsParens && push(`)`)
   } else {
+    push(`(`)
     genCompoundExpression(test, context)
+    push(`)`)
   }
   indent()
   context.indentLevel++

@@ -89,7 +89,8 @@ return function render() {
 `;
 
 exports[`compiler: codegen hoists 1`] = `
-"const _hoisted_1 = hello
+"
+const _hoisted_1 = hello
 const _hoisted_2 = { id: \\"foo\\" }
 
 return function render() {
