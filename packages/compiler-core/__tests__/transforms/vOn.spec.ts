@@ -5,7 +5,8 @@ import {
   ObjectExpression,
   CompilerOptions,
   ErrorCodes,
-  NodeTypes
+  NodeTypes,
+  CallExpression
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -29,7 +30,8 @@ function parseWithVOn(
 describe('compiler: transform v-on', () => {
   test('basic', () => {
     const node = parseWithVOn(`<div v-on:click="onClick"/>`)
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `onClick`,
@@ -64,7 +66,8 @@ describe('compiler: transform v-on', () => {
 
   test('dynamic arg', () => {
     const node = parseWithVOn(`<div v-on:[event]="handler"/>`)
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
         type: NodeTypes.COMPOUND_EXPRESSION,
@@ -82,7 +85,8 @@ describe('compiler: transform v-on', () => {
     const node = parseWithVOn(`<div v-on:[event]="handler"/>`, {
       prefixIdentifiers: true
     })
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
         type: NodeTypes.COMPOUND_EXPRESSION,
@@ -100,7 +104,8 @@ describe('compiler: transform v-on', () => {
     const node = parseWithVOn(`<div v-on:[event(foo)]="handler"/>`, {
       prefixIdentifiers: true
     })
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
         type: NodeTypes.COMPOUND_EXPRESSION,
@@ -123,7 +128,8 @@ describe('compiler: transform v-on', () => {
 
   test('should wrap as function if expression is inline statement', () => {
     const node = parseWithVOn(`<div @click="i++"/>`)
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: { content: `onClick` },
       value: {
@@ -137,7 +143,8 @@ describe('compiler: transform v-on', () => {
     const node = parseWithVOn(`<div @click="foo($event)"/>`, {
       prefixIdentifiers: true
     })
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: { content: `onClick` },
       value: {
@@ -157,7 +164,8 @@ describe('compiler: transform v-on', () => {
 
   test('should NOT wrap as function if expression is already function expression', () => {
     const node = parseWithVOn(`<div @click="$event => foo($event)"/>`)
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: { content: `onClick` },
       value: {
@@ -171,7 +179,8 @@ describe('compiler: transform v-on', () => {
     const node = parseWithVOn(`<div @click="e => foo(e)"/>`, {
       prefixIdentifiers: true
     })
-    const props = node.codegenNode!.arguments[1] as ObjectExpression
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: { content: `onClick` },
       value: {

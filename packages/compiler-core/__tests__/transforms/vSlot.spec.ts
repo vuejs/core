@@ -6,7 +6,8 @@ import {
   ElementNode,
   NodeTypes,
   ErrorCodes,
-  ForNode
+  ForNode,
+  CallExpression
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -44,7 +45,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
     root: ast,
     slots:
       ast.children[0].type === NodeTypes.ELEMENT
-        ? ast.children[0].codegenNode!.arguments[2]
+        ? (ast.children[0].codegenNode as CallExpression).arguments[2]
         : null
   }
 }

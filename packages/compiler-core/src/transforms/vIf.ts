@@ -179,7 +179,7 @@ function createChildrenCodegenNode(
     }
     return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
-    const childCodegen = (child as ElementNode).codegenNode!
+    const childCodegen = (child as ElementNode).codegenNode as CallExpression
     let vnodeCall = childCodegen
     // Element with custom directives. Locate the actual createVNode() call.
     if (vnodeCall.callee.includes(APPLY_DIRECTIVES)) {

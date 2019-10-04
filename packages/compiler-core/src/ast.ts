@@ -90,7 +90,7 @@ export interface ElementNode extends Node {
   isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
-  codegenNode: CallExpression | undefined
+  codegenNode: CallExpression | SimpleExpressionNode | undefined
 }
 
 export interface TextNode extends Node {

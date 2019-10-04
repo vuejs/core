@@ -7,7 +7,10 @@ function compileToFunction(
   template: string,
   options?: CompilerOptions
 ): RenderFunction {
-  const { code } = compile(template, options)
+  const { code } = compile(template, {
+    hoistStaticTrees: true,
+    ...options
+  })
   return new Function(code)() as RenderFunction
 }
 

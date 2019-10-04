@@ -175,7 +175,7 @@ export const isTemplateNode = (
 
 export const isSlotOutlet = (
   node: RootNode | TemplateChildNode
-): node is ElementNode & { tagType: ElementTypes.SLOT } =>
+): node is ElementNode & { tagType: ElementTypes.ELEMENT } =>
   node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 
 export function injectProp(

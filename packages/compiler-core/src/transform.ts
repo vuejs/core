@@ -16,6 +16,7 @@ import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
 import { isVSlot, createBlockExpression, isSlotOutlet } from './utils'
+import { hoistStaticTrees } from './transforms/hoistStatic'
 
 // There are two types of transforms:
 //
@@ -50,6 +51,7 @@ export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
   prefixIdentifiers?: boolean
+  hoistStaticTrees?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -81,6 +83,7 @@ function createTransformContext(
   root: RootNode,
   {
     prefixIdentifiers = false,
+    hoistStaticTrees = false,
     nodeTransforms = [],
     directiveTransforms = {},
     onError = defaultOnError
@@ -99,6 +102,7 @@ function createTransformContext(
       vOnce: 0
     },
     prefixIdentifiers,
+    hoistStaticTrees,
     nodeTransforms,
     directiveTransforms,
     onError,
@@ -200,6 +204,9 @@ function createTransformContext(
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
+  if (options.hoistStaticTrees) {
+    hoistStaticTrees(root, context)
+  }
   finalizeRoot(root, context)
 }
 
@@ -211,7 +218,8 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
     if (
       child.type === NodeTypes.ELEMENT &&
       !isSlotOutlet(child) &&
-      child.codegenNode
+      child.codegenNode &&
+      child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION
     ) {
       // turn root element into a block
       root.codegenNode = createBlockExpression(

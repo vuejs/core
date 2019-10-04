@@ -3,7 +3,8 @@ import {
   transform,
   CompilerOptions,
   ElementNode,
-  NodeTypes
+  NodeTypes,
+  CallExpression
 } from '@vue/compiler-core'
 import { transformBind } from '../../../compiler-core/src/transforms/vBind'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -59,7 +60,7 @@ describe('compiler: style transform', () => {
         bind: transformBind
       }
     })
-    expect(node.codegenNode!.arguments[1]).toMatchObject({
+    expect((node.codegenNode as CallExpression).arguments[1]).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
       properties: [
         {
