@@ -9,7 +9,7 @@ import { TransformContext } from '../transform'
 import { CREATE_VNODE } from '../runtimeConstants'
 import { PropsExpression } from './transformElement'
 
-export function hoistStaticTrees(root: RootNode, context: TransformContext) {
+export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(root.children, context, new Set<TemplateChildNode>())
 }
 

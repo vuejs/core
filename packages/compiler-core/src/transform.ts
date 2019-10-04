@@ -16,7 +16,7 @@ import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
 import { isVSlot, createBlockExpression, isSlotOutlet } from './utils'
-import { hoistStaticTrees } from './transforms/hoistStatic'
+import { hoistStatic } from './transforms/hoistStatic'
 
 // There are two types of transforms:
 //
@@ -51,7 +51,7 @@ export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
   prefixIdentifiers?: boolean
-  hoistStaticTrees?: boolean
+  hoistStatic?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -83,7 +83,7 @@ function createTransformContext(
   root: RootNode,
   {
     prefixIdentifiers = false,
-    hoistStaticTrees = false,
+    hoistStatic = false,
     nodeTransforms = [],
     directiveTransforms = {},
     onError = defaultOnError
@@ -102,7 +102,7 @@ function createTransformContext(
       vOnce: 0
     },
     prefixIdentifiers,
-    hoistStaticTrees,
+    hoistStatic,
     nodeTransforms,
     directiveTransforms,
     onError,
@@ -204,8 +204,8 @@ function createTransformContext(
 export function transform(root: RootNode, options: TransformOptions) {
   const context = createTransformContext(root, options)
   traverseNode(root, context)
-  if (options.hoistStaticTrees) {
-    hoistStaticTrees(root, context)
+  if (options.hoistStatic) {
+    hoistStatic(root, context)
   }
   finalizeRoot(root, context)
 }

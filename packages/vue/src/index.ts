@@ -8,7 +8,7 @@ function compileToFunction(
   options?: CompilerOptions
 ): RenderFunction {
   const { code } = compile(template, {
-    hoistStaticTrees: true,
+    hoistStatic: true,
     ...options
   })
   return new Function(code)() as RenderFunction
