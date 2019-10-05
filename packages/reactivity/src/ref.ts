@@ -3,8 +3,10 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
+export const refSymbol = Symbol()
+
 export interface Ref<T> {
-  _isRef: true
+  _isRef: symbol
   value: UnwrapNestedRefs<T>
 }
 
@@ -15,7 +17,7 @@ const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 export function ref<T>(raw: T): Ref<T> {
   raw = convert(raw)
   const v = {
-    _isRef: true,
+    _isRef: refSymbol,
     get value() {
       track(v, OperationTypes.GET, '')
       return raw
@@ -29,7 +31,7 @@ export function ref<T>(raw: T): Ref<T> {
 }
 
 export function isRef(v: any): v is Ref<any> {
-  return v ? v._isRef === true : false
+  return v ? v._isRef === refSymbol : false
 }
 
 export function toRefs<T extends object>(
@@ -47,7 +49,7 @@ function toProxyRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   const v = {
-    _isRef: true,
+    _isRef: refSymbol,
     get value() {
       return object[key]
     },
