@@ -2,8 +2,7 @@ import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
 import { EMPTY_OBJ, extend } from '@vue/shared'
 
-export interface ReactiveEffect {
-  (): any
+export interface ReactiveEffect extends Function {
   isEffect: true
   active: boolean
   raw: Function
@@ -63,9 +62,9 @@ function createReactiveEffect(
   fn: Function,
   options: ReactiveEffectOptions
 ): ReactiveEffect {
-  const effect = function effect(...args): any {
+  const effect: ReactiveEffect = function effect(...args: any[]): any {
     return run(effect as ReactiveEffect, fn, args)
-  } as ReactiveEffect
+  }
   effect.isEffect = true
   effect.active = true
   effect.raw = fn
