@@ -50,7 +50,7 @@ function parseWithElementTransform(
 }
 
 describe('compiler: element transform', () => {
-  test('import + resovle component', () => {
+  test('import + resolve component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
     expect(root.imports).toContain(RESOLVE_COMPONENT)
     expect(root.statements[0]).toMatch(`${RESOLVE_COMPONENT}("Foo")`)
@@ -575,7 +575,7 @@ describe('compiler: element transform', () => {
       expect(node2.arguments.length).toBe(4)
       expect(node2.arguments[3]).toBe(`${PatchFlags.TEXT} /* TEXT */`)
 
-      // multiple nodes, merged with optimze text
+      // multiple nodes, merged with optimize text
       const { node: node3 } = parseWithBind(`<div>foo {{ bar }} baz</div>`)
       expect(node3.arguments.length).toBe(4)
       expect(node3.arguments[3]).toBe(`${PatchFlags.TEXT} /* TEXT */`)

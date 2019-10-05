@@ -168,7 +168,7 @@ export interface LegacyOptions<
   beforeUpdate?(): void
   updated?(): void
   activated?(): void
-  decativated?(): void
+  deactivated?(): void
   beforeUnmount?(): void
   unmounted?(): void
   renderTracked?(e: DebuggerEvent): void
@@ -206,7 +206,7 @@ export function applyOptions(
     beforeUpdate,
     updated,
     // TODO activated
-    // TODO decativated
+    // TODO deactivated
     beforeUnmount,
     unmounted,
     renderTracked,

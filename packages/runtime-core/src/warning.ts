@@ -65,14 +65,14 @@ function getComponentTrace(): ComponentTraceStack {
   // we can't just use the stack because it will be incomplete during updates
   // that did not start from the root. Re-construct the parent chain using
   // instance parent pointers.
-  const normalizeStack: ComponentTraceStack = []
+  const normalizedStack: ComponentTraceStack = []
 
   while (currentVNode) {
-    const last = normalizeStack[0]
+    const last = normalizedStack[0]
     if (last && last.vnode === currentVNode) {
       last.recurseCount++
     } else {
-      normalizeStack.push({
+      normalizedStack.push({
         vnode: currentVNode,
         recurseCount: 0
       })
@@ -82,7 +82,7 @@ function getComponentTrace(): ComponentTraceStack {
     currentVNode = parentInstance && parentInstance.vnode
   }
 
-  return normalizeStack
+  return normalizedStack
 }
 
 function formatTrace(trace: ComponentTraceStack): string[] {

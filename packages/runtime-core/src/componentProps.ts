@@ -33,36 +33,36 @@ export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
 type PropConstructor<T> = { new (...args: any[]): T & object } | { (): T }
 
-type RequiredKeys<T, MakeDefautRequired> = {
+type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends
     | { required: true }
-    | (MakeDefautRequired extends true ? { default: any } : never)
+    | (MakeDefaultRequired extends true ? { default: any } : never)
     ? K
     : never
 }[keyof T]
 
-type OptionalKeys<T, MakeDefautRequired> = Exclude<
+type OptionalKeys<T, MakeDefaultRequired> = Exclude<
   keyof T,
-  RequiredKeys<T, MakeDefautRequired>
+  RequiredKeys<T, MakeDefaultRequired>
 >
 
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-    ? any // somehow `ObjectContructor` when inferred from { (): T } becomes `any`
+    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
     : T extends ObjectConstructor | { type: ObjectConstructor }
       ? { [key: string]: any }
       : T extends Prop<infer V> ? V : T
 
 export type ExtractPropTypes<
   O,
-  MakeDefautRequired extends boolean = true
+  MakeDefaultRequired extends boolean = true
 > = O extends object
   ? {
-      readonly [K in RequiredKeys<O, MakeDefautRequired>]: InferPropType<O[K]>
+      readonly [K in RequiredKeys<O, MakeDefaultRequired>]: InferPropType<O[K]>
     } &
       {
-        readonly [K in OptionalKeys<O, MakeDefautRequired>]?: InferPropType<
+        readonly [K in OptionalKeys<O, MakeDefaultRequired>]?: InferPropType<
           O[K]
         >
       }

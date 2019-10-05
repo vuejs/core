@@ -1,6 +1,6 @@
 import { isArray, isPlainObject, objectToString } from '@vue/shared'
 
-// for conversting {{ interpolation }} values to displayed strings.
+// for converting {{ interpolation }} values to displayed strings.
 export function toString(val: any): string {
   return val == null
     ? ''

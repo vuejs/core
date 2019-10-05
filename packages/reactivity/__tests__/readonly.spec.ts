@@ -264,7 +264,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Map) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
@@ -334,7 +334,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Set) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
           const observed: any = readonly(original)
           for (const value of observed) {
