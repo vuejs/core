@@ -40,42 +40,7 @@ export const PublicInstanceProxyHandlers = {
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
     } else {
-      // TODO simplify this?
-      switch (key) {
-        case '$data':
-          return data
-        case '$props':
-          return propsProxy
-        case '$attrs':
-          return target.attrs
-        case '$slots':
-          return target.slots
-        case '$refs':
-          return target.refs
-        case '$parent':
-          return target.parent
-        case '$root':
-          return target.root
-        case '$emit':
-          return target.emit
-        case '$el':
-          return target.vnode.el
-        case '$options':
-          return target.type
-        default:
-          // methods are only exposed when options are supported
-          if (__FEATURE_OPTIONS__) {
-            switch (key) {
-              case '$forceUpdate':
-                return target.update
-              case '$nextTick':
-                return nextTick
-              case '$watch':
-                return instanceWatch.bind(target)
-            }
-          }
-          return target.user[key]
-      }
+      return getInstancePropertyFromKey(target, key)
     }
   },
   // this trap is only called in browser-compiled render functions that use
@@ -100,4 +65,49 @@ export const PublicInstanceProxyHandlers = {
     }
     return true
   }
+}
+
+interface InternalInstanceProxyPropMap {
+  [name: string]: (target: ComponentInternalInstance) => any
+}
+
+const proxyPassThroughProps: any = {
+  data: !0,
+  attrs: !0,
+  slots: !0,
+  refs: !0,
+  parent: !0,
+  root: !0,
+  emit: !0
+}
+
+const proxyMappedProps: InternalInstanceProxyPropMap = {
+  props: target => target.propsProxy,
+  el: target => target.vnode.el,
+  options: target => target.type
+}
+
+// methods are only exposed when options are supported
+if (__FEATURE_OPTIONS__) {
+  Object.assign(proxyMappedProps, {
+    forceUpdate: target => target.update,
+    nextTick: () => nextTick,
+    watch: target => instanceWatch.bind(target)
+  } as InternalInstanceProxyPropMap)
+}
+
+function getInstancePropertyFromKey(
+  target: ComponentInternalInstance,
+  key: string
+) {
+  if (key[0] === '$') {
+    key = key.substr(1)
+    if (proxyPassThroughProps[key]) {
+      return target[key as keyof ComponentInternalInstance]
+    }
+    if (proxyMappedProps[key]) {
+      return proxyMappedProps[key](target)
+    }
+  }
+  return target.user[key]
 }
