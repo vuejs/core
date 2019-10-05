@@ -63,7 +63,7 @@ export function readonly<T extends object>(
   target: T
 ): Readonly<UnwrapNestedRefs<T>>
 export function readonly(target: object) {
-  // value is a mutable observable, retrive its original and return
+  // value is a mutable observable, retrieve its original and return
   // a readonly version.
   if (reactiveToRaw.has(target)) {
     target = reactiveToRaw.get(target)
