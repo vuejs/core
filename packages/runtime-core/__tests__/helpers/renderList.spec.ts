@@ -21,7 +21,7 @@ describe('renderList', () => {
     ])
   })
 
-  it('should render an item for every key in an object', () => {
+  it('should render properties in an object', () => {
     expect(
       renderList(
         { a: 1, b: 2, c: 3 },
