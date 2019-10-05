@@ -528,6 +528,7 @@ function genConditionalExpression(
   const { push, indent, deindent, newline } = context
   if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
     const needsParens = !isSimpleIdentifier(test.content)
+    needsParens && push(`(`)
     genExpression(test, context)
     needsParens && push(`)`)
   } else {
