@@ -31,7 +31,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./COMMIT_CONVENTION.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit.
+- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit.
 
 - No need to worry about code style as long as you have installed the dev dependencies - modified files are automatically formatted with Prettier on commit.
 

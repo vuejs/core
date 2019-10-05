@@ -126,7 +126,7 @@ export function processExpression(
             enter(child, parent) {
               if (
                 child.type === 'Identifier' &&
-                // do not record as scope variable if is a destructure key
+                // do not record as scope variable if is a destructured key
                 !isStaticPropertyKey(child, parent) &&
                 // do not record if this is a default value
                 // assignment of a destructured variable

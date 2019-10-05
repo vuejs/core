@@ -71,7 +71,7 @@ describe('reactivity/effect', () => {
 
   it('should observe has operations', () => {
     let dummy
-    const obj: any = reactive({ prop: 'value' })
+    const obj = reactive<{ prop: string | number }>({ prop: 'value' })
     effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
@@ -115,7 +115,7 @@ describe('reactivity/effect', () => {
 
   it('should observe inherited property accessors', () => {
     let dummy, parentDummy, hiddenValue: any
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: number }>({})
     const parent = reactive({
       set prop(value) {
         hiddenValue = value
@@ -179,7 +179,7 @@ describe('reactivity/effect', () => {
 
   it('should observe sparse array mutations', () => {
     let dummy
-    const list: any[] = reactive([])
+    const list = reactive<string[]>([])
     list[1] = 'World!'
     effect(() => (dummy = list.join(' ')))
 
@@ -192,7 +192,7 @@ describe('reactivity/effect', () => {
 
   it('should observe enumeration', () => {
     let dummy = 0
-    const numbers: any = reactive({ num1: 3 })
+    const numbers = reactive<Record<string, number>>({ num1: 3 })
     effect(() => {
       dummy = 0
       for (let key in numbers) {
@@ -269,7 +269,7 @@ describe('reactivity/effect', () => {
 
   it('should not observe raw mutations', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: string }>({})
     effect(() => (dummy = toRaw(obj).prop))
 
     expect(dummy).toBe(undefined)
@@ -279,7 +279,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered by raw mutations', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: string }>({})
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe(undefined)
@@ -289,7 +289,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered by inherited raw setters', () => {
     let dummy, parentDummy, hiddenValue: any
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: number }>({})
     const parent = reactive({
       set prop(value) {
         hiddenValue = value
@@ -437,7 +437,7 @@ describe('reactivity/effect', () => {
 
   it('should not run multiple times for a single mutation', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<Record<string, number>>({})
     const fnSpy = jest.fn(() => {
       for (const key in obj) {
         dummy = obj[key]

@@ -72,7 +72,7 @@ export function callWithAsyncErrorHandling(
 ) {
   const res = callWithErrorHandling(fn, instance, type, args)
   if (res != null && !res._isVue && typeof res.then === 'function') {
-    ;(res as Promise<any>).catch(err => {
+    res.catch((err: any) => {
       handleError(err, instance, type)
     })
   }
@@ -86,7 +86,7 @@ export function handleError(
 ) {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
-    let cur: ComponentInternalInstance | null = instance.parent
+    let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.renderProxy
     // in production the hook receives only the error code

@@ -191,11 +191,11 @@ function createTransformContext(
     if (identifiers[id] === undefined) {
       identifiers[id] = 0
     }
-    ;(identifiers[id] as number)++
+    identifiers[id]!++
   }
 
   function removeId(id: string) {
-    ;(context.identifiers[id] as number)--
+    context.identifiers[id]!--
   }
 
   return context

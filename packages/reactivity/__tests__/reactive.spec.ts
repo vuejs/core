@@ -19,7 +19,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('Array', () => {
-    const original: any[] = [{ foo: 1 }]
+    const original = [{ foo: 1 }]
     const observed = reactive(original)
     expect(observed).not.toBe(original)
     expect(isReactive(observed)).toBe(true)
@@ -88,7 +88,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('setting a property with an unobserved value should wrap with reactive', () => {
-    const observed: any = reactive({})
+    const observed = reactive<{ foo?: object }>({})
     const raw = {}
     observed.foo = raw
     expect(observed.foo).not.toBe(raw)

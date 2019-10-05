@@ -96,7 +96,7 @@ export function resolveProps(
   _options: ComponentPropsOptions | void
 ) {
   const hasDeclaredProps = _options != null
-  const options = normalizePropsOptions(_options) as NormalizedPropsOptions
+  const options = normalizePropsOptions(_options)!
   if (!rawProps && !hasDeclaredProps) {
     return
   }
@@ -196,9 +196,9 @@ const normalizationMap = new WeakMap()
 
 function normalizePropsOptions(
   raw: ComponentPropsOptions | void
-): NormalizedPropsOptions | void {
+): NormalizedPropsOptions | null {
   if (!raw) {
-    return
+    return null
   }
   if (normalizationMap.has(raw)) {
     return normalizationMap.get(raw)

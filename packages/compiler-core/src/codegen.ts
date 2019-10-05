@@ -190,7 +190,7 @@ export function generate(
         // save Vue in a separate variable to avoid collision
         push(`const _Vue = Vue\n`)
         // in "with" mode, helpers are declared inside the with block to avoid
-        // has check cost, but hosits are lifted out of the function - we need
+        // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
         if (ast.hoists.length) {
           push(`const _${CREATE_VNODE} = Vue.createVNode\n`)

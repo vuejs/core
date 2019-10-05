@@ -1,16 +1,13 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs } from './ref'
+import { Ref, UnwrapNestedRefs } from './ref'
 import { isFunction } from '@vue/shared'
 
-export interface ComputedRef<T> {
-  _isRef: true
+export interface ComputedRef<T> extends Ref<T> {
   readonly value: UnwrapNestedRefs<T>
   readonly effect: ReactiveEffect
 }
 
-export interface WritableComputedRef<T> {
-  _isRef: true
-  value: UnwrapNestedRefs<T>
+export interface WritableComputedRef<T> extends Ref<T> {
   readonly effect: ReactiveEffect
 }
 

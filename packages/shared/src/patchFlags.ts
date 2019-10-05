@@ -10,7 +10,7 @@
 //   const flag = TEXT | CLASS
 //   if (flag & TEXT) { ... }
 //
-// Check the `patchElement` function in './createRednerer.ts' to see how the
+// Check the `patchElement` function in './createRenderer.ts' to see how the
 // flags are handled during diff.
 
 export const enum PatchFlags {
@@ -42,7 +42,7 @@ export const enum PatchFlags {
 
   // Indicates an element that only needs non-props patching, e.g. ref or
   // directives (vnodeXXX hooks). It simply marks the vnode as "need patch",
-  // since every pathced vnode checks for refs and vnodeXXX hooks.
+  // since every patched vnode checks for refs and vnodeXXX hooks.
   // This flag is never directly matched against, it simply serves as a non-zero
   // value.
   NEED_PATCH = 1 << 5,
