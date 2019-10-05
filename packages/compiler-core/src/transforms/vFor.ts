@@ -182,9 +182,9 @@ const stripParensRE = /^\(|\)$/g
 
 export interface ForParseResult {
   source: ExpressionNode
-  value: ExpressionNode | undefined
-  key: ExpressionNode | undefined
-  index: ExpressionNode | undefined
+  value?: ExpressionNode
+  key?: ExpressionNode
+  index?: ExpressionNode
 }
 
 export function parseForExpression(

@@ -79,7 +79,7 @@ export interface RootNode extends Node {
   imports: string[]
   statements: string[]
   hoists: JSChildNode[]
-  codegenNode: TemplateChildNode | JSChildNode | undefined
+  codegenNode?: TemplateChildNode | JSChildNode
 }
 
 export interface ElementNode extends Node {
@@ -90,7 +90,7 @@ export interface ElementNode extends Node {
   isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
-  codegenNode: CallExpression | SimpleExpressionNode | undefined
+  codegenNode?: CallExpression | SimpleExpressionNode
 }
 
 export interface TextNode extends Node {
@@ -107,14 +107,14 @@ export interface CommentNode extends Node {
 export interface AttributeNode extends Node {
   type: NodeTypes.ATTRIBUTE
   name: string
-  value: TextNode | undefined
+  value?: TextNode
 }
 
 export interface DirectiveNode extends Node {
   type: NodeTypes.DIRECTIVE
   name: string
-  exp: ExpressionNode | undefined
-  arg: ExpressionNode | undefined
+  exp?: ExpressionNode
+  arg?: ExpressionNode
   modifiers: string[]
   // optional property to cache the expression parse result for v-for
   parseResult?: ForParseResult
@@ -151,16 +151,16 @@ export interface IfNode extends Node {
 
 export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
-  condition: ExpressionNode | undefined // else
+  condition?: ExpressionNode // else
   children: TemplateChildNode[]
 }
 
 export interface ForNode extends Node {
   type: NodeTypes.FOR
   source: ExpressionNode
-  valueAlias: ExpressionNode | undefined
-  keyAlias: ExpressionNode | undefined
-  objectIndexAlias: ExpressionNode | undefined
+  valueAlias?: ExpressionNode
+  keyAlias?: ExpressionNode
+  objectIndexAlias?: ExpressionNode
   children: TemplateChildNode[]
   codegenNode: SequenceExpression
 }
@@ -201,7 +201,7 @@ export interface ArrayExpression extends Node {
 
 export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
-  params: ExpressionNode | ExpressionNode[] | undefined
+  params?: ExpressionNode | ExpressionNode[]
   returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
   newline: boolean
 }

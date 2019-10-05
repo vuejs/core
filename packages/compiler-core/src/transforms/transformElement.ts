@@ -174,7 +174,7 @@ export function buildProps(
   context: TransformContext,
   isComponent: boolean = false
 ): {
-  props: PropsExpression | undefined
+  props?: PropsExpression
   directives: DirectiveNode[]
   patchFlag: number
   dynamicPropNames: string[]
