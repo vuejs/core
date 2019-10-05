@@ -2,7 +2,7 @@ import { parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
-import { transformSlotOutlet } from '../../src/transforms/transfromSlotOutlet'
+import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
   IfNode,
   NodeTypes,
