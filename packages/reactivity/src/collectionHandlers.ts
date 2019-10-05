@@ -38,12 +38,8 @@ function add(this: any, value: any) {
   const hadKey = proto.has.call(target, value)
   const result = proto.add.call(target, value)
   if (!hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, OperationTypes.ADD, value, { value })
-    } else {
-      trigger(target, OperationTypes.ADD, value)
-    }
+    const extraInfo = __DEV__ ? { value } : undefined
+    trigger(target, OperationTypes.ADD, value, extraInfo)
   }
   return result
 }
@@ -56,21 +52,9 @@ function set(this: any, key: any, value: any) {
   const oldValue = proto.get.call(target, key)
   const result = proto.set.call(target, key, value)
   if (value !== oldValue) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else {
-        trigger(target, OperationTypes.SET, key, extraInfo)
-      }
-    } else {
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key)
-      } else {
-        trigger(target, OperationTypes.SET, key)
-      }
-    }
+    const OperationType = !hadKey ? OperationTypes.ADD : OperationTypes.SET
+    const extraInfo = __DEV__ ? { oldValue, newValue: value } : undefined
+    trigger(target, OperationType, key, extraInfo)
   }
   return result
 }
@@ -83,12 +67,8 @@ function deleteEntry(this: any, key: any) {
   // forward the operation before queueing reactions
   const result = proto.delete.call(target, key)
   if (hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, OperationTypes.DELETE, key, { oldValue })
-    } else {
-      trigger(target, OperationTypes.DELETE, key)
-    }
+    const extraInfo = __DEV__ ? { oldValue } : undefined
+    trigger(target, OperationTypes.DELETE, key, extraInfo)
   }
   return result
 }
@@ -101,12 +81,8 @@ function clear(this: any) {
   // forward the operation before queueing reactions
   const result = proto.clear.call(target)
   if (hadItems) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, OperationTypes.CLEAR, void 0, { oldTarget })
-    } else {
-      trigger(target, OperationTypes.CLEAR)
-    }
+    const extraInfo = __DEV__ ? { oldTarget } : undefined
+    trigger(target, OperationTypes.CLEAR, void 0, extraInfo)
   }
   return result
 }

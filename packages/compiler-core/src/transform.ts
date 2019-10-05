@@ -143,12 +143,10 @@ function createTransformContext(
         // current node removed
         context.currentNode = null
         context.onNodeRemoved()
-      } else {
+      } else if (context.childIndex > removalIndex) {
         // sibling node removed
-        if (context.childIndex > removalIndex) {
-          context.childIndex--
-          context.onNodeRemoved()
-        }
+        context.childIndex--
+        context.onNodeRemoved()
       }
       context.parent!.children.splice(removalIndex, 1)
     },

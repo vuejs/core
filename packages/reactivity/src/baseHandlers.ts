@@ -46,22 +46,10 @@ function set(
   }
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
-  if (target === toRaw(receiver)) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else if (value !== oldValue) {
-        trigger(target, OperationTypes.SET, key, extraInfo)
-      }
-    } else {
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key)
-      } else if (value !== oldValue) {
-        trigger(target, OperationTypes.SET, key)
-      }
-    }
+  if (target === toRaw(receiver) && (!hadKey || value !== oldValue)) {
+    const operationType = !hadKey ? OperationTypes.ADD : OperationTypes.SET
+    const extraInfo = __DEV__ ? { oldValue, newValue: value } : undefined
+    trigger(target, operationType, key, extraInfo)
   }
   return result
 }
@@ -71,12 +59,8 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
   if (hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, OperationTypes.DELETE, key, { oldValue })
-    } else {
-      trigger(target, OperationTypes.DELETE, key)
-    }
+    const extraInfo = __DEV__ ? { oldValue } : undefined
+    trigger(target, OperationTypes.DELETE, key, extraInfo)
   }
   return result
 }
