@@ -1,4 +1,4 @@
-// compiler should normlaize class + :class bindings on the same element
+// compiler should normalize class + :class bindings on the same element
 // into a single binding ['staticClass', dynamic]
 
 export function patchClass(el: Element, value: string, isSVG: boolean) {

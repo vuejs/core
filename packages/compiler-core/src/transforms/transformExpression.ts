@@ -113,7 +113,7 @@ export function processExpression(
             node.name = `_ctx.${node.name}`
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
-            // also generate sub-expressioms for other identifiers for better
+            // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
           }
@@ -126,7 +126,7 @@ export function processExpression(
             enter(child, parent) {
               if (
                 child.type === 'Identifier' &&
-                // do not record as scope variable if is a destrcuture key
+                // do not record as scope variable if is a destructured key
                 !isStaticPropertyKey(child, parent) &&
                 // do not record if this is a default value
                 // assignment of a destructured variable
@@ -170,7 +170,7 @@ export function processExpression(
     }
   })
 
-  // We break up the coumpound expression into an array of strings and sub
+  // We break up the compound expression into an array of strings and sub
   // expressions (for identifiers that have been prefixed). In codegen, if
   // an ExpressionNode has the `.children` property, it will be used instead of
   // `.content`.

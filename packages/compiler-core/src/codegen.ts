@@ -179,7 +179,7 @@ export function generate(
   if (mode === 'function') {
     // Generate const declaration for helpers
     // In prefix mode, we place the const declaration at top so it's done
-    // only once; But if we not prefixing, we place the decalration inside the
+    // only once; But if we not prefixing, we place the declaration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
     if (hasImports) {
       if (prefixIdentifiers) {
@@ -189,7 +189,7 @@ export function generate(
         // save Vue in a separate variable to avoid collision
         push(`const _Vue = Vue\n`)
         // in "with" mode, helpers are declared inside the with block to avoid
-        // has check cost, but hosits are lifted out of the function - we need
+        // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
         if (ast.hoists.length) {
           push(`const _${CREATE_VNODE} = Vue.createVNode\n`)

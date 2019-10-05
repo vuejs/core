@@ -35,7 +35,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
       eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }
   } else {
-    // already a compound epxression.
+    // already a compound expression.
     eventName = arg
     eventName.children.unshift(`"on" + (`)
     eventName.children.push(`)`)
@@ -45,7 +45,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
 
   // handler processing
   if (dir.exp) {
-    // exp is guarunteed to be a simple expression here because v-on w/ arg is
+    // exp is guaranteed to be a simple expression here because v-on w/ arg is
     // skipped by transformExpression as a special case.
     let exp: ExpressionNode = dir.exp as SimpleExpressionNode
     const isInlineStatement = !(
