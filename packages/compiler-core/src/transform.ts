@@ -39,7 +39,7 @@ export type DirectiveTransform = (
   needRuntime: boolean
 }
 
-// A structural directive transform is a techically a NodeTransform;
+// A structural directive transform is a technically a NodeTransform;
 // Only v-if and v-for fall into this category.
 export type StructuralDirectiveTransform = (
   node: ElementNode,
