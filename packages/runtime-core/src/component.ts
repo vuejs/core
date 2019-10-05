@@ -225,7 +225,7 @@ export function setupStatefulComponent(
 ) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
+  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render

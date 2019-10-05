@@ -19,7 +19,7 @@ import {
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
-import { transformSlotOutlet } from '../src/transforms/transfromSlotOutlet'
+import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
 import { optimizeText } from '../src/transforms/optimizeText'
 
 describe('compiler: transform', () => {

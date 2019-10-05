@@ -2,7 +2,7 @@ import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
-import { ExtracComputedReturns } from './apiOptions'
+import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef } from '@vue/reactivity'
 
 // public properties exposed on the proxy, which is used as the render context
@@ -26,7 +26,7 @@ export type ComponentPublicInstance<
 } & P &
   UnwrapRef<B> &
   D &
-  ExtracComputedReturns<C> &
+  ExtractComputedReturns<C> &
   M
 
 export const PublicInstanceProxyHandlers = {
@@ -38,7 +38,7 @@ export const PublicInstanceProxyHandlers = {
       return renderContext[key]
     } else if (hasOwn(props, key)) {
       // return the value from propsProxy for ref unwrapping and readonly
-      return (propsProxy as any)[key]
+      return propsProxy![key]
     } else {
       // TODO simplify this?
       switch (key) {

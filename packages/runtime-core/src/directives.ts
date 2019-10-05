@@ -61,7 +61,7 @@ function applyDirective(
     valueCache.set(directive, valueCacheForDir)
   }
   for (const key in directive) {
-    const hook = directive[key as keyof Directive] as DirectiveHook
+    const hook = directive[key as keyof Directive]!
     const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue

@@ -11,7 +11,7 @@ import { transformOn } from '../../src/transforms/vOn'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { RENDER_SLOT } from '../../src/runtimeConstants'
-import { transformSlotOutlet } from '../../src/transforms/transfromSlotOutlet'
+import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 
 function parseWithSlots(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)

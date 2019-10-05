@@ -97,8 +97,8 @@ const blockStack: (VNode[] | null)[] = []
 //
 // disableTracking is true when creating a fragment block, since a fragment
 // always diffs its children.
-export function openBlock(disableTrackng?: boolean) {
-  blockStack.push(disableTrackng ? null : [])
+export function openBlock(disableTracking?: boolean) {
+  blockStack.push(disableTracking ? null : [])
 }
 
 let shouldTrack = true

@@ -86,7 +86,7 @@ export function handleError(
 ) {
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
-    let cur: ComponentInternalInstance | null = instance.parent
+    let cur = instance.parent
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.renderProxy
     // in production the hook receives only the error code

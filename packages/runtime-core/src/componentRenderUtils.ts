@@ -66,12 +66,12 @@ export function shouldUpdateComponent(
     }
     if (patchFlag & PatchFlags.FULL_PROPS) {
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps as Data, nextProps as Data)
+      return hasPropsChanged(prevProps!, nextProps!)
     } else if (patchFlag & PatchFlags.PROPS) {
-      const dynamicProps = nextVNode.dynamicProps as string[]
+      const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
-        if ((nextProps as any)[key] !== (prevProps as any)[key]) {
+        if (nextProps![key] !== prevProps![key]) {
           return true
         }
       }
