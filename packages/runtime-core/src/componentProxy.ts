@@ -91,10 +91,15 @@ export const PublicInstanceProxyHandlers = {
     } else if (hasOwn(renderContext, key)) {
       renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
-      __DEV__ && warn('attempt of mutating public property')
+      __DEV__ &&
+        warn(
+          `Attempting to mutate public property "${key}" to "${value}"`,
+          target
+        )
       return false
     } else if (key in target.props) {
-      __DEV__ && warn('attempt of mutating prop')
+      __DEV__ &&
+        warn(`Attempting to mutate prop "${key}" to "${value}"`, target)
       return false
     } else {
       target.user[key] = value

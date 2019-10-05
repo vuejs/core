@@ -267,7 +267,7 @@ export function applyOptions(
         if (isFunction(handler)) {
           watch(getter, handler as any)
         } else if (__DEV__) {
-          warn('invalid watch handler path')
+          warn(`Expected a function as watch handler "${raw}"`)
         }
       } else if (isFunction(raw)) {
         watch(getter, raw.bind(ctx))
@@ -275,7 +275,7 @@ export function applyOptions(
         // TODO 2.x compat
         watch(getter, raw.handler.bind(ctx), raw)
       } else if (__DEV__) {
-        warn('attempting to mutate readonly computed value')
+        warn(`Attempting to mutate readonly computed value "${key}"`)
       }
     }
   }
