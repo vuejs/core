@@ -520,6 +520,16 @@ describe('compiler: v-if', () => {
       )
     })
 
-    test.todo('with comments')
+    test('with comments', () => {
+      const { node } = parseWithIfTransform(`<div v-if="ok // Test comment"/>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches.length).toBe(1)
+      expect((node.branches[0].condition as SimpleExpressionNode).content).toBe(
+        `ok // Test comment`
+      )
+      expect(node.branches[0].children.length).toBe(1)
+      expect(node.branches[0].children[0].type).toBe(NodeTypes.ELEMENT)
+      expect((node.branches[0].children[0] as ElementNode).tag).toBe(`div`)
+    })
   })
 })

@@ -221,5 +221,10 @@ describe('compiler: transform v-on', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
-  test.todo('.once modifier')
+  test('.once modifier', () => {
+    const onError = jest.fn()
+    const res = parseWithVOn(`<div v-on:click.once="test" />`, { onError })
+    expect(onError).not.toHaveBeenCalled()
+    expect((res.props[0] as any).modifiers).toEqual(['once'])
+  })
 })
