@@ -267,7 +267,7 @@ describe('compiler: transform', () => {
       }
     }
 
-    test('no chidlren', () => {
+    test('no children', () => {
       const ast = transformWithCodegen(``)
       expect(ast.codegenNode).toBeUndefined()
     })
