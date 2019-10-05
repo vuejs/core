@@ -110,7 +110,7 @@ export interface MethodOptions {
   [key: string]: Function
 }
 
-export type ExtracComputedReturns<T extends any> = {
+export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: Function }
     ? ReturnType<T[key]['get']>
     : ReturnType<T[key]>
