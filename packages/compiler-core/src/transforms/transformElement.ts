@@ -191,7 +191,7 @@ export function buildProps(
   let hasDynamicKeys = false
   const dynamicPropNames: string[] = []
 
-  const anaylizePatchFlag = ({ key, value }: Property) => {
+  const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       if (value.type !== NodeTypes.SIMPLE_EXPRESSION || !value.isStatic) {
         const name = key.content
@@ -288,10 +288,10 @@ export function buildProps(
         const { props, needRuntime } = directiveTransform(prop, context)
         if (isArray(props)) {
           properties.push(...props)
-          properties.forEach(anaylizePatchFlag)
+          properties.forEach(analyzePatchFlag)
         } else {
           properties.push(props)
-          anaylizePatchFlag(props)
+          analyzePatchFlag(props)
         }
         if (needRuntime) {
           runtimeDirectives.push(prop)

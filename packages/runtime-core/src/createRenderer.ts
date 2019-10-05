@@ -149,7 +149,7 @@ export function createRenderer<
 } {
   type HostVNode = VNode<HostNode, HostElement>
   type HostVNodeChildren = VNodeChildren<HostNode, HostElement>
-  type HostSuspsenseBoundary = SuspenseBoundary<HostNode, HostElement>
+  type HostSuspenseBoundary = SuspenseBoundary<HostNode, HostElement>
 
   const {
     insert: hostInsert,
@@ -171,7 +171,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null = null,
     parentComponent: ComponentInternalInstance | null = null,
-    parentSuspense: HostSuspsenseBoundary | null = null,
+    parentSuspense: HostSuspenseBoundary | null = null,
     isSVG: boolean = false,
     optimized: boolean = false
   ) {
@@ -303,7 +303,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -329,7 +329,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
   ) {
     const tag = vnode.type as string
@@ -370,7 +370,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     start: number = 0
   ) {
@@ -392,7 +392,7 @@ export function createRenderer<
     n1: HostVNode,
     n2: HostVNode,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -491,10 +491,10 @@ export function createRenderer<
 
     if (dynamicChildren != null) {
       // children fast path
-      const olddynamicChildren = n1.dynamicChildren!
+      const oldDynamicChildren = n1.dynamicChildren!
       for (let i = 0; i < dynamicChildren.length; i++) {
         patch(
-          olddynamicChildren[i],
+          oldDynamicChildren[i],
           dynamicChildren[i],
           el,
           null,
@@ -522,7 +522,7 @@ export function createRenderer<
     oldProps: any,
     newProps: any,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
   ) {
     if (oldProps !== newProps) {
@@ -571,7 +571,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -613,7 +613,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -685,7 +685,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -717,7 +717,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -828,7 +828,7 @@ export function createRenderer<
     suspense.fallbackTree = fallback
   }
 
-  function resolveSuspense(suspense: HostSuspsenseBoundary) {
+  function resolveSuspense(suspense: HostSuspenseBoundary) {
     if (__DEV__) {
       if (suspense.isResolved) {
         throw new Error(
@@ -861,7 +861,7 @@ export function createRenderer<
     }
     // move content from off-dom container to actual container
     move(subTree as HostVNode, container, anchor)
-    const el = (vnode.el = (subTree as HostVNode).el as HostNode)
+    const el = (vnode.el = (subTree as HostVNode).el!)
     // suspense as the root node of a component...
     if (parentComponent && parentComponent.subTree === vnode) {
       parentComponent.vnode.el = el
@@ -892,7 +892,7 @@ export function createRenderer<
     }
   }
 
-  function restartSuspense(suspense: HostSuspsenseBoundary) {
+  function restartSuspense(suspense: HostSuspenseBoundary) {
     suspense.isResolved = false
     const {
       vnode,
@@ -919,7 +919,7 @@ export function createRenderer<
       isSVG,
       optimized
     )
-    const el = (vnode.el = (fallbackTree as HostVNode).el as HostNode)
+    const el = (vnode.el = (fallbackTree as HostVNode).el!)
     // suspense as the root node of a component...
     if (parentComponent && parentComponent.subTree === vnode) {
       parentComponent.vnode.el = el
@@ -939,7 +939,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -993,7 +993,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
   ) {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
@@ -1073,7 +1073,7 @@ export function createRenderer<
   function retryAsyncComponent(
     instance: ComponentInternalInstance,
     asyncSetupResult: unknown,
-    parentSuspense: HostSuspsenseBoundary,
+    parentSuspense: HostSuspenseBoundary,
     isSVG: boolean
   ) {
     parentSuspense.deps--
@@ -1104,7 +1104,7 @@ export function createRenderer<
 
   function setupRenderEffect(
     instance: ComponentInternalInstance,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     initialVNode: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
@@ -1168,7 +1168,7 @@ export function createRenderer<
           // to child component's vnode
           updateHOCHostEl(instance, nextTree.el)
         }
-        // upated hook
+        // updated hook
         if (instance.u !== null) {
           queuePostRenderEffect(instance.u, parentSuspense)
         }
@@ -1207,7 +1207,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean = false
   ) {
@@ -1311,7 +1311,7 @@ export function createRenderer<
     container: HostElement,
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -1358,7 +1358,7 @@ export function createRenderer<
     container: HostElement,
     parentAnchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
   ) {
@@ -1464,7 +1464,7 @@ export function createRenderer<
       const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
-      const keyToNewIndexMap: Map<any, number> = new Map()
+      const keyToNewIndexMap: Map<string | number, number> = new Map()
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = normalizeVNode(c2[i]))
         if (nextChild.key != null) {
@@ -1613,7 +1613,7 @@ export function createRenderer<
   function unmount(
     vnode: HostVNode,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
     const {
@@ -1678,7 +1678,7 @@ export function createRenderer<
 
   function unmountComponent(
     instance: ComponentInternalInstance,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
     const { bum, effects, update, subTree, um } = instance
@@ -1724,9 +1724,9 @@ export function createRenderer<
   }
 
   function unmountSuspense(
-    suspense: HostSuspsenseBoundary,
+    suspense: HostSuspenseBoundary,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
     suspense.isUnmounted = true
@@ -1739,7 +1739,7 @@ export function createRenderer<
   function unmountChildren(
     children: HostVNode[],
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspsenseBoundary | null,
+    parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean,
     start: number = 0
   ) {

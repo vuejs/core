@@ -130,9 +130,9 @@ export function track(
     if (depsMap === void 0) {
       targetMap.set(target, (depsMap = new Map()))
     }
-    let dep = depsMap.get(key as string | symbol)
+    let dep = depsMap.get(key!)
     if (!dep) {
-      depsMap.set(key as string | symbol, (dep = new Set()))
+      depsMap.set(key!, (dep = new Set()))
     }
     if (!dep.has(effect)) {
       dep.add(effect)
@@ -170,7 +170,7 @@ export function trigger(
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      addRunners(effects, computedRunners, depsMap.get(key as string | symbol))
+      addRunners(effects, computedRunners, depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE
     if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {

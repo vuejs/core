@@ -39,7 +39,7 @@ export type DirectiveTransform = (
   needRuntime: boolean
 }
 
-// A structural directive transform is a techically a NodeTransform;
+// A structural directive transform is a technically a NodeTransform;
 // Only v-if and v-for fall into this category.
 export type StructuralDirectiveTransform = (
   node: ElementNode,
@@ -191,11 +191,11 @@ function createTransformContext(
     if (identifiers[id] === undefined) {
       identifiers[id] = 0
     }
-    ;(identifiers[id] as number)++
+    identifiers[id]!++
   }
 
   function removeId(id: string) {
-    ;(context.identifiers[id] as number)--
+    context.identifiers[id]!--
   }
 
   return context
