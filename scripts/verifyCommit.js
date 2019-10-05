@@ -21,7 +21,7 @@ if (!commitRE.test(msg)) {
       `    ${chalk.green(
         `fix(v-model): handle events on blur (close #28)`
       )}\n\n` +
-      chalk.red(`  See .github/COMMIT_CONVENTION.md for more details.\n`) +
+      chalk.red(`  See .github/commit-convention.md for more details.\n`) +
       chalk.red(
         `  You can also use ${chalk.cyan(
           `npm run commit`
