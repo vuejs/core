@@ -1,7 +1,7 @@
 import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
-  it('should render nodes in an array', () => {
+  it('should render items in an array', () => {
     expect(
       renderList(['1', '2', '3'], (item, index) => `node ${index}: ${item}`)
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
