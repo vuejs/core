@@ -166,7 +166,7 @@ export interface ForNode extends Node {
 }
 
 // We also include a number of JavaScript AST nodes for code generation.
-// The AST is an intentioanlly minimal subset just to meet the exact needs of
+// The AST is an intentionally minimal subset just to meet the exact needs of
 // Vue render function generation.
 export type JSChildNode =
   | CallExpression
