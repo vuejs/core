@@ -9,7 +9,7 @@ import {
 import { TransformContext } from '../transform'
 import { APPLY_DIRECTIVES } from '../runtimeConstants'
 import { PropsExpression } from './transformElement'
-import { PatchFlags } from '@vue/runtime-dom'
+import { PatchFlags } from '@vue/shared'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(root.children, context, new Map<TemplateChildNode, boolean>())
