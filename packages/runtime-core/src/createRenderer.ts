@@ -1180,7 +1180,7 @@ export function createRenderer<
           // to child component's vnode
           updateHOCHostEl(instance, nextTree.el)
         }
-        // upated hook
+        // updated hook
         if (instance.u !== null) {
           queuePostRenderEffect(instance.u, parentSuspense)
         }
