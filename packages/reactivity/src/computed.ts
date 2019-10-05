@@ -28,7 +28,9 @@ export function computed<T>(
     ? (getterOrOptions as (() => T))
     : (getterOrOptions as WritableComputedOptions<T>).get
   const setter = isReadonly
-    ? null
+    ? () => {
+        // TODO warn attempting to mutate readonly computed value
+      }
     : (getterOrOptions as WritableComputedOptions<T>).set
 
   let dirty: boolean = true
@@ -57,12 +59,8 @@ export function computed<T>(
       trackChildRun(runner)
       return value
     },
-    set value(newValue) {
-      if (setter) {
-        setter(newValue)
-      } else {
-        // TODO warn attempting to mutate readonly computed value
-      }
+    set value(newValue: T) {
+      setter(newValue)
     }
   }
 }
