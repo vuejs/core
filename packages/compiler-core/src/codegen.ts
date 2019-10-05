@@ -180,7 +180,7 @@ export function generate(
   if (mode === 'function') {
     // Generate const declaration for helpers
     // In prefix mode, we place the const declaration at top so it's done
-    // only once; But if we not prefixing, we place the decalration inside the
+    // only once; But if we not prefixing, we place the declaration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
     if (hasImports) {
       if (prefixIdentifiers) {
