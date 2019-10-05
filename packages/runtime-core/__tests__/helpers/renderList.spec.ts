@@ -1,4 +1,4 @@
-import { renderList } from '../src/helpers/renderList'
+import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
   it('should render nodes in an array', () => {
