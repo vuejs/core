@@ -13,7 +13,7 @@ describe('renderList', () => {
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
-  it('should render N+1 items when given a number', () => {
+  it('should render integers 1 through N when given a number N', () => {
     expect(renderList(3, (item, index) => `node ${index}: ${item}`)).toEqual([
       'node 0: 1',
       'node 1: 2',
