@@ -19,11 +19,9 @@ const packageOptions = pkg.buildOptions || {}
 // build aliases dynamically
 const aliasOptions = { resolve: ['.ts'] }
 fs.readdirSync(packagesDir).forEach(dir => {
-  if (
-    !dir.startsWith('vue') &&
-    fs.statSync(path.resolve(packagesDir, dir)).isDirectory()
-  ) {
-    aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)
+  if (fs.statSync(path.resolve(packagesDir, dir)).isDirectory()) {
+    const name = dir === `vue` ? dir : `@vue/${dir}`
+    aliasOptions[name] = path.resolve(packagesDir, `${dir}/src/index`)
   }
 })
 const aliasPlugin = alias(aliasOptions)
@@ -119,7 +117,8 @@ function createConfig(output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBunlderESMBuild,
-        isGlobalBuild || isBrowserESMBuild
+        (isGlobalBuild || isBrowserESMBuild) &&
+          !packageOptions.enableNonBrowserBranches
       ),
       ...plugins
     ],
@@ -134,6 +133,7 @@ function createConfig(output, plugins = []) {
 
 function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
   return replace({
+    __COMMIT__: `"${process.env.COMMIT}"`,
     __DEV__: isBunlderESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`

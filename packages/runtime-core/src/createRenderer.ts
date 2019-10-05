@@ -60,12 +60,8 @@ function createDevEffectOptions(
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
-    onTrack: instance.rtc
-      ? e => invokeHooks(instance.rtc as Function[], e)
-      : void 0,
-    onTrigger: instance.rtg
-      ? e => invokeHooks(instance.rtg as Function[], e)
-      : void 0
+    onTrack: instance.rtc ? e => invokeHooks(instance.rtc!, e) : void 0,
+    onTrigger: instance.rtg ? e => invokeHooks(instance.rtg!, e) : void 0
   }
 }
 
@@ -449,7 +445,7 @@ export function createRenderer<
         // bail out and go through a full diff because we need to unset the old key
         if (patchFlag & PatchFlags.PROPS) {
           // if the flag is present then dynamicProps must be non-null
-          const propsToUpdate = n2.dynamicProps as string[]
+          const propsToUpdate = n2.dynamicProps!
           for (let i = 0; i < propsToUpdate.length; i++) {
             const key = propsToUpdate[i]
             const prev = oldProps[key]
@@ -781,7 +777,7 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const suspense = (n2.suspense = n1.suspense) as HostSuspenseBoundary
+    const suspense = (n2.suspense = n1.suspense)!
     suspense.vnode = n2
     const { content, fallback } = normalizeSuspenseChildren(n2)
     const oldSubTree = suspense.subTree
@@ -957,8 +953,7 @@ export function createRenderer<
         isSVG
       )
     } else {
-      const instance = (n2.component =
-        n1.component) as ComponentInternalInstance
+      const instance = (n2.component = n1.component)!
 
       if (shouldUpdateComponent(n1, n2, optimized)) {
         if (
@@ -1594,7 +1589,7 @@ export function createRenderer<
       return
     }
     if (__FEATURE_SUSPENSE__ && vnode.type === Suspense) {
-      const suspense = vnode.suspense as SuspenseBoundary
+      const suspense = vnode.suspense!
       move(
         suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
         container,

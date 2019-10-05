@@ -1,0 +1,15 @@
+{
+  "name": "@vue/template-explorer",
+  "version": "3.0.0-alpha.1",
+  "private": true,
+  "buildOptions": {
+    "formats": [
+      "global"
+    ],
+    "env": "development",
+    "enableNonBrowserBranches": true
+  },
+  "dependencies": {
+    "monaco-editor": "^0.18.1"
+  }
+}

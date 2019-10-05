@@ -29,7 +29,7 @@ export function renderComponentRoot(
   currentRenderingInstance = instance
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode((instance.render as Function).call(renderProxy))
+      result = normalizeVNode(instance.render!.call(renderProxy))
     } else {
       // functional
       const render = Component as FunctionalComponent

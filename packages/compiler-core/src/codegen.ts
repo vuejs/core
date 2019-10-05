@@ -22,7 +22,8 @@ import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
-  isSimpleIdentifier
+  isSimpleIdentifier,
+  loadDep
 } from './utils'
 import { isString, isArray } from '@vue/shared'
 import { TO_STRING, CREATE_VNODE, COMMENT } from './runtimeConstants'
@@ -97,7 +98,7 @@ function createCodegenContext(
     map:
       __BROWSER__ || !sourceMap
         ? undefined
-        : new (require('source-map')).SourceMapGenerator(),
+        : new (loadDep('source-map')).SourceMapGenerator(),
 
     helper(name) {
       return prefixIdentifiers ? name : `_${name}`
@@ -179,7 +180,7 @@ export function generate(
   if (mode === 'function') {
     // Generate const declaration for helpers
     // In prefix mode, we place the const declaration at top so it's done
-    // only once; But if we not prefixing, we place the decalration inside the
+    // only once; But if we not prefixing, we place the declaration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
     if (hasImports) {
       if (prefixIdentifiers) {
@@ -197,6 +198,7 @@ export function generate(
       }
     }
     genHoists(ast.hoists, context)
+    context.newline()
     push(`return `)
   } else {
     // generate import statements for helpers
@@ -204,6 +206,7 @@ export function generate(
       push(`import { ${ast.imports.join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
+    context.newline()
     push(`export default `)
   }
 
@@ -258,12 +261,15 @@ export function generate(
 }
 
 function genHoists(hoists: JSChildNode[], context: CodegenContext) {
+  if (!hoists.length) {
+    return
+  }
+  context.newline()
   hoists.forEach((exp, i) => {
     context.push(`const _hoisted_${i + 1} = `)
     genNode(exp, context)
     context.newline()
   })
-  context.newline()
 }
 
 function isText(n: string | CodegenNode) {
@@ -316,7 +322,11 @@ function genNodeList(
   }
 }
 
-function genNode(node: CodegenNode, context: CodegenContext) {
+function genNode(node: CodegenNode | string, context: CodegenContext) {
+  if (isString(node)) {
+    context.push(node)
+    return
+  }
   switch (node.type) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
@@ -517,12 +527,13 @@ function genConditionalExpression(
   const { test, consequent, alternate } = node
   const { push, indent, deindent, newline } = context
   if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
-    const needsQuote = !isSimpleIdentifier(test.content)
-    needsQuote && push(`(`)
+    const needsParens = !isSimpleIdentifier(test.content)
     genExpression(test, context)
-    needsQuote && push(`)`)
+    needsParens && push(`)`)
   } else {
+    push(`(`)
     genCompoundExpression(test, context)
+    push(`)`)
   }
   indent()
   context.indentLevel++
