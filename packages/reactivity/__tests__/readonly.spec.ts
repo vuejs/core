@@ -106,7 +106,7 @@ describe('reactivity/readonly', () => {
 
   describe('Array', () => {
     it('should make nested values readonly', () => {
-      const original: any[] = [{ foo: 1 }]
+      const original = [{ foo: 1 }]
       const observed = readonly(original)
       expect(observed).not.toBe(original)
       expect(isReactive(observed)).toBe(true)

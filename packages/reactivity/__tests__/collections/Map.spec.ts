@@ -247,7 +247,7 @@ describe('reactivity/collections', () => {
         })
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -262,7 +262,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -280,7 +280,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -298,7 +298,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
     })
   })
