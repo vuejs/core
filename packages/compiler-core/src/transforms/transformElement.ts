@@ -25,11 +25,9 @@ import {
   RESOLVE_COMPONENT,
   MERGE_PROPS,
   TO_HANDLERS
-} from '../runtimeConstants'
-import { getInnerRange, isVSlot } from '../utils'
+} from '../runtimeHelpers'
+import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
 import { buildSlots } from './vSlot'
-
-const toValidId = (str: string): string => str.replace(/[^\w]/g, '')
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
@@ -50,19 +48,14 @@ export const transformElement: NodeTransform = (node, context) => {
         let patchFlag: number = 0
         let runtimeDirectives: DirectiveNode[] | undefined
         let dynamicPropNames: string[] | undefined
-        let componentIdentifier: string | undefined
 
         if (isComponent) {
-          componentIdentifier = `_component_${toValidId(node.tag)}`
-          context.statements.add(
-            `const ${componentIdentifier} = ${context.helper(
-              RESOLVE_COMPONENT
-            )}(${JSON.stringify(node.tag)})`
-          )
+          context.helper(RESOLVE_COMPONENT)
+          context.components.add(node.tag)
         }
 
         const args: CallExpression['arguments'] = [
-          isComponent ? componentIdentifier! : `"${node.tag}"`
+          isComponent ? toValidAssetId(node.tag, `component`) : `"${node.tag}"`
         ]
         // props
         if (hasProps) {
@@ -402,13 +395,11 @@ function createDirectiveArgs(
   context: TransformContext
 ): ArrayExpression {
   // inject statement for resolving directive
-  const dirIdentifier = `_directive_${toValidId(dir.name)}`
-  context.statements.add(
-    `const ${dirIdentifier} = ${context.helper(
-      RESOLVE_DIRECTIVE
-    )}(${JSON.stringify(dir.name)})`
-  )
-  const dirArgs: ArrayExpression['elements'] = [dirIdentifier]
+  context.helper(RESOLVE_DIRECTIVE)
+  context.directives.add(dir.name)
+  const dirArgs: ArrayExpression['elements'] = [
+    toValidAssetId(dir.name, `directive`)
+  ]
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
   if (dir.arg) dirArgs.push(dir.arg)

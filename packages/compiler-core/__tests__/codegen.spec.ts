@@ -13,15 +13,23 @@ import {
   createCallExpression,
   createConditionalExpression
 } from '../src'
-import { CREATE_VNODE, COMMENT, TO_STRING } from '../src/runtimeConstants'
+import {
+  CREATE_VNODE,
+  COMMENT,
+  TO_STRING,
+  RESOLVE_DIRECTIVE,
+  helperNameMap,
+  RESOLVE_COMPONENT
+} from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
     type: NodeTypes.ROOT,
     children: [],
-    imports: [],
-    statements: [],
+    helpers: [],
+    components: [],
+    directives: [],
     hoists: [],
     codegenNode: undefined,
     loc: locStub,
@@ -32,45 +40,69 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
 describe('compiler: codegen', () => {
   test('module mode preamble', () => {
     const root = createRoot({
-      imports: [`helperOne`, `helperTwo`]
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
     const { code } = generate(root, { mode: 'module' })
-    expect(code).toMatch(`import { helperOne, helperTwo } from "vue"`)
+    expect(code).toMatch(
+      `import { ${helperNameMap[CREATE_VNODE]}, ${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      } } from "vue"`
+    )
     expect(code).toMatchSnapshot()
   })
 
   test('function mode preamble', () => {
     const root = createRoot({
-      imports: [`helperOne`, `helperTwo`]
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { helperOne: _helperOne, helperTwo: _helperTwo } = _Vue`
+      `const { ${helperNameMap[CREATE_VNODE]}: _${
+        helperNameMap[CREATE_VNODE]
+      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      } } = _Vue`
     )
     expect(code).toMatchSnapshot()
   })
 
   test('function mode preamble w/ prefixIdentifiers: true', () => {
     const root = createRoot({
-      imports: [`helperOne`, `helperTwo`]
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
     })
     const { code } = generate(root, {
       mode: 'function',
       prefixIdentifiers: true
     })
     expect(code).not.toMatch(`const _Vue = Vue`)
-    expect(code).toMatch(`const { helperOne, helperTwo } = Vue`)
+    expect(code).toMatch(
+      `const { ${helperNameMap[CREATE_VNODE]}, ${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      } } = Vue`
+    )
     expect(code).toMatchSnapshot()
   })
 
-  test('statements', () => {
+  test('assets', () => {
     const root = createRoot({
-      statements: [`const a = 1`, `const b = 2`]
+      components: [`Foo`, `bar-baz`],
+      directives: [`my_dir`]
     })
     const { code } = generate(root, { mode: 'function' })
-    expect(code).toMatch(`const a = 1\n`)
-    expect(code).toMatch(`const b = 2\n`)
+    expect(code).toMatch(
+      `const _component_Foo = _${helperNameMap[RESOLVE_COMPONENT]}("Foo")\n`
+    )
+    expect(code).toMatch(
+      `const _component_barbaz = _${
+        helperNameMap[RESOLVE_COMPONENT]
+      }("bar-baz")\n`
+    )
+    expect(code).toMatch(
+      `const _directive_my_dir = _${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      }("my_dir")\n`
+    )
     expect(code).toMatchSnapshot()
   })
 
@@ -122,7 +154,7 @@ describe('compiler: codegen', () => {
         codegenNode: createInterpolation(`hello`, locStub)
       })
     )
-    expect(code).toMatch(`return _${TO_STRING}(hello)`)
+    expect(code).toMatch(`return _${helperNameMap[TO_STRING]}(hello)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -136,7 +168,11 @@ describe('compiler: codegen', () => {
         }
       })
     )
-    expect(code).toMatch(`return _${CREATE_VNODE}(_${COMMENT}, 0, "foo")`)
+    expect(code).toMatch(
+      `return _${helperNameMap[CREATE_VNODE]}(_${
+        helperNameMap[COMMENT]
+      }, 0, "foo")`
+    )
     expect(code).toMatchSnapshot()
   })
 
@@ -155,7 +191,7 @@ describe('compiler: codegen', () => {
         ])
       })
     )
-    expect(code).toMatch(`return _ctx.foo + _${TO_STRING}(bar)`)
+    expect(code).toMatch(`return _ctx.foo + _${helperNameMap[TO_STRING]}(bar)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -264,15 +300,15 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`
-    return ${CREATE_VNODE}("div", {
+    return _${helperNameMap[CREATE_VNODE]}("div", {
       id: "foo",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      ${CREATE_VNODE}("p", { "some-key": "foo" })
+      _${helperNameMap[CREATE_VNODE]}("p", { "some-key": "foo" })
     ], [
       foo,
-      ${CREATE_VNODE}("p")
+      _${helperNameMap[CREATE_VNODE]}("p")
     ])`)
     expect(code).toMatchSnapshot()
   })

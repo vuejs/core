@@ -15,7 +15,7 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_SLOT
-} from '../src/runtimeConstants'
+} from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
@@ -225,14 +225,14 @@ describe('compiler: transform', () => {
   test('should inject toString helper for interpolations', () => {
     const ast = parse(`{{ foo }}`)
     transform(ast, {})
-    expect(ast.imports).toContain(TO_STRING)
+    expect(ast.helpers).toContain(TO_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
     const ast = parse(`<!--foo-->`)
     transform(ast, {})
-    expect(ast.imports).toContain(CREATE_VNODE)
-    expect(ast.imports).toContain(COMMENT)
+    expect(ast.helpers).toContain(CREATE_VNODE)
+    expect(ast.helpers).toContain(COMMENT)
   })
 
   describe('root codegenNode', () => {
@@ -256,11 +256,11 @@ describe('compiler: transform', () => {
         expressions: [
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${OPEN_BLOCK}`
+            callee: OPEN_BLOCK
           },
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${CREATE_BLOCK}`,
+            callee: CREATE_BLOCK,
             arguments: args
           }
         ]
@@ -277,7 +277,7 @@ describe('compiler: transform', () => {
       expect(ast.codegenNode).toMatchObject({
         codegenNode: {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`
+          callee: RENDER_SLOT
         }
       })
     })
@@ -326,7 +326,7 @@ describe('compiler: transform', () => {
       const ast = transformWithCodegen(`<div/><div/>`)
       expect(ast.codegenNode).toMatchObject(
         createBlockMatcher([
-          `_${FRAGMENT}`,
+          FRAGMENT,
           `null`,
           [
             { type: NodeTypes.ELEMENT, tag: `div` },

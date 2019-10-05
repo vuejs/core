@@ -64,7 +64,10 @@ export function baseCompile(
     }
   })
 
-  return generate(ast, options)
+  return generate(ast, {
+    ...options,
+    prefixIdentifiers
+  })
 }
 
 // Also expose lower level APIs & types

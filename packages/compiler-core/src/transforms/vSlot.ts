@@ -24,7 +24,7 @@ import {
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { findDir, isTemplateNode, assert, isVSlot } from '../utils'
-import { CREATE_SLOTS, RENDER_LIST } from '../runtimeConstants'
+import { CREATE_SLOTS, RENDER_LIST } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
 
 const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>

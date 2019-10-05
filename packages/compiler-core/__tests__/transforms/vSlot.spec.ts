@@ -17,7 +17,7 @@ import {
   trackSlotScopes,
   trackVForSlotScopes
 } from '../../src/transforms/vSlot'
-import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeConstants'
+import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
@@ -360,7 +360,7 @@ describe('compiler: transform component slots', () => {
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${CREATE_SLOTS}`,
+      callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
           _compiled: `[true]`
@@ -451,7 +451,7 @@ describe('compiler: transform component slots', () => {
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${CREATE_SLOTS}`,
+      callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
           _compiled: `[true]`

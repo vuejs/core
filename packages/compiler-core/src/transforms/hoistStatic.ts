@@ -7,7 +7,7 @@ import {
   ElementTypes
 } from '../ast'
 import { TransformContext } from '../transform'
-import { APPLY_DIRECTIVES } from '../runtimeConstants'
+import { APPLY_DIRECTIVES } from '../runtimeHelpers'
 import { PropsExpression } from './transformElement'
 import { PatchFlags } from '@vue/shared'
 
@@ -41,7 +41,7 @@ function walk(
           flag === PatchFlags.TEXT
         ) {
           let codegenNode = child.codegenNode as CallExpression
-          if (codegenNode.callee.includes(APPLY_DIRECTIVES)) {
+          if (codegenNode.callee === APPLY_DIRECTIVES) {
             codegenNode = codegenNode.arguments[0] as CallExpression
           }
           const props = codegenNode.arguments[1] as
@@ -68,7 +68,7 @@ function walk(
 
 function getPatchFlag(node: ElementNode): number | undefined {
   let codegenNode = node.codegenNode as CallExpression
-  if (codegenNode.callee.includes(APPLY_DIRECTIVES)) {
+  if (codegenNode.callee === APPLY_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0] as CallExpression
   }
   const flag = codegenNode.arguments[3]

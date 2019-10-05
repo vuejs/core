@@ -30,7 +30,7 @@ import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT
-} from '../runtimeConstants'
+} from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 import { PropsExpression } from './transformElement'

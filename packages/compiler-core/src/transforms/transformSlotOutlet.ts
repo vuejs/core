@@ -8,7 +8,7 @@ import {
 import { isSlotOutlet } from '../utils'
 import { buildProps } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { RENDER_SLOT } from '../runtimeConstants'
+import { RENDER_SLOT } from '../runtimeHelpers'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {

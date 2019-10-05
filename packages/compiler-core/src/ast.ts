@@ -1,5 +1,6 @@
 import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
+import { CREATE_VNODE, RuntimeHelper } from './runtimeHelpers'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -76,8 +77,9 @@ export type TemplateChildNode =
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
-  imports: string[]
-  statements: string[]
+  helpers: RuntimeHelper[]
+  components: string[]
+  directives: string[]
   hoists: JSChildNode[]
   codegenNode: TemplateChildNode | JSChildNode | undefined
 }
@@ -92,6 +94,29 @@ export interface ElementNode extends Node {
   children: TemplateChildNode[]
   codegenNode: CallExpression | SimpleExpressionNode | undefined
 }
+
+export interface PlainElementNode extends ElementNode {
+  tagType: ElementTypes.ELEMENT
+  codegenNode: VNodeCodegenNode | VNodeWithDirectiveCodegenNode
+}
+
+export interface ComponentNode extends ElementNode {
+  tagType: ElementTypes.COMPONENT
+  codegenNode: VNodeCodegenNode | VNodeWithDirectiveCodegenNode
+}
+
+export interface SlotOutletNode extends ElementNode {
+  tagType: ElementTypes.SLOT
+  codegenNode: SlotOutletCodegenNode
+}
+
+export interface VNodeCodegenNode extends CallExpression {
+  callee: typeof CREATE_VNODE
+}
+
+export interface VNodeWithDirectiveCodegenNode extends CallExpression {}
+
+export interface SlotOutletCodegenNode extends CallExpression {}
 
 export interface TextNode extends Node {
   type: NodeTypes.TEXT
@@ -137,7 +162,12 @@ export interface InterpolationNode extends Node {
 // always dynamic
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
-  children: (SimpleExpressionNode | InterpolationNode | TextNode | string)[]
+  children: (
+    | SimpleExpressionNode
+    | InterpolationNode
+    | TextNode
+    | string
+    | RuntimeHelper)[]
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
@@ -146,8 +176,10 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  codegenNode: SequenceExpression
+  codegenNode: IfCodegenNode
 }
+
+export interface IfCodegenNode extends SequenceExpression {}
 
 export interface IfBranchNode extends Node {
   type: NodeTypes.IF_BRANCH
@@ -162,8 +194,10 @@ export interface ForNode extends Node {
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
-  codegenNode: SequenceExpression
+  codegenNode: ForCodegenNode
 }
+
+export interface ForCodegenNode extends SequenceExpression {}
 
 // We also include a number of JavaScript AST nodes for code generation.
 // The AST is an intentionally minimal subset just to meet the exact needs of
@@ -179,8 +213,13 @@ export type JSChildNode =
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
-  callee: string
-  arguments: (string | JSChildNode | TemplateChildNode | TemplateChildNode[])[]
+  callee: string | RuntimeHelper
+  arguments: (
+    | string
+    | RuntimeHelper
+    | JSChildNode
+    | TemplateChildNode
+    | TemplateChildNode[])[]
 }
 
 export interface ObjectExpression extends Node {

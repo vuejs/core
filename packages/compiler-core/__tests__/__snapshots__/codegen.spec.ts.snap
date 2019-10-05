@@ -17,15 +17,15 @@ exports[`compiler: codegen Element (callExpression + objectExpression + arrayExp
 "
 return function render() {
   with (this) {
-    return createVNode(\\"div\\", {
+    return _createVNode(\\"div\\", {
       id: \\"foo\\",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
+      _createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
     ], [
       foo,
-      createVNode(\\"p\\")
+      _createVNode(\\"p\\")
     ])
   }
 }"
@@ -36,6 +36,19 @@ exports[`compiler: codegen SequenceExpression 1`] = `
 return function render() {
   with (this) {
     return (foo, bar(baz))
+  }
+}"
+`;
+
+exports[`compiler: codegen assets 1`] = `
+"
+return function render() {
+  with (this) {
+    const _component_Foo = _resolveComponent(\\"Foo\\")
+    const _component_barbaz = _resolveComponent(\\"bar-baz\\")
+    const _directive_my_dir = _resolveDirective(\\"my_dir\\")
+    
+    return null
   }
 }"
 `;
@@ -72,7 +85,7 @@ exports[`compiler: codegen function mode preamble 1`] = `
 
 return function render() {
   with (this) {
-    const { helperOne: _helperOne, helperTwo: _helperTwo } = _Vue
+    const { createVNode: _createVNode, resolveDirective: _resolveDirective } = _Vue
     
     return null
   }
@@ -80,7 +93,7 @@ return function render() {
 `;
 
 exports[`compiler: codegen function mode preamble w/ prefixIdentifiers: true 1`] = `
-"const { helperOne, helperTwo } = Vue
+"const { createVNode, resolveDirective } = Vue
 
 return function render() {
   const _ctx = this
@@ -119,7 +132,7 @@ return function render() {
 `;
 
 exports[`compiler: codegen module mode preamble 1`] = `
-"import { helperOne, helperTwo } from \\"vue\\"
+"import { createVNode, resolveDirective } from \\"vue\\"
 
 export default function render() {
   const _ctx = this
@@ -132,18 +145,6 @@ exports[`compiler: codegen prefixIdentifiers: true should inject _ctx statement 
 return function render() {
   const _ctx = this
   return null
-}"
-`;
-
-exports[`compiler: codegen statements 1`] = `
-"
-return function render() {
-  with (this) {
-    const a = 1
-    const b = 2
-    
-    return null
-  }
 }"
 `;
 

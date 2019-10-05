@@ -19,7 +19,7 @@ import {
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
-import { OPEN_BLOCK, CREATE_BLOCK, MERGE_PROPS } from './runtimeConstants'
+import { OPEN_BLOCK, CREATE_BLOCK, MERGE_PROPS } from './runtimeHelpers'
 import { isString, isFunction } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 
@@ -216,4 +216,11 @@ export function injectProp(
       props
     ])
   }
+}
+
+export function toValidAssetId(
+  name: string,
+  type: 'component' | 'directive'
+): string {
+  return `_${type}_${name.replace(/[^\w]/g, '')}`
 }

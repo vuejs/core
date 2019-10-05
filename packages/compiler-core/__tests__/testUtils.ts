@@ -6,7 +6,7 @@ import {
   Namespaces,
   ElementTypes
 } from '../src'
-import { CREATE_VNODE } from '../src/runtimeConstants'
+import { CREATE_VNODE } from '../src/runtimeHelpers'
 import { isString } from '@vue/shared'
 
 const leadingBracketRE = /^\[/

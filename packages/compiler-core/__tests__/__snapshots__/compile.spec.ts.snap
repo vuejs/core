@@ -56,13 +56,13 @@ export default function render() {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
-    _toString(_ctx.world.burn()),
+    toString(_ctx.world.burn()),
     (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),
     (openBlock(), createBlock(Fragment, null, renderList(_ctx.list, (value, index) => {
       return (openBlock(), createBlock(\\"div\\", null, [
-        createVNode(\\"span\\", null, _toString(value + index), 1 /* TEXT */)
+        createVNode(\\"span\\", null, toString(value + index), 1 /* TEXT */)
       ]))
     }), 128 /* UNKEYED_FRAGMENT */))
   ], 2 /* CLASS */))

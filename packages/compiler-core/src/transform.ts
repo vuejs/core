@@ -14,7 +14,14 @@ import {
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
-import { TO_STRING, COMMENT, CREATE_VNODE, FRAGMENT } from './runtimeConstants'
+import {
+  TO_STRING,
+  COMMENT,
+  CREATE_VNODE,
+  FRAGMENT,
+  RuntimeHelper,
+  helperNameMap
+} from './runtimeHelpers'
 import { isVSlot, createBlockExpression, isSlotOutlet } from './utils'
 import { hoistStatic } from './transforms/hoistStatic'
 
@@ -57,8 +64,9 @@ export interface TransformOptions {
 
 export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
-  imports: Set<string>
-  statements: Set<string>
+  helpers: Set<RuntimeHelper>
+  components: Set<string>
+  directives: Set<string>
   hoists: JSChildNode[]
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -70,7 +78,8 @@ export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
-  helper(name: string): string
+  helper<T extends RuntimeHelper>(name: T): T
+  helperString(name: RuntimeHelper): string
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
   onNodeRemoved: () => void
@@ -91,8 +100,9 @@ function createTransformContext(
 ): TransformContext {
   const context: TransformContext = {
     root,
-    imports: new Set(),
-    statements: new Set(),
+    helpers: new Set(),
+    components: new Set(),
+    directives: new Set(),
     hoists: [],
     identifiers: {},
     scopes: {
@@ -110,8 +120,14 @@ function createTransformContext(
     currentNode: root,
     childIndex: 0,
     helper(name) {
-      context.imports.add(name)
-      return prefixIdentifiers ? name : `_${name}`
+      context.helpers.add(name)
+      return name
+    },
+    helperString(name) {
+      return (
+        (context.prefixIdentifiers ? `` : `_`) +
+        helperNameMap[context.helper(name)]
+      )
     },
     replaceNode(node) {
       /* istanbul ignore if */
@@ -242,8 +258,9 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   }
 
   // finalize meta information
-  root.imports = [...context.imports]
-  root.statements = [...context.statements]
+  root.helpers = [...context.helpers]
+  root.components = [...context.components]
+  root.directives = [...context.directives]
   root.hoists = context.hoists
 }
 

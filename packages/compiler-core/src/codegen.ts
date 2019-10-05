@@ -23,10 +23,19 @@ import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
-  loadDep
+  loadDep,
+  toValidAssetId
 } from './utils'
-import { isString, isArray } from '@vue/shared'
-import { TO_STRING, CREATE_VNODE, COMMENT } from './runtimeConstants'
+import { isString, isArray, isSymbol } from '@vue/shared'
+import {
+  TO_STRING,
+  CREATE_VNODE,
+  COMMENT,
+  helperNameMap,
+  RESOLVE_COMPONENT,
+  RESOLVE_DIRECTIVE,
+  RuntimeHelper
+} from './runtimeHelpers'
 
 type CodegenNode = TemplateChildNode | JSChildNode
 
@@ -65,7 +74,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   offset: number
   indentLevel: number
   map?: SourceMapGenerator
-  helper(name: string): string
+  helper(key: RuntimeHelper): string
   push(code: string, node?: CodegenNode, openOnly?: boolean): void
   resetMapping(loc: SourceLocation): void
   indent(): void
@@ -77,7 +86,7 @@ function createCodegenContext(
   ast: RootNode,
   {
     mode = 'function',
-    prefixIdentifiers = false,
+    prefixIdentifiers = mode === 'module',
     sourceMap = false,
     filename = `template.vue.html`
   }: CodegenOptions
@@ -100,7 +109,8 @@ function createCodegenContext(
         ? undefined
         : new (loadDep('source-map')).SourceMapGenerator(),
 
-    helper(name) {
+    helper(key) {
+      const name = helperNameMap[key]
       return prefixIdentifiers ? name : `_${name}`
     },
     push(code, node, openOnly) {
@@ -172,8 +182,16 @@ export function generate(
   options: CodegenOptions = {}
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
-  const { mode, push, prefixIdentifiers, indent, deindent, newline } = context
-  const hasImports = ast.imports.length
+  const {
+    mode,
+    push,
+    helper,
+    prefixIdentifiers,
+    indent,
+    deindent,
+    newline
+  } = context
+  const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
 
   // preambles
@@ -182,9 +200,9 @@ export function generate(
     // In prefix mode, we place the const declaration at top so it's done
     // only once; But if we not prefixing, we place the declaration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
-    if (hasImports) {
+    if (hasHelpers) {
       if (prefixIdentifiers) {
-        push(`const { ${ast.imports.join(', ')} } = Vue\n`)
+        push(`const { ${ast.helpers.map(helper).join(', ')} } = Vue\n`)
       } else {
         // "with" mode.
         // save Vue in a separate variable to avoid collision
@@ -193,7 +211,7 @@ export function generate(
         // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
         if (ast.hoists.length) {
-          push(`const _${CREATE_VNODE} = Vue.createVNode\n`)
+          push(`const _${helperNameMap[CREATE_VNODE]} = Vue.createVNode\n`)
         }
       }
     }
@@ -202,8 +220,8 @@ export function generate(
     push(`return `)
   } else {
     // generate import statements for helpers
-    if (hasImports) {
-      push(`import { ${ast.imports.join(', ')} } from "vue"\n`)
+    if (hasHelpers) {
+      push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
     context.newline()
@@ -219,8 +237,12 @@ export function generate(
     indent()
     // function mode const declarations should be inside with block
     // also they should be renamed to avoid collision with user properties
-    if (hasImports) {
-      push(`const { ${ast.imports.map(n => `${n}: _${n}`).join(', ')} } = _Vue`)
+    if (hasHelpers) {
+      push(
+        `const { ${ast.helpers
+          .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
+          .join(', ')} } = _Vue`
+      )
       newline()
       newline()
     }
@@ -230,11 +252,13 @@ export function generate(
   }
 
   // generate asset resolution statements
-  if (ast.statements.length) {
-    ast.statements.forEach(s => {
-      push(s)
-      newline()
-    })
+  if (ast.components.length) {
+    genAssets(ast.components, 'component', context)
+  }
+  if (ast.directives.length) {
+    genAssets(ast.directives, 'directive', context)
+  }
+  if (ast.components.length || ast.directives.length) {
     newline()
   }
 
@@ -257,6 +281,23 @@ export function generate(
     ast,
     code: context.code,
     map: context.map ? context.map.toJSON() : undefined
+  }
+}
+
+function genAssets(
+  assets: string[],
+  type: 'component' | 'directive',
+  context: CodegenContext
+) {
+  const resolver = context.helper(
+    type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
+  )
+  for (let i = 0; i < assets.length; i++) {
+    const id = assets[i]
+    context.push(
+      `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
+    )
+    context.newline()
   }
 }
 
@@ -297,7 +338,7 @@ function genNodeListAsArray(
 }
 
 function genNodeList(
-  nodes: (string | CodegenNode | TemplateChildNode[])[],
+  nodes: (string | RuntimeHelper | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
   multilines: boolean = false
 ) {
@@ -322,9 +363,16 @@ function genNodeList(
   }
 }
 
-function genNode(node: CodegenNode | string, context: CodegenContext) {
+function genNode(
+  node: CodegenNode | RuntimeHelper | string,
+  context: CodegenContext
+) {
   if (isString(node)) {
     context.push(node)
+    return
+  }
+  if (isSymbol(node)) {
+    context.push(context.helper(node))
     return
   }
   switch (node.type) {
@@ -450,7 +498,10 @@ function genComment(node: CommentNode, context: CodegenContext) {
 
 // JavaScript
 function genCallExpression(node: CallExpression, context: CodegenContext) {
-  context.push(node.callee + `(`, node, true)
+  const callee = isString(node.callee)
+    ? node.callee
+    : context.helper(node.callee)
+  context.push(callee + `(`, node, true)
   genNodeList(node.arguments, context)
   context.push(`)`)
 }
