@@ -5,7 +5,7 @@ import { h } from '../src/h'
 
 // mock React just for TSX testing purposes
 const React = {
-  createElement: () => { }
+  createElement: () => {}
 }
 
 test('createComponent type inference', () => {
@@ -66,8 +66,8 @@ test('createComponent type inference', () => {
       return h('div', this.bb)
     }
   })
-    // test TSX props inference
-    ; (<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']}/>)
+  // test TSX props inference
+  ;(<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']}/>)
 })
 
 test('type inference w/ optional props declaration', () => {
@@ -85,14 +85,14 @@ test('type inference w/ optional props declaration', () => {
       return h('div', this.msg)
     }
   })
-    ; (<Comp msg="hello" />)
+  ;(<Comp msg="hello"/>)
 })
 
 test('type inference w/ direct setup function', () => {
   const Comp = createComponent((props: { msg: string }) => {
     return () => <div>{props.msg}</div>
   })
-    ; (<Comp msg="hello" />)
+  ;(<Comp msg="hello"/>)
 })
 
 test('type inference w/ array props declaration', () => {
@@ -113,7 +113,7 @@ test('type inference w/ array props declaration', () => {
       this.c
     }
   })
-    ; (<Comp a={1} b={2} />)
+  ;(<Comp a={1} b={2}/>)
 })
 
 test('with legacy options', () => {
