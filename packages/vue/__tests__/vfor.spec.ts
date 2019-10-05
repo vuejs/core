@@ -1,8 +1,6 @@
 import * as Vue from '../src'
-import { createApp, reactive, onMounted } from '../src'
-import { nextTick } from '../../runtime-test/src'
+import { createApp, reactive, nextTick } from '../src'
 ;(window as any).Vue = Vue
-const click = jest.fn()
 
 test('render new items added', async () => {
   const container = document.createElement('div')
@@ -24,12 +22,7 @@ test('render new items added', async () => {
       function addItem() {
         const number = Number(testList.length) + 1
         testList.push(number)
-        click()
       }
-
-      onMounted(() => {
-        addItem()
-      })
 
       return {
         testList,
@@ -38,6 +31,7 @@ test('render new items added', async () => {
     }
   }
   createApp().mount(App, container)
+  container!.querySelector('button')!.click()
   await nextTick()
   let text = container!.querySelector('ul')!.innerHTML
 
