@@ -22,10 +22,17 @@ test('createComponent type inference', () => {
         default: 'hello'
       },
       // explicit type casting
-      cc: (Array as any) as PropType<string[]>,
+      cc: Array as PropType<string[]>,
       // required + type casting
       dd: {
-        type: (Array as any) as PropType<string[]>,
+        type: Array as PropType<string[]>,
+        required: true
+      },
+      // explicit type casting with constructor
+      ccc: Array as () => string[],
+      // required + contructor type casting
+      ddd: {
+        type: Array as () => string[],
         required: true
       }
     } as const, // required to narrow for conditional check
@@ -60,7 +67,7 @@ test('createComponent type inference', () => {
     }
   })
   // test TSX props inference
-  ;(<MyComponent a={1} b="foo" dd={['foo']}/>)
+  ;(<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']}/>)
 })
 
 test('type inference w/ optional props declaration', () => {
