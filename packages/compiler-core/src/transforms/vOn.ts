@@ -35,7 +35,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
       eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }
   } else {
-    // already a compound epxression.
+    // already a compound expression.
     eventName = arg
     eventName.children.unshift(`"on" + (`)
     eventName.children.push(`)`)
