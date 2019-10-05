@@ -135,7 +135,7 @@ export const transformFor = createStructuralDirectiveTransform(
             }
           } else if (isTemplate) {
             // <template v-for="...">
-            // should genereate a fragment block for each loop
+            // should generate a fragment block for each loop
             childBlock = createBlockExpression(
               [
                 helper(FRAGMENT),
