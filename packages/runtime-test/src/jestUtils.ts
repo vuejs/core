@@ -57,11 +57,12 @@ export function mockWarn() {
           found++
         }
       })
-      if (found > 0) {
+
+      if (found === n) {
         return {
           pass: true,
           message: () =>
-            `expected "${received}" not to have been warned ${n} times.`
+            `expected "${received}" to have been warned ${n} times.`
         }
       } else {
         return {
