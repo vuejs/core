@@ -29,6 +29,7 @@ const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildAllMatching = args.all || args.a
+const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 ;(async () => {
   if (!targets.length) {
     await buildAll(allTargets)
@@ -60,11 +61,16 @@ async function build(target) {
     [
       '-c',
       '--environment',
-      `NODE_ENV:${env},` +
-        `TARGET:${target}` +
-        (formats ? `,FORMATS:${formats}` : ``) +
-        (args.types ? `,TYPES:true` : ``) +
-        (prodOnly ? `,PROD_ONLY:true` : ``)
+      [
+        `COMMIT:${commit}`,
+        `NODE_ENV:${env}`,
+        `TARGET:${target}`,
+        formats ? `FORMATS:${formats}` : ``,
+        args.types ? `TYPES:true` : ``,
+        prodOnly ? `PROD_ONLY:true` : ``
+      ]
+        .filter(_ => _)
+        .join(',')
     ],
     { stdio: 'inherit' }
   )

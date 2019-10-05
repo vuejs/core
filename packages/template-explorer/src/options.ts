@@ -11,6 +11,14 @@ const App = {
   setup() {
     return () => [
       h('h1', `Vue 3 Template Explorer`),
+      h(
+        'a',
+        {
+          href: `https://github.com/vuejs/vue-next/tree/${__COMMIT__}`,
+          target: `_blank`
+        },
+        `@${__COMMIT__}`
+      ),
       h('div', { id: 'options' }, [
         // mode selection
         h('span', { class: 'options-group' }, [

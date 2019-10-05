@@ -19,6 +19,7 @@ body {
 h1 {
   font-size: 18px;
   display: inline-block;
+  margin-right: 15px;
 }
 
 #options {
@@ -30,8 +31,13 @@ h1 {
   margin-right: 30px;
 }
 
-#header span, #header label, #header input {
+#header span, #header label, #header input, #header a {
   display: inline-block;
+}
+
+#header a {
+  font-weight: 600;
+  color: rgb(101, 163, 221);
 }
 
 #header .label {

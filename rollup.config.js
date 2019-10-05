@@ -133,6 +133,7 @@ function createConfig(output, plugins = []) {
 
 function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
   return replace({
+    __COMMIT__: `"${process.env.COMMIT}"`,
     __DEV__: isBunlderESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
