@@ -18,7 +18,7 @@ type EventValue = (Function | Function[]) & {
 let _getNow: () => number = Date.now
 
 // Determine what event timestamp the browser is using. Annoyingly, the
-// timestamp can either be hi-res ( relative to poge load) or low-res
+// timestamp can either be hi-res ( relative to page load) or low-res
 // (relative to UNIX epoch), so in order to compare time we have to use the
 // same timestamp type when saving the flush timestamp.
 if (
@@ -32,7 +32,7 @@ if (
 }
 
 // To avoid the overhead of repeatedly calling performance.now(), we cache
-// and use the same timestamp for all event listners attached in the same tick.
+// and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
 const p = Promise.resolve()
 const reset = () => {
