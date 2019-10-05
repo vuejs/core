@@ -135,7 +135,7 @@ export const errorMessages: { [code: number]: string } = {
     'Interpolation end sign was not found.',
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
     'End bracket for dynamic directive argument was not found. ' +
-    'Note that dynamic directive argument connot contain spaces.',
+    'Note that dynamic directive argument cannot contain spaces.',
 
   // transform errors
   [ErrorCodes.X_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
