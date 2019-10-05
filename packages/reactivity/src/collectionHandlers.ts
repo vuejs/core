@@ -38,7 +38,7 @@ function add(this: any, value: any) {
   const hadKey = proto.has.call(target, value)
   const result = proto.add.call(target, value)
   if (!hadKey) {
-    const extraInfo = __DEV__ ? { value } : undefined
+    const extraInfo = __DEV__ ? { value } : void 0
     trigger(target, OperationTypes.ADD, value, extraInfo)
   }
   return result
@@ -53,7 +53,7 @@ function set(this: any, key: any, value: any) {
   const result = proto.set.call(target, key, value)
   if (value !== oldValue) {
     const OperationType = !hadKey ? OperationTypes.ADD : OperationTypes.SET
-    const extraInfo = __DEV__ ? { oldValue, newValue: value } : undefined
+    const extraInfo = __DEV__ ? { oldValue, newValue: value } : void 0
     trigger(target, OperationType, key, extraInfo)
   }
   return result
@@ -67,7 +67,7 @@ function deleteEntry(this: any, key: any) {
   // forward the operation before queueing reactions
   const result = proto.delete.call(target, key)
   if (hadKey) {
-    const extraInfo = __DEV__ ? { oldValue } : undefined
+    const extraInfo = __DEV__ ? { oldValue } : void 0
     trigger(target, OperationTypes.DELETE, key, extraInfo)
   }
   return result
@@ -81,7 +81,7 @@ function clear(this: any) {
   // forward the operation before queueing reactions
   const result = proto.clear.call(target)
   if (hadItems) {
-    const extraInfo = __DEV__ ? { oldTarget } : undefined
+    const extraInfo = __DEV__ ? { oldTarget } : void 0
     trigger(target, OperationTypes.CLEAR, void 0, extraInfo)
   }
   return result

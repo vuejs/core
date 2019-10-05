@@ -48,7 +48,7 @@ function set(
   // don't trigger if target is something up in the prototype chain of original
   if (target === toRaw(receiver) && (!hadKey || value !== oldValue)) {
     const operationType = !hadKey ? OperationTypes.ADD : OperationTypes.SET
-    const extraInfo = __DEV__ ? { oldValue, newValue: value } : undefined
+    const extraInfo = __DEV__ ? { oldValue, newValue: value } : void 0
     trigger(target, operationType, key, extraInfo)
   }
   return result
@@ -59,7 +59,7 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
   if (hadKey) {
-    const extraInfo = __DEV__ ? { oldValue } : undefined
+    const extraInfo = __DEV__ ? { oldValue } : void 0
     trigger(target, OperationTypes.DELETE, key, extraInfo)
   }
   return result
