@@ -14,7 +14,7 @@ export const transformBind: DirectiveTransform = (dir, context) => {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
   }
   // .prop is no longer necessary due to new patch behavior
-  // .sync is replced by v-model:arg
+  // .sync is replaced by v-model:arg
   if (modifiers.includes('camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
       if (arg.isStatic) {
