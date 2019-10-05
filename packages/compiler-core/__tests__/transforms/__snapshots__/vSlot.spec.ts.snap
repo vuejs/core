@@ -71,7 +71,7 @@ return function render() {
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, createSlots({ _compiled: true }, [
-    _ctx.ok)
+    (_ctx.ok)
       ? {
           name: \\"one\\",
           fn: (props) => [toString(props)]

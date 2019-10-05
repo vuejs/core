@@ -35,7 +35,7 @@ return function render() {
     class: _ctx.bar.baz
   }, [
     toString(_ctx.world.burn()),
-    (openBlock(), _ctx.ok)
+    (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),
     (openBlock(), createBlock(Fragment, null, renderList(_ctx.list, (value, index) => {
@@ -57,7 +57,7 @@ export default function render() {
     class: _ctx.bar.baz
   }, [
     _toString(_ctx.world.burn()),
-    (openBlock(), _ctx.ok)
+    (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),
     (openBlock(), createBlock(Fragment, null, renderList(_ctx.list, (value, index) => {
