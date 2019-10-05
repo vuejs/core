@@ -29,7 +29,7 @@ export function renderComponentRoot(
   currentRenderingInstance = instance
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode((instance.render as Function).call(renderProxy))
+      result = normalizeVNode(instance.render!.call(renderProxy))
     } else {
       // functional
       const render = Component as FunctionalComponent
@@ -66,12 +66,12 @@ export function shouldUpdateComponent(
     }
     if (patchFlag & PatchFlags.FULL_PROPS) {
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps as Data, nextProps as Data)
+      return hasPropsChanged(prevProps!, nextProps!)
     } else if (patchFlag & PatchFlags.PROPS) {
-      const dynamicProps = nextVNode.dynamicProps as string[]
+      const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {
         const key = dynamicProps[i]
-        if ((nextProps as any)[key] !== (prevProps as any)[key]) {
+        if (nextProps![key] !== prevProps![key]) {
           return true
         }
       }

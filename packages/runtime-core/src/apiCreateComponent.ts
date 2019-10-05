@@ -77,5 +77,5 @@ export function createComponent<
 
 // implementation, close to no-op
 export function createComponent(options: any) {
-  return isFunction(options) ? { setup: options } : (options as any)
+  return isFunction(options) ? { setup: options } : options
 }

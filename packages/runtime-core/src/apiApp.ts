@@ -1,4 +1,4 @@
-import { Component, Data, ComponentInternalInstance } from './component'
+import { Component, Data } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive } from './directives'
@@ -142,7 +142,7 @@ export function createAppAPI<HostNode, HostElement>(
           vnode.appContext = context
           render(vnode, rootContainer)
           isMounted = true
-          return (vnode.component as ComponentInternalInstance).renderProxy
+          return vnode.component!.renderProxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted. Create a new app instance instead.`

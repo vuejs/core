@@ -38,7 +38,7 @@ export const PublicInstanceProxyHandlers = {
       return renderContext[key]
     } else if (hasOwn(props, key)) {
       // return the value from propsProxy for ref unwrapping and readonly
-      return (propsProxy as any)[key]
+      return propsProxy![key]
     } else {
       // TODO simplify this?
       switch (key) {
