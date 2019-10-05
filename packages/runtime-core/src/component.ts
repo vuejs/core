@@ -225,7 +225,7 @@ export function setupStatefulComponent(
 ) {
   const Component = instance.type as ComponentOptions
   // 1. create render proxy
-  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers) as any
+  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
@@ -255,7 +255,7 @@ export function setupStatefulComponent(
       if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
-        instance.asyncDep = setupResult as Promise<any>
+        instance.asyncDep = setupResult
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
@@ -358,10 +358,9 @@ export const SetupProxySymbol = Symbol()
 const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
 ;['attrs', 'slots', 'refs'].forEach((type: string) => {
   SetupProxyHandlers[type] = {
-    get: (instance, key) => (instance[type] as any)[key],
-    has: (instance, key) =>
-      key === SetupProxySymbol || key in (instance[type] as any),
-    ownKeys: instance => Reflect.ownKeys(instance[type] as any),
+    get: (instance, key) => instance[type][key],
+    has: (instance, key) => key === SetupProxySymbol || key in instance[type],
+    ownKeys: instance => Reflect.ownKeys(instance[type]),
     // this is necessary for ownKeys to work properly
     getOwnPropertyDescriptor: (instance, key) =>
       Reflect.getOwnPropertyDescriptor(instance[type], key),
@@ -379,6 +378,6 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     slots: new Proxy(instance, SetupProxyHandlers.slots),
     refs: new Proxy(instance, SetupProxyHandlers.refs),
     emit: instance.emit
-  } as any
+  }
   return __DEV__ ? Object.freeze(context) : context
 }

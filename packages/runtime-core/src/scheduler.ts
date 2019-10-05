@@ -53,11 +53,11 @@ function flushJobs(seenJobs?: JobCountMap) {
   }
   while ((job = queue.shift())) {
     if (__DEV__) {
-      const seen = seenJobs as JobCountMap
+      const seen = seenJobs!
       if (!seen.has(job)) {
         seen.set(job, 1)
       } else {
-        const count = seen.get(job) as number
+        const count = seen.get(job)!
         if (count > RECURSION_LIMIT) {
           throw new Error(
             'Maximum recursive updates exceeded. ' +

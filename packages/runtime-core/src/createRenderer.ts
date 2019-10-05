@@ -60,12 +60,8 @@ function createDevEffectOptions(
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
-    onTrack: instance.rtc
-      ? e => invokeHooks(instance.rtc as Function[], e)
-      : void 0,
-    onTrigger: instance.rtg
-      ? e => invokeHooks(instance.rtg as Function[], e)
-      : void 0
+    onTrack: instance.rtc ? e => invokeHooks(instance.rtc!, e) : void 0,
+    onTrigger: instance.rtg ? e => invokeHooks(instance.rtg!, e) : void 0
   }
 }
 
@@ -449,7 +445,7 @@ export function createRenderer<
         // bail out and go through a full diff because we need to unset the old key
         if (patchFlag & PatchFlags.PROPS) {
           // if the flag is present then dynamicProps must be non-null
-          const propsToUpdate = n2.dynamicProps as string[]
+          const propsToUpdate = n2.dynamicProps!
           for (let i = 0; i < propsToUpdate.length; i++) {
             const key = propsToUpdate[i]
             const prev = oldProps[key]
@@ -495,7 +491,7 @@ export function createRenderer<
 
     if (dynamicChildren != null) {
       // children fast path
-      const olddynamicChildren = n1.dynamicChildren as HostVNode[]
+      const olddynamicChildren = n1.dynamicChildren!
       for (let i = 0; i < dynamicChildren.length; i++) {
         patch(
           olddynamicChildren[i],
@@ -579,12 +575,10 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const fragmentStartAnchor = (n2.el = n1
-      ? n1.el
-      : hostCreateComment('')) as HostNode
+    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))!
     const fragmentEndAnchor = (n2.anchor = n1
       ? n1.anchor
-      : hostCreateComment('')) as HostNode
+      : hostCreateComment(''))!
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
@@ -647,7 +641,7 @@ export function createRenderer<
       }
     } else {
       // update content
-      const target = (n2.target = n1.target) as HostElement
+      const target = (n2.target = n1.target)!
       if (patchFlag === PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
@@ -783,7 +777,7 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const suspense = (n2.suspense = n1.suspense) as HostSuspsenseBoundary
+    const suspense = (n2.suspense = n1.suspense)!
     suspense.vnode = n2
     const { content, fallback } = normalizeSuspenseChildren(n2)
     const oldSubTree = suspense.subTree
@@ -959,8 +953,7 @@ export function createRenderer<
         isSVG
       )
     } else {
-      const instance = (n2.component =
-        n1.component) as ComponentInternalInstance
+      const instance = (n2.component = n1.component)!
 
       if (shouldUpdateComponent(n1, n2, optimized)) {
         if (
@@ -991,12 +984,7 @@ export function createRenderer<
       }
     }
     if (n2.ref !== null && parentComponent !== null) {
-      setRef(
-        n2.ref,
-        n1 && n1.ref,
-        parentComponent,
-        (n2.component as ComponentInternalInstance).renderProxy
-      )
+      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.component!.renderProxy)
     }
   }
 
@@ -1601,7 +1589,7 @@ export function createRenderer<
       return
     }
     if (__FEATURE_SUSPENSE__ && vnode.type === Suspense) {
-      const suspense = vnode.suspense as SuspenseBoundary
+      const suspense = vnode.suspense!
       move(
         suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
         container,
@@ -1611,14 +1599,14 @@ export function createRenderer<
       return
     }
     if (vnode.type === Fragment) {
-      hostInsert(vnode.el as HostNode, container, anchor)
+      hostInsert(vnode.el!, container, anchor)
       const children = vnode.children as HostVNode[]
       for (let i = 0; i < children.length; i++) {
         move(children[i], container, anchor)
       }
-      hostInsert(vnode.anchor as HostNode, container, anchor)
+      hostInsert(vnode.anchor!, container, anchor)
     } else {
-      hostInsert(vnode.el as HostNode, container, anchor)
+      hostInsert(vnode.el!, container, anchor)
     }
   }
 
@@ -1677,7 +1665,7 @@ export function createRenderer<
     }
 
     if (doRemove) {
-      hostRemove(vnode.el as HostNode)
+      hostRemove(vnode.el!)
       if (anchor != null) hostRemove(anchor)
     }
 
@@ -1742,19 +1730,9 @@ export function createRenderer<
     doRemove?: boolean
   ) {
     suspense.isUnmounted = true
-    unmount(
-      suspense.subTree as HostVNode,
-      parentComponent,
-      parentSuspense,
-      doRemove
-    )
+    unmount(suspense.subTree, parentComponent, parentSuspense, doRemove)
     if (!suspense.isResolved) {
-      unmount(
-        suspense.fallbackTree as HostVNode,
-        parentComponent,
-        parentSuspense,
-        doRemove
-      )
+      unmount(suspense.fallbackTree, parentComponent, parentSuspense, doRemove)
     }
   }
 
@@ -1784,7 +1762,7 @@ export function createRenderer<
         suspense.isResolved ? suspense.subTree : suspense.fallbackTree
       )
     }
-    return hostNextSibling((anchor || el) as HostNode)
+    return hostNextSibling((anchor || el)!)
   }
 
   function setRef(

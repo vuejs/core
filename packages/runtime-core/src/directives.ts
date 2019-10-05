@@ -55,13 +55,13 @@ function applyDirective(
   arg?: string,
   modifiers?: DirectiveModifiers
 ) {
-  let valueCacheForDir = valueCache.get(directive) as WeakMap<VNode, any>
+  let valueCacheForDir = valueCache.get(directive)!
   if (!valueCacheForDir) {
     valueCacheForDir = new WeakMap<VNode, any>()
     valueCache.set(directive, valueCacheForDir)
   }
   for (const key in directive) {
-    const hook = directive[key as keyof Directive] as DirectiveHook
+    const hook = directive[key as keyof Directive]!
     const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue
@@ -85,7 +85,7 @@ function applyDirective(
     }
     const existing = props[hookKey]
     props[hookKey] = existing
-      ? [].concat(existing as any, vnodeHook as any)
+      ? [].concat(existing, vnodeHook as any)
       : vnodeHook
   }
 }
