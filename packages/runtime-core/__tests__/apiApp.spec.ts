@@ -124,10 +124,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveDirective('foo-bar') as any
+        const FooBar = resolveDirective('foo-bar')!
         return () => {
           // resolve in render
-          const BarBaz = resolveDirective('bar-baz') as any
+          const BarBaz = resolveDirective('bar-baz')!
           return applyDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       }

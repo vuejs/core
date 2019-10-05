@@ -517,7 +517,7 @@ describe('renderer: suspense', () => {
 
     const Comp = {
       setup() {
-        const error = ref<any>(null)
+        const error = ref<Error | null>(null)
         onErrorCaptured(e => {
           error.value = e
           return true
