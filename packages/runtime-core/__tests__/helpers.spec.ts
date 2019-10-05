@@ -8,8 +8,9 @@ describe('toHandlers', () => {
     toHandlers((null as unknown) as any)
     toHandlers((undefined as unknown) as any)
 
-    // TODO: toHaveBeenWarnedTimes here will take any number and pass. That doesn't seem correct.
-    expect('v-on with no argument expects an object value.').toHaveBeenWarned()
+    expect(
+      'v-on with no argument expects an object value.'
+    ).toHaveBeenWarnedTimes(2)
   })
 
   it('should properly change object keys', () => {
