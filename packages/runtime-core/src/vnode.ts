@@ -19,7 +19,8 @@ export const Text = __DEV__ ? Symbol('Text') : Symbol()
 export const Comment = __DEV__ ? Symbol('Empty') : Symbol()
 export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
 export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
-export const vnodeSymbol = __DEV__ ? Symbol('isVNode') : Symbol()
+
+export const vnodeSymbol = Symbol()
 
 export type VNodeTypes =
   | string
