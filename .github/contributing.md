@@ -66,7 +66,7 @@ Packages to build can be specified with fuzzy matching:
 yarn build runtime-core
 
 # build all packages matching "runtime"
-yarn build runtime
+yarn build runtime --all
 ```
 
 By default, each package will be built in multiple distribution formats as specified in the `buildOptions.formats` field in its `package.json`. These can be overwritten via the `-f` flag. The following formats are supported:
