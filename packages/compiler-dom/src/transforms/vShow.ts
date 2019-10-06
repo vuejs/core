@@ -28,6 +28,7 @@ export const transformShow = createStructuralDirectiveTransform(
     const exp = context.hoist(
       createSimpleExpression('{"display":none}', false, dir.loc)
     )
+    const empty = context.hoist(createObjectExpression([], dir.loc))
 
     node.props.push({
       type: NodeTypes.DIRECTIVE,
@@ -36,8 +37,10 @@ export const transformShow = createStructuralDirectiveTransform(
       exp: createConditionalExpression(
         dir.exp,
         exp,
-        createSimpleExpression('', true, dir.loc)
-      ),
+        empty
+      ) as any /* DONT like this, is the `exp` required to be
+        Simple or Compound expression?
+      */,
       modifiers: [],
       loc: dir.loc
     })
