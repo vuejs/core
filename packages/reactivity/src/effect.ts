@@ -131,7 +131,7 @@ export function track(
       targetMap.set(target, (depsMap = new Map()))
     }
     let dep = depsMap.get(key!)
-    if (!dep) {
+    if (dep === void 0) {
       depsMap.set(key!, (dep = new Set()))
     }
     if (!dep.has(effect)) {

@@ -4,9 +4,10 @@ import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
 export const refSymbol = Symbol()
+export type RefSymbol = typeof refSymbol
 
 export interface Ref<T> {
-  _isRef: symbol
+  _isRef: RefSymbol
   value: UnwrapNestedRefs<T>
 }
 
