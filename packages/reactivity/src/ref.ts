@@ -77,9 +77,7 @@ export type UnwrapRef<T> = {
 }[T extends Ref<any>
   ? 'ref'
   : T extends Array<any>
-  ? 'array'
-  : T extends BailTypes
-  ? 'stop' // bail out on types that shouldn't be unwrapped
-  : T extends object
-  ? 'object'
-  : 'stop']
+    ? 'array'
+    : T extends BailTypes
+      ? 'stop' // bail out on types that shouldn't be unwrapped
+      : T extends object ? 'object' : 'stop']
