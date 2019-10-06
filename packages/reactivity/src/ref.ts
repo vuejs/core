@@ -68,6 +68,7 @@ type BailTypes =
   | WeakMap<any, any>
   | WeakSet<any>
 
+// Recursively unwraps nested value bindings.
 export type UnwrapRef<T> = {
   ref: T extends Ref<infer V> ? UnwrapRef<V> : T
   array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
@@ -78,7 +79,7 @@ export type UnwrapRef<T> = {
   : T extends Array<any>
   ? 'array'
   : T extends BailTypes
-  ? 'stop'
+  ? 'stop' // bail out on types that shouldn't be unwrapped
   : T extends object
   ? 'object'
   : 'stop']
