@@ -45,7 +45,7 @@ export function computed<T>(
     }
   })
   return {
-    _isRef: refSymbol,
+    [refSymbol]: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
