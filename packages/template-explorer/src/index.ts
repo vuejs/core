@@ -4,10 +4,16 @@ import { compilerOptions, initOptions } from './options'
 import { watch } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
 
-const self = window as any
+declare global {
+  interface Window {
+    monaco: typeof m
+    _deps: any
+    init: () => void
+  }
+}
 
-self.init = () => {
-  const monaco = (window as any).monaco as typeof m
+window.init = () => {
+  const monaco = window.monaco
   const persistedState = JSON.parse(
     decodeURIComponent(window.location.hash.slice(1)) || `{}`
   )
@@ -28,10 +34,8 @@ self.init = () => {
       monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [])
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new self._deps['source-map'].SourceMapConsumer(
-        map
-      ) as SourceMapConsumer
-      lastSuccessfulMap.computeColumnSpans()
+      lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
+      lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
       console.error(e)
     }
@@ -71,7 +75,7 @@ self.init = () => {
     }
   }
 
-  const sharedEditorOptions = {
+  const sharedEditorOptions: m.editor.IEditorConstructionOptions = {
     theme: 'vs-dark',
     fontSize: 14,
     wordWrap: 'on',
@@ -81,30 +85,24 @@ self.init = () => {
     minimap: {
       enabled: false
     }
-  } as const
+  }
 
-  const editor = monaco.editor.create(
-    document.getElementById('source') as HTMLElement,
-    {
-      value: persistedState.src || `<div>Hello World!</div>`,
-      language: 'html',
-      ...sharedEditorOptions
-    }
-  )
+  const editor = monaco.editor.create(document.getElementById('source')!, {
+    value: persistedState.src || `<div>Hello World!</div>`,
+    language: 'html',
+    ...sharedEditorOptions
+  })
 
   editor.getModel()!.updateOptions({
     tabSize: 2
   })
 
-  const output = monaco.editor.create(
-    document.getElementById('output') as HTMLElement,
-    {
-      value: '',
-      language: 'javascript',
-      readOnly: true,
-      ...sharedEditorOptions
-    }
-  )
+  const output = monaco.editor.create(document.getElementById('output')!, {
+    value: '',
+    language: 'javascript',
+    readOnly: true,
+    ...sharedEditorOptions
+  })
   output.getModel()!.updateOptions({
     tabSize: 2
   })
@@ -207,7 +205,10 @@ self.init = () => {
   watch(reCompile)
 }
 
-function debounce<T extends Function>(fn: T, delay: number = 300): T {
+function debounce<T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number = 300
+): T {
   let prevTimer: NodeJS.Timeout | null = null
   return ((...args: any[]) => {
     if (prevTimer) {
