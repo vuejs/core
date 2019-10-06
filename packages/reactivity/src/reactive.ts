@@ -35,7 +35,7 @@ const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
-    value._isVNode !== vnodeSymbol &&
+    !value[vnodeSymbol] &&
     observableValueRE.test(toTypeString(value)) &&
     !nonReactiveValues.has(value)
   )

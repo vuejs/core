@@ -4,7 +4,8 @@ import {
   createVNode,
   VNodeChildren,
   Fragment,
-  Portal
+  Portal,
+  vnodeSymbol
 } from './vnode'
 import { isObject, isArray } from '@vue/shared'
 import { Ref } from '@vue/reactivity'
@@ -52,7 +53,7 @@ export interface RawProps {
   key?: string | number
   ref?: string | Ref<any> | Function
   // used to differ from a single VNode object as children
-  _isVNode?: never
+  [vnodeSymbol]?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
 }

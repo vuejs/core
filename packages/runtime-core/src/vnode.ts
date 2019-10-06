@@ -57,7 +57,7 @@ export type NormalizedChildren<HostNode = any, HostElement = any> =
   | null
 
 export interface VNode<HostNode = any, HostElement = any> {
-  _isVNode: typeof vnodeSymbol
+  [vnodeSymbol]: true
   type: VNodeTypes
   props: Record<any, any> | null
   key: string | number | null
@@ -128,7 +128,7 @@ export function createBlock(
 }
 
 export function isVNode(value: any): boolean {
-  return value ? value._isVNode === vnodeSymbol : false
+  return value ? value[vnodeSymbol] === true : false
 }
 
 export function createVNode(
@@ -170,7 +170,7 @@ export function createVNode(
         : 0
 
   const vnode: VNode = {
-    _isVNode: vnodeSymbol,
+    [vnodeSymbol]: true,
     type,
     props,
     key: (props && props.key) || null,
@@ -215,7 +215,7 @@ function trackDynamicNode(vnode: VNode) {
 
 export function cloneVNode(vnode: VNode): VNode {
   return {
-    _isVNode: vnodeSymbol,
+    [vnodeSymbol]: true,
     type: vnode.type,
     props: vnode.props,
     key: vnode.key,
