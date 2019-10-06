@@ -26,7 +26,7 @@ export const transformShow = createStructuralDirectiveTransform(
     }
 
     const exp = context.hoist(
-      createSimpleExpression('{"display":none}', false, dir.loc)
+      createSimpleExpression('{"display":"none"}', false, dir.loc)
     )
     const empty = context.hoist(createObjectExpression([], dir.loc))
 
