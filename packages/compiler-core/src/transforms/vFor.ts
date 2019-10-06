@@ -14,7 +14,8 @@ import {
   ElementTypes,
   createObjectExpression,
   createObjectProperty,
-  CallExpression
+  ForCodegenNode,
+  PlainElementNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -66,7 +67,7 @@ export const transformFor = createStructuralDirectiveTransform(
             fragmentFlag +
               (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
           ])
-        ])
+        ]) as ForCodegenNode
 
         context.replaceNode({
           type: NodeTypes.FOR,
@@ -118,7 +119,7 @@ export const transformFor = createStructuralDirectiveTransform(
             : null
           if (slotOutlet) {
             // <slot v-for="..."> or <template v-for="..."><slot/></template>
-            childBlock = slotOutlet.codegenNode as CallExpression
+            childBlock = slotOutlet.codegenNode!
             if (isTemplate && keyProperty) {
               // <template v-for="..." :key="..."><slot/></template>
               // we need to inject the key to the renderSlot() call.
@@ -148,7 +149,7 @@ export const transformFor = createStructuralDirectiveTransform(
             // Normal element v-for. Directly use the child's codegenNode
             // arguments, but replace createVNode() with createBlock()
             childBlock = createBlockExpression(
-              (node.codegenNode as CallExpression).arguments,
+              (node as PlainElementNode).codegenNode!.arguments,
               context
             )
           }

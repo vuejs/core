@@ -11,7 +11,9 @@ import {
   createInterpolation,
   createSequenceExpression,
   createCallExpression,
-  createConditionalExpression
+  createConditionalExpression,
+  IfCodegenNode,
+  ForCodegenNode
 } from '../src'
 import {
   CREATE_VNODE,
@@ -22,6 +24,7 @@ import {
   RESOLVE_COMPONENT
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
+import { PatchFlags } from 'vue'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {
@@ -205,7 +208,7 @@ describe('compiler: codegen', () => {
           codegenNode: createSequenceExpression([
             createSimpleExpression('foo', false),
             createSimpleExpression('bar', false)
-          ])
+          ]) as IfCodegenNode
         }
       })
     )
@@ -227,7 +230,7 @@ describe('compiler: codegen', () => {
           codegenNode: createSequenceExpression([
             createSimpleExpression('foo', false),
             createSimpleExpression('bar', false)
-          ])
+          ]) as ForCodegenNode
         }
       })
     )
@@ -235,7 +238,7 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('Element (callExpression + objectExpression + arrayExpression)', () => {
+  test('Element (callExpression + objectExpression + TemplateChildNode[])', () => {
     const { code } = generate(
       createRoot({
         codegenNode: createElementWithCodegen([
@@ -283,19 +286,8 @@ describe('compiler: codegen', () => {
               )
             ])
           ],
-          // ArrayExpression
-          createArrayExpression(
-            [
-              'foo',
-              {
-                type: NodeTypes.JS_CALL_EXPRESSION,
-                loc: locStub,
-                callee: CREATE_VNODE,
-                arguments: [`"p"`]
-              }
-            ],
-            locStub
-          )
+          // flag
+          PatchFlags.FULL_PROPS + ''
         ])
       })
     )
@@ -306,10 +298,23 @@ describe('compiler: codegen', () => {
       [foo + bar]: bar
     }, [
       _${helperNameMap[CREATE_VNODE]}("p", { "some-key": "foo" })
-    ], [
+    ], ${PatchFlags.FULL_PROPS})`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('ArrayExpression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createArrayExpression([
+          createSimpleExpression(`foo`, false),
+          createCallExpression(`bar`, [`baz`])
+        ])
+      })
+    )
+    expect(code).toMatch(`return [
       foo,
-      _${helperNameMap[CREATE_VNODE]}("p")
-    ])`)
+      bar(baz)
+    ]`)
     expect(code).toMatchSnapshot()
   })
 

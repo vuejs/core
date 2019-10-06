@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: codegen ArrayExpression 1`] = `
+"
+return function render() {
+  with (this) {
+    return [
+      foo,
+      bar(baz)
+    ]
+  }
+}"
+`;
+
 exports[`compiler: codegen ConditionalExpression 1`] = `
 "
 return function render() {
@@ -13,7 +25,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: codegen Element (callExpression + objectExpression + arrayExpression) 1`] = `
+exports[`compiler: codegen Element (callExpression + objectExpression + TemplateChildNode[]) 1`] = `
 "
 return function render() {
   with (this) {
@@ -23,10 +35,7 @@ return function render() {
       [foo + bar]: bar
     }, [
       _createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
-    ], [
-      foo,
-      _createVNode(\\"p\\")
-    ])
+    ], 16)
   }
 }"
 `;

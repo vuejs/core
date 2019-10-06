@@ -1,10 +1,10 @@
 import {
   NodeTypes,
-  CallExpression,
   ElementNode,
   locStub,
   Namespaces,
-  ElementTypes
+  ElementTypes,
+  ElementCodegenNode
 } from '../src'
 import { CREATE_VNODE } from '../src/runtimeHelpers'
 import { isString } from '@vue/shared'
@@ -39,7 +39,7 @@ export function createObjectMatcher(obj: any) {
 }
 
 export function createElementWithCodegen(
-  args: CallExpression['arguments']
+  args: ElementCodegenNode['arguments']
 ): ElementNode {
   return {
     type: NodeTypes.ELEMENT,

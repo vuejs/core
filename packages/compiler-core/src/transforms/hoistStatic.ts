@@ -2,13 +2,13 @@ import {
   RootNode,
   NodeTypes,
   TemplateChildNode,
-  CallExpression,
   ElementNode,
-  ElementTypes
+  ElementTypes,
+  ElementCodegenNode,
+  ElementCodegenNodeWithDirective
 } from '../ast'
 import { TransformContext } from '../transform'
 import { APPLY_DIRECTIVES } from '../runtimeHelpers'
-import { PropsExpression } from './transformElement'
 import { PatchFlags } from '@vue/shared'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
@@ -29,7 +29,7 @@ function walk(
     ) {
       if (isStaticNode(child, resultCache)) {
         // whole tree is static
-        child.codegenNode = context.hoist(child.codegenNode!)
+        ;(child as any).codegenNode = context.hoist(child.codegenNode!)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -40,18 +40,13 @@ function walk(
           flag === PatchFlags.NEED_PATCH ||
           flag === PatchFlags.TEXT
         ) {
-          let codegenNode = child.codegenNode as CallExpression
+          let codegenNode = child.codegenNode!
           if (codegenNode.callee === APPLY_DIRECTIVES) {
-            codegenNode = codegenNode.arguments[0] as CallExpression
+            codegenNode = codegenNode.arguments[0]
           }
-          const props = codegenNode.arguments[1] as
-            | PropsExpression
-            | `null`
-            | undefined
+          const props = codegenNode.arguments[1]
           if (props && props !== `null`) {
-            ;(child.codegenNode as CallExpression).arguments[1] = context.hoist(
-              props
-            )
+            codegenNode.arguments[1] = context.hoist(props)
           }
         }
       }
@@ -67,9 +62,11 @@ function walk(
 }
 
 function getPatchFlag(node: ElementNode): number | undefined {
-  let codegenNode = node.codegenNode as CallExpression
+  let codegenNode = node.codegenNode as
+    | ElementCodegenNode
+    | ElementCodegenNodeWithDirective
   if (codegenNode.callee === APPLY_DIRECTIVES) {
-    codegenNode = codegenNode.arguments[0] as CallExpression
+    codegenNode = codegenNode.arguments[0]
   }
   const flag = codegenNode.arguments[3]
   return flag ? parseInt(flag as string, 10) : undefined

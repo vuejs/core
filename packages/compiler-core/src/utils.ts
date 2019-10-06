@@ -14,7 +14,9 @@ import {
   ObjectExpression,
   Property,
   JSChildNode,
-  createObjectExpression
+  createObjectExpression,
+  SlotOutletNode,
+  TemplateNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
@@ -180,12 +182,12 @@ export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
 
 export const isTemplateNode = (
   node: RootNode | TemplateChildNode
-): node is ElementNode & { tagType: ElementTypes.TEMPLATE } =>
+): node is TemplateNode =>
   node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
 
 export const isSlotOutlet = (
   node: RootNode | TemplateChildNode
-): node is ElementNode & { tagType: ElementTypes.ELEMENT } =>
+): node is SlotOutletNode =>
   node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 
 export function injectProp(

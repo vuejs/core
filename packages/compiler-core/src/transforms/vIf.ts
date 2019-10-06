@@ -17,7 +17,15 @@ import {
   CallExpression,
   createSimpleExpression,
   createObjectProperty,
-  createObjectExpression
+  createObjectExpression,
+  IfCodegenNode,
+  IfConditionalExpression,
+  BlockCodegenNode,
+  SlotOutletCodegenNode,
+  ElementCodegenNode,
+  ComponentCodegenNode,
+  ElementCodegenNodeWithDirective,
+  CompoenntCodegenNodeWithDirective
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -31,7 +39,6 @@ import {
   RENDER_SLOT
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
-import { PropsExpression } from './transformElement'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -57,7 +64,8 @@ export const transformIf = createStructuralDirectiveTransform(
       const branch = createIfBranch(node, dir)
       const codegenNode = createSequenceExpression([
         createCallExpression(context.helper(OPEN_BLOCK))
-      ])
+      ]) as IfCodegenNode
+
       context.replaceNode({
         type: NodeTypes.IF,
         loc: node.loc,
@@ -68,9 +76,11 @@ export const transformIf = createStructuralDirectiveTransform(
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
-        codegenNode.expressions.push(
-          createCodegenNodeForBranch(branch, 0, context)
-        )
+        codegenNode.expressions.push(createCodegenNodeForBranch(
+          branch,
+          0,
+          context
+        ) as IfConditionalExpression)
       }
     } else {
       // locate the adjacent v-if
@@ -137,7 +147,7 @@ function createCodegenNodeForBranch(
   branch: IfBranchNode,
   index: number,
   context: TransformContext
-): ConditionalExpression | CallExpression {
+): IfConditionalExpression | BlockCodegenNode {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
@@ -145,9 +155,9 @@ function createCodegenNodeForBranch(
       createCallExpression(context.helper(CREATE_BLOCK), [
         context.helper(EMPTY)
       ])
-    )
+    ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, index, context)
+    return createChildrenCodegenNode(branch, index, context) as BlockCodegenNode
   }
 }
 
@@ -173,23 +183,27 @@ function createChildrenCodegenNode(
     ]
     if (children.length === 1 && child.type === NodeTypes.FOR) {
       // optimize away nested fragments when child is a ForNode
-      const forBlockArgs = (child.codegenNode.expressions[1] as CallExpression)
-        .arguments
+      const forBlockArgs = child.codegenNode.expressions[1].arguments
       // directly use the for block's children and patchFlag
       blockArgs[2] = forBlockArgs[2]
       blockArgs[3] = forBlockArgs[3]
     }
     return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
-    const childCodegen = (child as ElementNode).codegenNode as CallExpression
+    const childCodegen = (child as ElementNode).codegenNode as
+      | ElementCodegenNode
+      | ComponentCodegenNode
+      | ElementCodegenNodeWithDirective
+      | CompoenntCodegenNodeWithDirective
+      | SlotOutletCodegenNode
     let vnodeCall = childCodegen
     // Element with custom directives. Locate the actual createVNode() call.
     if (vnodeCall.callee === APPLY_DIRECTIVES) {
-      vnodeCall = vnodeCall.arguments[0] as CallExpression
+      vnodeCall = vnodeCall.arguments[0]
     }
     // Change createVNode to createBlock.
     if (vnodeCall.callee === CREATE_VNODE) {
-      vnodeCall.callee = helper(CREATE_BLOCK)
+      ;(vnodeCall as any).callee = helper(CREATE_BLOCK)
     }
     // It's possible to have renderSlot() here as well - which already produces
     // a block, so no need to change the callee. However it accepts props at
@@ -197,10 +211,9 @@ function createChildrenCodegenNode(
     // logic below works for it too.
     const propsIndex = vnodeCall.callee === RENDER_SLOT ? 2 : 1
     // inject branch key
-    const existingProps = vnodeCall.arguments[propsIndex] as
-      | PropsExpression
-      | undefined
-      | 'null'
+    const existingProps = vnodeCall.arguments[
+      propsIndex
+    ] as ElementCodegenNode['arguments'][1]
     vnodeCall.arguments[propsIndex] = injectProp(
       existingProps,
       keyProperty,
