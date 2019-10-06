@@ -28,7 +28,7 @@ const readonlyToRaw = new WeakMap<any, any>()
 const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
-const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
+const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
 
 const canObserve = (value: any): boolean => {
