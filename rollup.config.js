@@ -51,8 +51,8 @@ const configs = {
 }
 
 const defaultFormats = ['esm', 'cjs']
-const inlineFromats = process.env.FORMATS && process.env.FORMATS.split(',')
-const packageFormats = inlineFromats || packageOptions.formats || defaultFormats
+const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
+const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
   ? []
   : packageFormats.map(format => createConfig(configs[format]))
