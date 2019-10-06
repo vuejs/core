@@ -7,7 +7,7 @@ import {
 } from '@vue/compiler-core'
 import { transformHtml } from '../../src/transforms/vHtml'
 
-function transformWithStyleTransform(
+function transformWithHtmlTransform(
   template: string,
   options: CompilerOptions = {}
 ) {
@@ -22,9 +22,9 @@ function transformWithStyleTransform(
   }
 }
 
-describe('compiler: style transform', () => {
+describe('compiler: html transform', () => {
   it('should add `innerHtml` prop', () => {
-    const { node } = transformWithStyleTransform(`<div v-html="test"/>`)
+    const { node } = transformWithHtmlTransform(`<div v-html="test"/>`)
     expect(node.props[0]).toMatchObject({
       type: NodeTypes.DIRECTIVE,
       name: `bind`,
@@ -42,7 +42,7 @@ describe('compiler: style transform', () => {
   })
 
   it('should remove all children', () => {
-    const { node } = transformWithStyleTransform(
+    const { node } = transformWithHtmlTransform(
       `<div v-html="test"><p>foo</p><p>bar</p></div>`
     )
     expect(node.children).toHaveLength(0)
