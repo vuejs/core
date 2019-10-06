@@ -13,6 +13,7 @@ import {
   ref,
   getCurrentInstance
 } from '@vue/runtime-test'
+import { isHTMLTag } from '@vue/shared'
 
 describe('api: createApp', () => {
   mockWarn()
@@ -285,5 +286,16 @@ describe('api: createApp', () => {
 
     app.mount(Root, nodeOps.createElement('div'))
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('config.isReservedTag', () => {
+    const app = createApp()
+    app.config.isReservedTag = (name: string) => isHTMLTag(name)
+
+    app.component('div', () => 'foo')
+    expect(
+      `[Vue warn]: Do not use built-in or reserved HTML elements as ` +
+        `component name: div`
+    ).toHaveBeenWarnedLast()
   })
 })
