@@ -13,7 +13,7 @@ import {
   EMPTY_OBJ
 } from '@vue/shared'
 import { computed } from './apiReactivity'
-import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
+import { watch, WatchOptions, CleanupRegistrar } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -116,11 +116,7 @@ export type ExtractComputedReturns<T extends any> = {
     : ReturnType<T[key]>
 }
 
-type WatchHandler = (
-  val: any,
-  oldVal: any,
-  onCleanup: CleanupRegistrator
-) => void
+type WatchHandler = (val: any, oldVal: any, onCleanup: CleanupRegistrar) => void
 
 type ComponentWatchOptions = Record<
   string,

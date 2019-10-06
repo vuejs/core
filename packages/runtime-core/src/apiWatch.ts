@@ -37,9 +37,9 @@ type MapSources<T> = {
   [K in keyof T]: T[K] extends WatcherSource<infer V> ? V : never
 }
 
-export type CleanupRegistrator = (invalidate: () => void) => void
+export type CleanupRegistrar = (invalidate: () => void) => void
 
-type SimpleEffect = (onCleanup: CleanupRegistrator) => void
+type SimpleEffect = (onCleanup: CleanupRegistrar) => void
 
 const invoke = (fn: Function) => fn()
 
@@ -49,7 +49,7 @@ export function watch(effect: SimpleEffect, options?: WatchOptions): StopHandle
 // overload #2: single source + cb
 export function watch<T>(
   source: WatcherSource<T>,
-  cb: (newValue: T, oldValue: T, onCleanup: CleanupRegistrator) => any,
+  cb: (newValue: T, oldValue: T, onCleanup: CleanupRegistrar) => any,
   options?: WatchOptions
 ): StopHandle
 
@@ -59,7 +59,7 @@ export function watch<T extends WatcherSource<unknown>[]>(
   cb: (
     newValues: MapSources<T>,
     oldValues: MapSources<T>,
-    onCleanup: CleanupRegistrator
+    onCleanup: CleanupRegistrar
   ) => any,
   options?: WatchOptions
 ): StopHandle
@@ -71,7 +71,7 @@ export function watch(
     | WatcherSource<unknown>[]
     | SimpleEffect,
   effectOrOptions?:
-    | ((value: any, oldValue: any, onCleanup: CleanupRegistrator) => any)
+    | ((value: any, oldValue: any, onCleanup: CleanupRegistrar) => any)
     | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
@@ -88,7 +88,7 @@ export function watch(
 function doWatch(
   source: WatcherSource | WatcherSource[] | SimpleEffect,
   cb:
-    | ((newValue: any, oldValue: any, onCleanup: CleanupRegistrator) => any)
+    | ((newValue: any, oldValue: any, onCleanup: CleanupRegistrar) => any)
     | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
@@ -134,7 +134,7 @@ function doWatch(
   }
 
   let cleanup: Function
-  const registerCleanup: CleanupRegistrator = (fn: () => void) => {
+  const registerCleanup: CleanupRegistrar = (fn: () => void) => {
     // TODO wrap the cleanup fn for error handling
     cleanup = runner.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
