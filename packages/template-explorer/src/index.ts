@@ -8,9 +8,11 @@ const self = window as any
 
 self.init = () => {
   const monaco = (window as any).monaco as typeof m
-  const persistedContent =
-    decodeURIComponent(window.location.hash.slice(1)) ||
-    `<div>{{ foo + bar }}</div>`
+  const persistedState = JSON.parse(
+    decodeURIComponent(window.location.hash.slice(1)) || `{}`
+  )
+
+  Object.assign(compilerOptions, persistedState.options)
 
   let lastSuccessfulCode: string = `/* See console for error */`
   let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
@@ -56,7 +58,13 @@ self.init = () => {
 
   function reCompile() {
     const src = editor.getValue()
-    window.location.hash = encodeURIComponent(src)
+    // every time we re-compile, persist current state to URL
+    window.location.hash = encodeURIComponent(
+      JSON.stringify({
+        src,
+        options: compilerOptions
+      })
+    )
     const res = compileCode(src)
     if (res) {
       output.setValue(res)
@@ -78,7 +86,7 @@ self.init = () => {
   const editor = monaco.editor.create(
     document.getElementById('source') as HTMLElement,
     {
-      value: persistedContent,
+      value: persistedState.src || `<div>Hello World!</div>`,
       language: 'html',
       ...sharedEditorOptions
     }
