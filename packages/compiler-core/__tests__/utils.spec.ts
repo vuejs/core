@@ -1,5 +1,9 @@
 import { Position } from '../src/ast'
-import { getInnerRange, advancePositionWithClone } from '../src/utils'
+import {
+  getInnerRange,
+  advancePositionWithClone,
+  isSimpleIdentifier
+} from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
   return { column, line, offset }
@@ -65,5 +69,31 @@ describe('getInnerRange', () => {
     expect(loc2.end.column).toBe(4)
     expect(loc2.end.line).toBe(2)
     expect(loc2.end.offset).toBe(7)
+  })
+})
+
+describe('isSimpleIdentifier', () => {
+  test('reserved keywords', () => {
+    expect(isSimpleIdentifier('NaN')).toBe(false)
+    expect(isSimpleIdentifier('true')).toBe(false)
+    expect(isSimpleIdentifier('false')).toBe(false)
+    expect(isSimpleIdentifier('undefined')).toBe(false)
+    expect(isSimpleIdentifier('null')).toBe(false)
+  })
+
+  test('valid variable names', () => {
+    expect(isSimpleIdentifier('naN')).toBe(true)
+    expect(isSimpleIdentifier('True')).toBe(true)
+    expect(isSimpleIdentifier('False')).toBe(true)
+    expect(isSimpleIdentifier('Undefined')).toBe(true)
+    expect(isSimpleIdentifier('Null')).toBe(true)
+    expect(isSimpleIdentifier('foo')).toBe(true)
+  })
+
+  test('expressions', () => {
+    expect(isSimpleIdentifier('foo = bar')).toBe(false)
+    expect(isSimpleIdentifier('Math.floor')).toBe(false)
+    expect(isSimpleIdentifier('foo.bar')).toBe(false)
+    expect(isSimpleIdentifier('foo[0]')).toBe(false)
   })
 })

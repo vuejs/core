@@ -59,8 +59,16 @@ export const walkJS: typeof walk = (ast, walker) => {
   return walk(ast, walker)
 }
 
+const reservedKeywords = new Set(
+  (
+    'true,false,null,Infinity,undefined,NaN,isFinite,isNaN,' +
+    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
+    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
+    'require'
+  ).split(',')
+)
 export const isSimpleIdentifier = (name: string): boolean =>
-  !/^\d|[^\w]/.test(name)
+  !/^\d|[^\w]/.test(name) && !reservedKeywords.has(name)
 
 export function getInnerRange(
   loc: SourceLocation,
