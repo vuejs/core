@@ -4,7 +4,6 @@ import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
 export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : undefined)
-export type RefSymbol = typeof refSymbol
 
 export interface Ref<T> {
   [refSymbol]: true
