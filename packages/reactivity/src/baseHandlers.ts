@@ -107,7 +107,7 @@ export const readonlyHandlers: ProxyHandler<any> = {
     if (LOCKED) {
       if (__DEV__) {
         console.warn(
-          `Set operation on key "${key as any}" failed: target is readonly.`,
+          `Set operation on key "${String(key)}" failed: target is readonly.`,
           target
         )
       }
@@ -121,7 +121,9 @@ export const readonlyHandlers: ProxyHandler<any> = {
     if (LOCKED) {
       if (__DEV__) {
         console.warn(
-          `Delete operation on key "${key as any}" failed: target is readonly.`,
+          `Delete operation on key "${String(
+            key
+          )}" failed: target is readonly.`,
           target
         )
       }
