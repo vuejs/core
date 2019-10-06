@@ -15,20 +15,20 @@ import { ReactiveEffect } from './effect'
 // raw Sets to reduce memory overhead.
 export type Dep = Set<ReactiveEffect>
 export type KeyToDepMap = Map<string | symbol, Dep>
-export const targetMap: WeakMap<any, KeyToDepMap> = new WeakMap()
+export const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // WeakMaps that store {raw <-> observed} pairs.
-const rawToReactive: WeakMap<any, any> = new WeakMap()
-const reactiveToRaw: WeakMap<any, any> = new WeakMap()
-const rawToReadonly: WeakMap<any, any> = new WeakMap()
-const readonlyToRaw: WeakMap<any, any> = new WeakMap()
+const rawToReactive = new WeakMap<any, any>()
+const reactiveToRaw = new WeakMap<any, any>()
+const rawToReadonly = new WeakMap<any, any>()
+const readonlyToRaw = new WeakMap<any, any>()
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const readonlyValues: WeakSet<any> = new WeakSet()
-const nonReactiveValues: WeakSet<any> = new WeakSet()
+const readonlyValues = new WeakSet<any>()
+const nonReactiveValues = new WeakSet<any>()
 
-const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
+const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
 
 const canObserve = (value: any): boolean => {
