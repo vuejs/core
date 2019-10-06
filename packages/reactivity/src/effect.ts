@@ -28,7 +28,7 @@ export interface DebuggerEvent {
   effect: ReactiveEffect
   target: any
   type: OperationTypes
-  key: string | symbol | undefined
+  key?: string | symbol
 }
 
 export const activeReactiveEffectStack: ReactiveEffect[] = []
@@ -190,7 +190,7 @@ export function trigger(
 function addRunners(
   effects: Set<ReactiveEffect>,
   computedRunners: Set<ReactiveEffect>,
-  effectsToAdd: Set<ReactiveEffect> | undefined
+  effectsToAdd?: Set<ReactiveEffect>
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
@@ -207,8 +207,8 @@ function scheduleRun(
   effect: ReactiveEffect,
   target: any,
   type: OperationTypes,
-  key: string | symbol | undefined,
-  extraInfo: any
+  key?: string | symbol,
+  extraInfo?: any
 ) {
   if (__DEV__ && effect.onTrigger) {
     effect.onTrigger(
