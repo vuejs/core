@@ -5,6 +5,7 @@ import {
   ElementNode,
   NodeTypes
 } from '@vue/compiler-core'
+import { mockWarn } from '@vue/runtime-test'
 import { transformText } from '../../src/transforms/vText'
 
 function transformWithTextTransform(
@@ -23,6 +24,8 @@ function transformWithTextTransform(
 }
 
 describe('compiler: text transform', () => {
+  mockWarn()
+
   it('should add `textContent` prop', () => {
     const { node } = transformWithTextTransform(`<div v-text="test"/>`)
     expect(node.props[0]).toMatchObject({
@@ -39,5 +42,28 @@ describe('compiler: text transform', () => {
         isStatic: false
       }
     })
+  })
+
+  it('should replace all children', () => {
+    const { node } = transformWithTextTransform(
+      `<div v-text="test"><p>foo</p><p>bar</p></div>`
+    )
+    expect(node.children).toHaveLength(0)
+    expect(node.props[0]).toMatchObject({
+      type: NodeTypes.DIRECTIVE,
+      name: `bind`,
+      arg: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: `textContent`,
+        isStatic: true
+      },
+      exp: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: `test`,
+        isStatic: false
+      }
+    })
+
+    expect(`"v-text" replaced children on "div" element`).toHaveBeenWarned()
   })
 })

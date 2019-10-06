@@ -33,5 +33,14 @@ export const transformText = createStructuralDirectiveTransform(
       modifiers: [],
       loc: dir.loc
     })
+
+    if (node.children.length > 0) {
+      // remove all the children, since they will be overridden by the `textContent`
+      node.children = []
+
+      if (__DEV__) {
+        console.warn(`"v-text" replaced children on "${node.tag}" element`)
+      }
+    }
   }
 )
