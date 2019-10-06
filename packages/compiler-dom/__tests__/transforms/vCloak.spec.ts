@@ -26,16 +26,22 @@ const transformWithoutCloak = createTransformFunction()
 
 describe('compiler: `v-cloak` transform', () => {
   test('removes v-cloak without side effects', () => {
-    const { node: cloakedNode } = transformWithCloak(`<div v-cloak/>`)
-    const { node } = transformWithoutCloak('<div />')
+    const { root: cloakedRoot } = transformWithCloak(`<div v-cloak/>`)
+    const { root } = transformWithoutCloak('<div />')
 
-    // The loc will be different if the templates are different
+    // The loc will be different as the templates are different
     // so for our comparison we need to remove them
-    expect(withoutLoc(cloakedNode)).toEqual(withoutLoc(node))
+    expect(withoutLoc(cloakedRoot)).toEqual(withoutLoc(root))
   })
 })
 
-function withoutLoc<T extends ElementNode>(node: T) {
+function withoutLoc<T extends any>(node: T): Omit<T, 'loc'> {
   const { loc, ...output } = node
+  if (output.children) {
+    ;(output as any).children = output.children.map(withoutLoc)
+  }
+  if ((output as any).codegenNode) {
+    ;(output as any).codegenNode = withoutLoc(output.codegenNode)
+  }
   return output
 }
