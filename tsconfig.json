@@ -20,7 +20,6 @@
     "types": ["jest", "node"],
     "rootDir": ".",
     "paths": {
-      "vue": ["packages/vue/src"],
       "@vue/shared": ["packages/shared/src"],
       "@vue/runtime-core": ["packages/runtime-core/src"],
       "@vue/runtime-dom": ["packages/runtime-dom/src"],

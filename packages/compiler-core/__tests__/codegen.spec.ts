@@ -24,7 +24,7 @@ import {
   RESOLVE_COMPONENT
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
-import { PatchFlags } from 'vue'
+import { PatchFlags } from '@vue/shared'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
   return {

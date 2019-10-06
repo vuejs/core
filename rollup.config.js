@@ -19,9 +19,11 @@ const packageOptions = pkg.buildOptions || {}
 // build aliases dynamically
 const aliasOptions = { resolve: ['.ts'] }
 fs.readdirSync(packagesDir).forEach(dir => {
+  if (dir === 'vue') {
+    return
+  }
   if (fs.statSync(path.resolve(packagesDir, dir)).isDirectory()) {
-    const name = dir === `vue` ? dir : `@vue/${dir}`
-    aliasOptions[name] = path.resolve(packagesDir, `${dir}/src/index`)
+    aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)
   }
 })
 const aliasPlugin = alias(aliasOptions)
