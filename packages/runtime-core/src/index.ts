@@ -16,7 +16,8 @@ export {
   cloneVNode,
   mergeProps,
   openBlock,
-  createBlock
+  createBlock,
+  vnodeSymbol
 } from './vnode'
 // VNode type symbols
 export { Text, Comment, Fragment, Portal, Suspense } from './vnode'

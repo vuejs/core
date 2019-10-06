@@ -8,6 +8,7 @@ import {
 
 import { UnwrapNestedRefs } from './ref'
 import { ReactiveEffect } from './effect'
+import { vnodeSymbol } from '@vue/runtime-core'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -34,7 +35,7 @@ const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
-    !value._isVNode &&
+    value._isVNode !== vnodeSymbol &&
     observableValueRE.test(toTypeString(value)) &&
     !nonReactiveValues.has(value)
   )

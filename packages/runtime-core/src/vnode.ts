@@ -20,6 +20,8 @@ export const Comment = __DEV__ ? Symbol('Empty') : Symbol()
 export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
 export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
 
+export const vnodeSymbol = Symbol()
+
 export type VNodeTypes =
   | string
   | Function
@@ -55,7 +57,7 @@ export type NormalizedChildren<HostNode = any, HostElement = any> =
   | null
 
 export interface VNode<HostNode = any, HostElement = any> {
-  _isVNode: true
+  _isVNode: typeof vnodeSymbol
   type: VNodeTypes
   props: Record<any, any> | null
   key: string | number | null
@@ -126,7 +128,7 @@ export function createBlock(
 }
 
 export function isVNode(value: any): boolean {
-  return value ? value._isVNode === true : false
+  return value ? value._isVNode === vnodeSymbol : false
 }
 
 export function createVNode(
@@ -168,7 +170,7 @@ export function createVNode(
         : 0
 
   const vnode: VNode = {
-    _isVNode: true,
+    _isVNode: vnodeSymbol,
     type,
     props,
     key: (props && props.key) || null,
@@ -213,7 +215,7 @@ function trackDynamicNode(vnode: VNode) {
 
 export function cloneVNode(vnode: VNode): VNode {
   return {
-    _isVNode: true,
+    _isVNode: vnodeSymbol,
     type: vnode.type,
     props: vnode.props,
     key: vnode.key,
