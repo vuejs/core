@@ -33,7 +33,7 @@ export function computed<T>(
       }
     : (getterOrOptions as WritableComputedOptions<T>).set
 
-  let dirty: boolean = true
+  let dirty = true
   let value: T
 
   const runner = effect(getter, {
