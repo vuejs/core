@@ -1,4 +1,5 @@
 import { createVNode } from '@vue/runtime-test'
+import { ShapeFlags } from '@vue/runtime-core'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -57,7 +58,47 @@ describe('vnode', () => {
     })
   })
 
-  test.todo('children normalization')
+  describe('children normalization', () => {
+    const nop = jest.fn
+
+    test('null', () => {
+      const vnode = createVNode('p', null, null)
+      expect(vnode.children).toBe(null)
+      expect(vnode.shapeFlag).toBe(ShapeFlags.ELEMENT)
+    })
+
+    test('array', () => {
+      const vnode = createVNode('p', null, ['foo'])
+      expect(vnode.children).toMatchObject(['foo'])
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT + ShapeFlags.ARRAY_CHILDREN
+      )
+    })
+
+    test('object', () => {
+      const vnode = createVNode('p', null, { foo: 'foo' })
+      expect(vnode.children).toMatchObject({ foo: 'foo' })
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+      )
+    })
+
+    test('function', () => {
+      const vnode = createVNode('p', null, nop)
+      expect(vnode.children).toMatchObject({ default: nop })
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+      )
+    })
+
+    test('string', () => {
+      const vnode = createVNode('p', null, 'foo')
+      expect(vnode.children).toBe('foo')
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT + ShapeFlags.TEXT_CHILDREN
+      )
+    })
+  })
 
   test.todo('normalizeVNode')
 
