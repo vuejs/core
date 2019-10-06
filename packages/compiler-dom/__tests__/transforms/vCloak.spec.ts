@@ -36,12 +36,12 @@ describe('compiler: `v-cloak` transform', () => {
 })
 
 function withoutLoc<T extends any>(node: T): Omit<T, 'loc'> {
-  const { loc, ...output } = node
+  const { loc, ...output }: any = node
   if (output.children) {
-    ;(output as any).children = output.children.map(withoutLoc)
+    output.children = output.children.map(withoutLoc)
   }
-  if ((output as any).codegenNode) {
-    ;(output as any).codegenNode = withoutLoc(output.codegenNode)
+  if (output.codegenNode) {
+    output.codegenNode = withoutLoc(output.codegenNode)
   }
   return output
 }
