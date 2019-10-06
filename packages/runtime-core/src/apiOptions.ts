@@ -244,38 +244,43 @@ export function applyOptions(
   }
   if (computedOptions) {
     for (const key in computedOptions) {
-      const opt = (computedOptions as ComputedOptions)[key]
-      renderContext[key] = isFunction(opt)
-        ? computed(opt.bind(ctx))
-        : computed({
-            get: opt.get.bind(ctx),
-            set: opt.set.bind(ctx)
-          })
+      if (computedOptions.hasOwnProperty(key)) {
+        const opt = (computedOptions as ComputedOptions)[key]
+        renderContext[key] = isFunction(opt)
+          ? computed(opt.bind(ctx))
+          : computed({
+              get: opt.get.bind(ctx),
+              set: opt.set.bind(ctx)
+            })
+      }
     }
   }
   if (methods) {
     for (const key in methods) {
-      renderContext[key] = (methods as MethodOptions)[key].bind(ctx)
+      if (methods.hasOwnProperty(key))
+        renderContext[key] = (methods as MethodOptions)[key].bind(ctx)
     }
   }
   if (watchOptions) {
     for (const key in watchOptions) {
-      const raw = watchOptions[key]
-      const getter = () => ctx[key]
-      if (isString(raw)) {
-        const handler = renderContext[raw]
-        if (isFunction(handler)) {
-          watch(getter, handler as any)
+      if (watchOptions.hasOwnProperty(key)) {
+        const raw = watchOptions[key]
+        const getter = () => ctx[key]
+        if (isString(raw)) {
+          const handler = renderContext[raw]
+          if (isFunction(handler)) {
+            watch(getter, handler as any)
+          } else if (__DEV__) {
+            // TODO warn invalid watch handler path
+          }
+        } else if (isFunction(raw)) {
+          watch(getter, raw.bind(ctx))
+        } else if (isObject(raw)) {
+          // TODO 2.x compat
+          watch(getter, raw.handler.bind(ctx), raw)
         } else if (__DEV__) {
-          // TODO warn invalid watch handler path
+          // TODO warn invalid watch options
         }
-      } else if (isFunction(raw)) {
-        watch(getter, raw.bind(ctx))
-      } else if (isObject(raw)) {
-        // TODO 2.x compat
-        watch(getter, raw.handler.bind(ctx), raw)
-      } else if (__DEV__) {
-        // TODO warn invalid watch options
       }
     }
   }
@@ -284,7 +289,9 @@ export function applyOptions(
       ? provideOptions.call(ctx)
       : provideOptions
     for (const key in provides) {
-      provide(key, provides[key])
+      if (provides.hasOwnProperty(key)) {
+        provide(key, provides[key])
+      }
     }
   }
   if (injectOptions) {
@@ -295,11 +302,13 @@ export function applyOptions(
       }
     } else {
       for (const key in injectOptions) {
-        const opt = injectOptions[key]
-        if (isObject(opt)) {
-          renderContext[key] = inject(opt.from, opt.default)
-        } else {
-          renderContext[key] = inject(opt)
+        if (injectOptions.hasOwnProperty(key)) {
+          const opt = injectOptions[key]
+          if (isObject(opt)) {
+            renderContext[key] = inject(opt.from, opt.default)
+          } else {
+            renderContext[key] = inject(opt)
+          }
         }
       }
     }

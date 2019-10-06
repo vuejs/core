@@ -135,11 +135,13 @@ function formatComponentName(vnode: VNode, file?: string): string {
 function formatProps(props: Data): string[] {
   const res: string[] = []
   for (const key in props) {
-    const value = props[key]
-    if (isString(value)) {
-      res.push(`${key}=${JSON.stringify(value)}`)
-    } else {
-      res.push(`${key}=`, toRaw(value) as any)
+    if (props.hasOwnProperty(key)) {
+      const value = props[key]
+      if (isString(value)) {
+        res.push(`${key}=${JSON.stringify(value)}`)
+      } else {
+        res.push(`${key}=`, toRaw(value) as any)
+      }
     }
   }
   return res

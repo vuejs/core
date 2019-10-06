@@ -241,7 +241,9 @@ function traverse(value: any, seen: Set<any> = new Set()) {
     })
   } else {
     for (const key in value) {
-      traverse(value[key], seen)
+      if (value.hasOwnProperty(key)) {
+        traverse(value[key], seen)
+      }
     }
   }
   return value

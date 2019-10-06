@@ -135,30 +135,32 @@ export function resolveProps(
   // set default values, cast booleans & run validators
   if (hasDeclaredProps) {
     for (const key in options) {
-      let opt = options[key]
-      if (opt == null) continue
-      const isAbsent = !hasOwn(props, key)
-      const hasDefault = hasOwn(opt, 'default')
-      const currentValue = props[key]
-      // default values
-      if (hasDefault && currentValue === undefined) {
-        const defaultValue = opt.default
-        setProp(key, isFunction(defaultValue) ? defaultValue() : defaultValue)
-      }
-      // boolean casting
-      if (opt[BooleanFlags.shouldCast]) {
-        if (isAbsent && !hasDefault) {
-          setProp(key, false)
-        } else if (
-          opt[BooleanFlags.shouldCastTrue] &&
-          (currentValue === '' || currentValue === hyphenate(key))
-        ) {
-          setProp(key, true)
+      if (options.hasOwnProperty(key)) {
+        let opt = options[key]
+        if (opt == null) continue
+        const isAbsent = !hasOwn(props, key)
+        const hasDefault = hasOwn(opt, 'default')
+        const currentValue = props[key]
+        // default values
+        if (hasDefault && currentValue === undefined) {
+          const defaultValue = opt.default
+          setProp(key, isFunction(defaultValue) ? defaultValue() : defaultValue)
         }
-      }
-      // runtime validation
-      if (__DEV__ && rawProps) {
-        validateProp(key, toRaw(rawProps[key]), opt, isAbsent)
+        // boolean casting
+        if (opt[BooleanFlags.shouldCast]) {
+          if (isAbsent && !hasDefault) {
+            setProp(key, false)
+          } else if (
+            opt[BooleanFlags.shouldCastTrue] &&
+            (currentValue === '' || currentValue === hyphenate(key))
+          ) {
+            setProp(key, true)
+          }
+        }
+        // runtime validation
+        if (__DEV__ && rawProps) {
+          validateProp(key, toRaw(rawProps[key]), opt, isAbsent)
+        }
       }
     }
   } else {

@@ -61,32 +61,34 @@ function applyDirective(
     valueCache.set(directive, valueCacheForDir)
   }
   for (const key in directive) {
-    const hook = directive[key as keyof Directive] as DirectiveHook
-    const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
-    const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
-      let oldValue
-      if (prevVNode != null) {
-        oldValue = valueCacheForDir.get(prevVNode)
-        valueCacheForDir.delete(prevVNode)
+    if (directive.hasOwnProperty(key)) {
+      const hook = directive[key as keyof Directive] as DirectiveHook
+      const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
+      const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
+        let oldValue
+        if (prevVNode != null) {
+          oldValue = valueCacheForDir.get(prevVNode)
+          valueCacheForDir.delete(prevVNode)
+        }
+        valueCacheForDir.set(vnode, value)
+        hook(
+          vnode.el,
+          {
+            instance: instance.renderProxy,
+            value,
+            oldValue,
+            arg,
+            modifiers
+          },
+          vnode,
+          prevVNode
+        )
       }
-      valueCacheForDir.set(vnode, value)
-      hook(
-        vnode.el,
-        {
-          instance: instance.renderProxy,
-          value,
-          oldValue,
-          arg,
-          modifiers
-        },
-        vnode,
-        prevVNode
-      )
+      const existing = props[hookKey]
+      props[hookKey] = existing
+        ? [].concat(existing as any, vnodeHook as any)
+        : vnodeHook
     }
-    const existing = props[hookKey]
-    props[hookKey] = existing
-      ? [].concat(existing as any, vnodeHook as any)
-      : vnodeHook
   }
 }
 

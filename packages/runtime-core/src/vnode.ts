@@ -281,7 +281,9 @@ function normalizeStyle(
       const normalized = normalizeStyle(value[i])
       if (normalized) {
         for (const key in normalized) {
-          res[key] = normalized[key]
+          if (normalized.hasOwnProperty(key)) {
+            res[key] = normalized[key]
+          }
         }
       }
     }
