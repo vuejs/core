@@ -5,6 +5,7 @@ import {
   ElementNode,
   NodeTypes
 } from '@vue/compiler-core'
+import { mockWarn } from '@vue/runtime-test'
 import { transformHtml } from '../../src/transforms/vHtml'
 
 function transformWithHtmlTransform(
@@ -23,6 +24,7 @@ function transformWithHtmlTransform(
 }
 
 describe('compiler: html transform', () => {
+  mockWarn()
   it('should add `innerHtml` prop', () => {
     const { node } = transformWithHtmlTransform(`<div v-html="test"/>`)
     expect(node.props[0]).toMatchObject({
@@ -60,5 +62,6 @@ describe('compiler: html transform', () => {
         isStatic: false
       }
     })
+    expect(`"v-html" replaced children on "div" element`).toHaveBeenWarned()
   })
 })

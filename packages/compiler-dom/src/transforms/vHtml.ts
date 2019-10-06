@@ -33,7 +33,13 @@ export const transformHtml = createStructuralDirectiveTransform(
       loc: dir.loc
     })
 
-    // remove all the children, since they will be overridden by the `innerHTML`
-    node.children = []
+    if (node.children.length > 0) {
+      // remove all the children, since they will be overridden by the `innerHTML`
+      node.children = []
+
+      if (__DEV__) {
+        console.warn(`"v-html" replaced children on "${node.tag}" element`)
+      }
+    }
   }
 )
