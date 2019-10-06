@@ -13,6 +13,7 @@ export function compile(
     ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
     nodeTransforms: [
       transformStyle,
+      // NOTE: transformShow must come come after the style
       transformShow,
       ...(options.nodeTransforms || [])
     ],

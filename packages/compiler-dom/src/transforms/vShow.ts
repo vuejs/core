@@ -5,8 +5,7 @@ import {
   createSimpleExpression,
   SimpleExpressionNode,
   NodeTypes,
-  createConditionalExpression,
-  createObjectExpression
+  createConditionalExpression
 } from '@vue/compiler-core'
 
 export const transformShow = createStructuralDirectiveTransform(
@@ -28,7 +27,7 @@ export const transformShow = createStructuralDirectiveTransform(
     const exp = context.hoist(
       createSimpleExpression('{"display":"none"}', false, dir.loc)
     )
-    const empty = context.hoist(createObjectExpression([], dir.loc))
+    const empty = context.hoist(createSimpleExpression('{}', false, dir.loc))
 
     node.props.push({
       type: NodeTypes.DIRECTIVE,
