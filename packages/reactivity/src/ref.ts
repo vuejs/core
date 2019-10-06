@@ -7,7 +7,7 @@ export const refSymbol = Symbol('isRef')
 export type RefSymbol = typeof refSymbol
 
 export interface Ref<T> {
-  [refSymbol]: boolean
+  [refSymbol]: true
   value: UnwrapNestedRefs<T>
 }
 
