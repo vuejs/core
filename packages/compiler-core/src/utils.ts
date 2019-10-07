@@ -22,7 +22,7 @@ import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import { OPEN_BLOCK, CREATE_BLOCK, MERGE_PROPS } from './runtimeHelpers'
-import { isString, isFunction } from '@vue/shared'
+import { isString, isFunction, globalsWhitelist } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 
 // cache node requires
@@ -59,16 +59,8 @@ export const walkJS: typeof walk = (ast, walker) => {
   return walk(ast, walker)
 }
 
-const reservedKeywords = new Set(
-  (
-    'true,false,null,Infinity,undefined,NaN,isFinite,isNaN,' +
-    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
-    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
-    'require'
-  ).split(',')
-)
 export const isSimpleIdentifier = (name: string): boolean =>
-  !/^\d|[^\w]/.test(name) && !reservedKeywords.has(name)
+  !/^\d|[^\w]/.test(name) && !globalsWhitelist.has(name)
 
 export function getInnerRange(
   loc: SourceLocation,
