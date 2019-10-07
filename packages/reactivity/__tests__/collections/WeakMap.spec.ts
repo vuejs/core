@@ -94,7 +94,7 @@ describe('reactivity/collections', () => {
     })
 
     it('should observed nested data', () => {
-      const observed = reactive(new Map())
+      const observed = reactive(new WeakMap())
       const key = {}
       observed.set(key, { a: 1 })
       let dummy
