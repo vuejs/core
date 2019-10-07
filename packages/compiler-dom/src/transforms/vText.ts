@@ -9,16 +9,16 @@ import {
 
 export const transformText: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
-    const htmlProp = node.props.find(
+    const prop = node.props.find(
       x => x.type === NodeTypes.DIRECTIVE && x.name === 'text'
     ) as DirectiveNode | undefined
-    if (htmlProp) {
-      htmlProp.name = `bind`
-      htmlProp.arg = createSimpleExpression(`textContent`, true, htmlProp.loc)
+    if (prop) {
+      prop.name = `bind`
+      prop.arg = createSimpleExpression(`textContent`, true, prop.loc)
 
-      if (!htmlProp.exp || !htmlProp.exp.loc.source.trim()) {
+      if (!prop.exp || !prop.exp.loc.source.trim()) {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_TEXT_NO_EXPRESSION, htmlProp.loc)
+          createCompilerError(ErrorCodes.X_V_TEXT_NO_EXPRESSION, prop.loc)
         )
       }
       if (node.children.length > 0) {
