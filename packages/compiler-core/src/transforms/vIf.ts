@@ -105,6 +105,9 @@ export const transformIf = createStructuralDirectiveTransform(
           // since the branch was removed, it will not be traversed.
           // make sure to traverse here.
           traverseChildren(branch, context)
+          // make sure to reset currentNode after traversal to indicate this
+          // node has been removed.
+          context.currentNode = null
           // attach this branch's codegen node to the v-if root.
           let parentCondition = sibling.codegenNode
             .expressions[1] as ConditionalExpression
