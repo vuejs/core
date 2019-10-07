@@ -35,7 +35,7 @@ However, there are still some 2.x parity features not completed yet:
   - [ ] `v-html`
   - [ ] `v-show`
 
-The current implementation also requires native ES2015+ in the runtime environment and does not support IE11 (yet).
+The current implementation also requires native ES2015+ in the runtime environment and does not support IE11.
 
 ## Contribution
 
