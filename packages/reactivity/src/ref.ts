@@ -68,80 +68,15 @@ type BailTypes =
   | WeakSet<any>
 
 // Recursively unwraps nested value bindings.
-// Unfortunately TS cannot do recursive types, but this should be enough for
-// practical use cases...
-export type UnwrapRef<T> = T extends Ref<infer V>
-  ? UnwrapRef2<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef2<V>>
+export type UnwrapRef<T> = {
+  ref: T extends Ref<infer V> ? UnwrapRef<V> : T
+  array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
+  object: { [K in keyof T]: UnwrapRef<T[K]> }
+  stop: T
+}[T extends Ref<any>
+  ? 'ref'
+  : T extends Array<any>
+    ? 'array'
     : T extends BailTypes
-      ? T // bail out on types that shouldn't be unwrapped
-      : T extends object ? { [K in keyof T]: UnwrapRef2<T[K]> } : T
-
-type UnwrapRef2<T> = T extends Ref<infer V>
-  ? UnwrapRef3<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef3<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef3<T[K]> } : T
-
-type UnwrapRef3<T> = T extends Ref<infer V>
-  ? UnwrapRef4<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef4<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef4<T[K]> } : T
-
-type UnwrapRef4<T> = T extends Ref<infer V>
-  ? UnwrapRef5<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef5<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef5<T[K]> } : T
-
-type UnwrapRef5<T> = T extends Ref<infer V>
-  ? UnwrapRef6<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef6<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef6<T[K]> } : T
-
-type UnwrapRef6<T> = T extends Ref<infer V>
-  ? UnwrapRef7<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef7<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef7<T[K]> } : T
-
-type UnwrapRef7<T> = T extends Ref<infer V>
-  ? UnwrapRef8<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef8<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef8<T[K]> } : T
-
-type UnwrapRef8<T> = T extends Ref<infer V>
-  ? UnwrapRef9<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef9<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef9<T[K]> } : T
-
-type UnwrapRef9<T> = T extends Ref<infer V>
-  ? UnwrapRef10<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef10<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef10<T[K]> } : T
-
-type UnwrapRef10<T> = T extends Ref<infer V>
-  ? V // stop recursion
-  : T
+      ? 'stop' // bail out on types that shouldn't be unwrapped
+      : T extends object ? 'object' : 'stop']
