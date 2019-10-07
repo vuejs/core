@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { isArray, looseEqual } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -17,6 +17,7 @@ type EventValue = (Function | Function[]) & {
 type EventValueWithOptions = {
   handler: EventValue
   options: AddEventListenerOptions
+  persistent: boolean
   invoker?: Invoker | null
 }
 
@@ -58,20 +59,21 @@ export function patchEvent(
   const invoker = prevValue && prevValue.invoker
   const value =
     nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
+  const persistent =
+    nextValue && 'persistent' in nextValue && nextValue.persistent
 
-  // go unoptimized route if it has to deal with event options
-  if (prevOptions || nextOptions) {
-    if (invoker) {
-      el.removeEventListener(name, invoker as any, prevOptions as any)
+  if (!persistent && (prevOptions || nextOptions)) {
+    if (!looseEqual(prevOptions, nextOptions)) {
+      if (invoker) {
+        el.removeEventListener(name, invoker as any, prevOptions as any)
+      }
+      if (nextValue && value) {
+        const invoker = createInvoker(value, instance)
+        nextValue.invoker = invoker
+        el.addEventListener(name, invoker, nextOptions as any)
+      }
+      return
     }
-    if (value) {
-      el.addEventListener(
-        name,
-        createInvoker(value, instance),
-        nextOptions as any
-      )
-    }
-    return
   }
 
   if (nextValue && value) {
