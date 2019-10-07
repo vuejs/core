@@ -14,6 +14,18 @@ type EventValue = (Function | Function[]) & {
   invoker?: Invoker | null
 }
 
+type EventListenerOptions = {
+  capture?: Boolean
+  once?: Boolean
+  passive?: Boolean
+} | null
+
+type EventValueWithOptions = {
+  handler: EventValue
+  options: EventListenerOptions
+  invoker?: Invoker | null
+}
+
 // Async edge case fix requires storing an event listener's attach timestamp.
 let _getNow: () => number = Date.now
 
@@ -43,19 +55,39 @@ const getNow = () => cachedNow || (p.then(reset), (cachedNow = _getNow()))
 export function patchEvent(
   el: Element,
   name: string,
-  prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  prevValue: EventValueWithOptions | EventValue | null,
+  nextValue: EventValueWithOptions | EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
+  const prevOptions = prevValue && 'options' in prevValue && prevValue.options
+  const nextOptions = nextValue && 'options' in nextValue && nextValue.options
   const invoker = prevValue && prevValue.invoker
-  if (nextValue) {
+  const handler =
+    nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
+
+  // go unoptimized route if it has to deal with event options
+  if (prevOptions || nextOptions) {
+    if (invoker) {
+      el.removeEventListener(name, invoker as any, prevOptions as any)
+    }
+    if (handler) {
+      el.addEventListener(
+        name,
+        createInvoker(handler, instance),
+        nextOptions as any
+      )
+    }
+    return
+  }
+
+  if (handler) {
     if (invoker) {
       ;(prevValue as EventValue).invoker = null
       invoker.value = nextValue
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(nextValue, instance))
+      el.addEventListener(name, createInvoker(handler, instance))
     }
   } else if (invoker) {
     el.removeEventListener(name, invoker as any)
