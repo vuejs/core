@@ -185,6 +185,8 @@ export interface CompoundExpressionNode extends Node {
   children: (
     | SimpleExpressionNode
     | InterpolationNode
+    | ObjectExpression
+    | CompoundExpressionNode
     | TextNode
     | string
     | RuntimeHelper)[]
