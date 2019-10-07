@@ -78,7 +78,8 @@ export {
   TransformOptions,
   TransformContext,
   NodeTransform,
-  StructuralDirectiveTransform
+  StructuralDirectiveTransform,
+  DirectiveTransform
 } from './transform'
 export {
   generate,
