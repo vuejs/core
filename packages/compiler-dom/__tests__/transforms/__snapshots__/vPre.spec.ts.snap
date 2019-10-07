@@ -1,0 +1,178 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: pre transform should not compile inner content 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "content": "{{ a }}",
+          "isEmpty": false,
+          "loc": Object {
+            "end": Object {
+              "column": 29,
+              "line": 2,
+              "offset": 34,
+            },
+            "source": "{{ a }}",
+            "start": Object {
+              "column": 22,
+              "line": 2,
+              "offset": 27,
+            },
+          },
+          "type": 2,
+        },
+      ],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 35,
+          "line": 2,
+          "offset": 40,
+        },
+        "source": "<div v-pre>{{ a }}</div>",
+        "start": Object {
+          "column": 11,
+          "line": 2,
+          "offset": 16,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+    Object {
+      "children": Array [
+        Object {
+          "content": Object {
+            "content": "a",
+            "isStatic": false,
+            "loc": Object {
+              "end": Object {
+                "column": 20,
+                "line": 3,
+                "offset": 60,
+              },
+              "source": "a",
+              "start": Object {
+                "column": 19,
+                "line": 3,
+                "offset": 59,
+              },
+            },
+            "type": 4,
+          },
+          "loc": Object {
+            "end": Object {
+              "column": 23,
+              "line": 3,
+              "offset": 63,
+            },
+            "source": "{{ a }}",
+            "start": Object {
+              "column": 16,
+              "line": 3,
+              "offset": 56,
+            },
+          },
+          "type": 5,
+        },
+      ],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 29,
+          "line": 3,
+          "offset": 69,
+        },
+        "source": "<div>{{ a }}</div>",
+        "start": Object {
+          "column": 11,
+          "line": 3,
+          "offset": 51,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+    Object {
+      "children": Array [
+        Object {
+          "content": "<component is=\\"div\\"></component>",
+          "isEmpty": false,
+          "loc": Object {
+            "end": Object {
+              "column": 45,
+              "line": 5,
+              "offset": 136,
+            },
+            "source": "<component is=\\"div\\"></component>",
+            "start": Object {
+              "column": 13,
+              "line": 5,
+              "offset": 104,
+            },
+          },
+          "type": 2,
+        },
+      ],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 17,
+          "line": 6,
+          "offset": 153,
+        },
+        "source": "<div v-pre>
+            <component is=\\"div\\"></component>
+          </div>",
+        "start": Object {
+          "column": 11,
+          "line": 4,
+          "offset": 80,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "isSelfClosing": false,
+  "loc": Object {
+    "end": Object {
+      "column": 15,
+      "line": 7,
+      "offset": 168,
+    },
+    "source": "<div>
+          <div v-pre>{{ a }}</div>
+          <div>{{ a }}</div>
+          <div v-pre>
+            <component is=\\"div\\"></component>
+          </div>
+        </div>",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "ns": 0,
+  "props": Array [],
+  "tag": "div",
+  "tagType": 0,
+  "type": 1,
+}
+`;

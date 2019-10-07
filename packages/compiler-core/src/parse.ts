@@ -128,7 +128,6 @@ function parseChildren(
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (startsWith(s, context.options.delimiters[0])) {
-      // '{{'
       node = parseInterpolation(context, mode)
     } else if (mode === TextModes.DATA && s[0] === '<') {
       // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
@@ -334,10 +333,10 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
-  const mode = (context.options.getTextMode(
+  const mode = context.options.getTextMode(
     element.tag,
     element.ns
-  ) as unknown) as TextModes
+  )
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
@@ -357,6 +356,23 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
+
+  const hasPre = element.props.some(x=>x.type === NodeTypes.DIRECTIVE && x.name === "pre");
+  // if has-pre get the source for the children
+  if(hasPre && element.children.length > 0){
+    const firstChild =  element.children[0];
+    const lastChild = element.children[element.children.length - 1];
+
+    const loc = getSelection(context, firstChild.loc.start, lastChild.loc.end );
+    // override the children with only the source of the node content
+    element.children = [{
+      type: NodeTypes.TEXT,
+      content: loc.source,
+      loc: loc,
+      isEmpty: false
+    }]
+  }
+  
   return element
 }
 
