@@ -22,9 +22,10 @@ function transformWithCloak(template: string, options: CompilerOptions = {}) {
 }
 
 describe('compiler: `v-cloak` transform', () => {
-  test('should add nothing to DOM', () => {
+  test('should add no props to DOM', () => {
     const { node } = transformWithCloak(`<div v-cloak/>`)
 
+    expect(node.props.length).toBe(1)
     expect(node.props[0]).toMatchObject({
       type: NodeTypes.DIRECTIVE,
       name: `cloak`,
