@@ -62,7 +62,7 @@ export function patchEvent(
   const prevOptions = prevValue && 'options' in prevValue && prevValue.options
   const nextOptions = nextValue && 'options' in nextValue && nextValue.options
   const invoker = prevValue && prevValue.invoker
-  const handler =
+  const value =
     nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
 
   // go unoptimized route if it has to deal with event options
@@ -70,24 +70,24 @@ export function patchEvent(
     if (invoker) {
       el.removeEventListener(name, invoker as any, prevOptions as any)
     }
-    if (handler) {
+    if (value) {
       el.addEventListener(
         name,
-        createInvoker(handler, instance),
+        createInvoker(value, instance),
         nextOptions as any
       )
     }
     return
   }
 
-  if (handler) {
+  if (nextValue && value) {
     if (invoker) {
       ;(prevValue as EventValue).invoker = null
-      invoker.value = nextValue
+      invoker.value = value
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(handler, instance))
+      el.addEventListener(name, createInvoker(value, instance))
     }
   } else if (invoker) {
     el.removeEventListener(name, invoker as any)
