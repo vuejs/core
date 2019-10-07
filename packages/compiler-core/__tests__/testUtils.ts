@@ -7,7 +7,7 @@ import {
   ElementCodegenNode
 } from '../src'
 import { CREATE_VNODE } from '../src/runtimeHelpers'
-import { isString } from '@vue/shared'
+import { isString, PatchFlags, PatchFlagNames, isArray } from '@vue/shared'
 
 const leadingBracketRE = /^\[/
 const bracketsRE = /^\[|\]$/g
@@ -56,5 +56,17 @@ export function createElementWithCodegen(
       callee: CREATE_VNODE,
       arguments: args
     }
+  }
+}
+
+export function genFlagText(flag: PatchFlags | PatchFlags[]) {
+  if (isArray(flag)) {
+    let f = 0
+    flag.forEach(ff => {
+      f |= ff
+    })
+    return `${f} /* ${flag.map(f => PatchFlagNames[f]).join(', ')} */`
+  } else {
+    return `${flag} /* ${PatchFlagNames[flag]} */`
   }
 }

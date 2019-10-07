@@ -25,8 +25,7 @@ import {
   RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/runtime-dom'
-import { PatchFlagNames } from '@vue/shared'
-import { createObjectMatcher } from '../testUtils'
+import { createObjectMatcher, genFlagText } from '../testUtils'
 
 function parseWithForTransform(
   template: string,
@@ -609,12 +608,8 @@ describe('compiler: v-for', () => {
                 ]
               },
               keyed
-                ? `${PatchFlags.KEYED_FRAGMENT} /* ${
-                    PatchFlagNames[PatchFlags.KEYED_FRAGMENT]
-                  } */`
-                : `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-                    PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
-                  } */`
+                ? genFlagText(PatchFlags.KEYED_FRAGMENT)
+                : genFlagText(PatchFlags.UNKEYED_FRAGMENT)
             ]
           }
         ]
@@ -842,9 +837,7 @@ describe('compiler: v-for', () => {
                     }
                   ]
                 },
-                `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-                  PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
-                } */`
+                genFlagText(PatchFlags.UNKEYED_FRAGMENT)
               ]
             }
           }

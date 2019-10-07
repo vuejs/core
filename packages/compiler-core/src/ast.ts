@@ -136,6 +136,10 @@ export interface SlotOutletNode extends BaseElementNode {
 
 export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
+  codegenNode:
+    | ElementCodegenNode
+    | CodegenNodeWithDirective<ElementCodegenNode>
+    | undefined
 }
 
 export interface TextNode extends Node {
@@ -278,8 +282,7 @@ export interface ConditionalExpression extends Node {
 // createVNode(...)
 export interface ElementCodegenNode extends CallExpression {
   callee: typeof CREATE_VNODE
-  arguments: // tag, props, children, patchFlag, dynamicProps
-
+  arguments:  // tag, props, children, patchFlag, dynamicProps
     | [string | RuntimeHelper]
     | [string | RuntimeHelper, PropsExpression]
     | [string | RuntimeHelper, 'null' | PropsExpression, TemplateChildNode[]]
@@ -305,8 +308,7 @@ export type ElementCodegenNodeWithDirective = CodegenNodeWithDirective<
 // createVNode(...)
 export interface ComponentCodegenNode extends CallExpression {
   callee: typeof CREATE_VNODE
-  arguments: // Comp, props, slots, patchFlag, dynamicProps
-
+  arguments:  // Comp, props, slots, patchFlag, dynamicProps
     | [string | RuntimeHelper]
     | [string | RuntimeHelper, PropsExpression]
     | [string | RuntimeHelper, 'null' | PropsExpression, SlotsExpression]
@@ -394,8 +396,7 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements: // dir, exp, arg, modifiers
-
+  elements:  // dir, exp, arg, modifiers
     | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
@@ -405,8 +406,7 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface SlotOutletCodegenNode extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments: // $slots, name, props, fallback
-
+  arguments:  // $slots, name, props, fallback
     | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
@@ -557,7 +557,7 @@ type InferCodegenNodeType<T> = T extends typeof CREATE_VNODE
   : T extends typeof CREATE_BLOCK
     ? BlockElementCodegenNode | BlockComponentCodegenNode
     : T extends typeof APPLY_DIRECTIVES
-      ? CodegenNodeWithDirective<ElementCodegenNode | ComponentCodegenNode>
+      ? ElementCodegenNodeWithDirective | CompoenntCodegenNodeWithDirective
       : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
 
 export function createCallExpression<T extends CallExpression['callee']>(

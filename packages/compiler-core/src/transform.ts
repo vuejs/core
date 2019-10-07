@@ -22,8 +22,8 @@ import {
   RuntimeHelper,
   helperNameMap
 } from './runtimeHelpers'
-import { isVSlot, createBlockExpression, isSlotOutlet } from './utils'
-import { hoistStatic } from './transforms/hoistStatic'
+import { isVSlot, createBlockExpression } from './utils'
+import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 
 // There are two types of transforms:
 //
@@ -229,26 +229,19 @@ export function transform(root: RootNode, options: TransformOptions) {
 function finalizeRoot(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
-  if (children.length === 1) {
-    const child = children[0]
-    if (
-      child.type === NodeTypes.ELEMENT &&
-      !isSlotOutlet(child) &&
-      child.codegenNode &&
-      child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION
-    ) {
-      // turn root element into a block
-      root.codegenNode = createBlockExpression(
-        child.codegenNode!.arguments,
-        context
-      )
-    } else {
-      // - single <slot/>, IfNode, ForNode: already blocks.
-      // - single text node: always patched.
-      // - transform calls without transformElement (only during tests)
-      // Just generate the node as-is
-      root.codegenNode = child
-    }
+  const child = children[0]
+  if (isSingleElementRoot(root, child) && child.codegenNode) {
+    // turn root element into a block
+    root.codegenNode = createBlockExpression(
+      child.codegenNode.arguments,
+      context
+    )
+  } else if (children.length === 1) {
+    // - single <slot/>, IfNode, ForNode: already blocks.
+    // - single text node: always patched.
+    // - transform calls without transformElement (only during tests)
+    // Just generate the node as-is
+    root.codegenNode = child
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
     root.codegenNode = createBlockExpression(
@@ -256,7 +249,6 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       context
     )
   }
-
   // finalize meta information
   root.helpers = [...context.helpers]
   root.components = [...context.components]
