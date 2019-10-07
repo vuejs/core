@@ -94,7 +94,7 @@ export const PublicInstanceProxyHandlers = {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}".` +
-          `Properties starting with $ are reserved and readonly.`,
+            `Properties starting with $ are reserved and readonly.`,
           target
         )
       return false

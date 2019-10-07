@@ -267,7 +267,7 @@ export function applyOptions(
         if (isFunction(handler)) {
           watch(getter, handler as any)
         } else if (__DEV__) {
-          warn(`Expected a function as watch handler "${raw}"`)
+          warn(`Invalid watch handler specified by key "${raw}"`, handler)
         }
       } else if (isFunction(raw)) {
         watch(getter, raw.bind(ctx))
@@ -275,7 +275,7 @@ export function applyOptions(
         // TODO 2.x compat
         watch(getter, raw.handler.bind(ctx), raw)
       } else if (__DEV__) {
-        warn(`Invalid watch options "${key}"`)
+        warn(`Invalid watch option: "${key}"`)
       }
     }
   }

@@ -522,11 +522,11 @@ describe('api: options', () => {
       render(h(Comp), root)
 
       expect(
-        'Expected a function as watch handler "notExistingMethod"'
+        'Invalid watch handler specified by key "notExistingMethod"'
       ).toHaveBeenWarned()
     })
 
-    test('Invalid watch options', () => {
+    test('Invalid watch option', () => {
       const Comp = {
         watch: { foo: true },
         render() {}
@@ -536,7 +536,7 @@ describe('api: options', () => {
       // @ts-ignore
       render(h(Comp), root)
 
-      expect('Invalid watch options "foo"').toHaveBeenWarned()
+      expect('Invalid watch option: "foo"').toHaveBeenWarned()
     })
   })
 })
