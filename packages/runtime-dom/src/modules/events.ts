@@ -47,12 +47,18 @@ export function patchEvent(
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
-  const prevInvoker = prevValue && prevValue.invoker
-  if (prevInvoker) {
-    el.removeEventListener(name, prevInvoker as any)
-  }
-  if (nextValue) {  
-    el.addEventListener(name, createInvoker(nextValue, instance))
+  const invoker = prevValue && prevValue.invoker
+  if (nextValue) {
+    if (invoker) {
+      ;(prevValue as EventValue).invoker = null
+      invoker.value = nextValue
+      nextValue.invoker = invoker
+      invoker.lastUpdated = getNow()
+    } else {
+      el.addEventListener(name, createInvoker(nextValue, instance))
+    }
+  } else if (invoker) {
+    el.removeEventListener(name, invoker as any)
   }
 }
 
@@ -66,6 +72,7 @@ function createInvoker(value: any, instance: ComponentInternalInstance | null) {
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated) {
       const args = [e]
+      const value = invoker.value
       if (isArray(value)) {
         for (let i = 0; i < value.length; i++) {
           callWithAsyncErrorHandling(
