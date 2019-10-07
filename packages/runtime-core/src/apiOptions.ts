@@ -275,7 +275,7 @@ export function applyOptions(
         // TODO 2.x compat
         watch(getter, raw.handler.bind(ctx), raw)
       } else if (__DEV__) {
-        warn(`Attempting to mutate readonly computed value "${key}"`)
+        warn(`Invalid watch options "${key}"`)
       }
     }
   }
