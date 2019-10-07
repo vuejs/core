@@ -72,6 +72,7 @@ function createInvoker(value: any, instance: ComponentInternalInstance | null) {
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated) {
       const args = [e]
+      const value = invoker.value
       if (isArray(value)) {
         for (let i = 0; i < value.length; i++) {
           callWithAsyncErrorHandling(
