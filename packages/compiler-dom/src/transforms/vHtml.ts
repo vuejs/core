@@ -9,16 +9,16 @@ import {
 
 export const transformHtml: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
-    const htmlProp = node.props.find(
+    const prop = node.props.find(
       x => x.type === NodeTypes.DIRECTIVE && x.name === 'html'
     ) as DirectiveNode | undefined
-    if (htmlProp) {
-      htmlProp.name = `bind`
-      htmlProp.arg = createSimpleExpression(`innerHTML`, true, htmlProp.loc)
+    if (prop) {
+      prop.name = `bind`
+      prop.arg = createSimpleExpression(`innerHTML`, true, prop.loc)
 
-      if (!htmlProp.exp || !htmlProp.exp.loc.source.trim()) {
+      if (!prop.exp || !prop.exp.loc.source.trim()) {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_HTML_NO_EXPRESSION, htmlProp.loc)
+          createCompilerError(ErrorCodes.X_V_HTML_NO_EXPRESSION, prop.loc)
         )
       }
       if (node.children.length > 0) {
