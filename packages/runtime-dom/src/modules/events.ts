@@ -14,15 +14,9 @@ type EventValue = (Function | Function[]) & {
   invoker?: Invoker | null
 }
 
-type EventListenerOptions = {
-  capture?: Boolean
-  once?: Boolean
-  passive?: Boolean
-} | null
-
 type EventValueWithOptions = {
   handler: EventValue
-  options: EventListenerOptions
+  options: AddEventListenerOptions
   invoker?: Invoker | null
 }
 
