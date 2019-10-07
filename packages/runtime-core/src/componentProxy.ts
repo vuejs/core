@@ -100,7 +100,7 @@ export const PublicInstanceProxyHandlers = {
       return false
     } else if (key in target.props) {
       __DEV__ &&
-        warn(`Attempting to mutate prop "${key}" to "${value}"`, target)
+        warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
       return false
     } else {
       target.user[key] = value
