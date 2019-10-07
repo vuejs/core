@@ -33,8 +33,15 @@ describe('vnode', () => {
       expect(vnode.props).toMatchObject({ class: 'foo baz' })
     })
 
-    test('array', () => {
+    test('array<string>', () => {
       const vnode = createVNode('p', { class: ['foo', 'baz'] })
+      expect(vnode.props).toMatchObject({ class: 'foo baz' })
+    })
+
+    test('array<object>', () => {
+      const vnode = createVNode('p', {
+        class: [{ foo: 'foo' }, { baz: 'baz' }]
+      })
       expect(vnode.props).toMatchObject({ class: 'foo baz' })
     })
 
