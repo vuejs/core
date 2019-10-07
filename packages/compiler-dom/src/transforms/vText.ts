@@ -1,46 +1,33 @@
-// TODO
 import {
-  createStructuralDirectiveTransform,
   createCompilerError,
   ErrorCodes,
   createSimpleExpression,
-  SimpleExpressionNode,
-  NodeTypes
+  NodeTypes,
+  NodeTransform,
+  DirectiveNode
 } from '@vue/compiler-core'
 
-export const transformText = createStructuralDirectiveTransform(
-  'text',
-  (node, dir, context) => {
-    if (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim()) {
-      const loc = dir.exp ? dir.exp.loc : node.loc
-      context.onError(
-        createCompilerError(ErrorCodes.X_V_TEXT_NO_EXPRESSION, dir.loc)
-      )
-      dir.exp = createSimpleExpression('', true, loc)
-    }
+export const transformText: NodeTransform = (node, context) => {
+  if (node.type === NodeTypes.ELEMENT) {
+    const htmlProp = node.props.find(
+      x => x.type === NodeTypes.DIRECTIVE && x.name === 'text'
+    ) as DirectiveNode | undefined
+    if (htmlProp) {
+      htmlProp.name = `bind`
+      htmlProp.arg = createSimpleExpression(`textContent`, true, htmlProp.loc)
 
-    // v-show can't be used outside of an element
-    if (node.type !== NodeTypes.ELEMENT) {
-      createCompilerError(ErrorCodes.X_V_TEXT_UNEXPECTED_USAGE, dir.loc)
-    }
-
-    // add prop textContent
-    node.props.push({
-      type: NodeTypes.DIRECTIVE,
-      name: `bind`,
-      arg: createSimpleExpression(`textContent`, true, dir.loc),
-      exp: dir.exp,
-      modifiers: [],
-      loc: dir.loc
-    })
-
-    if (node.children.length > 0) {
-      // remove all the children, since they will be overridden by the `textContent`
-      node.children = []
-
-      if (__DEV__) {
-        console.warn(`"v-text" replaced children on "${node.tag}" element`)
+      if (!htmlProp.exp || !htmlProp.exp.loc.source.trim()) {
+        context.onError(
+          createCompilerError(ErrorCodes.X_V_TEXT_NO_EXPRESSION, htmlProp.loc)
+        )
+      }
+      if (node.children.length > 0) {
+        // remove all the children, since they will be overridden by the `textContent`
+        node.children = []
+        if (__DEV__) {
+          console.warn(`"v-text" replaced children on "${node.tag}" element`)
+        }
       }
     }
   }
-)
+}
