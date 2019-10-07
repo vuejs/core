@@ -1,4 +1,5 @@
-import { NOOP } from '@vue/shared'
-import { createStructuralDirectiveTransform } from '@vue/compiler-core'
+import { DirectiveTransform } from 'packages/compiler-core/src/transform'
 
-export const transformCloak = createStructuralDirectiveTransform('cloak', NOOP)
+export const transformCloak: DirectiveTransform = (node, context) => {
+  return { props: [], needRuntime: false }
+}

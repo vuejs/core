@@ -11,13 +11,10 @@ export function compile(
   return baseCompile(template, {
     ...options,
     ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
-    nodeTransforms: [
-      transformStyle,
-      transformCloak,
-      ...(options.nodeTransforms || [])
-    ],
+    nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
     directiveTransforms: {
       // TODO include DOM-specific directiveTransforms
+      cloak: transformCloak,
       ...(options.directiveTransforms || {})
     }
   })
