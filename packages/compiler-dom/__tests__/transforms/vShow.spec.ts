@@ -2,11 +2,7 @@ import {
   parse,
   transform,
   CompilerOptions,
-  ElementNode,
-  NodeTypes,
-  createObjectExpression,
-  createObjectProperty,
-  createSimpleExpression
+  ElementNode
 } from '@vue/compiler-core'
 import { transformShow } from '../../src/transforms/vShow'
 import { transformStyle } from '../../src/transforms/transformStyle'
@@ -17,11 +13,10 @@ function parseWithShowTransform(
 ) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [
-      transformStyle,
-      // NOTE: transformShow must come come after the style
-      transformShow
-    ],
+    nodeTransforms: [transformStyle],
+    directiveTransforms: {
+      show: transformShow
+    },
     ...options
   })
   return {
@@ -31,83 +26,15 @@ function parseWithShowTransform(
 }
 
 describe('compiler: `v-show` transform', () => {
-  it('should add style directive', () => {
+  it('should add style', () => {
     const { node } = parseWithShowTransform(`<div v-show="true"/>`)
-
-    expect(node.props[0]).toMatchObject({
-      type: NodeTypes.DIRECTIVE,
-      name: `bind`,
-      arg: {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: `style`,
-        isStatic: true
-      },
-      exp: {
-        type: NodeTypes.COMPOUND_EXPRESSION,
-        children: [
-          {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            isStatic: false,
-            content: 'true'
-          },
-          "?",
-          createObjectExpression([
-            createObjectProperty('display', createSimpleExpression('none', true))
-          ]),
-          ":",
-          createObjectExpression([])
-        ]
-      }
-    })
+    expect(node).toMatchSnapshot()
   })
 
-  describe('style', () => {
-    it('should append to style', () => {
-      const { node } = parseWithShowTransform(
-        `<div style="display:flex" v-show="true"/>`
-      )
-
-      expect(node.props).toMatchObject([
-        {
-          type: NodeTypes.DIRECTIVE,
-          name: `bind`,
-          arg: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `style`,
-            isStatic: true
-          },
-          exp: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`,
-            isStatic: false
-          }
-        },
-        {
-          type: NodeTypes.DIRECTIVE,
-          name: `bind`,
-          arg: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `style`,
-            isStatic: true
-          },
-          exp: {
-            type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [
-              {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                isStatic: false,
-                content: 'true'
-              },
-              "?",
-              createObjectExpression([
-                createObjectProperty('display', createSimpleExpression('none', true))
-              ]),
-              ":",
-              createObjectExpression([])
-            ]
-          }
-        }
-      ])
-    })
+  it('should append to style', () => {
+    const { node } = parseWithShowTransform(
+      `<div style="display:flex" v-show="true"/>`
+    )
+    expect(node).toMatchSnapshot()
   })
 })

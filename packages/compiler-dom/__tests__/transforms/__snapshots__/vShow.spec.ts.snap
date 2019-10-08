@@ -1,0 +1,183 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: \`v-show\` transform should add style directive 1`] = `
+Object {
+  "children": Array [],
+  "codegenNode": undefined,
+  "isSelfClosing": true,
+  "loc": Object {
+    "end": Object {
+      "column": 21,
+      "line": 1,
+      "offset": 20,
+    },
+    "source": "<div v-show=\\"true\\"/>",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "ns": 0,
+  "props": Array [
+    Object {
+      "arg": undefined,
+      "exp": Object {
+        "content": "true",
+        "isStatic": false,
+        "loc": Object {
+          "end": Object {
+            "column": 18,
+            "line": 1,
+            "offset": 17,
+          },
+          "source": "true",
+          "start": Object {
+            "column": 14,
+            "line": 1,
+            "offset": 13,
+          },
+        },
+        "type": 4,
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 19,
+          "line": 1,
+          "offset": 18,
+        },
+        "source": "v-show=\\"true\\"",
+        "start": Object {
+          "column": 6,
+          "line": 1,
+          "offset": 5,
+        },
+      },
+      "modifiers": Array [],
+      "name": "show",
+      "type": 7,
+    },
+  ],
+  "tag": "div",
+  "tagType": 0,
+  "type": 1,
+}
+`;
+
+exports[`compiler: \`v-show\` transform style should append to style 1`] = `
+Object {
+  "children": Array [],
+  "codegenNode": undefined,
+  "isSelfClosing": true,
+  "loc": Object {
+    "end": Object {
+      "column": 42,
+      "line": 1,
+      "offset": 41,
+    },
+    "source": "<div style=\\"display:flex\\" v-show=\\"true\\"/>",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "ns": 0,
+  "props": Array [
+    Object {
+      "arg": Object {
+        "content": "style",
+        "isStatic": true,
+        "loc": Object {
+          "end": Object {
+            "column": 26,
+            "line": 1,
+            "offset": 25,
+          },
+          "source": "style=\\"display:flex\\"",
+          "start": Object {
+            "column": 6,
+            "line": 1,
+            "offset": 5,
+          },
+        },
+        "type": 4,
+      },
+      "exp": Object {
+        "content": "_hoisted_1",
+        "isStatic": false,
+        "loc": Object {
+          "end": Object {
+            "column": 26,
+            "line": 1,
+            "offset": 25,
+          },
+          "source": "style=\\"display:flex\\"",
+          "start": Object {
+            "column": 6,
+            "line": 1,
+            "offset": 5,
+          },
+        },
+        "type": 4,
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 26,
+          "line": 1,
+          "offset": 25,
+        },
+        "source": "style=\\"display:flex\\"",
+        "start": Object {
+          "column": 6,
+          "line": 1,
+          "offset": 5,
+        },
+      },
+      "modifiers": Array [],
+      "name": "bind",
+      "type": 7,
+    },
+    Object {
+      "arg": undefined,
+      "exp": Object {
+        "content": "true",
+        "isStatic": false,
+        "loc": Object {
+          "end": Object {
+            "column": 39,
+            "line": 1,
+            "offset": 38,
+          },
+          "source": "true",
+          "start": Object {
+            "column": 35,
+            "line": 1,
+            "offset": 34,
+          },
+        },
+        "type": 4,
+      },
+      "loc": Object {
+        "end": Object {
+          "column": 40,
+          "line": 1,
+          "offset": 39,
+        },
+        "source": "v-show=\\"true\\"",
+        "start": Object {
+          "column": 27,
+          "line": 1,
+          "offset": 26,
+        },
+      },
+      "modifiers": Array [],
+      "name": "show",
+      "type": 7,
+    },
+  ],
+  "tag": "div",
+  "tagType": 0,
+  "type": 1,
+}
+`;

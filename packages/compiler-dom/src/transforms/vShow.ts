@@ -5,12 +5,13 @@ import {
   createSimpleExpression,
   createCompoundExpression,
   createObjectExpression,
-  createObjectProperty
+  createObjectProperty,
+  SimpleExpressionNode
 } from '@vue/compiler-core'
 
 export const transformShow: DirectiveTransform = (dir, context) => {
   const { exp, loc } = dir
-  if (!exp) {
+  if (!exp || (exp && !(exp as SimpleExpressionNode).content.trim())) {
     context.onError(createCompilerError(ErrorCodes.X_V_SHOW_NO_EXPRESSION, loc))
   }
 
