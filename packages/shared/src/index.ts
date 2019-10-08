@@ -15,7 +15,7 @@ export const extend = <T extends object, U extends object>(
   b: U
 ): T & U => {
   for (const key in b) {
-    ;(a as any)[key] = b[key]
+    (a as any)[key] = b[key]
   }
   return a as any
 }
