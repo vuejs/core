@@ -53,11 +53,11 @@ export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: any[]
+  args: any[] = []
 ) {
   let res: any
   try {
-    res = args ? fn(...args) : fn()
+    res = fn(...args)
   } catch (err) {
     handleError(err, instance, type)
   }
