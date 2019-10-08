@@ -185,7 +185,7 @@ export function applyOptions(
     instance.renderContext === EMPTY_OBJ
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
-  const ctx = instance.renderProxy as any
+  const ctx = instance.renderProxy!
   const {
     // composition
     mixins,
@@ -265,7 +265,7 @@ export function applyOptions(
       if (isString(raw)) {
         const handler = renderContext[raw]
         if (isFunction(handler)) {
-          watch(getter, handler as any)
+          watch(getter, handler as WatchHandler)
         } else if (__DEV__) {
           // TODO warn invalid watch handler path
         }

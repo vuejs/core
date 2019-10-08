@@ -1188,7 +1188,7 @@ export function createRenderer<
     nextVNode.component = instance
     instance.vnode = nextVNode
     instance.next = null
-    resolveProps(instance, nextVNode.props, (nextVNode.type as any).props)
+    resolveProps(instance, nextVNode.props, (nextVNode.type as Component).props)
     resolveSlots(instance, nextVNode.children)
   }
 

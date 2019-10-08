@@ -1,7 +1,8 @@
-import { VNode, normalizeVNode } from './vnode'
+import { VNode, normalizeVNode, VNodeChild } from './vnode'
 import { ShapeFlags } from '.'
 import { isFunction } from '@vue/shared'
 import { ComponentInternalInstance } from './component'
+import { Slots } from './componentSlots'
 
 export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
 
@@ -62,14 +63,14 @@ export function normalizeSuspenseChildren(
 } {
   const { shapeFlag, children } = vnode
   if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    const { default: d, fallback } = children as any
+    const { default: d, fallback } = children as Slots
     return {
       content: normalizeVNode(isFunction(d) ? d() : d),
       fallback: normalizeVNode(isFunction(fallback) ? fallback() : fallback)
     }
   } else {
     return {
-      content: normalizeVNode(children as any),
+      content: normalizeVNode(children as VNodeChild),
       fallback: normalizeVNode(null)
     }
   }

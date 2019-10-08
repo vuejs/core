@@ -183,7 +183,7 @@ export function processExpression(
     // range is offset by -1 due to the wrapping parens when parsed
     const start = id.start - 1
     const end = id.end - 1
-    const last = ids[i - 1] as any
+    const last = ids[i - 1]
     const leadingText = rawExp.slice(last ? last.end - 1 : 0, start)
     if (leadingText.length || id.prefix) {
       children.push(leadingText + (id.prefix || ``))

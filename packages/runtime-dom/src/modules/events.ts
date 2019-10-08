@@ -5,9 +5,9 @@ import {
 } from '@vue/runtime-core'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
-interface Invoker extends Function {
+interface Invoker extends EventListener {
   value: EventValue
-  lastUpdated?: number
+  lastUpdated: number
 }
 
 type EventValue = (Function | Function[]) & {
@@ -58,7 +58,7 @@ export function patchEvent(
       el.addEventListener(name, createInvoker(nextValue, instance))
     }
   } else if (invoker) {
-    el.removeEventListener(name, invoker as any)
+    el.removeEventListener(name, invoker)
   }
 }
 
@@ -66,7 +66,7 @@ function createInvoker(
   initialValue: any,
   instance: ComponentInternalInstance | null
 ) {
-  const invoker = ((e: Event) => {
+  const invoker: Invoker = (e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
     // happens because browsers fire microtask ticks between event propagation.
@@ -94,7 +94,7 @@ function createInvoker(
         )
       }
     }
-  }) as any
+  }
   invoker.value = initialValue
   initialValue.invoker = invoker
   invoker.lastUpdated = getNow()
