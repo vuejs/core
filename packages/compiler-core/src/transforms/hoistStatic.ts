@@ -2,23 +2,43 @@ import {
   RootNode,
   NodeTypes,
   TemplateChildNode,
-  ElementNode,
   ElementTypes,
   ElementCodegenNode,
-  ElementCodegenNodeWithDirective
+  PlainElementNode,
+  ComponentNode,
+  TemplateNode
 } from '../ast'
 import { TransformContext } from '../transform'
 import { APPLY_DIRECTIVES } from '../runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
+import { isSlotOutlet } from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
-  walk(root.children, context, new Map<TemplateChildNode, boolean>())
+  walk(
+    root.children,
+    context,
+    new Map(),
+    isSingleElementRoot(root, root.children[0])
+  )
+}
+
+export function isSingleElementRoot(
+  root: RootNode,
+  child: TemplateChildNode
+): child is PlainElementNode | ComponentNode | TemplateNode {
+  const { children } = root
+  return (
+    children.length === 1 &&
+    child.type === NodeTypes.ELEMENT &&
+    !isSlotOutlet(child)
+  )
 }
 
 function walk(
   children: TemplateChildNode[],
   context: TransformContext,
-  resultCache: Map<TemplateChildNode, boolean>
+  resultCache: Map<TemplateChildNode, boolean>,
+  doNotHoistNode: boolean = false
 ) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -27,9 +47,9 @@ function walk(
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
     ) {
-      if (isStaticNode(child, resultCache)) {
+      if (!doNotHoistNode && isStaticNode(child, resultCache)) {
         // whole tree is static
-        ;(child as any).codegenNode = context.hoist(child.codegenNode!)
+        child.codegenNode = context.hoist(child.codegenNode!)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -40,7 +60,7 @@ function walk(
           flag === PatchFlags.NEED_PATCH ||
           flag === PatchFlags.TEXT
         ) {
-          let codegenNode = child.codegenNode!
+          let codegenNode = child.codegenNode as ElementCodegenNode
           if (codegenNode.callee === APPLY_DIRECTIVES) {
             codegenNode = codegenNode.arguments[0]
           }
@@ -51,20 +71,23 @@ function walk(
         }
       }
     }
-    if (child.type === NodeTypes.ELEMENT || child.type === NodeTypes.FOR) {
+    if (child.type === NodeTypes.ELEMENT) {
       walk(child.children, context, resultCache)
+    } else if (child.type === NodeTypes.FOR) {
+      // Do not hoist v-for single child because it has to be a block
+      walk(child.children, context, resultCache, child.children.length === 1)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
-        walk(child.branches[i].children, context, resultCache)
+        const branchChildren = child.branches[i].children
+        // Do not hoist v-if single child because it has to be a block
+        walk(branchChildren, context, resultCache, branchChildren.length === 1)
       }
     }
   }
 }
 
-function getPatchFlag(node: ElementNode): number | undefined {
-  let codegenNode = node.codegenNode as
-    | ElementCodegenNode
-    | ElementCodegenNodeWithDirective
+function getPatchFlag(node: PlainElementNode): number | undefined {
+  let codegenNode = node.codegenNode as ElementCodegenNode
   if (codegenNode.callee === APPLY_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0]
   }

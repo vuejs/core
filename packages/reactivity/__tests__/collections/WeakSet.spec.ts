@@ -3,11 +3,11 @@ import { reactive, isReactive, effect, toRaw } from '../../src'
 describe('reactivity/collections', () => {
   describe('WeakSet', () => {
     it('instanceof', () => {
-      const original = new Set()
+      const original = new WeakSet()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof Set).toBe(true)
-      expect(observed instanceof Set).toBe(true)
+      expect(original instanceof WeakSet).toBe(true)
+      expect(observed instanceof WeakSet).toBe(true)
     })
 
     it('should observe mutations', () => {

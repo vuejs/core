@@ -127,25 +127,32 @@ describe('reactivity/collections', () => {
 
     it('should observe entries iteration', () => {
       let dummy
+      let dummy2
       const map = reactive(new Map())
       effect(() => {
-        dummy = 0
+        dummy = ''
+        dummy2 = 0
         // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map.entries()) {
-          key
-          dummy += num
+          dummy += key
+          dummy2 += num
         }
       })
 
-      expect(dummy).toBe(0)
+      expect(dummy).toBe('')
+      expect(dummy2).toBe(0)
       map.set('key1', 3)
-      expect(dummy).toBe(3)
+      expect(dummy).toBe('key1')
+      expect(dummy2).toBe(3)
       map.set('key2', 2)
-      expect(dummy).toBe(5)
+      expect(dummy).toBe('key1key2')
+      expect(dummy2).toBe(5)
       map.delete('key1')
-      expect(dummy).toBe(2)
+      expect(dummy).toBe('key2')
+      expect(dummy2).toBe(2)
       map.clear()
-      expect(dummy).toBe(0)
+      expect(dummy).toBe('')
+      expect(dummy2).toBe(0)
     })
 
     it('should be triggered by clearing', () => {

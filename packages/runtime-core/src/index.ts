@@ -63,14 +63,19 @@ export {
 export {
   ComponentOptions,
   ComponentOptionsWithoutProps,
-  ComponentOptionsWithProps,
+  ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
 } from './apiOptions'
 
 export { ComponentPublicInstance } from './componentProxy'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
-export { Prop, PropType, ComponentPropsOptions } from './componentProps'
+export {
+  Prop,
+  PropType,
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions
+} from './componentProps'
 export {
   Directive,
   DirectiveBinding,

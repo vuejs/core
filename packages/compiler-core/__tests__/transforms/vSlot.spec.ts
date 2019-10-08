@@ -18,8 +18,8 @@ import {
   trackVForSlotScopes
 } from '../../src/transforms/vSlot'
 import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
-import { createObjectMatcher } from '../testUtils'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { createObjectMatcher, genFlagText } from '../testUtils'
+import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
@@ -308,9 +308,7 @@ describe('compiler: transform component slots', () => {
                   }),
                   // nested slot should be forced dynamic, since scope variables
                   // are not tracked as dependencies of the slot.
-                  `${PatchFlags.DYNAMIC_SLOTS} /* ${
-                    PatchFlagNames[PatchFlags.DYNAMIC_SLOTS]
-                  } */`
+                  genFlagText(PatchFlags.DYNAMIC_SLOTS)
                 ]
               }
             },

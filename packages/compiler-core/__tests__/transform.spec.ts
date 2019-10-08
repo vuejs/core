@@ -14,7 +14,8 @@ import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
-  RENDER_SLOT
+  RENDER_SLOT,
+  APPLY_DIRECTIVES
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
@@ -298,6 +299,28 @@ describe('compiler: transform', () => {
       const ast = transformWithCodegen(`<div v-for="i in list" />`)
       expect(ast.codegenNode).toMatchObject({
         type: NodeTypes.FOR
+      })
+    })
+
+    test('root element with custom directive', () => {
+      const ast = transformWithCodegen(`<div v-foo/>`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+        expressions: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: OPEN_BLOCK
+          },
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            // should wrap applyDirectives() around createBlock()
+            callee: APPLY_DIRECTIVES,
+            arguments: [
+              { callee: CREATE_BLOCK },
+              { type: NodeTypes.JS_ARRAY_EXPRESSION }
+            ]
+          }
+        ]
       })
     })
 

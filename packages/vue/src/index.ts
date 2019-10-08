@@ -1,6 +1,7 @@
 // This package is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
 import { compile, CompilerOptions } from '@vue/compiler-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 import { registerRuntimeCompiler, RenderFunction } from '@vue/runtime-dom'
 
 function compileToFunction(
@@ -11,7 +12,7 @@ function compileToFunction(
     hoistStatic: true,
     ...options
   })
-  return new Function(code)() as RenderFunction
+  return new Function('Vue', code)(runtimeDom) as RenderFunction
 }
 
 registerRuntimeCompiler(compileToFunction)

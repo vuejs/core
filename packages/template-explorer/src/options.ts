@@ -53,9 +53,10 @@ const App = {
           checked:
             compilerOptions.prefixIdentifiers ||
             compilerOptions.mode === 'module',
-          onChange(e: any) {
+          onChange(e: Event) {
             compilerOptions.prefixIdentifiers =
-              e.target.checked || compilerOptions.mode === 'module'
+              (<HTMLInputElement>e.target).checked ||
+              compilerOptions.mode === 'module'
           }
         }),
         h('label', { for: 'prefix' }, 'prefixIdentifiers'),
@@ -65,8 +66,8 @@ const App = {
           type: 'checkbox',
           id: 'hoist',
           checked: compilerOptions.hoistStatic,
-          onChange(e: any) {
-            compilerOptions.hoistStatic = e.target.checked
+          onChange(e: Event) {
+            compilerOptions.hoistStatic = (<HTMLInputElement>e.target).checked
           }
         }),
         h('label', { for: 'hoist' }, 'hoistStatic')
@@ -76,5 +77,5 @@ const App = {
 }
 
 export function initOptions() {
-  createApp().mount(App, document.getElementById('header') as HTMLElement)
+  createApp().mount(App, document.getElementById('header')!)
 }

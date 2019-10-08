@@ -62,7 +62,10 @@ export function patchEvent(
   }
 }
 
-function createInvoker(value: any, instance: ComponentInternalInstance | null) {
+function createInvoker(
+  initialValue: any,
+  instance: ComponentInternalInstance | null
+) {
   const invoker = ((e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
@@ -72,6 +75,7 @@ function createInvoker(value: any, instance: ComponentInternalInstance | null) {
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated) {
       const args = [e]
+      const value = invoker.value
       if (isArray(value)) {
         for (let i = 0; i < value.length; i++) {
           callWithAsyncErrorHandling(
@@ -91,8 +95,8 @@ function createInvoker(value: any, instance: ComponentInternalInstance | null) {
       }
     }
   }) as any
-  invoker.value = value
-  value.invoker = invoker
+  invoker.value = initialValue
+  initialValue.invoker = invoker
   invoker.lastUpdated = getNow()
   return invoker
 }

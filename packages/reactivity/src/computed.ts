@@ -33,8 +33,8 @@ export function computed<T>(
       }
     : (getterOrOptions as WritableComputedOptions<T>).set
 
-  let dirty: boolean = true
-  let value: any = undefined
+  let dirty = true
+  let value: T
 
   const runner = effect(getter, {
     lazy: true,
@@ -45,7 +45,7 @@ export function computed<T>(
     }
   })
   return {
-    _isRef: refSymbol,
+    [refSymbol]: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
