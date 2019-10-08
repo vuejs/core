@@ -62,18 +62,20 @@ export function patchEvent(
   const persistent =
     nextValue && 'persistent' in nextValue && nextValue.persistent
 
-  if (!persistent && (prevOptions || nextOptions)) {
-    if (!looseEqual(prevOptions, nextOptions)) {
-      if (invoker) {
-        el.removeEventListener(name, invoker as any, prevOptions as any)
-      }
-      if (nextValue && value) {
-        const invoker = createInvoker(value, instance)
-        nextValue.invoker = invoker
-        el.addEventListener(name, invoker, nextOptions as any)
-      }
-      return
+  if (
+    !persistent &&
+    (prevOptions || nextOptions) &&
+    !looseEqual(prevOptions, nextOptions)
+  ) {
+    if (invoker) {
+      el.removeEventListener(name, invoker as any, prevOptions as any)
     }
+    if (nextValue && value) {
+      const invoker = createInvoker(value, instance)
+      nextValue.invoker = invoker
+      el.addEventListener(name, invoker, nextOptions as any)
+    }
+    return
   }
 
   if (nextValue && value) {
