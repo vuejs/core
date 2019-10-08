@@ -27,7 +27,7 @@ import {
   onRenderTriggered
 } from './apiLifecycle'
 import { DebuggerEvent, reactive } from '@vue/reactivity'
-import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
 import { ComponentPublicInstance } from './componentProxy'
@@ -78,8 +78,8 @@ export type ComponentOptionsWithArrayProps<
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
-export type ComponentOptionsWithProps<
-  PropsOptions = ComponentPropsOptions,
+export type ComponentOptionsWithObjectProps<
+  PropsOptions = ComponentObjectPropsOptions,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
@@ -91,7 +91,7 @@ export type ComponentOptionsWithProps<
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
-  | ComponentOptionsWithProps
+  | ComponentOptionsWithObjectProps
   | ComponentOptionsWithArrayProps
 
 // TODO legacy component definition also supports constructors with .options

@@ -3,7 +3,7 @@ import {
   MethodOptions,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithProps
+  ComponentOptionsWithObjectProps
 } from './apiOptions'
 import { SetupContext } from './component'
 import { VNodeChild } from './vnode'
@@ -62,7 +62,7 @@ export function createComponent<
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
 >(
-  options: ComponentOptionsWithProps<PropsOptions, RawBindings, D, C, M>
+  options: ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M>
 ): {
   // for Vetur and TSX support
   new (): ComponentPublicInstance<

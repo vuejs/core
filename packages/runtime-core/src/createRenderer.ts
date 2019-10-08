@@ -13,7 +13,8 @@ import {
   ComponentInternalInstance,
   createComponentInstance,
   setupStatefulComponent,
-  handleSetupResult
+  handleSetupResult,
+  Component
 } from './component'
 import {
   renderComponentRoot,
@@ -1006,7 +1007,7 @@ export function createRenderer<
     }
 
     // resolve props and slots for setup context
-    const propsOptions = (initialVNode.type as any).props
+    const propsOptions = (initialVNode.type as Component).props
     resolveProps(instance, initialVNode.props, propsOptions)
     resolveSlots(instance, initialVNode.children)
 
