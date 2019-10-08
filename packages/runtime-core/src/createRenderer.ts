@@ -705,7 +705,7 @@ export function createRenderer<
       if (targetSelector !== (n1.props && n1.props.target)) {
         const nextTarget = (n2.target = isString(targetSelector)
           ? hostQuerySelector(targetSelector)
-          : null)
+          : targetSelector)
         if (nextTarget != null) {
           // move content
           if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
