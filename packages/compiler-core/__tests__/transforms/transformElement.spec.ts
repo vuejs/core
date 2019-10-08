@@ -1,10 +1,4 @@
-import {
-  ElementNode,
-  CompilerOptions,
-  parse,
-  transform,
-  ErrorCodes
-} from '../../src'
+import { CompilerOptions, parse, transform, ErrorCodes } from '../../src'
 import {
   RESOLVE_COMPONENT,
   CREATE_VNODE,
@@ -35,12 +29,14 @@ function parseWithElementTransform(
   root: RootNode
   node: CallExpression
 } {
-  const ast = parse(template, options)
+  // wrap raw template in an extra div so that it doesn't get turned into a
+  // block as root node
+  const ast = parse(`<div>${template}</div>`, options)
   transform(ast, {
     nodeTransforms: [optimizeText, transformElement],
     ...options
   })
-  const codegenNode = (ast.children[0] as ElementNode)
+  const codegenNode = (ast as any).children[0].children[0]
     .codegenNode as CallExpression
   expect(codegenNode.type).toBe(NodeTypes.JS_CALL_EXPRESSION)
   return {

@@ -10,7 +10,10 @@ import {
   createSimpleExpression,
   JSChildNode,
   SimpleExpressionNode,
-  ElementTypes
+  ElementTypes,
+  ElementCodegenNode,
+  ComponentCodegenNode,
+  createCallExpression
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -20,7 +23,9 @@ import {
   CREATE_VNODE,
   FRAGMENT,
   RuntimeHelper,
-  helperNameMap
+  helperNameMap,
+  APPLY_DIRECTIVES,
+  CREATE_BLOCK
 } from './runtimeHelpers'
 import { isVSlot, createBlockExpression } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
@@ -147,7 +152,7 @@ function createTransformContext(
       }
       const list = context.parent!.children
       const removalIndex = node
-        ? list.indexOf(node as any)
+        ? list.indexOf(node)
         : context.currentNode
           ? context.childIndex
           : -1
@@ -230,24 +235,38 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   const child = children[0]
-  if (isSingleElementRoot(root, child) && child.codegenNode) {
-    // turn root element into a block
-    root.codegenNode = createBlockExpression(
-      child.codegenNode.arguments,
-      context
-    )
-  } else if (children.length === 1) {
-    // - single <slot/>, IfNode, ForNode: already blocks.
-    // - single text node: always patched.
-    // - transform calls without transformElement (only during tests)
-    // Just generate the node as-is
-    root.codegenNode = child
+  if (children.length === 1) {
+    // if the single child is an element, turn it into a block.
+    if (isSingleElementRoot(root, child) && child.codegenNode) {
+      // single element root is never hoisted so codegenNode will never be
+      // SimpleExpressionNode
+      const codegenNode = child.codegenNode as
+        | ElementCodegenNode
+        | ComponentCodegenNode
+      if (codegenNode.callee === APPLY_DIRECTIVES) {
+        codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
+      } else {
+        codegenNode.callee = helper(CREATE_BLOCK)
+      }
+      root.codegenNode = createBlockExpression(codegenNode, context)
+    } else {
+      // - single <slot/>, IfNode, ForNode: already blocks.
+      // - single text node: always patched.
+      // root codegen falls through via genNode()
+      root.codegenNode = child
+    }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
     root.codegenNode = createBlockExpression(
-      [helper(FRAGMENT), `null`, root.children],
+      createCallExpression(helper(CREATE_BLOCK), [
+        helper(FRAGMENT),
+        `null`,
+        root.children
+      ]),
       context
     )
+  } else {
+    // no children = noop. codegen will return null.
   }
   // finalize meta information
   root.helpers = [...context.helpers]

@@ -132,6 +132,24 @@ return function render() {
 }"
 `;
 
+exports[`compiler: v-for codegen v-for on element with custom directive 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, applyDirectives: _applyDirectives, resolveDirective: _resolveDirective } = _Vue
+    
+    const _directive_foo = _resolveDirective(\\"foo\\")
+    
+    return (_openBlock(), _createBlock(_Fragment, null, _renderList(list, (i) => {
+      return (_openBlock(), _applyDirectives(_createBlock(\\"div\\", null, null, 32 /* NEED_PATCH */), [
+        [_directive_foo]
+      ]))
+    }), 128 /* UNKEYED_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-for codegen v-if + v-for 1`] = `
 "const _Vue = Vue
 

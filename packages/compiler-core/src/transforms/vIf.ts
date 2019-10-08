@@ -23,9 +23,7 @@ import {
   BlockCodegenNode,
   SlotOutletCodegenNode,
   ElementCodegenNode,
-  ComponentCodegenNode,
-  ElementCodegenNodeWithDirective,
-  CompoenntCodegenNodeWithDirective
+  ComponentCodegenNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -35,8 +33,7 @@ import {
   EMPTY,
   FRAGMENT,
   APPLY_DIRECTIVES,
-  CREATE_VNODE,
-  RENDER_SLOT
+  CREATE_VNODE
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 
@@ -196,8 +193,6 @@ function createChildrenCodegenNode(
     const childCodegen = (child as ElementNode).codegenNode as
       | ElementCodegenNode
       | ComponentCodegenNode
-      | ElementCodegenNodeWithDirective
-      | CompoenntCodegenNodeWithDirective
       | SlotOutletCodegenNode
     let vnodeCall = childCodegen
     // Element with custom directives. Locate the actual createVNode() call.
@@ -206,22 +201,10 @@ function createChildrenCodegenNode(
     }
     // Change createVNode to createBlock.
     if (vnodeCall.callee === CREATE_VNODE) {
-      ;(vnodeCall as any).callee = helper(CREATE_BLOCK)
+      vnodeCall.callee = helper(CREATE_BLOCK)
     }
-    // It's possible to have renderSlot() here as well - which already produces
-    // a block, so no need to change the callee. However it accepts props at
-    // a different arg index so make sure to check for so that the key injection
-    // logic below works for it too.
-    const propsIndex = vnodeCall.callee === RENDER_SLOT ? 2 : 1
     // inject branch key
-    const existingProps = vnodeCall.arguments[
-      propsIndex
-    ] as ElementCodegenNode['arguments'][1]
-    vnodeCall.arguments[propsIndex] = injectProp(
-      existingProps,
-      keyProperty,
-      context
-    )
+    injectProp(vnodeCall, keyProperty, context)
     return childCodegen
   }
 }
