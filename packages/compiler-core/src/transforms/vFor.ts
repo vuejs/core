@@ -15,7 +15,7 @@ import {
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
-  PlainElementNode
+  ElementCodegenNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -30,11 +30,11 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  APPLY_DIRECTIVES
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
-import { PropsExpression } from './transformElement'
 
 export const transformFor = createStructuralDirectiveTransform(
   'for',
@@ -124,34 +124,29 @@ export const transformFor = createStructuralDirectiveTransform(
               // <template v-for="..." :key="..."><slot/></template>
               // we need to inject the key to the renderSlot() call.
               // the props for renderSlot is passed as the 3rd argument.
-              const existingProps = childBlock.arguments[2] as
-                | PropsExpression
-                | undefined
-                | 'null'
-              childBlock.arguments[2] = injectProp(
-                existingProps,
-                keyProperty,
-                context
-              )
+              injectProp(childBlock, keyProperty, context)
             }
           } else if (isTemplate) {
             // <template v-for="...">
             // should generate a fragment block for each loop
             childBlock = createBlockExpression(
-              [
+              createCallExpression(helper(CREATE_BLOCK), [
                 helper(FRAGMENT),
                 keyProperty ? createObjectExpression([keyProperty]) : `null`,
                 node.children
-              ],
+              ]),
               context
             )
           } else {
             // Normal element v-for. Directly use the child's codegenNode
             // arguments, but replace createVNode() with createBlock()
-            childBlock = createBlockExpression(
-              (node as PlainElementNode).codegenNode!.arguments,
-              context
-            )
+            let codegenNode = node.codegenNode as ElementCodegenNode
+            if (codegenNode.callee === APPLY_DIRECTIVES) {
+              codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
+            } else {
+              codegenNode.callee = helper(CREATE_BLOCK)
+            }
+            childBlock = createBlockExpression(codegenNode, context)
           }
 
           renderExp.arguments.push(

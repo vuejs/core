@@ -20,7 +20,8 @@ export function provide<T>(key: InjectionKey<T> | string, value: T) {
     if (parentProvides === provides) {
       provides = currentInstance.provides = Object.create(parentProvides)
     }
-    provides[key as any] = value
+    // TS doesn't allow symbol as index type
+    provides[key as string] = value
   }
 }
 
@@ -30,7 +31,8 @@ export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
   if (currentInstance) {
     const provides = currentInstance.provides
     if (key in provides) {
-      return provides[key as any] as any
+      // TS doesn't allow symbol as index type
+      return provides[key as string]
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {

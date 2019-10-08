@@ -1,18 +1,22 @@
 import { VNode } from './vnode'
-import { Data, ComponentInternalInstance } from './component'
-import { isString } from '@vue/shared'
+import { Data, ComponentInternalInstance, Component } from './component'
+import { isString, isFunction } from '@vue/shared'
 import { toRaw } from '@vue/reactivity'
+
+type ComponentVNode = VNode & {
+  type: Component
+}
 
 let stack: VNode[] = []
 
 type TraceEntry = {
-  vnode: VNode
+  vnode: ComponentVNode
   recurseCount: number
 }
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: VNode) {
+export function pushWarningContext(vnode: ComponentVNode) {
   stack.push(vnode)
 }
 
@@ -117,9 +121,9 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
-function formatComponentName(vnode: VNode, file?: string): string {
-  const Component = vnode.type as any
-  let name = Component.displayName || Component.name
+function formatComponentName(vnode: ComponentVNode, file?: string): string {
+  const Component = vnode.type
+  let name = isFunction(Component) ? Component.displayName : Component.name
   if (!name && file) {
     const match = file.match(/([^/\\]+)\.vue$/)
     if (match) {
@@ -136,7 +140,7 @@ function formatProps(props: Data): string[] {
     if (isString(value)) {
       res.push(`${key}=${JSON.stringify(value)}`)
     } else {
-      res.push(`${key}=`, toRaw(value) as any)
+      res.push(`${key}=`, String(toRaw(value)))
     }
   }
   return res
