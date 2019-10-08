@@ -91,7 +91,7 @@ function doWatch(
   const instance = currentInstance
   const suspense = currentSuspense
 
-  let getter: Function
+  let getter: () => any
   if (isArray(source)) {
     getter = () =>
       source.map(
