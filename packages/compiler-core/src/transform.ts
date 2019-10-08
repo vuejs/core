@@ -45,6 +45,7 @@ export type NodeTransform = (
 //   It translates the raw directive into actual props for the VNode.
 export type DirectiveTransform = (
   dir: DirectiveNode,
+  node: ElementNode,
   context: TransformContext
 ) => {
   props: Property | Property[]
