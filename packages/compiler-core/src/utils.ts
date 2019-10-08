@@ -20,7 +20,8 @@ import {
   BlockCodegenNode,
   ElementCodegenNode,
   SlotOutletCodegenNode,
-  ComponentCodegenNode
+  ComponentCodegenNode,
+  ExpressionNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
@@ -236,4 +237,8 @@ export function toValidAssetId(
   type: 'component' | 'directive'
 ): string {
   return `_${type}_${name.replace(/[^\w]/g, '')}`
+}
+
+export function isEmptyExpression(node: ExpressionNode) {
+  return node.type === NodeTypes.SIMPLE_EXPRESSION && !node.content.trim()
 }

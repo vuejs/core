@@ -54,13 +54,11 @@ export const enum ErrorCodes {
   UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
   UNEXPECTED_SOLIDUS_IN_TAG,
   UNKNOWN_NAMED_CHARACTER_REFERENCE,
-
   // Vue-specific parse errors
   X_INVALID_END_TAG,
   X_MISSING_END_TAG,
   X_MISSING_INTERPOLATION_END,
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
-
   // transform errors
   X_IF_NO_EXPRESSION,
   X_ELSE_NO_ADJACENT_IF,
@@ -76,7 +74,8 @@ export const enum ErrorCodes {
   X_DUPLICATE_SLOT_NAMES,
   X_EXTRANEOUS_NON_SLOT_CHILDREN,
   X_MISPLACED_V_SLOT,
-
+  X_V_MODEL_NO_EXPRESSION,
+  X_V_MODEL_MALFORMED_EXPRESSION,
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
   X_MODULE_MODE_NOT_SUPPORTED
@@ -148,6 +147,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing epxression.`,
   [ErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
+  [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
+  [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model has invalid expression.`,
   [ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_NAMED_SLOT_ON_COMPONENT]:
     `Named v-slot on component. ` +
