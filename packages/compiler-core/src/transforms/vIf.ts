@@ -206,7 +206,7 @@ function createChildrenCodegenNode(
     }
     // Change createVNode to createBlock.
     if (vnodeCall.callee === CREATE_VNODE) {
-      ;(vnodeCall as any).callee = helper(CREATE_BLOCK)
+      (vnodeCall as any).callee = helper(CREATE_BLOCK)
     }
     // It's possible to have renderSlot() here as well - which already produces
     // a block, so no need to change the callee. However it accepts props at
