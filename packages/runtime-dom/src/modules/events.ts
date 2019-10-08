@@ -85,10 +85,14 @@ export function patchEvent(
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(value, instance))
+      el.addEventListener(
+        name,
+        createInvoker(value, instance),
+        nextOptions as any
+      )
     }
   } else if (invoker) {
-    el.removeEventListener(name, invoker as any)
+    el.removeEventListener(name, invoker as any, prevOptions as any)
   }
 }
 
