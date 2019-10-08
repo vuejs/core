@@ -13,7 +13,6 @@ import {
   ref,
   getCurrentInstance
 } from '@vue/runtime-test'
-import { isHTMLTag } from '@vue/shared'
 
 describe('api: createApp', () => {
   mockWarn()
@@ -289,8 +288,9 @@ describe('api: createApp', () => {
   })
 
   test('config.isReservedTag', () => {
+    const mockIsReservedTag = (name: string) => name === 'div'
     const app = createApp()
-    app.config.isReservedTag = (name: string) => isHTMLTag(name)
+    app.config.isReservedTag = mockIsReservedTag
 
     app.component('div', () => 'foo')
     expect(

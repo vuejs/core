@@ -1,5 +1,4 @@
 export * from './patchFlags'
-export * from './element'
 export { globalsWhitelist } from './globalsWhitelist'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
