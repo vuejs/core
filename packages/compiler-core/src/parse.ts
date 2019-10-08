@@ -356,22 +356,6 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
-
-  const hasPre = element.props.some(x=>x.type === NodeTypes.DIRECTIVE && x.name === "pre");
-  // if has-pre get the source for the children
-  if(hasPre && element.children.length > 0){
-    const firstChild =  element.children[0];
-    const lastChild = element.children[element.children.length - 1];
-
-    const loc = getSelection(context, firstChild.loc.start, lastChild.loc.end );
-    // override the children with only the source of the node content
-    element.children = [{
-      type: NodeTypes.TEXT,
-      content: loc.source,
-      loc: loc,
-      isEmpty: false
-    }]
-  }
   
   return element
 }
