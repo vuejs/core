@@ -356,7 +356,6 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
-  
   return element
 }
 
