@@ -9,7 +9,7 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { isEmptyExpression } from '../utils'
 
-export const transformModel: DirectiveTransform = (dir, context) => {
+export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
   if (!exp) {
     context.onError(createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION))
