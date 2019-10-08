@@ -25,6 +25,8 @@ import {
 } from '../utils'
 import { globalsWhitelist } from '@vue/shared'
 
+const literalsWhitelist = new Set([`true`, `false`, `null`, `this`])
+
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
@@ -78,9 +80,15 @@ export function processExpression(
   }
 
   // fast path if expression is a simple identifier.
-  if (isSimpleIdentifier(node.content)) {
-    if (!asParams && !context.identifiers[node.content]) {
-      node.content = `_ctx.${node.content}`
+  const rawExp = node.content
+  if (isSimpleIdentifier(rawExp)) {
+    if (
+      !asParams &&
+      !context.identifiers[rawExp] &&
+      !globalsWhitelist.has(rawExp) &&
+      !literalsWhitelist.has(rawExp)
+    ) {
+      node.content = `_ctx.${rawExp}`
     }
     return node
   }
@@ -88,7 +96,7 @@ export function processExpression(
   let ast: any
   // if the expression is supposed to be used in a function params position
   // we need to parse it differently.
-  const source = `(${node.content})${asParams ? `=>{}` : ``}`
+  const source = `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parseJS(source, { ranges: true })
   } catch (e) {
@@ -174,7 +182,6 @@ export function processExpression(
   // expressions (for identifiers that have been prefixed). In codegen, if
   // an ExpressionNode has the `.children` property, it will be used instead of
   // `.content`.
-  const full = node.content
   const children: CompoundExpressionNode['children'] = []
   ids.sort((a, b) => a.start - b.start)
   ids.forEach((id, i) => {
@@ -182,11 +189,11 @@ export function processExpression(
     const start = id.start - 1
     const end = id.end - 1
     const last = ids[i - 1] as any
-    const leadingText = full.slice(last ? last.end - 1 : 0, start)
+    const leadingText = rawExp.slice(last ? last.end - 1 : 0, start)
     if (leadingText.length || id.prefix) {
       children.push(leadingText + (id.prefix || ``))
     }
-    const source = full.slice(start, end)
+    const source = rawExp.slice(start, end)
     children.push(
       createSimpleExpression(id.name, false, {
         source,
@@ -194,8 +201,8 @@ export function processExpression(
         end: advancePositionWithClone(node.loc.start, source, end)
       })
     )
-    if (i === ids.length - 1 && end < full.length) {
-      children.push(full.slice(end))
+    if (i === ids.length - 1 && end < rawExp.length) {
+      children.push(rawExp.slice(end))
     }
   })
 
