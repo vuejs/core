@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`compiler: \`v-show\` transform should add style directive 1`] = `
+exports[`compiler: \`v-show\` transform should add style 1`] = `
 Object {
   "children": Array [],
   "codegenNode": undefined,
@@ -64,7 +64,7 @@ Object {
 }
 `;
 
-exports[`compiler: \`v-show\` transform style should append to style 1`] = `
+exports[`compiler: \`v-show\` transform should append to style 1`] = `
 Object {
   "children": Array [],
   "codegenNode": undefined,
