@@ -116,11 +116,11 @@ export type ExtractComputedReturns<T extends any> = {
     : ReturnType<T[key]>
 }
 
-type WatchHandler = (
-  val: any,
-  oldVal: any,
+export type WatchHandler<T = any> = (
+  val: T,
+  oldVal: T,
   onCleanup: CleanupRegistrator
-) => void
+) => any
 
 type ComponentWatchOptions = Record<
   string,
