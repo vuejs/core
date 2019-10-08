@@ -52,9 +52,9 @@ export function baseCompile(
           ]
         : []),
       trackSlotScopes,
-      optimizeText,
       transformSlotOutlet,
       transformElement,
+      optimizeText,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
