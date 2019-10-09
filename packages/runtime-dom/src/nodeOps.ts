@@ -1,3 +1,5 @@
+import { patchTextContent, patchNodeValue } from './modules/text'
+
 const doc = document
 const svgNS = 'http://www.w3.org/2000/svg'
 
@@ -24,13 +26,9 @@ export const nodeOps = {
 
   createComment: (text: string): Comment => doc.createComment(text),
 
-  setText: (node: Text, text: string) => {
-    node.nodeValue = text
-  },
+  setText: (node: Text, text: string) => patchNodeValue(node, text),
 
-  setElementText: (el: HTMLElement, text: string) => {
-    el.textContent = text
-  },
+  setElementText: (el: HTMLElement, text: string) => patchTextContent(el, text),
 
   parentNode: (node: Node): Node | null => node.parentNode,
 
