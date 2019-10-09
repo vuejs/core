@@ -29,7 +29,9 @@ export function computed<T>(
     : (getterOrOptions as WritableComputedOptions<T>).get
   const setter = isReadonly
     ? () => {
-        // TODO warn attempting to mutate readonly computed value
+        if (__DEV__) {
+          console.warn('Write operation failed: computed value is readonly')
+        }
       }
     : (getterOrOptions as WritableComputedOptions<T>).set
 
