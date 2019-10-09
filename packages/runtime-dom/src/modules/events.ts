@@ -111,7 +111,7 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
-    if (e.timeStamp >= invoker.lastUpdated) {
+    if (e.timeStamp >= invoker.lastUpdated - 1) {
       const args = [e]
       const value = invoker.value
       if (isArray(value)) {
