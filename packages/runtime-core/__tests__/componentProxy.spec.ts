@@ -1,4 +1,4 @@
-import { mockWarn } from '@vue/runtime-test'
+import { createApp, nodeOps, mockWarn } from '@vue/runtime-test'
 
 describe('component proxy', () => {
   /**
@@ -12,25 +12,38 @@ describe('component proxy', () => {
    */
   describe('warnings', () => {
     mockWarn()
+    let app: any, appProps: any
+
+    beforeEach(() => {
+      const component = {
+        render() {}
+      }
+      const root = nodeOps.createElement('div')
+      app = createApp().mount(component, root, appProps)
+    })
 
     test('Attempting to mutate public property', () => {
-      console.warn(
-        'Attempting to mutate public property "$foo".' +
-          'Properties starting with $ are reserved and readonly.'
-      )
-
-      expect(
-        'Attempting to mutate public property "$foo".' +
-          'Properties starting with $ are reserved and readonly.'
-      ).toHaveBeenWarned()
+      try {
+        // @ts-ignore
+        app.$props = null
+      } catch {
+        expect(
+          'Attempting to mutate public property "$props". ' +
+            'Properties starting with $ are reserved and readonly.'
+        ).toHaveBeenWarned()
+      }
     })
 
     test('Attempting to mutate prop', () => {
-      console.warn(`Attempting to mutate prop "foo". Props are readonly.`)
-
-      expect(
-        'Attempting to mutate prop "foo". Props are readonly.'
-      ).toHaveBeenWarned()
+      appProps = { foo: 'foo' }
+      try {
+        // @ts-ignore
+        app.foo = null
+      } catch {
+        expect(
+          'Attempting to mutate prop "foo". Props are readonly.'
+        ).toHaveBeenWarned()
+      }
     })
   })
 })

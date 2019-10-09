@@ -16,6 +16,7 @@ export type ComponentPublicInstance<
   M = {},
   PublicProps = P
 > = {
+  [key: string]: any
   $data: D
   $props: PublicProps
   $attrs: Data
@@ -93,7 +94,7 @@ export const PublicInstanceProxyHandlers = {
     } else if (key[0] === '$' && key.slice(1) in target) {
       __DEV__ &&
         warn(
-          `Attempting to mutate public property "${key}".` +
+          `Attempting to mutate public property "${key}". ` +
             `Properties starting with $ are reserved and readonly.`,
           target
         )
