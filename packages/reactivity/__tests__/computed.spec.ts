@@ -1,6 +1,9 @@
 import { computed, reactive, effect, stop, ref } from '../src'
+import { mockWarn } from '@vue/runtime-test'
 
 describe('reactivity/computed', () => {
+  mockWarn()
+
   it('should return updated value', () => {
     const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
@@ -156,5 +159,16 @@ describe('reactivity/computed', () => {
 
     plusOne.value = 0
     expect(dummy).toBe(-1)
+  })
+
+  it('should warning', () => {
+    const n = ref(1)
+    const plusOne = computed(() => n.value + 1)
+    // @ts-ignore: warning when using js instead of ts
+    plusOne.value = 0
+    expect(plusOne.value).toBe(2)
+    expect(
+      'attempting to mutate computed value but it has no setter.'
+    ).toHaveBeenWarned()
   })
 })
