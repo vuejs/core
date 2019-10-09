@@ -69,7 +69,7 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect: ReactiveEffect = function reactiveEffect(...args: any[]): any {
+  const effect = function reactiveEffect(...args: any[]): any {
     return run(effect, fn, args)
   } as ReactiveEffect
   effect[effectSymbol] = true
