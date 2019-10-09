@@ -28,7 +28,9 @@ const readonlyToRaw = new WeakMap<any, any>()
 const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
-const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
+const collectionTypes = new Set<
+  SetConstructor | MapConstructor | WeakMapConstructor | WeakSetConstructor
+>([Set, Map, WeakMap, WeakSet])
 const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
 
 const canObserve = (value: any): boolean => {
@@ -103,7 +105,9 @@ function createReactiveObject(
   if (!canObserve(target)) {
     return target
   }
-  const handlers = collectionTypes.has(target.constructor)
+  const handlers = [...collectionTypes].some(
+    collectionType => target instanceof collectionType
+  )
     ? collectionHandlers
     : baseHandlers
   observed = new Proxy(target, handlers)
