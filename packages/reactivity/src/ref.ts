@@ -5,12 +5,12 @@ import { reactive } from './reactive'
 
 export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : undefined)
 
-export interface Ref<T> {
+export interface Ref<T = any> {
   [refSymbol]: true
   value: UnwrapNestedRefs<T>
 }
 
-export type UnwrapNestedRefs<T> = T extends Ref<any> ? T : UnwrapRef<T>
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
@@ -30,7 +30,7 @@ export function ref<T>(raw: T): Ref<T> {
   return v as Ref<T>
 }
 
-export function isRef(v: any): v is Ref<any> {
+export function isRef(v: any): v is Ref {
   return v ? v[refSymbol] === true : false
 }
 
@@ -73,7 +73,7 @@ export type UnwrapRef<T> = {
   array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
   stop: T
-}[T extends Ref<any>
+}[T extends Ref
   ? 'ref'
   : T extends Array<any>
     ? 'array'
