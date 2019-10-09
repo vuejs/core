@@ -1,8 +1,8 @@
 import {
   ErrorCodes,
-  CoreCompilerError,
   createCompilerError,
-  defaultOnError
+  defaultOnError,
+  CompilerError
 } from './errors'
 import {
   assert,
@@ -38,7 +38,7 @@ export interface ParserOptions {
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
   namedCharacterReferences?: { [name: string]: string | undefined }
 
-  onError?: (error: CoreCompilerError) => void
+  onError?: (error: CompilerError) => void
 }
 
 export const defaultParserOptions: Required<ParserOptions> = {
