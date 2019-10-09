@@ -8,7 +8,7 @@ import { isRef } from './ref'
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
     .map(key => (Symbol as any)[key])
-    .filter(value => isSymbol(value))
+    .filter(isSymbol)
 )
 
 function createGetter(isReadonly: boolean) {
