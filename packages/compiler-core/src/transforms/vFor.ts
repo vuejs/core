@@ -159,12 +159,12 @@ export const transformFor = createStructuralDirectiveTransform(
         }
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_FOR_MALFORMED_EXPRESSION, dir.loc)
+          createCompilerError(ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION, dir.loc)
         )
       }
     } else {
       context.onError(
-        createCompilerError(ErrorCodes.X_FOR_NO_EXPRESSION, dir.loc)
+        createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc)
       )
     }
   }

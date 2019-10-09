@@ -62,20 +62,20 @@ export const enum ErrorCodes {
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
-  X_IF_NO_EXPRESSION,
-  X_ELSE_NO_ADJACENT_IF,
-  X_FOR_NO_EXPRESSION,
-  X_FOR_MALFORMED_EXPRESSION,
+  X_V_IF_NO_EXPRESSION,
+  X_V_ELSE_NO_ADJACENT_IF,
+  X_V_FOR_NO_EXPRESSION,
+  X_V_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
   X_V_HTML_NO_EXPRESSION,
   X_V_HTML_WITH_CHILDREN,
-  X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-  X_NAMED_SLOT_ON_COMPONENT,
-  X_MIXED_SLOT_USAGE,
-  X_DUPLICATE_SLOT_NAMES,
-  X_EXTRANEOUS_NON_SLOT_CHILDREN,
-  X_MISPLACED_V_SLOT,
+  X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+  X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
+  X_V_SLOT_MIXED_SLOT_USAGE,
+  X_V_SLOT_DUPLICATE_SLOT_NAMES,
+  X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
+  X_V_SLOT_MISPLACED,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -140,27 +140,27 @@ export const errorMessages: { [code: number]: string } = {
     'Note that dynamic directive argument cannot contain spaces.',
 
   // transform errors
-  [ErrorCodes.X_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
-  [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
-  [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
-  [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
+  [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
+  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
+  [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
+  [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing epxression.`,
   [ErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
-  [ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
-  [ErrorCodes.X_NAMED_SLOT_ON_COMPONENT]:
+  [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
+  [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
     `Named v-slot on component. ` +
     `Named slots should use <template v-slot> syntax nested inside the component.`,
-  [ErrorCodes.X_MIXED_SLOT_USAGE]:
+  [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
     `Mixed v-slot usage on both the component and nested <template>.` +
     `The default slot should also use <template> syntax when there are other ` +
     `named slots to avoid scope ambiguity.`,
-  [ErrorCodes.X_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
-  [ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN]:
+  [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
+  [ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN]:
     `Extraneous children found when component has explicit slots. ` +
     `These children will be ignored.`,
-  [ErrorCodes.X_MISPLACED_V_SLOT]: `v-slot can only be used on components or <template> tags.`,
+  [ErrorCodes.X_V_SLOT_MISPLACED]: `v-slot can only be used on components or <template> tags.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

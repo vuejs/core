@@ -228,7 +228,7 @@ export function buildProps(
       if (name === 'slot') {
         if (!isComponent) {
           context.onError(
-            createCompilerError(ErrorCodes.X_MISPLACED_V_SLOT, loc)
+            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc)
           )
         }
         continue

@@ -556,7 +556,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN,
+        code: ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
         loc: {
           source: `bar`,
           start: {
@@ -579,7 +579,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_DUPLICATE_SLOT_NAMES,
+        code: ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
         loc: {
           source: `#foo`,
           start: {
@@ -602,7 +602,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_MIXED_SLOT_USAGE,
+        code: ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE,
         loc: {
           source: `#foo`,
           start: {
@@ -625,7 +625,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_MISPLACED_V_SLOT,
+        code: ErrorCodes.X_V_SLOT_MISPLACED,
         loc: {
           source: `v-slot`,
           start: {
@@ -648,7 +648,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_NAMED_SLOT_ON_COMPONENT,
+        code: ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
         loc: {
           source: `v-slot:foo`,
           start: {

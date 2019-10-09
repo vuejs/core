@@ -219,7 +219,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_NO_EXPRESSION
+          code: ErrorCodes.X_V_FOR_NO_EXPRESSION
         })
       )
     })
@@ -231,7 +231,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -243,7 +243,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -255,7 +255,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -267,7 +267,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
