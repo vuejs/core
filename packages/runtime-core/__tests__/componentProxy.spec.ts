@@ -14,8 +14,8 @@ describe('component: proxy', () => {
       mounted() {
         ctx = getCurrentInstance()
       },
-      render(this: any) {
-        return `${this.foo}`
+      render() {
+        return null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
@@ -34,6 +34,9 @@ describe('component: proxy', () => {
         return {
           foo: 1
         }
+      },
+      render() {
+        return null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
@@ -55,6 +58,7 @@ describe('component: proxy', () => {
       },
       setup() {
         ctx = getCurrentInstance()
+        return () => null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
@@ -69,6 +73,7 @@ describe('component: proxy', () => {
     const Comp = {
       setup() {
         ctx = getCurrentInstance()
+        return () => null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
@@ -92,6 +97,7 @@ describe('component: proxy', () => {
     const Comp = {
       setup() {
         ctx = getCurrentInstance()
+        return () => null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
