@@ -3,6 +3,7 @@ import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 import { transformStyle } from './transforms/transformStyle'
 import { transformCloak } from './transforms/vCloak'
+import { transformVHtml } from './transforms/vHtml'
 
 export function compile(
   template: string,
@@ -15,6 +16,7 @@ export function compile(
     directiveTransforms: {
       // TODO include DOM-specific directiveTransforms
       cloak: transformCloak,
+      html: transformVHtml,
       ...(options.directiveTransforms || {})
     }
   })

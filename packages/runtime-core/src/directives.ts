@@ -104,7 +104,8 @@ export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
     vnode = cloneVNode(vnode)
     vnode.props = vnode.props != null ? extend({}, vnode.props) : {}
     for (let i = 0; i < directives.length; i++) {
-      ;(applyDirective as any)(vnode.props, instance, ...directives[i])
+      const [dir, value, arg, modifiers] = directives[i]
+      applyDirective(vnode.props, instance, dir, value, arg, modifiers)
     }
   } else if (__DEV__) {
     warn(`applyDirectives can only be used inside render functions.`)

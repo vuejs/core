@@ -132,8 +132,8 @@ export function createComponentInstance(
     type: vnode.type as Component,
     root: null as any, // set later so it can point to itself
     next: null,
-    subTree: null as any,
-    update: null as any,
+    subTree: null as any, // will be set synchronously right after creation
+    update: null as any, // will be set synchronously right after creation
     render: null,
     renderProxy: null,
     propsProxy: null,

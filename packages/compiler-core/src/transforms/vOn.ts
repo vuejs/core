@@ -17,7 +17,7 @@ const simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]
 // v-on without arg is handled directly in ./element.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-on
 // *with* args.
-export const transformOn: DirectiveTransform = (dir, context) => {
+export const transformOn: DirectiveTransform = (dir, node, context) => {
   const { loc, modifiers } = dir
   const arg = dir.arg!
   if (!dir.exp && !modifiers.length) {

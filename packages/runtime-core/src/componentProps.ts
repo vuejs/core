@@ -16,7 +16,11 @@ import {
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
 
-export type ComponentPropsOptions<P = Data> = {
+export type ComponentPropsOptions<P = Data> =
+  | ComponentObjectPropsOptions<P>
+  | string[]
+
+export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
 

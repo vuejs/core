@@ -7,7 +7,7 @@ import { CAMELIZE } from '../runtimeHelpers'
 // v-bind without arg is handled directly in ./element.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
-export const transformBind: DirectiveTransform = (dir, context) => {
+export const transformBind: DirectiveTransform = (dir, node, context) => {
   const { exp, modifiers, loc } = dir
   const arg = dir.arg!
   if (!exp) {

@@ -13,7 +13,7 @@ import { FunctionalComponent } from './component'
 import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithProps,
+  ComponentOptionsWithObjectProps,
   ComponentOptions
 } from './apiOptions'
 import { ExtractPropTypes } from './componentProps'
@@ -121,7 +121,7 @@ export function h<P extends string>(
   children?: RawChildren | RawSlots
 ): VNode
 export function h<P>(
-  type: ComponentOptionsWithProps<P>,
+  type: ComponentOptionsWithObjectProps<P>,
   props?: (RawProps & ExtractPropTypes<P>) | null,
   children?: RawChildren | RawSlots
 ): VNode
