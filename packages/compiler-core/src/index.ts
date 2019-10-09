@@ -13,6 +13,7 @@ import { transformBind } from './transforms/vBind'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 import { trackSlotScopes, trackVForSlotScopes } from './transforms/vSlot'
 import { optimizeText } from './transforms/optimizeText'
+import { transformOnce } from './transforms/vOnce'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -60,6 +61,7 @@ export function baseCompile(
     directiveTransforms: {
       on: transformOn,
       bind: transformBind,
+      once: transformOnce,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })

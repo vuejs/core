@@ -63,7 +63,7 @@ export const walkJS: typeof walk = (ast, walker) => {
 }
 
 export const isSimpleIdentifier = (name: string): boolean =>
-  !/^\d|[^\w]/.test(name)
+  !/^\d|[^\$\w]/.test(name)
 
 export function getInnerRange(
   loc: SourceLocation,
