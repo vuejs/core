@@ -1,31 +1,22 @@
 import { createApp, nodeOps, mockWarn } from '@vue/runtime-test'
 
+const createTestInstance = (props?: any) => {
+  const component = {
+    render() {}
+  }
+  const root = nodeOps.createElement('div')
+  return createApp().mount(component, root, props)
+}
+
 describe('component proxy', () => {
-  /**
-   * These tests should tests the warnings for PublicInstanceProxyHandlers in componentProxy
-   * {@link @vue/runtime-core/src/componentProxy}
-   *
-   * The function setupStatefulComponent is the location where PublicInstanceProxyHandlers is being used.
-   * {@link @vue/runtime-core/src/createRenderer}
-   *
-   * Currently I haven't found a way to create a component that uses PublicInstanceProxyHandlers
-   */
   describe('warnings', () => {
     mockWarn()
-    let app: any, appProps: any
-
-    beforeEach(() => {
-      const component = {
-        render() {}
-      }
-      const root = nodeOps.createElement('div')
-      app = createApp().mount(component, root, appProps)
-    })
 
     test('Attempting to mutate public property', () => {
+      const app = createTestInstance()
+
       try {
-        // @ts-ignore
-        app.$props = null
+        app.$props = { foo: 'bar' }
       } catch {
         expect(
           'Attempting to mutate public property "$props". ' +
@@ -35,10 +26,10 @@ describe('component proxy', () => {
     })
 
     test('Attempting to mutate prop', () => {
-      appProps = { foo: 'foo' }
+      const app = createTestInstance({ foo: 'foo' })
+
       try {
-        // @ts-ignore
-        app.foo = null
+        app.foo = 'bar'
       } catch {
         expect(
           'Attempting to mutate prop "foo". Props are readonly.'
