@@ -83,6 +83,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$emit).toBe(ctx.emit)
     expect(instanceProxy.$el).toBe(ctx.vnode.el)
     expect(instanceProxy.$options).toBe(ctx.type)
+    expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
   })
 
   it('user', async () => {
