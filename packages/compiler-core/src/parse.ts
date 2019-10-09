@@ -26,6 +26,7 @@ import {
   TemplateChildNode,
   InterpolationNode
 } from './ast'
+import { extend } from '@vue/shared'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
@@ -74,6 +75,7 @@ interface ParserContext {
   line: number
   column: number
   maxCRNameLength: number
+  inPre: boolean
 }
 
 export function parse(content: string, options: ParserOptions = {}): RootNode {
@@ -109,7 +111,8 @@ function createParserContext(
     maxCRNameLength: Object.keys(
       options.namedCharacterReferences ||
         defaultParserOptions.namedCharacterReferences
-    ).reduce((max, name) => Math.max(max, name.length), 0)
+    ).reduce((max, name) => Math.max(max, name.length), 0),
+    inPre: false
   }
 }
 
@@ -127,7 +130,7 @@ function parseChildren(
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
-    if (startsWith(s, context.options.delimiters[0])) {
+    if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
       // '{{'
       node = parseInterpolation(context, mode)
     } else if (mode === TextModes.DATA && s[0] === '<') {
@@ -325,8 +328,10 @@ function parseElement(
   __DEV__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
+  const wasInPre = context.inPre
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
+  const isPreBoundary = context.inPre && !wasInPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
@@ -354,6 +359,10 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
+
+  if (isPreBoundary) {
+    context.inPre = false
+  }
   return element
 }
 
@@ -380,18 +389,68 @@ function parseTag(
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
-  const props = []
   const ns = context.options.getNamespace(tag, parent)
-
-  let tagType = ElementTypes.ELEMENT
-  if (tag === 'slot') tagType = ElementTypes.SLOT
-  else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-  else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
 
   advanceBy(context, match[0].length)
   advanceSpaces(context)
 
+  // save current state in case we need to re-parse attributes with v-pre
+  const cursor = getCursor(context)
+  const currentSource = context.source
+
   // Attributes.
+  let props = parseAttributes(context, type)
+
+  // check v-pre
+  if (
+    !context.inPre &&
+    props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
+  ) {
+    context.inPre = true
+    // reset context
+    extend(context, cursor)
+    context.source = currentSource
+    // re-parse attrs and filter out v-pre itself
+    props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+  }
+
+  // Tag close.
+  let isSelfClosing = false
+  if (context.source.length === 0) {
+    emitError(context, ErrorCodes.EOF_IN_TAG)
+  } else {
+    isSelfClosing = startsWith(context.source, '/>')
+    if (type === TagType.End && isSelfClosing) {
+      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
+    }
+    advanceBy(context, isSelfClosing ? 2 : 1)
+  }
+
+  let tagType = ElementTypes.ELEMENT
+  if (!context.inPre) {
+    if (tag === 'slot') tagType = ElementTypes.SLOT
+    else if (tag === 'template') tagType = ElementTypes.TEMPLATE
+    else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
+  }
+
+  return {
+    type: NodeTypes.ELEMENT,
+    ns,
+    tag,
+    tagType,
+    props,
+    isSelfClosing,
+    children: [],
+    loc: getSelection(context, start),
+    codegenNode: undefined // to be created during transform phase
+  }
+}
+
+function parseAttributes(
+  context: ParserContext,
+  type: TagType
+): (AttributeNode | DirectiveNode)[] {
+  const props = []
   const attributeNames = new Set<string>()
   while (
     context.source.length > 0 &&
@@ -418,30 +477,7 @@ function parseTag(
     }
     advanceSpaces(context)
   }
-
-  // Tag close.
-  let isSelfClosing = false
-  if (context.source.length === 0) {
-    emitError(context, ErrorCodes.EOF_IN_TAG)
-  } else {
-    isSelfClosing = startsWith(context.source, '/>')
-    if (type === TagType.End && isSelfClosing) {
-      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
-    }
-    advanceBy(context, isSelfClosing ? 2 : 1)
-  }
-
-  return {
-    type: NodeTypes.ELEMENT,
-    ns,
-    tag,
-    tagType,
-    props,
-    isSelfClosing,
-    children: [],
-    loc: getSelection(context, start),
-    codegenNode: undefined // to be created during transform phase
-  }
+  return props
 }
 
 function parseAttribute(
@@ -497,7 +533,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (/^(v-|:|@|#)/.test(name)) {
+  if (!context.inPre && /^(v-|:|@|#)/.test(name)) {
     const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
       name
     )!

@@ -1278,6 +1278,88 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('v-pre', () => {
+      const ast = parse(
+        `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
+          `<div :id="foo"><Comp/>{{ bar }}</div>`
+      )
+
+      const divWithPre = ast.children[0] as ElementNode
+      expect(divWithPre.props).toMatchObject([
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `:id`,
+          value: {
+            type: NodeTypes.TEXT,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 1,
+              column: 12
+            },
+            end: {
+              line: 1,
+              column: 21
+            }
+          }
+        }
+      ])
+      expect(divWithPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.ELEMENT,
+        tag: `Comp`
+      })
+      expect(divWithPre.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: `{{ bar }}`
+      })
+
+      // should not affect siblings after it
+      const divWithoutPre = ast.children[1] as ElementNode
+      expect(divWithoutPre.props).toMatchObject([
+        {
+          type: NodeTypes.DIRECTIVE,
+          name: `bind`,
+          arg: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: true,
+            content: `id`
+          },
+          exp: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: false,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 2,
+              column: 6
+            },
+            end: {
+              line: 2,
+              column: 15
+            }
+          }
+        }
+      ])
+      expect(divWithoutPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.COMPONENT,
+        tag: `Comp`
+      })
+      expect(divWithoutPre.children[1]).toMatchObject({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `bar`,
+          isStatic: false
+        }
+      })
+    })
+
     test('end tags are case-insensitive.', () => {
       const ast = parse('<div>hello</DIV>after')
       const element = ast.children[0] as ElementNode
