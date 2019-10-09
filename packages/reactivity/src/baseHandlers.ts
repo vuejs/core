@@ -70,7 +70,7 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
-  if (hadKey) {
+  if (result && hadKey) {
     /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.DELETE, key, { oldValue })
