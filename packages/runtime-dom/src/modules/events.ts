@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { isArray, EMPTY_OBJ } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -11,6 +11,13 @@ interface Invoker extends EventListener {
 }
 
 type EventValue = (Function | Function[]) & {
+  invoker?: Invoker | null
+}
+
+type EventValueWithOptions = {
+  handler: EventValue
+  options: AddEventListenerOptions
+  persistent?: boolean
   invoker?: Invoker | null
 }
 
@@ -43,22 +50,53 @@ const getNow = () => cachedNow || (p.then(reset), (cachedNow = _getNow()))
 export function patchEvent(
   el: Element,
   name: string,
-  prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  prevValue: EventValueWithOptions | EventValue | null,
+  nextValue: EventValueWithOptions | EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
+  const prevOptions = prevValue && 'options' in prevValue && prevValue.options
+  const nextOptions = nextValue && 'options' in nextValue && nextValue.options
   const invoker = prevValue && prevValue.invoker
-  if (nextValue) {
+  const value =
+    nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
+  const persistent =
+    nextValue && 'persistent' in nextValue && nextValue.persistent
+
+  if (!persistent && (prevOptions || nextOptions)) {
+    const prev = prevOptions || EMPTY_OBJ
+    const next = nextOptions || EMPTY_OBJ
+    if (
+      prev.capture !== next.capture ||
+      prev.passive !== next.passive ||
+      prev.once !== next.once
+    ) {
+      if (invoker) {
+        el.removeEventListener(name, invoker as any, prevOptions as any)
+      }
+      if (nextValue && value) {
+        const invoker = createInvoker(value, instance)
+        nextValue.invoker = invoker
+        el.addEventListener(name, invoker, nextOptions as any)
+      }
+      return
+    }
+  }
+
+  if (nextValue && value) {
     if (invoker) {
       ;(prevValue as EventValue).invoker = null
-      invoker.value = nextValue
+      invoker.value = value
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(nextValue, instance))
+      el.addEventListener(
+        name,
+        createInvoker(value, instance),
+        nextOptions as any
+      )
     }
   } else if (invoker) {
-    el.removeEventListener(name, invoker)
+    el.removeEventListener(name, invoker, prevOptions as any)
   }
 }
 
@@ -73,7 +111,7 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
-    if (e.timeStamp >= invoker.lastUpdated) {
+    if (e.timeStamp >= invoker.lastUpdated - 1) {
       const args = [e]
       const value = invoker.value
       if (isArray(value)) {
