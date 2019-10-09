@@ -70,6 +70,7 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
+  /* istanbul ignore else */
   if (hadKey) {
     /* istanbul ignore else */
     if (__DEV__) {
@@ -105,6 +106,7 @@ export const readonlyHandlers: ProxyHandler<any> = {
 
   set(target: any, key: string | symbol, value: any, receiver: any): boolean {
     if (LOCKED) {
+      /* istanbul ignore else */
       if (__DEV__) {
         console.warn(
           `Set operation on key "${String(key)}" failed: target is readonly.`,
@@ -119,6 +121,7 @@ export const readonlyHandlers: ProxyHandler<any> = {
 
   deleteProperty(target: any, key: string | symbol): boolean {
     if (LOCKED) {
+      /* istanbul ignore else */
       if (__DEV__) {
         console.warn(
           `Delete operation on key "${String(

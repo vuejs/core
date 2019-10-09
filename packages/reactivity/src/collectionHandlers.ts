@@ -165,6 +165,7 @@ function createReadonlyMethod(
 ): Function {
   return function(this: any, ...args: any[]) {
     if (LOCKED) {
+      /* istanbul ignore else */
       if (__DEV__) {
         const key = args[0] ? `on key "${args[0]}" ` : ``
         console.warn(

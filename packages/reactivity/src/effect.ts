@@ -50,6 +50,7 @@ export function effect<T = any>(
 }
 
 export function stop(effect: ReactiveEffect) {
+  /* istanbul ignore else */
   if (effect.active) {
     cleanup(effect)
     if (effect.onStop) {

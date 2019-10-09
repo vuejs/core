@@ -85,6 +85,7 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>
 ) {
   if (!isObject(target)) {
+    /* istanbul ignore else */
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
     }
