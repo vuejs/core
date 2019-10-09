@@ -1,24 +1,29 @@
 import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
-  code: ErrorCodes
+  code: number
   loc?: SourceLocation
+}
+
+export interface CoreCompilerError extends CompilerError {
+  code: ErrorCodes
 }
 
 export function defaultOnError(error: CompilerError) {
   throw error
 }
 
-export function createCompilerError(
-  code: ErrorCodes,
-  loc?: SourceLocation
-): CompilerError {
-  const msg = __DEV__ || !__BROWSER__ ? errorMessages[code] : code
+export function createCompilerError<T extends number>(
+  code: T,
+  loc?: SourceLocation,
+  messages?: { [code: number]: string }
+): T extends ErrorCodes ? CoreCompilerError : CompilerError {
+  const msg = __DEV__ || !__BROWSER__ ? (messages || errorMessages)[code] : code
   const locInfo = loc ? ` (${loc.start.line}:${loc.start.column})` : ``
   const error = new SyntaxError(msg + locInfo) as CompilerError
   error.code = code
   error.loc = loc
-  return error
+  return error as any
 }
 
 export const enum ErrorCodes {
@@ -68,8 +73,6 @@ export const enum ErrorCodes {
   X_V_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
-  X_V_HTML_NO_EXPRESSION,
-  X_V_HTML_WITH_CHILDREN,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
   X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
   X_V_SLOT_MIXED_SLOT_USAGE,
@@ -79,7 +82,12 @@ export const enum ErrorCodes {
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
-  X_MODULE_MODE_NOT_SUPPORTED
+  X_MODULE_MODE_NOT_SUPPORTED,
+
+  // Sepcial value for higher-order compilers to pick up the last code
+  // to avoid collision of error codes. This should always be kept as the last
+  // item.
+  __EXTEND_POINT__
 }
 
 export const errorMessages: { [code: number]: string } = {
@@ -146,8 +154,6 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
-  [ErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing epxression.`,
-  [ErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
     `Named v-slot on component. ` +

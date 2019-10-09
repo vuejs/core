@@ -87,5 +87,10 @@ export {
   CodegenContext,
   CodegenResult
 } from './codegen'
-export { ErrorCodes, CompilerError, createCompilerError } from './errors'
+export {
+  ErrorCodes,
+  CoreCompilerError,
+  CompilerError,
+  createCompilerError
+} from './errors'
 export * from './ast'
