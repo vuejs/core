@@ -4,7 +4,7 @@ import { ComponentPublicInstance } from './componentProxy'
 import { Directive } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
-import { isFunction, NO } from '@vue/shared'
+import { isFunction } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -37,7 +37,6 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string
   ) => void
-  isReservedTag: (name: string) => boolean
 }
 
 export interface AppContext {
@@ -62,8 +61,7 @@ export function createAppContext(): AppContext {
       devtools: true,
       performance: false,
       errorHandler: undefined,
-      warnHandler: undefined,
-      isReservedTag: NO
+      warnHandler: undefined
     },
     mixins: [],
     components: {},
@@ -113,12 +111,6 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       component(name: string, component?: Component): any {
-        if (__DEV__ && context.config.isReservedTag(name)) {
-          warn(
-            `Do not use built-in or reserved HTML elements as component ` +
-              `name: ${name}`
-          )
-        }
         if (!component) {
           return context.components[name]
         } else {

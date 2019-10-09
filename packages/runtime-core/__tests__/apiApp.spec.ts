@@ -286,16 +286,4 @@ describe('api: createApp', () => {
     app.mount(Root, nodeOps.createElement('div'))
     expect(handler).toHaveBeenCalledTimes(1)
   })
-
-  test('config.isReservedTag', () => {
-    const mockIsReservedTag = (name: string) => name === 'div'
-    const app = createApp()
-    app.config.isReservedTag = mockIsReservedTag
-
-    app.component('div', () => 'foo')
-    expect(
-      `[Vue warn]: Do not use built-in or reserved HTML elements as ` +
-        `component name: div`
-    ).toHaveBeenWarnedLast()
-  })
 })
