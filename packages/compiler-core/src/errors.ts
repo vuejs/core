@@ -68,6 +68,8 @@ export const enum ErrorCodes {
   X_V_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
+  X_V_HTML_NO_EXPRESSION,
+  X_V_HTML_WITH_CHILDREN,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
   X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
   X_V_SLOT_MIXED_SLOT_USAGE,
@@ -144,6 +146,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
+  [ErrorCodes.X_V_HTML_NO_EXPRESSION]: `v-html is missing epxression.`,
+  [ErrorCodes.X_V_HTML_WITH_CHILDREN]: `v-html will override element children.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
     `Named v-slot on component. ` +

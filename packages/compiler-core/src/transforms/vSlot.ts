@@ -110,7 +110,7 @@ export function buildSlots(
   // since it likely uses a scope variable.
   // TODO: This can be further optimized to only make it dynamic when the slot
   // actually uses the scope variables.
-  let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
+  let hasDynamicSlots = context.scopes.vSlot > 1 || context.scopes.vFor > 0
 
   // 1. Check for default slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>

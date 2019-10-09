@@ -52,9 +52,9 @@ export function baseCompile(
           ]
         : []),
       trackSlotScopes,
-      optimizeText,
       transformSlotOutlet,
       transformElement,
+      optimizeText,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
@@ -78,7 +78,8 @@ export {
   TransformOptions,
   TransformContext,
   NodeTransform,
-  StructuralDirectiveTransform
+  StructuralDirectiveTransform,
+  DirectiveTransform
 } from './transform'
 export {
   generate,

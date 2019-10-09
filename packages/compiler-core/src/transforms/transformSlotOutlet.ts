@@ -52,9 +52,9 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
     let hasProps = propsWithoutName.length > 0
     if (hasProps) {
       const { props: propsExpression, directives } = buildProps(
-        propsWithoutName,
-        loc,
-        context
+        node,
+        context,
+        propsWithoutName
       )
       if (directives.length) {
         context.onError(

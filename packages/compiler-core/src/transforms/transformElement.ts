@@ -13,8 +13,7 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createObjectExpression,
-  Property,
-  SourceLocation
+  Property
 } from '../ast'
 import { isArray, PatchFlags, PatchFlagNames } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -44,7 +43,6 @@ export const transformElement: NodeTransform = (node, context) => {
       return () => {
         const isComponent = node.tagType === ElementTypes.COMPONENT
         let hasProps = node.props.length > 0
-        const hasChildren = node.children.length > 0
         let patchFlag: number = 0
         let runtimeDirectives: DirectiveNode[] | undefined
         let dynamicPropNames: string[] | undefined
@@ -59,12 +57,7 @@ export const transformElement: NodeTransform = (node, context) => {
         ]
         // props
         if (hasProps) {
-          const propsBuildResult = buildProps(
-            node.props,
-            node.loc,
-            context,
-            isComponent
-          )
+          const propsBuildResult = buildProps(node, context)
           patchFlag = propsBuildResult.patchFlag
           dynamicPropNames = propsBuildResult.dynamicPropNames
           runtimeDirectives = propsBuildResult.directives
@@ -75,6 +68,7 @@ export const transformElement: NodeTransform = (node, context) => {
           }
         }
         // children
+        const hasChildren = node.children.length > 0
         if (hasChildren) {
           if (!hasProps) {
             args.push(`null`)
@@ -162,16 +156,17 @@ export const transformElement: NodeTransform = (node, context) => {
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 
 export function buildProps(
-  props: ElementNode['props'],
-  elementLoc: SourceLocation,
+  node: ElementNode,
   context: TransformContext,
-  isComponent: boolean = false
+  props: ElementNode['props'] = node.props
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
   patchFlag: number
   dynamicPropNames: string[]
 } {
+  const elementLoc = node.loc
+  const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -278,7 +273,7 @@ export function buildProps(
       const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
         // has built-in directive transform.
-        const { props, needRuntime } = directiveTransform(prop, context)
+        const { props, needRuntime } = directiveTransform(prop, node, context)
         if (isArray(props)) {
           properties.push(...props)
           properties.forEach(analyzePatchFlag)

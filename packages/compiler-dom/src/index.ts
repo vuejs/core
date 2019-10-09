@@ -2,6 +2,7 @@ import { baseCompile, CompilerOptions, CodegenResult } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 import { transformStyle } from './transforms/transformStyle'
+import { transformVHtml } from './transforms/vHtml'
 
 export function compile(
   template: string,
@@ -12,7 +13,7 @@ export function compile(
     ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
     nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
     directiveTransforms: {
-      // TODO include DOM-specific directiveTransforms
+      html: transformVHtml,
       ...(options.directiveTransforms || {})
     }
   })
