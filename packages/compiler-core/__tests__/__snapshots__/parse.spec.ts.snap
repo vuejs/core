@@ -5524,6 +5524,55 @@ Object {
 }
 `;
 
+exports[`compiler: parse Errors RESERVED_TAG_NAME <loading-indicator></loading-indicator> 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [],
+      "codegenNode": undefined,
+      "isSelfClosing": false,
+      "loc": Object {
+        "end": Object {
+          "column": 40,
+          "line": 1,
+          "offset": 39,
+        },
+        "source": "<loading-indicator></loading-indicator>",
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": Array [],
+      "tag": "loading-indicator",
+      "tagType": 1,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
+  "hoists": Array [],
+  "loc": Object {
+    "end": Object {
+      "column": 40,
+      "line": 1,
+      "offset": 39,
+    },
+    "source": "<loading-indicator></loading-indicator>",
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse Errors SURROGATE_CHARACTER_REFERENCE <template>&#xD800;</template> 1`] = `
 Object {
   "children": Array [
