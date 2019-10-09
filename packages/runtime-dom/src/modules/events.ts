@@ -1,4 +1,4 @@
-import { isArray, looseEqual } from '@vue/shared'
+import { isArray, EMPTY_OBJ } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -62,20 +62,24 @@ export function patchEvent(
   const persistent =
     nextValue && 'persistent' in nextValue && nextValue.persistent
 
-  if (
-    !persistent &&
-    (prevOptions || nextOptions) &&
-    !looseEqual(prevOptions, nextOptions)
-  ) {
-    if (invoker) {
-      el.removeEventListener(name, invoker as any, prevOptions as any)
+  if (!persistent && (prevOptions || nextOptions)) {
+    const prev = prevOptions || EMPTY_OBJ
+    const next = nextOptions || EMPTY_OBJ
+    if (
+      prev.capture !== next.capture ||
+      prev.passive !== next.passive ||
+      prev.once !== next.once
+    ) {
+      if (invoker) {
+        el.removeEventListener(name, invoker as any, prevOptions as any)
+      }
+      if (nextValue && value) {
+        const invoker = createInvoker(value, instance)
+        nextValue.invoker = invoker
+        el.addEventListener(name, invoker, nextOptions as any)
+      }
+      return
     }
-    if (nextValue && value) {
-      const invoker = createInvoker(value, instance)
-      nextValue.invoker = invoker
-      el.addEventListener(name, invoker, nextOptions as any)
-    }
-    return
   }
 
   if (nextValue && value) {
