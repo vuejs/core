@@ -247,7 +247,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
   } else if (isArray(child)) {
     // fragment
     return createVNode(Fragment, null, child)
-  } else if (typeof child === 'object') {
+  } else if (isObject(child)) {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
     return child.el === null ? child : cloneVNode(child)
@@ -263,7 +263,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
-  } else if (typeof children === 'object') {
+  } else if (isObject(children)) {
     type = ShapeFlags.SLOTS_CHILDREN
   } else if (isFunction(children)) {
     children = { default: children }
