@@ -26,9 +26,9 @@ export const nodeOps = {
 
   createComment: (text: string): Comment => doc.createComment(text),
 
-  setText: (node: Text, text: string) => patchNodeValue(node, text),
+  setText: patchNodeValue,
 
-  setElementText: (el: HTMLElement, text: string) => patchTextContent(el, text),
+  setElementText: patchTextContent,
 
   parentNode: (node: Node): Node | null => node.parentNode,
 
