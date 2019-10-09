@@ -121,19 +121,19 @@ const emptyAppContext = createAppContext()
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null
-): ComponentInternalInstance {
+) {
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
-  const instance = {
+  const instance: ComponentInternalInstance = {
     vnode,
     parent,
     appContext,
-    type: vnode.type as Component,
-    root: null as any, // set later so it can point to itself
+    type: vnode.type,
+    root: null!, // set later so it can point to itself
     next: null,
-    subTree: null as any, // will be set synchronously right after creation
-    update: null as any, // will be set synchronously right after creation
+    subTree: null!, // will be set synchronously right after creation
+    update: null!, // will be set synchronously right after creation
     render: null,
     renderProxy: null,
     propsProxy: null,
@@ -178,7 +178,7 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
 
-    emit: (event: string, ...args: unknown[]) => {
+    emit: (event, ...args) => {
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
