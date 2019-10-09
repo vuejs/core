@@ -2,11 +2,11 @@ import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
 import { EMPTY_OBJ, extend } from '@vue/shared'
 
-export interface ReactiveEffect {
-  (): any
+export interface ReactiveEffect<T = any> {
+  (): T
   isEffect: true
   active: boolean
-  raw: Function
+  raw: () => T
   deps: Array<Dep>
   computed?: boolean
   scheduler?: (run: Function) => void
@@ -35,10 +35,10 @@ export const activeReactiveEffectStack: ReactiveEffect[] = []
 
 export const ITERATE_KEY = Symbol('iterate')
 
-export function effect(
-  fn: Function,
+export function effect<T = any>(
+  fn: () => T,
   options: ReactiveEffectOptions = EMPTY_OBJ
-): ReactiveEffect {
+): ReactiveEffect<T> {
   if ((fn as ReactiveEffect).isEffect) {
     fn = (fn as ReactiveEffect).raw
   }
@@ -59,13 +59,13 @@ export function stop(effect: ReactiveEffect) {
   }
 }
 
-function createReactiveEffect(
-  fn: Function,
+function createReactiveEffect<T = any>(
+  fn: () => T,
   options: ReactiveEffectOptions
-): ReactiveEffect {
-  const effect = function effect(...args): any {
+): ReactiveEffect<T> {
+  const effect: ReactiveEffect = function effect(...args: any[]): any {
     return run(effect as ReactiveEffect, fn, args)
-  } as ReactiveEffect
+  }
   effect.isEffect = true
   effect.active = true
   effect.raw = fn
