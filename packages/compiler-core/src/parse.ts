@@ -31,7 +31,7 @@ import { extend } from '@vue/shared'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
-  isReservedTag?: (name: string) => boolean // e.g. loading-indicator in weex
+  isReservedTag?: (tag: string) => boolean // e.g. loading-indicator in weex
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
