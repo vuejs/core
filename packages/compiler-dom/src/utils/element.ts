@@ -20,10 +20,14 @@ const SVGTag =
   'font-face,foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,' +
   'pattern,polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view'
 
+const VoidTag =
+  'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
+
 const createStringValidator = (str: string) => {
   const set = new Set(str.split(','))
   return (x: string) => set.has(x)
 }
 
+export const isVoidTag = createStringValidator(VoidTag)
 export const isHTMLTag = createStringValidator(HTMLTag)
 export const isSVGTag = createStringValidator(SVGTag)
