@@ -319,7 +319,7 @@ function finishComponentSetup(
     if (Component.template && !Component.render) {
       if (compile) {
         Component.render = compile(Component.template, {
-          onError(err) {}
+          onError(err: any) {}
         })
       } else if (__DEV__) {
         warn(

@@ -1767,8 +1767,8 @@ export function createRenderer<
   }
 
   function setRef(
-    ref: string | Function | Ref<any>,
-    oldRef: string | Function | Ref<any> | null,
+    ref: string | Function | Ref,
+    oldRef: string | Function | Ref | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
   ) {
