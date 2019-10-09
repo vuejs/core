@@ -45,6 +45,7 @@ export const enum ErrorCodes {
   INCORRECTLY_OPENED_COMMENT,
   INVALID_FIRST_CHARACTER_OF_TAG_NAME,
   MISSING_ATTRIBUTE_VALUE,
+  RESERVED_TAG_NAME,
   MISSING_END_TAG_NAME,
   MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
   MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
@@ -115,6 +116,8 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME]:
     "Illegal tag name. Use '&lt;' to print '<'.",
   [ErrorCodes.MISSING_ATTRIBUTE_VALUE]: 'Attribute value was expected.',
+  [ErrorCodes.RESERVED_TAG_NAME]:
+    'Do not use built-in or reserved HTML elements as component name.',
   [ErrorCodes.MISSING_END_TAG_NAME]: 'End tag name was expected.',
   [ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE]:
     'Semicolon was expected.',

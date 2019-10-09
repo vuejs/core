@@ -1,3 +1,4 @@
+import { NO } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -30,6 +31,7 @@ import { extend } from '@vue/shared'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
+  isReservedTag?: (name: string) => boolean // e.g. loading-indicator in weex
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
@@ -47,7 +49,8 @@ export const defaultParserOptions: Required<ParserOptions> = {
   ignoreSpaces: true,
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
-  isVoidTag: () => false,
+  isVoidTag: NO,
+  isReservedTag: NO,
   namedCharacterReferences: {
     'gt;': '>',
     'lt;': '<',
