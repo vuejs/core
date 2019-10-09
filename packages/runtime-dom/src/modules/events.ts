@@ -17,7 +17,7 @@ type EventValue = (Function | Function[]) & {
 type EventValueWithOptions = {
   handler: EventValue
   options: AddEventListenerOptions
-  persistent: boolean
+  persistent?: boolean
   invoker?: Invoker | null
 }
 
