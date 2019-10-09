@@ -14,7 +14,6 @@ export function compile(
     ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
     nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
     directiveTransforms: {
-      // TODO include DOM-specific directiveTransforms
       cloak: transformCloak,
       html: transformVHtml,
       ...(options.directiveTransforms || {})
