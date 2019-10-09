@@ -168,6 +168,22 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('should not prefix reserved literals', () => {
+    function assert(exp: string) {
+      const node = parseWithExpressionTransform(
+        `{{ ${exp} }}`
+      ) as InterpolationNode
+      expect(node.content).toMatchObject({
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: exp
+      })
+    }
+    assert(`true`)
+    assert(`false`)
+    assert(`null`)
+    assert(`this`)
+  })
+
   test('should not prefix id of a function declaration', () => {
     const node = parseWithExpressionTransform(
       `{{ function foo() { return bar } }}`

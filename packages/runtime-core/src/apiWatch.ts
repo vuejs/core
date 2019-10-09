@@ -20,6 +20,7 @@ import {
 } from './errorHandling'
 import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './createRenderer'
+import { WatchHandler } from './apiOptions'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -49,7 +50,7 @@ export function watch(effect: SimpleEffect, options?: WatchOptions): StopHandle
 // overload #2: single source + cb
 export function watch<T>(
   source: WatcherSource<T>,
-  cb: (newValue: T, oldValue: T, onCleanup: CleanupRegistrator) => any,
+  cb: WatchHandler<T>,
   options?: WatchOptions
 ): StopHandle
 
@@ -65,23 +66,18 @@ export function watch<T extends WatcherSource<unknown>[]>(
 ): StopHandle
 
 // implementation
-export function watch(
-  effectOrSource:
-    | WatcherSource<unknown>
-    | WatcherSource<unknown>[]
-    | SimpleEffect,
-  effectOrOptions?:
-    | ((value: any, oldValue: any, onCleanup: CleanupRegistrator) => any)
-    | WatchOptions,
+export function watch<T = any>(
+  effectOrSource: WatcherSource<T> | WatcherSource<T>[] | SimpleEffect,
+  cbOrOptions?: WatchHandler<T> | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
-  if (isFunction(effectOrOptions)) {
+  if (isFunction(cbOrOptions)) {
     // effect callback as 2nd argument - this is a source watcher
-    return doWatch(effectOrSource, effectOrOptions, options)
+    return doWatch(effectOrSource, cbOrOptions, options)
   } else {
     // 2nd argument is either missing or an options object
     // - this is a simple effect watcher
-    return doWatch(effectOrSource, null, effectOrOptions)
+    return doWatch(effectOrSource, null, cbOrOptions)
   }
 }
 
@@ -95,7 +91,7 @@ function doWatch(
   const instance = currentInstance
   const suspense = currentSuspense
 
-  let getter: Function
+  let getter: () => any
   if (isArray(source)) {
     getter = () =>
       source.map(
@@ -214,7 +210,7 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): () => void {
-  const ctx = this.renderProxy as any
+  const ctx = this.renderProxy!
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)

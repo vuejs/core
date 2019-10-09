@@ -17,7 +17,7 @@ exports[`compiler: optimize interpolation consecutive text between elements 1`] 
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createVNode: _createVNode, toString: _toString, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -33,7 +33,7 @@ exports[`compiler: optimize interpolation consecutive text mixed with elements 1
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createVNode: _createVNode, toString: _toString, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),

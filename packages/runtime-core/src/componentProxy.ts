@@ -15,6 +15,7 @@ export type ComponentPublicInstance<
   M = {},
   PublicProps = P
 > = {
+  [key: string]: any
   $data: D
   $props: PublicProps
   $attrs: Data
