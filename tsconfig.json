@@ -1,40 +1,64 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "outDir": "dist",
-    "sourceMap": false,
-    "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "allowJs": false,
-    "noUnusedLocals": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
-    "experimentalDecorators": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "removeComments": false,
-    "jsx": "react",
-    "lib": ["esnext", "dom"],
-    "types": ["jest", "node"],
-    "rootDir": ".",
-    "paths": {
-      "@vue/shared": ["packages/shared/src"],
-      "@vue/runtime-core": ["packages/runtime-core/src"],
-      "@vue/runtime-dom": ["packages/runtime-dom/src"],
-      "@vue/runtime-test": ["packages/runtime-test/src"],
-      "@vue/reactivity": ["packages/reactivity/src"],
-      "@vue/compiler-core": ["packages/compiler-core/src"],
-      "@vue/compiler-dom": ["packages/compiler-dom/src"],
-      "@vue/server-renderer": ["packages/server-renderer/src"],
-      "@vue/template-explorer": ["packages/template-explorer/src"]
+  "compilerOptions": { //编译配置
+    "baseUrl": ".", //用于解析非相对模块名称的基目录
+    "outDir": "dist", //指定输出目录
+    "sourceMap": true, // 生成相应的 '.map' 文件
+    "target": "esnext", //指定 ECMAScript 目标版本: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'
+    "module": "esnext", //指定使用模块: 'commonjs', 'amd', 'system', 'umd' or 'es2015'
+    "moduleResolution": "node", //选择模块解析策略： 'node' (Node.js) or 'classic' (TypeScript pre-1.6)
+    "allowJs": false, //允许编译 javascript 文件
+    "noUnusedLocals": true, //有未使用的变量时，抛出错误
+    "strictNullChecks": true, //启用严格的 null 检查
+    "noImplicitAny": true, //在表达式和声明上有隐含的 any类型时报错
+    "noImplicitThis": true, // 当 this 表达式值为 any 类型的时候，生成一个错误
+    "experimentalDecorators": true, //启用装饰器
+    "resolveJsonModule": true, //
+    "esModuleInterop": true, //
+    "removeComments": false, //删除编译后的所有的注释
+    "jsx": "react", //指定 jsx 代码的生成: 'preserve', 'react-native', or 'react'
+    "lib": [
+      "esnext",
+      "dom"
+    ], // 指定要包含在编译中的库文件
+    "types": [
+      "jest",
+      "node"
+    ], //需要包含的类型声明文件名列表
+    "rootDir": ".", //根文件夹列表，其组合内容表示项目运行时的结构内容
+    "paths": { //模块名到基于 baseUrl 的路径映射的列表
+      "@vue/shared": [
+        "packages/shared/src"
+      ], //主要包含了一些平台无关的内部帮助方法
+      "@vue/runtime-core": [
+        "packages/runtime-core/src"
+      ], //虚拟 DOM 渲染器、Vue 组件和 Vue 的各种API
+      "@vue/runtime-dom": [
+        "packages/runtime-dom/src"
+      ], //处理原生 DOM API、DOM 事件和 DOM 属性
+      "@vue/runtime-test": [
+        "packages/runtime-test/src"
+      ], //一个专门为了测试而写的轻量级 runtime
+      "@vue/reactivity": [
+        "packages/reactivity/src"
+      ], //数据响应式系统
+      "@vue/compiler-core": [
+        "packages/compiler-core/src"
+      ], // 平台无关的编译器. 它既包含可扩展的基础功能
+      "@vue/compiler-dom": [
+        "packages/compiler-dom/src"
+      ], //针对浏览器而写的编译器。
+      "@vue/server-renderer": [
+        "packages/server-renderer/src"
+      ], //用于 SSR
+      "@vue/template-explorer": [
+        "packages/template-explorer/src"
+      ] //
     }
   },
-  "include": [
-    "packages/global.d.ts",
-    "packages/runtime-dom/jsx.d.ts",
-    "packages/*/src",
-    "packages/*/__tests__"
+  "include": [ // 显式指定需要编译的文件
+    "packages/global.d.ts", //
+    "packages/runtime-dom/jsx.d.ts", //
+    "packages/*/src", //
+    "packages/*/__tests__" //
   ]
 }
