@@ -6,7 +6,7 @@ import {
   readonlyCollectionHandlers
 } from './collectionHandlers'
 
-import { UnwrapNestedRefs } from './ref'
+import { UnwrapRef } from './ref'
 import { ReactiveEffect } from './effect'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -40,7 +40,7 @@ const canObserve = (value: any): boolean => {
   )
 }
 
-export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive<T extends object>(target: T): UnwrapRef<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (readonlyToRaw.has(target)) {
@@ -59,9 +59,7 @@ export function reactive(target: object) {
   )
 }
 
-export function readonly<T extends object>(
-  target: T
-): Readonly<UnwrapNestedRefs<T>> {
+export function readonly<T extends object>(target: T): Readonly<UnwrapRef<T>> {
   // value is a mutable observable, retrieve its original and return
   // a readonly version.
   if (reactiveToRaw.has(target)) {
