@@ -14,27 +14,19 @@ describe('component proxy', () => {
 
     test('Attempting to mutate public property', () => {
       const app = createTestInstance()
-
-      try {
-        app.$props = { foo: 'bar' }
-      } catch {
-        expect(
-          'Attempting to mutate public property "$props". ' +
-            'Properties starting with $ are reserved and readonly.'
-        ).toHaveBeenWarned()
-      }
+      app.$props = { foo: 'bar' }
+      expect(
+        'Attempting to mutate public property "$props". ' +
+          'Properties starting with $ are reserved and readonly.'
+      ).toHaveBeenWarned()
     })
 
     test('Attempting to mutate prop', () => {
       const app = createTestInstance({ foo: 'foo' })
-
-      try {
-        app.foo = 'bar'
-      } catch {
-        expect(
-          'Attempting to mutate prop "foo". Props are readonly.'
-        ).toHaveBeenWarned()
-      }
+      app.foo = 'bar'
+      expect(
+        'Attempting to mutate prop "foo". Props are readonly.'
+      ).toHaveBeenWarned()
     })
   })
 })

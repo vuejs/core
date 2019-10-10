@@ -98,11 +98,9 @@ export const PublicInstanceProxyHandlers = {
             `Properties starting with $ are reserved and readonly.`,
           target
         )
-      return false
     } else if (key in target.props) {
       __DEV__ &&
         warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
-      return false
     } else {
       target.user[key] = value
     }
