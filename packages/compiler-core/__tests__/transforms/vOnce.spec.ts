@@ -3,7 +3,7 @@ import { transformOnce } from '../../src/transforms/vOnce'
 import { transformElement } from '../../src/transforms/transformElement'
 import { createObjectMatcher } from '../testUtils'
 
-function transformWithCloak(template: string) {
+function transformWithOnce(template: string) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [transformElement],
@@ -16,10 +16,10 @@ function transformWithCloak(template: string) {
 
 describe('compiler: v-once transform', () => {
   test('should add no props to DOM', () => {
-    const node = transformWithCloak(`<div v-once />`)
+    const node = transformWithOnce(`<div v-once />`)
     const codegenArgs = (node.codegenNode as CallExpression).arguments
 
-    // As v-cloak adds no properties the codegen should be identical to
+    // As v-once adds no properties the codegen should be identical to
     // rendering a div with no props or reactive data (so just the tag as the arg)
     expect(codegenArgs[1]).toMatchObject(
       createObjectMatcher({
