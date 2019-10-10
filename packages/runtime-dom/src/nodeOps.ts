@@ -4,11 +4,7 @@ const svgNS = 'http://www.w3.org/2000/svg'
 export const nodeOps = {
   insert: (child: Node, parent: Node, anchor?: Node) => {
     if (anchor != null) {
-      try {
-        parent.insertBefore(child, anchor)
-      } catch (e) {
-        debugger
-      }
+      parent.insertBefore(child, anchor)
     } else {
       parent.appendChild(child)
     }
