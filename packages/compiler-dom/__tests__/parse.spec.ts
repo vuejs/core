@@ -5,8 +5,7 @@ import {
   TextNode,
   ErrorCodes,
   ElementTypes,
-  InterpolationNode,
-  createCompilerError
+  InterpolationNode
 } from '@vue/compiler-core'
 import {
   parserOptionsMinimal as parserOptions,
@@ -153,48 +152,6 @@ describe('DOM parser', () => {
         },
         codegenNode: undefined
       })
-    })
-
-    test('Reserved tag validation', () => {
-      const spy = jest.fn()
-      const ast = parse('<font-face></font-face>', {
-        ...parserOptions,
-        onError: spy
-      })
-
-      expect(ast.children.length).toBe(1)
-      expect(spy.mock.calls).toMatchObject([
-        [
-          createCompilerError(ErrorCodes.RESERVED_TAG_NAME, {
-            start: {
-              offset: 10,
-              column: 11,
-              line: 1
-            },
-            end: {
-              offset: 10,
-              column: 11,
-              line: 1
-            },
-            source: ''
-          })
-        ],
-        [
-          createCompilerError(ErrorCodes.RESERVED_TAG_NAME, {
-            start: {
-              offset: 22,
-              column: 23,
-              line: 1
-            },
-            end: {
-              offset: 22,
-              column: 23,
-              line: 1
-            },
-            source: ''
-          })
-        ]
-      ])
     })
 
     test('Strict end tag detection for textarea.', () => {

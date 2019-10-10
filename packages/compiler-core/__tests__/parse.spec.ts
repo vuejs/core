@@ -2189,21 +2189,6 @@ foo
           errors: []
         }
       ],
-      RESERVED_TAG_NAME: [
-        {
-          code: '<loading-indicator></loading-indicator>',
-          errors: [
-            {
-              type: ErrorCodes.RESERVED_TAG_NAME,
-              loc: { offset: 18, line: 1, column: 19 }
-            },
-            {
-              type: ErrorCodes.RESERVED_TAG_NAME,
-              loc: { offset: 38, line: 1, column: 39 }
-            }
-          ]
-        }
-      ],
       MISSING_END_TAG_NAME: [
         {
           code: '<template></></template>',
