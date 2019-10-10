@@ -351,5 +351,17 @@ describe('compiler: transform v-model', () => {
         })
       )
     })
+
+    test('mal-formed expression', () => {
+      const onError = jest.fn()
+      parseWithVModel('<span v-model="a + b" />', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
+        })
+      )
+    })
   })
 })

@@ -7,21 +7,23 @@ import {
   Property
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { isEmptyExpression } from '../utils'
+import { isMemberExpression } from '../utils'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
   if (!exp) {
-    context.onError(createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION))
-
+    context.onError(
+      createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc)
+    )
     return createTransformProps()
   }
 
-  if (isEmptyExpression(exp)) {
+  const expString =
+    exp.type === NodeTypes.SIMPLE_EXPRESSION ? exp.content : exp.loc.source
+  if (!isMemberExpression(expString)) {
     context.onError(
-      createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION)
+      createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
     )
-
     return createTransformProps()
   }
 

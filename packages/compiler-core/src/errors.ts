@@ -170,7 +170,7 @@ export const errorMessages: { [code: number]: string } = {
     `These children will be ignored.`,
   [ErrorCodes.X_V_SLOT_MISPLACED]: `v-slot can only be used on components or <template> tags.`,
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
-  [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model has invalid expression.`,
+  [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

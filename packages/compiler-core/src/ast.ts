@@ -519,11 +519,12 @@ export function createInterpolation(
 }
 
 export function createCompoundExpression(
-  children: CompoundExpressionNode['children']
+  children: CompoundExpressionNode['children'],
+  loc: SourceLocation = locStub
 ): CompoundExpressionNode {
   return {
     type: NodeTypes.COMPOUND_EXPRESSION,
-    loc: locStub,
+    loc,
     children
   }
 }

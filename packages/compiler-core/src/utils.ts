@@ -63,8 +63,13 @@ export const walkJS: typeof walk = (ast, walker) => {
   return walk(ast, walker)
 }
 
+const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
-  !/^\d|[^\$\w]/.test(name)
+  !nonIdentifierRE.test(name)
+
+const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
+export const isMemberExpression = (path: string): boolean =>
+  memberExpRE.test(path)
 
 export function getInnerRange(
   loc: SourceLocation,
