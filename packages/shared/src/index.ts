@@ -1,4 +1,5 @@
 export * from './patchFlags'
+export * from './element'
 export { globalsWhitelist } from './globalsWhitelist'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
@@ -7,6 +8,11 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
 export const EMPTY_ARR: [] = []
 
 export const NOOP = () => {}
+
+/**
+ * Always return false.
+ */
+export const NO = () => false
 
 export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
 

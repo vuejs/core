@@ -110,10 +110,9 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      component(name: string, component?: Component) {
-        // TODO component name validation
+      component(name: string, component?: Component): any {
         if (!component) {
-          return context.components[name] as any
+          return context.components[name]
         } else {
           context.components[name] = component
           return app
