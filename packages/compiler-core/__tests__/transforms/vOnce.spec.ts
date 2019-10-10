@@ -19,8 +19,6 @@ describe('compiler: v-once transform', () => {
     const node = transformWithOnce(`<div v-once />`)
     const codegenArgs = (node.codegenNode as CallExpression).arguments
 
-    // As v-once adds no properties the codegen should be identical to
-    // rendering a div with no props or reactive data (so just the tag as the arg)
     expect(codegenArgs[1]).toMatchObject(
       createObjectMatcher({
         $once: `[true]`
