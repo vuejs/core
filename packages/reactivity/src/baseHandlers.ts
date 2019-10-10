@@ -2,19 +2,19 @@ import { reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
-import { isObject, hasOwn } from '@vue/shared'
+import { isObject, hasOwn, isSymbol } from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
     .map(key => (Symbol as any)[key])
-    .filter(value => typeof value === 'symbol')
+    .filter(isSymbol)
 )
 
 function createGetter(isReadonly: boolean) {
   return function get(target: any, key: string | symbol, receiver: any) {
     const res = Reflect.get(target, key, receiver)
-    if (typeof key === 'symbol' && builtInSymbols.has(key)) {
+    if (isSymbol(key) && builtInSymbols.has(key)) {
       return res
     }
     if (isRef(res)) {
@@ -70,7 +70,7 @@ function deleteProperty(target: any, key: string | symbol): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
-  if (hadKey) {
+  if (result && hadKey) {
     /* istanbul ignore else */
     if (__DEV__) {
       trigger(target, OperationTypes.DELETE, key, { oldValue })

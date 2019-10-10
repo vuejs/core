@@ -59,7 +59,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       if (directives.length) {
         context.onError(
           createCompilerError(
-            ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+            ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
             directives[0].loc
           )
         )

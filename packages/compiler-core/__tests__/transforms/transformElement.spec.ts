@@ -33,7 +33,7 @@ function parseWithElementTransform(
   // block as root node
   const ast = parse(`<div>${template}</div>`, options)
   transform(ast, {
-    nodeTransforms: [optimizeText, transformElement],
+    nodeTransforms: [transformElement, optimizeText],
     ...options
   })
   const codegenNode = (ast as any).children[0].children[0]

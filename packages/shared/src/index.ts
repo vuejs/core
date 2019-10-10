@@ -43,7 +43,7 @@ export const isPlainObject = (val: any): val is object =>
 
 const vnodeHooksRE = /^vnode/
 export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref' || vnodeHooksRE.test(key)
+  key === 'key' || key === 'ref' || key === '$once' || vnodeHooksRE.test(key)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {

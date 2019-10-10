@@ -4,7 +4,7 @@ import {
   PlainElementNode,
   CompilerOptions
 } from '@vue/compiler-core'
-import { transformVHtml } from '../../src/transforms/vHtml'
+import { transformVText } from '../../src/transforms/vText'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import {
   createObjectMatcher,
@@ -13,62 +13,62 @@ import {
 import { PatchFlags } from '@vue/shared'
 import { DOMErrorCodes } from '../../src/errors'
 
-function transformWithVHtml(template: string, options: CompilerOptions = {}) {
+function transformWithVText(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [transformElement],
     directiveTransforms: {
-      html: transformVHtml
+      text: transformVText
     },
     ...options
   })
   return ast
 }
 
-describe('compiler: v-html transform', () => {
-  it('should convert v-html to innerHTML', () => {
-    const ast = transformWithVHtml(`<div v-html="test"/>`)
+describe('compiler: v-text transform', () => {
+  it('should convert v-text to textContent', () => {
+    const ast = transformWithVText(`<div v-text="test"/>`)
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       arguments: [
         `"div"`,
         createObjectMatcher({
-          innerHTML: `[test]`
+          textContent: `[test]`
         }),
         `null`,
         genFlagText(PatchFlags.PROPS),
-        `["innerHTML"]`
+        `["textContent"]`
       ]
     })
   })
 
-  it('should raise error and ignore children when v-html is present', () => {
+  it('should raise error and ignore children when v-text is present', () => {
     const onError = jest.fn()
-    const ast = transformWithVHtml(`<div v-html="test">hello</div>`, {
+    const ast = transformWithVText(`<div v-text="test">hello</div>`, {
       onError
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }]
+      [{ code: DOMErrorCodes.X_V_TEXT_WITH_CHILDREN }]
     ])
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       arguments: [
         `"div"`,
         createObjectMatcher({
-          innerHTML: `[test]`
+          textContent: `[test]`
         }),
         `null`, // <-- children should have been removed
         genFlagText(PatchFlags.PROPS),
-        `["innerHTML"]`
+        `["textContent"]`
       ]
     })
   })
 
   it('should raise error if has no expression', () => {
     const onError = jest.fn()
-    transformWithVHtml(`<div v-html></div>`, {
+    transformWithVText(`<div v-text></div>`, {
       onError
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }]
+      [{ code: DOMErrorCodes.X_V_TEXT_NO_EXPRESSION }]
     ])
   })
 })

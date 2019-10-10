@@ -50,7 +50,7 @@ h('div', null, {})
 export interface RawProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref<any> | Function
+  ref?: string | Ref | Function
   // used to differ from a single VNode object as children
   _isVNode?: never
   // used to differ from Array children

@@ -346,7 +346,8 @@ export function traverseNode(
   }
 
   // exit transforms
-  for (let i = 0; i < exitFns.length; i++) {
+  let i = exitFns.length
+  while (i--) {
     exitFns[i]()
   }
 }
