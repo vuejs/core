@@ -1,7 +1,14 @@
-import { createApp, getCurrentInstance, nodeOps } from '@vue/runtime-test'
+import {
+  createApp,
+  getCurrentInstance,
+  nodeOps,
+  mockWarn
+} from '@vue/runtime-test'
 import { ComponentInternalInstance } from '../src/component'
 
 describe('component: proxy', () => {
+  mockWarn()
+
   it('data', () => {
     const app = createApp()
     let instance: ComponentInternalInstance
@@ -73,6 +80,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.foo).toBe(1)
     expect(instance!.propsProxy!.foo).toBe(1)
     expect(() => (instanceProxy.foo = 2)).toThrow(TypeError)
+    expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
   })
 
   it('methods', () => {
@@ -100,6 +108,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$el).toBe(instance!.vnode.el)
     expect(instanceProxy.$options).toBe(instance!.type)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
+    expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
   })
 
   it('user', async () => {

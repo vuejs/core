@@ -2,11 +2,13 @@ import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
 import { EMPTY_OBJ, extend } from '@vue/shared'
 
-export interface ReactiveEffect {
-  (): any
-  isEffect: true
+export const effectSymbol = Symbol(__DEV__ ? 'effect' : void 0)
+
+export interface ReactiveEffect<T = any> {
+  (): T
+  [effectSymbol]: true
   active: boolean
-  raw: Function
+  raw: () => T
   deps: Array<Dep>
   computed?: boolean
   scheduler?: (run: Function) => void
@@ -35,12 +37,16 @@ export const activeReactiveEffectStack: ReactiveEffect[] = []
 
 export const ITERATE_KEY = Symbol('iterate')
 
-export function effect(
-  fn: Function,
+export function isEffect(fn: any): fn is ReactiveEffect {
+  return fn != null && fn[effectSymbol] === true
+}
+
+export function effect<T = any>(
+  fn: () => T,
   options: ReactiveEffectOptions = EMPTY_OBJ
-): ReactiveEffect {
-  if ((fn as ReactiveEffect).isEffect) {
-    fn = (fn as ReactiveEffect).raw
+): ReactiveEffect<T> {
+  if (isEffect(fn)) {
+    fn = fn.raw
   }
   const effect = createReactiveEffect(fn, options)
   if (!options.lazy) {
@@ -59,14 +65,14 @@ export function stop(effect: ReactiveEffect) {
   }
 }
 
-function createReactiveEffect(
-  fn: Function,
+function createReactiveEffect<T = any>(
+  fn: () => T,
   options: ReactiveEffectOptions
-): ReactiveEffect {
-  const effect = function effect(...args): any {
-    return run(effect as ReactiveEffect, fn, args)
+): ReactiveEffect<T> {
+  const effect = function reactiveEffect(...args: any[]): any {
+    return run(effect, fn, args)
   } as ReactiveEffect
-  effect.isEffect = true
+  effect[effectSymbol] = true
   effect.active = true
   effect.raw = fn
   effect.scheduler = options.scheduler

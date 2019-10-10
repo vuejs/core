@@ -13,7 +13,7 @@ import { FunctionalComponent } from './component'
 import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithProps,
+  ComponentOptionsWithObjectProps,
   ComponentOptions
 } from './apiOptions'
 import { ExtractPropTypes } from './componentProps'
@@ -50,7 +50,7 @@ h('div', null, {})
 export interface RawProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref<any> | Function
+  ref?: string | Ref | Function
   // used to differ from a single VNode object as children
   _isVNode?: never
   // used to differ from Array children
@@ -121,7 +121,7 @@ export function h<P extends string>(
   children?: RawChildren | RawSlots
 ): VNode
 export function h<P>(
-  type: ComponentOptionsWithProps<P>,
+  type: ComponentOptionsWithObjectProps<P>,
   props?: (RawProps & ExtractPropTypes<P>) | null,
   children?: RawChildren | RawSlots
 ): VNode

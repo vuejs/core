@@ -8,7 +8,8 @@ import {
   nextTick,
   renderToString,
   ref,
-  createComponent
+  createComponent,
+  mockWarn
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
@@ -504,5 +505,38 @@ describe('api: options', () => {
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1,1,3</div>`)
+  })
+
+  describe('warnings', () => {
+    mockWarn()
+
+    test('Expected a function as watch handler', () => {
+      const Comp = {
+        watch: {
+          foo: 'notExistingMethod'
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      expect(
+        'Invalid watch handler specified by key "notExistingMethod"'
+      ).toHaveBeenWarned()
+    })
+
+    test('Invalid watch option', () => {
+      const Comp = {
+        watch: { foo: true },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      // @ts-ignore
+      render(h(Comp), root)
+
+      expect('Invalid watch option: "foo"').toHaveBeenWarned()
+    })
   })
 })

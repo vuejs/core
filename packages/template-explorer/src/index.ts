@@ -25,13 +25,20 @@ window.init = () => {
   function compileCode(source: string): string {
     console.clear()
     try {
+      const errors: CompilerError[] = []
       const { code, ast, map } = compile(source, {
         filename: 'template.vue',
         ...compilerOptions,
         sourceMap: true,
-        onError: displayError
+        onError: err => {
+          errors.push(err)
+        }
       })
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [])
+      monaco.editor.setModelMarkers(
+        editor.getModel()!,
+        `@vue/compiler-dom`,
+        errors.filter(e => e.loc).map(formatError)
+      )
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
@@ -42,22 +49,17 @@ window.init = () => {
     return lastSuccessfulCode
   }
 
-  function displayError(err: CompilerError) {
-    const loc = err.loc
-    if (loc) {
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [
-        {
-          severity: monaco.MarkerSeverity.Error,
-          startLineNumber: loc.start.line,
-          startColumn: loc.start.column,
-          endLineNumber: loc.end.line,
-          endColumn: loc.end.column,
-          message: `Vue template compilation error: ${err.message}`,
-          code: String(err.code)
-        }
-      ])
+  function formatError(err: CompilerError) {
+    const loc = err.loc!
+    return {
+      severity: monaco.MarkerSeverity.Error,
+      startLineNumber: loc.start.line,
+      startColumn: loc.start.column,
+      endLineNumber: loc.end.line,
+      endColumn: loc.end.column,
+      message: `Vue template compilation error: ${err.message}`,
+      code: String(err.code)
     }
-    throw err
   }
 
   function reCompile() {

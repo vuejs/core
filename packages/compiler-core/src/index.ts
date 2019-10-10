@@ -13,6 +13,7 @@ import { transformBind } from './transforms/vBind'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 import { trackSlotScopes, trackVForSlotScopes } from './transforms/vSlot'
 import { optimizeText } from './transforms/optimizeText'
+import { transformOnce } from './transforms/vOnce'
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions
 
@@ -52,14 +53,15 @@ export function baseCompile(
           ]
         : []),
       trackSlotScopes,
-      optimizeText,
       transformSlotOutlet,
       transformElement,
+      optimizeText,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
       on: transformOn,
       bind: transformBind,
+      once: transformOnce,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })
@@ -78,7 +80,8 @@ export {
   TransformOptions,
   TransformContext,
   NodeTransform,
-  StructuralDirectiveTransform
+  StructuralDirectiveTransform,
+  DirectiveTransform
 } from './transform'
 export {
   generate,
@@ -86,5 +89,10 @@ export {
   CodegenContext,
   CodegenResult
 } from './codegen'
-export { ErrorCodes, CompilerError, createCompilerError } from './errors'
+export {
+  ErrorCodes,
+  CoreCompilerError,
+  CompilerError,
+  createCompilerError
+} from './errors'
 export * from './ast'

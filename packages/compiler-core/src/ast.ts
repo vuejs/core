@@ -114,19 +114,12 @@ export interface BaseElementNode extends Node {
 
 export interface PlainElementNode extends BaseElementNode {
   tagType: ElementTypes.ELEMENT
-  codegenNode:
-    | ElementCodegenNode
-    | CodegenNodeWithDirective<ElementCodegenNode>
-    | undefined
-  // | SimpleExpressionNode (only when hoisted)
+  codegenNode: ElementCodegenNode | undefined | SimpleExpressionNode // only when hoisted
 }
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
-  codegenNode:
-    | ComponentCodegenNode
-    | CodegenNodeWithDirective<ComponentCodegenNode>
-    | undefined
+  codegenNode: ComponentCodegenNode | undefined
 }
 
 export interface SlotOutletNode extends BaseElementNode {
@@ -280,8 +273,8 @@ export interface ConditionalExpression extends Node {
 // Codegen Node Types ----------------------------------------------------------
 
 // createVNode(...)
-export interface ElementCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE
+export interface PlainElementCodegenNode extends CallExpression {
+  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
   arguments:  // tag, props, children, patchFlag, dynamicProps
     | [string | RuntimeHelper]
     | [string | RuntimeHelper, PropsExpression]
@@ -301,13 +294,13 @@ export interface ElementCodegenNode extends CallExpression {
       ]
 }
 
-export type ElementCodegenNodeWithDirective = CodegenNodeWithDirective<
-  ElementCodegenNode
->
+export type ElementCodegenNode =
+  | PlainElementCodegenNode
+  | CodegenNodeWithDirective<PlainElementCodegenNode>
 
 // createVNode(...)
-export interface ComponentCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE
+export interface PlainComponentCodegenNode extends CallExpression {
+  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
   arguments:  // Comp, props, slots, patchFlag, dynamicProps
     | [string | RuntimeHelper]
     | [string | RuntimeHelper, PropsExpression]
@@ -327,9 +320,9 @@ export interface ComponentCodegenNode extends CallExpression {
       ]
 }
 
-export type CompoenntCodegenNodeWithDirective = CodegenNodeWithDirective<
-  ComponentCodegenNode
->
+export type ComponentCodegenNode =
+  | PlainComponentCodegenNode
+  | CodegenNodeWithDirective<PlainComponentCodegenNode>
 
 export type SlotsExpression = SlotsObjectExpression | DynamicSlotsExpression
 
@@ -417,6 +410,11 @@ export interface SlotOutletCodegenNode extends CallExpression {
       ]
 }
 
+export type BlockCodegenNode =
+  | ElementCodegenNode
+  | ComponentCodegenNode
+  | SlotOutletCodegenNode
+
 export interface IfCodegenNode extends SequenceExpression {
   expressions: [OpenBlockExpression, IfConditionalExpression]
 }
@@ -448,28 +446,6 @@ export interface OpenBlockExpression extends CallExpression {
   callee: typeof OPEN_BLOCK
   arguments: []
 }
-
-export type BlockCodegenNode =
-  | BlockElementCodegenNode
-  | BlockComponentCodegenNode
-  | BlockElementCodegenNodeWithDirective
-  | BlockComponentCodegenNodeWithDirective
-
-export type BlockElementCodegenNode = ElementCodegenNode & {
-  callee: typeof CREATE_BLOCK
-}
-
-export type BlockComponentCodegenNode = ComponentCodegenNode & {
-  callee: typeof CREATE_BLOCK
-}
-
-export type BlockElementCodegenNodeWithDirective = CodegenNodeWithDirective<
-  BlockElementCodegenNode
->
-
-export type BlockComponentCodegenNodeWithDirective = CodegenNodeWithDirective<
-  BlockComponentCodegenNode
->
 
 // AST Utilities ---------------------------------------------------------------
 
@@ -552,13 +528,15 @@ export function createCompoundExpression(
   }
 }
 
-type InferCodegenNodeType<T> = T extends typeof CREATE_VNODE
-  ? ElementCodegenNode | ComponentCodegenNode
-  : T extends typeof CREATE_BLOCK
-    ? BlockElementCodegenNode | BlockComponentCodegenNode
-    : T extends typeof APPLY_DIRECTIVES
-      ? ElementCodegenNodeWithDirective | CompoenntCodegenNodeWithDirective
-      : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
+type InferCodegenNodeType<T> = T extends
+  | typeof CREATE_VNODE
+  | typeof CREATE_BLOCK
+  ? PlainElementCodegenNode | PlainComponentCodegenNode
+  : T extends typeof APPLY_DIRECTIVES
+    ?
+        | CodegenNodeWithDirective<PlainElementCodegenNode>
+        | CodegenNodeWithDirective<PlainComponentCodegenNode>
+    : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
 
 export function createCallExpression<T extends CallExpression['callee']>(
   callee: T,

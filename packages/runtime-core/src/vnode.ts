@@ -7,7 +7,12 @@ import {
   extend,
   PatchFlags
 } from '@vue/shared'
-import { ComponentInternalInstance, Data, SetupProxySymbol } from './component'
+import {
+  ComponentInternalInstance,
+  Data,
+  SetupProxySymbol,
+  Component
+} from './component'
 import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
@@ -22,8 +27,7 @@ export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
 
 export type VNodeTypes =
   | string
-  | Function
-  | Object
+  | Component
   | typeof Fragment
   | typeof Portal
   | typeof Text

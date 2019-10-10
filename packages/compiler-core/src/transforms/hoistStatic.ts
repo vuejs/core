@@ -2,10 +2,8 @@ import {
   RootNode,
   NodeTypes,
   TemplateChildNode,
-  ElementNode,
   ElementTypes,
   ElementCodegenNode,
-  ElementCodegenNodeWithDirective,
   PlainElementNode,
   ComponentNode,
   TemplateNode
@@ -51,7 +49,7 @@ function walk(
     ) {
       if (!doNotHoistNode && isStaticNode(child, resultCache)) {
         // whole tree is static
-        ;(child as any).codegenNode = context.hoist(child.codegenNode!)
+        child.codegenNode = context.hoist(child.codegenNode!)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -62,7 +60,7 @@ function walk(
           flag === PatchFlags.NEED_PATCH ||
           flag === PatchFlags.TEXT
         ) {
-          let codegenNode = child.codegenNode!
+          let codegenNode = child.codegenNode as ElementCodegenNode
           if (codegenNode.callee === APPLY_DIRECTIVES) {
             codegenNode = codegenNode.arguments[0]
           }
@@ -88,10 +86,8 @@ function walk(
   }
 }
 
-function getPatchFlag(node: ElementNode): number | undefined {
-  let codegenNode = node.codegenNode as
-    | ElementCodegenNode
-    | ElementCodegenNodeWithDirective
+function getPatchFlag(node: PlainElementNode): number | undefined {
+  let codegenNode = node.codegenNode as ElementCodegenNode
   if (codegenNode.callee === APPLY_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0]
   }
