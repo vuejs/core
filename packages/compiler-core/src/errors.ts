@@ -79,6 +79,8 @@ export const enum ErrorCodes {
   X_V_SLOT_DUPLICATE_SLOT_NAMES,
   X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
   X_V_SLOT_MISPLACED,
+  X_V_MODEL_NO_EXPRESSION,
+  X_V_MODEL_MALFORMED_EXPRESSION,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -167,6 +169,8 @@ export const errorMessages: { [code: number]: string } = {
     `Extraneous children found when component has explicit slots. ` +
     `These children will be ignored.`,
   [ErrorCodes.X_V_SLOT_MISPLACED]: `v-slot can only be used on components or <template> tags.`,
+  [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
+  [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model has invalid expression.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
