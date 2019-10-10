@@ -505,15 +505,13 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(1)
   })
 
-
   it('lazy', () => {
     const obj = reactive({ foo: 1 })
     let dummy
-    const runner = effect(() => {
-      dummy = obj.foo
-    }, { lazy: true })
+    const runner = effect(() => (dummy = obj.foo), { lazy: true })
     expect(dummy).toBe(undefined)
-    runner()
+
+    expect(runner()).toBe(1)
     expect(dummy).toBe(1)
     obj.foo = 2
     expect(dummy).toBe(2)
