@@ -235,5 +235,5 @@ export function toValidAssetId(
   name: string,
   type: 'component' | 'directive'
 ): string {
-  return `_${type}_${name.replace(/[^\w]/g, '')}`
+  return `_${type}_${name.replace(/[^\w]/g, '_')}`
 }
