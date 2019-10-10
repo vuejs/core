@@ -42,7 +42,7 @@ function transformWithHoist(template: string) {
   }
 }
 
-describe('compiler: hositStatic transform', () => {
+describe('compiler: hoistStatic transform', () => {
   test('should NOT hoist root node', () => {
     // if the whole tree is static, the root still needs to be a block
     // so that it's patched in optimized mode to skip children
@@ -180,6 +180,52 @@ describe('compiler: hositStatic transform', () => {
             `null`,
             genFlagText(PatchFlags.PROPS),
             `["id"]`
+          ]
+        }
+      }
+    ])
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('hoist element with static key', () => {
+    const { root, args } = transformWithHoist(`<div><div key="foo"/></div>`)
+    expect(root.hoists.length).toBe(1)
+    expect(root.hoists).toMatchObject([
+      {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_VNODE,
+        arguments: [`"div"`, createObjectMatcher({ key: 'foo' })]
+      }
+    ])
+    expect(args).toMatchObject([
+      `"div"`,
+      `null`,
+      [
+        {
+          type: NodeTypes.ELEMENT,
+          codegenNode: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_hoisted_1`
+          }
+        }
+      ]
+    ])
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('should NOT hoist element with dynamic key', () => {
+    const { root, args } = transformWithHoist(`<div><div :key="foo"/></div>`)
+    expect(root.hoists.length).toBe(0)
+    expect(args[2]).toMatchObject([
+      {
+        type: NodeTypes.ELEMENT,
+        codegenNode: {
+          callee: CREATE_VNODE,
+          arguments: [
+            `"div"`,
+            createObjectMatcher({
+              key: `[foo]`
+            })
           ]
         }
       }
