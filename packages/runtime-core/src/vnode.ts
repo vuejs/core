@@ -129,7 +129,7 @@ export function createBlock(
   return vnode
 }
 
-export function isVNode(value: any): boolean {
+export function isVNode(value: any): value is VNode {
   return value ? value._isVNode === true : false
 }
 
