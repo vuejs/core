@@ -114,7 +114,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
   setElementText(node: HostElement, text: string): void
-  parentNode(node: HostNode): HostNode | null
+  parentNode(node: HostNode): HostElement | null
   nextSibling(node: HostNode): HostNode | null
   querySelector(selector: string): HostElement | null
 }
@@ -499,10 +499,11 @@ export function createRenderer<
       // children fast path
       const oldDynamicChildren = n1.dynamicChildren!
       for (let i = 0; i < dynamicChildren.length; i++) {
+        const oldVNode = oldDynamicChildren[i]
         patch(
-          oldDynamicChildren[i],
+          oldVNode,
           dynamicChildren[i],
-          el,
+          hostParentNode(oldVNode.el!)!,
           null,
           parentComponent,
           parentSuspense,

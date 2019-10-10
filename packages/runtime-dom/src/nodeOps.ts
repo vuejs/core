@@ -4,7 +4,11 @@ const svgNS = 'http://www.w3.org/2000/svg'
 export const nodeOps = {
   insert: (child: Node, parent: Node, anchor?: Node) => {
     if (anchor != null) {
-      parent.insertBefore(child, anchor)
+      try {
+        parent.insertBefore(child, anchor)
+      } catch (e) {
+        debugger
+      }
     } else {
       parent.appendChild(child)
     }
@@ -32,7 +36,8 @@ export const nodeOps = {
     el.textContent = text
   },
 
-  parentNode: (node: Node): Node | null => node.parentNode,
+  parentNode: (node: Node): HTMLElement | null =>
+    node.parentNode as HTMLElement,
 
   nextSibling: (node: Node): Node | null => node.nextSibling,
 
