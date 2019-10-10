@@ -80,3 +80,6 @@ export type UnwrapRef<T> = {
     : T extends BailTypes
       ? 'stop' // bail out on types that shouldn't be unwrapped
       : T extends object ? 'object' : 'stop']
+
+// only unwrap nested ref
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
