@@ -4,7 +4,8 @@ import {
   createVNode,
   VNodeChildren,
   Fragment,
-  Portal
+  Portal,
+  isVNode
 } from './vnode'
 import { isObject, isArray } from '@vue/shared'
 import { Ref } from '@vue/reactivity'
@@ -34,17 +35,19 @@ h('div', {})
 // type + omit props + children
 // Omit props does NOT support named slots
 h('div', []) // array
-h('div', () => {}) // default slot
 h('div', 'foo') // text
+h('div', h('br')) // vnode
+h(Component, () => {}) // default slot
 
 // type + props + children
 h('div', {}, []) // array
-h('div', {}, () => {}) // default slot
-h('div', {}, {}) // named slots
 h('div', {}, 'foo') // text
+h('div', {}, h('br')) // vnode
+h(Component, {}, () => {}) // default slot
+h(Component, {}, {}) // named slots
 
 // named slots without props requires explicit `null` to avoid ambiguity
-h('div', null, {})
+h(Component, null, {})
 **/
 
 export interface RawProps {
@@ -61,6 +64,7 @@ export type RawChildren =
   | string
   | number
   | boolean
+  | VNode
   | VNodeChildren
   | (() => any)
 
@@ -142,6 +146,10 @@ export function h(
 ): VNode {
   if (arguments.length === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
+      // single vnode without props
+      if (isVNode(propsOrChildren)) {
+        return createVNode(type, null, [propsOrChildren])
+      }
       // props without children
       return createVNode(type, propsOrChildren)
     } else {
@@ -149,6 +157,9 @@ export function h(
       return createVNode(type, null, propsOrChildren)
     }
   } else {
+    if (isVNode(children)) {
+      children = [children]
+    }
     return createVNode(type, propsOrChildren, children)
   }
 }
