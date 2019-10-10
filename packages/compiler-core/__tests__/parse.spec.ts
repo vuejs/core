@@ -2604,7 +2604,7 @@ foo
                   }
                   return TextModes.DATA
                 },
-                isReservedTag: tag => tag === 'loading-indicator',
+                isNativeTag: tag => tag === 'loading-indicator',
                 ...options,
                 onError: spy
               })
