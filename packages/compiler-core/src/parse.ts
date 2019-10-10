@@ -44,13 +44,19 @@ export interface ParserOptions {
   onError?: (error: CompilerError) => void
 }
 
-export const defaultParserOptions: Required<ParserOptions> = {
+// `isNativeTag` is optional, others are required
+type MergedParserOptions = Pick<
+  Required<ParserOptions>,
+  Exclude<keyof ParserOptions, 'isNativeTag'>
+> &
+  Pick<ParserOptions, 'isNativeTag'>
+
+export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
   ignoreSpaces: true,
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
-  isNativeTag: NO,
   namedCharacterReferences: {
     'gt;': '>',
     'lt;': '<',
@@ -71,7 +77,7 @@ export const enum TextModes {
 }
 
 interface ParserContext {
-  options: Required<ParserOptions>
+  options: MergedParserOptions
   readonly originalSource: string
   source: string
   offset: number
@@ -431,9 +437,14 @@ function parseTag(
 
   let tagType = ElementTypes.ELEMENT
   if (!context.inPre) {
+    if (context.options.isNativeTag) {
+      if (!context.options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
+    } else {
+      if (/^[A-Z]/.test(tag)) tagType = ElementTypes.COMPONENT
+    }
+
     if (tag === 'slot') tagType = ElementTypes.SLOT
     else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-    else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
   }
 
   return {
