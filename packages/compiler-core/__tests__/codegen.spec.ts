@@ -89,7 +89,7 @@ describe('compiler: codegen', () => {
 
   test('assets', () => {
     const root = createRoot({
-      components: [`Foo`, `bar-baz`],
+      components: [`Foo`, `bar-baz`, `barbaz`],
       directives: [`my_dir`]
     })
     const { code } = generate(root, { mode: 'function' })
@@ -97,9 +97,14 @@ describe('compiler: codegen', () => {
       `const _component_Foo = _${helperNameMap[RESOLVE_COMPONENT]}("Foo")\n`
     )
     expect(code).toMatch(
-      `const _component_barbaz = _${
+      `const _component_bar_baz = _${
         helperNameMap[RESOLVE_COMPONENT]
       }("bar-baz")\n`
+    )
+    expect(code).toMatch(
+      `const _component_barbaz = _${
+        helperNameMap[RESOLVE_COMPONENT]
+      }("barbaz")\n`
     )
     expect(code).toMatch(
       `const _directive_my_dir = _${
