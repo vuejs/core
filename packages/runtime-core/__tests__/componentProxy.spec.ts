@@ -1,10 +1,10 @@
 import { createApp, getCurrentInstance, nodeOps } from '@vue/runtime-test'
-import { PublicInstanceProxyHandlers } from '../src/componentProxy'
 
 describe('component: proxy', () => {
   it('data', () => {
     const app = createApp()
     let ctx: any
+    let instanceProxy: any
     const Comp = {
       data() {
         return {
@@ -13,13 +13,13 @@ describe('component: proxy', () => {
       },
       mounted() {
         ctx = getCurrentInstance()
+        instanceProxy = this
       },
       render() {
         return null
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    const instanceProxy = new Proxy(ctx, PublicInstanceProxyHandlers)
     expect(instanceProxy.foo).toBe(1)
     instanceProxy.foo = 2
     expect(ctx.data.foo).toBe(2)
@@ -40,7 +40,7 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    const instanceProxy = new Proxy(ctx, PublicInstanceProxyHandlers)
+    const instanceProxy = ctx.renderProxy
     expect(instanceProxy.foo).toBe(1)
     instanceProxy.foo = 2
     expect(ctx.renderContext.foo).toBe(2)
@@ -62,7 +62,7 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    const instanceProxy = new Proxy(ctx, PublicInstanceProxyHandlers)
+    const instanceProxy = ctx.renderProxy
     expect(instanceProxy.foo).toBe(1)
     expect(() => (instanceProxy.foo = 2)).toThrow(TypeError)
   })
@@ -77,7 +77,7 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    const instanceProxy = new Proxy(ctx, PublicInstanceProxyHandlers)
+    const instanceProxy = ctx.renderProxy
     expect(instanceProxy.$data).toBe(ctx.data)
     expect(instanceProxy.$props).toBe(ctx.propsProxy)
     expect(instanceProxy.$attrs).toBe(ctx.attrs)
@@ -101,7 +101,7 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    const instanceProxy = new Proxy(ctx, PublicInstanceProxyHandlers)
+    const instanceProxy = ctx.renderProxy
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
     expect(ctx.user.foo).toBe(1)
