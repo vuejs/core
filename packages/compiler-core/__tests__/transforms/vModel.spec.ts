@@ -64,6 +64,7 @@ describe('compiler: transform v-model', () => {
 
     expect(generate(root).code).toMatchSnapshot()
   })
+
   test('simple exprssion (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model="model" />', {
       prefixIdentifiers: true
@@ -102,6 +103,7 @@ describe('compiler: transform v-model', () => {
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
+
   test('compound expression', () => {
     const root = parseWithVModel('<input v-model="model[index]" />')
     const node = root.children[0] as ElementNode
@@ -193,6 +195,7 @@ describe('compiler: transform v-model', () => {
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
+
   test('with argument', () => {
     const root = parseWithVModel('<input v-model:value="model" />')
     const node = root.children[0] as ElementNode
@@ -229,6 +232,7 @@ describe('compiler: transform v-model', () => {
 
     expect(generate(root).code).toMatchSnapshot()
   })
+
   test('with dynamic argument', () => {
     const root = parseWithVModel('<input v-model:[value]="model" />')
     const node = root.children[0] as ElementNode
@@ -274,6 +278,7 @@ describe('compiler: transform v-model', () => {
 
     expect(generate(root).code).toMatchSnapshot()
   })
+
   test('with dynamic argument (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model:[value]="model" />', {
       prefixIdentifiers: true
