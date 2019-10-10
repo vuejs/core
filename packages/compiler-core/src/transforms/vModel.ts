@@ -38,7 +38,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         ])
     : createSimpleExpression('onUpdate:modelValue', true)
 
-  return createTransformProps([
+  const props = [
     createObjectProperty(propName, dir.exp!),
     createObjectProperty(
       eventName,
@@ -48,7 +48,13 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         ` = $event)`
       ])
     )
-  ])
+  ]
+
+  if (dir.modifiers.length) {
+    // TODO add modelModifiers prop
+  }
+
+  return createTransformProps(props)
 }
 
 function createTransformProps(props: Property[] = []) {

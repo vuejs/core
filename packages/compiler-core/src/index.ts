@@ -98,3 +98,9 @@ export {
   createCompilerError
 } from './errors'
 export * from './ast'
+export * from './utils'
+export { registerRuntimeHelpers } from './runtimeHelpers'
+
+// expose transforms so higher-order compilers can import and extend them
+export { transformModel } from './transforms/vModel'
+export { transformOn } from './transforms/vOn'

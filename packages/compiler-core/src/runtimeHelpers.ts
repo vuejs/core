@@ -18,30 +18,10 @@ export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 
-export type RuntimeHelper =
-  | typeof FRAGMENT
-  | typeof PORTAL
-  | typeof COMMENT
-  | typeof TEXT
-  | typeof SUSPENSE
-  | typeof EMPTY
-  | typeof OPEN_BLOCK
-  | typeof CREATE_BLOCK
-  | typeof CREATE_VNODE
-  | typeof RESOLVE_COMPONENT
-  | typeof RESOLVE_DIRECTIVE
-  | typeof APPLY_DIRECTIVES
-  | typeof RENDER_LIST
-  | typeof RENDER_SLOT
-  | typeof CREATE_SLOTS
-  | typeof TO_STRING
-  | typeof MERGE_PROPS
-  | typeof TO_HANDLERS
-  | typeof CAMELIZE
-
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
-export const helperNameMap = {
+// Using `any` here because TS doesn't allow symbols as index type.
+export const helperNameMap: any = {
   [FRAGMENT]: `Fragment`,
   [PORTAL]: `Portal`,
   [COMMENT]: `Comment`,
@@ -61,4 +41,10 @@ export const helperNameMap = {
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`
+}
+
+export function registerRuntimeHelpers(helpers: any) {
+  Object.getOwnPropertySymbols(helpers).forEach(s => {
+    helperNameMap[s] = helpers[s]
+  })
 }

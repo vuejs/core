@@ -69,10 +69,12 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   }
 
   return {
-    props: createObjectProperty(
-      eventName,
-      dir.exp || createSimpleExpression(`() => {}`, false, loc)
-    ),
+    props: [
+      createObjectProperty(
+        eventName,
+        dir.exp || createSimpleExpression(`() => {}`, false, loc)
+      )
+    ],
     needRuntime: false
   }
 }

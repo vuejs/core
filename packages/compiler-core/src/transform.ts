@@ -22,7 +22,6 @@ import {
   COMMENT,
   CREATE_VNODE,
   FRAGMENT,
-  RuntimeHelper,
   helperNameMap,
   APPLY_DIRECTIVES,
   CREATE_BLOCK
@@ -48,8 +47,8 @@ export type DirectiveTransform = (
   node: ElementNode,
   context: TransformContext
 ) => {
-  props: Property | Property[]
-  needRuntime: boolean
+  props: Property[]
+  needRuntime: boolean | symbol
 }
 
 // A structural directive transform is a technically a NodeTransform;
@@ -70,7 +69,7 @@ export interface TransformOptions {
 
 export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
-  helpers: Set<RuntimeHelper>
+  helpers: Set<symbol>
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
@@ -84,8 +83,8 @@ export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
-  helper<T extends RuntimeHelper>(name: T): T
-  helperString(name: RuntimeHelper): string
+  helper<T extends symbol>(name: T): T
+  helperString(name: symbol): string
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
   onNodeRemoved: () => void

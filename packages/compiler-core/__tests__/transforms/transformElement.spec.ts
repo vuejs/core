@@ -271,7 +271,7 @@ describe('compiler: element transform', () => {
         foo(dir) {
           _dir = dir
           return {
-            props: createObjectProperty(dir.arg!, dir.exp!),
+            props: [createObjectProperty(dir.arg!, dir.exp!)],
             needRuntime: false
           }
         }

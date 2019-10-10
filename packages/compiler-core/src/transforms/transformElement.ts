@@ -15,7 +15,7 @@ import {
   createObjectExpression,
   Property
 } from '../ast'
-import { isArray, PatchFlags, PatchFlagNames } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
@@ -27,6 +27,10 @@ import {
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
 import { buildSlots } from './vSlot'
+
+// some directive transforms (e.g. v-model) may return a symbol for runtime
+// import, which should be used instead of a resolveDirective call.
+const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
@@ -137,9 +141,7 @@ export const transformElement: NodeTransform = (node, context) => {
             [
               vnode,
               createArrayExpression(
-                runtimeDirectives.map(dir => {
-                  return createDirectiveArgs(dir, context)
-                }),
+                runtimeDirectives.map(dir => createDirectiveArgs(dir, context)),
                 loc
               )
             ],
@@ -274,15 +276,13 @@ export function buildProps(
       if (directiveTransform) {
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
-        if (isArray(props)) {
-          properties.push(...props)
-          properties.forEach(analyzePatchFlag)
-        } else {
-          properties.push(props)
-          analyzePatchFlag(props)
-        }
+        props.forEach(analyzePatchFlag)
+        properties.push(...props)
         if (needRuntime) {
           runtimeDirectives.push(prop)
+          if (isSymbol(needRuntime)) {
+            directiveImportMap.set(prop, needRuntime)
+          }
         }
       } else {
         // no built-in transform, this is a user custom directive.
@@ -362,7 +362,12 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps[name]
     if (existing) {
-      if (name.startsWith('on') || name === 'style' || name === 'class') {
+      if (
+        name === 'style' ||
+        name === 'class' ||
+        name.startsWith('on') ||
+        name.startsWith('vnode')
+      ) {
         mergeAsArray(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
@@ -389,12 +394,17 @@ function createDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
-  // inject statement for resolving directive
-  context.helper(RESOLVE_DIRECTIVE)
-  context.directives.add(dir.name)
-  const dirArgs: ArrayExpression['elements'] = [
-    toValidAssetId(dir.name, `directive`)
-  ]
+  const dirArgs: ArrayExpression['elements'] = []
+  const runtime = directiveImportMap.get(dir)
+  if (runtime) {
+    context.helper(runtime)
+    dirArgs.push(context.helperString(runtime))
+  } else {
+    // inject statement for resolving directive
+    context.helper(RESOLVE_DIRECTIVE)
+    context.directives.add(dir.name)
+    dirArgs.push(toValidAssetId(dir.name, `directive`))
+  }
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
   if (dir.arg) dirArgs.push(dir.arg)

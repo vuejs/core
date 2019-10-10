@@ -33,8 +33,7 @@ import {
   COMMENT,
   helperNameMap,
   RESOLVE_COMPONENT,
-  RESOLVE_DIRECTIVE,
-  RuntimeHelper
+  RESOLVE_DIRECTIVE
 } from './runtimeHelpers'
 
 type CodegenNode = TemplateChildNode | JSChildNode
@@ -74,7 +73,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   offset: number
   indentLevel: number
   map?: SourceMapGenerator
-  helper(key: RuntimeHelper): string
+  helper(key: symbol): string
   push(code: string, node?: CodegenNode, openOnly?: boolean): void
   resetMapping(loc: SourceLocation): void
   indent(): void
@@ -338,7 +337,7 @@ function genNodeListAsArray(
 }
 
 function genNodeList(
-  nodes: (string | RuntimeHelper | CodegenNode | TemplateChildNode[])[],
+  nodes: (string | symbol | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
   multilines: boolean = false
 ) {
@@ -363,10 +362,7 @@ function genNodeList(
   }
 }
 
-function genNode(
-  node: CodegenNode | RuntimeHelper | string,
-  context: CodegenContext
-) {
+function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
   if (isString(node)) {
     context.push(node)
     return

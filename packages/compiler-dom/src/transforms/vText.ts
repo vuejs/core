@@ -19,10 +19,12 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     node.children.length = 0
   }
   return {
-    props: createObjectProperty(
-      createSimpleExpression(`textContent`, true, loc),
-      exp || createSimpleExpression('', true)
-    ),
+    props: [
+      createObjectProperty(
+        createSimpleExpression(`textContent`, true, loc),
+        exp || createSimpleExpression('', true)
+      )
+    ],
     needRuntime: false
   }
 }
