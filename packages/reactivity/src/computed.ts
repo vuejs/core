@@ -1,9 +1,9 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { Ref, refSymbol, UnwrapNestedRefs } from './ref'
+import { Ref, refSymbol, UnwrapRef } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
 export interface ComputedRef<T> extends WritableComputedRef<T> {
-  readonly value: UnwrapNestedRefs<T>
+  readonly value: UnwrapRef<T>
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {

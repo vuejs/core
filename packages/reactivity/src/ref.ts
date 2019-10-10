@@ -7,14 +7,15 @@ export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : undefined)
 
 export interface Ref<T = any> {
   [refSymbol]: true
-  value: UnwrapNestedRefs<T>
+  value: UnwrapRef<T>
 }
-
-export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
 export function ref<T>(raw: T): Ref<T> {
+  if (isRef(raw)) {
+    return raw
+  }
   raw = convert(raw)
   const v = {
     [refSymbol]: true,
@@ -48,16 +49,15 @@ function toProxyRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  const v = {
+  return {
     [refSymbol]: true,
-    get value() {
+    get value(): any {
       return object[key]
     },
     set value(newVal) {
       object[key] = newVal
     }
   }
-  return v as Ref<T[K]>
 }
 
 type BailTypes =
@@ -80,3 +80,6 @@ export type UnwrapRef<T> = {
     : T extends BailTypes
       ? 'stop' // bail out on types that shouldn't be unwrapped
       : T extends object ? 'object' : 'stop']
+
+// only unwrap nested ref
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
