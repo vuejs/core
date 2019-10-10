@@ -349,7 +349,7 @@ export interface DynamicSlotsExpression extends CallExpression {
 }
 
 export interface DynamicSlotEntries extends ArrayExpression {
-  elements: (ConditionalDynamicSlotNode | ListDyanmicSlotNode)[]
+  elements: (ConditionalDynamicSlotNode | ListDynamicSlotNode)[]
 }
 
 export interface ConditionalDynamicSlotNode extends ConditionalExpression {
@@ -357,7 +357,7 @@ export interface ConditionalDynamicSlotNode extends ConditionalExpression {
   alternate: DynamicSlotNode | SimpleExpressionNode
 }
 
-export interface ListDyanmicSlotNode extends CallExpression {
+export interface ListDynamicSlotNode extends CallExpression {
   callee: typeof RENDER_LIST
   arguments: [ExpressionNode, ListDyanmicSlotIterator]
 }
