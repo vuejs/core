@@ -62,7 +62,9 @@ export function resolveSlots(
                 `Prefer function slots for better performance.`
             )
           }
-          const normalized = normalizeSlotValue(value)
+          const normalized = normalizeSlotValue(value as
+            | VNodeChild
+            | VNodeChild[])
           slots[key] = () => normalized
         }
       }
@@ -75,7 +77,7 @@ export function resolveSlots(
           `Prefer function slots for better performance.`
       )
     }
-    const normalized = normalizeSlotValue(children)
+    const normalized = normalizeSlotValue(children as VNodeChild | VNodeChild[])
     slots = { default: () => normalized }
   }
   if (slots !== void 0) {
