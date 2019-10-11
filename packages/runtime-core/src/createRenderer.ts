@@ -7,7 +7,8 @@ import {
   VNode,
   VNodeChildren,
   Suspense,
-  createVNode
+  createVNode,
+  Empty
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -195,6 +196,9 @@ export function createRenderer<
         break
       case Comment:
         processCommentNode(n1, n2, container, anchor)
+        break
+      case Empty:
+        processEmpty(n1, n2, container, anchor)
         break
       case Fragment:
         processFragment(
@@ -569,6 +573,18 @@ export function createRenderer<
           }
         }
       }
+    }
+  }
+
+  function processEmpty(
+    n1: HostVNode | null,
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null
+  ) {
+    const emptyAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))!
+    if (n1 == null) {
+      hostInsert(emptyAnchor, container, anchor)
     }
   }
 

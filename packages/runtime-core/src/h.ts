@@ -5,7 +5,8 @@ import {
   VNodeChildren,
   Fragment,
   Portal,
-  isVNode
+  isVNode,
+  Empty
 } from './vnode'
 import { isObject, isArray } from '@vue/shared'
 import { Ref } from '@vue/reactivity'
@@ -85,6 +86,9 @@ export function h(
   props?: RawProps | null,
   children?: RawChildren
 ): VNode
+
+// empty
+export function h(type: typeof Empty): VNode
 
 // keyed fragment
 export function h(type: typeof Fragment, children?: RawChildren): VNode
