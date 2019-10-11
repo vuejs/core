@@ -358,10 +358,10 @@ export interface ConditionalDynamicSlotNode extends ConditionalExpression {
 
 export interface ListDynamicSlotNode extends CallExpression {
   callee: typeof RENDER_LIST
-  arguments: [ExpressionNode, ListDyanmicSlotIterator]
+  arguments: [ExpressionNode, ListDynamicSlotIterator]
 }
 
-export interface ListDyanmicSlotIterator extends FunctionExpression {
+export interface ListDynamicSlotIterator extends FunctionExpression {
   returns: DynamicSlotNode
 }
 
