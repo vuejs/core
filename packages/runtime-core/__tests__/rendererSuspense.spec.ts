@@ -2,6 +2,7 @@ import {
   h,
   ref,
   Suspense,
+  Portal,
   ComponentOptions,
   render,
   nodeOps,
@@ -711,5 +712,43 @@ describe('renderer: suspense', () => {
     )
   })
 
-  test.todo('portal inside suspense')
+  test('portal inside suspense', async () => {
+    const root = nodeOps.createElement('div')
+    const mountTarget = nodeOps.createElement('div')
+    const portalTarget = nodeOps.createElement('div')
+    nodeOps.insert(mountTarget, root)
+    nodeOps.insert(portalTarget, root)
+
+    const PortalChild = createAsyncComponent({
+      setup() {
+        return () => {
+          const portalVNode = h(
+            Portal,
+            { target: portalTarget.selector },
+            h('div', 'portal')
+          )
+          return portalVNode
+        }
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h(PortalChild),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    render(h(Comp), mountTarget)
+    expect(serializeInner(mountTarget)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(portalTarget)).toBe(``)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(mountTarget)).toBe(`<!--[object Object]-->`)
+    expect(serializeInner(portalTarget)).toBe(`<div>portal</div>`)
+  })
 })

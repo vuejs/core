@@ -20,6 +20,7 @@ export interface TestElement {
   type: NodeTypes.ELEMENT
   parentNode: TestElement | null
   tag: string
+  selector: string
   children: TestNode[]
   props: Record<string, any>
   eventListeners: Record<string, Function | Function[]> | null
@@ -56,6 +57,7 @@ export interface NodeOp {
 
 let nodeId: number = 0
 let recordedNodeOps: NodeOp[] = []
+const insertedElementMap: Map<string, TestElement> = new Map()
 
 export function logNodeOp(op: NodeOp) {
   recordedNodeOps.push(op)
@@ -72,10 +74,12 @@ export function dumpOps(): NodeOp[] {
 }
 
 function createElement(tag: string): TestElement {
+  const id = nodeId++
   const node: TestElement = {
-    id: nodeId++,
+    id,
     type: NodeTypes.ELEMENT,
     tag,
+    selector: tag + id,
     children: [],
     props: {},
     parentNode: null,
@@ -164,6 +168,10 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
     parent.children.splice(refIndex, 0, child)
     child.parentNode = parent
   }
+
+  if (child.type === NodeTypes.ELEMENT) {
+    insertedElementMap.set(child.selector, child)
+  }
 }
 
 function remove(child: TestNode, logOp: boolean = true) {
@@ -185,6 +193,10 @@ function remove(child: TestNode, logOp: boolean = true) {
       throw Error('target is not a childNode of parent')
     }
     child.parentNode = null
+
+    if (child.type === NodeTypes.ELEMENT) {
+      insertedElementMap.delete(child.selector)
+    }
   }
 }
 
@@ -224,8 +236,32 @@ function nextSibling(node: TestNode): TestNode | null {
   return parent.children[i + 1] || null
 }
 
-function querySelector(): any {
-  throw new Error('querySelector not supported in test renderer.')
+/**
+ * We use the selector(`tag + id`) as the key to buffer the element in the `insert` function,
+ * therefore, we can use selector(`tag + id`) as a key to query elements, in order to facilitate testing:
+ *
+ * ```js
+ * const root = nodeOps.createElement('div')
+ * const portalTarget = nodeOps.createElement('div')
+ * nodeOps.insert(portalTarget, root)  // { [portalTarget.selector]: portalTarget }
+ * ```
+ *
+ * This is mainly to facilitate testing of Protal,
+ * in the tests, we can specify the target as follows:
+ *
+ * ```js
+ * h(Portal, { target: portalTarget.selector }, h('div', 'portal'))
+ * ```
+ *
+ * assertion:
+ *
+ * ```js
+ * expect(serializeInner(portalTarget)).toBe(`<div>portal</div>`)
+ * ```
+ *
+ */
+function querySelector(selector: string) {
+  return insertedElementMap.get(selector) || null
 }
 
 export const nodeOps = {

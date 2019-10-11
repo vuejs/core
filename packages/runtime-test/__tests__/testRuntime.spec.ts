@@ -215,4 +215,17 @@ describe('test renderer', () => {
     expect('warn!!!').toHaveBeenWarnedTimes(2)
     expect('warning').toHaveBeenWarnedLast()
   })
+
+  it('should query the element correctly', () => {
+    const root = nodeOps.createElement('div')
+    const el1 = nodeOps.createElement('div')
+    const el2 = nodeOps.createElement('div')
+    nodeOps.insert(el1, root)
+
+    expect(nodeOps.querySelector(el1.selector)).toEqual(el1)
+    expect(serialize(nodeOps.querySelector(el1.selector) as TestElement)).toBe(
+      `<div></div>`
+    )
+    expect(nodeOps.querySelector(el2.selector)).toBe(null)
+  })
 })
