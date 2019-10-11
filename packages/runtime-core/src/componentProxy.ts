@@ -34,6 +34,7 @@ export type ComponentPublicInstance<
 export const PublicInstanceProxyHandlers = {
   get(target: ComponentInternalInstance, key: string) {
     const { renderContext, data, props, propsProxy } = target
+    const versionApiMap = getVersionApiMap(target)
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       return data[key]
     } else if (hasOwn(renderContext, key)) {
@@ -41,43 +42,17 @@ export const PublicInstanceProxyHandlers = {
     } else if (hasOwn(props, key)) {
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
+    } else if (versionApiMap.has(key)) {
+      return versionApiMap.get(key)
     } else {
-      // TODO simplify this?
-      switch (key) {
-        case '$data':
-          return data
-        case '$props':
-          return propsProxy
-        case '$attrs':
-          return target.attrs
-        case '$slots':
-          return target.slots
-        case '$refs':
-          return target.refs
-        case '$parent':
-          return target.parent
-        case '$root':
-          return target.root
-        case '$emit':
-          return target.emit
-        case '$el':
-          return target.vnode.el
-        case '$options':
-          return target.type
-        default:
-          // methods are only exposed when options are supported
-          if (__FEATURE_OPTIONS__) {
-            switch (key) {
-              case '$forceUpdate':
-                return target.update
-              case '$nextTick':
-                return nextTick
-              case '$watch':
-                return instanceWatch.bind(target)
-            }
-          }
-          return target.user[key]
+      // methods are only exposed when options are supported
+      if (__FEATURE_OPTIONS__) {
+        const featureApiMap = getFeatureApiMap(target)
+        if (featureApiMap.has(key)) {
+          return featureApiMap.get(key)
+        }
       }
+      return target.user[key]
     }
   },
   // this trap is only called in browser-compiled render functions that use
@@ -108,4 +83,31 @@ export const PublicInstanceProxyHandlers = {
     }
     return true
   }
+}
+
+function getVersionApiMap(target: ComponentInternalInstance): Map<string, any> {
+  return new Map(
+    Object.entries({
+      $data: target.data,
+      $props: target.propsProxy,
+      $attrs: target.attrs,
+      $slots: target.slots,
+      $refs: target.refs,
+      $parent: target.parent,
+      $root: target.root,
+      $emit: target.emit,
+      $el: target.vnode.el,
+      $options: target.type
+    })
+  )
+}
+
+function getFeatureApiMap(target: ComponentInternalInstance): Map<string, any> {
+  return new Map(
+    Object.entries({
+      $forceUpdate: target.update,
+      $nextTick: nextTick,
+      $watch: instanceWatch.bind(target)
+    })
+  )
 }
