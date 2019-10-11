@@ -100,10 +100,8 @@ function setSelected(el: HTMLSelectElement, value: any) {
   if (isMultiple && !isArray(value)) {
     __DEV__ &&
       warn(
-        `<select multiple v-model> ` +
-          `expects an Array value for its binding, but got ${Object.prototype.toString
-            .call(value)
-            .slice(8, -1)}`
+        `<select multiple v-model> expects an Array value for its binding, ` +
+          `but got ${Object.prototype.toString.call(value).slice(8, -1)}`
       )
     return
   }
