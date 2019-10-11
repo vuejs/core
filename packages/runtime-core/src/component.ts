@@ -319,7 +319,12 @@ function finishComponentSetup(
     if (Component.template && !Component.render) {
       if (compile) {
         Component.render = compile(Component.template, {
-          onError(err) {}
+          onError(err) {
+            if (__DEV__) {
+              // TODO use err.loc to provide codeframe like Vue 2
+              warn(`Template compilation error: ${err.message}`)
+            }
+          }
         })
       } else if (__DEV__) {
         warn(
