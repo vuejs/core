@@ -1,5 +1,11 @@
 import { createVNode } from '@vue/runtime-test'
-import { ShapeFlags, Comment, Fragment, Text } from '@vue/runtime-core'
+import {
+  ShapeFlags,
+  Comment,
+  Fragment,
+  Text,
+  cloneVNode
+} from '@vue/runtime-core'
 import { mergeProps, normalizeVNode } from '../src/vnode'
 import { Data } from '../src/component'
 
@@ -134,9 +140,39 @@ describe('vnode', () => {
     expect(normalizeVNode(true)).toMatchObject({ type: Text, children: `true` })
   })
 
-  test.todo('node type/shapeFlag inference')
+  test('type shapeFlag inference', () => {
+    expect(createVNode('div').shapeFlag).toBe(ShapeFlags.ELEMENT)
+    expect(createVNode({}).shapeFlag).toBe(ShapeFlags.STATEFUL_COMPONENT)
+    expect(createVNode(() => {}).shapeFlag).toBe(
+      ShapeFlags.FUNCTIONAL_COMPONENT
+    )
+    expect(createVNode(Text).shapeFlag).toBe(0)
+  })
 
-  test.todo('cloneVNode')
+  test('cloneVNode', () => {
+    const node1 = createVNode('div', { foo: 1 }, null)
+    expect(cloneVNode(node1)).toEqual(node1)
+
+    const node2 = createVNode({}, null, [node1])
+    const cloned2 = cloneVNode(node2)
+    expect(cloned2).toEqual(node2)
+    expect(cloneVNode(node2)).toEqual(node2)
+    expect(cloneVNode(node2)).toEqual(cloned2)
+
+    // should reset mounted state
+    const node3 = createVNode('div', { foo: 1 }, [node1])
+    node3.el = {}
+    node3.anchor = {}
+    node3.component = {} as any
+    node3.suspense = {} as any
+    expect(cloneVNode(node3)).toEqual({
+      ...node3,
+      el: null,
+      anchor: null,
+      component: null,
+      suspense: null
+    })
+  })
 
   describe('mergeProps', () => {
     test('class', () => {
