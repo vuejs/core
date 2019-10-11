@@ -16,6 +16,12 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('should not run the passed function (wrapped by a effect) when lazy is true', () => {
+    const fnSpy = jest.fn(() => {})
+    effect(fnSpy, { lazy: true })
+    expect(fnSpy).toHaveBeenCalledTimes(0)
+  })
+
   it('should observe basic properties', () => {
     let dummy
     const counter = reactive({ num: 0 })
