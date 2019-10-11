@@ -1,5 +1,7 @@
 import { createVNode } from '@vue/runtime-test'
 import { ShapeFlags } from '@vue/runtime-core'
+import { mergeProps } from '../src/vnode'
+import { Data } from '../src/component'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -113,5 +115,69 @@ describe('vnode', () => {
 
   test.todo('cloneVNode')
 
-  test.todo('mergeProps')
+  describe('mergeProps', () => {
+    test('class', () => {
+      let props1: Data = { class: 'c' }
+      let props2: Data = { class: ['cc'] }
+      let props3: Data = { class: [{ ccc: true }] }
+      let props4: Data = { class: { cccc: true } }
+      expect(mergeProps(props1, props2, props3, props4)).toMatchObject({
+        class: 'c cc ccc cccc'
+      })
+    })
+
+    test('style', () => {
+      let props1: Data = {
+        style: {
+          color: 'red',
+          fontSize: 10
+        }
+      }
+      let props2: Data = {
+        style: [
+          {
+            color: 'blue',
+            with: '200px'
+          },
+          {
+            with: '300px',
+            height: '300px',
+            fontSize: 30
+          }
+        ]
+      }
+      expect(mergeProps(props1, props2)).toMatchObject({
+        style: {
+          color: 'blue',
+          with: '300px',
+          height: '300px',
+          fontSize: 30
+        }
+      })
+    })
+
+    test('handlers', () => {
+      let clickHander1 = function() {}
+      let clickHander2 = function() {}
+      let focusHander2 = function() {}
+
+      let props1: Data = { onClick: clickHander1 }
+      let props2: Data = { onClick: clickHander2, onFocus: focusHander2 }
+      expect(mergeProps(props1, props2)).toMatchObject({
+        onClick: [clickHander1, clickHander2],
+        onFocus: focusHander2
+      })
+    })
+
+    test('default', () => {
+      let props1: Data = { foo: 'c' }
+      let props2: Data = { foo: {}, bar: ['cc'] }
+      let props3: Data = { baz: { ccc: true } }
+      expect(mergeProps(props1, props2, props3)).toMatchObject({
+        foo: {},
+        bar: ['cc'],
+        baz: { ccc: true }
+      })
+    })
+  })
 })
