@@ -119,9 +119,10 @@ describe('vnode', () => {
     test('class', () => {
       let props1: Data = { class: 'c' }
       let props2: Data = { class: ['cc'] }
-      let props3: Data = { class: { ccc: true } }
-      expect(mergeProps(props1, props2, props3)).toMatchObject({
-        class: 'c cc ccc'
+      let props3: Data = { class: [{ ccc: true }] }
+      let props4: Data = { class: { cccc: true } }
+      expect(mergeProps(props1, props2, props3, props4)).toMatchObject({
+        class: 'c cc ccc cccc'
       })
     })
 
