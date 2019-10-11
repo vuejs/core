@@ -130,9 +130,9 @@ describe('vnode', () => {
     // mounted VNode -> cloned VNode
     const mounted = createVNode('div')
     mounted.el = {}
-    const normlaized = normalizeVNode(mounted)
-    expect(normlaized).not.toBe(mounted)
-    expect(normlaized).toEqual({ ...mounted, el: null })
+    const normalized = normalizeVNode(mounted)
+    expect(normalized).not.toBe(mounted)
+    expect(normalized).toEqual({ ...mounted, el: null })
 
     // primitive types
     expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
