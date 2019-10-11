@@ -1,6 +1,6 @@
 import { createVNode } from '@vue/runtime-test'
-import { ShapeFlags } from '@vue/runtime-core'
-import { mergeProps } from '../src/vnode'
+import { ShapeFlags, Comment, Fragment, Text } from '@vue/runtime-core'
+import { mergeProps, normalizeVNode } from '../src/vnode'
 import { Data } from '../src/component'
 
 describe('vnode', () => {
@@ -109,7 +109,30 @@ describe('vnode', () => {
     })
   })
 
-  test.todo('normalizeVNode')
+  test('normalizeVNode', () => {
+    // null / undefined -> Comment
+    expect(normalizeVNode(null)).toMatchObject({ type: Comment })
+    expect(normalizeVNode(undefined)).toMatchObject({ type: Comment })
+
+    // array -> Fragment
+    expect(normalizeVNode(['foo'])).toMatchObject({ type: Fragment })
+
+    // VNode -> VNode
+    const vnode = createVNode('div')
+    expect(normalizeVNode(vnode)).toBe(vnode)
+
+    // mounted VNode -> cloned VNode
+    const mounted = createVNode('div')
+    mounted.el = {}
+    const normlaized = normalizeVNode(mounted)
+    expect(normlaized).not.toBe(mounted)
+    expect(normlaized).toEqual({ ...mounted, el: null })
+
+    // primitive types
+    expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
+    expect(normalizeVNode(1)).toMatchObject({ type: Text, children: `1` })
+    expect(normalizeVNode(true)).toMatchObject({ type: Text, children: `true` })
+  })
 
   test.todo('node type/shapeFlag inference')
 
