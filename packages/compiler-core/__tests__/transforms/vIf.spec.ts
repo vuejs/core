@@ -19,7 +19,7 @@ import { CompilerOptions, generate } from '../../src'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  EMPTY,
+  COMMENT,
   FRAGMENT,
   MERGE_PROPS,
   APPLY_DIRECTIVES,
@@ -322,7 +322,7 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([EMPTY])
+      expect(branch2.arguments).toMatchObject([COMMENT])
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -345,7 +345,7 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([EMPTY])
+      expect(branch2.arguments).toMatchObject([COMMENT])
       expect(generate(root).code).toMatchSnapshot()
     })
 

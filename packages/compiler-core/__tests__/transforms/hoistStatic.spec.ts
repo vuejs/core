@@ -116,6 +116,33 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('hoist nested static tree with comments', () => {
+    const { root, args } = transformWithHoist(
+      `<div><div><!--comment--></div></div>`
+    )
+    expect(root.hoists).toMatchObject([
+      {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_VNODE,
+        arguments: [
+          `"div"`,
+          `null`,
+          [{ type: NodeTypes.COMMENT, content: `comment` }]
+        ]
+      }
+    ])
+    expect(args[2]).toMatchObject([
+      {
+        type: NodeTypes.ELEMENT,
+        codegenNode: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `_hoisted_1`
+        }
+      }
+    ])
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('hoist siblings with common non-hoistable parent', () => {
     const { root, args } = transformWithHoist(`<div><span/><div/></div>`)
     expect(root.hoists).toMatchObject([
