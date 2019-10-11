@@ -3,7 +3,6 @@ export const PORTAL = Symbol(__DEV__ ? `Portal` : ``)
 export const COMMENT = Symbol(__DEV__ ? `Comment` : ``)
 export const TEXT = Symbol(__DEV__ ? `Text` : ``)
 export const SUSPENSE = Symbol(__DEV__ ? `Suspense` : ``)
-export const EMPTY = Symbol(__DEV__ ? `Empty` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
@@ -27,7 +26,6 @@ export const helperNameMap: any = {
   [COMMENT]: `Comment`,
   [TEXT]: `Text`,
   [SUSPENSE]: `Suspense`,
-  [EMPTY]: `Empty`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,

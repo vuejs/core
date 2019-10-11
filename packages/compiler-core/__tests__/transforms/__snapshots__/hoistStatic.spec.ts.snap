@@ -37,6 +37,26 @@ return function render() {
 }"
 `;
 
+exports[`compiler: hoistStatic transform hoist nested static tree with comments 1`] = `
+"const _Vue = Vue
+const _createVNode = Vue.createVNode
+const _Comment = Vue.Comment
+
+const _hoisted_1 = _createVNode(\\"div\\", null, [
+  _createVNode(_Comment, null, \\"comment\\")
+])
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, Comment: _Comment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _hoisted_1
+    ]))
+  }
+}"
+`;
+
 exports[`compiler: hoistStatic transform hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
@@ -213,6 +233,7 @@ return function render() {
 exports[`compiler: hoistStatic transform should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
+const _Comment = Vue.Comment
 
 const _hoisted_1 = {
   key: 0,
@@ -222,14 +243,14 @@ const _hoisted_2 = _createVNode(\\"span\\")
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(), ok
         ? _createBlock(\\"div\\", _hoisted_1, [
             _hoisted_2
           ])
-        : _createBlock(_Empty))
+        : _createBlock(_Comment))
     ]))
   }
 }"
