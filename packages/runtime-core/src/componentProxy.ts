@@ -31,6 +31,18 @@ export type ComponentPublicInstance<
   ExtractComputedReturns<C> &
   M
 
+const proxyHandlers = {
+  $data: 'data',
+  $props: 'propsProxy',
+  $attrs: 'attrs',
+  $slots: 'slots',
+  $refs: 'refs',
+  $parent: 'parent',
+  $root: 'root',
+  $emit: 'emit',
+  $options: 'type'
+}
+
 export const PublicInstanceProxyHandlers = {
   get(target: ComponentInternalInstance, key: string) {
     const { renderContext, data, props, propsProxy } = target
@@ -42,28 +54,12 @@ export const PublicInstanceProxyHandlers = {
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
     } else {
-      // TODO simplify this?
+      if (hasOwn(proxyHandlers, key)) {
+        return target[proxyHandlers[key]]
+      }
       switch (key) {
-        case '$data':
-          return data
-        case '$props':
-          return propsProxy
-        case '$attrs':
-          return target.attrs
-        case '$slots':
-          return target.slots
-        case '$refs':
-          return target.refs
-        case '$parent':
-          return target.parent
-        case '$root':
-          return target.root
-        case '$emit':
-          return target.emit
         case '$el':
           return target.vnode.el
-        case '$options':
-          return target.type
         default:
           // methods are only exposed when options are supported
           if (__FEATURE_OPTIONS__) {
