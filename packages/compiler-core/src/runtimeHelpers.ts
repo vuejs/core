@@ -26,7 +26,6 @@ export const helperNameMap: any = {
   [COMMENT]: `Comment`,
   [TEXT]: `Text`,
   [SUSPENSE]: `Suspense`,
-  [COMMENT]: `Comment`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,
