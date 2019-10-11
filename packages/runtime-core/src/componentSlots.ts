@@ -23,10 +23,8 @@ export type RawSlots = {
   _compiled?: boolean
 }
 
-const normalizeSlotValue = (value: unknown): VNode[] =>
-  isArray(value)
-    ? value.map(normalizeVNode)
-    : [normalizeVNode(value as VNodeChild)]
+const normalizeSlotValue = (value: VNodeChild | VNodeChild[]): VNode[] =>
+  isArray(value) ? value.map(normalizeVNode) : [normalizeVNode(value)]
 
 const normalizeSlot = (key: string, rawSlot: Function): Slot => (
   props: any
