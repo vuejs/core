@@ -1,18 +1,21 @@
 import { patchEvent } from '../src/modules/events'
+import { nextTick } from '@vue/runtime-dom'
 
 describe(`events`, () => {
-  it('should assign event handler', () => {
+  it('should assign event handler', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
     patchEvent(el, 'click', null, fn, null)
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
     expect(fn).toHaveBeenCalledTimes(3)
   })
 
-  it('should update event handler', () => {
+  it('should update event handler', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const prevFn = jest.fn()
@@ -20,7 +23,9 @@ describe(`events`, () => {
     patchEvent(el, 'click', null, prevFn, null)
     el.dispatchEvent(event)
     patchEvent(el, 'click', prevFn, nextFn, null)
+    await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
     expect(prevFn).toHaveBeenCalledTimes(1)
     expect(nextFn).toHaveBeenCalledTimes(2)
@@ -47,7 +52,7 @@ describe(`events`, () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  it('should support event options', () => {
+  it('should support event options', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
@@ -59,11 +64,12 @@ describe(`events`, () => {
     }
     patchEvent(el, 'click', null, nextValue, null)
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it('should support varying event options', () => {
+  it('should support varying event options', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const prevFn = jest.fn()
@@ -77,12 +83,13 @@ describe(`events`, () => {
     patchEvent(el, 'click', null, prevFn, null)
     patchEvent(el, 'click', prevFn, nextValue, null)
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
     expect(prevFn).not.toHaveBeenCalled()
     expect(nextFn).toHaveBeenCalledTimes(1)
   })
 
-  it('should unassign event handler with options', () => {
+  it('should unassign event handler with options', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
@@ -95,6 +102,7 @@ describe(`events`, () => {
     patchEvent(el, 'click', null, nextValue, null)
     patchEvent(el, 'click', nextValue, null, null)
     el.dispatchEvent(event)
+    await nextTick()
     el.dispatchEvent(event)
     expect(fn).not.toHaveBeenCalled()
   })
