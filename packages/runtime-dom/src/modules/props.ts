@@ -18,5 +18,10 @@ export function patchDOMProp(
     // non-string values will be stringified.
     el._value = value
   }
-  el[key] = value == null ? '' : value
+  if (value === '' && typeof el[key] === 'boolean') {
+    // e.g. <select multiple> compiles to { multiple: '' }
+    el[key] = true
+  } else {
+    el[key] = value == null ? '' : value
+  }
 }
