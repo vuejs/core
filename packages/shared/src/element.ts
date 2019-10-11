@@ -171,6 +171,9 @@ const VoidTagSet = new Set([
   'wbr'
 ])
 
+const BuiltInTagSet = new Set(['slot', 'component'])
+
 export const isVoidTag = (tag: string) => VoidTagSet.has(tag)
 export const isHTMLTag = (tag: string) => HTMLTagSet.has(tag)
 export const isSVGTag = (tag: string) => SVGTagSet.has(tag)
+export const isBuiltInTag = (tag: string) => BuiltInTagSet.has(tag)
