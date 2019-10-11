@@ -103,4 +103,8 @@ export { registerRuntimeHelpers } from './runtimeHelpers'
 
 // expose transforms so higher-order compilers can import and extend them
 export { transformModel } from './transforms/vModel'
-export { transformOn } from './transforms/vOn'
+export {
+  transformOn,
+  createVOnEventName,
+  validateVOnArguments
+} from './transforms/vOn'

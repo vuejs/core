@@ -14,15 +14,7 @@ import { isMemberExpression } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
 
-// v-on without arg is handled directly in ./element.ts due to it affecting
-// codegen for the entire props object. This transform here is only for v-on
-// *with* args.
-export const transformOn: DirectiveTransform = (dir, node, context) => {
-  const { loc, modifiers } = dir
-  const arg = dir.arg!
-  if (!dir.exp && !modifiers.length) {
-    context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
-  }
+export const createVOnEventName = (arg: ExpressionNode): ExpressionNode => {
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
@@ -40,6 +32,24 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     eventName.children.unshift(`"on" + (`)
     eventName.children.push(`)`)
   }
+  return eventName
+}
+
+export const validateVOnArguments: (
+  ...args: Parameters<DirectiveTransform>
+) => void = (dir, node, context) => {
+  const { loc, modifiers } = dir
+  if (!dir.exp && !modifiers.length) {
+    context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
+  }
+}
+
+// v-on without arg is handled directly in ./element.ts due to it affecting
+// codegen for the entire props object. This transform here is only for v-on
+// *with* args.
+export const transformOn: DirectiveTransform = (dir, node, context) => {
+  validateVOnArguments(dir, node, context)
+  let eventName = createVOnEventName(dir.arg!)
   // TODO .once modifier handling since it is platform agnostic
   // other modifiers are handled in compiler-dom
 
