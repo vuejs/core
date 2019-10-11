@@ -13,5 +13,10 @@ export function patchDOMProp(
   if ((key === 'innerHTML' || key === 'textContent') && prevChildren != null) {
     unmountChildren(prevChildren, parentComponent, parentSuspense)
   }
+  if (key === 'value' && el.tagName !== 'PROGRESS') {
+    // store value as _value as well since
+    // non-string values will be stringified.
+    el._value = value
+  }
   el[key] = value == null ? '' : value
 }

@@ -47,6 +47,24 @@ const reset = () => {
 }
 const getNow = () => cachedNow || (p.then(reset), (cachedNow = _getNow()))
 
+export function addEventListener(
+  el: Element,
+  event: string,
+  handler: EventListener,
+  options?: EventListenerOptions
+) {
+  el.addEventListener(event, handler, options)
+}
+
+export function removeEventListener(
+  el: Element,
+  event: string,
+  handler: EventListener,
+  options?: EventListenerOptions
+) {
+  el.removeEventListener(event, handler, options)
+}
+
 export function patchEvent(
   el: Element,
   name: string,
@@ -71,12 +89,12 @@ export function patchEvent(
       prev.once !== next.once
     ) {
       if (invoker) {
-        el.removeEventListener(name, invoker as any, prevOptions as any)
+        removeEventListener(el, name, invoker, prev)
       }
       if (nextValue && value) {
         const invoker = createInvoker(value, instance)
         nextValue.invoker = invoker
-        el.addEventListener(name, invoker, nextOptions as any)
+        addEventListener(el, name, invoker, next)
       }
       return
     }
@@ -89,14 +107,15 @@ export function patchEvent(
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(
+      addEventListener(
+        el,
         name,
         createInvoker(value, instance),
-        nextOptions as any
+        nextOptions || void 0
       )
     }
   } else if (invoker) {
-    el.removeEventListener(name, invoker, prevOptions as any)
+    removeEventListener(el, name, invoker, prevOptions || void 0)
   }
 }
 
