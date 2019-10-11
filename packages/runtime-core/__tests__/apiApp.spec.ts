@@ -286,4 +286,55 @@ describe('api: createApp', () => {
     app.mount(Root, nodeOps.createElement('div'))
     expect(handler).toHaveBeenCalledTimes(1)
   })
+
+  describe('config.isNativeTag', () => {
+    test('setupStatefulComponent', () => {
+      const app = createApp()
+
+      const handler = (app.config.isNativeTag = jest.fn(tag => tag === 'div'))
+
+      const Root = {
+        name: 'div',
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('register using app.component', () => {
+      const app = createApp()
+
+      const handler = (app.config.isNativeTag = jest.fn(tag => tag === 'div'))
+
+      const Root = {
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.component('div', () => 'div')
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+  })
 })
