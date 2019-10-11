@@ -10,9 +10,9 @@ import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking } from '@vue/reactivity'
 
-function injectHook(
+function injectHook<T = any>(
   type: LifecycleHooks,
-  hook: Function,
+  hook: (...args: any[]) => T,
   target: ComponentInternalInstance | null
 ) {
   if (target) {
@@ -49,56 +49,56 @@ function injectHook(
 }
 
 export function onBeforeMount(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_MOUNT, hook, target)
 }
 
 export function onMounted(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.MOUNTED, hook, target)
 }
 
 export function onBeforeUpdate(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_UPDATE, hook, target)
 }
 
 export function onUpdated(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.UPDATED, hook, target)
 }
 
 export function onBeforeUnmount(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.BEFORE_UNMOUNT, hook, target)
 }
 
 export function onUnmounted(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.UNMOUNTED, hook, target)
 }
 
 export function onRenderTriggered(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
 }
 
 export function onRenderTracked(
-  hook: Function,
+  hook: () => void,
   target: ComponentInternalInstance | null = currentInstance
 ) {
   injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)

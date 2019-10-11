@@ -73,7 +73,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: unknown }
+  Props = { [key in PropNames]?: any }
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>

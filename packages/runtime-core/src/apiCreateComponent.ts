@@ -45,7 +45,7 @@ export function createComponent<
   options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
 ): {
   new (): ComponentPublicInstance<
-    { [key in PropNames]?: unknown },
+    { [key in PropNames]?: any },
     RawBindings,
     D,
     C,

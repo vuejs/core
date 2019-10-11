@@ -10,7 +10,13 @@ interface Invoker extends EventListener {
   lastUpdated: number
 }
 
-type EventValue = (Function | Function[]) & {
+type EventValue = (
+  Function &
+  ((...args: any) => any) & {
+  invoker?: Invoker | null
+}) | (
+  Function[] &
+  ((...args: any) => any)[]) & {
   invoker?: Invoker | null
 }
 

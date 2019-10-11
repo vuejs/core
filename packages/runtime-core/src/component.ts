@@ -26,7 +26,7 @@ import {
 import { SuspenseBoundary } from './suspense'
 import { CompilerOptions } from '@vue/compiler-dom'
 
-export type Data = { [key: string]: unknown }
+export type Data = { [key: string]: any }
 
 export interface FunctionalComponent<P = {}> {
   (props: P, ctx: SetupContext): VNodeChild
@@ -36,7 +36,7 @@ export interface FunctionalComponent<P = {}> {
 
 export type Component = ComponentOptions | FunctionalComponent
 
-type LifecycleHook = Function[] | null
+type LifecycleHook = ((...args: any[]) => any)[] | null
 
 export const enum LifecycleHooks {
   BEFORE_CREATE = 'bc',
@@ -238,7 +238,7 @@ export function setupStatefulComponent(
 
     currentInstance = instance
     currentSuspense = parentSuspense
-    const setupResult = callWithErrorHandling(
+    const setupResult: any = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
@@ -273,7 +273,7 @@ export function setupStatefulComponent(
 
 export function handleSetupResult(
   instance: ComponentInternalInstance,
-  setupResult: unknown,
+  setupResult: any,
   parentSuspense: SuspenseBoundary | null
 ) {
   if (isFunction(setupResult)) {

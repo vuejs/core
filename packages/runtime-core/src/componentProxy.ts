@@ -24,7 +24,7 @@ export type ComponentPublicInstance<
   $slots: Data
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: (event: string, ...args: unknown[]) => void
+  $emit: (event: string, ...args: any[]) => void
 } & P &
   UnwrapRef<B> &
   D &

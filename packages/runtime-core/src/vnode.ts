@@ -136,7 +136,7 @@ export function isVNode(value: any): value is VNode {
 export function createVNode(
   type: VNodeTypes,
   props: { [key: string]: any } | null = null,
-  children: unknown = null,
+  children: any = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null
 ): VNode {
@@ -257,7 +257,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
   }
 }
 
-export function normalizeChildren(vnode: VNode, children: unknown) {
+export function normalizeChildren(vnode: VNode, children: any) {
   let type = 0
   if (children == null) {
     children = null

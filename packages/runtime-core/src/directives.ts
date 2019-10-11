@@ -113,8 +113,8 @@ export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
   return vnode
 }
 
-export function invokeDirectiveHook(
-  hook: Function | Function[],
+export function invokeDirectiveHook<T>(
+  hook: (...args: any[]) => T | ((...args: any[]) => T)[],
   instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null

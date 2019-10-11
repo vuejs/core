@@ -272,6 +272,7 @@ describe('api: lifecycle hooks', () => {
 
     const Comp = {
       setup() {
+        // @ts-ignore
         onRenderTracked(onTrack)
         return () =>
           h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
@@ -308,6 +309,7 @@ describe('api: lifecycle hooks', () => {
 
     const Comp = {
       setup() {
+        // @ts-ignore
         onRenderTriggered(onTrigger)
         return () =>
           h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])

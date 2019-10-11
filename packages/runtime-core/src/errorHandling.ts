@@ -49,12 +49,12 @@ export const ErrorTypeStrings: Record<number | string, string> = {
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
 
-export function callWithErrorHandling(
-  fn: Function,
+export function callWithErrorHandling<T = any>(
+  fn: (...args: any[]) => T,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: any[]
-) {
+): T | undefined {
   let res: any
   try {
     res = args ? fn(...args) : fn()
@@ -64,13 +64,13 @@ export function callWithErrorHandling(
   return res
 }
 
-export function callWithAsyncErrorHandling(
-  fn: Function,
+export function callWithAsyncErrorHandling<T = any>(
+  fn: (...args: any[]) => T,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: any[]
 ) {
-  const res = callWithErrorHandling(fn, instance, type, args)
+  const res: any = callWithErrorHandling(fn, instance, type, args)
   if (res != null && !res._isVue && typeof res.then === 'function') {
     res.catch((err: any) => {
       handleError(err, instance, type)
