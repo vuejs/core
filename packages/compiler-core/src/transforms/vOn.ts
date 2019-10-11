@@ -1,18 +1,17 @@
-import { DirectiveTransform } from '../transform'
+import { DirectiveTransform, TransformContext } from '../transform'
 import {
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
   NodeTypes,
   createCompoundExpression,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  DirectiveNode
 } from '../ast'
-import { capitalize } from '@vue/shared'
+import { capitalize, fnExpRE } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { isMemberExpression } from '../utils'
-
-const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
 
 export const createVOnEventName = (arg: ExpressionNode): ExpressionNode => {
   let eventName: ExpressionNode
@@ -35,54 +34,69 @@ export const createVOnEventName = (arg: ExpressionNode): ExpressionNode => {
   return eventName
 }
 
-export const validateVOnArguments: (
-  ...args: Parameters<DirectiveTransform>
-) => void = (dir, node, context) => {
+export const validateVOnArguments = (
+  dir: DirectiveNode,
+  context: TransformContext
+) => {
   const { loc, modifiers } = dir
   if (!dir.exp && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
 }
 
-// v-on without arg is handled directly in ./element.ts due to it affecting
-// codegen for the entire props object. This transform here is only for v-on
-// *with* args.
-export const transformOn: DirectiveTransform = (dir, node, context) => {
-  validateVOnArguments(dir, node, context)
-  let eventName = createVOnEventName(dir.arg!)
+// handler processing
+export const processVOnHanlder = (
+  exp: ExpressionNode,
+  context: TransformContext
+): ExpressionNode => {
+  if (!__BROWSER__ && context.prefixIdentifiers) {
+    context.addIdentifiers(`$event`)
+    let result = processExpression(exp as SimpleExpressionNode, context)
+    context.removeIdentifiers(`$event`)
+    return result
+  }
+  return exp
+}
+
+export type VOnDirectiveNode = Omit<DirectiveNode, 'arg' | 'exp'> & {
+  // v-on without arg is handled directly in ./element.ts due to it affecting
+  // codegen for the entire props object. This transform here is only for v-on
+  // *with* args.
+  arg: ExpressionNode
+  // exp is guaranteed to be a simple expression here because v-on w/ arg is
+  // skipped by transformExpression as a special case.
+  exp: SimpleExpressionNode | undefined
+}
+export const transformOn: DirectiveTransform = (
+  dir: VOnDirectiveNode,
+  node,
+  context
+) => {
+  validateVOnArguments(dir, context)
+  let eventName = createVOnEventName(dir.arg)
   // TODO .once modifier handling since it is platform agnostic
   // other modifiers are handled in compiler-dom
 
-  // handler processing
-  if (dir.exp) {
-    // exp is guaranteed to be a simple expression here because v-on w/ arg is
-    // skipped by transformExpression as a special case.
-    let exp: ExpressionNode = dir.exp as SimpleExpressionNode
+  let exp: ExpressionNode | undefined = dir.exp
+  if (exp) {
     const isInlineStatement = !(
       isMemberExpression(exp.content) || fnExpRE.test(exp.content)
     )
-    // process the expression since it's been skipped
-    if (!__BROWSER__ && context.prefixIdentifiers) {
-      context.addIdentifiers(`$event`)
-      exp = processExpression(exp, context)
-      context.removeIdentifiers(`$event`)
-    }
+    exp = processVOnHanlder(exp, context)
+    // wrap inline statement in a function expression
     if (isInlineStatement) {
-      // wrap inline statement in a function expression
       exp = createCompoundExpression([
         `$event => (`,
         ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
         `)`
       ])
     }
-    dir.exp = exp
   }
-
   return {
     props: [
       createObjectProperty(
         eventName,
-        dir.exp || createSimpleExpression(`() => {}`, false, loc)
+        exp || createSimpleExpression(`() => {}`, false, dir.loc)
       )
     ],
     needRuntime: false

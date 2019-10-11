@@ -105,6 +105,10 @@ export { registerRuntimeHelpers } from './runtimeHelpers'
 export { transformModel } from './transforms/vModel'
 export {
   transformOn,
+  // Probably not ok to export like this...
+  // Need better ways to let compiler-dom import things from compiler-core
   createVOnEventName,
-  validateVOnArguments
+  validateVOnArguments,
+  processVOnHanlder,
+  VOnDirectiveNode
 } from './transforms/vOn'
