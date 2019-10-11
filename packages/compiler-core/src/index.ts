@@ -103,12 +103,4 @@ export { registerRuntimeHelpers } from './runtimeHelpers'
 
 // expose transforms so higher-order compilers can import and extend them
 export { transformModel } from './transforms/vModel'
-export {
-  transformOn,
-  // Probably not ok to export like this...
-  // Need better ways to let compiler-dom import things from compiler-core
-  createVOnEventName,
-  validateVOnArguments,
-  processVOnHanlder,
-  VOnDirectiveNode
-} from './transforms/vOn'
+export { transformOn } from './transforms/vOn'

@@ -27,55 +27,17 @@ function parseWithVOn(
 }
 
 describe('compiler-dom: transform v-on', () => {
-  it('should support .stop modifier', () => {
-    const node = parseWithVOn(`<div @click.stop="test"/>`, {
+  it('should support muliple modifiers w/ prefixIdentifiers: true', () => {
+    const node = parseWithVOn(`<div @click.stop.prevent="test"/>`, {
       prefixIdentifiers: true
     })
     const props = (node.codegenNode as CallExpression)
       .arguments[1] as ObjectExpression
-    expect(props.properties[0].value).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        `$event => {`,
-        `$event.stopPropagation();`,
-        '(',
-        {
-          content: '_ctx.test',
-          isStatic: false,
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          loc: expect.anything()
-        },
-        ')',
-        '($event)',
-        '}'
-      ]
-    })
-  })
-
-  it('should support muliple modifiers, and ignore unknown modifier', () => {
-    const node = parseWithVOn(`<div @click.stop.prevent.gibberish="test"/>`, {
-      prefixIdentifiers: true
-    })
-    const props = (node.codegenNode as CallExpression)
-      .arguments[1] as ObjectExpression
-    expect(props.properties[0].value).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        `$event => {`,
-        `$event.stopPropagation();`,
-        `$event.preventDefault();`,
-        '', // ignored modifier "gibberish"
-        '(',
-        {
-          content: '_ctx.test',
-          isStatic: false,
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          loc: expect.anything()
-        },
-        ')',
-        '($event)',
-        '}'
-      ]
+    expect(props.properties[0]).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        arguments: [{ content: '_ctx.test' }, '["stop","prevent"]']
+      }
     })
   })
 })

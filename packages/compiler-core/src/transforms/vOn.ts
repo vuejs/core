@@ -1,19 +1,39 @@
-import { DirectiveTransform, TransformContext } from '../transform'
+import { DirectiveTransform } from '../transform'
 import {
+  DirectiveNode,
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
   NodeTypes,
   createCompoundExpression,
-  SimpleExpressionNode,
-  DirectiveNode
+  SimpleExpressionNode
 } from '../ast'
-import { capitalize, fnExpRE } from '@vue/shared'
+import { capitalize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { isMemberExpression } from '../utils'
 
-export const createVOnEventName = (arg: ExpressionNode): ExpressionNode => {
+const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
+
+export type VOnDirectiveNode = Omit<DirectiveNode, 'arg' | 'exp'> & {
+  // v-on without arg is handled directly in ./element.ts due to it affecting
+  // codegen for the entire props object. This transform here is only for v-on
+  // *with* args.
+  arg: ExpressionNode
+  // exp is guaranteed to be a simple expression here because v-on w/ arg is
+  // skipped by transformExpression as a special case.
+  exp: SimpleExpressionNode | undefined
+}
+
+export const transformOn: DirectiveTransform = (
+  dir: VOnDirectiveNode,
+  node,
+  context
+) => {
+  const { loc, modifiers, arg } = dir
+  if (!dir.exp && !modifiers.length) {
+    context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
+  }
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
@@ -31,60 +51,23 @@ export const createVOnEventName = (arg: ExpressionNode): ExpressionNode => {
     eventName.children.unshift(`"on" + (`)
     eventName.children.push(`)`)
   }
-  return eventName
-}
-
-export const validateVOnArguments = (
-  dir: DirectiveNode,
-  context: TransformContext
-) => {
-  const { loc, modifiers } = dir
-  if (!dir.exp && !modifiers.length) {
-    context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
-  }
-}
-
-// handler processing
-export const processVOnHanlder = (
-  exp: ExpressionNode,
-  context: TransformContext
-): ExpressionNode => {
-  if (!__BROWSER__ && context.prefixIdentifiers) {
-    context.addIdentifiers(`$event`)
-    let result = processExpression(exp as SimpleExpressionNode, context)
-    context.removeIdentifiers(`$event`)
-    return result
-  }
-  return exp
-}
-
-export type VOnDirectiveNode = Omit<DirectiveNode, 'arg' | 'exp'> & {
-  // v-on without arg is handled directly in ./element.ts due to it affecting
-  // codegen for the entire props object. This transform here is only for v-on
-  // *with* args.
-  arg: ExpressionNode
-  // exp is guaranteed to be a simple expression here because v-on w/ arg is
-  // skipped by transformExpression as a special case.
-  exp: SimpleExpressionNode | undefined
-}
-export const transformOn: DirectiveTransform = (
-  dir: VOnDirectiveNode,
-  node,
-  context
-) => {
-  validateVOnArguments(dir, context)
-  let eventName = createVOnEventName(dir.arg)
   // TODO .once modifier handling since it is platform agnostic
   // other modifiers are handled in compiler-dom
 
+  // handler processing
   let exp: ExpressionNode | undefined = dir.exp
   if (exp) {
     const isInlineStatement = !(
       isMemberExpression(exp.content) || fnExpRE.test(exp.content)
     )
-    exp = processVOnHanlder(exp, context)
-    // wrap inline statement in a function expression
+    // process the expression since it's been skipped
+    if (!__BROWSER__ && context.prefixIdentifiers) {
+      context.addIdentifiers(`$event`)
+      exp = processExpression(exp, context)
+      context.removeIdentifiers(`$event`)
+    }
     if (isInlineStatement) {
+      // wrap inline statement in a function expression
       exp = createCompoundExpression([
         `$event => (`,
         ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
@@ -92,11 +75,12 @@ export const transformOn: DirectiveTransform = (
       ])
     }
   }
+
   return {
     props: [
       createObjectProperty(
         eventName,
-        exp || createSimpleExpression(`() => {}`, false, dir.loc)
+        exp || createSimpleExpression(`() => {}`, false, loc)
       )
     ],
     needRuntime: false
