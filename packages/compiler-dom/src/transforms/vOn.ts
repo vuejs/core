@@ -71,8 +71,10 @@ export const transformOn: DirectiveTransform = (
       : EMPTY_ARR),
     `}`
   ])
-  return {
+  let res = {
     props: [createObjectProperty(eventName, exp)],
     needRuntime: false
   }
+  console.log(`result`, JSON.stringify(res.props[0].value, null, 2))
+  return res
 }
