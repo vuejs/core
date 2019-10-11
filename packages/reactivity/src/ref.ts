@@ -3,7 +3,7 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
-export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : undefined)
+export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : void 0)
 
 export interface Ref<T = any> {
   [refSymbol]: true
