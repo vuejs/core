@@ -11,6 +11,7 @@ import {
   createComponent,
   mockWarn
 } from '@vue/runtime-test'
+import { ComponentPublicInstance } from '../src/componentProxy'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -109,14 +110,14 @@ describe('api: options', () => {
   })
 
   test('watch', async () => {
-    function returnThis(this: any) {
+    function returnThis(this: ComponentPublicInstance) {
       return this
     }
     const spyA = jest.fn(returnThis)
     const spyB = jest.fn(returnThis)
     const spyC = jest.fn(returnThis)
 
-    let ctx: any
+    let ctx: ComponentPublicInstance
     const Comp = {
       data() {
         return {
@@ -140,7 +141,7 @@ describe('api: options', () => {
       methods: {
         onFooChange: spyA
       },
-      render() {
+      render(this: ComponentPublicInstance) {
         ctx = this
       }
     }
@@ -154,21 +155,21 @@ describe('api: options', () => {
     assertCall(spyA, 0, [1, undefined])
     assertCall(spyB, 0, [2, undefined])
     assertCall(spyC, 0, [{ qux: 3 }, undefined])
-    expect(spyA).toHaveReturnedWith(ctx)
-    expect(spyB).toHaveReturnedWith(ctx)
-    expect(spyC).toHaveReturnedWith(ctx)
+    expect(spyA).toHaveReturnedWith(ctx!)
+    expect(spyB).toHaveReturnedWith(ctx!)
+    expect(spyC).toHaveReturnedWith(ctx!)
 
-    ctx.foo++
+    ctx!.foo++
     await nextTick()
     expect(spyA).toHaveBeenCalledTimes(2)
     assertCall(spyA, 1, [2, 1])
 
-    ctx.bar++
+    ctx!.bar++
     await nextTick()
     expect(spyB).toHaveBeenCalledTimes(2)
     assertCall(spyB, 1, [3, 2])
 
-    ctx.baz.qux++
+    ctx!.baz.qux++
     await nextTick()
     expect(spyC).toHaveBeenCalledTimes(2)
     // new and old objects have same identity
@@ -289,8 +290,8 @@ describe('api: options', () => {
       unmounted() {
         calls.push('mid onUnmounted')
       },
-      render(this: any) {
-        return h(Child, { count: this.$props.count })
+      render(this: ComponentPublicInstance) {
+        return h(Child, { count: (this.$props as any).count })
       }
     }
 
@@ -319,8 +320,8 @@ describe('api: options', () => {
       unmounted() {
         calls.push('child onUnmounted')
       },
-      render(this: any) {
-        return h('div', this.$props.count)
+      render(this: ComponentPublicInstance) {
+        return h('div', (this.$props as any).count)
       }
     }
 
@@ -377,7 +378,7 @@ describe('api: options', () => {
           a: 1
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -393,7 +394,7 @@ describe('api: options', () => {
           b: 2
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('mixinB created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -410,7 +411,7 @@ describe('api: options', () => {
           c: 3
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('comp created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -419,7 +420,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('comp mounted')
       },
-      render(this: any) {
+      render(this: ComponentPublicInstance) {
         return `${this.a}${this.b}${this.c}`
       }
     }
@@ -457,7 +458,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('comp')
       },
-      render(this: any) {
+      render(this: ComponentPublicInstance) {
         return `${this.a}${this.b}`
       }
     }
@@ -473,9 +474,9 @@ describe('api: options', () => {
           count: ref(0)
         }
       },
-      data() {
+      data(this: ComponentPublicInstance) {
         return {
-          plusOne: (this as any).count + 1
+          plusOne: this.count + 1
         }
       },
       computed: {

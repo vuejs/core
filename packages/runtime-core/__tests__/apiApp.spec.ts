@@ -14,6 +14,9 @@ import {
   getCurrentInstance
 } from '@vue/runtime-test'
 
+import { ComponentInternalInstance } from '../src/component'
+import { ComponentPublicInstance } from '../src/componentProxy'
+
 describe('api: createApp', () => {
   mockWarn()
 
@@ -148,7 +151,7 @@ describe('api: createApp', () => {
           a: 1
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -164,7 +167,7 @@ describe('api: createApp', () => {
           b: 2
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('mixinB created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -180,7 +183,7 @@ describe('api: createApp', () => {
           c: 3
         }
       },
-      created(this: any) {
+      created(this: ComponentPublicInstance) {
         calls.push('comp created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
@@ -189,7 +192,7 @@ describe('api: createApp', () => {
       mounted() {
         calls.push('comp mounted')
       },
-      render(this: any) {
+      render(this: ComponentPublicInstance) {
         return `${this.a}${this.b}${this.c}`
       }
     }
@@ -243,7 +246,7 @@ describe('api: createApp', () => {
     const handler = (app.config.errorHandler = jest.fn(
       (err, instance, info) => {
         expect(err).toBe(error)
-        expect((instance as any).count).toBe(count.value)
+        expect(instance!.count).toBe(count.value)
         expect(info).toBe(`render function`)
       }
     ))
@@ -266,7 +269,7 @@ describe('api: createApp', () => {
 
   test('config.warnHandler', () => {
     const app = createApp()
-    let ctx: any
+    let ctx: ComponentInternalInstance
 
     const handler = (app.config.warnHandler = jest.fn(
       (msg, instance, trace) => {
@@ -279,7 +282,7 @@ describe('api: createApp', () => {
     const Root = {
       name: 'Hello',
       setup() {
-        ctx = getCurrentInstance()
+        ctx = getCurrentInstance()!
       }
     }
 

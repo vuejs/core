@@ -5,6 +5,7 @@ import {
   mockWarn
 } from '@vue/runtime-test'
 import { ComponentInternalInstance } from '../src/component'
+import { ComponentPublicInstance } from '../src/componentProxy'
 
 describe('component: proxy', () => {
   mockWarn()
@@ -12,14 +13,14 @@ describe('component: proxy', () => {
   it('data', () => {
     const app = createApp()
     let instance: ComponentInternalInstance
-    let instanceProxy: any
+    let instanceProxy: ComponentPublicInstance
     const Comp = {
       data() {
         return {
           foo: 1
         }
       },
-      mounted() {
+      mounted(this: ComponentPublicInstance) {
         instance = getCurrentInstance()!
         instanceProxy = this
       },
@@ -28,22 +29,22 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    expect(instanceProxy.foo).toBe(1)
-    instanceProxy.foo = 2
+    expect(instanceProxy!.foo).toBe(1)
+    instanceProxy!.foo = 2
     expect(instance!.data.foo).toBe(2)
   })
 
   it('renderContext', () => {
     const app = createApp()
     let instance: ComponentInternalInstance
-    let instanceProxy: any
+    let instanceProxy: ComponentPublicInstance
     const Comp = {
       setup() {
         return {
           foo: 1
         }
       },
-      mounted() {
+      mounted(this: ComponentPublicInstance) {
         instance = getCurrentInstance()!
         instanceProxy = this
       },
@@ -52,15 +53,15 @@ describe('component: proxy', () => {
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    expect(instanceProxy.foo).toBe(1)
-    instanceProxy.foo = 2
+    expect(instanceProxy!.foo).toBe(1)
+    instanceProxy!.foo = 2
     expect(instance!.renderContext.foo).toBe(2)
   })
 
   it('propsProxy', () => {
     const app = createApp()
     let instance: ComponentInternalInstance
-    let instanceProxy: any
+    let instanceProxy: ComponentPublicInstance
     const Comp = {
       props: {
         foo: {
@@ -71,13 +72,13 @@ describe('component: proxy', () => {
       setup() {
         return () => null
       },
-      mounted() {
+      mounted(this: ComponentPublicInstance) {
         instance = getCurrentInstance()!
         instanceProxy = this
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    expect(instanceProxy.foo).toBe(1)
+    expect(instanceProxy!.foo).toBe(1)
     expect(instance!.propsProxy!.foo).toBe(1)
     expect(() => (instanceProxy.foo = 2)).toThrow(TypeError)
     expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
@@ -86,27 +87,27 @@ describe('component: proxy', () => {
   it('methods', () => {
     const app = createApp()
     let instance: ComponentInternalInstance
-    let instanceProxy: any
+    let instanceProxy: ComponentPublicInstance
     const Comp = {
       setup() {
         return () => null
       },
-      mounted() {
+      mounted(this: ComponentPublicInstance) {
         instance = getCurrentInstance()!
         instanceProxy = this
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    expect(instanceProxy.$data).toBe(instance!.data)
-    expect(instanceProxy.$props).toBe(instance!.propsProxy)
-    expect(instanceProxy.$attrs).toBe(instance!.attrs)
-    expect(instanceProxy.$slots).toBe(instance!.slots)
-    expect(instanceProxy.$refs).toBe(instance!.refs)
-    expect(instanceProxy.$parent).toBe(instance!.parent)
-    expect(instanceProxy.$root).toBe(instance!.root)
-    expect(instanceProxy.$emit).toBe(instance!.emit)
-    expect(instanceProxy.$el).toBe(instance!.vnode.el)
-    expect(instanceProxy.$options).toBe(instance!.type)
+    expect(instanceProxy!.$data).toBe(instance!.data)
+    expect(instanceProxy!.$props).toBe(instance!.propsProxy)
+    expect(instanceProxy!.$attrs).toBe(instance!.attrs)
+    expect(instanceProxy!.$slots).toBe(instance!.slots)
+    expect(instanceProxy!.$refs).toBe(instance!.refs)
+    expect(instanceProxy!.$parent).toBe(instance!.parent)
+    expect(instanceProxy!.$root).toBe(instance!.root)
+    expect(instanceProxy!.$emit).toBe(instance!.emit)
+    expect(instanceProxy!.$el).toBe(instance!.vnode.el)
+    expect(instanceProxy!.$options).toBe(instance!.type)
     expect(() => (instanceProxy.$data = {})).toThrow(TypeError)
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
   })
@@ -114,19 +115,19 @@ describe('component: proxy', () => {
   it('user', async () => {
     const app = createApp()
     let instance: ComponentInternalInstance
-    let instanceProxy: any
+    let instanceProxy: ComponentPublicInstance
     const Comp = {
       setup() {
         return () => null
       },
-      mounted() {
+      mounted(this: ComponentPublicInstance) {
         instance = getCurrentInstance()!
         instanceProxy = this
       }
     }
     app.mount(Comp, nodeOps.createElement('div'))
-    instanceProxy.foo = 1
-    expect(instanceProxy.foo).toBe(1)
+    instanceProxy!.foo = 1
+    expect(instanceProxy!.foo).toBe(1)
     expect(instance!.user.foo).toBe(1)
   })
 })
