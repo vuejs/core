@@ -10,7 +10,8 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  NOOP
 } from '@vue/shared'
 import { computed } from './apiReactivity'
 import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
@@ -98,12 +99,12 @@ export type ComponentOptions =
 type LegacyComponent = ComponentOptions
 
 export interface ComputedOptions {
-  [key: string]:
-    | Function
-    | {
-        get: Function
-        set: Function
-      }
+  [key: string]: Function | ComputedOptionHandler
+}
+
+type ComputedOptionHandler = {
+  get: Function
+  set: Function
 }
 
 export interface MethodOptions {
@@ -245,12 +246,20 @@ export function applyOptions(
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
-      renderContext[key] = isFunction(opt)
-        ? computed(opt.bind(ctx))
-        : computed({
-            get: opt.get.bind(ctx),
-            set: opt.set.bind(ctx)
+
+      if (isFunction(opt)) {
+        renderContext[key] = computed((opt as Function).bind(ctx))
+      } else {
+        const { get, set } = opt as ComputedOptionHandler
+        if (!isFunction(get)) {
+          warn(`Getter is missing for computed property "${key}"`)
+        } else {
+          renderContext[key] = computed({
+            get: get.bind(ctx),
+            set: isFunction(set) ? set.bind(ctx) : NOOP.bind(ctx)
           })
+        }
+      }
     }
   }
   if (methods) {

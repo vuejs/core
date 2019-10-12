@@ -538,5 +538,22 @@ describe('api: options', () => {
 
       expect('Invalid watch option: "foo"').toHaveBeenWarned()
     })
+
+    test('Invalid computed option', () => {
+      const Comp = {
+        computed: {
+          foo: {
+            set() {}
+          }
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+
+      render(h(Comp), root)
+
+      expect('Getter is missing for computed property "foo"').toHaveBeenWarned()
+    })
   })
 })
