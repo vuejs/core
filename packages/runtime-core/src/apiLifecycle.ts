@@ -48,61 +48,23 @@ function injectHook(
   }
 }
 
-export function onBeforeMount(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_MOUNT, hook, target)
+function hookInjector(lifecycle: LifecycleHooks) : Function {
+  return function(
+    hook: Function,
+    target: ComponentInternalInstance | null = currentInstance
+  ) {
+    injectHook(lifecycle, hook, target)
+  }
 }
 
-export function onMounted(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.MOUNTED, hook, target)
-}
-
-export function onBeforeUpdate(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_UPDATE, hook, target)
-}
-
-export function onUpdated(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.UPDATED, hook, target)
-}
-
-export function onBeforeUnmount(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_UNMOUNT, hook, target)
-}
-
-export function onUnmounted(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.UNMOUNTED, hook, target)
-}
-
-export function onRenderTriggered(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
-}
-
-export function onRenderTracked(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)
-}
+export const onBeforeMount = hookInjector(LifecycleHooks.BEFORE_MOUNT)
+export const onMounted = hookInjector(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = hookInjector(LifecycleHooks.BEFORE_UPDATE)
+export const onUpdated = hookInjector(LifecycleHooks.UPDATED)
+export const onBeforeUnmount = hookInjector(LifecycleHooks.BEFORE_UNMOUNT)
+export const onUnmounted = hookInjector(LifecycleHooks.UNMOUNTED)
+export const onRenderTriggered = hookInjector(LifecycleHooks.RENDER_TRIGGERED)
+export const onRenderTracked = hookInjector(LifecycleHooks.RENDER_TRACKED)
 
 export function onErrorCaptured(
   hook: (
