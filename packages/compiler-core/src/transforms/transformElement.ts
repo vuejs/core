@@ -406,18 +406,16 @@ function buildDirectiveArgs(
     dirArgs.push(toValidAssetId(dir.name, `directive`))
   }
   const { loc } = dir
-  if (dir.exp) dirArgs.push(dir.exp)
+  if (dir.exp) {
+    dirArgs.push(dir.exp)
+  } else {
+    dirArgs.push(`void 0`)
+  }
   if (dir.arg) {
-    if (!dir.exp) {
-      dirArgs.push(`void 0`)
-    }
     dirArgs.push(dir.arg)
   }
   if (Object.keys(dir.modifiers).length) {
     if (!dir.arg) {
-      if (!dir.exp) {
-        dirArgs.push(`void 0`)
-      }
       dirArgs.push(`void 0`)
     }
     dirArgs.push(
