@@ -128,14 +128,20 @@ describe('test renderer', () => {
           {
             id: 'test'
           },
-          [h('span', 'foo'), 'hello', h('br')]
+          [
+            h('span', 'foo'),
+            'hello',
+            h('br', {
+              id: 'br'
+            })
+          ]
         )
       }
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serialize(root)).toEqual(
-      `<div><div id="test"><span>foo</span>hello<br/></div></div>`
+      `<div><div id="test"><span>foo</span>hello<br id="br"/></div></div>`
     )
     // indented output
     expect(serialize(root, 2)).toEqual(
@@ -145,7 +151,7 @@ describe('test renderer', () => {
       foo
     </span>
     hello
-    <br/>
+    <br id="br"/>
   </div>
 </div>`
     )
