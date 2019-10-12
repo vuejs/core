@@ -165,10 +165,7 @@ function setSelected(el: HTMLSelectElement, value: any) {
 }
 
 function looseIndexOf(arr: any[], val: any): number {
-  for (let i = 0; i < arr.length; i++) {
-    if (looseEqual(arr[i], val)) return i
-  }
-  return -1
+  return arr.findIndex(item => looseEqual(item, val))
 }
 
 // retrieve raw value set via :value bindings
