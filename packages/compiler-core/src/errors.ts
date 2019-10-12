@@ -1,24 +1,29 @@
 import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
-  code: ErrorCodes
+  code: number
   loc?: SourceLocation
+}
+
+export interface CoreCompilerError extends CompilerError {
+  code: ErrorCodes
 }
 
 export function defaultOnError(error: CompilerError) {
   throw error
 }
 
-export function createCompilerError(
-  code: ErrorCodes,
-  loc?: SourceLocation
-): CompilerError {
-  const msg = __DEV__ || !__BROWSER__ ? errorMessages[code] : code
+export function createCompilerError<T extends number>(
+  code: T,
+  loc?: SourceLocation,
+  messages?: { [code: number]: string }
+): T extends ErrorCodes ? CoreCompilerError : CompilerError {
+  const msg = __DEV__ || !__BROWSER__ ? (messages || errorMessages)[code] : code
   const locInfo = loc ? ` (${loc.start.line}:${loc.start.column})` : ``
   const error = new SyntaxError(msg + locInfo) as CompilerError
   error.code = code
   error.loc = loc
-  return error
+  return error as any
 }
 
 export const enum ErrorCodes {
@@ -62,22 +67,29 @@ export const enum ErrorCodes {
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
-  X_IF_NO_EXPRESSION,
-  X_ELSE_NO_ADJACENT_IF,
-  X_FOR_NO_EXPRESSION,
-  X_FOR_MALFORMED_EXPRESSION,
+  X_V_IF_NO_EXPRESSION,
+  X_V_ELSE_NO_ADJACENT_IF,
+  X_V_FOR_NO_EXPRESSION,
+  X_V_FOR_MALFORMED_EXPRESSION,
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
-  X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-  X_NAMED_SLOT_ON_COMPONENT,
-  X_MIXED_SLOT_USAGE,
-  X_DUPLICATE_SLOT_NAMES,
-  X_EXTRANEOUS_NON_SLOT_CHILDREN,
-  X_MISPLACED_V_SLOT,
+  X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+  X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
+  X_V_SLOT_MIXED_SLOT_USAGE,
+  X_V_SLOT_DUPLICATE_SLOT_NAMES,
+  X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
+  X_V_SLOT_MISPLACED,
+  X_V_MODEL_NO_EXPRESSION,
+  X_V_MODEL_MALFORMED_EXPRESSION,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
-  X_MODULE_MODE_NOT_SUPPORTED
+  X_MODULE_MODE_NOT_SUPPORTED,
+
+  // Sepcial value for higher-order compilers to pick up the last code
+  // to avoid collision of error codes. This should always be kept as the last
+  // item.
+  __EXTEND_POINT__
 }
 
 export const errorMessages: { [code: number]: string } = {
@@ -138,25 +150,27 @@ export const errorMessages: { [code: number]: string } = {
     'Note that dynamic directive argument cannot contain spaces.',
 
   // transform errors
-  [ErrorCodes.X_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
-  [ErrorCodes.X_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
-  [ErrorCodes.X_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
-  [ErrorCodes.X_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
+  [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
+  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
+  [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
+  [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
-  [ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
-  [ErrorCodes.X_NAMED_SLOT_ON_COMPONENT]:
+  [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
+  [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
     `Named v-slot on component. ` +
     `Named slots should use <template v-slot> syntax nested inside the component.`,
-  [ErrorCodes.X_MIXED_SLOT_USAGE]:
+  [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
     `Mixed v-slot usage on both the component and nested <template>.` +
     `The default slot should also use <template> syntax when there are other ` +
     `named slots to avoid scope ambiguity.`,
-  [ErrorCodes.X_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
-  [ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN]:
+  [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
+  [ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN]:
     `Extraneous children found when component has explicit slots. ` +
     `These children will be ignored.`,
-  [ErrorCodes.X_MISPLACED_V_SLOT]: `v-slot can only be used on components or <template> tags.`,
+  [ErrorCodes.X_V_SLOT_MISPLACED]: `v-slot can only be used on components or <template> tags.`,
+  [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
+  [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

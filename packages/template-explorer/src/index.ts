@@ -15,7 +15,9 @@ declare global {
 window.init = () => {
   const monaco = window.monaco
   const persistedState = JSON.parse(
-    decodeURIComponent(window.location.hash.slice(1)) || `{}`
+    decodeURIComponent(window.location.hash.slice(1)) ||
+      localStorage.getItem('state') ||
+      `{}`
   )
 
   Object.assign(compilerOptions, persistedState.options)
@@ -25,13 +27,20 @@ window.init = () => {
   function compileCode(source: string): string {
     console.clear()
     try {
+      const errors: CompilerError[] = []
       const { code, ast, map } = compile(source, {
         filename: 'template.vue',
         ...compilerOptions,
         sourceMap: true,
-        onError: displayError
+        onError: err => {
+          errors.push(err)
+        }
       })
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [])
+      monaco.editor.setModelMarkers(
+        editor.getModel()!,
+        `@vue/compiler-dom`,
+        errors.filter(e => e.loc).map(formatError)
+      )
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
       lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
@@ -42,33 +51,28 @@ window.init = () => {
     return lastSuccessfulCode
   }
 
-  function displayError(err: CompilerError) {
-    const loc = err.loc
-    if (loc) {
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [
-        {
-          severity: monaco.MarkerSeverity.Error,
-          startLineNumber: loc.start.line,
-          startColumn: loc.start.column,
-          endLineNumber: loc.end.line,
-          endColumn: loc.end.column,
-          message: `Vue template compilation error: ${err.message}`,
-          code: String(err.code)
-        }
-      ])
+  function formatError(err: CompilerError) {
+    const loc = err.loc!
+    return {
+      severity: monaco.MarkerSeverity.Error,
+      startLineNumber: loc.start.line,
+      startColumn: loc.start.column,
+      endLineNumber: loc.end.line,
+      endColumn: loc.end.column,
+      message: `Vue template compilation error: ${err.message}`,
+      code: String(err.code)
     }
-    throw err
   }
 
   function reCompile() {
     const src = editor.getValue()
-    // every time we re-compile, persist current state to URL
-    window.location.hash = encodeURIComponent(
-      JSON.stringify({
-        src,
-        options: compilerOptions
-      })
-    )
+    // every time we re-compile, persist current state
+    const state = JSON.stringify({
+      src,
+      options: compilerOptions
+    })
+    localStorage.setItem('state', state)
+    window.location.hash = encodeURIComponent(state)
     const res = compileCode(src)
     if (res) {
       output.setValue(res)

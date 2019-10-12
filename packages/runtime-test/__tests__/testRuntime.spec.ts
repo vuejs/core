@@ -12,10 +12,13 @@ import {
   NodeOpTypes,
   nextTick,
   serialize,
-  triggerEvent
+  triggerEvent,
+  mockWarn
 } from '../src'
 
 describe('test renderer', () => {
+  mockWarn()
+
   it('should work', () => {
     const root = nodeOps.createElement('div')
     render(
@@ -168,5 +171,48 @@ describe('test renderer', () => {
     expect(count.value).toBe(1)
     await nextTick()
     expect(serialize(root)).toBe(`<div><span>1</span></div>`)
+  })
+
+  it('should be able to trigger events with muliple listeners', async () => {
+    const count = ref(0)
+    const count2 = ref(1)
+
+    const App = () => {
+      return h(
+        'span',
+        {
+          onClick: [
+            () => {
+              count.value++
+            },
+            () => {
+              count2.value++
+            }
+          ]
+        },
+        `${count.value}, ${count2.value}`
+      )
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    triggerEvent(root.children[0] as TestElement, 'click')
+    expect(count.value).toBe(1)
+    expect(count2.value).toBe(2)
+    await nextTick()
+    expect(serialize(root)).toBe(`<div><span>1, 2</span></div>`)
+  })
+
+  it('should mock warn', () => {
+    console.warn('warn!!!')
+    expect('warn!!!').toHaveBeenWarned()
+    expect('warn!!!').toHaveBeenWarnedTimes(1)
+
+    console.warn('warn!!!')
+    expect('warn!!!').toHaveBeenWarnedTimes(2)
+
+    console.warn('warning')
+    expect('warn!!!').toHaveBeenWarnedTimes(2)
+    expect('warning').toHaveBeenWarnedLast()
   })
 })

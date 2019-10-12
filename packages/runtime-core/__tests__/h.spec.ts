@@ -18,8 +18,12 @@ describe('renderer: h', () => {
     // array
     expect(h('div', ['foo'])).toMatchObject(createVNode('div', null, ['foo']))
     // default slot
+    const Component = { template: '<br />' }
     const slot = () => {}
-    expect(h('div', slot)).toMatchObject(createVNode('div', null, slot))
+    expect(h(Component, slot)).toMatchObject(createVNode(Component, null, slot))
+    // single vnode
+    const vnode = h('div')
+    expect(h('div', vnode)).toMatchObject(createVNode('div', null, [vnode]))
     // text
     expect(h('div', 'foo')).toMatchObject(createVNode('div', null, 'foo'))
   })
@@ -28,20 +32,27 @@ describe('renderer: h', () => {
     // array
     expect(h('div', {}, ['foo'])).toMatchObject(createVNode('div', {}, ['foo']))
     // default slot
+    const Component = { template: '<br />' }
     const slot = () => {}
-    expect(h('div', {}, slot)).toMatchObject(createVNode('div', {}, slot))
+    expect(h(Component, {}, slot)).toMatchObject(
+      createVNode(Component, {}, slot)
+    )
+    // single vnode
+    const vnode = h('div')
+    expect(h('div', {}, vnode)).toMatchObject(createVNode('div', {}, [vnode]))
     // text
     expect(h('div', {}, 'foo')).toMatchObject(createVNode('div', {}, 'foo'))
   })
 
   test('named slots with null props', () => {
+    const Component = { template: '<br />' }
     const slot = () => {}
     expect(
-      h('div', null, {
+      h(Component, null, {
         foo: slot
       })
     ).toMatchObject(
-      createVNode('div', null, {
+      createVNode(Component, null, {
         foo: slot
       })
     )

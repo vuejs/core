@@ -12,7 +12,7 @@ return applyDirectives(h(comp), [
 */
 
 import { VNode, cloneVNode } from './vnode'
-import { extend, isArray, isFunction } from '@vue/shared'
+import { extend, isArray, isFunction, EMPTY_OBJ } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
@@ -21,26 +21,26 @@ import { ComponentPublicInstance } from './componentProxy'
 
 export interface DirectiveBinding {
   instance: ComponentPublicInstance | null
-  value?: any
-  oldValue?: any
+  value: any
+  oldValue: any
   arg?: string
-  modifiers?: DirectiveModifiers
+  modifiers: DirectiveModifiers
 }
 
-export type DirectiveHook = (
-  el: any,
+export type DirectiveHook<T = any> = (
+  el: T,
   binding: DirectiveBinding,
-  vnode: VNode,
+  vnode: VNode<any, T>,
   prevVNode: VNode | null
 ) => void
 
-export interface Directive {
-  beforeMount?: DirectiveHook
-  mounted?: DirectiveHook
-  beforeUpdate?: DirectiveHook
-  updated?: DirectiveHook
-  beforeUnmount?: DirectiveHook
-  unmounted?: DirectiveHook
+export interface Directive<T = any> {
+  beforeMount?: DirectiveHook<T>
+  mounted?: DirectiveHook<T>
+  beforeUpdate?: DirectiveHook<T>
+  updated?: DirectiveHook<T>
+  beforeUnmount?: DirectiveHook<T>
+  unmounted?: DirectiveHook<T>
 }
 
 type DirectiveModifiers = Record<string, boolean>
@@ -53,7 +53,7 @@ function applyDirective(
   directive: Directive,
   value?: any,
   arg?: string,
-  modifiers?: DirectiveModifiers
+  modifiers: DirectiveModifiers = EMPTY_OBJ
 ) {
   let valueCacheForDir = valueCache.get(directive)!
   if (!valueCacheForDir) {
@@ -104,7 +104,8 @@ export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
     vnode = cloneVNode(vnode)
     vnode.props = vnode.props != null ? extend({}, vnode.props) : {}
     for (let i = 0; i < directives.length; i++) {
-      ;(applyDirective as any)(vnode.props, instance, ...directives[i])
+      const [dir, value, arg, modifiers] = directives[i]
+      applyDirective(vnode.props, instance, dir, value, arg, modifiers)
     }
   } else if (__DEV__) {
     warn(`applyDirectives can only be used inside render functions.`)

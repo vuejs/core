@@ -10,14 +10,14 @@ import {
 import { capitalize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { isMemberExpression } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
-const simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*$/
 
 // v-on without arg is handled directly in ./element.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-on
 // *with* args.
-export const transformOn: DirectiveTransform = (dir, context) => {
+export const transformOn: DirectiveTransform = (dir, node, context) => {
   const { loc, modifiers } = dir
   const arg = dir.arg!
   if (!dir.exp && !modifiers.length) {
@@ -49,7 +49,7 @@ export const transformOn: DirectiveTransform = (dir, context) => {
     // skipped by transformExpression as a special case.
     let exp: ExpressionNode = dir.exp as SimpleExpressionNode
     const isInlineStatement = !(
-      simplePathRE.test(exp.content) || fnExpRE.test(exp.content)
+      isMemberExpression(exp.content) || fnExpRE.test(exp.content)
     )
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
@@ -69,10 +69,12 @@ export const transformOn: DirectiveTransform = (dir, context) => {
   }
 
   return {
-    props: createObjectProperty(
-      eventName,
-      dir.exp || createSimpleExpression(`() => {}`, false, loc)
-    ),
+    props: [
+      createObjectProperty(
+        eventName,
+        dir.exp || createSimpleExpression(`() => {}`, false, loc)
+      )
+    ],
     needRuntime: false
   }
 }

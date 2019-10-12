@@ -317,7 +317,7 @@ describe('compiler: transform <slot> outlets', () => {
     parseWithSlots(source, { onError })
     const index = source.indexOf('v-foo')
     expect(onError.mock.calls[0][0]).toMatchObject({
-      code: ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+      code: ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
       loc: {
         source: `v-foo`,
         start: {

@@ -1,6 +1,16 @@
-import { computed, reactive, effect, stop, ref } from '../src'
+import {
+  computed,
+  reactive,
+  effect,
+  stop,
+  ref,
+  WritableComputedRef
+} from '../src'
+import { mockWarn } from '@vue/runtime-test'
 
 describe('reactivity/computed', () => {
+  mockWarn()
+
   it('should return updated value', () => {
     const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
@@ -156,5 +166,15 @@ describe('reactivity/computed', () => {
 
     plusOne.value = 0
     expect(dummy).toBe(-1)
+  })
+
+  it('should warn if trying to set a readonly computed', () => {
+    const n = ref(1)
+    const plusOne = computed(() => n.value + 1)
+    ;(plusOne as WritableComputedRef<number>).value++ // Type cast to prevent TS from preventing the error
+
+    expect(
+      'Write operation failed: computed value is readonly'
+    ).toHaveBeenWarnedLast()
   })
 })

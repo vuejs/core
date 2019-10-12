@@ -1,5 +1,9 @@
-import { Position } from '../src/ast'
-import { getInnerRange, advancePositionWithClone } from '../src/utils'
+import { Position, NodeTypes } from '../src/ast'
+import {
+  getInnerRange,
+  advancePositionWithClone,
+  isEmptyExpression
+} from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
   return { column, line, offset }
@@ -65,5 +69,40 @@ describe('getInnerRange', () => {
     expect(loc2.end.column).toBe(4)
     expect(loc2.end.line).toBe(2)
     expect(loc2.end.offset).toBe(7)
+  })
+})
+
+describe('isEmptyExpression', () => {
+  test('empty', () => {
+    expect(
+      isEmptyExpression({
+        content: '',
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        isStatic: true,
+        loc: null as any
+      })
+    ).toBe(true)
+  })
+
+  test('spaces', () => {
+    expect(
+      isEmptyExpression({
+        content: '  \t  ',
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        isStatic: true,
+        loc: null as any
+      })
+    ).toBe(true)
+  })
+
+  test('identifier', () => {
+    expect(
+      isEmptyExpression({
+        content: 'foo',
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        isStatic: true,
+        loc: null as any
+      })
+    ).toBe(false)
   })
 })

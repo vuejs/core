@@ -2,18 +2,22 @@ import {
   RootNode,
   NodeTypes,
   TemplateChildNode,
-  ElementNode,
   ElementTypes,
   ElementCodegenNode,
-  ElementCodegenNodeWithDirective,
   PlainElementNode,
   ComponentNode,
-  TemplateNode
+  TemplateNode,
+  ElementNode
 } from '../ast'
 import { TransformContext } from '../transform'
 import { APPLY_DIRECTIVES } from '../runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
-import { isSlotOutlet } from '../utils'
+import { isSlotOutlet, findProp } from '../utils'
+
+function hasDynamicKey(node: ElementNode) {
+  const keyProp = findProp(node, 'key')
+  return keyProp && keyProp.type === NodeTypes.DIRECTIVE
+}
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
@@ -49,20 +53,25 @@ function walk(
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
     ) {
-      if (!doNotHoistNode && isStaticNode(child, resultCache)) {
+      if (
+        !doNotHoistNode &&
+        isStaticNode(child, resultCache) &&
+        !hasDynamicKey(child)
+      ) {
         // whole tree is static
-        ;(child as any).codegenNode = context.hoist(child.codegenNode!)
+        child.codegenNode = context.hoist(child.codegenNode!)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
         // hoisting.
         const flag = getPatchFlag(child)
         if (
-          !flag ||
-          flag === PatchFlags.NEED_PATCH ||
-          flag === PatchFlags.TEXT
+          (!flag ||
+            flag === PatchFlags.NEED_PATCH ||
+            flag === PatchFlags.TEXT) &&
+          !hasDynamicKey(child)
         ) {
-          let codegenNode = child.codegenNode!
+          let codegenNode = child.codegenNode as ElementCodegenNode
           if (codegenNode.callee === APPLY_DIRECTIVES) {
             codegenNode = codegenNode.arguments[0]
           }
@@ -88,10 +97,8 @@ function walk(
   }
 }
 
-function getPatchFlag(node: ElementNode): number | undefined {
-  let codegenNode = node.codegenNode as
-    | ElementCodegenNode
-    | ElementCodegenNodeWithDirective
+function getPatchFlag(node: PlainElementNode): number | undefined {
+  let codegenNode = node.codegenNode as ElementCodegenNode
   if (codegenNode.callee === APPLY_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0]
   }

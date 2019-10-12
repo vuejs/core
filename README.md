@@ -29,10 +29,10 @@ However, there are still some 2.x parity features not completed yet:
 - [ ] Compiler DOM-specific transforms
   - [ ] `v-on` DOM modifiers
   - [ ] `v-model`
-  - [ ] `v-text`
-  - [ ] `v-pre`
-  - [ ] `v-once`
-  - [ ] `v-html`
+  - [x] `v-text`
+  - [x] `v-pre`
+  - [x] `v-once`
+  - [x] `v-html`
   - [ ] `v-show`
 
 The current implementation also requires native ES2015+ in the runtime environment and does not support IE11 (yet).
