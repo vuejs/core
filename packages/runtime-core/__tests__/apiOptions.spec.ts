@@ -539,7 +539,7 @@ describe('api: options', () => {
       expect('Invalid watch option: "foo"').toHaveBeenWarned()
     })
 
-    test('computed warn with setter and no getter', () => {
+    test('computed with setter and no getter', () => {
       const Comp = {
         computed: {
           foo: {
