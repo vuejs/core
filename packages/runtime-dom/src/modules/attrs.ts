@@ -1,11 +1,12 @@
-const xlinkNS = 'http://www.w3.org/1999/xlink'
+const XLINK_NS = 'http://www.w3.org/1999/xlink'
+const XLINK_PREFIX = 'xlink:'
 
 function isXlink(name: string): boolean {
-  return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
+  return name.startsWith(XLINK_PREFIX)
 }
 
 function getXlinkProp(name: string): string {
-  return isXlink(name) ? name.slice(6, name.length) : ''
+  return isXlink(name) ? name.slice(6) : ''
 }
 
 export function patchAttr(
@@ -17,9 +18,9 @@ export function patchAttr(
   // isSVG short-circuits isXlink check
   if (isSVG && isXlink(key)) {
     if (value == null) {
-      el.removeAttributeNS(xlinkNS, getXlinkProp(key))
+      el.removeAttributeNS(XLINK_NS, getXlinkProp(key))
     } else {
-      el.setAttributeNS(xlinkNS, key, value)
+      el.setAttributeNS(XLINK_NS, key, value)
     }
   } else {
     if (value == null) {
