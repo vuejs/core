@@ -84,7 +84,7 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
         if (i > -1) {
           assign([...modelValue.slice(0, i), ...modelValue.slice(i + 1)])
         } else {
-          assign(modelValue.concat(elementValue))
+          assign(modelValue.concat([elementValue]))
         }
       } else {
         assign(el.checked)
