@@ -57,8 +57,6 @@ export const transformElement: NodeTransform = (node, context) => {
         if (isComponent) {
           context.helper(RESOLVE_COMPONENT)
           context.components.add(node.tag)
-        } else if (isPortal) {
-          context.helper(PORTAL)
         }
 
         const args: CallExpression['arguments'] = [
