@@ -25,11 +25,10 @@ export function renderList(
       }
     } else {
       const keys = Object.keys(source)
-      ret = new Array(keys.length)
-      for (let i = 0, l = keys.length; i < l; i++) {
-        const key = keys[i]
-        ret[i] = renderItem(source[key], key, i)
-      }
+      ret = Array.from({length: keys.length}, (_, index) => {
+        const key = keys[index];
+        return renderItem(source[key], key, index)
+      })
     }
   }
   return ret
