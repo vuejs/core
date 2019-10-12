@@ -445,7 +445,7 @@ function parseTag(
 
     if (tag === 'slot') tagType = ElementTypes.SLOT
     else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-    else if (/[Pp]ortal/.test(tag)) tagType = ElementTypes.PORTAL
+    else if (tag === 'portal' || tag === 'Portal') tagType = ElementTypes.PORTAL
   }
 
   return {
