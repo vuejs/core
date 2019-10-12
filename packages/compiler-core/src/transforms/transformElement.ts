@@ -141,7 +141,7 @@ export const transformElement: NodeTransform = (node, context) => {
             [
               vnode,
               createArrayExpression(
-                runtimeDirectives.map(dir => createDirectiveArgs(dir, context)),
+                runtimeDirectives.map(dir => buildDirectiveArgs(dir, context)),
                 loc
               )
             ],
@@ -390,7 +390,7 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-function createDirectiveArgs(
+function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
@@ -407,8 +407,19 @@ function createDirectiveArgs(
   }
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
-  if (dir.arg) dirArgs.push(dir.arg)
+  if (dir.arg) {
+    if (!dir.exp) {
+      dirArgs.push(`void 0`)
+    }
+    dirArgs.push(dir.arg)
+  }
   if (Object.keys(dir.modifiers).length) {
+    if (!dir.arg) {
+      if (!dir.exp) {
+        dirArgs.push(`void 0`)
+      }
+      dirArgs.push(`void 0`)
+    }
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
