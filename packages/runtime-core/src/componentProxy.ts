@@ -31,7 +31,7 @@ export type ComponentPublicInstance<
   ExtractComputedReturns<C> &
   M
 
-const proxyHandlers = {
+const publicPropertiesMap = {
   $data: 'data',
   $props: 'propsProxy',
   $attrs: 'attrs',
@@ -53,28 +53,23 @@ export const PublicInstanceProxyHandlers = {
     } else if (hasOwn(props, key)) {
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
-    } else {
-      if (hasOwn(proxyHandlers, key)) {
-        return target[proxyHandlers[key]]
-      }
+    } else if (key === '$el') {
+      return target.vnode.el
+    } else if (hasOwn(publicPropertiesMap, key)) {
+      return target[publicPropertiesMap[key]]
+    }
+    // methods are only exposed when options are supported
+    if (__FEATURE_OPTIONS__) {
       switch (key) {
-        case '$el':
-          return target.vnode.el
-        default:
-          // methods are only exposed when options are supported
-          if (__FEATURE_OPTIONS__) {
-            switch (key) {
-              case '$forceUpdate':
-                return target.update
-              case '$nextTick':
-                return nextTick
-              case '$watch':
-                return instanceWatch.bind(target)
-            }
-          }
-          return target.user[key]
+        case '$forceUpdate':
+          return target.update
+        case '$nextTick':
+          return nextTick
+        case '$watch':
+          return instanceWatch.bind(target)
       }
     }
+    return target.user[key]
   },
   // this trap is only called in browser-compiled render functions that use
   // `with (this) {}`
