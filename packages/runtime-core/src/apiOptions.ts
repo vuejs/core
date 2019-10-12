@@ -251,13 +251,13 @@ export function applyOptions(
         renderContext[key] = computed((opt as Function).bind(ctx))
       } else {
         const { get, set } = opt as ComputedOptionHandler
-        if (!isFunction(get)) {
-          warn(`Getter is missing for computed property "${key}"`)
-        } else {
+        if (isFunction(get)) {
           renderContext[key] = computed({
             get: get.bind(ctx),
             set: isFunction(set) ? set.bind(ctx) : NOOP.bind(ctx)
           })
+        } else if (__DEV__) {
+          warn(`Getter is missing for computed property "${key}"`)
         }
       }
     }
