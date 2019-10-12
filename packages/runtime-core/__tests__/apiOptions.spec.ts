@@ -539,7 +539,7 @@ describe('api: options', () => {
       expect('Invalid watch option: "foo"').toHaveBeenWarned()
     })
 
-    test('Invalid computed option', () => {
+    test('computed warn with setter and no getter', () => {
       const Comp = {
         computed: {
           foo: {
@@ -550,10 +550,30 @@ describe('api: options', () => {
       }
 
       const root = nodeOps.createElement('div')
-
       render(h(Comp), root)
-
       expect('Getter is missing for computed property "foo"').toHaveBeenWarned()
+    })
+
+    test('assigning to computed with no setter', () => {
+      let instance: any
+      const Comp = {
+        computed: {
+          foo: {
+            get() {}
+          }
+        },
+        mounted() {
+          instance = this
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      instance.foo = 1
+      expect(
+        'Computed property "foo" was assigned to but it has no setter'
+      ).toHaveBeenWarned()
     })
   })
 })
