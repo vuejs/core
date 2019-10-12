@@ -19,7 +19,7 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentProxy'
 
-export interface DirectiveBinding<T> {
+export interface DirectiveBinding<T = any> {
   instance: ComponentPublicInstance<T> | null
   value: any
   oldValue: any
