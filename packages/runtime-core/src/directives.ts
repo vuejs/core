@@ -31,7 +31,7 @@ export type DirectiveHook<T = any> = (
   el: T,
   binding: DirectiveBinding,
   vnode: VNode<any, T>,
-  prevVNode: VNode | null
+  prevVNode: VNode<any, T> | null
 ) => void
 
 export interface Directive<T = any> {
@@ -91,14 +91,17 @@ function applyDirective(
 }
 
 // Directive, value, argument, modifiers
-export type DirectiveArguments = Array<
-  | [Directive]
-  | [Directive, any]
-  | [Directive, any, string]
-  | [Directive, any, string, DirectiveModifiers]
+export type DirectiveArguments<T> = Array<
+  | [Directive<T>]
+  | [Directive<T>, any]
+  | [Directive<T>, any, string]
+  | [Directive<T>, any, string, DirectiveModifiers]
 >
 
-export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
+export function applyDirectives<T>(
+  vnode: VNode<any, T>,
+  directives: DirectiveArguments<T>
+) {
   const instance = currentRenderingInstance
   if (instance !== null) {
     vnode = cloneVNode(vnode)
@@ -113,11 +116,11 @@ export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
   return vnode
 }
 
-export function invokeDirectiveHook(
-  hook: Function | Function[],
+export function invokeDirectiveHook<T>(
+  hook: DirectiveHook<T>,
   instance: ComponentInternalInstance | null,
-  vnode: VNode,
-  prevVNode: VNode | null = null
+  vnode: VNode<any, T>,
+  prevVNode: VNode<any, T> | null = null
 ) {
   const args = [vnode, prevVNode]
   if (isArray(hook)) {
