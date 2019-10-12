@@ -123,10 +123,9 @@ export function createAppAPI<HostNode, HostElement>(
         // TODO directive name validation
         if (!directive) {
           return context.directives[name] as any
-        } else {
-          context.directives[name] = directive
-          return app
         }
+        context.directives[name] = directive
+        return app
       },
 
       mount(
