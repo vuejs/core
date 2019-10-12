@@ -42,7 +42,13 @@ export const PublicInstanceProxyHandlers = {
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
     } else {
-      // TODO simplify this?
+      /**
+       * NOTE switch is intentional for performance reasons
+       * see:
+       * https://github.com/vuejs/vue-next/pull/107
+       * https://github.com/vuejs/vue-next/pull/209
+       * https://github.com/vuejs/vue-next/pull/214
+       */
       switch (key) {
         case '$data':
           return data
