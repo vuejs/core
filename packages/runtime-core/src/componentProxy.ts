@@ -1,6 +1,6 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
-import { instanceWatch, WatchOptions } from './apiWatch'
+import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
@@ -28,12 +28,8 @@ export type ComponentPublicInstance<
   $el: any
   $options: any
   $forceUpdate: ReactiveEffect
-  $nextTick: (fn?: () => void) => Promise<void>
-  $watch: (
-    source: string | Function,
-    cb: Function,
-    options?: WatchOptions
-  ) => () => void
+  $nextTick: typeof nextTick
+  $watch: typeof instanceWatch
 } & P &
   UnwrapRef<B> &
   D &
