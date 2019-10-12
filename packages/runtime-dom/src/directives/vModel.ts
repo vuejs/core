@@ -23,16 +23,32 @@ function trigger(el: HTMLElement, type: string) {
   el.dispatchEvent(e)
 }
 
+function toNumber(val: string): number | string {
+  const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
-  beforeMount(el, { value, modifiers: { lazy } }, vnode) {
+  beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el.value = value
     const assign = getModelAssigner(vnode)
+    const castToNumber = number || el.type === 'number'
     addEventListener(el, lazy ? 'change' : 'input', () => {
-      // TODO number & trim modifiers
-      assign(el.value)
+      let domValue: string | number = el.value
+      if (trim) {
+        domValue = domValue.trim()
+      } else if (castToNumber) {
+        domValue = toNumber(domValue)
+      }
+      assign(domValue)
     })
+    if (trim) {
+      addEventListener(el, 'change', () => {
+        el.value = el.value.trim()
+      })
+    }
     if (!lazy) {
       addEventListener(el, 'compositionstart', onCompositionStart)
       addEventListener(el, 'compositionend', onCompositionEnd)
@@ -43,29 +59,56 @@ export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
       addEventListener(el, 'change', onCompositionEnd)
     }
   },
-  beforeUpdate(el, { value }) {
-    // TODO number & trim handling
+  beforeUpdate(el, { value, modifiers: { trim, number } }) {
+    if (document.activeElement === el) {
+      if (trim && el.value.trim() === value) {
+        return
+      }
+      if ((number || el.type === 'number') && toNumber(el.value) === value) {
+        return
+      }
+    }
     el.value = value
   }
 }
 
 export const vModelCheckbox: Directive<HTMLInputElement> = {
-  beforeMount(el, { value }, vnode) {
-    // TODO handle array checkbox & number modifier
-    el.checked = !!value
+  beforeMount(el, binding, vnode) {
+    setChecked(el, binding, vnode)
     const assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
-      assign(el.checked)
+      const modelValue = (el as any)._modelValue
+      const elementValue = getValue(el)
+      if (isArray(modelValue)) {
+        const i = looseIndexOf(modelValue, elementValue)
+        if (i > -1) {
+          assign([...modelValue.slice(0, i), ...modelValue.slice(i + 1)])
+        } else {
+          assign(modelValue.concat(elementValue))
+        }
+      } else {
+        assign(el.checked)
+      }
     })
   },
-  beforeUpdate(el, { value }) {
-    el.checked = !!value
-  }
+  beforeUpdate: setChecked
+}
+
+function setChecked(
+  el: HTMLInputElement,
+  { value }: DirectiveBinding,
+  vnode: VNode
+) {
+  // store the v-model value on the element so it can be accessed by the
+  // change listener.
+  ;(el as any)._modelValue = value
+  el.checked = isArray(value)
+    ? looseIndexOf(value, vnode.props!.value) > -1
+    : !!value
 }
 
 export const vModelRadio: Directive<HTMLInputElement> = {
   beforeMount(el, { value }, vnode) {
-    // TODO number modifier
     el.checked = looseEqual(value, vnode.props!.value)
     const assign = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
@@ -73,7 +116,6 @@ export const vModelRadio: Directive<HTMLInputElement> = {
     })
   },
   beforeUpdate(el, { value }, vnode) {
-    // TODO number modifier
     el.checked = looseEqual(value, vnode.props!.value)
   }
 }
@@ -101,23 +143,18 @@ function setSelected(el: HTMLSelectElement, value: any) {
     __DEV__ &&
       warn(
         `<select multiple v-model> expects an Array value for its binding, ` +
-          `but got ${Object.prototype.toString.call(value).slice(8, -1)}`
+          `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`
       )
     return
   }
-  let selected, option
   for (let i = 0, l = el.options.length; i < l; i++) {
-    option = el.options[i]
+    const option = el.options[i]
+    const optionValue = getValue(option)
     if (isMultiple) {
-      selected = looseIndexOf(value, getValue(option)) > -1
-      if (option.selected !== selected) {
-        option.selected = selected
-      }
+      option.selected = looseIndexOf(value, optionValue) > -1
     } else {
       if (looseEqual(getValue(option), value)) {
-        if (el.selectedIndex !== i) {
-          el.selectedIndex = i
-        }
+        el.selectedIndex = i
         return
       }
     }
@@ -127,7 +164,7 @@ function setSelected(el: HTMLSelectElement, value: any) {
   }
 }
 
-function looseIndexOf(arr: Array<any>, val: any): number {
+function looseIndexOf(arr: any[], val: any): number {
   for (let i = 0; i < arr.length; i++) {
     if (looseEqual(arr[i], val)) return i
   }
