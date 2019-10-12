@@ -1,12 +1,8 @@
-import {
-  ComponentInternalInstance,
-  Data,
-  FunctionalComponent
-} from './component'
+import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch, WatchOptions } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
-import { ExtractComputedReturns, ComponentOptions } from './apiOptions'
+import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef } from '@vue/reactivity'
 import { warn } from './warning'
 import { ReactiveEffect } from '@vue/reactivity'
@@ -31,7 +27,7 @@ export type ComponentPublicInstance<
   $parent: ComponentInternalInstance | null
   $emit: (event: string, ...args: unknown[]) => void
   $el: any
-  $options: FunctionalComponent | ComponentOptions
+  $options: any
   $forceUpdate: ReactiveEffect
   $nextTick: (fn?: () => void) => Promise<void>
   $watch: (
