@@ -17,7 +17,7 @@ export function renderList(
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
       ret = Array.from(
-        source as Iterable<{value: any}>, 
+        source as Iterable<any>, 
         renderItem
       )
     } else {
