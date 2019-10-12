@@ -132,7 +132,7 @@ export function processExpression(
         // so that we don't prefix them
         node.params.forEach(p =>
           walkJS(p, {
-            enter(child, parent) {
+            enter(child: Node, parent: Node) {
               if (
                 child.type === 'Identifier' &&
                 // do not record as scope variable if is a destructured key
