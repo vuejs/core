@@ -25,7 +25,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - If fixing bug:
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
-  - Add appropriate test coverage if applicable.
+  - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `yarn test --coverage`.
 
 - It's OK to have multiple small commits as you work on the PR - GitHub can automatically squash them before merging.
 
@@ -149,6 +149,10 @@ This project uses a [monorepo](https://github.com/lerna/lerna#about) structure a
 - `compiler-core`: The platform-agnostic compiler core. Includes the extensible base of the compiler and all platform-agnostic plugins.
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
+
+- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` ad open its `index.html` to get a repl of template compilation based on current source code.
+
+  A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
 - `shared`: **Private.** Platform-agnostic internal utilities shared across multiple packages. This package is private and not published.
 

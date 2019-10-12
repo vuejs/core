@@ -154,6 +154,28 @@ describe('DOM parser', () => {
       })
     })
 
+    test('native element', () => {
+      const ast = parse('<div></div><comp></comp><Comp></Comp>', parserOptions)
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'comp',
+        tagType: ElementTypes.COMPONENT
+      })
+
+      expect(ast.children[2]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
     test('Strict end tag detection for textarea.', () => {
       const ast = parse(
         '<textarea>hello</textarea</textarea0></texTArea a="<>">',

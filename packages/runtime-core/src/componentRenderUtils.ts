@@ -40,7 +40,7 @@ export function renderComponentRoot(
               slots,
               emit
             })
-          : render(props, null as any)
+          : render(props, null as any /* we know it doesn't it */)
       )
     }
   } catch (err) {
@@ -89,7 +89,7 @@ export function shouldUpdateComponent(
       return nextProps !== null
     }
     if (nextProps === null) {
-      return prevProps !== null
+      return true
     }
     return hasPropsChanged(prevProps, nextProps)
   }

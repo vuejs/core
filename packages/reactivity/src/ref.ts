@@ -3,18 +3,21 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 
-export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : undefined)
+export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : '')
 
-export interface Ref<T> {
+export interface Ref<T = any> {
   [refSymbol]: true
-  value: UnwrapNestedRefs<T>
+  value: UnwrapRef<T>
 }
-
-export type UnwrapNestedRefs<T> = T extends Ref<any> ? T : UnwrapRef<T>
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
-export function ref<T>(raw: T): Ref<T> {
+export function ref<T extends Ref>(raw: T): T
+export function ref<T>(raw: T): Ref<T>
+export function ref(raw: any) {
+  if (isRef(raw)) {
+    return raw
+  }
   raw = convert(raw)
   const v = {
     [refSymbol]: true,
@@ -27,10 +30,10 @@ export function ref<T>(raw: T): Ref<T> {
       trigger(v, OperationTypes.SET, '')
     }
   }
-  return v as Ref<T>
+  return v as Ref
 }
 
-export function isRef(v: any): v is Ref<any> {
+export function isRef(v: any): v is Ref {
   return v ? v[refSymbol] === true : false
 }
 
@@ -48,16 +51,15 @@ function toProxyRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  const v = {
+  return {
     [refSymbol]: true,
-    get value() {
+    get value(): any {
       return object[key]
     },
     set value(newVal) {
       object[key] = newVal
     }
   }
-  return v as Ref<T[K]>
 }
 
 type BailTypes =
@@ -73,10 +75,13 @@ export type UnwrapRef<T> = {
   array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
   stop: T
-}[T extends Ref<any>
+}[T extends Ref
   ? 'ref'
   : T extends Array<any>
     ? 'array'
     : T extends BailTypes
       ? 'stop' // bail out on types that shouldn't be unwrapped
       : T extends object ? 'object' : 'stop']
+
+// only unwrap nested ref
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>

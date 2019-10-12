@@ -19,7 +19,7 @@ import { CompilerOptions, generate } from '../../src'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  EMPTY,
+  COMMENT,
   FRAGMENT,
   MERGE_PROPS,
   APPLY_DIRECTIVES,
@@ -195,7 +195,7 @@ describe('compiler: v-if', () => {
       const { node: node1 } = parseWithIfTransform(`<div v-else/>`, { onError })
       expect(onError.mock.calls[0]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node1.loc
         }
       ])
@@ -207,7 +207,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[1]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node2.loc
         }
       ])
@@ -219,7 +219,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[2]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
         }
       ])
@@ -233,7 +233,7 @@ describe('compiler: v-if', () => {
       })
       expect(onError.mock.calls[0]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node1.loc
         }
       ])
@@ -245,7 +245,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[1]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node2.loc
         }
       ])
@@ -257,7 +257,7 @@ describe('compiler: v-if', () => {
       )
       expect(onError.mock.calls[2]).toMatchObject([
         {
-          code: ErrorCodes.X_ELSE_NO_ADJACENT_IF,
+          code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
           loc: node3.loc
         }
       ])
@@ -322,7 +322,7 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([EMPTY])
+      expect(branch2.arguments).toMatchObject([COMMENT])
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -345,7 +345,7 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([EMPTY])
+      expect(branch2.arguments).toMatchObject([COMMENT])
       expect(generate(root).code).toMatchSnapshot()
     })
 

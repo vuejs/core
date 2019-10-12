@@ -1,3 +1,4 @@
+import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
 import { mockWarn } from '@vue/runtime-test'
 
@@ -124,6 +125,14 @@ describe('reactivity/reactive', () => {
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('should not unwrap Ref<T>', () => {
+    const observedNumberRef = reactive(ref(1))
+    const observedObjectRef = reactive(ref({ foo: 1 }))
+
+    expect(isRef(observedNumberRef)).toBe(true)
+    expect(isRef(observedObjectRef)).toBe(true)
   })
 
   test('non-observable values', () => {

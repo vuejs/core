@@ -27,7 +27,7 @@ import {
   onRenderTriggered
 } from './apiLifecycle'
 import { DebuggerEvent, reactive } from '@vue/reactivity'
-import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
 import { ComponentPublicInstance } from './componentProxy'
@@ -78,8 +78,8 @@ export type ComponentOptionsWithArrayProps<
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
-export type ComponentOptionsWithProps<
-  PropsOptions = ComponentPropsOptions,
+export type ComponentOptionsWithObjectProps<
+  PropsOptions = ComponentObjectPropsOptions,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
@@ -91,7 +91,7 @@ export type ComponentOptionsWithProps<
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
-  | ComponentOptionsWithProps
+  | ComponentOptionsWithObjectProps
   | ComponentOptionsWithArrayProps
 
 // TODO legacy component definition also supports constructors with .options
@@ -116,11 +116,11 @@ export type ExtractComputedReturns<T extends any> = {
     : ReturnType<T[key]>
 }
 
-type WatchHandler = (
-  val: any,
-  oldVal: any,
+export type WatchHandler<T = any> = (
+  val: T,
+  oldVal: T,
   onCleanup: CleanupRegistrator
-) => void
+) => any
 
 type ComponentWatchOptions = Record<
   string,
@@ -185,7 +185,7 @@ export function applyOptions(
     instance.renderContext === EMPTY_OBJ
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
-  const ctx = instance.renderProxy as any
+  const ctx = instance.renderProxy!
   const {
     // composition
     mixins,
@@ -265,9 +265,9 @@ export function applyOptions(
       if (isString(raw)) {
         const handler = renderContext[raw]
         if (isFunction(handler)) {
-          watch(getter, handler as any)
+          watch(getter, handler as WatchHandler)
         } else if (__DEV__) {
-          // TODO warn invalid watch handler path
+          warn(`Invalid watch handler specified by key "${raw}"`, handler)
         }
       } else if (isFunction(raw)) {
         watch(getter, raw.bind(ctx))
@@ -275,7 +275,7 @@ export function applyOptions(
         // TODO 2.x compat
         watch(getter, raw.handler.bind(ctx), raw)
       } else if (__DEV__) {
-        // TODO warn invalid watch options
+        warn(`Invalid watch option: "${key}"`)
       }
     }
   }

@@ -22,11 +22,11 @@ export {
 } from '@vue/reactivity'
 
 import {
-  Ref,
   computed as _computed,
   ComputedRef,
   WritableComputedOptions,
-  ReactiveEffect
+  ReactiveEffect,
+  WritableComputedRef
 } from '@vue/reactivity'
 
 import { currentInstance } from './component'
@@ -40,9 +40,13 @@ export function recordEffect(effect: ReactiveEffect) {
 }
 
 export function computed<T>(getter: () => T): ComputedRef<T>
-export function computed<T>(options: WritableComputedOptions<T>): Ref<T>
-export function computed<T>(getterOrOptions: any) {
-  const c = _computed(getterOrOptions)
+export function computed<T>(
+  options: WritableComputedOptions<T>
+): WritableComputedRef<T>
+export function computed<T>(
+  getterOrOptions: (() => T) | WritableComputedOptions<T>
+) {
+  const c = _computed(getterOrOptions as any)
   recordEffect(c.effect)
   return c
 }

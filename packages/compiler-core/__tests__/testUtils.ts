@@ -4,7 +4,7 @@ import {
   locStub,
   Namespaces,
   ElementTypes,
-  ElementCodegenNode
+  PlainElementCodegenNode
 } from '../src'
 import { CREATE_VNODE } from '../src/runtimeHelpers'
 import { isString, PatchFlags, PatchFlagNames, isArray } from '@vue/shared'
@@ -39,7 +39,7 @@ export function createObjectMatcher(obj: any) {
 }
 
 export function createElementWithCodegen(
-  args: ElementCodegenNode['arguments']
+  args: PlainElementCodegenNode['arguments']
 ): ElementNode {
   return {
     type: NodeTypes.ELEMENT,
