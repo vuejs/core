@@ -84,3 +84,6 @@ export {
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './suspense'
+
+import packageJson from '../package.json'
+export const version = packageJson.version
