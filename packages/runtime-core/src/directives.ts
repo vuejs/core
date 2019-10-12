@@ -19,8 +19,8 @@ import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentProxy'
 
-export interface DirectiveBinding {
-  instance: ComponentPublicInstance | null
+export interface DirectiveBinding<T> {
+  instance: ComponentPublicInstance<T> | null
   value: any
   oldValue: any
   arg?: string
@@ -29,7 +29,7 @@ export interface DirectiveBinding {
 
 export type DirectiveHook<T = any> = (
   el: T,
-  binding: DirectiveBinding,
+  binding: DirectiveBinding<T>,
   vnode: VNode<any, T>,
   prevVNode: VNode | null
 ) => void
