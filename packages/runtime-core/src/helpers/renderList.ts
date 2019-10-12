@@ -18,7 +18,7 @@ export function renderList(
     if (source[Symbol.iterator as any]) {
       ret = Array.from(
         source as Iterable<{value: any}>, 
-        ({value}, index) => renderItem(value, index)
+        renderItem
       )
     } else {
       const keys = Object.keys(source)
