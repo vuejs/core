@@ -1,4 +1,9 @@
-import { Directive, VNode, DirectiveBinding, warn } from '@vue/runtime-core'
+import {
+  DirectiveHooks,
+  VNode,
+  DirectiveBinding,
+  warn
+} from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
 import { looseEqual, isArray } from '@vue/shared'
 
@@ -30,7 +35,9 @@ function toNumber(val: string): number | string {
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
-export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
+export const vModelText: DirectiveHooks<
+  HTMLInputElement | HTMLTextAreaElement
+> = {
   beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el.value = value
     const assign = getModelAssigner(vnode)
@@ -72,7 +79,7 @@ export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
   }
 }
 
-export const vModelCheckbox: Directive<HTMLInputElement> = {
+export const vModelCheckbox: DirectiveHooks<HTMLInputElement> = {
   beforeMount(el, binding, vnode) {
     setChecked(el, binding, vnode)
     const assign = getModelAssigner(vnode)
@@ -107,7 +114,7 @@ function setChecked(
     : !!value
 }
 
-export const vModelRadio: Directive<HTMLInputElement> = {
+export const vModelRadio: DirectiveHooks<HTMLInputElement> = {
   beforeMount(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     const assign = getModelAssigner(vnode)
@@ -120,7 +127,7 @@ export const vModelRadio: Directive<HTMLInputElement> = {
   }
 }
 
-export const vModelSelect: Directive<HTMLSelectElement> = {
+export const vModelSelect: DirectiveHooks<HTMLSelectElement> = {
   // use mounted & updated because <select> relies on its children <option>s.
   mounted(el, { value }, vnode) {
     setSelected(el, value)
@@ -176,7 +183,7 @@ function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
 }
 
-export const vModelDynamic: Directive<
+export const vModelDynamic: DirectiveHooks<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
   beforeMount(el, binding, vnode) {
@@ -198,9 +205,9 @@ function callModelHook(
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: keyof Directive
+  hook: keyof DirectiveHooks
 ) {
-  let modelToUse: Directive
+  let modelToUse: DirectiveHooks
   switch (el.tagName) {
     case 'SELECT':
       modelToUse = vModelSelect
