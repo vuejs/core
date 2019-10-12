@@ -24,11 +24,8 @@ export function renderList(
         result = iterator.next()
       }
     } else {
-      const keys = Object.keys(source)
-      ret = Array.from({length: keys.length}, (_, index) => {
-        const key = keys[index];
-        return renderItem(source[key], key, index)
-      })
+      ret = Object.entries(source)
+        .map(([key, value], index) => renderItem(value, key, index))
     }
   }
   return ret
