@@ -3,9 +3,8 @@ import { nextTick } from './scheduler'
 import { instanceWatch, WatchOptions } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
-import { UnwrapRef } from '@vue/reactivity'
+import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
-import { ReactiveEffect } from '@vue/reactivity'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
