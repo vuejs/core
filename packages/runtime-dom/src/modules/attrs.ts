@@ -1,8 +1,8 @@
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
-const XLINK_PREFIX = 'xlink:'
+const XLINK_ATTR_PREFIX = 'xlink:'
 
 function isXlink(name: string): boolean {
-  return name.startsWith(XLINK_PREFIX)
+  return name.startsWith(XLINK_ATTR_PREFIX)
 }
 
 function getXlinkProp(name: string): string {
