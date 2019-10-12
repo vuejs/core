@@ -372,8 +372,7 @@ function callHookFromMixins(
   mixins: ComponentOptions[],
   ctx: any
 ) {
-  for (let i = 0; i < mixins.length; i++) {
-    const fn = mixins[i][name]
+  for (const {[name]: fn} of mixins) {
     if (fn) {
       fn.call(ctx)
     }
@@ -384,7 +383,7 @@ function applyMixins(
   instance: ComponentInternalInstance,
   mixins: ComponentOptions[]
 ) {
-  for (let i = 0; i < mixins.length; i++) {
-    applyOptions(instance, mixins[i], true)
+  for (const mixin of mixins) {
+    applyOptions(instance, mixin, true)
   }
 }
