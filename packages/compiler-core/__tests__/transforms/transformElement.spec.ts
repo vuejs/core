@@ -1,17 +1,12 @@
-import {
-  ElementNode,
-  CompilerOptions,
-  parse,
-  transform,
-  ErrorCodes
-} from '../../src'
+import { CompilerOptions, parse, transform, ErrorCodes } from '../../src'
 import {
   RESOLVE_COMPONENT,
   CREATE_VNODE,
   MERGE_PROPS,
   RESOLVE_DIRECTIVE,
   APPLY_DIRECTIVES,
-  TO_HANDLERS
+  TO_HANDLERS,
+  helperNameMap
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -35,12 +30,14 @@ function parseWithElementTransform(
   root: RootNode
   node: CallExpression
 } {
-  const ast = parse(template, options)
+  // wrap raw template in an extra div so that it doesn't get turned into a
+  // block as root node
+  const ast = parse(`<div>${template}</div>`, options)
   transform(ast, {
-    nodeTransforms: [optimizeText, transformElement],
+    nodeTransforms: [transformElement, optimizeText],
     ...options
   })
-  const codegenNode = (ast.children[0] as ElementNode)
+  const codegenNode = (ast as any).children[0].children[0]
     .codegenNode as CallExpression
   expect(codegenNode.type).toBe(NodeTypes.JS_CALL_EXPRESSION)
   return {
@@ -275,7 +272,7 @@ describe('compiler: element transform', () => {
         foo(dir) {
           _dir = dir
           return {
-            props: createObjectProperty(dir.arg!, dir.exp!),
+            props: [createObjectProperty(dir.arg!, dir.exp!)],
             needRuntime: false
           }
         }
@@ -351,6 +348,29 @@ describe('compiler: element transform', () => {
         ]
       }
     ])
+  })
+
+  test('directiveTransform with needRuntime: Symbol', () => {
+    const { root, node } = parseWithElementTransform(
+      `<div v-foo:bar="hello" />`,
+      {
+        directiveTransforms: {
+          foo() {
+            return {
+              props: [],
+              needRuntime: CREATE_VNODE
+            }
+          }
+        }
+      }
+    )
+
+    expect(root.helpers).toContain(CREATE_VNODE)
+    expect(root.helpers).not.toContain(RESOLVE_DIRECTIVE)
+    expect(root.directives.length).toBe(0)
+    expect((node as any).arguments[1].elements[0].elements[0]).toBe(
+      `_${helperNameMap[CREATE_VNODE]}`
+    )
   })
 
   test('runtime directives', () => {

@@ -110,10 +110,9 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      component(name: string, component?: Component) {
-        // TODO component name validation
+      component(name: string, component?: Component): any {
         if (!component) {
-          return context.components[name] as any
+          return context.components[name]
         } else {
           context.components[name] = component
           return app
@@ -157,7 +156,9 @@ export function createAppAPI<HostNode, HostElement>(
               `It will be overwritten with the new value.`
           )
         }
-        context.provides[key as any] = value
+        // TypeScript doesn't allow symbols as index type
+        // https://github.com/Microsoft/TypeScript/issues/24587
+        context.provides[key as string] = value
       }
     }
 

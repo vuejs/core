@@ -5,11 +5,11 @@ exports[`compiler: v-if codegen basic v-if 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(\\"div\\", { key: 0 })
-      : _createBlock(_Empty))
+      : _createBlock(_Comment))
   }
 }"
 `;
@@ -19,7 +19,7 @@ exports[`compiler: v-if codegen template v-if 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, Fragment: _Fragment, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(_Fragment, { key: 0 }, [
@@ -27,7 +27,7 @@ return function render() {
           \\"hello\\",
           _createVNode(\\"p\\")
         ])
-      : _createBlock(_Empty))
+      : _createBlock(_Comment))
   }
 }"
 `;
@@ -37,11 +37,11 @@ exports[`compiler: v-if codegen template v-if w/ single <slot/> child 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _renderSlot($slots, \\"default\\", { key: 0 })
-      : _createBlock(_Empty))
+      : _createBlock(_Comment))
   }
 }"
 `;
@@ -51,7 +51,7 @@ exports[`compiler: v-if codegen v-if + v-else 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(\\"div\\", { key: 0 })
@@ -65,7 +65,7 @@ exports[`compiler: v-if codegen v-if + v-else-if + v-else 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty, Fragment: _Fragment } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment, Fragment: _Fragment } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(\\"div\\", { key: 0 })
@@ -81,13 +81,13 @@ exports[`compiler: v-if codegen v-if + v-else-if 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(\\"div\\", { key: 0 })
       : orNot
         ? _createBlock(\\"p\\", { key: 1 })
-        : _createBlock(_Empty))
+        : _createBlock(_Comment))
   }
 }"
 `;
@@ -97,11 +97,11 @@ exports[`compiler: v-if codegen v-if on <slot/> 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, renderSlot: _renderSlot, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), ok
       ? _renderSlot($slots, \\"default\\", { key: 0 })
-      : _createBlock(_Empty))
+      : _createBlock(_Comment))
   }
 }"
 `;

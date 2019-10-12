@@ -2,7 +2,6 @@ import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
   CREATE_VNODE,
-  RuntimeHelper,
   APPLY_DIRECTIVES,
   RENDER_SLOT,
   CREATE_SLOTS,
@@ -88,7 +87,7 @@ export type TemplateChildNode =
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
-  helpers: RuntimeHelper[]
+  helpers: symbol[]
   components: string[]
   directives: string[]
   hoists: JSChildNode[]
@@ -114,19 +113,12 @@ export interface BaseElementNode extends Node {
 
 export interface PlainElementNode extends BaseElementNode {
   tagType: ElementTypes.ELEMENT
-  codegenNode:
-    | ElementCodegenNode
-    | CodegenNodeWithDirective<ElementCodegenNode>
-    | undefined
-  // | SimpleExpressionNode (only when hoisted)
+  codegenNode: ElementCodegenNode | undefined | SimpleExpressionNode // only when hoisted
 }
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
-  codegenNode:
-    | ComponentCodegenNode
-    | CodegenNodeWithDirective<ComponentCodegenNode>
-    | undefined
+  codegenNode: ComponentCodegenNode | undefined
 }
 
 export interface SlotOutletNode extends BaseElementNode {
@@ -191,7 +183,7 @@ export interface CompoundExpressionNode extends Node {
     | InterpolationNode
     | TextNode
     | string
-    | RuntimeHelper)[]
+    | symbol)[]
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
@@ -233,10 +225,10 @@ export type JSChildNode =
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
-  callee: string | RuntimeHelper
+  callee: string | symbol
   arguments: (
     | string
-    | RuntimeHelper
+    | symbol
     | JSChildNode
     | TemplateChildNode
     | TemplateChildNode[])[]
@@ -280,20 +272,20 @@ export interface ConditionalExpression extends Node {
 // Codegen Node Types ----------------------------------------------------------
 
 // createVNode(...)
-export interface ElementCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE
+export interface PlainElementCodegenNode extends CallExpression {
+  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
   arguments:  // tag, props, children, patchFlag, dynamicProps
-    | [string | RuntimeHelper]
-    | [string | RuntimeHelper, PropsExpression]
-    | [string | RuntimeHelper, 'null' | PropsExpression, TemplateChildNode[]]
+    | [string | symbol]
+    | [string | symbol, PropsExpression]
+    | [string | symbol, 'null' | PropsExpression, TemplateChildNode[]]
     | [
-        string | RuntimeHelper,
+        string | symbol,
         'null' | PropsExpression,
         'null' | TemplateChildNode[],
         string
       ]
     | [
-        string | RuntimeHelper,
+        string | symbol,
         'null' | PropsExpression,
         'null' | TemplateChildNode[],
         string,
@@ -301,25 +293,25 @@ export interface ElementCodegenNode extends CallExpression {
       ]
 }
 
-export type ElementCodegenNodeWithDirective = CodegenNodeWithDirective<
-  ElementCodegenNode
->
+export type ElementCodegenNode =
+  | PlainElementCodegenNode
+  | CodegenNodeWithDirective<PlainElementCodegenNode>
 
 // createVNode(...)
-export interface ComponentCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE
+export interface PlainComponentCodegenNode extends CallExpression {
+  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
   arguments:  // Comp, props, slots, patchFlag, dynamicProps
-    | [string | RuntimeHelper]
-    | [string | RuntimeHelper, PropsExpression]
-    | [string | RuntimeHelper, 'null' | PropsExpression, SlotsExpression]
+    | [string | symbol]
+    | [string | symbol, PropsExpression]
+    | [string | symbol, 'null' | PropsExpression, SlotsExpression]
     | [
-        string | RuntimeHelper,
+        string | symbol,
         'null' | PropsExpression,
         'null' | SlotsExpression,
         string
       ]
     | [
-        string | RuntimeHelper,
+        string | symbol,
         'null' | PropsExpression,
         'null' | SlotsExpression,
         string,
@@ -327,9 +319,9 @@ export interface ComponentCodegenNode extends CallExpression {
       ]
 }
 
-export type CompoenntCodegenNodeWithDirective = CodegenNodeWithDirective<
-  ComponentCodegenNode
->
+export type ComponentCodegenNode =
+  | PlainComponentCodegenNode
+  | CodegenNodeWithDirective<PlainComponentCodegenNode>
 
 export type SlotsExpression = SlotsObjectExpression | DynamicSlotsExpression
 
@@ -356,7 +348,7 @@ export interface DynamicSlotsExpression extends CallExpression {
 }
 
 export interface DynamicSlotEntries extends ArrayExpression {
-  elements: (ConditionalDynamicSlotNode | ListDyanmicSlotNode)[]
+  elements: (ConditionalDynamicSlotNode | ListDynamicSlotNode)[]
 }
 
 export interface ConditionalDynamicSlotNode extends ConditionalExpression {
@@ -364,12 +356,12 @@ export interface ConditionalDynamicSlotNode extends ConditionalExpression {
   alternate: DynamicSlotNode | SimpleExpressionNode
 }
 
-export interface ListDyanmicSlotNode extends CallExpression {
+export interface ListDynamicSlotNode extends CallExpression {
   callee: typeof RENDER_LIST
-  arguments: [ExpressionNode, ListDyanmicSlotIterator]
+  arguments: [ExpressionNode, ListDynamicSlotIterator]
 }
 
-export interface ListDyanmicSlotIterator extends FunctionExpression {
+export interface ListDynamicSlotIterator extends FunctionExpression {
   returns: DynamicSlotNode
 }
 
@@ -417,6 +409,11 @@ export interface SlotOutletCodegenNode extends CallExpression {
       ]
 }
 
+export type BlockCodegenNode =
+  | ElementCodegenNode
+  | ComponentCodegenNode
+  | SlotOutletCodegenNode
+
 export interface IfCodegenNode extends SequenceExpression {
   expressions: [OpenBlockExpression, IfConditionalExpression]
 }
@@ -448,28 +445,6 @@ export interface OpenBlockExpression extends CallExpression {
   callee: typeof OPEN_BLOCK
   arguments: []
 }
-
-export type BlockCodegenNode =
-  | BlockElementCodegenNode
-  | BlockComponentCodegenNode
-  | BlockElementCodegenNodeWithDirective
-  | BlockComponentCodegenNodeWithDirective
-
-export type BlockElementCodegenNode = ElementCodegenNode & {
-  callee: typeof CREATE_BLOCK
-}
-
-export type BlockComponentCodegenNode = ComponentCodegenNode & {
-  callee: typeof CREATE_BLOCK
-}
-
-export type BlockElementCodegenNodeWithDirective = CodegenNodeWithDirective<
-  BlockElementCodegenNode
->
-
-export type BlockComponentCodegenNodeWithDirective = CodegenNodeWithDirective<
-  BlockComponentCodegenNode
->
 
 // AST Utilities ---------------------------------------------------------------
 
@@ -543,22 +518,25 @@ export function createInterpolation(
 }
 
 export function createCompoundExpression(
-  children: CompoundExpressionNode['children']
+  children: CompoundExpressionNode['children'],
+  loc: SourceLocation = locStub
 ): CompoundExpressionNode {
   return {
     type: NodeTypes.COMPOUND_EXPRESSION,
-    loc: locStub,
+    loc,
     children
   }
 }
 
-type InferCodegenNodeType<T> = T extends typeof CREATE_VNODE
-  ? ElementCodegenNode | ComponentCodegenNode
-  : T extends typeof CREATE_BLOCK
-    ? BlockElementCodegenNode | BlockComponentCodegenNode
-    : T extends typeof APPLY_DIRECTIVES
-      ? ElementCodegenNodeWithDirective | CompoenntCodegenNodeWithDirective
-      : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
+type InferCodegenNodeType<T> = T extends
+  | typeof CREATE_VNODE
+  | typeof CREATE_BLOCK
+  ? PlainElementCodegenNode | PlainComponentCodegenNode
+  : T extends typeof APPLY_DIRECTIVES
+    ?
+        | CodegenNodeWithDirective<PlainElementCodegenNode>
+        | CodegenNodeWithDirective<PlainComponentCodegenNode>
+    : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
 
 export function createCallExpression<T extends CallExpression['callee']>(
   callee: T,

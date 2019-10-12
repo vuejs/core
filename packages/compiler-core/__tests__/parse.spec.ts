@@ -564,6 +564,52 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('native element with `isNativeTag`', () => {
+      const ast = parse('<div></div><comp></comp><Comp></Comp>', {
+        isNativeTag: tag => tag === 'div'
+      })
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'comp',
+        tagType: ElementTypes.COMPONENT
+      })
+
+      expect(ast.children[2]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
+    test('native element without `isNativeTag`', () => {
+      const ast = parse('<div></div><comp></comp><Comp></Comp>')
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'comp',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[2]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
     test('attribute with no value', () => {
       const ast = parse('<div id></div>')
       const element = ast.children[0] as ElementNode
@@ -1274,6 +1320,88 @@ describe('compiler: parse', () => {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
           source: '#a="{ b }"'
+        }
+      })
+    })
+
+    test('v-pre', () => {
+      const ast = parse(
+        `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
+          `<div :id="foo"><Comp/>{{ bar }}</div>`
+      )
+
+      const divWithPre = ast.children[0] as ElementNode
+      expect(divWithPre.props).toMatchObject([
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `:id`,
+          value: {
+            type: NodeTypes.TEXT,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 1,
+              column: 12
+            },
+            end: {
+              line: 1,
+              column: 21
+            }
+          }
+        }
+      ])
+      expect(divWithPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.ELEMENT,
+        tag: `Comp`
+      })
+      expect(divWithPre.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: `{{ bar }}`
+      })
+
+      // should not affect siblings after it
+      const divWithoutPre = ast.children[1] as ElementNode
+      expect(divWithoutPre.props).toMatchObject([
+        {
+          type: NodeTypes.DIRECTIVE,
+          name: `bind`,
+          arg: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: true,
+            content: `id`
+          },
+          exp: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: false,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 2,
+              column: 6
+            },
+            end: {
+              line: 2,
+              column: 15
+            }
+          }
+        }
+      ])
+      expect(divWithoutPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.COMPONENT,
+        tag: `Comp`
+      })
+      expect(divWithoutPre.children[1]).toMatchObject({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `bar`,
+          isStatic: false
         }
       })
     })

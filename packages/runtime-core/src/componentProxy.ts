@@ -4,6 +4,7 @@ import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef } from '@vue/reactivity'
+import { warn } from './warning'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -15,6 +16,7 @@ export type ComponentPublicInstance<
   M = {},
   PublicProps = P
 > = {
+  [key: string]: any
   $data: D
   $props: PublicProps
   $attrs: Data
@@ -90,10 +92,16 @@ export const PublicInstanceProxyHandlers = {
     } else if (hasOwn(renderContext, key)) {
       renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
-      // TODO warn attempt of mutating public property
+      __DEV__ &&
+        warn(
+          `Attempting to mutate public property "${key}". ` +
+            `Properties starting with $ are reserved and readonly.`,
+          target
+        )
       return false
     } else if (key in target.props) {
-      // TODO warn attempt of mutating prop
+      __DEV__ &&
+        warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
       return false
     } else {
       target.user[key] = value
