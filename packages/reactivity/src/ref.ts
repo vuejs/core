@@ -12,7 +12,9 @@ export interface Ref<T = any> {
 
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
-export function ref<T>(raw: T): Ref<T> {
+export function ref<T extends Ref>(raw: T): T
+export function ref<T>(raw: T): Ref<T>
+export function ref(raw: any) {
   if (isRef(raw)) {
     return raw
   }
@@ -28,7 +30,7 @@ export function ref<T>(raw: T): Ref<T> {
       trigger(v, OperationTypes.SET, '')
     }
   }
-  return v as Ref<T>
+  return v as Ref
 }
 
 export function isRef(v: any): v is Ref {
