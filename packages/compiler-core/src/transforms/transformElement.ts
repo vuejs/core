@@ -192,7 +192,7 @@ export function buildProps(
         } else if (name === 'style') {
           hasStyleBinding = true
         } else if (name !== 'key') {
-          dynamicPropNames.push(key.content)
+          dynamicPropNames.push(name)
         }
       }
     } else {
