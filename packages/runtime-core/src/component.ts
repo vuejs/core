@@ -24,7 +24,11 @@ import {
   isObject
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
-import { CompilerOptions } from '@vue/compiler-dom'
+import {
+  CompilerError,
+  CompilerOptions,
+  generateCodeFrame
+} from '@vue/compiler-dom'
 
 export type Data = { [key: string]: unknown }
 
@@ -319,10 +323,17 @@ function finishComponentSetup(
     if (Component.template && !Component.render) {
       if (compile) {
         Component.render = compile(Component.template, {
-          onError(err) {
+          onError(err: CompilerError) {
             if (__DEV__) {
-              // TODO use err.loc to provide codeframe like Vue 2
-              warn(`Template compilation error: ${err.message}`)
+              const message = `Template compilation error: ${err.message}`
+              const codeFrame =
+                err.loc &&
+                generateCodeFrame(
+                  Component.template!,
+                  err.loc.start.offset,
+                  err.loc.end.offset
+                )
+              warn(codeFrame ? `${message}\n${codeFrame}` : message)
             }
           }
         })
