@@ -28,10 +28,9 @@ export const transformBind: DirectiveTransform = (dir, node, context) => {
     }
   }
   return {
-    props: createObjectProperty(
-      arg!,
-      exp || createSimpleExpression('', true, loc)
-    ),
+    props: [
+      createObjectProperty(arg!, exp || createSimpleExpression('', true, loc))
+    ],
     needRuntime: false
   }
 }

@@ -5,6 +5,7 @@ import {
   Namespaces,
   NodeTypes
 } from '@vue/compiler-core'
+import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 
 export const enum DOMNamespaces {
   HTML = Namespaces.HTML,
@@ -13,6 +14,10 @@ export const enum DOMNamespaces {
 }
 
 export const parserOptionsMinimal: ParserOptions = {
+  isVoidTag,
+
+  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
+
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
     let ns = parent ? parent.ns : DOMNamespaces.HTML
@@ -75,11 +80,5 @@ export const parserOptionsMinimal: ParserOptions = {
       }
     }
     return TextModes.DATA
-  },
-
-  isVoidTag(tag: string): boolean {
-    return /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i.test(
-      tag
-    )
   }
 }

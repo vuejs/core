@@ -74,7 +74,7 @@ function createConfig(output, plugins = []) {
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
-  const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
+  const isBundlerESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
 
   if (isGlobalBuild) {
@@ -118,7 +118,7 @@ function createConfig(output, plugins = []) {
       aliasPlugin,
       createReplacePlugin(
         isProductionBuild,
-        isBunlderESMBuild,
+        isBundlerESMBuild,
         (isGlobalBuild || isBrowserESMBuild) &&
           !packageOptions.enableNonBrowserBranches
       ),
@@ -133,10 +133,10 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
+function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
-    __DEV__: isBunlderESMBuild
+    __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
       : // hard coded dev/prod builds

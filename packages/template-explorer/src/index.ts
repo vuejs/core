@@ -15,7 +15,9 @@ declare global {
 window.init = () => {
   const monaco = window.monaco
   const persistedState = JSON.parse(
-    decodeURIComponent(window.location.hash.slice(1)) || `{}`
+    decodeURIComponent(window.location.hash.slice(1)) ||
+      localStorage.getItem('state') ||
+      `{}`
   )
 
   Object.assign(compilerOptions, persistedState.options)
@@ -64,13 +66,13 @@ window.init = () => {
 
   function reCompile() {
     const src = editor.getValue()
-    // every time we re-compile, persist current state to URL
-    window.location.hash = encodeURIComponent(
-      JSON.stringify({
-        src,
-        options: compilerOptions
-      })
-    )
+    // every time we re-compile, persist current state
+    const state = JSON.stringify({
+      src,
+      options: compilerOptions
+    })
+    localStorage.setItem('state', state)
+    window.location.hash = encodeURIComponent(state)
     const res = compileCode(src)
     if (res) {
       output.setValue(res)

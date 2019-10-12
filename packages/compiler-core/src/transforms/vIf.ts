@@ -30,7 +30,7 @@ import { processExpression } from './transformExpression'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  EMPTY,
+  COMMENT,
   FRAGMENT,
   APPLY_DIRECTIVES,
   CREATE_VNODE
@@ -46,7 +46,7 @@ export const transformIf = createStructuralDirectiveTransform(
     ) {
       const loc = dir.exp ? dir.exp.loc : node.loc
       context.onError(
-        createCompilerError(ErrorCodes.X_IF_NO_EXPRESSION, dir.loc)
+        createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc)
       )
       dir.exp = createSimpleExpression(`true`, false, loc)
     }
@@ -125,7 +125,7 @@ export const transformIf = createStructuralDirectiveTransform(
           }
         } else {
           context.onError(
-            createCompilerError(ErrorCodes.X_ELSE_NO_ADJACENT_IF, node.loc)
+            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
           )
         }
         break
@@ -153,7 +153,7 @@ function createCodegenNodeForBranch(
       branch.condition,
       createChildrenCodegenNode(branch, index, context),
       createCallExpression(context.helper(CREATE_BLOCK), [
-        context.helper(EMPTY)
+        context.helper(COMMENT)
       ])
     ) as IfConditionalExpression
   } else {

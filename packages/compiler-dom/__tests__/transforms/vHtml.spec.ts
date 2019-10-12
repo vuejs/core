@@ -2,8 +2,7 @@ import {
   parse,
   transform,
   PlainElementNode,
-  CompilerOptions,
-  ErrorCodes
+  CompilerOptions
 } from '@vue/compiler-core'
 import { transformVHtml } from '../../src/transforms/vHtml'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -12,6 +11,7 @@ import {
   genFlagText
 } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
+import { DOMErrorCodes } from '../../src/errors'
 
 function transformWithVHtml(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -47,7 +47,7 @@ describe('compiler: v-html transform', () => {
       onError
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: ErrorCodes.X_V_HTML_WITH_CHILDREN }]
+      [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }]
     ])
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       arguments: [
@@ -68,7 +68,7 @@ describe('compiler: v-html transform', () => {
       onError
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: ErrorCodes.X_V_HTML_NO_EXPRESSION }]
+      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }]
     ])
   })
 })

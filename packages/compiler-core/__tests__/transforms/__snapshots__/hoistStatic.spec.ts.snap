@@ -1,6 +1,23 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`compiler: hositStatic transform hoist nested static tree 1`] = `
+exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
+"const _Vue = Vue
+const _createVNode = Vue.createVNode
+
+const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" })
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _hoisted_1
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform hoist nested static tree 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -20,7 +37,27 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform hoist siblings with common non-hoistable parent 1`] = `
+exports[`compiler: hoistStatic transform hoist nested static tree with comments 1`] = `
+"const _Vue = Vue
+const _createVNode = Vue.createVNode
+const _Comment = Vue.Comment
+
+const _hoisted_1 = _createVNode(\\"div\\", null, [
+  _createVNode(_Comment, null, \\"comment\\")
+])
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, Comment: _Comment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _hoisted_1
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -39,7 +76,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform hoist simple element 1`] = `
+exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -56,7 +93,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform hoist static props for elements with directives 1`] = `
+exports[`compiler: hoistStatic transform hoist static props for elements with directives 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -77,7 +114,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform hoist static props for elements with dynamic text children 1`] = `
+exports[`compiler: hoistStatic transform hoist static props for elements with dynamic text children 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -94,7 +131,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform hoist static props for elements with unhoistable children 1`] = `
+exports[`compiler: hoistStatic transform hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -115,7 +152,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform should NOT hoist components 1`] = `
+exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -131,7 +168,21 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform should NOT hoist element with dynamic props 1`] = `
+exports[`compiler: hoistStatic transform should NOT hoist element with dynamic key 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _createVNode(\\"div\\", { key: foo })
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform should NOT hoist element with dynamic props 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -145,7 +196,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform should NOT hoist root node 1`] = `
+exports[`compiler: hoistStatic transform should NOT hoist root node 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -157,7 +208,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform should hoist v-for children if static 1`] = `
+exports[`compiler: hoistStatic transform should hoist v-for children if static 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
@@ -179,9 +230,10 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hositStatic transform should hoist v-if props/children if static 1`] = `
+exports[`compiler: hoistStatic transform should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
+const _Comment = Vue.Comment
 
 const _hoisted_1 = {
   key: 0,
@@ -191,14 +243,14 @@ const _hoisted_2 = _createVNode(\\"span\\")
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty } = _Vue
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(), ok
         ? _createBlock(\\"div\\", _hoisted_1, [
             _hoisted_2
           ])
-        : _createBlock(_Empty))
+        : _createBlock(_Comment))
     ]))
   }
 }"

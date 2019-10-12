@@ -119,7 +119,7 @@ export function buildSlots(
     const { arg, exp, loc } = explicitDefaultSlot
     if (arg) {
       context.onError(
-        createCompilerError(ErrorCodes.X_NAMED_SLOT_ON_COMPONENT, loc)
+        createCompilerError(ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT, loc)
       )
     }
     slotsProperties.push(buildDefaultSlot(exp, children, loc))
@@ -148,7 +148,7 @@ export function buildSlots(
     if (explicitDefaultSlot) {
       // already has on-component default slot - this is incorrect usage.
       context.onError(
-        createCompilerError(ErrorCodes.X_MIXED_SLOT_USAGE, slotDir.loc)
+        createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc)
       )
       break
     }
@@ -224,7 +224,7 @@ export function buildSlots(
           : buildDynamicSlot(slotName, slotFunction)
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_ELSE_NO_ADJACENT_IF, vElse.loc)
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
         )
       }
     } else if ((vFor = findDir(slotElement, 'for'))) {
@@ -247,7 +247,7 @@ export function buildSlots(
         )
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_FOR_MALFORMED_EXPRESSION, vFor.loc)
+          createCompilerError(ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION, vFor.loc)
         )
       }
     } else {
@@ -255,7 +255,10 @@ export function buildSlots(
       if (staticSlotName) {
         if (seenSlotNames.has(staticSlotName)) {
           context.onError(
-            createCompilerError(ErrorCodes.X_DUPLICATE_SLOT_NAMES, dirLoc)
+            createCompilerError(
+              ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
+              dirLoc
+            )
           )
           continue
         }
@@ -268,7 +271,7 @@ export function buildSlots(
   if (hasTemplateSlots && extraneousChild) {
     context.onError(
       createCompilerError(
-        ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN,
+        ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
         extraneousChild.loc
       )
     )

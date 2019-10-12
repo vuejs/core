@@ -5,7 +5,7 @@ exports[`compiler: integration tests function mode 1`] = `
 
 return function render() {
   with (this) {
-    const { toString: _toString, openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Empty: _Empty, Fragment: _Fragment, renderList: _renderList } = _Vue
+    const { toString: _toString, openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment, Fragment: _Fragment, renderList: _renderList } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", {
       id: \\"foo\\",
@@ -26,7 +26,7 @@ return function render() {
 `;
 
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
-"const { toString, openBlock, createVNode, createBlock, Empty, Fragment, renderList } = Vue
+"const { toString, openBlock, createVNode, createBlock, Comment, Fragment, renderList } = Vue
 
 return function render() {
   const _ctx = this
@@ -48,7 +48,7 @@ return function render() {
 `;
 
 exports[`compiler: integration tests module mode 1`] = `
-"import { toString, openBlock, createVNode, createBlock, Empty, Fragment, renderList } from \\"vue\\"
+"import { toString, openBlock, createVNode, createBlock, Comment, Fragment, renderList } from \\"vue\\"
 
 export default function render() {
   const _ctx = this

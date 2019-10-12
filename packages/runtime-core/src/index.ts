@@ -29,6 +29,7 @@ export { getCurrentInstance } from './component'
 
 // For custom renderers
 export { createRenderer } from './createRenderer'
+export { warn } from './warning'
 export {
   handleError,
   callWithErrorHandling,

@@ -1,4 +1,5 @@
 export * from './patchFlags'
+export * from './element'
 export { globalsWhitelist } from './globalsWhitelist'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
@@ -7,6 +8,11 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
 export const EMPTY_ARR: [] = []
 
 export const NOOP = () => {}
+
+/**
+ * Always return false.
+ */
+export const NO = () => false
 
 export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
 
@@ -43,7 +49,7 @@ export const isPlainObject = (val: any): val is object =>
 
 const vnodeHooksRE = /^vnode/
 export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref' || vnodeHooksRE.test(key)
+  key === 'key' || key === 'ref' || key === '$once' || vnodeHooksRE.test(key)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {
@@ -57,4 +63,45 @@ export const hyphenate = (str: string): string => {
 
 export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+/**
+ * Check if two values are loosely equal - that is,
+ * if they are plain objects, do they have the same shape?
+ */
+export function looseEqual(a: any, b: any): boolean {
+  if (a === b) return true
+  const isObjectA = isObject(a)
+  const isObjectB = isObject(b)
+  if (isObjectA && isObjectB) {
+    try {
+      const isArrayA = isArray(a)
+      const isArrayB = isArray(b)
+      if (isArrayA && isArrayB) {
+        return (
+          a.length === b.length &&
+          a.every((e: any, i: any) => looseEqual(e, b[i]))
+        )
+      } else if (a instanceof Date && b instanceof Date) {
+        return a.getTime() === b.getTime()
+      } else if (!isArrayA && !isArrayB) {
+        const keysA = Object.keys(a)
+        const keysB = Object.keys(b)
+        return (
+          keysA.length === keysB.length &&
+          keysA.every(key => looseEqual(a[key], b[key]))
+        )
+      } else {
+        /* istanbul ignore next */
+        return false
+      }
+    } catch (e) {
+      /* istanbul ignore next */
+      return false
+    }
+  } else if (!isObjectA && !isObjectB) {
+    return String(a) === String(b)
+  } else {
+    return false
+  }
 }

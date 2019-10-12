@@ -5,7 +5,8 @@ import {
   MERGE_PROPS,
   RESOLVE_DIRECTIVE,
   APPLY_DIRECTIVES,
-  TO_HANDLERS
+  TO_HANDLERS,
+  helperNameMap
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -271,7 +272,7 @@ describe('compiler: element transform', () => {
         foo(dir) {
           _dir = dir
           return {
-            props: createObjectProperty(dir.arg!, dir.exp!),
+            props: [createObjectProperty(dir.arg!, dir.exp!)],
             needRuntime: false
           }
         }
@@ -347,6 +348,29 @@ describe('compiler: element transform', () => {
         ]
       }
     ])
+  })
+
+  test('directiveTransform with needRuntime: Symbol', () => {
+    const { root, node } = parseWithElementTransform(
+      `<div v-foo:bar="hello" />`,
+      {
+        directiveTransforms: {
+          foo() {
+            return {
+              props: [],
+              needRuntime: CREATE_VNODE
+            }
+          }
+        }
+      }
+    )
+
+    expect(root.helpers).toContain(CREATE_VNODE)
+    expect(root.helpers).not.toContain(RESOLVE_DIRECTIVE)
+    expect(root.directives.length).toBe(0)
+    expect((node as any).arguments[1].elements[0].elements[0]).toBe(
+      `_${helperNameMap[CREATE_VNODE]}`
+    )
   })
 
   test('runtime directives', () => {

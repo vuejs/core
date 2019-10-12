@@ -175,6 +175,34 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should NOT wrap as function if expression is complex member expression', () => {
+    const node = parseWithVOn(`<div @click="a['b' + c]"/>`)
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: `a['b' + c]`
+      }
+    })
+  })
+
+  test('complex member expression w/ prefixIdentifiers: true', () => {
+    const node = parseWithVOn(`<div @click="a['b' + c]"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [{ content: `_ctx.a` }, `['b' + `, { content: `_ctx.c` }, `]`]
+      }
+    })
+  })
+
   test('function expression w/ prefixIdentifiers: true', () => {
     const node = parseWithVOn(`<div @click="e => foo(e)"/>`, {
       prefixIdentifiers: true

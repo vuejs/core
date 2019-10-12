@@ -203,7 +203,7 @@ export function processExpression(
 
   let ret
   if (children.length) {
-    ret = createCompoundExpression(children)
+    ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
   }

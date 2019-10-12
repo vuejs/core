@@ -114,7 +114,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
   setElementText(node: HostElement, text: string): void
-  parentNode(node: HostNode): HostNode | null
+  parentNode(node: HostNode): HostElement | null
   nextSibling(node: HostNode): HostNode | null
   querySelector(selector: string): HostElement | null
 }
@@ -177,10 +177,15 @@ export function createRenderer<
     optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
-    if (n1 != null && !isSameType(n1, n2)) {
-      anchor = getNextHostNode(n1)
-      unmount(n1, parentComponent, parentSuspense, true)
-      n1 = null
+    if (n1 != null) {
+      if (!isSameType(n1, n2)) {
+        anchor = getNextHostNode(n1)
+        unmount(n1, parentComponent, parentSuspense, true)
+        n1 = null
+      } else if (n1.props && n1.props.$once) {
+        console.log(111)
+        return
+      }
     }
 
     const { type, shapeFlag } = n2
@@ -494,10 +499,15 @@ export function createRenderer<
       // children fast path
       const oldDynamicChildren = n1.dynamicChildren!
       for (let i = 0; i < dynamicChildren.length; i++) {
+        const oldVNode = oldDynamicChildren[i]
         patch(
-          oldDynamicChildren[i],
+          oldVNode,
           dynamicChildren[i],
-          el,
+          // in the case of a Fragment, we need to provide the actual parent
+          // of the Fragment itself so it can move its children. In other cases,
+          // the parent container is not actually used so we just pass the
+          // block element here to avoid a DOM parentNode call.
+          oldVNode.type === Fragment ? hostParentNode(oldVNode.el!)! : el,
           null,
           parentComponent,
           parentSuspense,
@@ -1767,8 +1777,8 @@ export function createRenderer<
   }
 
   function setRef(
-    ref: string | Function | Ref<any>,
-    oldRef: string | Function | Ref<any> | null,
+    ref: string | Function | Ref,
+    oldRef: string | Function | Ref | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
   ) {

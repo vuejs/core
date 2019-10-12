@@ -32,7 +32,8 @@ export const nodeOps = {
     el.textContent = text
   },
 
-  parentNode: (node: Node): Node | null => node.parentNode,
+  parentNode: (node: Node): HTMLElement | null =>
+    node.parentNode as HTMLElement,
 
   nextSibling: (node: Node): Node | null => node.nextSibling,
 
