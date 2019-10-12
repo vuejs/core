@@ -103,7 +103,7 @@ export const vModelCheckbox: DirectiveHooks<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding,
+  { value }: DirectiveBinding<HTMLInputElement>,
   vnode: VNode
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -202,7 +202,9 @@ export const vModelDynamic: DirectiveHooks<
 
 function callModelHook(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-  binding: DirectiveBinding,
+  binding: DirectiveBinding<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >,
   vnode: VNode,
   prevVNode: VNode | null,
   hook: keyof DirectiveHooks
