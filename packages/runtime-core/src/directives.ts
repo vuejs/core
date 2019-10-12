@@ -34,7 +34,7 @@ export type DirectiveHook<T = any> = (
   prevVNode: VNode | null
 ) => void
 
-export interface Directive<T = any> {
+export interface DirectiveHooks<T = any> {
   beforeMount?: DirectiveHook<T>
   mounted?: DirectiveHook<T>
   beforeUpdate?: DirectiveHook<T>
@@ -42,6 +42,8 @@ export interface Directive<T = any> {
   beforeUnmount?: DirectiveHook<T>
   unmounted?: DirectiveHook<T>
 }
+
+export type Directive<T = any> = DirectiveHooks<T> | DirectiveHook<T>
 
 type DirectiveModifiers = Record<string, boolean>
 
@@ -60,8 +62,16 @@ function applyDirective(
     valueCacheForDir = new WeakMap<VNode, any>()
     valueCache.set(directive, valueCacheForDir)
   }
+
+  if (isFunction(directive)) {
+    directive = {
+      mounted: directive,
+      updated: directive
+    } as DirectiveHooks
+  }
+
   for (const key in directive) {
-    const hook = directive[key as keyof Directive]!
+    const hook = directive[key as keyof DirectiveHooks]!
     const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue
