@@ -209,7 +209,7 @@ export function instanceWatch(
   source: string | Function,
   cb: Function,
   options?: WatchOptions
-): () => void {
+): StopHandle {
   const ctx = this.renderProxy!
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)

@@ -3,7 +3,7 @@ import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
-import { UnwrapRef } from '@vue/reactivity'
+import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
 
 // public properties exposed on the proxy, which is used as the render context
@@ -25,6 +25,11 @@ export type ComponentPublicInstance<
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
   $emit: (event: string, ...args: unknown[]) => void
+  $el: any
+  $options: any
+  $forceUpdate: ReactiveEffect
+  $nextTick: typeof nextTick
+  $watch: typeof instanceWatch
 } & P &
   UnwrapRef<B> &
   D &
