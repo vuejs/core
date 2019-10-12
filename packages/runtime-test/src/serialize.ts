@@ -32,6 +32,25 @@ export function serializeInner(
     : ``
 }
 
+const voidTags = [
+  'area',
+  'base',
+  'br',
+  'col',
+  'command',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'keygen',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr'
+]
+
 function serializeElement(
   node: TestElement,
   indent: number,
@@ -45,6 +64,9 @@ function serializeElement(
     .filter(_ => _)
     .join(' ')
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
+  if (voidTags.includes(node.tag)) {
+    return `${padding}<${node.tag}${props ? ` ${props}` : ``}/>`
+  }
   return (
     `${padding}<${node.tag}${props ? ` ${props}` : ``}>` +
     `${serializeInner(node, indent, depth)}` +
