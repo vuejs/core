@@ -11,7 +11,7 @@ export function nextTick(fn?: () => void): Promise<void> {
 }
 
 export function queueJob(job: () => void) {
-  if (queue.indexOf(job) === -1) {
+  if (!queue.includes(job)) {
     queue.push(job)
     if (!isFlushing) {
       nextTick(flushJobs)
@@ -19,26 +19,25 @@ export function queueJob(job: () => void) {
   }
 }
 
-export function queuePostFlushCb(cb: Function | Function[]) {
-  if (Array.isArray(cb)) {
-    postFlushCbs.push.apply(postFlushCbs, cb)
-  } else {
-    postFlushCbs.push(cb)
+export function queuePostFlushCb(cbs: Function | Function[]) {
+  if (!Array.isArray(cbs)) {
+    cbs = [cbs]
   }
+
+  postFlushCbs.push(...cbs)
+
   if (!isFlushing) {
     nextTick(flushJobs)
   }
 }
 
-const dedupe = (cbs: Function[]): Function[] => Array.from(new Set(cbs))
+const dedupe = (cbs: Function[]): Function[] => [...new Set(cbs)]
 
 export function flushPostFlushCbs() {
   if (postFlushCbs.length) {
     const cbs = dedupe(postFlushCbs)
     postFlushCbs.length = 0
-    for (let i = 0; i < cbs.length; i++) {
-      cbs[i]()
-    }
+    for (const cb of cbs) cb()
   }
 }
 
