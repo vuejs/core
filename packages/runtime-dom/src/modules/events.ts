@@ -132,19 +132,11 @@ function createInvoker(
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated - 1) {
       const args = [e]
-      const value = invoker.value
-      if (isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          callWithAsyncErrorHandling(
-            value[i],
-            instance,
-            ErrorCodes.NATIVE_EVENT_HANDLER,
-            args
-          )
-        }
-      } else {
+      let {value} = invoker
+      value = isArray(value) ? value : [value]
+      for (const item of value) {
         callWithAsyncErrorHandling(
-          value,
+          item,
           instance,
           ErrorCodes.NATIVE_EVENT_HANDLER,
           args
