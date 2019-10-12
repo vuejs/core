@@ -1,4 +1,5 @@
 import { handleError, ErrorCodes } from './errorHandling'
+import { isArray } from '@vue/shared'
 
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
@@ -19,12 +20,12 @@ export function queueJob(job: () => void) {
   }
 }
 
-export function queuePostFlushCb(cbs: Function | Function[]) {
-  if (!Array.isArray(cbs)) {
-    cbs = [cbs]
+export function queuePostFlushCb(cb: Function | Function[]) {
+  if (!isArray(cb)) {
+    postFlushCbs.push(cb)
+  } else {
+    postFlushCbs.push(...cb)
   }
-
-  postFlushCbs.push(...cbs)
 
   if (!isFlushing) {
     nextTick(flushJobs)
