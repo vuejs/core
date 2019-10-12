@@ -15,7 +15,7 @@ import { isMemberExpression } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
 
-export type VOnDirectiveNode = Omit<DirectiveNode, 'arg' | 'exp'> & {
+export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./element.ts due to it affecting
   // codegen for the entire props object. This transform here is only for v-on
   // *with* args.
