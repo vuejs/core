@@ -136,8 +136,8 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'foo',
               value: 'foo',
-              'onUpdate:modelValue': () => {
-                this.value.push('foo' as never)
+              'onUpdate:modelValue': (value: any) => {
+                this.value = value
               }
             }),
             this.value
@@ -147,8 +147,8 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'bar',
               value: 'bar',
-              'onUpdate:modelValue': () => {
-                this.value.push('bar' as never)
+              'onUpdate:modelValue': (value: any) => {
+                this.value = value
               }
             }),
             this.value
