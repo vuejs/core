@@ -1,15 +1,29 @@
-import { DirectiveTransform } from '../transform'
+import { DirectiveTransform, TransformContext } from '../transform'
 import {
   createSimpleExpression,
   createObjectProperty,
   createCompoundExpression,
   NodeTypes,
-  Property
+  Property,
+  DirectiveNode,
+  ElementNode,
+  createCallExpression,
+  CallExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { isMemberExpression } from '../utils'
+import { TO_NUMBER, TRIM } from '../runtimeHelpers'
 
-export const transformModel: DirectiveTransform = (dir, node, context) => {
+export enum VModelModifiers {
+  NUMBER = 'number',
+  TRIM = 'trim'
+}
+
+export const transformModel: DirectiveTransform = (
+  dir: DirectiveNode,
+  node: ElementNode,
+  context: TransformContext
+) => {
   const { exp, arg } = dir
   if (!exp) {
     context.onError(
@@ -45,18 +59,36 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       createCompoundExpression([
         `$event => (`,
         ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        ` = $event)`
+        ...getVModelValueExpression(dir.modifiers, context)
       ])
     )
   ]
-
-  if (dir.modifiers.length) {
-    // TODO add modelModifiers prop
-  }
 
   return createTransformProps(props)
 }
 
 function createTransformProps(props: Property[] = []) {
   return { props, needRuntime: false }
+}
+
+function getVModelValueExpression(
+  modifiers: string[],
+  context: TransformContext
+): Array<CallExpression | string> {
+  const start = ' = ',
+    end = ')'
+  const arg = `$event`
+  if (modifiers.length) {
+    if (modifiers.indexOf(VModelModifiers.NUMBER) > -1) {
+      return [
+        start,
+        createCallExpression(context.helper(TO_NUMBER), [arg]),
+        end
+      ]
+    }
+    if (modifiers.indexOf(VModelModifiers.TRIM) > -1) {
+      return [start, createCallExpression(context.helper(TRIM), [arg]), end]
+    }
+  }
+  return [start + arg + end]
 }

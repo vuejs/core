@@ -65,6 +65,9 @@ export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
+export function trim(val: any): any {
+  return isString(val) ? val.trim() : val
+}
 /**
  * Check if two values are loosely equal - that is,
  * if they are plain objects, do they have the same shape?

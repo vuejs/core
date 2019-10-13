@@ -27,6 +27,36 @@ return function render() {
 }"
 `;
 
+exports[`compiler: transform v-model modifiers .number 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { toNumber: _toNumber, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = _toNumber($event))
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .trim 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { trim: _trim, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = _trim($event))
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+  }
+}"
+`;
+
 exports[`compiler: transform v-model simple exprssion (with prefixIdentifiers) 1`] = `
 "import { createVNode, createBlock, openBlock } from \\"vue\\"
 

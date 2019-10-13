@@ -42,10 +42,11 @@ export { applyDirectives } from './directives'
 export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
 export { toString } from './helpers/toString'
+export { toNumber } from './helpers/toNumber'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
-export { capitalize, camelize } from '@vue/shared'
+export { capitalize, camelize, trim } from '@vue/shared'
 
 // Internal, for integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

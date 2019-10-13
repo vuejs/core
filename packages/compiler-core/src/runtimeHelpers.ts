@@ -13,9 +13,11 @@ export const RENDER_LIST = Symbol(__DEV__ ? `renderList` : ``)
 export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
 export const CREATE_SLOTS = Symbol(__DEV__ ? `createSlots` : ``)
 export const TO_STRING = Symbol(__DEV__ ? `toString` : ``)
+export const TO_NUMBER = Symbol(__DEV__ ? `toNumber` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
+export const TRIM = Symbol(__DEV__ ? `trim` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -36,9 +38,11 @@ export const helperNameMap: any = {
   [RENDER_SLOT]: `renderSlot`,
   [CREATE_SLOTS]: `createSlots`,
   [TO_STRING]: `toString`,
+  [TO_NUMBER]: 'toNumber',
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
-  [CAMELIZE]: `camelize`
+  [CAMELIZE]: `camelize`,
+  [TRIM]: 'trim'
 }
 
 export function registerRuntimeHelpers(helpers: any) {

@@ -5,12 +5,14 @@ import {
   ElementNode,
   ObjectExpression,
   CompilerOptions,
-  CallExpression
+  CallExpression,
+  NodeTypes
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { TO_NUMBER, TRIM } from '../../src/runtimeHelpers'
 
 function parseWithVModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -362,6 +364,94 @@ describe('compiler: transform v-model', () => {
           code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
         })
       )
+    })
+  })
+
+  describe('modifiers', () => {
+    test('.number', () => {
+      const root = parseWithVModel('<input v-model.number="model" />')
+      const node = root.children[0] as ElementNode
+      const props = ((node.codegenNode as CallExpression)
+        .arguments[1] as ObjectExpression).properties
+
+      expect(props[0]).toMatchObject({
+        key: {
+          content: 'modelValue',
+          isStatic: true
+        },
+        value: {
+          content: 'model',
+          isStatic: false
+        }
+      })
+
+      expect(props[1]).toMatchObject({
+        key: {
+          content: 'onUpdate:modelValue',
+          isStatic: true
+        },
+        value: {
+          children: [
+            '$event => (',
+            {
+              content: 'model',
+              isStatic: false
+            },
+            ' = ',
+            {
+              type: NodeTypes.JS_CALL_EXPRESSION,
+              arguments: ['$event'],
+              callee: TO_NUMBER
+            },
+            ')'
+          ]
+        }
+      })
+
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('.trim', () => {
+      const root = parseWithVModel('<input v-model.trim="model" />')
+      const node = root.children[0] as ElementNode
+      const props = ((node.codegenNode as CallExpression)
+        .arguments[1] as ObjectExpression).properties
+
+      expect(props[0]).toMatchObject({
+        key: {
+          content: 'modelValue',
+          isStatic: true
+        },
+        value: {
+          content: 'model',
+          isStatic: false
+        }
+      })
+
+      expect(props[1]).toMatchObject({
+        key: {
+          content: 'onUpdate:modelValue',
+          isStatic: true
+        },
+        value: {
+          children: [
+            '$event => (',
+            {
+              content: 'model',
+              isStatic: false
+            },
+            ' = ',
+            {
+              type: NodeTypes.JS_CALL_EXPRESSION,
+              arguments: ['$event'],
+              callee: TRIM
+            },
+            ')'
+          ]
+        }
+      })
+
+      expect(generate(root).code).toMatchSnapshot()
     })
   })
 })

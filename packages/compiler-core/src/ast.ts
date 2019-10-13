@@ -181,6 +181,7 @@ export interface CompoundExpressionNode extends Node {
   children: (
     | SimpleExpressionNode
     | InterpolationNode
+    | CallExpression
     | TextNode
     | string
     | symbol)[]
