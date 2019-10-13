@@ -10,6 +10,13 @@ import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
 
+type DebuggerEventHook = (e: DebuggerEvent) => void
+type ErrorCapturedHook = (
+  err: Error,
+  instance: ComponentPublicInstance | null,
+  info: string
+) => boolean | void
+
 function injectHook(
   type: LifecycleHooks,
   hook: Function,
@@ -48,41 +55,40 @@ function injectHook(
   }
 }
 
-const createLifecycleInjector = (lifecycle: LifecycleHooks): Function => function(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(lifecycle, hook, target)
-}
+const createLifecycleInjector = <T extends Function = Function>(
+  lifecycle: LifecycleHooks
+): Function =>
+  function(
+    hook: T,
+    target: ComponentInternalInstance | null = currentInstance
+  ) {
+    injectHook(lifecycle, hook, target)
+  }
 
-export const onBeforeMount = createLifecycleInjector(LifecycleHooks.BEFORE_MOUNT)
-export const onMounted = createLifecycleInjector(LifecycleHooks.MOUNTED)
-export const onBeforeUpdate = createLifecycleInjector(LifecycleHooks.BEFORE_UPDATE)
-export const onUpdated = createLifecycleInjector(LifecycleHooks.UPDATED)
-export const onBeforeUnmount = createLifecycleInjector(LifecycleHooks.BEFORE_UNMOUNT)
-export const onUnmounted = createLifecycleInjector(LifecycleHooks.UNMOUNTED)
-
-export function onRenderTriggered(
-  hook: (e: DebuggerEvent) => void,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
-}
-
-export function onRenderTracked(
-  hook: (e: DebuggerEvent) => void,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)
-}
-
-export function onErrorCaptured(
-  hook: (
-    err: Error,
-    instance: ComponentPublicInstance | null,
-    info: string
-  ) => boolean | void,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
-}
+export const onBeforeMount = createLifecycleInjector(
+  LifecycleHooks.BEFORE_MOUNT
+)
+export const onMounted = createLifecycleInjector<Function>(
+  LifecycleHooks.MOUNTED
+)
+export const onBeforeUpdate = createLifecycleInjector<Function>(
+  LifecycleHooks.BEFORE_UPDATE
+)
+export const onUpdated = createLifecycleInjector<Function>(
+  LifecycleHooks.UPDATED
+)
+export const onBeforeUnmount = createLifecycleInjector<Function>(
+  LifecycleHooks.BEFORE_UNMOUNT
+)
+export const onUnmounted = createLifecycleInjector<Function>(
+  LifecycleHooks.UNMOUNTED
+)
+export const onRenderTriggered = createLifecycleInjector<DebuggerEventHook>(
+  LifecycleHooks.RENDER_TRIGGERED
+)
+export const onRenderTracked = createLifecycleInjector<DebuggerEventHook>(
+  LifecycleHooks.RENDER_TRACKED
+)
+export const onErrorCaptured = createLifecycleInjector<ErrorCapturedHook>(
+  LifecycleHooks.ERROR_CAPTURED
+)
