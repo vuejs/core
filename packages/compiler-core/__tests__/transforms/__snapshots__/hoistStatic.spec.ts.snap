@@ -8,7 +8,7 @@ const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" })
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
@@ -28,7 +28,7 @@ const _hoisted_1 = _createVNode(\\"p\\", null, [
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
@@ -48,7 +48,7 @@ const _hoisted_1 = _createVNode(\\"div\\", null, [
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, Comment: _Comment, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
@@ -66,7 +66,7 @@ const _hoisted_2 = _createVNode(\\"div\\")
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1,
@@ -84,7 +84,7 @@ const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\"
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
@@ -101,7 +101,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, applyDirectives: _applyDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { applyDirectives: _applyDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _directive_foo = _resolveDirective(\\"foo\\")
     
@@ -122,7 +122,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 
 return function render() {
   with (this) {
-    const { toString: _toString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { toString: _toString, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", _hoisted_1, _toString(hello), 1 /* TEXT */)
@@ -139,7 +139,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 
 return function render() {
   with (this) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { resolveComponent: _resolveComponent, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
     
@@ -217,7 +217,7 @@ const _hoisted_2 = _createVNode(\\"span\\")
 
 return function render() {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(), _createBlock(_Fragment, null, _renderList(list, (i) => {
@@ -243,7 +243,7 @@ const _hoisted_2 = _createVNode(\\"span\\")
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment } = _Vue
+    const { openBlock: _openBlock, createBlock: _createBlock } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(), ok

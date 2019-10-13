@@ -190,7 +190,7 @@ export function generate(
     deindent,
     newline
   } = context
-  const hasHelpers = ast.helpers.length > 0
+  let hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
 
   // preambles
@@ -211,9 +211,12 @@ export function generate(
         // to provide the helper here.
         if (ast.hoists.length) {
           push(`const _${helperNameMap[CREATE_VNODE]} = Vue.createVNode\n`)
+          ast.helpers = ast.helpers.filter(h => h !== CREATE_VNODE)
           if (ast.helpers.includes(COMMENT)) {
             push(`const _${helperNameMap[COMMENT]} = Vue.Comment\n`)
+            ast.helpers = ast.helpers.filter(h => h !== COMMENT)
           }
+          hasHelpers = ast.helpers.length > 0
         }
       }
     }
