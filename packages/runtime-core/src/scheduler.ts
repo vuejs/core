@@ -38,7 +38,9 @@ export function flushPostFlushCbs() {
   if (postFlushCbs.length) {
     const cbs = dedupe(postFlushCbs)
     postFlushCbs.length = 0
-    for (const cb of cbs) cb()
+    for (let i = 0; i < cbs.length; i++) {
+      cbs[i]()
+    }
   }
 }
 
