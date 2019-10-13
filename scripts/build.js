@@ -68,7 +68,7 @@ async function build(target) {
         args.types ? `TYPES:true` : ``,
         prodOnly ? `PROD_ONLY:true` : ``
       ]
-        .filter(_ => _)
+        .filter(Boolean)
         .join(',')
     ],
     { stdio: 'inherit' }

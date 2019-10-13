@@ -218,7 +218,7 @@ export function generate(
       }
     }
     genHoists(ast.hoists, context)
-    context.newline()
+    newline()
     push(`return `)
   } else {
     // generate import statements for helpers
@@ -226,7 +226,7 @@ export function generate(
       push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
-    context.newline()
+    newline()
     push(`export default `)
   }
 

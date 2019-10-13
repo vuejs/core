@@ -89,7 +89,7 @@ export function shouldUpdateComponent(
       return nextProps !== null
     }
     if (nextProps === null) {
-      return prevProps !== null
+      return true
     }
     return hasPropsChanged(prevProps, nextProps)
   }

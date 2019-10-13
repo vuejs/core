@@ -45,7 +45,7 @@ export function loadDep(name: string) {
   }
 }
 
-export const parseJS: typeof parse = (code: string, options: any) => {
+export const parseJS: typeof parse = (code, options) => {
   assert(
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`
