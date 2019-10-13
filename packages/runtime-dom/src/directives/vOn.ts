@@ -1,3 +1,5 @@
+import { isArray } from '@vue/shared'
+
 const modifierGuards: Record<string, (e: Event) => void | boolean> = {
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
@@ -53,8 +55,8 @@ export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
         !keysToMatch.some(
           k =>
             k === eventKey ||
-            (Array.isArray(keyNames[k])
-              ? keyNames[k].indexOf(eventKey) > -1
+            (isArray(keyNames[k])
+              ? keyNames[k].includes(eventKey)
               : eventKey === keyNames[k])
         )
       ) {
