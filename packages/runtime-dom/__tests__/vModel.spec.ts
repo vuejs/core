@@ -9,12 +9,16 @@ import {
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
-  const event = new Event(type, { bubbles: true })
+  const event = new Event(type)
   el.dispatchEvent(event)
 }
 
 const withVModel = (node: VNode, arg: any, mods?: any) =>
   applyDirectives(node, [[vModelDynamic, arg, '', mods]])
+
+const setValue = function(this: any, value: any) {
+  this.value = value
+}
 
 let app: any, root: any
 
@@ -22,10 +26,6 @@ beforeEach(() => {
   app = createApp()
   root = document.createElement('div') as any
 })
-
-const setValue = function(this: any, value: any) {
-  this.value = value
-}
 
 describe('vModel', () => {
   it('should work with text input', async () => {
