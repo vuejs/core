@@ -23,6 +23,10 @@ beforeEach(() => {
   root = document.createElement('div') as any
 })
 
+const setValue = function(this: any, value: any) {
+  this.value = value
+}
+
 describe('vModel', () => {
   it('should work with text input', async () => {
     const component = createComponent({
@@ -33,9 +37,7 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              'onUpdate:modelValue': (val: any) => {
-                this.value = val
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           )
@@ -66,9 +68,7 @@ describe('vModel', () => {
         return [
           withVModel(
             h('textarea', {
-              'onUpdate:modelValue': (val: any) => {
-                this.value = val
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           )
@@ -169,9 +169,7 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'checkbox',
-              'onUpdate:modelValue': (val: any) => {
-                this.value = val
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           )
@@ -205,9 +203,7 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'foo',
               value: 'foo',
-              'onUpdate:modelValue': (value: any) => {
-                this.value = value
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           ),
@@ -216,9 +212,7 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'bar',
               value: 'bar',
-              'onUpdate:modelValue': (value: any) => {
-                this.value = value
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           )
@@ -278,9 +272,7 @@ describe('vModel', () => {
             h('input', {
               type: 'radio',
               value: 'foo',
-              'onUpdate:modelValue': (val: any) => {
-                this.value = val
-              }
+              'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
           )
@@ -314,9 +306,7 @@ describe('vModel', () => {
               'select',
               {
                 value: null,
-                'onUpdate:modelValue': (val: any) => {
-                  this.value = val
-                }
+                'onUpdate:modelValue': setValue.bind(this)
               },
               [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
             ),
@@ -361,9 +351,7 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': (val: any) => {
-                  this.value = val
-                }
+                'onUpdate:modelValue': setValue.bind(this)
               },
               [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
             ),
