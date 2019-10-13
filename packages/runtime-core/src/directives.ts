@@ -91,17 +91,14 @@ function applyDirective(
 }
 
 // Directive, value, argument, modifiers
-export type DirectiveArguments<T> = Array<
-  | [Directive<T>]
-  | [Directive<T>, any]
-  | [Directive<T>, any, string]
-  | [Directive<T>, any, string, DirectiveModifiers]
+export type DirectiveArguments = Array<
+  | [Directive]
+  | [Directive, any]
+  | [Directive, any, string]
+  | [Directive, any, string, DirectiveModifiers]
 >
 
-export function applyDirectives<T>(
-  vnode: VNode<any, T>,
-  directives: DirectiveArguments<T>
-) {
+export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
   const instance = currentRenderingInstance
   if (instance !== null) {
     vnode = cloneVNode(vnode)
@@ -116,11 +113,11 @@ export function applyDirectives<T>(
   return vnode
 }
 
-export function invokeDirectiveHook<T>(
-  hook: DirectiveHook<T>,
+export function invokeDirectiveHook(
+  hook: Function | Function[],
   instance: ComponentInternalInstance | null,
-  vnode: VNode<any, T>,
-  prevVNode: VNode<any, T> | null = null
+  vnode: VNode,
+  prevVNode: VNode | null = null
 ) {
   const args = [vnode, prevVNode]
   if (isArray(hook)) {
