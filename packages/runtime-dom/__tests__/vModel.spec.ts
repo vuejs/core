@@ -90,6 +90,75 @@ describe('vModel', () => {
     expect(input.value).toEqual('bar')
   })
 
+  it('should support modifiers', async () => {
+    const component = createComponent({
+      data() {
+        return { number: null, trim: null, lazy: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              class: 'number',
+              'onUpdate:modelValue': (val: any) => {
+                this.number = val
+              }
+            }),
+            this.number,
+            {
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              class: 'trim',
+              'onUpdate:modelValue': (val: any) => {
+                this.trim = val
+              }
+            }),
+            this.trim,
+            {
+              trim: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              class: 'lazy',
+              'onUpdate:modelValue': (val: any) => {
+                this.lazy = val
+              }
+            }),
+            this.lazy,
+            {
+              lazy: true
+            }
+          )
+        ]
+      }
+    })
+    app.mount(component, root)
+
+    const number = root.querySelector('.number')
+    const trim = root.querySelector('.trim')
+    const lazy = root.querySelector('.lazy')
+    const data = root._vnode.component.data
+
+    number.value = '+01.2'
+    triggerEvent('input', number)
+    await nextTick()
+    expect(data.number).toEqual(1.2)
+
+    trim.value = '    hello, world    '
+    triggerEvent('input', trim)
+    await nextTick()
+    expect(data.trim).toEqual('hello, world')
+
+    lazy.value = 'foo'
+    triggerEvent('change', lazy)
+    await nextTick()
+    expect(data.lazy).toEqual('foo')
+  })
+
   it('should work with checkbox', async () => {
     const component = createComponent({
       data() {
@@ -270,6 +339,7 @@ describe('vModel', () => {
 
     foo.selected = false
     bar.selected = true
+    triggerEvent('change', input)
     await nextTick()
     expect(data.value).toEqual('bar')
 
@@ -316,11 +386,13 @@ describe('vModel', () => {
 
     foo.selected = false
     bar.selected = true
+    triggerEvent('change', input)
     await nextTick()
     expect(data.value).toMatchObject(['bar'])
 
     foo.selected = true
     bar.selected = true
+    triggerEvent('change', input)
     await nextTick()
     expect(data.value).toMatchObject(['foo', 'bar'])
 
