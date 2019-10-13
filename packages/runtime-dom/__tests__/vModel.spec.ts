@@ -271,7 +271,17 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'radio',
+              class: 'foo',
               value: 'foo',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          ),
+          withVModel(
+            h('input', {
+              type: 'radio',
+              class: 'bar',
+              value: 'bar',
               'onUpdate:modelValue': setValue.bind(this)
             }),
             this.value
@@ -281,17 +291,34 @@ describe('vModel', () => {
     })
     app.mount(component, root)
 
-    const input = root.querySelector('input')
+    const foo = root.querySelector('.foo')
+    const bar = root.querySelector('.bar')
     const data = root._vnode.component.data
 
-    input.checked = true
-    triggerEvent('change', input)
+    foo.checked = true
+    triggerEvent('change', foo)
     await nextTick()
     expect(data.value).toEqual('foo')
 
-    data.value = false
+    bar.checked = true
+    triggerEvent('change', bar)
     await nextTick()
-    expect(input.checked).toEqual(false)
+    expect(data.value).toEqual('bar')
+
+    data.value = null
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(false)
+
+    data.value = 'foo'
+    await nextTick()
+    expect(foo.checked).toEqual(true)
+    expect(bar.checked).toEqual(false)
+
+    data.value = 'bar'
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+    expect(bar.checked).toEqual(true)
   })
 
   it('should work with single select', async () => {
