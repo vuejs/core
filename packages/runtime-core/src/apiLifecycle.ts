@@ -8,7 +8,7 @@ import { ComponentPublicInstance } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
-import { pauseTracking, resumeTracking } from '@vue/reactivity'
+import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
 
 function injectHook(
   type: LifecycleHooks,
@@ -63,8 +63,20 @@ export const onBeforeUpdate = createLifecycleInjector(LifecycleHooks.BEFORE_UPDA
 export const onUpdated = createLifecycleInjector(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createLifecycleInjector(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createLifecycleInjector(LifecycleHooks.UNMOUNTED)
-export const onRenderTriggered = createLifecycleInjector(LifecycleHooks.RENDER_TRIGGERED)
-export const onRenderTracked = createLifecycleInjector(LifecycleHooks.RENDER_TRACKED)
+
+export function onRenderTriggered(
+  hook: (e: DebuggerEvent) => void,
+  target: ComponentInternalInstance | null = currentInstance
+) {
+  injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
+}
+
+export function onRenderTracked(
+  hook: (e: DebuggerEvent) => void,
+  target: ComponentInternalInstance | null = currentInstance
+) {
+  injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)
+}
 
 export function onErrorCaptured(
   hook: (
