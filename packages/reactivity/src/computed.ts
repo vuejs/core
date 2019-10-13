@@ -7,7 +7,7 @@ export interface ComputedRef<T> extends WritableComputedRef<T> {
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
-  readonly effect: ReactiveEffect<T>
+  readonly effect: ReactiveEffect
 }
 
 export interface WritableComputedOptions<T> {
