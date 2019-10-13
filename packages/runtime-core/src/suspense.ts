@@ -68,10 +68,10 @@ export function normalizeSuspenseChildren(
       content: normalizeVNode(isFunction(d) ? d() : d),
       fallback: normalizeVNode(isFunction(fallback) ? fallback() : fallback)
     }
-  } else {
-    return {
-      content: normalizeVNode(children as VNodeChild),
-      fallback: normalizeVNode(null)
-    }
+  }
+
+  return {
+    content: normalizeVNode(children as VNodeChild),
+    fallback: normalizeVNode(null)
   }
 }
