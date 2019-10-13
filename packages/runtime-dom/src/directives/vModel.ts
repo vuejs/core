@@ -1,4 +1,5 @@
 import {
+  Directive,
   DirectiveHooks,
   VNode,
   DirectiveBinding,
@@ -35,9 +36,7 @@ function toNumber(val: string): number | string {
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
-export const vModelText: DirectiveHooks<
-  HTMLInputElement | HTMLTextAreaElement
-> = {
+export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
   beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el.value = value
     const assign = getModelAssigner(vnode)
@@ -79,7 +78,7 @@ export const vModelText: DirectiveHooks<
   }
 }
 
-export const vModelCheckbox: DirectiveHooks<HTMLInputElement> = {
+export const vModelCheckbox: Directive<HTMLInputElement> = {
   beforeMount(el, binding, vnode) {
     setChecked(el, binding, vnode)
     const assign = getModelAssigner(vnode)
@@ -114,7 +113,7 @@ function setChecked(
     : !!value
 }
 
-export const vModelRadio: DirectiveHooks<HTMLInputElement> = {
+export const vModelRadio: Directive<HTMLInputElement> = {
   beforeMount(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     const assign = getModelAssigner(vnode)
@@ -127,7 +126,7 @@ export const vModelRadio: DirectiveHooks<HTMLInputElement> = {
   }
 }
 
-export const vModelSelect: DirectiveHooks<HTMLSelectElement> = {
+export const vModelSelect: Directive<HTMLSelectElement> = {
   // use mounted & updated because <select> relies on its children <option>s.
   mounted(el, { value }, vnode) {
     setSelected(el, value)
@@ -183,7 +182,7 @@ function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
 }
 
-export const vModelDynamic: DirectiveHooks<
+export const vModelDynamic: Directive<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
   beforeMount(el, binding, vnode) {
@@ -212,21 +211,21 @@ function callModelHook(
   let modelToUse: DirectiveHooks
   switch (el.tagName) {
     case 'SELECT':
-      modelToUse = vModelSelect
+      modelToUse = vModelSelect as DirectiveHooks
       break
     case 'TEXTAREA':
-      modelToUse = vModelText
+      modelToUse = vModelText as DirectiveHooks
       break
     default:
       switch (el.type) {
         case 'checkbox':
-          modelToUse = vModelCheckbox
+          modelToUse = vModelCheckbox as DirectiveHooks
           break
         case 'radio':
-          modelToUse = vModelRadio
+          modelToUse = vModelRadio as DirectiveHooks
           break
         default:
-          modelToUse = vModelText
+          modelToUse = vModelText as DirectiveHooks
       }
   }
   const fn = modelToUse[hook]
