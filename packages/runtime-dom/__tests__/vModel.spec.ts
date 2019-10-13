@@ -232,4 +232,102 @@ describe('vModel', () => {
     await nextTick()
     expect(input.checked).toEqual(false)
   })
+
+  it('should work with single select', async () => {
+    const component = createComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                'onUpdate:modelValue': (val: any) => {
+                  this.value = val
+                }
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    app.mount(component, root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    foo.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('foo')
+
+    foo.selected = false
+    bar.selected = true
+    await nextTick()
+    expect(data.value).toEqual('bar')
+
+    data.value = 'foo'
+    await nextTick()
+    expect(input.value).toEqual('foo')
+  })
+
+  it('should work with multiple select', async () => {
+    const component = createComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': (val: any) => {
+                  this.value = val
+                }
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+            ),
+            this.value
+          )
+        ]
+      }
+    })
+    app.mount(component, root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    foo.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject(['foo'])
+
+    foo.selected = false
+    bar.selected = true
+    await nextTick()
+    expect(data.value).toMatchObject(['bar'])
+
+    foo.selected = true
+    bar.selected = true
+    await nextTick()
+    expect(data.value).toMatchObject(['foo', 'bar'])
+
+    foo.selected = false
+    bar.selected = false
+    data.value = ['foo']
+    await nextTick()
+    expect(foo.selected).toEqual(true)
+  })
 })
