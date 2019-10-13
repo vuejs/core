@@ -38,6 +38,12 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         ])
     : createSimpleExpression('onUpdate:modelValue', true)
 
+  const value = dir.modifiers.includes('number')
+    ? `Number($event)`
+    : dir.modifiers.includes('trim')
+      ? `$event.trim()`
+      : `$event`
+
   const props = [
     createObjectProperty(propName, dir.exp!),
     createObjectProperty(
@@ -45,7 +51,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       createCompoundExpression([
         `$event => (`,
         ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        ` = $event)`
+        ` = ${value})`
       ])
     )
   ]
