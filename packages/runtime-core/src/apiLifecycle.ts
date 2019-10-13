@@ -68,21 +68,15 @@ const createLifecycleInjector = <T extends Function = Function>(
 export const onBeforeMount = createLifecycleInjector(
   LifecycleHooks.BEFORE_MOUNT
 )
-export const onMounted = createLifecycleInjector<Function>(
-  LifecycleHooks.MOUNTED
-)
-export const onBeforeUpdate = createLifecycleInjector<Function>(
+export const onMounted = createLifecycleInjector(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = createLifecycleInjector(
   LifecycleHooks.BEFORE_UPDATE
 )
-export const onUpdated = createLifecycleInjector<Function>(
-  LifecycleHooks.UPDATED
-)
-export const onBeforeUnmount = createLifecycleInjector<Function>(
+export const onUpdated = createLifecycleInjector(LifecycleHooks.UPDATED)
+export const onBeforeUnmount = createLifecycleInjector(
   LifecycleHooks.BEFORE_UNMOUNT
 )
-export const onUnmounted = createLifecycleInjector<Function>(
-  LifecycleHooks.UNMOUNTED
-)
+export const onUnmounted = createLifecycleInjector(LifecycleHooks.UNMOUNTED)
 export const onRenderTriggered = createLifecycleInjector<DebuggerEventHook>(
   LifecycleHooks.RENDER_TRIGGERED
 )
