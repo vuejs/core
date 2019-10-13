@@ -1,9 +1,9 @@
-const fs = require('fs')
-const path = require('path')
-const ts = require('rollup-plugin-typescript2')
-const replace = require('rollup-plugin-replace')
-const alias = require('rollup-plugin-alias')
-const json = require('rollup-plugin-json')
+import fs from 'fs'
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
+import replace from 'rollup-plugin-replace'
+import alias from 'rollup-plugin-alias'
+import json from 'rollup-plugin-json'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -68,7 +68,7 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
-module.exports = packageConfigs
+export default packageConfigs
 
 function createConfig(output, plugins = []) {
   const isProductionBuild =
