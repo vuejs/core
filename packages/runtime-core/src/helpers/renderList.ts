@@ -1,7 +1,7 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
 
-const isIterable = (object: any) =>
+const isIterable = (object: any): boolean =>
   isArray(object) ||
   isString(object) ||
   (isObject(object) && object[Symbol.iterator as any])
