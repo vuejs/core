@@ -48,13 +48,11 @@ function injectHook(
   }
 }
 
-function createLifecycleInjector(lifecycle: LifecycleHooks): Function {
-  return function(
-    hook: Function,
-    target: ComponentInternalInstance | null = currentInstance
-  ) {
-    injectHook(lifecycle, hook, target)
-  }
+const createLifecycleInjector = (lifecycle: LifecycleHooks): Function => function(
+  hook: Function,
+  target: ComponentInternalInstance | null = currentInstance
+) {
+  injectHook(lifecycle, hook, target)
 }
 
 export const onBeforeMount = createLifecycleInjector(LifecycleHooks.BEFORE_MOUNT)
