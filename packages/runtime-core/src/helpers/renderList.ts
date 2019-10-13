@@ -1,17 +1,17 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
 
-const isIterable = (object: any): boolean =>
-  isArray(object) ||
-  isString(object) ||
-  (isObject(object) && object[Symbol.iterator as any])
+const isIterableSource = (source: any): boolean =>
+  isArray(source) ||
+  isString(source) ||
+  (isObject(source) && source[Symbol.iterator as any])
 
 export function renderList(
   source: any,
   renderItem: (value: any, key: string | number, index?: number) => VNodeChild
 ): VNodeChild[] {
   let ret: VNodeChild[] = []
-  if (isIterable(source)) {
+  if (isIterableSource(source)) {
     ret = Array.from(source as Iterable<any>, renderItem)
   } else if (typeof source === 'number') {
     for (let i = 0; i < source; i++) {
