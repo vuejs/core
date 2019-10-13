@@ -9,6 +9,7 @@ describe('toString', () => {
   "a": "b"
 }</div></div>`)
   })
+
   it('should return VNode', () => {
     const root = nodeOps.createElement('div')
 
