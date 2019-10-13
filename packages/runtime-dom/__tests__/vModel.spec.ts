@@ -360,9 +360,21 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toEqual('bar')
 
+    foo.selected = false
+    bar.selected = false
     data.value = 'foo'
     await nextTick()
     expect(input.value).toEqual('foo')
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+
+    foo.selected = true
+    bar.selected = false
+    data.value = 'bar'
+    await nextTick()
+    expect(input.value).toEqual('bar')
+    expect(foo.selected).toEqual(false)
+    expect(bar.selected).toEqual(true)
   })
 
   it('should work with multiple select', async () => {
@@ -415,6 +427,15 @@ describe('vModel', () => {
     bar.selected = false
     data.value = ['foo']
     await nextTick()
+    expect(input.value).toEqual('foo')
     expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+
+    foo.selected = false
+    bar.selected = false
+    data.value = ['foo', 'bar']
+    await nextTick()
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
   })
 })

@@ -84,7 +84,7 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
         if (checked) {
           assign(modelValue.concat(elementValue))
         } else {
-          const index = modelValue.findIndex(el => looseEqual(el, elementValue))
+          const index = looseIndexOf(modelValue, elementValue)
           if (index > -1) {
             const filtered = [...modelValue]
             filtered.splice(index, 1)
