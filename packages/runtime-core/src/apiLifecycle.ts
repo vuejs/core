@@ -83,6 +83,10 @@ export const onRenderTriggered = createLifecycleInjector<DebuggerEventHook>(
 export const onRenderTracked = createLifecycleInjector<DebuggerEventHook>(
   LifecycleHooks.RENDER_TRACKED
 )
-export const onErrorCaptured = createLifecycleInjector<ErrorCapturedHook>(
-  LifecycleHooks.ERROR_CAPTURED
-)
+
+export function onErrorCaptured(
+  hook: ErrorCapturedHook,
+  target: ComponentInternalInstance | null = currentInstance
+) {
+  injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
+}
