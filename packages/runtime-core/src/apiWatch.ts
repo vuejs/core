@@ -203,6 +203,24 @@ function doWatch(
   }
 }
 
+function getValueByPath<T>(
+  object: any,
+  path: string,
+  fallback?: T
+): T | undefined {
+  const pathSegments = path.split('.')
+
+  for (let i = 0; i < pathSegments.length; i++) {
+    if (object[pathSegments[i]]) {
+      object = object[pathSegments[i]]
+    } else {
+      return fallback
+    }
+  }
+
+  return object
+}
+
 // this.$watch
 export function instanceWatch(
   this: ComponentInternalInstance,
@@ -211,7 +229,9 @@ export function instanceWatch(
   options?: WatchOptions
 ): StopHandle {
   const ctx = this.renderProxy!
-  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
+  const getter = isString(source)
+    ? () => getValueByPath(ctx, source)
+    : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)
   return stop

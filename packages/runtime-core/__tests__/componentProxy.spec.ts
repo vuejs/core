@@ -2,7 +2,8 @@ import {
   createApp,
   getCurrentInstance,
   nodeOps,
-  mockWarn
+  mockWarn,
+  nextTick
 } from '@vue/runtime-test'
 import { ComponentInternalInstance } from '../src/component'
 
@@ -128,5 +129,39 @@ describe('component: proxy', () => {
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
     expect(instance!.user.foo).toBe(1)
+  })
+
+  it('watch', async () => {
+    const foobar = jest.fn()
+
+    const app = createApp()
+    let instanceProxy: any
+    const Comp = {
+      data() {
+        return {
+          foo: {
+            bar: 1,
+            baz: 2
+          }
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      },
+      render() {
+        return null
+      }
+    }
+    app.mount(Comp, nodeOps.createElement('div'))
+    instanceProxy.$watch('foo.bar', foobar)
+
+    instanceProxy.foo.bar++
+    await nextTick()
+    expect(foobar).toHaveBeenCalledTimes(1)
+    expect(foobar.mock.calls[0][0]).toBe(2)
+
+    instanceProxy.foo.baz++
+    await nextTick()
+    expect(foobar).toHaveBeenCalledTimes(1)
   })
 })
