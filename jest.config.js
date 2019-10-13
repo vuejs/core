@@ -1,7 +1,10 @@
+const pkg = require('./packages/vue/package.json')
+
 module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
+    __VERSION__: pkg.version,
     __BROWSER__: false,
     __JSDOM__: true,
     __FEATURE_OPTIONS__: true,

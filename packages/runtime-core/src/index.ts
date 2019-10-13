@@ -85,5 +85,4 @@ export {
 } from './directives'
 export { SuspenseBoundary } from './suspense'
 
-import packageJson from '../package.json'
-export const version = packageJson.version
+export const version = __VERSION__

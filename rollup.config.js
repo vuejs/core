@@ -4,6 +4,7 @@ const ts = require('rollup-plugin-typescript2')
 const replace = require('rollup-plugin-replace')
 const alias = require('rollup-plugin-alias')
 const json = require('rollup-plugin-json')
+const runtimeCorePkg = require('./packages/runtime-core/package.json')
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -136,6 +137,7 @@ function createConfig(output, plugins = []) {
 function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
+    __VERSION__: `"${runtimeCorePkg.version}"`,
     __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
