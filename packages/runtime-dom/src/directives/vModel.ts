@@ -79,15 +79,22 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
+      const checked = el.checked
       if (isArray(modelValue)) {
-        const i = looseIndexOf(modelValue, elementValue)
-        if (i > -1) {
-          assign([...modelValue.slice(0, i), ...modelValue.slice(i + 1)])
-        } else {
+        if (checked) {
           assign(modelValue.concat(elementValue))
+        } else {
+          const index = modelValue.findIndex(el => looseEqual(el, elementValue))
+          if (index > -1) {
+            const filtered = [...modelValue]
+            filtered.splice(index, 1)
+            assign(filtered)
+          } else {
+            assign(modelValue)
+          }
         }
       } else {
-        assign(el.checked)
+        assign(checked)
       }
     })
   },
