@@ -1,4 +1,4 @@
-import { handleError, ErrorCodes } from './errorHandling'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
@@ -69,11 +69,7 @@ function flushJobs(seenJobs?: JobCountMap) {
         }
       }
     }
-    try {
-      job()
-    } catch (err) {
-      handleError(err, null, ErrorCodes.SCHEDULER)
-    }
+    callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
   }
   flushPostFlushCbs()
   isFlushing = false
