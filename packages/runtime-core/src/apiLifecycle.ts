@@ -48,7 +48,7 @@ function injectHook(
   }
 }
 
-function hookInjector(lifecycle: LifecycleHooks) : Function {
+function createLifecycleInjector(lifecycle: LifecycleHooks): Function {
   return function(
     hook: Function,
     target: ComponentInternalInstance | null = currentInstance
