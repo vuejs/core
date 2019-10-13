@@ -57,14 +57,14 @@ function createLifecycleInjector(lifecycle: LifecycleHooks): Function {
   }
 }
 
-export const onBeforeMount = hookInjector(LifecycleHooks.BEFORE_MOUNT)
-export const onMounted = hookInjector(LifecycleHooks.MOUNTED)
-export const onBeforeUpdate = hookInjector(LifecycleHooks.BEFORE_UPDATE)
-export const onUpdated = hookInjector(LifecycleHooks.UPDATED)
-export const onBeforeUnmount = hookInjector(LifecycleHooks.BEFORE_UNMOUNT)
-export const onUnmounted = hookInjector(LifecycleHooks.UNMOUNTED)
-export const onRenderTriggered = hookInjector(LifecycleHooks.RENDER_TRIGGERED)
-export const onRenderTracked = hookInjector(LifecycleHooks.RENDER_TRACKED)
+export const onBeforeMount = createLifecycleInjector(LifecycleHooks.BEFORE_MOUNT)
+export const onMounted = createLifecycleInjector(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = createLifecycleInjector(LifecycleHooks.BEFORE_UPDATE)
+export const onUpdated = createLifecycleInjector(LifecycleHooks.UPDATED)
+export const onBeforeUnmount = createLifecycleInjector(LifecycleHooks.BEFORE_UNMOUNT)
+export const onUnmounted = createLifecycleInjector(LifecycleHooks.UNMOUNTED)
+export const onRenderTriggered = createLifecycleInjector(LifecycleHooks.RENDER_TRIGGERED)
+export const onRenderTracked = createLifecycleInjector(LifecycleHooks.RENDER_TRACKED)
 
 export function onErrorCaptured(
   hook: (
