@@ -13,7 +13,8 @@ const triggerEvent = (type: string, el: Element) => {
   el.dispatchEvent(event)
 }
 
-const withVModel = (node: VNode) => applyDirectives(node, [[vModelDynamic]])
+const withVModel = (node: VNode, arg: any, mods?: any) =>
+  applyDirectives(node, [[vModelDynamic, arg, '', mods]])
 
 let app: any, root: any
 
@@ -32,11 +33,11 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              vModel: this.value,
               'onUpdate:modelValue': (val: any) => {
                 this.value = val
               }
-            })
+            }),
+            this.value
           )
         ]
       }
@@ -65,11 +66,11 @@ describe('vModel', () => {
         return [
           withVModel(
             h('textarea', {
-              vModel: this.value,
               'onUpdate:modelValue': (val: any) => {
                 this.value = val
               }
-            })
+            }),
+            this.value
           )
         ]
       }
@@ -99,11 +100,11 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'checkbox',
-              vModel: this.value,
               'onUpdate:modelValue': (val: any) => {
                 this.value = val
               }
-            })
+            }),
+            this.value
           )
         ]
       }
@@ -135,22 +136,22 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'foo',
               value: 'foo',
-              vModel: this.value,
               'onUpdate:modelValue': () => {
                 this.value.push('foo' as never)
               }
-            })
+            }),
+            this.value
           ),
           withVModel(
             h('input', {
               type: 'checkbox',
               class: 'bar',
               value: 'bar',
-              vModel: this.value,
               'onUpdate:modelValue': () => {
                 this.value.push('bar' as never)
               }
-            })
+            }),
+            this.value
           )
         ]
       }
@@ -207,11 +208,12 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'radio',
-              vModel: this.value,
+              value: 'foo',
               'onUpdate:modelValue': (val: any) => {
                 this.value = val
               }
-            })
+            }),
+            this.value
           )
         ]
       }
@@ -224,7 +226,7 @@ describe('vModel', () => {
     input.checked = true
     triggerEvent('change', input)
     await nextTick()
-    expect(data.value).toEqual(true)
+    expect(data.value).toEqual('foo')
 
     data.value = false
     await nextTick()
