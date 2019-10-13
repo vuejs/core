@@ -21,6 +21,7 @@ import {
 import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './createRenderer'
 import { WatchHandler } from './apiOptions'
+import { Refs } from 'packages/reactivity/src/ref'
 
 export interface WatchOptions {
   lazy?: boolean
@@ -48,8 +49,8 @@ const invoke = (fn: Function) => fn()
 export function watch(effect: SimpleEffect, options?: WatchOptions): StopHandle
 
 // overload #2: single source + cb
-export function watch<T>(
-  source: WatcherSource<T>,
+export function watch<T extends Ref<T> | (() => T) | Refs<T>>(
+  source: T,
   cb: WatchHandler<T>,
   options?: WatchOptions
 ): StopHandle
@@ -66,7 +67,7 @@ export function watch<T extends WatcherSource<unknown>[]>(
 ): StopHandle
 
 // implementation
-export function watch<T = any>(
+export function watch<T>(
   effectOrSource: WatcherSource<T> | WatcherSource<T>[] | SimpleEffect,
   cbOrOptions?: WatchHandler<T> | WatchOptions,
   options?: WatchOptions

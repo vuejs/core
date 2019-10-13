@@ -10,6 +10,8 @@ export interface Ref<T = any> {
   value: UnwrapRef<T>
 }
 
+export type Refs<T> = { [K in keyof T]: Ref<T[K]> }
+
 const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
 
 export function ref<T extends Ref>(raw: T): T
@@ -37,9 +39,7 @@ export function isRef(v: any): v is Ref {
   return v ? v[refSymbol] === true : false
 }
 
-export function toRefs<T extends object>(
-  object: T
-): { [K in keyof T]: Ref<T[K]> } {
+export function toRefs<T extends object>(object: T): Refs<T> {
   const ret: any = {}
   for (const key in object) {
     ret[key] = toProxyRef(object, key)
