@@ -1,8 +1,8 @@
 import { isArray, isPlainObject, objectToString } from '@vue/shared'
-import { VNode, isVNode } from '../vnode'
+import { isVNode, VNodeChild } from '../vnode'
 
 // for converting {{ interpolation }} values to displayed strings.
-export function toString(val: any): string | VNode {
+export function toString(val: any): VNodeChild {
   return val == null
     ? ''
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
