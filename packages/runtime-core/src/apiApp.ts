@@ -113,20 +113,18 @@ export function createAppAPI<HostNode, HostElement>(
       component(name: string, component?: Component): any {
         if (!component) {
           return context.components[name]
-        } else {
-          context.components[name] = component
-          return app
         }
+        context.components[name] = component
+        return app
       },
 
       directive(name: string, directive?: Directive) {
         // TODO directive name validation
         if (!directive) {
           return context.directives[name] as any
-        } else {
-          context.directives[name] = directive
-          return app
         }
+        context.directives[name] = directive
+        return app
       },
 
       mount(

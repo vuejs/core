@@ -152,10 +152,9 @@ export function h(
       }
       // props without children
       return createVNode(type, propsOrChildren)
-    } else {
-      // omit props
-      return createVNode(type, null, propsOrChildren)
     }
+    // omit props
+    return createVNode(type, null, propsOrChildren)
   } else {
     if (isVNode(children)) {
       children = [children]
