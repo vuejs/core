@@ -1,5 +1,3 @@
-import { isArray } from '@vue/shared'
-
 const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
 
 const modifierGuards: Record<
