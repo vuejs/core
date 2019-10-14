@@ -64,12 +64,12 @@ export interface SetupContext {
 
 export type RenderFunction = () => VNodeChild
 
-export interface ComponentInternalInstance<T = any> {
+export interface ComponentInternalInstance {
   type: FunctionalComponent | ComponentOptions
   parent: ComponentInternalInstance | null
   appContext: AppContext
   root: ComponentInternalInstance
-  vnode: VNode<any, T>
+  vnode: VNode
   next: VNode | null
   subTree: VNode
   update: ReactiveEffect
@@ -78,7 +78,7 @@ export interface ComponentInternalInstance<T = any> {
   provides: Data
 
   components: Record<string, Component>
-  directives: Record<string, Directive<T>>
+  directives: Record<string, Directive>
 
   asyncDep: Promise<any> | null
   asyncResult: any
