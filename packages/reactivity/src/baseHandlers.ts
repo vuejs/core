@@ -1,4 +1,4 @@
-import { reactive, readonly, toRaw } from './reactive'
+import { isReactive, isReadonly, reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
@@ -11,7 +11,7 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-function createGetter(isReadonly: boolean) {
+function createGetter(isReadonlyFlag: boolean) {
   return function get(target: any, key: string | symbol, receiver: any) {
     const res = Reflect.get(target, key, receiver)
     if (isSymbol(key) && builtInSymbols.has(key)) {
@@ -21,13 +21,18 @@ function createGetter(isReadonly: boolean) {
       return res.value
     }
     track(target, OperationTypes.GET, key)
-    return isObject(res)
-      ? isReadonly
-        ? // need to lazy access readonly and reactive here to avoid
-          // circular dependency
-          readonly(res)
+    if (!isObject(res)) {
+      return res
+    }
+    // need to lazy access readonly and reactive here to avoid
+    // circular dependency
+    return isReadonlyFlag
+      ? isReadonly(res)
+        ? res
+        : readonly(res)
+      : isReactive(res)
+        ? res
         : reactive(res)
-      : res
   }
 }
 
