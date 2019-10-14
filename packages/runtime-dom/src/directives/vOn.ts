@@ -31,11 +31,10 @@ const modifierKeys = ['ctrl', 'shift', 'alt', 'meta']
 type ModifierKeysProperty = 'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey'
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
-  return (event: Event) => {
+  return (event: MouseEvent | KeyboardEvent | TouchEvent) => {
     for (let modifier of modifiers) {
       if (
         modifier === 'exact' &&
-        event instanceof KeyboardEvent &&
         // Some of the modifierKeys are not specified as modifier, but is flagged true on the event
         modifierKeys.some(modifierKey => {
           modifiers.indexOf(modifierKey) === -1 &&
