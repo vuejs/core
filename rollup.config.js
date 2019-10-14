@@ -76,6 +76,7 @@ function createConfig(output, plugins = []) {
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBundlerESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
+  const isRuntimeCompileBuild = /^dist\/vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -120,7 +121,8 @@ function createConfig(output, plugins = []) {
         isProductionBuild,
         isBundlerESMBuild,
         (isGlobalBuild || isBrowserESMBuild) &&
-          !packageOptions.enableNonBrowserBranches
+          !packageOptions.enableNonBrowserBranches,
+        isRuntimeCompileBuild
       ),
       ...plugins
     ],
@@ -133,7 +135,12 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
+function createReplacePlugin(
+  isProduction,
+  isBundlerESMBuild,
+  isBrowserBuild,
+  isRuntimeCompileBuild
+) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
     __DEV__: isBundlerESMBuild
@@ -143,9 +150,11 @@ function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
         !isProduction,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
+    // support compile in browser?
+    __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean,
+    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
     __FEATURE_SUSPENSE__: true,
     // this is only used during tests
     __JSDOM__: false

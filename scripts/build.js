@@ -28,8 +28,12 @@ const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildAllMatching = args.all || args.a
+const lean = args.lean || args.l
 const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
-;(async () => {
+
+run()
+
+async function run() {
   if (!targets.length) {
     await buildAll(allTargets)
     checkAllSizes(allTargets)
@@ -37,7 +41,7 @@ const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
     await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
     checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
   }
-})()
+}
 
 async function buildAll(targets) {
   for (const target of targets) {
@@ -54,7 +58,6 @@ async function build(target) {
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
     (devOnly ? 'development' : 'production')
-
   await execa(
     'rollup',
     [
@@ -66,7 +69,8 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         args.types ? `TYPES:true` : ``,
-        prodOnly ? `PROD_ONLY:true` : ``
+        prodOnly ? `PROD_ONLY:true` : ``,
+        lean ? `LEAN:true` : ``
       ]
         .filter(Boolean)
         .join(',')
@@ -118,7 +122,7 @@ function checkAllSizes(targets) {
 
 function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
-  const esmProdBuild = `${pkgDir}/dist/${target}.esm-browser.prod.js`
+  const esmProdBuild = `${pkgDir}/dist/${target}.global.prod.js`
   if (fs.existsSync(esmProdBuild)) {
     const file = fs.readFileSync(esmProdBuild)
     const minSize = (file.length / 1024).toFixed(2) + 'kb'
