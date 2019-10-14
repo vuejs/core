@@ -72,20 +72,23 @@ type BailTypes =
 
 // Recursively unwraps nested value bindings.
 export type UnwrapRef<T> = {
-  computedRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
+  cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
+  wcRef: T extends WritableComputedRef<infer V> ? UnwrapRef<V> : T
   ref: T extends Ref<infer V> ? UnwrapRef<V> : T
   array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
   stop: T
 }[T extends ComputedRef<any>
-  ? 'computedRef'
-  : T extends Ref
-    ? 'ref'
-    : T extends Array<any>
-      ? 'array'
-      : T extends BailTypes
-        ? 'stop' // bail out on types that shouldn't be unwrapped
-        : T extends object ? 'object' : 'stop']
+  ? 'cRef'
+  : T extends WritableComputedRef<any>
+    ? 'wcRef'
+    : T extends Ref
+      ? 'ref'
+      : T extends Array<any>
+        ? 'array'
+        : T extends BailTypes
+          ? 'stop' // bail out on types that shouldn't be unwrapped
+          : T extends object ? 'object' : 'stop']
 
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
