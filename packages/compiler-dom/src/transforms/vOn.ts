@@ -36,7 +36,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   const runtimeModifiers = modifiers.filter(m => !EVENT_OPTION_MODIFIERS.has(m))
   let handler = createCallExpression(context.helper(V_ON_MODIFIERS_GUARD), [
     value,
-    JSON.stringify(runtimeModifiers.filter(NOT_KEY_MODIFIERS.has))
+    JSON.stringify(runtimeModifiers.filter(m => NOT_KEY_MODIFIERS.has(m)))
   ])
   if (
     // if event name is dynamic, always wrap with keys guard
@@ -55,7 +55,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     createObjectProperty('persistent', createSimpleExpression('true', false))
   ]
 
-  const eventOptionModifiers = modifiers.filter(EVENT_OPTION_MODIFIERS.has)
+  const eventOptionModifiers = modifiers.filter(m => EVENT_OPTION_MODIFIERS.has(m))
   if (eventOptionModifiers.length) {
     properties.push(
       createObjectProperty(
