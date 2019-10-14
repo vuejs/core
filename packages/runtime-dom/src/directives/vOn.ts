@@ -16,7 +16,7 @@ const modifierGuards: Record<string, (e: Event) => void | boolean> = {
 const keyNames: Record<string, string | string[]> = {
   esc: 'escape',
   // IE11 uses `Spacebar` for Space key name.
-  space: [' ', 'epacebar'],
+  space: [' ', 'spacebar'],
   up: 'arrowup',
   left: 'arrowleft',
   right: 'arrowright',
