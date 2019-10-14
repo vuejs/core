@@ -26,20 +26,18 @@ const keyNames: Record<string, string | string[]> = {
 }
 
 const modifierKeys = ['ctrl', 'shift', 'alt', 'meta']
-// Currently there's no way to let ts know 'ctrl' + 'Key' is 'ctrlKey'
-// https://github.com/microsoft/TypeScript/issues/12754
-type ModifierKeysProperty = 'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey'
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
-  return (event: MouseEvent | KeyboardEvent | TouchEvent) => {
+  return (event: Event) => {
     for (let modifier of modifiers) {
       if (
         modifier === 'exact' &&
         // Some of the modifierKeys are not specified as modifier, but is flagged true on the event
-        modifierKeys.some(modifierKey => {
-          modifiers.indexOf(modifierKey) === -1 &&
-            event[`${modifierKey}Key` as ModifierKeysProperty]
-        })
+        modifierKeys.some(
+          modifierKey =>
+            modifiers.indexOf(modifierKey) === -1 &&
+            (event as any)[`${modifierKey}Key`]
+        )
       ) {
         return
       }
@@ -47,7 +45,7 @@ export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
       if (guard && guard(event)) return
     }
     if ('key' in event) {
-      const eventKey = (event as any).key.toLowerCase()
+      const eventKey = (event['key'] as string).toLowerCase()
       const keysToMatch = modifiers.filter(m => !modifierGuards[m])
       if (
         // None of the provided key modifiers match the current event key
