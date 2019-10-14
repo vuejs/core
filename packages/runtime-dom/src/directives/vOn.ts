@@ -1,6 +1,13 @@
 import { isArray } from '@vue/shared'
 
-const modifierGuards: Record<string, (e: Event) => void | boolean> = {
+type ModifiersMap = Record<string, true>
+
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
+
+const modifierGuards: Record<
+  string,
+  (e: Event, modifiersMap?: ModifiersMap) => void | boolean
+> = {
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
   self: e => e.target !== e.currentTarget,
@@ -10,7 +17,12 @@ const modifierGuards: Record<string, (e: Event) => void | boolean> = {
   meta: e => !(e as any).metaKey,
   left: e => 'button' in e && (e as any).button !== 0,
   middle: e => 'button' in e && (e as any).button !== 1,
-  right: e => 'button' in e && (e as any).button !== 2
+  right: e => 'button' in e && (e as any).button !== 2,
+  exact: (e, map: ModifiersMap) =>
+    // Some of the system modifiers are not specified, but is flagged true on the event
+    systemModifiers.some(
+      modifierKey => !map[modifierKey] && (e as any)[`${modifierKey}Key`]
+    )
 }
 
 const keyNames: Record<string, string | string[]> = {
@@ -25,40 +37,35 @@ const keyNames: Record<string, string | string[]> = {
   delete: ['backspace', 'del']
 }
 
-const modifierKeys = ['ctrl', 'shift', 'alt', 'meta']
-
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
   return (event: Event) => {
-    for (let modifier of modifiers) {
-      if (
-        modifier === 'exact' &&
-        // Some of the modifierKeys are not specified as modifier, but is flagged true on the event
-        modifierKeys.some(
-          modifierKey =>
-            modifiers.indexOf(modifierKey) === -1 &&
-            (event as any)[`${modifierKey}Key`]
-        )
-      ) {
-        return
-      }
-      const guard = modifierGuards[modifier]
-      if (guard && guard(event)) return
+    const modifiersMap = modifiers.reduce(
+      (map, m) => ((map[m] = true), map),
+      {} as ModifiersMap
+    )
+    for (let i = 0; i < modifiers.length; i++) {
+      const guard = modifierGuards[modifiers[i]]
+      if (guard && guard(event, modifiersMap)) return
     }
-    if ('key' in event) {
-      const eventKey = (event['key'] as string).toLowerCase()
-      const keysToMatch = modifiers.filter(m => !modifierGuards[m])
-      if (
-        // None of the provided key modifiers match the current event key
-        !keysToMatch.some(
-          k =>
-            k === eventKey ||
-            (isArray(keyNames[k])
-              ? keyNames[k].includes(eventKey)
-              : eventKey === keyNames[k])
-        )
-      ) {
-        return
-      }
+    return fn(event)
+  }
+}
+
+export const vOnKeysGuard = (fn: Function, modifiers: string[]) => {
+  return (event: Event) => {
+    if (!('key' in event)) return
+    const eventKey = (event['key'] as string).toLowerCase()
+    if (
+      // None of the provided key modifiers match the current event key
+      !modifiers.some(
+        k =>
+          k === eventKey ||
+          (isArray(keyNames[k])
+            ? keyNames[k].includes(eventKey)
+            : eventKey === keyNames[k])
+      )
+    ) {
+      return
     }
     return fn(event)
   }
