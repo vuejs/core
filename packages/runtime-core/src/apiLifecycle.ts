@@ -50,10 +50,8 @@ function injectHook(
 
 const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
-) => (
-  hook: T,
-  target: ComponentInternalInstance | null = currentInstance
-) => injectHook(lifecycle, hook, target)
+) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  injectHook(lifecycle, hook, target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)

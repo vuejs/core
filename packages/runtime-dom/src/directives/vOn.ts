@@ -28,7 +28,6 @@ export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
   }
 }
 
-
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.
 const keyNames: Record<string, string | string[]> = {
