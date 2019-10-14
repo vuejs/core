@@ -1,4 +1,5 @@
 import { handleError, ErrorCodes } from './errorHandling'
+import { isArray } from '@vue/shared'
 
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
@@ -11,7 +12,7 @@ export function nextTick(fn?: () => void): Promise<void> {
 }
 
 export function queueJob(job: () => void) {
-  if (queue.indexOf(job) === -1) {
+  if (!queue.includes(job)) {
     queue.push(job)
     if (!isFlushing) {
       nextTick(flushJobs)
@@ -20,17 +21,18 @@ export function queueJob(job: () => void) {
 }
 
 export function queuePostFlushCb(cb: Function | Function[]) {
-  if (Array.isArray(cb)) {
-    postFlushCbs.push.apply(postFlushCbs, cb)
-  } else {
+  if (!isArray(cb)) {
     postFlushCbs.push(cb)
+  } else {
+    postFlushCbs.push(...cb)
   }
+
   if (!isFlushing) {
     nextTick(flushJobs)
   }
 }
 
-const dedupe = (cbs: Function[]): Function[] => Array.from(new Set(cbs))
+const dedupe = (cbs: Function[]): Function[] => [...new Set(cbs)]
 
 export function flushPostFlushCbs() {
   if (postFlushCbs.length) {
