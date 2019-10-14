@@ -238,8 +238,17 @@ export function setupStatefulComponent(
 ) {
   const Component = instance.type as ComponentOptions
 
-  if (__DEV__ && Component.name) {
-    validateComponentName(Component.name, instance.appContext.config)
+  if (__DEV__) {
+    if (Component.name) {
+      validateComponentName(Component.name, instance.appContext.config)
+    }
+    if (Component.components) {
+      const names = Object.keys(Component.components)
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i]
+        validateComponentName(name, instance.appContext.config)
+      }
+    }
   }
 
   // 1. create render proxy
