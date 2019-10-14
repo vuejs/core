@@ -1,6 +1,6 @@
 import {
   Directive,
-  DirectiveHooks,
+  ObjectDirective,
   VNode,
   DirectiveBinding,
   warn
@@ -102,7 +102,7 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding<HTMLInputElement>,
+  { value }: DirectiveBinding,
   vnode: VNode
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -201,31 +201,29 @@ export const vModelDynamic: Directive<
 
 function callModelHook(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
-  binding: DirectiveBinding<
-    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-  >,
+  binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: keyof DirectiveHooks
+  hook: keyof ObjectDirective
 ) {
-  let modelToUse: DirectiveHooks
+  let modelToUse: ObjectDirective
   switch (el.tagName) {
     case 'SELECT':
-      modelToUse = vModelSelect as DirectiveHooks
+      modelToUse = vModelSelect as ObjectDirective
       break
     case 'TEXTAREA':
-      modelToUse = vModelText as DirectiveHooks
+      modelToUse = vModelText as ObjectDirective
       break
     default:
       switch (el.type) {
         case 'checkbox':
-          modelToUse = vModelCheckbox as DirectiveHooks
+          modelToUse = vModelCheckbox as ObjectDirective
           break
         case 'radio':
-          modelToUse = vModelRadio as DirectiveHooks
+          modelToUse = vModelRadio as ObjectDirective
           break
         default:
-          modelToUse = vModelText as DirectiveHooks
+          modelToUse = vModelText as ObjectDirective
       }
   }
   const fn = modelToUse[hook]

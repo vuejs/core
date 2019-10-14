@@ -34,7 +34,7 @@ export type DirectiveHook<T = any> = (
   prevVNode: VNode | null
 ) => void
 
-export interface DirectiveHooks<T = any> {
+export interface ObjectDirective<T = any> {
   beforeMount?: DirectiveHook<T>
   mounted?: DirectiveHook<T>
   beforeUpdate?: DirectiveHook<T>
@@ -43,7 +43,9 @@ export interface DirectiveHooks<T = any> {
   unmounted?: DirectiveHook<T>
 }
 
-export type Directive<T = any> = DirectiveHooks<T> | DirectiveHook<T>
+export type FunctionDirective<T = any> = DirectiveHook<T>
+
+export type Directive<T = any> = ObjectDirective<T> | FunctionDirective<T>
 
 type DirectiveModifiers = Record<string, boolean>
 
@@ -67,11 +69,11 @@ function applyDirective(
     directive = {
       mounted: directive,
       updated: directive
-    } as DirectiveHooks
+    } as ObjectDirective
   }
 
   for (const key in directive) {
-    const hook = directive[key as keyof DirectiveHooks]!
+    const hook = directive[key as keyof ObjectDirective]!
     const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue

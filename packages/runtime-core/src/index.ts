@@ -81,7 +81,7 @@ export {
   Directive,
   DirectiveBinding,
   DirectiveHook,
-  DirectiveHooks,
+  ObjectDirective,
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './suspense'
