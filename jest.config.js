@@ -4,6 +4,7 @@ module.exports = {
     __DEV__: true,
     __BROWSER__: false,
     __JSDOM__: true,
+    __RUNTIME_COMPILE__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
   },

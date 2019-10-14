@@ -48,7 +48,7 @@ const publicPropertiesMap = {
   $options: 'type'
 }
 
-export const PublicInstanceProxyHandlers = {
+export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
     const { renderContext, data, props, propsProxy } = target
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -76,11 +76,7 @@ export const PublicInstanceProxyHandlers = {
     }
     return target.user[key]
   },
-  // this trap is only called in browser-compiled render functions that use
-  // `with (this) {}`
-  has(_: any, key: string): boolean {
-    return key[0] !== '_' && !globalsWhitelist.has(key)
-  },
+
   set(target: ComponentInternalInstance, key: string, value: any): boolean {
     const { data, renderContext } = target
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -103,5 +99,13 @@ export const PublicInstanceProxyHandlers = {
       target.user[key] = value
     }
     return true
+  }
+}
+
+if (__RUNTIME_COMPILE__) {
+  // this trap is only called in browser-compiled render functions that use
+  // `with (this) {}`
+  PublicInstanceProxyHandlers.has = (_: any, key: string): boolean => {
+    return key[0] !== '_' && !globalsWhitelist.has(key)
   }
 }

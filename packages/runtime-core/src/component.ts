@@ -320,7 +320,7 @@ function finishComponentSetup(
 ) {
   const Component = instance.type as ComponentOptions
   if (!instance.render) {
-    if (Component.template && !Component.render) {
+    if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
       if (compile) {
         Component.render = compile(Component.template, {
           onError(err: CompilerError) {
