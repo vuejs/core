@@ -39,7 +39,9 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     JSON.stringify(runtimeModifiers.filter(m => m in NOT_KEY_MODIFIERS))
   ])
   if (
-    key.type === NodeTypes.COMPOUND_EXPRESSION || // event name is dynamic, always wrap with keys guard
+    // if event name is dynamic, always wrap with keys guard
+    key.type === NodeTypes.COMPOUND_EXPRESSION ||
+    !(key.isStatic) ||
     key.content.toLowerCase() in KEYBOARD_EVENTS
   ) {
     handler = createCallExpression(context.helper(V_ON_KEYS_GUARD), [
@@ -49,7 +51,8 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   }
   const properties = [
     createObjectProperty('handler', handler),
-    createObjectProperty('persistent', createSimpleExpression('true', false)) // so the runtime knows the options never change
+    // so the runtime knows the options never change
+    createObjectProperty('persistent', createSimpleExpression('true', false))
   ]
 
   const eventOptionModifiers = modifiers.filter(
