@@ -130,8 +130,4 @@ describe('reactivity/ref', () => {
     expect(dummyX).toBe(4)
     expect(dummyY).toBe(5)
   })
-
-  test('refSymbol __DEV__ branch', () => {
-    __DEV__ = false
-  })
 })
