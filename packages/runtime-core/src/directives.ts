@@ -31,7 +31,7 @@ export type DirectiveHook<T = any> = (
   el: T,
   binding: DirectiveBinding,
   vnode: VNode<any, T>,
-  prevVNode: VNode | null
+  prevVNode: VNode<any, T> | null
 ) => void
 
 export interface Directive<T = any> {
