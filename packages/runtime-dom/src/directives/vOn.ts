@@ -20,6 +20,17 @@ const modifierGuards: Record<
     modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
 }
 
+export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
+  return (event: Event) => {
+    for (let i = 0; i < modifiers.length; i++) {
+      const guard = modifierGuards[modifiers[i]]
+      if (guard && guard(event, modifiers)) return
+    }
+    return fn(event)
+  }
+}
+
+
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.
 const keyNames: Record<string, string | string[]> = {
@@ -30,16 +41,6 @@ const keyNames: Record<string, string | string[]> = {
   right: 'arrowright',
   down: 'arrowdown',
   delete: 'backspace'
-}
-
-export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
-  return (event: Event) => {
-    for (let i = 0; i < modifiers.length; i++) {
-      const guard = modifierGuards[modifiers[i]]
-      if (guard && guard(event, modifiers)) return
-    }
-    return fn(event)
-  }
 }
 
 export const vOnKeysGuard = (fn: Function, modifiers: string[]) => {
