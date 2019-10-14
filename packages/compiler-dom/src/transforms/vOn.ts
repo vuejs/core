@@ -23,10 +23,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
         JSON.stringify(modifiers.filter(m => !(m in EVENT_OPTION_MODIFIERS)))
       ])
     ),
-    createObjectProperty(
-      'persistent',
-      createSimpleExpression(true as any, true)
-    ) // so the runtime knows the options never change
+    createObjectProperty('persistent', createSimpleExpression('true', false)) // so the runtime knows the options never change
   ]
 
   const eventOptionModifiers = modifiers.filter(
@@ -40,7 +37,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
           eventOptionModifiers.map(modifier =>
             createObjectProperty(
               modifier,
-              createSimpleExpression(true as any, true)
+              createSimpleExpression('true', false)
             )
           )
         )
