@@ -1,10 +1,10 @@
-const pkg = require('./packages/vue/package.json')
+const lernaJson = require('./lerna.json')
 
 module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
-    __VERSION__: pkg.version,
+    __VERSION__: lernaJson.version,
     __BROWSER__: false,
     __JSDOM__: true,
     __RUNTIME_COMPILE__: true,
