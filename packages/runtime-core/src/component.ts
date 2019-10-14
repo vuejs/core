@@ -12,7 +12,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { AppContext, createAppContext } from './apiApp'
+import { AppContext, createAppContext, AppConfig } from './apiApp'
 import { Directive } from './directives'
 import { applyOptions, ComponentOptions } from './apiOptions'
 import {
@@ -21,7 +21,8 @@ import {
   capitalize,
   NOOP,
   isArray,
-  isObject
+  isObject,
+  NO
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
 import {
@@ -223,11 +224,37 @@ export const setCurrentInstance = (
   currentInstance = instance
 }
 
+const BuiltInTagSet = new Set(['slot', 'component'])
+const isBuiltInTag = (tag: string) => BuiltInTagSet.has(tag)
+
+export function validateComponentName(name: string, config: AppConfig) {
+  const appIsNativeTag = config.isNativeTag || NO
+  if (isBuiltInTag(name) || appIsNativeTag(name)) {
+    warn(
+      'Do not use built-in or reserved HTML elements as component id: ' + name
+    )
+  }
+}
+
 export function setupStatefulComponent(
   instance: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null
 ) {
   const Component = instance.type as ComponentOptions
+
+  if (__DEV__) {
+    if (Component.name) {
+      validateComponentName(Component.name, instance.appContext.config)
+    }
+    if (Component.components) {
+      const names = Object.keys(Component.components)
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i]
+        validateComponentName(name, instance.appContext.config)
+      }
+    }
+  }
+
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
