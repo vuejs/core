@@ -6,14 +6,14 @@ For full exposed APIs, see `src/index.ts`. You can also run `yarn build runtime-
 
 ## Building a Custom Renderer
 
-``` ts
+```ts
 import { createRenderer, createAppAPI } from '@vue/runtime-core'
 
 const { render, createApp } = createRenderer({
   pathcProp,
   insert,
   remove,
-  createElement,
+  createElement
   // ...
 })
 

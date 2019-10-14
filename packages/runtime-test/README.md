@@ -1,6 +1,6 @@
 # @vue/runtime-test
 
-``` js
+```js
 import {
   h,
   render,
@@ -11,12 +11,12 @@ import {
 } from '@vue/runtime-test'
 
 class App extends Component {
-  data () {
+  data() {
     return {
       msg: 'Hello World!'
     }
   }
-  render () {
+  render() {
     return h('div', this.msg)
   }
 }

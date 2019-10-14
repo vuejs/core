@@ -67,7 +67,7 @@ test('createComponent type inference', () => {
     }
   })
   // test TSX props inference
-  ;(<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']}/>)
+  ;<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']} />
 })
 
 test('type inference w/ optional props declaration', () => {
@@ -85,14 +85,14 @@ test('type inference w/ optional props declaration', () => {
       return h('div', this.msg)
     }
   })
-  ;(<Comp msg="hello"/>)
+  ;<Comp msg="hello" />
 })
 
 test('type inference w/ direct setup function', () => {
   const Comp = createComponent((props: { msg: string }) => {
     return () => <div>{props.msg}</div>
   })
-  ;(<Comp msg="hello"/>)
+  ;<Comp msg="hello" />
 })
 
 test('type inference w/ array props declaration', () => {
@@ -113,7 +113,7 @@ test('type inference w/ array props declaration', () => {
       this.c
     }
   })
-  ;(<Comp a={1} b={2}/>)
+  ;<Comp a={1} b={2} />
 })
 
 test('with legacy options', () => {

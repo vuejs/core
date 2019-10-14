@@ -11,8 +11,8 @@ jobs:
 
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "yarn.lock" }}
-          - v1-dependencies-
+            - v1-dependencies-{{ checksum "yarn.lock" }}
+            - v1-dependencies-
 
       - run: yarn --frozen-lockfile
 
@@ -23,3 +23,31 @@ jobs:
           key: v1-dependencies-{{ checksum "yarn.lock" }}
 
       - run: yarn test --ci --runInBand
+
+  lint:
+    docker:
+      - image: vuejs/ci
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "yarn.lock" }}
+            - v1-dependencies-
+
+      - run:
+          name: Installing Dependencies
+          command: yarn --frozen-lockfile
+
+      - save_cache:
+          paths:
+            - node_modules
+            - ~/.cache/yarn
+          key: v1-dependencies-{{ checksum "yarn.lock" }}
+
+      - run:
+          name: Linting Code Style
+          command: npx prettier --check "**/*.{ts,js,json,yaml,md,css}"

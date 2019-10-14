@@ -41,7 +41,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   if (
     // if event name is dynamic, always wrap with keys guard
     key.type === NodeTypes.COMPOUND_EXPRESSION ||
-    !(key.isStatic) ||
+    !key.isStatic ||
     key.content.toLowerCase() in KEYBOARD_EVENTS
   ) {
     handler = createCallExpression(context.helper(V_ON_KEYS_GUARD), [

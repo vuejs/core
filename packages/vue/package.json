@@ -12,7 +12,12 @@
   "unpkg": "dist/vue.global.js",
   "buildOptions": {
     "name": "Vue",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": [
+      "esm",
+      "cjs",
+      "global",
+      "esm-browser"
+    ]
   },
   "repository": {
     "type": "git",

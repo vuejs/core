@@ -9,7 +9,9 @@
   ],
   "types": "dist/server-renderer.d.ts",
   "buildOptions": {
-    "formats": ["cjs"]
+    "formats": [
+      "cjs"
+    ]
   },
   "repository": {
     "type": "git",

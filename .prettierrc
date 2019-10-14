@@ -1,3 +1,16 @@
 semi: false
 singleQuote: true
 printWidth: 80
+overrides:
+  - files: "*.ts"
+    parser: typescript
+  - files: "*.js"
+    parser: babel
+  - files: "*.json"
+    parser: json-stringify
+  - files: "*.yaml,.prettierrc"
+    parser: yaml
+  - files: "*.md"
+    parser: markdown
+  - files: "*.css"
+    parser: css

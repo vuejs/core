@@ -19,10 +19,12 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
 
 - If adding a new feature:
+
   - Add accompanying test case.
   - Provide a convincing reason to add this feature. Ideally, you should open a suggestion issue first and have it approved before working on it.
 
 - If fixing bug:
+
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
   - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `yarn test --coverage`.
@@ -41,7 +43,7 @@ You will need [Node.js](http://nodejs.org) **version 10+**, and [Yarn](https://y
 
 After cloning the repo, run:
 
-``` bash
+```bash
 $ yarn # install the dependencies of the project
 ```
 
@@ -61,7 +63,7 @@ The `build` script builds all public packages (packages without `private: true` 
 
 Packages to build can be specified with fuzzy matching:
 
-``` bash
+```bash
 # build runtime-core only
 yarn build runtime-core
 
@@ -78,13 +80,13 @@ By default, each package will be built in multiple distribution formats as speci
 
 For example, to build `runtime-core` with the global build only:
 
-``` bash
+```bash
 yarn build runtime-core -f global
 ```
 
 Multiple formats can be specified as a comma-separated list:
 
-``` bash
+```bash
 yarn build runtime-core -f esm,cjs
 ```
 
@@ -100,7 +102,7 @@ The `--types` flag will generate type declarations during the build and in addit
 
 The `dev` script bundles a target package (default: `vue`) in a specified format (default: `global`) in dev mode and watches for changes. This is useful when you want to load up a build in an HTML page for quick debugging:
 
-``` bash
+```bash
 $ yarn dev
 
 > rollup v1.19.4
@@ -115,7 +117,7 @@ $ yarn dev
 
 The `yarn test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
 
-``` bash
+```bash
 # run all tests
 $ yarn test
 
@@ -160,7 +162,7 @@ This project uses a [monorepo](https://github.com/lerna/lerna#about) structure a
 
 Note that when importing these packages, the `@vue/` prefix is needed:
 
-``` js
+```js
 import { h } from '@vue/runtime-core'
 ```
 

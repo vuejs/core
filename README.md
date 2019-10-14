@@ -5,6 +5,7 @@
 We have achieved most of the architectural goals and new features planned for v3:
 
 - Compiler
+
   - [x] Modular architecture
   - [x] "Block tree" optimization
   - [x] More aggressive static tree hoisting

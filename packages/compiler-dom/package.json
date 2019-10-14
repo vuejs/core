@@ -13,7 +13,11 @@
   "sideEffects": false,
   "buildOptions": {
     "name": "VueDOMCompiler",
-    "formats": ["cjs", "global", "esm-browser"]
+    "formats": [
+      "cjs",
+      "global",
+      "esm-browser"
+    ]
   },
   "repository": {
     "type": "git",
