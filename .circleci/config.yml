@@ -25,5 +25,5 @@ jobs:
           key: v1-dependencies-{{ checksum "yarn.lock" }}
 
       - run: 
-          name: Running Test
+          name: Running Tests
           command: yarn test --ci --runInBand
