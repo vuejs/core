@@ -290,8 +290,11 @@ describe('api: createApp', () => {
   describe('config.isNativeTag', () => {
     test('setupStatefulComponent', () => {
       const app = createApp()
-
-      const handler = (app.config.isNativeTag = jest.fn(tag => tag === 'div'))
+      const isNativeTag = jest.fn(tag => tag === 'div')
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
 
       const Root = {
         name: 'div',
@@ -306,7 +309,7 @@ describe('api: createApp', () => {
       }
 
       app.mount(Root, nodeOps.createElement('div'))
-      expect(handler).toHaveBeenCalledTimes(1)
+      expect(isNativeTag).toHaveBeenCalledTimes(1)
       expect(
         `Do not use built-in or reserved HTML elements as component id: div`
       ).toHaveBeenWarned()
@@ -314,8 +317,11 @@ describe('api: createApp', () => {
 
     test('register using app.component', () => {
       const app = createApp()
-
-      const handler = (app.config.isNativeTag = jest.fn(tag => tag === 'div'))
+      const isNativeTag = jest.fn(tag => tag === 'div')
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
 
       const Root = {
         setup() {
@@ -331,7 +337,7 @@ describe('api: createApp', () => {
       app.component('div', () => 'div')
 
       app.mount(Root, nodeOps.createElement('div'))
-      expect(handler).toHaveBeenCalledTimes(1)
+      expect(isNativeTag).toHaveBeenCalledTimes(1)
       expect(
         `Do not use built-in or reserved HTML elements as component id: div`
       ).toHaveBeenWarned()

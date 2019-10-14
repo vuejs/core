@@ -27,7 +27,7 @@ export interface App<HostElement = any> {
 export interface AppConfig {
   devtools: boolean
   performance: boolean
-  isNativeTag?: (tag: string) => boolean
+  readonly isNativeTag?: (tag: string) => boolean
   errorHandler?: (
     err: Error,
     instance: ComponentPublicInstance | null,
