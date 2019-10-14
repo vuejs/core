@@ -17,7 +17,7 @@ const modifierGuards: Record<
   middle: e => 'button' in e && (e as any).button !== 1,
   right: e => 'button' in e && (e as any).button !== 2,
   exact: (e, modifiers) =>
-    modifiers.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
+    modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
 }
 
 const keyNames: Record<string, string | string[]> = {
