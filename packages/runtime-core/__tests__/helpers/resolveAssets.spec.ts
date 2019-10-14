@@ -17,9 +17,11 @@ describe('resolveAssets', () => {
     let component1: Component
     let component2: Component
     let component3: Component
+    let component4: Component
     let directive1: Directive
     let directive2: Directive
     let directive3: Directive
+    let directive4: Directive
 
     const Root = {
       components: {
@@ -38,6 +40,9 @@ describe('resolveAssets', () => {
           // capitalize
           component3 = resolveComponent('fooBar')!
           directive3 = resolveDirective('barBaz')!
+          // camelize and capitalize
+          component4 = resolveComponent('foo-bar')!
+          directive4 = resolveDirective('bar-baz')!
         }
       }
     }
@@ -47,10 +52,12 @@ describe('resolveAssets', () => {
     expect(component1!).toBe(FooBar)
     expect(component2!).toBe(FooBar)
     expect(component3!).toBe(FooBar)
+    expect(component4!).toBe(FooBar)
 
     expect(directive1!).toBe(BarBaz)
     expect(directive2!).toBe(BarBaz)
     expect(directive3!).toBe(BarBaz)
+    expect(directive4!).toBe(BarBaz)
   })
 
   describe('warning', () => {
