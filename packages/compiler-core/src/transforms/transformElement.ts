@@ -183,7 +183,12 @@ export function buildProps(
 
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
-      if (value.type !== NodeTypes.SIMPLE_EXPRESSION || !value.isStatic) {
+      if (
+        value.type !== NodeTypes.SIMPLE_EXPRESSION ||
+        // E.g: <p :foo="1 + 2" />.
+        // Do not add prop `foo` to `dynamicPropNames`.
+        (!value.isStatic && value.hasPrefixedIdentifier)
+      ) {
         const name = key.content
         if (name === 'ref') {
           hasRef = true

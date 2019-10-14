@@ -61,6 +61,7 @@ export const transformExpression: NodeTransform = (node, context) => {
 
 interface PrefixMeta {
   prefix?: string
+  prefixedName: boolean
   start: number
   end: number
   scopeIds?: Set<string>
@@ -108,6 +109,7 @@ export function processExpression(
   const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
 
+  let hasPrefixedIdentifier = false
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walkJS(ast, {
     enter(node: Node & PrefixMeta, parent) {
@@ -120,10 +122,13 @@ export function processExpression(
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
+            hasPrefixedIdentifier = true
+            node.prefixedName = true
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
+            node.prefixedName = false
             ids.push(node)
           }
         }
@@ -190,11 +195,16 @@ export function processExpression(
     }
     const source = rawExp.slice(start, end)
     children.push(
-      createSimpleExpression(id.name, false, {
-        source,
-        start: advancePositionWithClone(node.loc.start, source, start),
-        end: advancePositionWithClone(node.loc.start, source, end)
-      })
+      createSimpleExpression(
+        id.name,
+        false,
+        {
+          source,
+          start: advancePositionWithClone(node.loc.start, source, start),
+          end: advancePositionWithClone(node.loc.start, source, end)
+        },
+        id.prefixedName /* hasPrefixedIdentifier */
+      )
     )
     if (i === ids.length - 1 && end < rawExp.length) {
       children.push(rawExp.slice(end))
@@ -206,6 +216,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
+    ret.hasPrefixedIdentifier = hasPrefixedIdentifier
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

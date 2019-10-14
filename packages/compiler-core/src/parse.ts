@@ -563,9 +563,13 @@ function parseAttribute(
       )
       let content = match[2]
       let isStatic = true
+      // Used to indicate whether the arg needs to be prefixed,
+      // only dynamic arg need to be prefixed
+      let hasPrefixedIdentifier = false
 
       if (content.startsWith('[')) {
         isStatic = false
+        hasPrefixedIdentifier = true
 
         if (!content.endsWith(']')) {
           emitError(
@@ -581,6 +585,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
+        hasPrefixedIdentifier,
         loc
       }
     }
@@ -606,6 +611,8 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
+        // Set `hasPrefixedIdentifier` to true by default and will decide in transformExpression
+        hasPrefixedIdentifier: true,
         loc: value.loc
       },
       arg,
@@ -712,6 +719,8 @@ function parseInterpolation(
     content: {
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
+      // Set `hasPrefixedIdentifier` to true by default and will decide in transformExpression
+      hasPrefixedIdentifier: true,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },

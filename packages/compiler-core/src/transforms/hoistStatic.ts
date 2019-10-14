@@ -119,7 +119,7 @@ function isStaticNode(
         return resultCache.get(node) as boolean
       }
       const flag = getPatchFlag(node)
-      if (!flag) {
+      if (!flag || flag === PatchFlags.TEXT) {
         // element self is static. check its children.
         for (let i = 0; i < node.children.length; i++) {
           if (!isStaticNode(node.children[i], resultCache)) {
@@ -137,9 +137,29 @@ function isStaticNode(
       return true
     case NodeTypes.IF:
     case NodeTypes.FOR:
-    case NodeTypes.INTERPOLATION:
-    case NodeTypes.COMPOUND_EXPRESSION:
       return false
+    case NodeTypes.COMPOUND_EXPRESSION:
+      return node.children.every(n => {
+        return (
+          typeof n === 'string' ||
+          typeof n === 'symbol' ||
+          // NodeTypes.TEXT is static.
+          n.type === NodeTypes.TEXT ||
+          // Expressions without identifiers are static.
+          (n.type === NodeTypes.SIMPLE_EXPRESSION &&
+            !n.hasPrefixedIdentifier) ||
+          // Check NodeTypes.INTERPOLATION
+          (n.type === NodeTypes.INTERPOLATION && isStaticNode(n, resultCache))
+        )
+      })
+    case NodeTypes.INTERPOLATION:
+      // Representing this interpolation is static
+      return (
+        (node.content.type === NodeTypes.SIMPLE_EXPRESSION &&
+          !node.content.hasPrefixedIdentifier) ||
+        (node.content.type === NodeTypes.COMPOUND_EXPRESSION &&
+          isStaticNode(node.content, resultCache))
+      )
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
