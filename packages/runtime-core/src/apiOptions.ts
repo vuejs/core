@@ -99,12 +99,12 @@ export type ComponentOptions =
 type LegacyComponent = ComponentOptions
 
 export interface ComputedOptions {
-  [key: string]: Function | ComputedOptionHandler
-}
-
-type ComputedOptionHandler = {
-  get: Function
-  set: Function
+  [key: string]:
+    | Function
+    | {
+        get: Function
+        set: Function
+      }
 }
 
 export interface MethodOptions {
