@@ -1,6 +1,6 @@
 import { version } from '../src'
-import packageJson from '../package.json'
+import lernaJson from '../../../lerna.json'
 
 test('version', () => {
-  expect(version).toBe(packageJson.version)
+  expect(version).toBe(lernaJson.version)
 })
