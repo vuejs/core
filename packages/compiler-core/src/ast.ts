@@ -49,7 +49,8 @@ export const enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
-  TEMPLATE
+  TEMPLATE,
+  PORTAL
 }
 
 export interface Node {
@@ -99,6 +100,7 @@ export type ElementNode =
   | ComponentNode
   | SlotOutletNode
   | TemplateNode
+  | PortalNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -132,6 +134,11 @@ export interface TemplateNode extends BaseElementNode {
     | ElementCodegenNode
     | CodegenNodeWithDirective<ElementCodegenNode>
     | undefined
+}
+
+export interface PortalNode extends BaseElementNode {
+  tagType: ElementTypes.PORTAL
+  codegenNode: ElementCodegenNode | undefined
 }
 
 export interface TextNode extends Node {

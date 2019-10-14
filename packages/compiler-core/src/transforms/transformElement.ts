@@ -23,7 +23,8 @@ import {
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
   MERGE_PROPS,
-  TO_HANDLERS
+  TO_HANDLERS,
+  PORTAL
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
 import { buildSlots } from './vSlot'
@@ -38,6 +39,7 @@ export const transformElement: NodeTransform = (node, context) => {
     if (
       node.tagType === ElementTypes.ELEMENT ||
       node.tagType === ElementTypes.COMPONENT ||
+      node.tagType === ElementTypes.PORTAL ||
       // <template> with v-if or v-for are ignored during traversal.
       // <template> without v-slot should be treated as a normal element.
       (node.tagType === ElementTypes.TEMPLATE && !node.props.some(isVSlot))
@@ -46,6 +48,7 @@ export const transformElement: NodeTransform = (node, context) => {
       // processed and merged.
       return () => {
         const isComponent = node.tagType === ElementTypes.COMPONENT
+        const isPortal = node.tagType === ElementTypes.PORTAL
         let hasProps = node.props.length > 0
         let patchFlag: number = 0
         let runtimeDirectives: DirectiveNode[] | undefined
@@ -57,7 +60,11 @@ export const transformElement: NodeTransform = (node, context) => {
         }
 
         const args: CallExpression['arguments'] = [
-          isComponent ? toValidAssetId(node.tag, `component`) : `"${node.tag}"`
+          isComponent
+            ? toValidAssetId(node.tag, `component`)
+            : isPortal
+              ? context.helper(PORTAL)
+              : `"${node.tag}"`
         ]
         // props
         if (hasProps) {
