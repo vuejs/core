@@ -10,7 +10,8 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  NOOP
 } from '@vue/shared'
 import { computed } from './apiReactivity'
 import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
@@ -247,24 +248,24 @@ export function applyOptions(
       const opt = (computedOptions as ComputedOptions)[key]
 
       if (isFunction(opt)) {
-        renderContext[key] = computed((opt as Function).bind(ctx))
+        renderContext[key] = computed(opt.bind(ctx))
       } else {
-        const { get, set } = opt as ComputedOptionHandler
+        const { get, set } = opt
         if (isFunction(get)) {
           renderContext[key] = computed({
             get: get.bind(ctx),
             set: isFunction(set)
               ? set.bind(ctx)
-              : () => {
-                  if (__DEV__) {
+              : __DEV__
+                ? () => {
                     warn(
-                      `Computed property "${key}" was assigned to but it has no setter`
+                      `Computed property "${key}" was assigned to but it has no setter.`
                     )
                   }
-                }
+                : NOOP
           })
         } else if (__DEV__) {
-          warn(`Getter is missing for computed property "${key}"`)
+          warn(`Computed property "${key}" has no getter.`)
         }
       }
     }
