@@ -1,13 +1,11 @@
 import { isObject, toTypeString } from '@vue/shared'
 import { mutableHandlers, readonlyHandlers } from './baseHandlers'
-
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-
-import { UnwrapNestedRefs } from './ref'
 import { ReactiveEffect } from './effect'
+import { UnwrapRef, Ref } from './ref'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -39,6 +37,9 @@ const canObserve = (value: any): boolean => {
     !nonReactiveValues.has(value)
   )
 }
+
+// only unwrap nested ref
+type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
