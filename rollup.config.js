@@ -4,6 +4,7 @@ import ts from 'rollup-plugin-typescript2'
 import replace from 'rollup-plugin-replace'
 import alias from 'rollup-plugin-alias'
 import json from 'rollup-plugin-json'
+import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -143,6 +144,7 @@ function createReplacePlugin(
 ) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
+    __VERSION__: `"${lernaJson.version}"`,
     __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
