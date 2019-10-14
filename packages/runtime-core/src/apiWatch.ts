@@ -3,6 +3,7 @@ import {
   stop,
   isRef,
   Ref,
+  ComputedRef,
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob } from './scheduler'
@@ -32,7 +33,7 @@ export interface WatchOptions {
 
 type StopHandle = () => void
 
-type WatcherSource<T = any> = Ref<T> | (() => T)
+type WatcherSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 type MapSources<T> = {
   [K in keyof T]: T[K] extends WatcherSource<infer V> ? V : never

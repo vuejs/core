@@ -34,6 +34,9 @@ describe('api: watch', () => {
       () => state.count,
       (count, prevCount) => {
         dummy = [count, prevCount]
+        // assert types
+        count + 1
+        prevCount + 1
       }
     )
     await nextTick()
@@ -49,6 +52,9 @@ describe('api: watch', () => {
     let dummy
     watch(count, (count, prevCount) => {
       dummy = [count, prevCount]
+      // assert types
+      count + 1
+      prevCount + 1
     })
     await nextTick()
     expect(dummy).toMatchObject([0, undefined])
@@ -64,6 +70,9 @@ describe('api: watch', () => {
     let dummy
     watch(plus, (count, prevCount) => {
       dummy = [count, prevCount]
+      // assert types
+      count + 1
+      prevCount + 1
     })
     await nextTick()
     expect(dummy).toMatchObject([1, undefined])
@@ -81,6 +90,9 @@ describe('api: watch', () => {
     let dummy
     watch([() => state.count, count, plus], (vals, oldVals) => {
       dummy = [vals, oldVals]
+      // assert types
+      vals.concat(1)
+      oldVals.concat(1)
     })
     await nextTick()
     expect(dummy).toMatchObject([[1, 1, 2], []])
