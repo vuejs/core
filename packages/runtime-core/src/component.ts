@@ -22,8 +22,7 @@ import {
   NOOP,
   isArray,
   isObject,
-  NO,
-  isBuiltInTag
+  NO
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
 import { CompilerOptions } from '@vue/compiler-dom'
@@ -220,6 +219,9 @@ export const setCurrentInstance = (
 ) => {
   currentInstance = instance
 }
+
+const BuiltInTagSet = new Set(['slot', 'component'])
+const isBuiltInTag = (tag: string) => BuiltInTagSet.has(tag)
 
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
