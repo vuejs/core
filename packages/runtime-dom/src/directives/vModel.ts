@@ -81,17 +81,14 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
       const elementValue = getValue(el)
       const checked = el.checked
       if (isArray(modelValue)) {
-        if (checked) {
+        const index = looseIndexOf(modelValue, elementValue)
+        const found = index !== -1
+        if (checked && !found) {
           assign(modelValue.concat(elementValue))
-        } else {
-          const index = looseIndexOf(modelValue, elementValue)
-          if (index > -1) {
-            const filtered = [...modelValue]
-            filtered.splice(index, 1)
-            assign(filtered)
-          } else {
-            assign(modelValue)
-          }
+        } else if (!checked && found) {
+          const filtered = [...modelValue]
+          filtered.splice(index, 1)
+          assign(filtered)
         }
       } else {
         assign(checked)
