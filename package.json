@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "size-runtime": "node scripts/build.js runtime-dom -p -f esm-browser",
-    "size-compiler": "node scripts/build.js compiler-dom -p -f esm-browser",
+    "size-runtime": "node scripts/build.js runtime-dom -p -f global",
+    "size-compiler": "node scripts/build.js compiler-dom -p -f global",
     "size": "yarn size-runtime && yarn size-compiler",
     "lint": "prettier --write --parser typescript 'packages/**/*.ts'",
     "test": "jest"

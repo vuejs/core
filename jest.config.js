@@ -7,6 +7,7 @@ module.exports = {
     __VERSION__: pkg.version,
     __BROWSER__: false,
     __JSDOM__: true,
+    __RUNTIME_COMPILE__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
   },

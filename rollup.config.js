@@ -1,10 +1,10 @@
-const fs = require('fs')
-const path = require('path')
-const ts = require('rollup-plugin-typescript2')
-const replace = require('rollup-plugin-replace')
-const alias = require('rollup-plugin-alias')
-const json = require('rollup-plugin-json')
-const lernaJson = require('./lerna.json')
+import fs from 'fs'
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
+import replace from 'rollup-plugin-replace'
+import alias from 'rollup-plugin-alias'
+import json from 'rollup-plugin-json'
+import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -69,7 +69,7 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
-module.exports = packageConfigs
+export default packageConfigs
 
 function createConfig(output, plugins = []) {
   const isProductionBuild =
@@ -77,6 +77,7 @@ function createConfig(output, plugins = []) {
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
   const isBundlerESMBuild = /\.esm\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
+  const isRuntimeCompileBuild = /^dist\/vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -121,7 +122,8 @@ function createConfig(output, plugins = []) {
         isProductionBuild,
         isBundlerESMBuild,
         (isGlobalBuild || isBrowserESMBuild) &&
-          !packageOptions.enableNonBrowserBranches
+          !packageOptions.enableNonBrowserBranches,
+        isRuntimeCompileBuild
       ),
       ...plugins
     ],
@@ -134,7 +136,12 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
+function createReplacePlugin(
+  isProduction,
+  isBundlerESMBuild,
+  isBrowserBuild,
+  isRuntimeCompileBuild
+) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
     __VERSION__: `"${lernaJson.version}"`,
@@ -145,9 +152,11 @@ function createReplacePlugin(isProduction, isBundlerESMBuild, isBrowserBuild) {
         !isProduction,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
+    // support compile in browser?
+    __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean,
+    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
     __FEATURE_SUSPENSE__: true,
     // this is only used during tests
     __JSDOM__: false
