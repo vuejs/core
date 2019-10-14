@@ -5,8 +5,8 @@ describe('toHandlers', () => {
   mockWarn()
 
   it('should not accept non-objects', () => {
-    toHandlers((null as unknown) as any)
-    toHandlers((undefined as unknown) as any)
+    toHandlers(null as any)
+    toHandlers(undefined as any)
 
     expect(
       'v-on with no argument expects an object value.'

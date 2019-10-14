@@ -16,7 +16,6 @@ yarn build core --formats cjs
 
 const fs = require('fs-extra')
 const path = require('path')
-const zlib = require('zlib')
 const chalk = require('chalk')
 const execa = require('execa')
 const { gzipSync } = require('zlib')
@@ -69,7 +68,7 @@ async function build(target) {
         args.types ? `TYPES:true` : ``,
         prodOnly ? `PROD_ONLY:true` : ``
       ]
-        .filter(_ => _)
+        .filter(Boolean)
         .join(',')
     ],
     { stdio: 'inherit' }

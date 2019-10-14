@@ -53,7 +53,7 @@ export function patchProp(
           unmountChildren
         )
       } else {
-        patchAttr(el, key, nextValue, isSVG)
+        patchAttr(el, key, nextValue)
       }
       break
   }

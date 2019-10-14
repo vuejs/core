@@ -42,7 +42,7 @@ function serializeElement(
       const value = node.props[key]
       return isOn(key) || value == null ? `` : `${key}=${JSON.stringify(value)}`
     })
-    .filter(_ => _)
+    .filter(Boolean)
     .join(' ')
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
   return (
