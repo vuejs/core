@@ -1,12 +1,10 @@
 import { isArray } from '@vue/shared'
 
-type ModifiersMap = Record<string, true>
-
-const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
+const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
 
 const modifierGuards: Record<
   string,
-  (e: Event, modifiersMap?: ModifiersMap) => void | boolean
+  (e: Event, modifiers?: string[]) => void | boolean
 > = {
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
@@ -18,11 +16,8 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as any).button !== 0,
   middle: e => 'button' in e && (e as any).button !== 1,
   right: e => 'button' in e && (e as any).button !== 2,
-  exact: (e, map: ModifiersMap) =>
-    // Some of the system modifiers are not specified, but is flagged true on the event
-    systemModifiers.some(
-      modifierKey => !map[modifierKey] && (e as any)[`${modifierKey}Key`]
-    )
+  exact: (e, modifiers) =>
+    modifiers.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
 }
 
 const keyNames: Record<string, string | string[]> = {
@@ -39,22 +34,18 @@ const keyNames: Record<string, string | string[]> = {
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
   return (event: Event) => {
-    const modifiersMap = modifiers.reduce(
-      (map, m) => ((map[m] = true), map),
-      {} as ModifiersMap
-    )
     for (let i = 0; i < modifiers.length; i++) {
       const guard = modifierGuards[modifiers[i]]
-      if (guard && guard(event, modifiersMap)) return
+      if (guard && guard(event, modifiers)) return
     }
     return fn(event)
   }
 }
 
 export const vOnKeysGuard = (fn: Function, modifiers: string[]) => {
-  return (event: Event) => {
+  return (event: KeyboardEvent) => {
     if (!('key' in event)) return
-    const eventKey = (event['key'] as string).toLowerCase()
+    const eventKey = event.key.toLowerCase()
     if (
       // None of the provided key modifiers match the current event key
       !modifiers.some(
