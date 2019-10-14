@@ -2,7 +2,7 @@ import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
-import { ComputedRef } from './computed'
+import { ComputedRef, WritableComputedRef } from './computed'
 
 export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : '')
 
