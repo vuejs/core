@@ -20,16 +20,16 @@ const modifierGuards: Record<
     modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
 }
 
+// Kept for 2.x compat.
+// Note: IE11 compat for `spacebar` and `del` is removed for now.
 const keyNames: Record<string, string | string[]> = {
   esc: 'escape',
-  // IE11 uses `Spacebar` for Space key name.
-  space: [' ', 'spacebar'],
+  space: ' ',
   up: 'arrowup',
   left: 'arrowleft',
   right: 'arrowright',
   down: 'arrowdown',
-  // IE11 uses `Del` for Delete key name.
-  delete: ['backspace', 'del']
+  delete: 'backspace'
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
@@ -48,13 +48,7 @@ export const vOnKeysGuard = (fn: Function, modifiers: string[]) => {
     const eventKey = event.key.toLowerCase()
     if (
       // None of the provided key modifiers match the current event key
-      !modifiers.some(
-        k =>
-          k === eventKey ||
-          (isArray(keyNames[k])
-            ? keyNames[k].includes(eventKey)
-            : eventKey === keyNames[k])
-      )
+      !modifiers.some(k => k === eventKey || keyNames[k] === eventKey)
     ) {
       return
     }
