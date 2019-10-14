@@ -9,7 +9,7 @@
     "size-runtime": "node scripts/build.js runtime-dom -p -f global",
     "size-compiler": "node scripts/build.js compiler-dom -p -f global",
     "size": "yarn size-runtime && yarn size-compiler",
-    "lint": "prettier --write --parser typescript 'packages/**/*.ts'",
+    "lint": "prettier --write --parser typescript \"packages/**/*.ts\"",
     "test": "jest"
   },
   "gitHooks": {
