@@ -61,6 +61,7 @@ export const transformExpression: NodeTransform = (node, context) => {
 
 interface PrefixMeta {
   prefix?: string
+  isConstant: boolean
   start: number
   end: number
   scopeIds?: Set<string>
@@ -90,6 +91,9 @@ export function processExpression(
       !literalsWhitelist.has(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
+    } else if (!context.identifiers[rawExp]) {
+      // mark node constant for hoisting unless it's referring a scope variable
+      node.isConstant = true
     }
     return node
   }
@@ -113,15 +117,20 @@ export function processExpression(
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
         if (!ids.includes(node)) {
-          if (!knownIds[node.name] && shouldPrefix(node, parent)) {
+          const needPrefix = shouldPrefix(node, parent)
+          if (!knownIds[node.name] && needPrefix) {
             if (isPropertyShorthand(node, parent)) {
               // property shorthand like { foo }, we need to add the key since we
               // rewrite the value
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
+            node.isConstant = false
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
+            // The identifier is considered constant unless it's pointing to a
+            // scope variable (a v-for alias, or a v-slot prop)
+            node.isConstant = !(needPrefix && knownIds[node.name])
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
@@ -190,11 +199,16 @@ export function processExpression(
     }
     const source = rawExp.slice(start, end)
     children.push(
-      createSimpleExpression(id.name, false, {
-        source,
-        start: advancePositionWithClone(node.loc.start, source, start),
-        end: advancePositionWithClone(node.loc.start, source, end)
-      })
+      createSimpleExpression(
+        id.name,
+        false,
+        {
+          source,
+          start: advancePositionWithClone(node.loc.start, source, start),
+          end: advancePositionWithClone(node.loc.start, source, end)
+        },
+        id.isConstant /* isConstant */
+      )
     )
     if (i === ids.length - 1 && end < rawExp.length) {
       children.push(rawExp.slice(end))
@@ -206,6 +220,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
+    ret.isConstant = true
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

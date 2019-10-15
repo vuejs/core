@@ -7,7 +7,7 @@ type ComponentVNode = VNode & {
   type: Component
 }
 
-let stack: VNode[] = []
+const stack: VNode[] = []
 
 type TraceEntry = {
   vnode: ComponentVNode

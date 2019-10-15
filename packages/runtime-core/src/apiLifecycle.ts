@@ -60,7 +60,7 @@ export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 
-type DebuggerHook = (e: DebuggerEvent) => void
+export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRIGGERED
 )
@@ -68,7 +68,7 @@ export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED
 )
 
-type ErrorCapturedHook = (
+export type ErrorCapturedHook = (
   err: Error,
   instance: ComponentPublicInstance | null,
   info: string
