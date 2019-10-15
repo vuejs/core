@@ -1,4 +1,6 @@
-const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
+import { makeMap } from '@vue/shared'
+
+const systemModifiers = /*@__PURE__*/ makeMap(['ctrl', 'shift', 'alt', 'meta'])
 
 const modifierGuards: Record<
   string,
@@ -15,7 +17,7 @@ const modifierGuards: Record<
   middle: e => 'button' in e && (e as any).button !== 1,
   right: e => 'button' in e && (e as any).button !== 2,
   exact: (e, modifiers) =>
-    modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
+    modifiers!.some(m => systemModifiers(m) && (e as any)[`${m}Key`])
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {

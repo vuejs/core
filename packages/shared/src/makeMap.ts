@@ -4,11 +4,10 @@
 // IMPORTANT: all calls of this function must be prefixed with /*@__PURE__*/
 // So that rollup can tree-shake them if necessary.
 export function makeMap(
-  str: string,
+  list: string[],
   expectsLowerCase?: boolean
 ): (key: string) => boolean {
   const map: Record<string, boolean> = Object.create(null)
-  const list: Array<string> = str.split(',')
   for (let i = 0; i < list.length; i++) {
     map[list[i]] = true
   }
