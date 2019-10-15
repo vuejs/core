@@ -14,6 +14,7 @@ function transformWithModel(template: string, options: CompilerOptions = {}) {
   })
   return ast
 }
+
 describe('compiler: v-model transform', () => {
   it('should raise error if used file input element', () => {
     const onError = jest.fn()
