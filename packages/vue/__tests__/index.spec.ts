@@ -29,3 +29,14 @@ it('should correctly normalize class with on-the-fly template compilation', () =
   expect(classes.contains('test')).toBe(true)
   expect(classes.contains('test2')).toBe(false)
 })
+
+it('should support custom element', () => {
+  const app = createApp()
+  const container = document.createElement('div')
+  const App = {
+    template: '<custom></custom>'
+  }
+  app.config.isCustomElement = tag => tag === 'custom'
+  app.mount(App, container)
+  expect(container.innerHTML).toBe('<custom></custom>')
+})

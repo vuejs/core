@@ -616,6 +616,25 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('custom element', () => {
+      const ast = parse('<div></div><comp></comp>', {
+        isNativeTag: tag => tag === 'div',
+        isCustomElement: tag => tag === 'comp'
+      })
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'comp',
+        tagType: ElementTypes.ELEMENT
+      })
+    })
+
     test('attribute with no value', () => {
       const ast = parse('<div id></div>')
       const element = ast.children[0] as ElementNode
