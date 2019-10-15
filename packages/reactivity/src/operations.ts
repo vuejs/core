@@ -9,3 +9,14 @@ export const enum OperationTypes {
   HAS = 'has',
   ITERATE = 'iterate'
 }
+
+export type ReadOperationTypes =
+  | OperationTypes.GET
+  | OperationTypes.HAS
+  | OperationTypes.ITERATE
+
+export type WriteOperationTypes =
+  | OperationTypes.SET
+  | OperationTypes.ADD
+  | OperationTypes.DELETE
+  | OperationTypes.CLEAR

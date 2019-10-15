@@ -1,6 +1,10 @@
-import { OperationTypes } from './operations'
-import { Dep, targetMap } from './reactive'
 import { EMPTY_OBJ, extend } from '@vue/shared'
+import {
+  OperationTypes,
+  WriteOperationTypes,
+  ReadOperationTypes
+} from './operations'
+import { Dep, targetMap } from './reactive'
 
 export const effectSymbol = Symbol(__DEV__ ? 'effect' : void 0)
 
@@ -31,6 +35,10 @@ export interface DebuggerEvent {
   target: any
   type: OperationTypes
   key: string | symbol | undefined
+  value?: any
+  oldValue?: any
+  newValue?: any
+  oldTarget?: any
 }
 
 export const activeReactiveEffectStack: ReactiveEffect[] = []
@@ -69,7 +77,7 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(...args: any[]): any {
+  const effect = function reactiveEffect(...args: never) {
     return run(effect, fn, args)
   } as ReactiveEffect
   effect[effectSymbol] = true
@@ -84,7 +92,11 @@ function createReactiveEffect<T = any>(
   return effect
 }
 
-function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
+function run<Fn extends (...args: any[]) => any>(
+  effect: ReactiveEffect,
+  fn: Fn,
+  args: Parameters<Fn>
+): ReturnType<Fn> | undefined {
   if (!effect.active) {
     return fn(...args)
   }
@@ -121,9 +133,19 @@ export function resumeTracking() {
 
 export function track(
   target: any,
-  type: OperationTypes,
+  type: OperationTypes.ITERATE,
+  key?: undefined
+): void
+export function track(
+  target: any,
+  type: Exclude<ReadOperationTypes, OperationTypes.ITERATE>,
+  key: string | symbol
+): void
+export function track(
+  target: any,
+  type: ReadOperationTypes,
   key?: string | symbol
-) {
+): void {
   if (!shouldTrack) {
     return
   }
@@ -157,10 +179,22 @@ export function track(
 
 export function trigger(
   target: any,
-  type: OperationTypes,
+  type: OperationTypes.CLEAR,
+  key?: undefined,
+  extraInfo?: Partial<DebuggerEvent>
+): void
+export function trigger(
+  target: any,
+  type: Exclude<WriteOperationTypes, OperationTypes.CLEAR>,
+  key: string | symbol,
+  extraInfo?: Partial<DebuggerEvent>
+): void
+export function trigger(
+  target: any,
+  type: WriteOperationTypes,
   key?: string | symbol,
-  extraInfo?: any
-) {
+  extraInfo?: Partial<DebuggerEvent>
+): void {
   const depsMap = targetMap.get(target)
   if (depsMap === void 0) {
     // never been tracked
@@ -213,8 +247,8 @@ function scheduleRun(
   effect: ReactiveEffect,
   target: any,
   type: OperationTypes,
-  key: string | symbol | undefined,
-  extraInfo: any
+  key?: string | symbol,
+  extraInfo?: Partial<DebuggerEvent>
 ) {
   if (__DEV__ && effect.onTrigger) {
     effect.onTrigger(
