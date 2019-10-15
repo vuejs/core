@@ -7,13 +7,13 @@ const modifierGuards: Record<
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
   self: e => e.target !== e.currentTarget,
-  ctrl: e => !(e as any).ctrlKey,
-  shift: e => !(e as any).shiftKey,
-  alt: e => !(e as any).altKey,
-  meta: e => !(e as any).metaKey,
-  left: e => 'button' in e && (e as any).button !== 0,
-  middle: e => 'button' in e && (e as any).button !== 1,
-  right: e => 'button' in e && (e as any).button !== 2,
+  ctrl: e => !(e as KeyboardEvent).ctrlKey,
+  shift: e => !(e as KeyboardEvent).shiftKey,
+  alt: e => !(e as KeyboardEvent).altKey,
+  meta: e => !(e as KeyboardEvent).metaKey,
+  left: e => 'button' in e && (e as MouseEvent).button !== 0,
+  middle: e => 'button' in e && (e as MouseEvent).button !== 1,
+  right: e => 'button' in e && (e as MouseEvent).button !== 2,
   exact: (e, modifiers) =>
     modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
 }
