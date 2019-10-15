@@ -77,7 +77,7 @@ export function processExpression(
   // function params
   asParams: boolean = false
 ): ExpressionNode {
-  if (!context.prefixIdentifiers) {
+  if (!context.prefixIdentifiers || !node.content.trim()) {
     return node
   }
 
