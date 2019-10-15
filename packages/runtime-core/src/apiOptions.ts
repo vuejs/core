@@ -25,9 +25,11 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
-  onRenderTriggered
+  onRenderTriggered,
+  DebuggerHook,
+  ErrorCapturedHook
 } from './apiLifecycle'
-import { DebuggerEvent, reactive } from '@vue/reactivity'
+import { reactive } from '@vue/reactivity'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
@@ -172,9 +174,9 @@ export interface LegacyOptions<
   deactivated?(): void
   beforeUnmount?(): void
   unmounted?(): void
-  renderTracked?(e: DebuggerEvent): void
-  renderTriggered?(e: DebuggerEvent): void
-  errorCaptured?(): boolean | void
+  renderTracked?: DebuggerHook
+  renderTriggered?: DebuggerHook
+  errorCaptured?: ErrorCapturedHook
 }
 
 export function applyOptions(
