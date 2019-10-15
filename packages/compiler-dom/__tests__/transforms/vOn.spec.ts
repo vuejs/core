@@ -90,4 +90,17 @@ describe('compiler-dom: transform v-on', () => {
       })
     })
   })
+
+  it('should not wrap keys guard if no key modifier is present', () => {
+    const [prop] = parseVOnProperties(`<div @keyup.exact="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_MODIFIERS_GUARD,
+        arguments: [{ content: '_ctx.test' }, '["exact"]']
+      }
+    })
+  })
 })

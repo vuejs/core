@@ -1,5 +1,4 @@
-const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
-
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 const modifierGuards: Record<
   string,
   (e: Event, modifiers?: string[]) => void | boolean
@@ -14,8 +13,17 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as any).button !== 0,
   middle: e => 'button' in e && (e as any).button !== 1,
   right: e => 'button' in e && (e as any).button !== 2,
-  exact: (e, modifiers) =>
-    modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
+  exact: (e, modifiers: string[]) => {
+    // todo: replace with makeMap
+    let map = modifiers.reduce(
+      (map, m) => ((map[m] = true), map),
+      Object.create(null)
+    )
+    // Some of the system modifiers are not specified, but is flagged true on the event
+    return systemModifiers.some(
+      modifierKey => !map[modifierKey] && (e as any)[`${modifierKey}Key`]
+    )
+  }
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {

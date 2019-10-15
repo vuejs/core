@@ -41,15 +41,17 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     value,
     JSON.stringify(runtimeModifiers.filter(m => m in NOT_KEY_MODIFIERS))
   ])
+  const keyModifiers = runtimeModifiers.filter(m => !(m in NOT_KEY_MODIFIERS))
   if (
+    keyModifiers.length &&
     // if event name is dynamic, always wrap with keys guard
-    key.type === NodeTypes.COMPOUND_EXPRESSION ||
-    !key.isStatic ||
-    key.content.toLowerCase() in KEYBOARD_EVENTS
+    (key.type === NodeTypes.COMPOUND_EXPRESSION ||
+      !key.isStatic ||
+      key.content.toLowerCase() in KEYBOARD_EVENTS)
   ) {
     handler = createCallExpression(context.helper(V_ON_KEYS_GUARD), [
       handler,
-      JSON.stringify(runtimeModifiers.filter(m => !(m in NOT_KEY_MODIFIERS)))
+      JSON.stringify(keyModifiers)
     ])
   }
 
