@@ -37,13 +37,10 @@ describe('compiler-dom: transform v-on', () => {
     })
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
-      value: createObjectMatcher({
-        handler: {
-          callee: V_ON_MODIFIERS_GUARD,
-          arguments: [{ content: '_ctx.test' }, '["stop","prevent"]']
-        },
-        persistent: { content: 'true', isStatic: false }
-      })
+      value: {
+        callee: V_ON_MODIFIERS_GUARD,
+        arguments: [{ content: '_ctx.test' }, '["stop","prevent"]']
+      }
     })
   })
 
@@ -59,11 +56,11 @@ describe('compiler-dom: transform v-on', () => {
           callee: V_ON_MODIFIERS_GUARD,
           arguments: [{ content: '_ctx.test' }, '["stop"]']
         },
-        persistent: { content: 'true', isStatic: false },
         options: createObjectMatcher({
           capture: { content: 'true', isStatic: false },
           passive: { content: 'true', isStatic: false }
-        })
+        }),
+        persistent: { content: 'true', isStatic: false }
       })
     })
   })
@@ -86,10 +83,10 @@ describe('compiler-dom: transform v-on', () => {
             '["a"]'
           ]
         },
-        persistent: { content: 'true', isStatic: false },
         options: createObjectMatcher({
           capture: { content: 'true', isStatic: false }
-        })
+        }),
+        persistent: { content: 'true', isStatic: false }
       })
     })
   })
