@@ -203,6 +203,42 @@ return function render() {
 }"
 `;
 
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that with scope variable (2) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      (_openBlock(), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+        return (_openBlock(), _createBlock(\\"p\\", null, [
+          _createVNode(\\"span\\", null, _toString(o + 'foo'), 1 /* TEXT */)
+        ]))
+      }), 128 /* UNKEYED_FRAGMENT */))
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that with scope variable 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      (_openBlock(), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+        return (_openBlock(), _createBlock(\\"p\\", null, [
+          _createVNode(\\"span\\", null, _toString(o), 1 /* TEXT */)
+        ]))
+      }), 128 /* UNKEYED_FRAGMENT */))
+    ]))
+  }
+}"
+`;
+
 exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
 "const _Vue = Vue
 

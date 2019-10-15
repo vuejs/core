@@ -165,9 +165,7 @@ export interface SimpleExpressionNode extends Node {
   type: NodeTypes.SIMPLE_EXPRESSION
   content: string
   isStatic: boolean
-  // Is used to indicate whether there is an identifier
-  // in an expression that needs to be prefixed with `_ctx.`.
-  hasPrefixedIdentifier: boolean
+  isConstant: boolean
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
@@ -498,12 +496,12 @@ export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
   isStatic: SimpleExpressionNode['isStatic'],
   loc: SourceLocation = locStub,
-  hasPrefixedIdentifier: boolean = true
+  isConstant: boolean = false
 ): SimpleExpressionNode {
   return {
     type: NodeTypes.SIMPLE_EXPRESSION,
     loc,
-    hasPrefixedIdentifier,
+    isConstant,
     content,
     isStatic
   }

@@ -187,7 +187,7 @@ export function buildProps(
         value.type !== NodeTypes.SIMPLE_EXPRESSION ||
         // E.g: <p :foo="1 + 2" />.
         // Do not add prop `foo` to `dynamicPropNames`.
-        (!value.isStatic && value.hasPrefixedIdentifier)
+        (!value.isStatic && !value.isConstant)
       ) {
         const name = key.content
         if (name === 'ref') {

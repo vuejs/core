@@ -2,6 +2,7 @@ import {
   RootNode,
   NodeTypes,
   TemplateChildNode,
+  SimpleExpressionNode,
   ElementTypes,
   ElementCodegenNode,
   PlainElementNode,
@@ -11,7 +12,7 @@ import {
 } from '../ast'
 import { TransformContext } from '../transform'
 import { APPLY_DIRECTIVES } from '../runtimeHelpers'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet, findProp } from '../utils'
 
 function hasDynamicKey(node: ElementNode) {
@@ -107,7 +108,7 @@ function getPatchFlag(node: PlainElementNode): number | undefined {
 }
 
 function isStaticNode(
-  node: TemplateChildNode,
+  node: TemplateChildNode | SimpleExpressionNode,
   resultCache: Map<TemplateChildNode, boolean>
 ): boolean {
   switch (node.type) {
@@ -138,28 +139,16 @@ function isStaticNode(
     case NodeTypes.IF:
     case NodeTypes.FOR:
       return false
+    case NodeTypes.INTERPOLATION:
+      return isStaticNode(node.content, resultCache)
+    case NodeTypes.SIMPLE_EXPRESSION:
+      return node.isConstant
     case NodeTypes.COMPOUND_EXPRESSION:
-      return node.children.every(n => {
+      return node.children.every(child => {
         return (
-          typeof n === 'string' ||
-          typeof n === 'symbol' ||
-          // NodeTypes.TEXT is static.
-          n.type === NodeTypes.TEXT ||
-          // Expressions without identifiers are static.
-          (n.type === NodeTypes.SIMPLE_EXPRESSION &&
-            !n.hasPrefixedIdentifier) ||
-          // Check NodeTypes.INTERPOLATION
-          (n.type === NodeTypes.INTERPOLATION && isStaticNode(n, resultCache))
+          isString(child) || isSymbol(child) || isStaticNode(child, resultCache)
         )
       })
-    case NodeTypes.INTERPOLATION:
-      // Representing this interpolation is static
-      return (
-        (node.content.type === NodeTypes.SIMPLE_EXPRESSION &&
-          !node.content.hasPrefixedIdentifier) ||
-        (node.content.type === NodeTypes.COMPOUND_EXPRESSION &&
-          isStaticNode(node.content, resultCache))
-      )
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node

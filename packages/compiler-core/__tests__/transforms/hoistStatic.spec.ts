@@ -468,7 +468,7 @@ describe('compiler: hoistStatic transform', () => {
                 content: {
                   content: `1`,
                   isStatic: false,
-                  hasPrefixedIdentifier: false
+                  isConstant: true
                 }
               },
               {
@@ -476,7 +476,7 @@ describe('compiler: hoistStatic transform', () => {
                 content: {
                   content: `2`,
                   isStatic: false,
-                  hasPrefixedIdentifier: false
+                  isConstant: true
                 }
               }
             ]
@@ -519,7 +519,7 @@ describe('compiler: hoistStatic transform', () => {
               content: {
                 content: `1`,
                 isStatic: false,
-                hasPrefixedIdentifier: false
+                isConstant: true
               }
             },
             '1 /* TEXT */'
@@ -557,12 +557,12 @@ describe('compiler: hoistStatic transform', () => {
             {
               key: {
                 content: `class`,
-                hasPrefixedIdentifier: false,
+                isConstant: true,
                 isStatic: true
               },
               value: {
                 content: `{ foo: true }`,
-                hasPrefixedIdentifier: false,
+                isConstant: true,
                 isStatic: false
               }
             }
@@ -587,7 +587,7 @@ describe('compiler: hoistStatic transform', () => {
                   type: NodeTypes.INTERPOLATION,
                   content: {
                     content: `_ctx.bar`,
-                    hasPrefixedIdentifier: true,
+                    isConstant: false,
                     isStatic: false
                   }
                 },
@@ -597,6 +597,30 @@ describe('compiler: hoistStatic transform', () => {
           }
         ]
       ])
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('should NOT hoist expressions that with scope variable', () => {
+      const { root } = transformWithHoist(
+        `<div><p v-for="o in list"><span>{{ o }}</span></p></div>`,
+        {
+          prefixIdentifiers: true
+        }
+      )
+
+      expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('should NOT hoist expressions that with scope variable (2)', () => {
+      const { root } = transformWithHoist(
+        `<div><p v-for="o in list"><span>{{ o + 'foo' }}</span></p></div>`,
+        {
+          prefixIdentifiers: true
+        }
+      )
+
+      expect(root.hoists.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
     })
   })

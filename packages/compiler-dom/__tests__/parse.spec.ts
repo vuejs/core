@@ -117,7 +117,7 @@ describe('DOM parser', () => {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `a < b`,
           isStatic: false,
-          hasPrefixedIdentifier: true,
+          isConstant: false,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 16, line: 1, column: 17 },

@@ -3986,7 +3986,7 @@ Object {
         Object {
           "content": Object {
             "content": "a < b",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7152,7 +7152,7 @@ Object {
         Object {
           "content": Object {
             "content": "'</div>'",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7322,7 +7322,7 @@ Object {
         Object {
           "arg": Object {
             "content": "se",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7643,7 +7643,7 @@ Object {
     Object {
       "content": Object {
         "content": "",
-        "hasPrefixedIdentifier": true,
+        "isConstant": false,
         "isStatic": false,
         "loc": Object {
           "end": Object {
@@ -7802,7 +7802,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
-            "hasPrefixedIdentifier": false,
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7821,7 +7821,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7882,7 +7882,7 @@ Object {
         Object {
           "arg": Object {
             "content": "style",
-            "hasPrefixedIdentifier": false,
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7901,7 +7901,7 @@ Object {
           },
           "exp": Object {
             "content": "{ color: 'red' }",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7991,7 +7991,7 @@ Object {
             Object {
               "arg": Object {
                 "content": "style",
-                "hasPrefixedIdentifier": false,
+                "isConstant": true,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -8010,7 +8010,7 @@ Object {
               },
               "exp": Object {
                 "content": "{ color: 'red' }",
-                "hasPrefixedIdentifier": true,
+                "isConstant": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -8090,7 +8090,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
-            "hasPrefixedIdentifier": false,
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -8109,7 +8109,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
-            "hasPrefixedIdentifier": true,
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {

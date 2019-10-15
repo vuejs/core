@@ -61,7 +61,7 @@ export const transformExpression: NodeTransform = (node, context) => {
 
 interface PrefixMeta {
   prefix?: string
-  prefixedName: boolean
+  isConstant: boolean
   start: number
   end: number
   scopeIds?: Set<string>
@@ -109,7 +109,7 @@ export function processExpression(
   const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
 
-  let hasPrefixedIdentifier = false
+  let isConstant = true
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walkJS(ast, {
     enter(node: Node & PrefixMeta, parent) {
@@ -122,13 +122,17 @@ export function processExpression(
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
-            hasPrefixedIdentifier = true
-            node.prefixedName = true
+            node.isConstant = false
+            isConstant = false
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
+            // This means this identifier is pointing to a scope variable (a v-for alias, or a v-slot prop)
+            // which is also dynamic and cannot be hoisted.
+            node.isConstant = !(
+              knownIds[node.name] && shouldPrefix(node, parent)
+            )
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
-            node.prefixedName = false
             ids.push(node)
           }
         }
@@ -203,7 +207,7 @@ export function processExpression(
           start: advancePositionWithClone(node.loc.start, source, start),
           end: advancePositionWithClone(node.loc.start, source, end)
         },
-        id.prefixedName /* hasPrefixedIdentifier */
+        id.isConstant /* isConstant */
       )
     )
     if (i === ids.length - 1 && end < rawExp.length) {
@@ -216,7 +220,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
-    ret.hasPrefixedIdentifier = hasPrefixedIdentifier
+    ret.isConstant = isConstant
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

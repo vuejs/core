@@ -79,7 +79,7 @@ describe('isEmptyExpression', () => {
         content: '',
         type: NodeTypes.SIMPLE_EXPRESSION,
         isStatic: true,
-        hasPrefixedIdentifier: false,
+        isConstant: true,
         loc: null as any
       })
     ).toBe(true)
@@ -91,7 +91,7 @@ describe('isEmptyExpression', () => {
         content: '  \t  ',
         type: NodeTypes.SIMPLE_EXPRESSION,
         isStatic: true,
-        hasPrefixedIdentifier: false,
+        isConstant: true,
         loc: null as any
       })
     ).toBe(true)
@@ -103,7 +103,7 @@ describe('isEmptyExpression', () => {
         content: 'foo',
         type: NodeTypes.SIMPLE_EXPRESSION,
         isStatic: true,
-        hasPrefixedIdentifier: false,
+        isConstant: true,
         loc: null as any
       })
     ).toBe(false)
