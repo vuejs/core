@@ -51,7 +51,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       }
       // inject runtime directive
       // by returning the helper symbol via needRuntime
-      // the import will replaced a resovleDirective call.
+      // the import will replace the resovleDirective call.
       res.needRuntime = context.helper(directiveToUse)
     } else {
       context.onError(
