@@ -91,6 +91,9 @@ export function processExpression(
       !literalsWhitelist.has(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
+    } else if (!context.identifiers[rawExp]) {
+      // mark node constant for hoisting unless it's referring a scope variable
+      node.isConstant = true
     }
     return node
   }
@@ -109,13 +112,13 @@ export function processExpression(
   const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
 
-  let isConstant = true
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walkJS(ast, {
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
         if (!ids.includes(node)) {
-          if (!knownIds[node.name] && shouldPrefix(node, parent)) {
+          const needPrefix = shouldPrefix(node, parent)
+          if (!knownIds[node.name] && needPrefix) {
             if (isPropertyShorthand(node, parent)) {
               // property shorthand like { foo }, we need to add the key since we
               // rewrite the value
@@ -123,14 +126,11 @@ export function processExpression(
             }
             node.name = `_ctx.${node.name}`
             node.isConstant = false
-            isConstant = false
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
-            // This means this identifier is pointing to a scope variable (a v-for alias, or a v-slot prop)
-            // which is also dynamic and cannot be hoisted.
-            node.isConstant = !(
-              knownIds[node.name] && shouldPrefix(node, parent)
-            )
+            // The identifier is considered constant unless it's pointing to a
+            // scope variable (a v-for alias, or a v-slot prop)
+            node.isConstant = !(needPrefix && knownIds[node.name])
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
@@ -220,7 +220,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
-    ret.isConstant = isConstant
+    ret.isConstant = true
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

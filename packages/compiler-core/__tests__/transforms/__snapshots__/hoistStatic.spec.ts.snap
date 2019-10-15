@@ -173,7 +173,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
-const _hoisted_1 = _createVNode(\\"span\\", null, [\\"foo \\", _toString(1), _toString(2)])
+const _hoisted_1 = _createVNode(\\"span\\", null, [\\"foo \\", _toString(1), _toString(true)])
 
 return function render() {
   with (this) {
@@ -203,7 +203,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that with scope variable (2) 1`] = `
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (2) 1`] = `
 "const _Vue = Vue
 
 return function render() {
@@ -221,7 +221,24 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that with scope variable 1`] = `
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (v-slot) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { toString: _toString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    const _component_Comp = _resolveComponent(\\"Comp\\")
+    
+    return (_openBlock(), _createBlock(_component_Comp, null, {
+      default: ({ foo }) => [_toString(_ctx.foo)],
+      _compiled: true
+    }))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables 1`] = `
 "const _Vue = Vue
 
 return function render() {

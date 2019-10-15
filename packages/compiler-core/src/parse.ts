@@ -564,12 +564,9 @@ function parseAttribute(
       )
       let content = match[2]
       let isStatic = true
-      // Non-dynamic arg is a constant.
-      let isConstant = true
 
       if (content.startsWith('[')) {
         isStatic = false
-        isConstant = false
 
         if (!content.endsWith(']')) {
           emitError(
@@ -585,7 +582,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
-        isConstant,
+        isConstant: isStatic,
         loc
       }
     }
@@ -611,7 +608,8 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
-        // Set `isConstant` to false by default and will decide in transformExpression
+        // Treat as non-constant by default. This can be potentially set to
+        // true by `transformExpression` to make it eligible for hoisting.
         isConstant: false,
         loc: value.loc
       },

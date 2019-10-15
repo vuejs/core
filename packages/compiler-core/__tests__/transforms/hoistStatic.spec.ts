@@ -446,7 +446,7 @@ describe('compiler: hoistStatic transform', () => {
   describe('prefixIdentifiers', () => {
     test('hoist nested static tree with static interpolation', () => {
       const { root, args } = transformWithHoist(
-        `<div><span>foo {{ 1 }} {{ 2 }}</span></div>`,
+        `<div><span>foo {{ 1 }} {{ true }}</span></div>`,
         {
           prefixIdentifiers: true
         }
@@ -474,7 +474,7 @@ describe('compiler: hoistStatic transform', () => {
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
-                  content: `2`,
+                  content: `true`,
                   isStatic: false,
                   isConstant: true
                 }
@@ -600,7 +600,7 @@ describe('compiler: hoistStatic transform', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that with scope variable', () => {
+    test('should NOT hoist expressions that refer scope variables', () => {
       const { root } = transformWithHoist(
         `<div><p v-for="o in list"><span>{{ o }}</span></p></div>`,
         {
@@ -612,9 +612,21 @@ describe('compiler: hoistStatic transform', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that with scope variable (2)', () => {
+    test('should NOT hoist expressions that refer scope variables (2)', () => {
       const { root } = transformWithHoist(
         `<div><p v-for="o in list"><span>{{ o + 'foo' }}</span></p></div>`,
+        {
+          prefixIdentifiers: true
+        }
+      )
+
+      expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('should NOT hoist expressions that refer scope variables (v-slot)', () => {
+      const { root } = transformWithHoist(
+        `<Comp v-slot="{ foo }">{{ foo }}</Comp>`,
         {
           prefixIdentifiers: true
         }
