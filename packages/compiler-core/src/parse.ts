@@ -564,9 +564,12 @@ function parseAttribute(
       )
       let content = match[2]
       let isStatic = true
+      // Non-dynamic arg is a constant.
+      let isConstant = true
 
       if (content.startsWith('[')) {
         isStatic = false
+        isConstant = false
 
         if (!content.endsWith(']')) {
           emitError(
@@ -582,6 +585,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
+        isConstant,
         loc
       }
     }
@@ -607,6 +611,8 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
+        // Set `isConstant` to false by default and will decide in transformExpression
+        isConstant: false,
         loc: value.loc
       },
       arg,
@@ -713,6 +719,8 @@ function parseInterpolation(
     content: {
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
+      // Set `isConstant` to false by default and will decide in transformExpression
+      isConstant: false,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },
