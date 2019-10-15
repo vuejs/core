@@ -348,36 +348,39 @@ function finishComponentSetup(
   const Component = instance.type as ComponentOptions
   if (!instance.render) {
     if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
-      if (compile) {
-        Component.render = compile(Component.template, {
-          isCustomElement: instance.appContext.config.isCustomElement || NO,
-          onError(err: CompilerError) {
-            if (__DEV__) {
-              const message = `Template compilation error: ${err.message}`
-              const codeFrame =
-                err.loc &&
-                generateCodeFrame(
-                  Component.template!,
-                  err.loc.start.offset,
-                  err.loc.end.offset
-                )
-              warn(codeFrame ? `${message}\n${codeFrame}` : message)
-            }
+      // __RUNTIME_COMPILE__ ensures `compile` is provided
+      Component.render = compile!(Component.template, {
+        isCustomElement: instance.appContext.config.isCustomElement || NO,
+        onError(err: CompilerError) {
+          if (__DEV__) {
+            const message = `Template compilation error: ${err.message}`
+            const codeFrame =
+              err.loc &&
+              generateCodeFrame(
+                Component.template!,
+                err.loc.start.offset,
+                err.loc.end.offset
+              )
+            warn(codeFrame ? `${message}\n${codeFrame}` : message)
           }
-        })
-      } else if (__DEV__) {
+        }
+      })
+    }
+    if (__DEV__ && !Component.render) {
+      /* istanbul ignore if */
+      if (!__RUNTIME_COMPILE__ && Component.template) {
         warn(
           `Component provides template but the build of Vue you are running ` +
             `does not support on-the-fly template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
+      } else {
+        warn(
+          `Component is missing${
+            __RUNTIME_COMPILE__ ? ` template or` : ``
+          } render function.`
+        )
       }
-    }
-    if (__DEV__ && !Component.render) {
-      warn(
-        `Component is missing render function. Either provide a template or ` +
-          `return a render function from setup().`
-      )
     }
     instance.render = (Component.render || NOOP) as RenderFunction
   }

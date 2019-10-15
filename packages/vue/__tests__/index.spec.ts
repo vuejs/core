@@ -1,42 +1,48 @@
 import { createApp } from '../src'
+import { mockWarn } from '@vue/runtime-test'
 
-it('should support on-the-fly template compilation', () => {
-  const container = document.createElement('div')
-  const App = {
-    template: `{{ count }}`,
-    data() {
-      return {
-        count: 0
+describe('compiler + runtime integration', () => {
+  mockWarn()
+
+  it('should support on-the-fly template compilation', () => {
+    const container = document.createElement('div')
+    const App = {
+      template: `{{ count }}`,
+      data() {
+        return {
+          count: 0
+        }
       }
     }
-  }
-  createApp().mount(App, container)
-  expect(container.innerHTML).toBe(`0`)
-})
+    createApp().mount(App, container)
+    expect(container.innerHTML).toBe(`0`)
+  })
 
-it('should correctly normalize class with on-the-fly template compilation', () => {
-  const container = document.createElement('div')
-  const App = {
-    template: `<div :class="{ test: demoValue, test2: !demoValue }"></div>`,
-    data() {
-      return {
-        demoValue: true
-      }
+  it('should warn template compilation errors with codeframe', () => {
+    const container = document.createElement('div')
+    const App = {
+      template: `<div v-if>`
     }
-  }
-  createApp().mount(App, container)
-  const classes = container.firstElementChild!.classList
-  expect(classes.contains('test')).toBe(true)
-  expect(classes.contains('test2')).toBe(false)
-})
+    createApp().mount(App, container)
+    expect(
+      `Template compilation error: End tag was not found`
+    ).toHaveBeenWarned()
+    expect(`v-if/v-else-if is missing expression`).toHaveBeenWarned()
+    expect(
+      `
+1  |  <div v-if>
+   |       ^^^^`.trim()
+    ).toHaveBeenWarned()
+  })
 
-it('should support custom element', () => {
-  const app = createApp()
-  const container = document.createElement('div')
-  const App = {
-    template: '<custom></custom>'
-  }
-  app.config.isCustomElement = tag => tag === 'custom'
-  app.mount(App, container)
-  expect(container.innerHTML).toBe('<custom></custom>')
+  it('should support custom element', () => {
+    const app = createApp()
+    const container = document.createElement('div')
+    const App = {
+      template: '<custom></custom>'
+    }
+    app.config.isCustomElement = tag => tag === 'custom'
+    app.mount(App, container)
+    expect(container.innerHTML).toBe('<custom></custom>')
+  })
 })
