@@ -45,10 +45,7 @@ export interface ParserOptions {
 }
 
 // `isNativeTag` is optional, others are required
-type MergedParserOptions = Pick<
-  Required<ParserOptions>,
-  Exclude<keyof ParserOptions, 'isNativeTag'>
-> &
+type MergedParserOptions = Omit<Required<ParserOptions>, 'isNativeTag'> &
   Pick<ParserOptions, 'isNativeTag'>
 
 export const defaultParserOptions: MergedParserOptions = {
