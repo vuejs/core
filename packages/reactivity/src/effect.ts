@@ -88,7 +88,7 @@ function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
   if (!effect.active) {
     return fn(...args)
   }
-  if (activeReactiveEffectStack.indexOf(effect) === -1) {
+  if (!activeReactiveEffectStack.includes(effect)) {
     cleanup(effect)
     try {
       activeReactiveEffectStack.push(effect)
