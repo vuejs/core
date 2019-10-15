@@ -110,7 +110,7 @@ export function processExpression(
 
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walkJS(ast, {
-    enter(node: Node & PrefixMeta, parent) {
+    enter(node: Node & PrefixMeta, parent: any) {
       if (node.type === 'Identifier') {
         if (!ids.includes(node)) {
           if (!knownIds[node.name] && shouldPrefix(node, parent)) {
@@ -131,8 +131,8 @@ export function processExpression(
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
-          walkJS(p, {
-            enter(child, parent) {
+          walkJS(p as any, {
+            enter(child: any, parent: any) {
               if (
                 child.type === 'Identifier' &&
                 // do not record as scope variable if is a destructured key
