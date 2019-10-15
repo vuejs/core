@@ -1,4 +1,4 @@
-const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent;
 
@@ -16,8 +16,8 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as MouseEvent).button !== 0,
   middle: e => 'button' in e && (e as MouseEvent).button !== 1,
   right: e => 'button' in e && (e as MouseEvent).button !== 2,
-  exact: (e, modifiers) =>
-    modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
+  exact: (e, modifiers: string[]) =>
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
