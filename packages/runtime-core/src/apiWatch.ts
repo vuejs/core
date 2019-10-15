@@ -56,7 +56,7 @@ export function watch<T>(
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
-export function watch<T extends WatcherSource<unknown>[]>(
+export function watch<T extends readonly WatcherSource<unknown>[]>(
   sources: T,
   cb: (
     newValues: MapSources<T>,
