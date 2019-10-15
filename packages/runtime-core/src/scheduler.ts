@@ -1,5 +1,5 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { isArray } from '@vue/shared'
+import { isArray, uniq } from '@vue/shared'
 
 const queue: Function[] = []
 const postFlushCbs: Function[] = []
@@ -32,11 +32,9 @@ export function queuePostFlushCb(cb: Function | Function[]) {
   }
 }
 
-const dedupe = (cbs: Function[]): Function[] => [...new Set(cbs)]
-
 export function flushPostFlushCbs() {
   if (postFlushCbs.length) {
-    const cbs = dedupe(postFlushCbs)
+    const cbs = uniq(postFlushCbs)
     postFlushCbs.length = 0
     for (let i = 0; i < cbs.length; i++) {
       cbs[i]()

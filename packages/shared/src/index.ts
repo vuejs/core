@@ -64,3 +64,6 @@ export const hyphenate = (str: string): string => {
 export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
+
+export const uniq = <T>(arr: Array<T>) =>
+  arr.filter((v, i) => arr.indexOf(v) === i)
