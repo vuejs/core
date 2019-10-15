@@ -25,7 +25,7 @@ import {
 } from '../utils'
 import { isGloballyWhitelisted, makeMap } from '@vue/shared'
 
-const isLiteralWhitelisted = /*@__PURE__*/ makeMap('true,false,null,this')
+const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
