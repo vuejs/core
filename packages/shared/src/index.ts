@@ -17,14 +17,16 @@ export const NO = () => false
 
 export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
 
-export const extend = <T extends object, U extends object>(
+export function extend<T extends object, U extends object>(a: T, b: U): T & U
+export function extend<T extends object, U extends object>(
   a: T,
-  b: U
-): T & U => {
+  b?: U
+): T & Partial<U>
+export function extend(a: any, b: any): any {
   for (const key in b) {
-    ;(a as any)[key] = b[key]
+    a[key] = b[key]
   }
-  return a as any
+  return a
 }
 
 const hasOwnProperty = Object.prototype.hasOwnProperty
