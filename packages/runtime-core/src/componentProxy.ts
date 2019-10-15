@@ -106,6 +106,6 @@ if (__RUNTIME_COMPILE__) {
   // this trap is only called in browser-compiled render functions that use
   // `with (this) {}`
   PublicInstanceProxyHandlers.has = (_: any, key: string): boolean => {
-    return key[0] !== '_' && !globalsWhitelist.has(key)
+    return key[0] !== '_' && !globalsWhitelist(key)
   }
 }

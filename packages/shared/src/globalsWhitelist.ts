@@ -1,4 +1,6 @@
-export const globalsWhitelist = new Set([
+import { makeMap } from "./makeMap";
+
+export const globalsWhitelist = makeMap([
   'Infinity',
   'undefined',
   'NaN',

@@ -86,7 +86,7 @@ export function processExpression(
     if (
       !asParams &&
       !context.identifiers[rawExp] &&
-      !globalsWhitelist.has(rawExp) &&
+      !globalsWhitelist(rawExp) &&
       !literalsWhitelist.has(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
@@ -246,7 +246,7 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
     // not in an Array destructure pattern
     !(parent.type === 'ArrayPattern') &&
     // skip whitelisted globals
-    !globalsWhitelist.has(identifier.name) &&
+    !globalsWhitelist(identifier.name) &&
     // special case for webpack compilation
     identifier.name !== `require` &&
     // is a special keyword but parsed as identifier
