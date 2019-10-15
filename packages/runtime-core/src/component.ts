@@ -350,6 +350,7 @@ function finishComponentSetup(
     if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
       if (compile) {
         Component.render = compile(Component.template, {
+          isCustomElement: instance.appContext.config.isCustomElement || NO,
           onError(err: CompilerError) {
             if (__DEV__) {
               const message = `Template compilation error: ${err.message}`

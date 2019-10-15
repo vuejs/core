@@ -28,6 +28,7 @@ export interface AppConfig {
   devtools: boolean
   performance: boolean
   readonly isNativeTag?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean
   errorHandler?: (
     err: Error,
     instance: ComponentPublicInstance | null,
@@ -62,6 +63,7 @@ export function createAppContext(): AppContext {
       devtools: true,
       performance: false,
       isNativeTag: NO,
+      isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
     },
