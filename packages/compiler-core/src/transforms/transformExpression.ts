@@ -23,9 +23,9 @@ import {
   parseJS,
   walkJS
 } from '../utils'
-import { globalsWhitelist } from '@vue/shared'
+import { isGloballyWhitelisted, makeMap } from '@vue/shared'
 
-const literalsWhitelist = new Set([`true`, `false`, `null`, `this`])
+const isLiteralWhitelisted = makeMap('true,false,null,this')
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -87,8 +87,8 @@ export function processExpression(
     if (
       !asParams &&
       !context.identifiers[rawExp] &&
-      !globalsWhitelist.has(rawExp) &&
-      !literalsWhitelist.has(rawExp)
+      !isGloballyWhitelisted(rawExp) &&
+      !isLiteralWhitelisted(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
     } else if (!context.identifiers[rawExp]) {
@@ -261,7 +261,7 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
     // not in an Array destructure pattern
     !(parent.type === 'ArrayPattern') &&
     // skip whitelisted globals
-    !globalsWhitelist.has(identifier.name) &&
+    !isGloballyWhitelisted(identifier.name) &&
     // special case for webpack compilation
     identifier.name !== `require` &&
     // is a special keyword but parsed as identifier
