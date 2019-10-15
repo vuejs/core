@@ -16,17 +16,8 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as MouseEvent).button !== 0,
   middle: e => 'button' in e && (e as MouseEvent).button !== 1,
   right: e => 'button' in e && (e as MouseEvent).button !== 2,
-  exact: (e, modifiers: string[]) => {
-    // todo: replace with makeMap
-    let map = modifiers.reduce(
-      (map, m) => ((map[m] = true), map),
-      Object.create(null)
-    )
-    // Some of the system modifiers are not specified, but is flagged true on the event
-    return systemModifiers.some(
-      modifierKey => !map[modifierKey] && (e as any)[`${modifierKey}Key`]
-    )
-  }
+  exact: (e, modifiers: string[]) =>
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
