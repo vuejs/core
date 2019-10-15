@@ -37,5 +37,5 @@ export const DOMErrorMessages: { [code: number]: string } = {
   [DOMErrorCodes.X_V_TEXT_WITH_CHILDREN]: `v-text will override element children.`,
   [DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT]: `v-model can only be used on <input>, <textarea> and <select> elements.`,
   [DOMErrorCodes.X_V_MODEL_ARG_ON_ELEMENT]: `v-model argument is not supported on plain elements.`,
-  [DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT]: `v-model can not used on file input, file inputs are read only, use a v-on:change listener instead.`
+  [DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT]: `v-model cannot used on file inputs since they are read-only. Use a v-on:change listener instead.`
 }
