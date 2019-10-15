@@ -103,6 +103,28 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([[2, 2, 3], [1, 1, 2]])
   })
 
+  it('watching multiple sources: readonly array', async () => {
+    const state = reactive({ count: 1 })
+    const status = ref(false)
+
+    let dummy
+    watch([() => state.count, status] as const, (vals, oldVals) => {
+      dummy = [vals, oldVals]
+      let [count] = vals
+      let [, oldStatus] = oldVals
+      // assert types
+      count + 1
+      oldStatus === true
+    })
+    await nextTick()
+    expect(dummy).toMatchObject([[1, false], []])
+
+    state.count++
+    status.value = false
+    await nextTick()
+    expect(dummy).toMatchObject([[2, false], [1, false]])
+  })
+
   it('stopping the watcher', async () => {
     const state = reactive({ count: 0 })
     let dummy
