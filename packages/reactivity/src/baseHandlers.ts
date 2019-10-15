@@ -38,7 +38,6 @@ function set(
   receiver: any
 ): boolean {
   value = toRaw(value)
-  const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   if (isRef(oldValue) && !isRef(value)) {
     oldValue.value = value
@@ -47,6 +46,7 @@ function set(
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === toRaw(receiver)) {
+    const hadKey = hasOwn(target, key)
     /* istanbul ignore else */
     if (__DEV__) {
       const extraInfo = { oldValue, newValue: value }
