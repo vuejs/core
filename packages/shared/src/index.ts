@@ -1,6 +1,7 @@
 export * from './patchFlags'
 export * from './element'
-export { globalsWhitelist } from './globalsWhitelist'
+export { isGloballyWhitelisted } from './globalsWhitelist'
+export { makeMap } from './makeMap'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})

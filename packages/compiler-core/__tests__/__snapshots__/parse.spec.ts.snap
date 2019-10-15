@@ -3986,6 +3986,7 @@ Object {
         Object {
           "content": Object {
             "content": "a < b",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7151,6 +7152,7 @@ Object {
         Object {
           "content": Object {
             "content": "'</div>'",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7320,6 +7322,7 @@ Object {
         Object {
           "arg": Object {
             "content": "se",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7640,6 +7643,7 @@ Object {
     Object {
       "content": Object {
         "content": "",
+        "isConstant": false,
         "isStatic": false,
         "loc": Object {
           "end": Object {
@@ -7798,6 +7802,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7816,6 +7821,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7876,6 +7882,7 @@ Object {
         Object {
           "arg": Object {
             "content": "style",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7894,6 +7901,7 @@ Object {
           },
           "exp": Object {
             "content": "{ color: 'red' }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7983,6 +7991,7 @@ Object {
             Object {
               "arg": Object {
                 "content": "style",
+                "isConstant": true,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -8001,6 +8010,7 @@ Object {
               },
               "exp": Object {
                 "content": "{ color: 'red' }",
+                "isConstant": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -8080,6 +8090,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -8098,6 +8109,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {

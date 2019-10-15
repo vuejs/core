@@ -38,12 +38,12 @@ function set(
   receiver: any
 ): boolean {
   value = toRaw(value)
-  const hadKey = hasOwn(target, key)
   const oldValue = target[key]
   if (isRef(oldValue) && !isRef(value)) {
     oldValue.value = value
     return true
   }
+  const hadKey = hasOwn(target, key)
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === toRaw(receiver)) {
