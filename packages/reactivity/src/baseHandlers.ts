@@ -43,10 +43,10 @@ function set(
     oldValue.value = value
     return true
   }
+  const hadKey = hasOwn(target, key)
   const result = Reflect.set(target, key, value, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === toRaw(receiver)) {
-    const hadKey = hasOwn(target, key)
     /* istanbul ignore else */
     if (__DEV__) {
       const extraInfo = { oldValue, newValue: value }
