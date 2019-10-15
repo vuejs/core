@@ -32,6 +32,7 @@ import { extend } from '@vue/shared'
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
   isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
+  isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
@@ -57,6 +58,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
+  isCustomElement: NO,
   namedCharacterReferences: {
     'gt;': '>',
     'lt;': '<',
@@ -436,7 +438,7 @@ function parseTag(
   }
 
   let tagType = ElementTypes.ELEMENT
-  if (!context.inPre) {
+  if (!context.inPre && !context.options.isCustomElement(tag)) {
     if (context.options.isNativeTag) {
       if (!context.options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else {
