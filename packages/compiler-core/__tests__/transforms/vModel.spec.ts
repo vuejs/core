@@ -25,8 +25,8 @@ function parseWithVModel(template: string, options: CompilerOptions = {}) {
     nodeTransforms: [
       transformFor,
       transformExpression,
-      trackSlotScopes,
-      transformElement
+      transformElement,
+      trackSlotScopes
     ],
     directiveTransforms: {
       ...options.directiveTransforms,
