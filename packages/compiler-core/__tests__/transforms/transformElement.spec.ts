@@ -48,6 +48,14 @@ function parseWithElementTransform(
   }
 }
 
+function parseWithBind(template: string) {
+  return parseWithElementTransform(template, {
+    directiveTransforms: {
+      bind: transformBind
+    }
+  })
+}
+
 describe('compiler: element transform', () => {
   test('import + resolve component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
@@ -627,14 +635,6 @@ describe('compiler: element transform', () => {
   })
 
   describe('patchFlag analysis', () => {
-    function parseWithBind(template: string) {
-      return parseWithElementTransform(template, {
-        directiveTransforms: {
-          bind: transformBind
-        }
-      })
-    }
-
     test('TEXT', () => {
       const { node } = parseWithBind(`<div>foo</div>`)
       expect(node.arguments.length).toBe(3)
@@ -720,16 +720,8 @@ describe('compiler: element transform', () => {
   })
 
   describe('dynamic component', () => {
-    const options = {
-      directiveTransforms: {
-        bind: transformBind
-      }
-    }
     test('static binding', () => {
-      const { node, root } = parseWithElementTransform(
-        `<component is="foo" />`,
-        options
-      )
+      const { node, root } = parseWithBind(`<component is="foo" />`)
       expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
         callee: CREATE_VNODE,
@@ -738,10 +730,7 @@ describe('compiler: element transform', () => {
     })
 
     test('dynamic binding', () => {
-      const { node, root } = parseWithElementTransform(
-        `<component :is="foo" />`,
-        options
-      )
+      const { node, root } = parseWithBind(`<component :is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node.arguments).toMatchObject([
         {
@@ -761,15 +750,9 @@ describe('compiler: element transform', () => {
         callee: CREATE_VNODE,
         arguments: ['"component"']
       }
-      const { node: node1 } = parseWithElementTransform(
-        `<component is />`,
-        options
-      )
+      const { node: node1 } = parseWithBind(`<component is />`)
       expect(node1).toMatchObject(result)
-      const { node: node2 } = parseWithElementTransform(
-        `<component :is />`,
-        options
-      )
+      const { node: node2 } = parseWithBind(`<component :is />`)
       expect(node2).toMatchObject(result)
     })
   })
