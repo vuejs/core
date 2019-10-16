@@ -1,6 +1,8 @@
 import { isString } from '@vue/shared'
 
-export function patchStyle(el: any, prev: any, next: any) {
+type Style = string | Partial<CSSStyleDeclaration>
+
+export function patchStyle(el: HTMLElement, prev: Style, next: Style) {
   const { style } = el
   if (!next) {
     el.removeAttribute('style')
@@ -8,7 +10,7 @@ export function patchStyle(el: any, prev: any, next: any) {
     style.cssText = next
   } else {
     for (const key in next) {
-      style[key] = next[key]
+      style[key] = next[key] as string
     }
     if (prev && !isString(prev)) {
       for (const key in prev) {
