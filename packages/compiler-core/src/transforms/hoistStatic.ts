@@ -116,8 +116,9 @@ function isStaticNode(
       if (node.tagType !== ElementTypes.ELEMENT) {
         return false
       }
-      if (resultCache.has(node)) {
-        return resultCache.get(node)!
+      const cached = resultCache.get(node)
+      if (cached !== undefined) {
+        return cached
       }
       const flag = getPatchFlag(node)
       if (!flag || flag === PatchFlags.TEXT) {
