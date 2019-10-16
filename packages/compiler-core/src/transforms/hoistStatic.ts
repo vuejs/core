@@ -104,7 +104,7 @@ function getPatchFlag(node: PlainElementNode): number | undefined {
     codegenNode = codegenNode.arguments[0]
   }
   const flag = codegenNode.arguments[3]
-  return flag ? parseInt(flag as string, 10) : undefined
+  return flag ? parseInt(flag, 10) : undefined
 }
 
 function isStaticNode(

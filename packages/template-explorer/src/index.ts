@@ -213,12 +213,12 @@ function debounce<T extends (...args: any[]) => any>(
   fn: T,
   delay: number = 300
 ): T {
-  let prevTimer: NodeJS.Timeout | null = null
+  let prevTimer: number | null = null
   return ((...args: any[]) => {
     if (prevTimer) {
       clearTimeout(prevTimer)
     }
-    prevTimer = setTimeout(() => {
+    prevTimer = window.setTimeout(() => {
       fn(...args)
       prevTimer = null
     }, delay)

@@ -17,7 +17,7 @@ const bracketsRE = /^\[|\]$/g
 // e.g.
 // - createObjectMatcher({ 'foo': '[bar]' }) matches { foo: bar }
 // - createObjectMatcher({ '[foo]': 'bar' }) matches { [foo]: "bar" }
-export function createObjectMatcher(obj: any) {
+export function createObjectMatcher(obj: Record<string, any>) {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
     properties: Object.keys(obj).map(key => ({
