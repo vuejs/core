@@ -5,18 +5,29 @@ import {
   ElementNode,
   ObjectExpression,
   CompilerOptions,
-  CallExpression
+  CallExpression,
+  ForNode,
+  PlainElementNode,
+  PlainElementCodegenNode,
+  ComponentNode
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { transformFor } from '../../src/transforms/vFor'
+import { trackSlotScopes } from '../../src/transforms/vSlot'
 
 function parseWithVModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
 
   transform(ast, {
-    nodeTransforms: [transformExpression, transformElement],
+    nodeTransforms: [
+      transformFor,
+      transformExpression,
+      trackSlotScopes,
+      transformElement
+    ],
     directiveTransforms: {
       ...options.directiveTransforms,
       model: transformModel
@@ -325,6 +336,39 @@ describe('compiler: transform v-model', () => {
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
+  })
+
+  test('should not mark update handler dynamic', () => {
+    const root = parseWithVModel('<input v-model="foo" />', {
+      prefixIdentifiers: true
+    })
+    const codegen = (root.children[0] as PlainElementNode)
+      .codegenNode as PlainElementCodegenNode
+    expect(codegen.arguments[4]).toBe(`["modelValue"]`)
+  })
+
+  test('should mark update handler dynamic if it refers v-for scope variables', () => {
+    const root = parseWithVModel(
+      '<input v-for="i in list" v-model="foo[i]" />',
+      {
+        prefixIdentifiers: true
+      }
+    )
+    const codegen = ((root.children[0] as ForNode)
+      .children[0] as PlainElementNode).codegenNode as PlainElementCodegenNode
+    expect(codegen.arguments[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
+  })
+
+  test('should mark update handler dynamic if it refers slot scope variables', () => {
+    const root = parseWithVModel(
+      '<Comp v-slot="{ foo }"><input v-model="foo"/></Comp>',
+      {
+        prefixIdentifiers: true
+      }
+    )
+    const codegen = ((root.children[0] as ComponentNode)
+      .children[0] as PlainElementNode).codegenNode as PlainElementCodegenNode
+    expect(codegen.arguments[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
   describe('errors', () => {

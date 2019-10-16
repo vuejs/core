@@ -193,21 +193,21 @@ export function buildProps(
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       if (
-        value.type !== NodeTypes.SIMPLE_EXPRESSION ||
-        // E.g: <p :foo="1 + 2" />.
-        // Do not add prop `foo` to `dynamicPropNames`.
-        (!value.isStatic && !value.isConstant)
+        (value.type === NodeTypes.SIMPLE_EXPRESSION ||
+          value.type === NodeTypes.COMPOUND_EXPRESSION) &&
+        isStaticNode(value)
       ) {
-        const name = key.content
-        if (name === 'ref') {
-          hasRef = true
-        } else if (name === 'class') {
-          hasClassBinding = true
-        } else if (name === 'style') {
-          hasStyleBinding = true
-        } else if (name !== 'key') {
-          dynamicPropNames.push(name)
-        }
+        return
+      }
+      const name = key.content
+      if (name === 'ref') {
+        hasRef = true
+      } else if (name === 'class') {
+        hasClassBinding = true
+      } else if (name === 'style') {
+        hasStyleBinding = true
+      } else if (name !== 'key') {
+        dynamicPropNames.push(name)
       }
     } else {
       hasDynamicKeys = true
