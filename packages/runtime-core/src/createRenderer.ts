@@ -1502,8 +1502,8 @@ export function createRenderer<
       // and oldIndex = 0 is a special value indicating the new node has
       // no corresponding old node.
       // used for determining longest stable subsequence
-      const newIndexToOldIndexMap = []
-      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap.push(0)
+      const newIndexToOldIndexMap = new Array(toBePatched)
+      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
