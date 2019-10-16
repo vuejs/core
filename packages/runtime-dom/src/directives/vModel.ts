@@ -1,12 +1,11 @@
 import {
-  Directive,
   ObjectDirective,
   VNode,
   DirectiveBinding,
   warn
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
-import { looseEqual, isArray } from '@vue/shared'
+import { isArray } from '@vue/shared'
 
 const getModelAssigner = (vnode: VNode): ((value: any) => void) =>
   vnode.props!['onUpdate:modelValue']
@@ -36,7 +35,7 @@ function toNumber(val: string): number | string {
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
-export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
+export const vModelText: ObjectDirective<HTMLInputElement | HTMLTextAreaElement> = {
   beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el.value = value
     const assign = getModelAssigner(vnode)
@@ -78,7 +77,7 @@ export const vModelText: Directive<HTMLInputElement | HTMLTextAreaElement> = {
   }
 }
 
-export const vModelCheckbox: Directive<HTMLInputElement> = {
+export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
   beforeMount(el, binding, vnode) {
     setChecked(el, binding, vnode)
     const assign = getModelAssigner(vnode)
@@ -113,7 +112,7 @@ function setChecked(
     : !!value
 }
 
-export const vModelRadio: Directive<HTMLInputElement> = {
+export const vModelRadio: ObjectDirective<HTMLInputElement> = {
   beforeMount(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
     const assign = getModelAssigner(vnode)
@@ -126,7 +125,7 @@ export const vModelRadio: Directive<HTMLInputElement> = {
   }
 }
 
-export const vModelSelect: Directive<HTMLSelectElement> = {
+export const vModelSelect: ObjectDirective<HTMLSelectElement> = {
   // use mounted & updated because <select> relies on its children <option>s.
   mounted(el, { value }, vnode) {
     setSelected(el, value)
@@ -182,7 +181,7 @@ function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
 }
 
-export const vModelDynamic: Directive<
+export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
   beforeMount(el, binding, vnode) {
@@ -209,21 +208,21 @@ function callModelHook(
   let modelToUse: ObjectDirective
   switch (el.tagName) {
     case 'SELECT':
-      modelToUse = vModelSelect as ObjectDirective
+      modelToUse = vModelSelect
       break
     case 'TEXTAREA':
-      modelToUse = vModelText as ObjectDirective
+      modelToUse = vModelText
       break
     default:
       switch (el.type) {
         case 'checkbox':
-          modelToUse = vModelCheckbox as ObjectDirective
+          modelToUse = vModelCheckbox
           break
         case 'radio':
-          modelToUse = vModelRadio as ObjectDirective
+          modelToUse = vModelRadio
           break
         default:
-          modelToUse = vModelText as ObjectDirective
+          modelToUse = vModelText
       }
   }
   const fn = modelToUse[hook]
