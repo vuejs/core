@@ -7,7 +7,8 @@ import {
   APPLY_DIRECTIVES,
   TO_HANDLERS,
   helperNameMap,
-  PORTAL
+  PORTAL,
+  RESOLVE_DYNAMIC_COMPONENT
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -715,6 +716,61 @@ describe('compiler: element transform', () => {
       const vnodeCall = node.arguments[0] as CallExpression
       expect(vnodeCall.arguments.length).toBe(4)
       expect(vnodeCall.arguments[3]).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+  })
+
+  describe('dynamic component', () => {
+    const options = {
+      directiveTransforms: {
+        bind: transformBind
+      }
+    }
+    test('static binding', () => {
+      const { node, root } = parseWithElementTransform(
+        `<component is="foo" />`,
+        options
+      )
+      expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        callee: RESOLVE_COMPONENT,
+        arguments: ['_component_foo']
+      })
+    })
+
+    test('dynamic binding', () => {
+      const { node, root } = parseWithElementTransform(
+        `<component :is="foo" />`,
+        options
+      )
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node.arguments).toMatchObject([
+        {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo'
+            }
+          ]
+        }
+      ])
+    })
+
+    test('empty "is" prop', () => {
+      const result = {
+        callee: CREATE_VNODE,
+        arguments: ['"component"']
+      }
+      const { node: node1 } = parseWithElementTransform(
+        `<component is />`,
+        options
+      )
+      expect(node1).toMatchObject(result)
+      const { node: node2 } = parseWithElementTransform(
+        `<component :is />`,
+        options
+      )
+      expect(node2).toMatchObject(result)
     })
   })
 })

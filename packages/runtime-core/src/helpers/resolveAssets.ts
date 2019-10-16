@@ -8,6 +8,17 @@ export function resolveComponent(name: string): Component | undefined {
   return resolveAsset('components', name)
 }
 
+export function resolveDynamicComponent(
+  component: unknown
+): Component | undefined {
+  if (!component) return
+  if (typeof component === 'string') {
+    return resolveAsset('components', component)
+  } else if (typeof component === 'function' || typeof component === 'object') {
+    return component || undefined
+  }
+}
+
 export function resolveDirective(name: string): Directive | undefined {
   return resolveAsset('directives', name)
 }
