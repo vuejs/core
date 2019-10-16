@@ -225,7 +225,7 @@ export const setCurrentInstance = (
   currentInstance = instance
 }
 
-const isBuiltInTag = /*@__PURE__*/ makeMap('slot,component')
+const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
