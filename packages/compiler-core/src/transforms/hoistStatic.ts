@@ -151,7 +151,7 @@ function isStaticNode(
       })
     default:
       if (__DEV__) {
-        const exhaustiveCheck = node
+        const exhaustiveCheck: never = node
         exhaustiveCheck
       }
       return false
