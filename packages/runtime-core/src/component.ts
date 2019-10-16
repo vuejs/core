@@ -22,7 +22,8 @@ import {
   NOOP,
   isArray,
   isObject,
-  NO
+  NO,
+  makeMap
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
 import {
@@ -224,8 +225,7 @@ export const setCurrentInstance = (
   currentInstance = instance
 }
 
-const BuiltInTagSet = new Set(['slot', 'component'])
-const isBuiltInTag = (tag: string) => BuiltInTagSet.has(tag)
+const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
