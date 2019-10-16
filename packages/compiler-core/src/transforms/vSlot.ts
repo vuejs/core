@@ -342,7 +342,7 @@ function hasScopeRef(
   node: TemplateChildNode | IfBranchNode | SimpleExpressionNode | undefined,
   ids: TransformContext['identifiers']
 ): boolean {
-  if (!node) {
+  if (!node || Object.keys(ids).length === 0) {
     return false
   }
   switch (node.type) {
