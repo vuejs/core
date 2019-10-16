@@ -117,23 +117,23 @@ function isStaticNode(
         return false
       }
       const cached = resultCache.get(node)
-      if (cached === undefined) {
-        const flag = getPatchFlag(node)
-        if (!flag || flag === PatchFlags.TEXT) {
-          // element self is static. check its children.
-          for (let i = 0; i < node.children.length; i++) {
-            if (!isStaticNode(node.children[i], resultCache)) {
-              resultCache.set(node, false)
-              return false
-            }
-          }
-          resultCache.set(node, true)
-          return true
-        } else {
-          return false
-        }
+      if (cached !== undefined) {
+        return cached
       }
-      return cached
+      const flag = getPatchFlag(node)
+      if (!flag || flag === PatchFlags.TEXT) {
+        // element self is static. check its children.
+        for (let i = 0; i < node.children.length; i++) {
+          if (!isStaticNode(node.children[i], resultCache)) {
+            resultCache.set(node, false)
+            return false
+          }
+        }
+        resultCache.set(node, true)
+        return true
+      } else {
+        return false
+      }
     case NodeTypes.TEXT:
     case NodeTypes.COMMENT:
       return true
