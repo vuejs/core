@@ -5,7 +5,7 @@ import {
   warn
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
-import { isArray } from '@vue/shared'
+import { looseEqual, isArray } from '@vue/shared'
 
 const getModelAssigner = (vnode: VNode): ((value: any) => void) =>
   vnode.props!['onUpdate:modelValue']
