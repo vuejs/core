@@ -732,7 +732,7 @@ describe('compiler: element transform', () => {
       )
       expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
-        callee: RESOLVE_COMPONENT,
+        callee: CREATE_VNODE,
         arguments: ['_component_foo']
       })
     })
