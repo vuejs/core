@@ -371,6 +371,27 @@ describe('compiler: transform v-model', () => {
     expect(codegen.arguments[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
+  test('should generate modelModifers for component v-model', () => {
+    const root = parseWithVModel('<Comp v-model.trim.bar-baz="foo" />', {
+      prefixIdentifiers: true
+    })
+    const args = (root.children[0] as ComponentNode).codegenNode!.arguments
+    // props
+    expect(args[1]).toMatchObject({
+      properties: [
+        { key: { content: `modelValue` } },
+        { key: { content: `onUpdate:modelValue` } },
+        {
+          key: { content: 'modelModifiers' },
+          value: { content: `{ trim: true, "bar-baz": true }`, isStatic: false }
+        }
+      ]
+    })
+    // should NOT include modelModifiers in dynamicPropNames because it's never
+    // gonna change
+    expect(args[4]).toBe(`["modelValue"]`)
+  })
+
   describe('errors', () => {
     test('missing expression', () => {
       const onError = jest.fn()

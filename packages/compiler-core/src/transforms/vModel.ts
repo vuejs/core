@@ -6,7 +6,8 @@ import {
   NodeTypes,
   Property,
   CompoundExpressionNode,
-  createInterpolation
+  createInterpolation,
+  ElementTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { isMemberExpression, isSimpleIdentifier } from '../utils'
@@ -64,7 +65,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   const props = [
+    // modelValue: foo
     createObjectProperty(propName, dir.exp!),
+    // "onUpdate:modelValue": $event => (foo = $event)
     createObjectProperty(
       eventName,
       createCompoundExpression([
@@ -75,8 +78,17 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     )
   ]
 
-  if (dir.modifiers.length) {
-    // TODO add modelModifiers prop
+  // modelModifiers: { foo: true, "bar-baz": true }
+  if (dir.modifiers.length && node.tagType === ElementTypes.COMPONENT) {
+    const modifiers = dir.modifiers
+      .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
+      .join(`, `)
+    props.push(
+      createObjectProperty(
+        `modelModifiers`,
+        createSimpleExpression(`{ ${modifiers} }`, false, dir.loc, true)
+      )
+    )
   }
 
   return createTransformProps(props)
