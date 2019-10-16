@@ -35,11 +35,14 @@ describe('reactivity/reactive', () => {
     expect(Object.keys(observed)).toEqual(['0'])
   })
 
-  test('cloned reactive Array should point to observed values', () => {
+  test('cloned reactive Array should not point to observed object, but inner elements should have same refrences', () => {
     const original = [{ foo: 1 }]
     const observed = reactive(original)
     const clone = observed.slice()
+    expect(isReactive(clone)).toBe(false)
     expect(isReactive(clone[0])).toBe(true)
+    expect(clone).not.toBe(original)
+    expect(clone).not.toBe(observed)
     expect(clone[0]).not.toBe(original[0])
     expect(clone[0]).toBe(observed[0])
   })

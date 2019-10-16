@@ -140,6 +140,12 @@ describe('reactivity/computed', () => {
         n.value = val - 1
       }
     })
+    const plusOneButSetPlusTwo = computed({
+      get: () => n.value + 1,
+      set: val => {
+        n.value = val + 2
+      }
+    })
 
     expect(plusOne.value).toBe(2)
     n.value++
@@ -147,6 +153,14 @@ describe('reactivity/computed', () => {
 
     plusOne.value = 0
     expect(n.value).toBe(-1)
+    expect(plusOne.value).toBe(0)
+
+    expect(plusOneButSetPlusTwo.value).toBe(0)
+    plusOneButSetPlusTwo.value = 0
+    // even you just assigned 0, but getter will return 3 as you access it
+    expect(plusOneButSetPlusTwo.value).toBe(3)
+    expect(n.value).toBe(2)
+    expect(plusOne.value).toBe(3)
   })
 
   it('should trigger effect w/ setter', () => {
