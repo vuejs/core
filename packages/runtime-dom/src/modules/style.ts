@@ -1,6 +1,6 @@
 import { isString } from '@vue/shared'
 
-type Style = string | Partial<CSSStyleDeclaration>
+type Style = string | Partial<CSSStyleDeclaration> | null
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style

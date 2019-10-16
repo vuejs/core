@@ -9,7 +9,3 @@ declare var __VERSION__: string
 // Feature flags
 declare var __FEATURE_OPTIONS__: boolean
 declare var __FEATURE_SUSPENSE__: boolean
-
-// Global opration
-declare type AnyFunction = (...args: any[]) => any
-declare type AnyObject<T = any> = { [key: string]: T }
