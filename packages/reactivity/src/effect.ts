@@ -128,29 +128,30 @@ export function track(
     return
   }
   const effect = activeReactiveEffectStack[activeReactiveEffectStack.length - 1]
-  if (effect) {
-    if (type === OperationTypes.ITERATE) {
-      key = ITERATE_KEY
-    }
-    let depsMap = targetMap.get(target)
-    if (depsMap === void 0) {
-      targetMap.set(target, (depsMap = new Map()))
-    }
-    let dep = depsMap.get(key!)
-    if (dep === void 0) {
-      depsMap.set(key!, (dep = new Set()))
-    }
-    if (!dep.has(effect)) {
-      dep.add(effect)
-      effect.deps.push(dep)
-      if (__DEV__ && effect.onTrack) {
-        effect.onTrack({
-          effect,
-          target,
-          type,
-          key
-        })
-      }
+  if (!effect) {
+    return
+  }
+  if (type === OperationTypes.ITERATE) {
+    key = ITERATE_KEY
+  }
+  let depsMap = targetMap.get(target)
+  if (depsMap === void 0) {
+    targetMap.set(target, (depsMap = new Map()))
+  }
+  let dep = depsMap.get(key!)
+  if (dep === void 0) {
+    depsMap.set(key!, (dep = new Set()))
+  }
+  if (!dep.has(effect)) {
+    dep.add(effect)
+    effect.deps.push(dep)
+    if (__DEV__ && effect.onTrack) {
+      effect.onTrack({
+        effect,
+        target,
+        type,
+        key
+      })
     }
   }
 }
