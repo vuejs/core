@@ -379,6 +379,8 @@ describe('compiler: expression transform', () => {
   test('should handle parse error', () => {
     const onError = jest.fn()
     parseWithExpressionTransform(`{{ a( }}`, { onError })
-    expect(onError.mock.calls[0][0].message).toMatch(`Unexpected token (1:4)`)
+    expect(onError.mock.calls[0][0].message).toMatch(
+      `Invalid JavaScript expression. (1:4)`
+    )
   })
 })

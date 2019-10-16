@@ -24,6 +24,7 @@ import {
   walkJS
 } from '../utils'
 import { isGloballyWhitelisted, makeMap } from '@vue/shared'
+import { createCompilerError, ErrorCodes } from '../errors'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
@@ -105,7 +106,9 @@ export function processExpression(
   try {
     ast = parseJS(source, { ranges: true })
   } catch (e) {
-    context.onError(e)
+    context.onError(
+      createCompilerError(ErrorCodes.X_INVALID_EXPRESSION, node.loc)
+    )
     return node
   }
 
