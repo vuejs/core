@@ -183,7 +183,6 @@ export function createRenderer<
         unmount(n1, parentComponent, parentSuspense, true)
         n1 = null
       } else if (n1.props && n1.props.$once) {
-        console.log(111)
         return
       }
     }
