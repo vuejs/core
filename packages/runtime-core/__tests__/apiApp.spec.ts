@@ -286,4 +286,85 @@ describe('api: createApp', () => {
     app.mount(Root, nodeOps.createElement('div'))
     expect(handler).toHaveBeenCalledTimes(1)
   })
+
+  describe('config.isNativeTag', () => {
+    const isNativeTag = jest.fn(tag => tag === 'div')
+
+    test('Component.name', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        name: 'div',
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('Component.components', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        components: {
+          div: () => 'div'
+        },
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('register using app.component', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.component('div', () => 'div')
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+  })
 })

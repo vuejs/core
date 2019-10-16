@@ -87,7 +87,7 @@ export interface TransformContext extends Required<TransformOptions> {
   helperString(name: symbol): string
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
-  onNodeRemoved: () => void
+  onNodeRemoved(): void
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode

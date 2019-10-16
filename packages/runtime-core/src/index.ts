@@ -84,3 +84,5 @@ export {
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './suspense'
+
+export const version = __VERSION__

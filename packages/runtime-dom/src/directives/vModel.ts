@@ -1,6 +1,6 @@
 import { Directive, VNode, DirectiveBinding, warn } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
-import { looseEqual, isArray } from '@vue/shared'
+import { isArray, isObject } from '@vue/shared'
 
 const getModelAssigner = (vnode: VNode): ((value: any) => void) =>
   vnode.props!['onUpdate:modelValue']
@@ -79,15 +79,19 @@ export const vModelCheckbox: Directive<HTMLInputElement> = {
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
+      const checked = el.checked
       if (isArray(modelValue)) {
-        const i = looseIndexOf(modelValue, elementValue)
-        if (i > -1) {
-          assign([...modelValue.slice(0, i), ...modelValue.slice(i + 1)])
-        } else {
+        const index = looseIndexOf(modelValue, elementValue)
+        const found = index !== -1
+        if (checked && !found) {
           assign(modelValue.concat(elementValue))
+        } else if (!checked && found) {
+          const filtered = [...modelValue]
+          filtered.splice(index, 1)
+          assign(filtered)
         }
       } else {
-        assign(el.checked)
+        assign(checked)
       }
     })
   },
@@ -161,6 +165,43 @@ function setSelected(el: HTMLSelectElement, value: any) {
   }
   if (!isMultiple) {
     el.selectedIndex = -1
+  }
+}
+
+function looseEqual(a: any, b: any): boolean {
+  if (a === b) return true
+  const isObjectA = isObject(a)
+  const isObjectB = isObject(b)
+  if (isObjectA && isObjectB) {
+    try {
+      const isArrayA = isArray(a)
+      const isArrayB = isArray(b)
+      if (isArrayA && isArrayB) {
+        return (
+          a.length === b.length &&
+          a.every((e: any, i: any) => looseEqual(e, b[i]))
+        )
+      } else if (a instanceof Date && b instanceof Date) {
+        return a.getTime() === b.getTime()
+      } else if (!isArrayA && !isArrayB) {
+        const keysA = Object.keys(a)
+        const keysB = Object.keys(b)
+        return (
+          keysA.length === keysB.length &&
+          keysA.every(key => looseEqual(a[key], b[key]))
+        )
+      } else {
+        /* istanbul ignore next */
+        return false
+      }
+    } catch (e) {
+      /* istanbul ignore next */
+      return false
+    }
+  } else if (!isObjectA && !isObjectB) {
+    return String(a) === String(b)
+  } else {
+    return false
   }
 }
 

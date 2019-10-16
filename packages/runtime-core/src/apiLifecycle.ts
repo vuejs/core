@@ -50,10 +50,8 @@ function injectHook(
 
 const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
-) => (
-  hook: T,
-  target: ComponentInternalInstance | null = currentInstance
-) => injectHook(lifecycle, hook, target)
+) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  injectHook(lifecycle, hook, target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
@@ -62,7 +60,7 @@ export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 
-type DebuggerHook = (e: DebuggerEvent) => void
+export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRIGGERED
 )
@@ -70,7 +68,7 @@ export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED
 )
 
-type ErrorCapturedHook = (
+export type ErrorCapturedHook = (
   err: Error,
   instance: ComponentPublicInstance | null,
   info: string

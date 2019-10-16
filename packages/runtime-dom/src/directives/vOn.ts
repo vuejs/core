@@ -1,4 +1,6 @@
-const systemModifiers = new Set(['ctrl', 'shift', 'alt', 'meta'])
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
+
+type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent;
 
 const modifierGuards: Record<
   string,
@@ -7,15 +9,15 @@ const modifierGuards: Record<
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
   self: e => e.target !== e.currentTarget,
-  ctrl: e => !(e as any).ctrlKey,
-  shift: e => !(e as any).shiftKey,
-  alt: e => !(e as any).altKey,
-  meta: e => !(e as any).metaKey,
-  left: e => 'button' in e && (e as any).button !== 0,
-  middle: e => 'button' in e && (e as any).button !== 1,
-  right: e => 'button' in e && (e as any).button !== 2,
-  exact: (e, modifiers) =>
-    modifiers!.some(m => systemModifiers.has(m) && (e as any)[`${m}Key`])
+  ctrl: e => !(e as KeyedEvent).ctrlKey,
+  shift: e => !(e as KeyedEvent).shiftKey,
+  alt: e => !(e as KeyedEvent).altKey,
+  meta: e => !(e as KeyedEvent).metaKey,
+  left: e => 'button' in e && (e as MouseEvent).button !== 0,
+  middle: e => 'button' in e && (e as MouseEvent).button !== 1,
+  right: e => 'button' in e && (e as MouseEvent).button !== 2,
+  exact: (e, modifiers: string[]) =>
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
 export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
@@ -27,7 +29,6 @@ export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
     return fn(event)
   }
 }
-
 
 // Kept for 2.x compat.
 // Note: IE11 compat for `spacebar` and `del` is removed for now.

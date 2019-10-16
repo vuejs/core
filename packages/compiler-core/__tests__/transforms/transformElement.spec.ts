@@ -6,7 +6,8 @@ import {
   RESOLVE_DIRECTIVE,
   APPLY_DIRECTIVES,
   TO_HANDLERS,
-  helperNameMap
+  helperNameMap,
+  PORTAL
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -252,6 +253,52 @@ describe('compiler: element transform', () => {
       createObjectMatcher({
         id: 'foo'
       })
+    ])
+  })
+
+  test('should handle <portal> element', () => {
+    const { node } = parseWithElementTransform(
+      `<portal target="#foo"><span /></portal>`
+    )
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments).toMatchObject([
+      PORTAL,
+      createObjectMatcher({
+        target: '#foo'
+      }),
+      [
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'span',
+          codegenNode: {
+            callee: CREATE_VNODE,
+            arguments: [`"span"`]
+          }
+        }
+      ]
+    ])
+  })
+
+  test('should handle <Portal> element', () => {
+    const { node } = parseWithElementTransform(
+      `<Portal target="#foo"><span /></Portal>`
+    )
+    expect(node.callee).toBe(CREATE_VNODE)
+    expect(node.arguments).toMatchObject([
+      PORTAL,
+      createObjectMatcher({
+        target: '#foo'
+      }),
+      [
+        {
+          type: NodeTypes.ELEMENT,
+          tag: 'span',
+          codegenNode: {
+            callee: CREATE_VNODE,
+            arguments: [`"span"`]
+          }
+        }
+      ]
     ])
   })
 

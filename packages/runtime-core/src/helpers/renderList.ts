@@ -16,10 +16,7 @@ export function renderList(
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
-      ret = Array.from(
-        source as Iterable<any>, 
-        renderItem
-      )
+      ret = Array.from(source as Iterable<any>, renderItem)
     } else {
       const keys = Object.keys(source)
       ret = new Array(keys.length)

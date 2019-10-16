@@ -1,6 +1,7 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
 import { mockWarn } from '@vue/runtime-test'
+import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
   mockWarn()
@@ -133,6 +134,22 @@ describe('reactivity/reactive', () => {
 
     expect(isRef(observedNumberRef)).toBe(true)
     expect(isRef(observedObjectRef)).toBe(true)
+  })
+
+  test('should unwrap computed refs', () => {
+    // readonly
+    const a = computed(() => 1)
+    // writable
+    const b = computed({
+      get: () => 1,
+      set: () => {}
+    })
+    const obj = reactive({ a, b })
+    // check type
+    obj.a + 1
+    obj.b + 1
+    expect(typeof obj.a).toBe(`number`)
+    expect(typeof obj.b).toBe(`number`)
   })
 
   test('non-observable values', () => {

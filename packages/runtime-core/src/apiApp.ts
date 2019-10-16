@@ -1,10 +1,10 @@
-import { Component, Data } from './component'
+import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
-import { isFunction } from '@vue/shared'
+import { isFunction, NO } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -27,6 +27,8 @@ export interface App<HostElement = any> {
 export interface AppConfig {
   devtools: boolean
   performance: boolean
+  readonly isNativeTag?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean
   errorHandler?: (
     err: Error,
     instance: ComponentPublicInstance | null,
@@ -60,6 +62,8 @@ export function createAppContext(): AppContext {
     config: {
       devtools: true,
       performance: false,
+      isNativeTag: NO,
+      isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
     },
@@ -111,6 +115,9 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       component(name: string, component?: Component): any {
+        if (__DEV__) {
+          validateComponentName(name, context.config)
+        }
         if (!component) {
           return context.components[name]
         } else {

@@ -1,4 +1,4 @@
-import { patchEvent } from '../src/modules/events'
+import { patchEvent } from '../../src/modules/events'
 import { nextTick } from '@vue/runtime-dom'
 
 describe(`events`, () => {

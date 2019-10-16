@@ -1,7 +1,7 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn, globalsWhitelist } from '@vue/shared'
+import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
@@ -106,6 +106,6 @@ if (__RUNTIME_COMPILE__) {
   // this trap is only called in browser-compiled render functions that use
   // `with (this) {}`
   PublicInstanceProxyHandlers.has = (_: any, key: string): boolean => {
-    return key[0] !== '_' && !globalsWhitelist.has(key)
+    return key[0] !== '_' && !isGloballyWhitelisted(key)
   }
 }

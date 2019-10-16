@@ -49,7 +49,8 @@ export const enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
-  TEMPLATE
+  TEMPLATE,
+  PORTAL
 }
 
 export interface Node {
@@ -99,6 +100,7 @@ export type ElementNode =
   | ComponentNode
   | SlotOutletNode
   | TemplateNode
+  | PortalNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -134,6 +136,11 @@ export interface TemplateNode extends BaseElementNode {
     | undefined
 }
 
+export interface PortalNode extends BaseElementNode {
+  tagType: ElementTypes.PORTAL
+  codegenNode: ElementCodegenNode | undefined
+}
+
 export interface TextNode extends Node {
   type: NodeTypes.TEXT
   content: string
@@ -165,6 +172,7 @@ export interface SimpleExpressionNode extends Node {
   type: NodeTypes.SIMPLE_EXPRESSION
   content: string
   isStatic: boolean
+  isConstant: boolean
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
@@ -494,11 +502,13 @@ export function createObjectProperty(
 export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
   isStatic: SimpleExpressionNode['isStatic'],
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
+  isConstant: boolean = false
 ): SimpleExpressionNode {
   return {
     type: NodeTypes.SIMPLE_EXPRESSION,
     loc,
+    isConstant,
     content,
     isStatic
   }

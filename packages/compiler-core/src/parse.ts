@@ -32,6 +32,7 @@ import { extend } from '@vue/shared'
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
   isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
+  isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
@@ -45,10 +46,7 @@ export interface ParserOptions {
 }
 
 // `isNativeTag` is optional, others are required
-type MergedParserOptions = Pick<
-  Required<ParserOptions>,
-  Exclude<keyof ParserOptions, 'isNativeTag'>
-> &
+type MergedParserOptions = Omit<Required<ParserOptions>, 'isNativeTag'> &
   Pick<ParserOptions, 'isNativeTag'>
 
 export const defaultParserOptions: MergedParserOptions = {
@@ -57,6 +55,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
+  isCustomElement: NO,
   namedCharacterReferences: {
     'gt;': '>',
     'lt;': '<',
@@ -436,7 +435,7 @@ function parseTag(
   }
 
   let tagType = ElementTypes.ELEMENT
-  if (!context.inPre) {
+  if (!context.inPre && !context.options.isCustomElement(tag)) {
     if (context.options.isNativeTag) {
       if (!context.options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else {
@@ -445,6 +444,7 @@ function parseTag(
 
     if (tag === 'slot') tagType = ElementTypes.SLOT
     else if (tag === 'template') tagType = ElementTypes.TEMPLATE
+    else if (tag === 'portal' || tag === 'Portal') tagType = ElementTypes.PORTAL
   }
 
   return {
@@ -581,6 +581,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
+        isConstant: isStatic,
         loc
       }
     }
@@ -606,6 +607,9 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
+        // Treat as non-constant by default. This can be potentially set to
+        // true by `transformExpression` to make it eligible for hoisting.
+        isConstant: false,
         loc: value.loc
       },
       arg,
@@ -712,6 +716,8 @@ function parseInterpolation(
     content: {
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
+      // Set `isConstant` to false by default and will decide in transformExpression
+      isConstant: false,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },
