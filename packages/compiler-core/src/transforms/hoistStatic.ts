@@ -68,8 +68,8 @@ function walk(
         const flag = getPatchFlag(child)
         if (
           (!flag ||
-            flag === PatchFlags.NEED_PATCH ||
-            flag === PatchFlags.TEXT) &&
+            flag & PatchFlags.NEED_PATCH ||
+            flag & PatchFlags.TEXT) &&
           !hasDynamicKey(child)
         ) {
           let codegenNode = child.codegenNode as ElementCodegenNode
@@ -120,7 +120,7 @@ function isStaticNode(
         return resultCache.get(node) as boolean
       }
       const flag = getPatchFlag(node)
-      if (!flag || flag === PatchFlags.TEXT) {
+      if (!flag || flag & PatchFlags.TEXT) {
         // element self is static. check its children.
         for (let i = 0; i < node.children.length; i++) {
           if (!isStaticNode(node.children[i], resultCache)) {

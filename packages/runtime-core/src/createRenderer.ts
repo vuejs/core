@@ -653,7 +653,7 @@ export function createRenderer<
     } else {
       // update content
       const target = (n2.target = n1.target)!
-      if (patchFlag === PatchFlags.TEXT) {
+      if (patchFlag & PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
       } else if (!optimized) {
         patchChildren(
