@@ -156,13 +156,21 @@ describe('reactivity/effect', () => {
   it('should observe iteration', () => {
     let dummy
     const list = reactive(['Hello'])
-    effect(() => (dummy = list.join(' ')))
+    const fn = jest.fn(() => (dummy = list.join(' ')))
+    effect(fn)
+
+    expect(fn).toHaveBeenCalledTimes(1) // normal
 
     expect(dummy).toBe('Hello')
     list.push('World!')
     expect(dummy).toBe('Hello World!')
+
+    expect(fn).toHaveBeenCalledTimes(2) // normal
+
     list.shift()
     expect(dummy).toBe('World!')
+
+    expect(fn).toHaveBeenCalledTimes(5) // It depends on list.length
   })
 
   it('should observe implicit array length changes', () => {
