@@ -28,6 +28,7 @@ import {
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
 import { buildSlots } from './vSlot'
+import { isStaticNode } from './hoistStatic'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -93,10 +94,11 @@ export const transformElement: NodeTransform = (node, context) => {
           } else if (node.children.length === 1) {
             const child = node.children[0]
             const type = child.type
+            // check for dynamic text children
             const hasDynamicTextChild =
               type === NodeTypes.INTERPOLATION ||
               type === NodeTypes.COMPOUND_EXPRESSION
-            if (hasDynamicTextChild) {
+            if (hasDynamicTextChild && !isStaticNode(child)) {
               patchFlag |= PatchFlags.TEXT
             }
             // pass directly if the only child is a text node
