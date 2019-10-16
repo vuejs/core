@@ -9,7 +9,7 @@ import {
   createInterpolation
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { isMemberExpression } from '../utils'
+import { isMemberExpression, isSimpleIdentifier } from '../utils'
 import { isObject } from '@vue/shared'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
@@ -26,6 +26,18 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   if (!isMemberExpression(expString)) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
+    )
+    return createTransformProps()
+  }
+
+  if (
+    !__BROWSER__ &&
+    context.prefixIdentifiers &&
+    isSimpleIdentifier(expString) &&
+    context.identifiers[expString]
+  ) {
+    context.onError(
+      createCompilerError(ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE, exp.loc)
     )
     return createTransformProps()
   }

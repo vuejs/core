@@ -361,7 +361,7 @@ describe('compiler: transform v-model', () => {
 
   test('should mark update handler dynamic if it refers slot scope variables', () => {
     const root = parseWithVModel(
-      '<Comp v-slot="{ foo }"><input v-model="foo"/></Comp>',
+      '<Comp v-slot="{ foo }"><input v-model="foo.bar"/></Comp>',
       {
         prefixIdentifiers: true
       }
@@ -404,6 +404,21 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
+        })
+      )
+    })
+
+    test('used on scope variable', () => {
+      const onError = jest.fn()
+      parseWithVModel('<span v-for="i in list" v-model="i" />', {
+        onError,
+        prefixIdentifiers: true
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE
         })
       )
     })
