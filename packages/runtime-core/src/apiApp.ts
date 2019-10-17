@@ -1,4 +1,9 @@
-import { Component, Data, validateComponentName } from './component'
+import {
+  Component,
+  Data,
+  validateComponentName,
+  validateDirectiveName
+} from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive } from './directives'
@@ -127,7 +132,10 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       directive(name: string, directive?: Directive) {
-        // TODO directive name validation
+        if (__DEV__) {
+          validateDirectiveName(name)
+        }
+
         if (!directive) {
           return context.directives[name] as any
         } else {

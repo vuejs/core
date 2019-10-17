@@ -226,6 +226,9 @@ export const setCurrentInstance = (
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
+const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'if,else-if,else,for,model,on,text,html,bind,once,cloak,slot,show'
+)
 
 export function validateComponentName(name: string, config: AppConfig) {
   const appIsNativeTag = config.isNativeTag || NO
@@ -233,6 +236,12 @@ export function validateComponentName(name: string, config: AppConfig) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name
     )
+  }
+}
+
+export function validateDirectiveName(name: string) {
+  if (isBuiltInDirective(name)) {
+    warn('Do not use built-in directives ids as your directive id: ' + name)
   }
 }
 

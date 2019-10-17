@@ -138,6 +138,11 @@ describe('api: createApp', () => {
     expect(spy1).toHaveBeenCalled()
     expect(spy2).not.toHaveBeenCalled()
     expect(spy3).toHaveBeenCalled()
+
+    app.directive('bind', FooBar)
+    expect(
+      `Do not use built-in directives ids as your directive id: bind`
+    ).toHaveBeenWarned()
   })
 
   test('mixin', () => {
