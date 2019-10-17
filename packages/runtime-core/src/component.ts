@@ -82,6 +82,7 @@ export interface ComponentInternalInstance {
   render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
+  accessCache: Data
 
   components: Record<string, Component>
   directives: Record<string, Directive>
@@ -146,6 +147,7 @@ export function createComponentInstance(
     setupContext: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    accessCache: null!,
 
     // setup context properties
     renderContext: EMPTY_OBJ,
@@ -254,7 +256,8 @@ export function setupStatefulComponent(
       }
     }
   }
-
+  // 0. create render proxy property access cache
+  instance.accessCache = Object.create(null)
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
