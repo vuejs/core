@@ -20,19 +20,24 @@ export function computed<T>(
   options: WritableComputedOptions<T>
 ): WritableComputedRef<T>
 export function computed<T>(
-  getterOrOptions: (() => T) | WritableComputedOptions<T>
+  getter: () => T,
+  setter: (v: T) => void
+): WritableComputedRef<T>
+export function computed<T>(
+  getterOrOptions: (() => T) | WritableComputedOptions<T>,
+  setter?: (v: T) => void
 ): any {
-  const isReadonly = isFunction(getterOrOptions)
-  const getter = isReadonly
+  const isReadonly = isFunction(getterOrOptions) && setter === undefined
+  const getter = isFunction(getterOrOptions)
     ? (getterOrOptions as (() => T))
     : (getterOrOptions as WritableComputedOptions<T>).get
-  const setter = isReadonly
+  const set = isReadonly
     ? __DEV__
       ? () => {
           console.warn('Write operation failed: computed value is readonly')
         }
       : NOOP
-    : (getterOrOptions as WritableComputedOptions<T>).set
+    : setter || (getterOrOptions as WritableComputedOptions<T>).set
 
   let dirty = true
   let value: T
@@ -61,7 +66,7 @@ export function computed<T>(
       return value
     },
     set value(newValue: T) {
-      setter(newValue)
+      set(newValue)
     }
   }
 }

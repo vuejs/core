@@ -149,6 +149,23 @@ describe('reactivity/computed', () => {
     expect(n.value).toBe(-1)
   })
 
+  it('should support setter as second arg', () => {
+    const n = ref(1)
+    const plusOne = computed(
+      () => n.value + 1,
+      val => {
+        n.value = val - 1
+      }
+    )
+
+    expect(plusOne.value).toBe(2)
+    n.value++
+    expect(plusOne.value).toBe(3)
+
+    plusOne.value = 0
+    expect(n.value).toBe(-1)
+  })
+
   it('should trigger effect w/ setter', () => {
     const n = ref(1)
     const plusOne = computed({
