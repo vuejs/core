@@ -85,6 +85,7 @@ export interface ComponentInternalInstance {
 
   components: Record<string, Component>
   directives: Record<string, Directive>
+  filters: Record<string, Function>
 
   asyncDep: Promise<any> | null
   asyncResult: any
@@ -158,6 +159,7 @@ export function createComponentInstance(
     // per-instance asset storage (mutable during options resolution)
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
+    filters: Object.create(appContext.filters),
 
     // async dependency management
     asyncDep: null,
