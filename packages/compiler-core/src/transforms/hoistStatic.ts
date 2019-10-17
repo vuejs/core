@@ -116,7 +116,7 @@ export function isStaticNode(
         return false
       }
       const cached = resultCache.get(node)
-      if (cached !== undefined) {
+      if (cached !== void 0) {
         return cached
       }
       const flag = getPatchFlag(node)
