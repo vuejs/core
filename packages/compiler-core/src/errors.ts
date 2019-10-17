@@ -88,7 +88,7 @@ export const enum ErrorCodes {
   X_PREFIX_ID_NOT_SUPPORTED,
   X_MODULE_MODE_NOT_SUPPORTED,
 
-  // Sepcial value for higher-order compilers to pick up the last code
+  // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
   __EXTEND_POINT__
