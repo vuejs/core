@@ -1,6 +1,7 @@
 import { VNode } from './vnode'
 import { ComponentInternalInstance, LifecycleHooks } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
+import { isPromise } from '@vue/shared'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -71,8 +72,8 @@ export function callWithAsyncErrorHandling(
   args?: any[]
 ) {
   const res = callWithErrorHandling(fn, instance, type, args)
-  if (res != null && !res._isVue && typeof res.then === 'function') {
-    res.catch((err: any) => {
+  if (res != null && !res._isVue && isPromise(res)) {
+    res.catch((err: Error) => {
       handleError(err, instance, type)
     })
   }

@@ -23,7 +23,8 @@ import {
   isArray,
   isObject,
   NO,
-  makeMap
+  makeMap,
+  isPromise
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
 import {
@@ -281,11 +282,7 @@ export function setupStatefulComponent(
     currentInstance = null
     currentSuspense = null
 
-    if (
-      setupResult &&
-      isFunction(setupResult.then) &&
-      isFunction(setupResult.catch)
-    ) {
+    if (isPromise(setupResult)) {
       if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.
