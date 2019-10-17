@@ -72,7 +72,7 @@ export function callWithAsyncErrorHandling(
   args?: any[]
 ) {
   const res = callWithErrorHandling(fn, instance, type, args)
-  if (!res._isVue && isPromise(res)) {
+  if (res != null && !res._isVue && isPromise(res)) {
     res.catch((err: Error) => {
       handleError(err, instance, type)
     })
