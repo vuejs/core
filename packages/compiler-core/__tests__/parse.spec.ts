@@ -410,6 +410,34 @@ describe('compiler: parse', () => {
         }
       })
     })
+
+    test('custom delimiters', () => {
+      const ast = parse('<p>{msg}</p>', {
+        delimiters: ['{', '}']
+      })
+      const element = ast.children[0] as ElementNode
+      const interpolation = element.children[0] as InterpolationNode
+
+      expect(interpolation).toStrictEqual({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `msg`,
+          isStatic: false,
+          isConstant: false,
+          loc: {
+            start: { offset: 4, line: 1, column: 5 },
+            end: { offset: 7, line: 1, column: 8 },
+            source: 'msg'
+          }
+        },
+        loc: {
+          start: { offset: 3, line: 1, column: 4 },
+          end: { offset: 8, line: 1, column: 9 },
+          source: '{msg}'
+        }
+      })
+    })
   })
 
   describe('Comment', () => {
