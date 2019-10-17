@@ -156,15 +156,18 @@ export function findDir(
 
 export function findProp(
   node: ElementNode,
-  name: string
+  name: string,
+  dynamicOnly: boolean = false
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
+      if (dynamicOnly) continue
       if (p.name === name && p.value && !p.value.isEmpty) {
         return p
       }
     } else if (
+      p.name === 'bind' &&
       p.arg &&
       p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
       p.arg.isStatic &&

@@ -53,9 +53,9 @@ export function baseCompile(
             transformExpression
           ]
         : []),
-      trackSlotScopes,
       transformSlotOutlet,
       transformElement,
+      trackSlotScopes,
       optimizeText,
       ...(options.nodeTransforms || []) // user transforms
     ],

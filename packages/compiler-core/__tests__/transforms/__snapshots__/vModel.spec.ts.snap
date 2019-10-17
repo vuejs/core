@@ -8,7 +8,7 @@ export default function render() {
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model[_ctx.index],
     \\"onUpdate:modelValue\\": $event => (_ctx.model[_ctx.index] = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+  }, null, 8 /* PROPS */, [\\"modelValue\\"]))
 }"
 `;
 
@@ -35,7 +35,7 @@ export default function render() {
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model,
     \\"onUpdate:modelValue\\": $event => (_ctx.model = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+  }, null, 8 /* PROPS */, [\\"modelValue\\"]))
 }"
 `;
 

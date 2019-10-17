@@ -273,6 +273,28 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('should NOT hoist element with dynamic ref', () => {
+    const { root, args } = transformWithHoist(`<div><div :ref="foo"/></div>`)
+    expect(root.hoists.length).toBe(0)
+    expect(args[2]).toMatchObject([
+      {
+        type: NodeTypes.ELEMENT,
+        codegenNode: {
+          callee: CREATE_VNODE,
+          arguments: [
+            `"div"`,
+            createObjectMatcher({
+              ref: `[foo]`
+            }),
+            `null`,
+            genFlagText(PatchFlags.NEED_PATCH)
+          ]
+        }
+      }
+    ])
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('hoist static props for elements with directives', () => {
     const { root, args } = transformWithHoist(
       `<div><div id="foo" v-foo/></div>`
@@ -521,8 +543,7 @@ describe('compiler: hoistStatic transform', () => {
                 isStatic: false,
                 isConstant: true
               }
-            },
-            '1 /* TEXT */'
+            }
           ]
         }
       ])

@@ -25,10 +25,12 @@ import {
   RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
   TO_HANDLERS,
-  PORTAL
+  PORTAL,
+  SUSPENSE
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
 import { buildSlots } from './vSlot'
+import { isStaticNode } from './hoistStatic'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -36,155 +38,152 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
-  if (node.type === NodeTypes.ELEMENT) {
-    if (
-      node.tagType === ElementTypes.ELEMENT ||
-      node.tagType === ElementTypes.COMPONENT ||
-      node.tagType === ElementTypes.PORTAL ||
-      // <template> with v-if or v-for are ignored during traversal.
-      // <template> without v-slot should be treated as a normal element.
-      (node.tagType === ElementTypes.TEMPLATE && !node.props.some(isVSlot))
-    ) {
-      // perform the work on exit, after all child expressions have been
-      // processed and merged.
-      return () => {
-        const isComponent = node.tagType === ElementTypes.COMPONENT
-        const isPortal = node.tagType === ElementTypes.PORTAL
-        let hasProps = node.props.length > 0
-        let patchFlag: number = 0
-        let runtimeDirectives: DirectiveNode[] | undefined
-        let dynamicPropNames: string[] | undefined
-        let dynamicComponent: string | CallExpression | undefined
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    // handled by transformSlotOutlet
+    node.tagType === ElementTypes.SLOT ||
+    // <template v-if/v-for> should have already been replaced
+    // <templte v-slot> is handled by buildSlots
+    (node.tagType === ElementTypes.TEMPLATE && node.props.some(isVSlot))
+  ) {
+    return
+  }
+  // perform the work on exit, after all child expressions have been
+  // processed and merged.
+  return () => {
+    const isComponent = node.tagType === ElementTypes.COMPONENT
+    let hasProps = node.props.length > 0
+    let patchFlag: number = 0
+    let runtimeDirectives: DirectiveNode[] | undefined
+    let dynamicPropNames: string[] | undefined
+    let dynamicComponent: string | CallExpression | undefined
 
-        // handle dynamic component
-        if (node.tag === 'component') {
-          const isProp = findProp(node, 'is')
-          if (isProp) {
-            // static <component is="foo" />
-            if (isProp.type === NodeTypes.ATTRIBUTE) {
-              const tag = isProp.value && isProp.value.content
-              if (tag) {
-                context.helper(RESOLVE_COMPONENT)
-                context.components.add(tag)
-                dynamicComponent = toValidAssetId(tag, `component`)
-              }
-            }
-            // dynamic <component :is="asdf" />
-            else if (isProp.exp) {
-              dynamicComponent = createCallExpression(
-                context.helper(RESOLVE_DYNAMIC_COMPONENT),
-                [isProp.exp]
-              )
-            }
+    // handle dynamic component
+    if (node.tag === 'component') {
+      const isProp = findProp(node, 'is')
+      if (isProp) {
+        // static <component is="foo" />
+        if (isProp.type === NodeTypes.ATTRIBUTE) {
+          const tag = isProp.value && isProp.value.content
+          if (tag) {
+            context.helper(RESOLVE_COMPONENT)
+            context.components.add(tag)
+            dynamicComponent = toValidAssetId(tag, `component`)
           }
         }
-
-        if (isComponent && !dynamicComponent) {
-          context.helper(RESOLVE_COMPONENT)
-          context.components.add(node.tag)
-        }
-
-        const args: CallExpression['arguments'] = [
-          dynamicComponent
-            ? dynamicComponent
-            : isComponent
-              ? toValidAssetId(node.tag, `component`)
-              : isPortal
-                ? context.helper(PORTAL)
-                : `"${node.tag}"`
-        ]
-        // props
-        if (hasProps) {
-          const propsBuildResult = buildProps(node, context)
-          patchFlag = propsBuildResult.patchFlag
-          dynamicPropNames = propsBuildResult.dynamicPropNames
-          runtimeDirectives = propsBuildResult.directives
-          if (!propsBuildResult.props) {
-            hasProps = false
-          } else {
-            args.push(propsBuildResult.props)
-          }
-        }
-        // children
-        const hasChildren = node.children.length > 0
-        if (hasChildren) {
-          if (!hasProps) {
-            args.push(`null`)
-          }
-          if (isComponent) {
-            const { slots, hasDynamicSlots } = buildSlots(node, context)
-            args.push(slots)
-            if (hasDynamicSlots) {
-              patchFlag |= PatchFlags.DYNAMIC_SLOTS
-            }
-          } else if (node.children.length === 1) {
-            const child = node.children[0]
-            const type = child.type
-            const hasDynamicTextChild =
-              type === NodeTypes.INTERPOLATION ||
-              type === NodeTypes.COMPOUND_EXPRESSION
-            if (hasDynamicTextChild) {
-              patchFlag |= PatchFlags.TEXT
-            }
-            // pass directly if the only child is a text node
-            // (plain / interpolation / expression)
-            if (hasDynamicTextChild || type === NodeTypes.TEXT) {
-              args.push(child)
-            } else {
-              args.push(node.children)
-            }
-          } else {
-            args.push(node.children)
-          }
-        }
-        // patchFlag & dynamicPropNames
-        if (patchFlag !== 0) {
-          if (!hasChildren) {
-            if (!hasProps) {
-              args.push(`null`)
-            }
-            args.push(`null`)
-          }
-          if (__DEV__) {
-            const flagNames = Object.keys(PatchFlagNames)
-              .map(Number)
-              .filter(n => n > 0 && patchFlag & n)
-              .map(n => PatchFlagNames[n])
-              .join(`, `)
-            args.push(patchFlag + ` /* ${flagNames} */`)
-          } else {
-            args.push(patchFlag + '')
-          }
-          if (dynamicPropNames && dynamicPropNames.length) {
-            args.push(
-              `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
-            )
-          }
-        }
-
-        const { loc } = node
-        const vnode = createCallExpression(
-          context.helper(CREATE_VNODE),
-          args,
-          loc
-        )
-
-        if (runtimeDirectives && runtimeDirectives.length) {
-          node.codegenNode = createCallExpression(
-            context.helper(APPLY_DIRECTIVES),
-            [
-              vnode,
-              createArrayExpression(
-                runtimeDirectives.map(dir => buildDirectiveArgs(dir, context)),
-                loc
-              )
-            ],
-            loc
+        // dynamic <component :is="asdf" />
+        else if (isProp.exp) {
+          dynamicComponent = createCallExpression(
+            context.helper(RESOLVE_DYNAMIC_COMPONENT),
+            [isProp.exp]
           )
-        } else {
-          node.codegenNode = vnode
         }
       }
+    }
+
+    if (isComponent && !dynamicComponent) {
+      context.helper(RESOLVE_COMPONENT)
+      context.components.add(node.tag)
+    }
+
+    const args: CallExpression['arguments'] = [
+      dynamicComponent
+        ? dynamicComponent
+        : isComponent
+          ? toValidAssetId(node.tag, `component`)
+          : node.tagType === ElementTypes.PORTAL
+            ? context.helper(PORTAL)
+            : node.tagType === ElementTypes.SUSPENSE
+              ? context.helper(SUSPENSE)
+              : `"${node.tag}"`
+    ]
+    // props
+    if (hasProps) {
+      const propsBuildResult = buildProps(node, context)
+      patchFlag = propsBuildResult.patchFlag
+      dynamicPropNames = propsBuildResult.dynamicPropNames
+      runtimeDirectives = propsBuildResult.directives
+      if (!propsBuildResult.props) {
+        hasProps = false
+      } else {
+        args.push(propsBuildResult.props)
+      }
+    }
+    // children
+    const hasChildren = node.children.length > 0
+    if (hasChildren) {
+      if (!hasProps) {
+        args.push(`null`)
+      }
+      if (isComponent) {
+        const { slots, hasDynamicSlots } = buildSlots(node, context)
+        args.push(slots)
+        if (hasDynamicSlots) {
+          patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        }
+      } else if (node.children.length === 1) {
+        const child = node.children[0]
+        const type = child.type
+        // check for dynamic text children
+        const hasDynamicTextChild =
+          type === NodeTypes.INTERPOLATION ||
+          type === NodeTypes.COMPOUND_EXPRESSION
+        if (hasDynamicTextChild && !isStaticNode(child)) {
+          patchFlag |= PatchFlags.TEXT
+        }
+        // pass directly if the only child is a text node
+        // (plain / interpolation / expression)
+        if (hasDynamicTextChild || type === NodeTypes.TEXT) {
+          args.push(child)
+        } else {
+          args.push(node.children)
+        }
+      } else {
+        args.push(node.children)
+      }
+    }
+    // patchFlag & dynamicPropNames
+    if (patchFlag !== 0) {
+      if (!hasChildren) {
+        if (!hasProps) {
+          args.push(`null`)
+        }
+        args.push(`null`)
+      }
+      if (__DEV__) {
+        const flagNames = Object.keys(PatchFlagNames)
+          .map(Number)
+          .filter(n => n > 0 && patchFlag & n)
+          .map(n => PatchFlagNames[n])
+          .join(`, `)
+        args.push(patchFlag + ` /* ${flagNames} */`)
+      } else {
+        args.push(patchFlag + '')
+      }
+      if (dynamicPropNames && dynamicPropNames.length) {
+        args.push(
+          `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
+        )
+      }
+    }
+
+    const { loc } = node
+    const vnode = createCallExpression(context.helper(CREATE_VNODE), args, loc)
+
+    if (runtimeDirectives && runtimeDirectives.length) {
+      node.codegenNode = createCallExpression(
+        context.helper(APPLY_DIRECTIVES),
+        [
+          vnode,
+          createArrayExpression(
+            runtimeDirectives.map(dir => buildDirectiveArgs(dir, context)),
+            loc
+          )
+        ],
+        loc
+      )
+    } else {
+      node.codegenNode = vnode
     }
   }
 }
@@ -218,21 +217,21 @@ export function buildProps(
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       if (
-        value.type !== NodeTypes.SIMPLE_EXPRESSION ||
-        // E.g: <p :foo="1 + 2" />.
-        // Do not add prop `foo` to `dynamicPropNames`.
-        (!value.isStatic && !value.isConstant)
+        (value.type === NodeTypes.SIMPLE_EXPRESSION ||
+          value.type === NodeTypes.COMPOUND_EXPRESSION) &&
+        isStaticNode(value)
       ) {
-        const name = key.content
-        if (name === 'ref') {
-          hasRef = true
-        } else if (name === 'class') {
-          hasClassBinding = true
-        } else if (name === 'style') {
-          hasStyleBinding = true
-        } else if (name !== 'key') {
-          dynamicPropNames.push(name)
-        }
+        return
+      }
+      const name = key.content
+      if (name === 'ref') {
+        hasRef = true
+      } else if (name === 'class') {
+        hasClassBinding = true
+      } else if (name === 'style') {
+        hasStyleBinding = true
+      } else if (name !== 'key') {
+        dynamicPropNames.push(name)
       }
     } else {
       hasDynamicKeys = true

@@ -183,7 +183,6 @@ export function createRenderer<
         unmount(n1, parentComponent, parentSuspense, true)
         n1 = null
       } else if (n1.props && n1.props.$once) {
-        console.log(111)
         return
       }
     }
@@ -496,25 +495,14 @@ export function createRenderer<
     }
 
     if (dynamicChildren != null) {
-      // children fast path
-      const oldDynamicChildren = n1.dynamicChildren!
-      for (let i = 0; i < dynamicChildren.length; i++) {
-        const oldVNode = oldDynamicChildren[i]
-        patch(
-          oldVNode,
-          dynamicChildren[i],
-          // in the case of a Fragment, we need to provide the actual parent
-          // of the Fragment itself so it can move its children. In other cases,
-          // the parent container is not actually used so we just pass the
-          // block element here to avoid a DOM parentNode call.
-          oldVNode.type === Fragment ? hostParentNode(oldVNode.el!)! : el,
-          null,
-          parentComponent,
-          parentSuspense,
-          isSVG,
-          true
-        )
-      }
+      patchBlockChildren(
+        n1.dynamicChildren!,
+        dynamicChildren,
+        el,
+        parentComponent,
+        parentSuspense,
+        isSVG
+      )
     } else if (!optimized) {
       // full diff
       patchChildren(n1, n2, el, null, parentComponent, parentSuspense, isSVG)
@@ -524,6 +512,36 @@ export function createRenderer<
       queuePostRenderEffect(() => {
         invokeDirectiveHook(newProps.vnodeUpdated, parentComponent, n2, n1)
       }, parentSuspense)
+    }
+  }
+
+  // The fast path for blocks.
+  function patchBlockChildren(
+    oldChildren: HostVNode[],
+    newChildren: HostVNode[],
+    fallbackContainer: HostElement,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: HostSuspenseBoundary | null,
+    isSVG: boolean
+  ) {
+    for (let i = 0; i < newChildren.length; i++) {
+      const oldVNode = oldChildren[i]
+      patch(
+        oldVNode,
+        newChildren[i],
+        // in the case of a Fragment, we need to provide the actual parent
+        // of the Fragment itself so it can move its children. In other cases,
+        // the parent container is not actually used so we just pass the
+        // block element here to avoid a DOM parentNode call.
+        oldVNode.type === Fragment
+          ? hostParentNode(oldVNode.el!)!
+          : fallbackContainer,
+        null,
+        parentComponent,
+        parentSuspense,
+        isSVG,
+        true
+      )
     }
   }
 
@@ -655,6 +673,16 @@ export function createRenderer<
       const target = (n2.target = n1.target)!
       if (patchFlag === PatchFlags.TEXT) {
         hostSetElementText(target, children as string)
+      } else if (n2.dynamicChildren) {
+        // fast path when the portal happens to be a block root
+        patchBlockChildren(
+          n1.dynamicChildren!,
+          n2.dynamicChildren,
+          container,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
       } else if (!optimized) {
         patchChildren(
           n1,
@@ -1503,8 +1531,8 @@ export function createRenderer<
       // and oldIndex = 0 is a special value indicating the new node has
       // no corresponding old node.
       // used for determining longest stable subsequence
-      const newIndexToOldIndexMap = []
-      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap.push(0)
+      const newIndexToOldIndexMap = new Array(toBePatched)
+      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]

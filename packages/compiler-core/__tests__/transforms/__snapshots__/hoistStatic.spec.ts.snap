@@ -190,7 +190,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
-const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toString(1), 1 /* TEXT */)
+const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toString(1))
 
 return function render() {
   with (this) {
@@ -295,6 +295,20 @@ return function render() {
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"])
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: hoistStatic transform should NOT hoist element with dynamic ref 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _createVNode(\\"div\\", { ref: foo }, null, 32 /* NEED_PATCH */)
     ]))
   }
 }"

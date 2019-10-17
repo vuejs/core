@@ -15,7 +15,12 @@ import {
 } from '../runtimeHelpers'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
-  const res = baseTransform(dir, node, context)
+  const baseResult = baseTransform(dir, node, context)
+  // base transform has errors
+  if (!baseResult.props.length) {
+    return baseResult
+  }
+
   const { tag, tagType } = node
   if (tagType === ElementTypes.ELEMENT) {
     if (dir.arg) {
@@ -63,7 +68,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       // by returning the helper symbol via needRuntime
       // the import will replaced a resovleDirective call.
       if (!isInvalidType) {
-        res.needRuntime = context.helper(directiveToUse)
+        baseResult.needRuntime = context.helper(directiveToUse)
       }
     } else {
       context.onError(
@@ -74,5 +79,5 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       )
     }
   }
-  return res
+  return baseResult
 }
