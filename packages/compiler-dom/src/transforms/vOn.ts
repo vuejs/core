@@ -16,7 +16,7 @@ const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
 const isNonKeyModifier = /*#__PURE__*/ makeMap(
   // event propagation management
   `stop,prevent,self,` +
-    // system modifers + exact
+    // system modifiers + exact
     `ctrl,shift,alt,meta,exact,` +
     // mouse
     `left,middle,right`
