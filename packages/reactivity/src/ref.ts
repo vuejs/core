@@ -4,10 +4,8 @@ import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 import { ComputedRef } from './computed'
 
-export const refSymbol = Symbol(__DEV__ ? 'refSymbol' : '')
-
 export interface Ref<T = any> {
-  [refSymbol]: true
+  _isRef: true
   value: UnwrapRef<T>
 }
 
@@ -21,7 +19,7 @@ export function ref(raw: any) {
   }
   raw = convert(raw)
   const v = {
-    [refSymbol]: true,
+    _isRef: true,
     get value() {
       track(v, OperationTypes.GET, '')
       return raw
@@ -35,7 +33,7 @@ export function ref(raw: any) {
 }
 
 export function isRef(v: any): v is Ref {
-  return v ? v[refSymbol] === true : false
+  return v ? v._isRef === true : false
 }
 
 export function toRefs<T extends object>(
@@ -53,7 +51,7 @@ function toProxyRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   return {
-    [refSymbol]: true,
+    _isRef: true,
     get value(): any {
       return object[key]
     },

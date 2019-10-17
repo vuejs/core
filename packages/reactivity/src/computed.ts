@@ -1,5 +1,5 @@
 import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { Ref, refSymbol, UnwrapRef } from './ref'
+import { Ref, UnwrapRef } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
 export interface ComputedRef<T> extends WritableComputedRef<T> {
@@ -46,7 +46,7 @@ export function computed<T>(
     }
   })
   return {
-    [refSymbol]: true,
+    _isRef: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
