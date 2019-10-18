@@ -7,7 +7,8 @@ import {
   APPLY_DIRECTIVES,
   TO_HANDLERS,
   helperNameMap,
-  PORTAL
+  PORTAL,
+  RESOLVE_DYNAMIC_COMPONENT
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -45,6 +46,14 @@ function parseWithElementTransform(
     root: ast,
     node: codegenNode
   }
+}
+
+function parseWithBind(template: string) {
+  return parseWithElementTransform(template, {
+    directiveTransforms: {
+      bind: transformBind
+    }
+  })
 }
 
 describe('compiler: element transform', () => {
@@ -626,14 +635,6 @@ describe('compiler: element transform', () => {
   })
 
   describe('patchFlag analysis', () => {
-    function parseWithBind(template: string) {
-      return parseWithElementTransform(template, {
-        directiveTransforms: {
-          bind: transformBind
-        }
-      })
-    }
-
     test('TEXT', () => {
       const { node } = parseWithBind(`<div>foo</div>`)
       expect(node.arguments.length).toBe(3)
@@ -715,6 +716,33 @@ describe('compiler: element transform', () => {
       const vnodeCall = node.arguments[0] as CallExpression
       expect(vnodeCall.arguments.length).toBe(4)
       expect(vnodeCall.arguments[3]).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+  })
+
+  describe('dynamic component', () => {
+    test('static binding', () => {
+      const { node, root } = parseWithBind(`<component is="foo" />`)
+      expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        callee: CREATE_VNODE,
+        arguments: ['_component_foo']
+      })
+    })
+
+    test('dynamic binding', () => {
+      const { node, root } = parseWithBind(`<component :is="foo" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node.arguments).toMatchObject([
+        {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo'
+            }
+          ]
+        }
+      ])
     })
   })
 })

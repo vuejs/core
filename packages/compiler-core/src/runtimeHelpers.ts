@@ -7,6 +7,9 @@ export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
+export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
+  __DEV__ ? `resolveDynamicComponent` : ``
+)
 export const RESOLVE_DIRECTIVE = Symbol(__DEV__ ? `resolveDirective` : ``)
 export const APPLY_DIRECTIVES = Symbol(__DEV__ ? `applyDirectives` : ``)
 export const RENDER_LIST = Symbol(__DEV__ ? `renderList` : ``)
@@ -30,6 +33,7 @@ export const helperNameMap: any = {
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,
   [RESOLVE_COMPONENT]: `resolveComponent`,
+  [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,
   [APPLY_DIRECTIVES]: `applyDirectives`,
   [RENDER_LIST]: `renderList`,
