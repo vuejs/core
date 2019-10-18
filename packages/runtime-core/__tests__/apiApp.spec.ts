@@ -141,7 +141,7 @@ describe('api: createApp', () => {
 
     app.directive('bind', FooBar)
     expect(
-      `Do not use built-in directives ids as your directive id: bind`
+      `Do not use built-in directive ids as custom directive id: bind`
     ).toHaveBeenWarned()
   })
 

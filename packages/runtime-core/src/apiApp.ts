@@ -1,12 +1,7 @@
-import {
-  Component,
-  Data,
-  validateComponentName,
-  validateDirectiveName
-} from './component'
+import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
-import { Directive } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
 import { isFunction, NO } from '@vue/shared'
