@@ -27,13 +27,17 @@ const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
-const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
+const observableTypes = new Set(
+  ['Object', 'Array', 'Map', 'Set', 'WeakMap', 'WeakSet'].map(
+    t => `[object ${t}]`
+  )
+)
 
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
     !value._isVNode &&
-    observableValueRE.test(toTypeString(value)) &&
+    observableTypes.has(toTypeString(value)) &&
     !nonReactiveValues.has(value)
   )
 }
