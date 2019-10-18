@@ -80,6 +80,14 @@ describe('reactivity/ref', () => {
     expect(typeof (c.value.b + 1)).toBe('number')
   })
 
+  it('should pass type check on ref', () => {
+    const arrRef = ref([1, new Map<any, any>(), ref('1')] as const)
+    const [one, two, three] = arrRef.value
+    one + 1
+    two.has(1)
+    three + 'foo'
+  })
+
   test('isRef', () => {
     expect(isRef(ref(1))).toBe(true)
     expect(isRef(computed(() => 1))).toBe(true)
