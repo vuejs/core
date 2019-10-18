@@ -138,6 +138,11 @@ describe('api: createApp', () => {
     expect(spy1).toHaveBeenCalled()
     expect(spy2).not.toHaveBeenCalled()
     expect(spy3).toHaveBeenCalled()
+
+    app.directive('bind', FooBar)
+    expect(
+      `Do not use built-in directive ids as custom directive id: bind`
+    ).toHaveBeenWarned()
   })
 
   test('mixin', () => {
@@ -339,6 +344,33 @@ describe('api: createApp', () => {
       app.mount(Root, nodeOps.createElement('div'))
       expect(
         `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('Component.directives', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        directives: {
+          bind: () => {}
+        },
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in directive ids as custom directive id: bind`
       ).toHaveBeenWarned()
     })
 

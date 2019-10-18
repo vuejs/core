@@ -1,7 +1,7 @@
 import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
-import { Directive } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
 import { isFunction, NO } from '@vue/shared'
@@ -127,7 +127,10 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       directive(name: string, directive?: Directive) {
-        // TODO directive name validation
+        if (__DEV__) {
+          validateDirectiveName(name)
+        }
+
         if (!directive) {
           return context.directives[name] as any
         } else {

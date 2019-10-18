@@ -12,7 +12,7 @@ return applyDirectives(h(comp), [
 */
 
 import { VNode, cloneVNode } from './vnode'
-import { extend, isArray, isFunction, EMPTY_OBJ } from '@vue/shared'
+import { extend, isArray, isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
@@ -50,6 +50,16 @@ export type Directive<T = any> = ObjectDirective<T> | FunctionDirective<T>
 type DirectiveModifiers = Record<string, boolean>
 
 const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
+
+const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
+)
+
+export function validateDirectiveName(name: string) {
+  if (isBuiltInDirective(name)) {
+    warn('Do not use built-in directive ids as custom directive id: ' + name)
+  }
+}
 
 function applyDirective(
   props: Record<any, any>,

@@ -13,7 +13,7 @@ import {
   callWithAsyncErrorHandling
 } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiApp'
-import { Directive } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './apiOptions'
 import {
   EMPTY_OBJ,
@@ -254,6 +254,12 @@ export function setupStatefulComponent(
       for (let i = 0; i < names.length; i++) {
         const name = names[i]
         validateComponentName(name, instance.appContext.config)
+      }
+    }
+    if (Component.directives) {
+      const names = Object.keys(Component.directives)
+      for (let i = 0; i < names.length; i++) {
+        validateDirectiveName(names[i])
       }
     }
   }
