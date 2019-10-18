@@ -241,7 +241,7 @@ export function validateComponentName(name: string, config: AppConfig) {
 
 export function validateDirectiveName(name: string) {
   if (isBuiltInDirective(name)) {
-    warn('Do not use built-in directives ids as your directive id: ' + name)
+    warn('Do not use built-in directive ids as custom directive id: ' + name)
   }
 }
 
