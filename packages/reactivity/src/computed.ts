@@ -1,5 +1,5 @@
-import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { Ref, refSymbol, UnwrapRef } from './ref'
+import { effect, ReactiveEffect, effectStack } from './effect'
+import { Ref, UnwrapRef } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
 export interface ComputedRef<T> extends WritableComputedRef<T> {
@@ -46,7 +46,7 @@ export function computed<T>(
     }
   })
   return {
-    [refSymbol]: true,
+    _isRef: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
@@ -67,15 +67,15 @@ export function computed<T>(
 }
 
 function trackChildRun(childRunner: ReactiveEffect) {
-  const parentRunner =
-    activeReactiveEffectStack[activeReactiveEffectStack.length - 1]
-  if (parentRunner) {
-    for (let i = 0; i < childRunner.deps.length; i++) {
-      const dep = childRunner.deps[i]
-      if (!dep.has(parentRunner)) {
-        dep.add(parentRunner)
-        parentRunner.deps.push(dep)
-      }
+  if (effectStack.length === 0) {
+    return
+  }
+  const parentRunner = effectStack[effectStack.length - 1]
+  for (let i = 0; i < childRunner.deps.length; i++) {
+    const dep = childRunner.deps[i]
+    if (!dep.has(parentRunner)) {
+      dep.add(parentRunner)
+      parentRunner.deps.push(dep)
     }
   }
 }

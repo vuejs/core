@@ -31,7 +31,7 @@ function parseVOnProperties(
 }
 
 describe('compiler-dom: transform v-on', () => {
-  it('should support muliple modifiers w/ prefixIdentifiers: true', () => {
+  it('should support multiple modifiers w/ prefixIdentifiers: true', () => {
     const [prop] = parseVOnProperties(`<div @click.stop.prevent="test"/>`, {
       prefixIdentifiers: true
     })

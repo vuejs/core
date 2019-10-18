@@ -173,7 +173,7 @@ describe('test renderer', () => {
     expect(serialize(root)).toBe(`<div><span>1</span></div>`)
   })
 
-  it('should be able to trigger events with muliple listeners', async () => {
+  it('should be able to trigger events with multiple listeners', async () => {
     const count = ref(0)
     const count2 = ref(1)
 

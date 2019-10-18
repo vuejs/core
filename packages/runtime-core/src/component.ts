@@ -23,7 +23,8 @@ import {
   isArray,
   isObject,
   NO,
-  makeMap
+  makeMap,
+  isPromise
 } from '@vue/shared'
 import { SuspenseBoundary } from './suspense'
 import {
@@ -82,6 +83,7 @@ export interface ComponentInternalInstance {
   render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
+  accessCache: Data
 
   components: Record<string, Component>
   directives: Record<string, Directive>
@@ -146,6 +148,7 @@ export function createComponentInstance(
     setupContext: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
+    accessCache: null!,
 
     // setup context properties
     renderContext: EMPTY_OBJ,
@@ -254,7 +257,8 @@ export function setupStatefulComponent(
       }
     }
   }
-
+  // 0. create render proxy property access cache
+  instance.accessCache = {}
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
@@ -278,11 +282,7 @@ export function setupStatefulComponent(
     currentInstance = null
     currentSuspense = null
 
-    if (
-      setupResult &&
-      isFunction(setupResult.then) &&
-      isFunction(setupResult.catch)
-    ) {
+    if (isPromise(setupResult)) {
       if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.

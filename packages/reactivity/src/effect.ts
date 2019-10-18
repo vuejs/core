@@ -33,7 +33,7 @@ export interface DebuggerEvent {
   key: string | symbol | undefined
 }
 
-export const activeReactiveEffectStack: ReactiveEffect[] = []
+export const effectStack: ReactiveEffect[] = []
 
 export const ITERATE_KEY = Symbol('iterate')
 
@@ -88,13 +88,13 @@ function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
   if (!effect.active) {
     return fn(...args)
   }
-  if (!activeReactiveEffectStack.includes(effect)) {
+  if (!effectStack.includes(effect)) {
     cleanup(effect)
     try {
-      activeReactiveEffectStack.push(effect)
+      effectStack.push(effect)
       return fn(...args)
     } finally {
-      activeReactiveEffectStack.pop()
+      effectStack.pop()
     }
   }
 }
@@ -124,13 +124,10 @@ export function track(
   type: OperationTypes,
   key?: string | symbol
 ) {
-  if (!shouldTrack) {
+  if (!shouldTrack || effectStack.length === 0) {
     return
   }
-  const effect = activeReactiveEffectStack[activeReactiveEffectStack.length - 1]
-  if (!effect) {
-    return
-  }
+  const effect = effectStack[effectStack.length - 1]
   if (type === OperationTypes.ITERATE) {
     key = ITERATE_KEY
   }
