@@ -6,6 +6,7 @@ import {
 } from './collectionHandlers'
 import { ReactiveEffect } from './effect'
 import { UnwrapRef, Ref } from './ref'
+import { makeMap } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -27,13 +28,17 @@ const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
-const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
+const isObservableType = /*#__PURE__*/ makeMap(
+  ['Object', 'Array', 'Map', 'Set', 'WeakMap', 'WeakSet']
+    .map(t => `[object ${t}]`)
+    .join(',')
+)
 
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
     !value._isVNode &&
-    observableValueRE.test(toTypeString(value)) &&
+    isObservableType(toTypeString(value)) &&
     !nonReactiveValues.has(value)
   )
 }
