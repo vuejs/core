@@ -11,7 +11,8 @@ import {
   isObject,
   isArray,
   EMPTY_OBJ,
-  NOOP
+  NOOP,
+  hasOwn
 } from '@vue/shared'
 import { computed } from './apiReactivity'
 import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
@@ -194,6 +195,7 @@ export function applyOptions(
     mixins,
     extends: extendsOptions,
     // state
+    props,
     data: dataOptions,
     computed: computedOptions,
     methods,
@@ -239,7 +241,19 @@ export function applyOptions(
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
-      instance.data = reactive(data)
+      let uniqueData: Record<any, any> = {}
+      for (const key in data) {
+        if (props && hasOwn(props, key)) {
+          __DEV__ &&
+            warn(
+              `The data property "${key}" is already declared as a prop. ` +
+                `Use prop default value instead.`
+            )
+        } else {
+          uniqueData[key] = data[key]
+        }
+      }
+      instance.data = reactive(uniqueData)
     } else {
       // existing data: this is a mixin or extends.
       extend(instance.data, data)
@@ -247,34 +261,61 @@ export function applyOptions(
   }
   if (computedOptions) {
     for (const key in computedOptions) {
-      const opt = (computedOptions as ComputedOptions)[key]
-
-      if (isFunction(opt)) {
-        renderContext[key] = computed(opt.bind(ctx))
+      if (instance.data && hasOwn(instance.data, key)) {
+        __DEV__ &&
+          warn(`The computed property "${key}" is already defined in data.`)
+      } else if (props && hasOwn(props, key)) {
+        __DEV__ &&
+          warn(`The computed property "${key}" is already defined in prop.`)
       } else {
-        const { get, set } = opt
-        if (isFunction(get)) {
-          renderContext[key] = computed({
-            get: get.bind(ctx),
-            set: isFunction(set)
-              ? set.bind(ctx)
-              : __DEV__
-                ? () => {
-                    warn(
-                      `Computed property "${key}" was assigned to but it has no setter.`
-                    )
-                  }
-                : NOOP
-          })
-        } else if (__DEV__) {
-          warn(`Computed property "${key}" has no getter.`)
+        const opt = (computedOptions as ComputedOptions)[key]
+
+        if (isFunction(opt)) {
+          renderContext[key] = computed(opt.bind(ctx))
+        } else {
+          const { get, set } = opt
+          if (isFunction(get)) {
+            renderContext[key] = computed({
+              get: get.bind(ctx),
+              set: isFunction(set)
+                ? set.bind(ctx)
+                : __DEV__
+                  ? () => {
+                      warn(
+                        `Computed property "${key}" was assigned to but it has no setter.`
+                      )
+                    }
+                  : NOOP
+            })
+          } else if (__DEV__) {
+            warn(`Computed property "${key}" has no getter.`)
+          }
         }
       }
     }
   }
   if (methods) {
     for (const key in methods) {
-      renderContext[key] = (methods as MethodOptions)[key].bind(ctx)
+      const methodHandler = (methods as MethodOptions)[key]
+      if (!isFunction(methodHandler)) {
+        __DEV__ &&
+          warn(
+            `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
+              `Did you reference the function correctly?`
+          )
+      } else if (instance.data && hasOwn(instance.data, key)) {
+        __DEV__ &&
+          warn(`Method "${key}" has already been defined as a data property.`)
+      } else if (props && hasOwn(props, key)) {
+        __DEV__ && warn(`Method "${key}" has already been defined as a prop.`)
+      } else if (computedOptions && hasOwn(computedOptions, key)) {
+        __DEV__ &&
+          warn(
+            `Method "${key}" has already been defined as a compute property.`
+          )
+      } else {
+        renderContext[key] = methodHandler.bind(ctx)
+      }
     }
   }
   if (watchOptions) {

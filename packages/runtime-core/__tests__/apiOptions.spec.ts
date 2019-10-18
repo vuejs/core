@@ -575,5 +575,126 @@ describe('api: options', () => {
         'Computed property "foo" was assigned to but it has no setter.'
       ).toHaveBeenWarned()
     })
+
+    test('data property is already declared in props', () => {
+      const Comp = {
+        props: { foo: Number },
+        data: {
+          foo: 1
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `The data property "foo" is already declared as a prop. ` +
+          `Use prop default value instead.`
+      ).toHaveBeenWarned()
+    })
+
+    test('computed property is already declared in data', () => {
+      const Comp = {
+        data: {
+          foo: 1
+        },
+        computed: {
+          foo() {}
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `The computed property "foo" is already defined in data.`
+      ).toHaveBeenWarned()
+    })
+
+    test('computed property is already declared in prop', () => {
+      const Comp = {
+        props: { foo: Number },
+        computed: {
+          foo() {}
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `The computed property "foo" is already defined in prop.`
+      ).toHaveBeenWarned()
+    })
+
+    test('methods property is not a function', () => {
+      const Comp = {
+        methods: {
+          foo: 1
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Method "foo" has type "number" in the component definition. ` +
+          `Did you reference the function correctly?`
+      ).toHaveBeenWarned()
+    })
+
+    test('methods property is already declared in data', () => {
+      const Comp = {
+        data: {
+          foo: 2
+        },
+        methods: {
+          foo() {}
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Method "foo" has already been defined as a data property.`
+      ).toHaveBeenWarned()
+    })
+
+    test('methods property is already declared in props', () => {
+      const Comp = {
+        props: {
+          foo: Number
+        },
+        methods: {
+          foo() {}
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Method "foo" has already been defined as a prop.`
+      ).toHaveBeenWarned()
+    })
+
+    test('methods property is already declared in computed', () => {
+      const Comp = {
+        computed: {
+          foo() {}
+        },
+        methods: {
+          foo() {}
+        },
+        render() {}
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Method "foo" has already been defined as a compute property.`
+      ).toHaveBeenWarned()
+    })
   })
 })
