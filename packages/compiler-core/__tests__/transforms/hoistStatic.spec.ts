@@ -677,5 +677,55 @@ describe('compiler: hoistStatic transform', () => {
         }).code
       ).toMatchSnapshot()
     })
+    test('should NOT hoist expressions that refer scope variables (v-slot)', () => {
+      const { root } = transformWithHoist(
+        `<Comp v-slot="{ foo }">{{ foo }}</Comp>`,
+        {
+          prefixIdentifiers: true
+        }
+      )
+
+      expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('hoist ref with static value', () => {
+      const { root, args } = transformWithHoist(
+        `<div><span ref="o"></span></div>`,
+        {
+          prefixIdentifiers: true
+        }
+      )
+
+      expect(root.hoists.length).toBe(1)
+      expect(root.hoists).toMatchObject([
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: CREATE_VNODE,
+          arguments: [
+            `"span"`,
+            createObjectMatcher({
+              ref: `o`
+            }),
+            `null`,
+            `32 /* NEED_PATCH */`
+          ]
+        }
+      ])
+      expect(args).toMatchObject([
+        `"div"`,
+        `null`,
+        [
+          {
+            type: NodeTypes.ELEMENT,
+            codegenNode: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `_hoisted_1`
+            }
+          }
+        ]
+      ])
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })
