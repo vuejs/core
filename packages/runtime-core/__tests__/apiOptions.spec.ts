@@ -588,7 +588,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `The data property "foo" is already declared as a prop. ` +
+        `Data property "foo" is already declared as a prop. ` +
           `Use prop default value instead.`
       ).toHaveBeenWarned()
     })
@@ -607,7 +607,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `The computed property "foo" is already defined in data.`
+        `Computed property "foo" is already defined in data.`
       ).toHaveBeenWarned()
     })
 
@@ -623,7 +623,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `The computed property "foo" is already defined in prop.`
+        `Computed property "foo" is already defined in prop.`
       ).toHaveBeenWarned()
     })
 

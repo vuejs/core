@@ -246,7 +246,7 @@ export function applyOptions(
         if (props && hasOwn(props, key)) {
           __DEV__ &&
             warn(
-              `The data property "${key}" is already declared as a prop. ` +
+              `Data property "${key}" is already declared as a prop. ` +
                 `Use prop default value instead.`
             )
         } else {
@@ -263,10 +263,10 @@ export function applyOptions(
     for (const key in computedOptions) {
       if (instance.data && hasOwn(instance.data, key)) {
         __DEV__ &&
-          warn(`The computed property "${key}" is already defined in data.`)
+          warn(`Computed property "${key}" is already defined in data.`)
       } else if (props && hasOwn(props, key)) {
         __DEV__ &&
-          warn(`The computed property "${key}" is already defined in prop.`)
+          warn(`Computed property "${key}" is already defined in prop.`)
       } else {
         const opt = (computedOptions as ComputedOptions)[key]
 
