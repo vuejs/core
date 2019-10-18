@@ -13,10 +13,10 @@ import { isFunction } from '@vue/shared'
 
 // overload 1: direct setup function
 // (uses user defined props interface)
-export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
+export function createComponent<Props, RawBindings = object>(
+  setup: (props: Props, ctx: SetupContext) => RawBindings | (() => VNodeChild)
 ): {
-  new (): ComponentPublicInstance<Props>
+  new (): ComponentPublicInstance<Props, RawBindings>
 }
 
 // overload 2: object format with no props
