@@ -669,7 +669,7 @@ describe('compiler: hoistStatic transform', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('hoist ref with static value', () => {
+    test('hoist element with static ref', () => {
       const { root, args } = transformWithHoist(
         `<div><span ref="o"></span></div>`,
         {
