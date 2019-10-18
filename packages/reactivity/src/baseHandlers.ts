@@ -12,9 +12,8 @@ const builtInSymbols = new Set(
 )
 
 function createGetter(isReadonly: boolean) {
-  return function get(target: any, key: string | symbol) {
-    // not using Reflect.get here for perf reasons
-    const res = target[key]
+  return function get(target: any, key: string | symbol, receiver: any) {
+    const res = Reflect.get(target, key, receiver)
     if (isSymbol(key) && builtInSymbols.has(key)) {
       return res
     }
