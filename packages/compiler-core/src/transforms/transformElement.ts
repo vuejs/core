@@ -102,7 +102,8 @@ export const transformElement: NodeTransform = (node, context) => {
       const propsBuildResult = buildProps(
         node,
         context,
-        node.props.filter(p => p !== isProp) // skip reserved "is" prop <component is>
+        // skip reserved "is" prop <component is>
+        node.props.filter(p => p !== isProp)
       )
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
