@@ -15,6 +15,6 @@ registerRuntimeHelpers({
   [V_MODEL_TEXT]: `vModelText`,
   [V_MODEL_SELECT]: `vModelSelect`,
   [V_MODEL_DYNAMIC]: `vModelDynamic`,
-  [V_ON_MODIFIERS_GUARD]: `vOnModifiersGuard`,
-  [V_ON_KEYS_GUARD]: `vOnKeysGuard`
+  [V_ON_MODIFIERS_GUARD]: `withModifiers`,
+  [V_ON_KEYS_GUARD]: `withKeys`
 })

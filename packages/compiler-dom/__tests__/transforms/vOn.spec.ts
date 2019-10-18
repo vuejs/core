@@ -103,4 +103,17 @@ describe('compiler-dom: transform v-on', () => {
       }
     })
   })
+
+  it('should not wrap normal guard if there is only keys guard', () => {
+    const [prop] = parseVOnProperties(`<div @keyup.enter="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_KEYS_GUARD,
+        arguments: [{ content: '_ctx.test' }, '["enter"]']
+      }
+    })
+  })
 })

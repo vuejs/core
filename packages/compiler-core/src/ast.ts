@@ -190,7 +190,6 @@ export interface InterpolationNode extends Node {
   content: ExpressionNode
 }
 
-// always dynamic
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
   children: (

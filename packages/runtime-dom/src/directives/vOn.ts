@@ -1,6 +1,6 @@
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
-type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent;
+type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
 const modifierGuards: Record<
   string,
@@ -20,7 +20,7 @@ const modifierGuards: Record<
     systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
-export const vOnModifiersGuard = (fn: Function, modifiers: string[]) => {
+export const withModifiers = (fn: Function, modifiers: string[]) => {
   return (event: Event) => {
     for (let i = 0; i < modifiers.length; i++) {
       const guard = modifierGuards[modifiers[i]]
@@ -42,7 +42,7 @@ const keyNames: Record<string, string | string[]> = {
   delete: 'backspace'
 }
 
-export const vOnKeysGuard = (fn: Function, modifiers: string[]) => {
+export const withKeys = (fn: Function, modifiers: string[]) => {
   return (event: KeyboardEvent) => {
     if (!('key' in event)) return
     const eventKey = event.key.toLowerCase()
