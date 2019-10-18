@@ -56,7 +56,7 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
-    const { renderContext, data, props, propsProxy, accessCache } = target
+    const { renderContext, data, props, propsProxy, accessCache, type } = target
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
@@ -79,7 +79,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache[key] = AccessTypes.CONTEXT
       return renderContext[key]
     } else if (hasOwn(props, key)) {
-      accessCache[key] = AccessTypes.PROPS
+      // only cache props access if component has declared (thus stable) props
+      if (type.props != null) {
+        accessCache[key] = AccessTypes.PROPS
+      }
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
     } else if (key === '$el') {
