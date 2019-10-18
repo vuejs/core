@@ -80,6 +80,25 @@ describe('reactivity/ref', () => {
     expect(typeof (c.value.b + 1)).toBe('number')
   })
 
+  it('should properly unwrap ref types nested inside arrays', () => {
+    const arr = ref([1, ref(1)]).value
+    // should unwrap to number[]
+    arr[0]++
+    arr[1]++
+
+    const arr2 = ref([1, new Map<string, any>(), ref('1')]).value
+    const value = arr2[0]
+    if (typeof value === 'string') {
+      value + 'foo'
+    } else if (typeof value === 'number') {
+      value + 1
+    } else {
+      // should narrow down to Map type
+      // and not contain any Ref type
+      value.has('foo')
+    }
+  })
+
   test('isRef', () => {
     expect(isRef(ref(1))).toBe(true)
     expect(isRef(computed(() => 1))).toBe(true)
