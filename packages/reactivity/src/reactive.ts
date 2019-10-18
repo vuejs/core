@@ -27,7 +27,7 @@ const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
-const observableTypes = new Set(
+const observableTypes = new Set<String>(
   ['Object', 'Array', 'Map', 'Set', 'WeakMap', 'WeakSet'].map(
     t => `[object ${t}]`
   )
