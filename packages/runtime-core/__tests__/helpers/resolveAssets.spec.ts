@@ -5,7 +5,8 @@ import {
   resolveComponent,
   resolveDirective,
   Component,
-  Directive
+  Directive,
+  resolveDynamicComponent
 } from '@vue/runtime-test'
 
 describe('resolveAssets', () => {
@@ -89,6 +90,31 @@ describe('resolveAssets', () => {
       app.mount(Root, root)
       expect('Failed to resolve component: foo').toHaveBeenWarned()
       expect('Failed to resolve directive: bar').toHaveBeenWarned()
+    })
+
+    test('resolve dynamic component', () => {
+      const app = createApp()
+      const dynamicComponents = {
+        foo: () => 'foo',
+        bar: () => 'bar',
+        baz: { render: () => 'baz' }
+      }
+      let foo, bar, baz // dynamic components
+      const Root = {
+        components: { foo: dynamicComponents.foo },
+        setup() {
+          return () => {
+            foo = resolveDynamicComponent('foo') // <component is="foo"/>
+            bar = resolveDynamicComponent(dynamicComponents.bar) // <component :is="bar"/>, function
+            baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
+          }
+        }
+      }
+      const root = nodeOps.createElement('div')
+      app.mount(Root, root)
+      expect(foo).toBe(dynamicComponents.foo)
+      expect(bar).toBe(dynamicComponents.bar)
+      expect(baz).toBe(dynamicComponents.baz)
     })
   })
 })
