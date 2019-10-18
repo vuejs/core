@@ -22,7 +22,7 @@ import {
   COMMENT,
   FRAGMENT,
   MERGE_PROPS,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RENDER_SLOT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
@@ -513,7 +513,7 @@ describe('compiler: v-if', () => {
       } = parseWithIfTransform(`<div v-if="ok" v-foo />`)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.callee).toBe(APPLY_DIRECTIVES)
+      expect(branch1.callee).toBe(WITH_DIRECTIVES)
       const realBranch = branch1.arguments[0] as CallExpression
       expect(realBranch.arguments[1]).toMatchObject(
         createObjectMatcher({ key: `[0]` })

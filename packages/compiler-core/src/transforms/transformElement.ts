@@ -19,7 +19,7 @@ import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
   RESOLVE_DYNAMIC_COMPONENT,
@@ -177,7 +177,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     if (runtimeDirectives && runtimeDirectives.length) {
       node.codegenNode = createCallExpression(
-        context.helper(APPLY_DIRECTIVES),
+        context.helper(WITH_DIRECTIVES),
         [
           vnode,
           createArrayExpression(

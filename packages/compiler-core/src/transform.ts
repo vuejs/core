@@ -23,7 +23,7 @@ import {
   CREATE_VNODE,
   FRAGMENT,
   helperNameMap,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   CREATE_BLOCK
 } from './runtimeHelpers'
 import { isVSlot, createBlockExpression } from './utils'
@@ -243,7 +243,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       const codegenNode = child.codegenNode as
         | ElementCodegenNode
         | ComponentCodegenNode
-      if (codegenNode.callee === APPLY_DIRECTIVES) {
+      if (codegenNode.callee === WITH_DIRECTIVES) {
         codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
       } else {
         codegenNode.callee = helper(CREATE_BLOCK)

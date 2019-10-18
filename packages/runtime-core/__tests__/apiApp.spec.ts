@@ -8,7 +8,7 @@ import {
   inject,
   resolveComponent,
   resolveDirective,
-  applyDirectives,
+  withDirectives,
   Plugin,
   ref,
   getCurrentInstance
@@ -128,7 +128,7 @@ describe('api: createApp', () => {
         return () => {
           // resolve in render
           const BarBaz = resolveDirective('bar-baz')!
-          return applyDirectives(h('div'), [[FooBar], [BarBaz]])
+          return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       }
     }

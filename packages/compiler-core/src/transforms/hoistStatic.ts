@@ -11,7 +11,7 @@ import {
   ElementNode
 } from '../ast'
 import { TransformContext } from '../transform'
-import { APPLY_DIRECTIVES } from '../runtimeHelpers'
+import { WITH_DIRECTIVES } from '../runtimeHelpers'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet, findProp } from '../utils'
 
@@ -72,7 +72,7 @@ function walk(
           !hasDynamicKeyOrRef(child)
         ) {
           let codegenNode = child.codegenNode as ElementCodegenNode
-          if (codegenNode.callee === APPLY_DIRECTIVES) {
+          if (codegenNode.callee === WITH_DIRECTIVES) {
             codegenNode = codegenNode.arguments[0]
           }
           const props = codegenNode.arguments[1]
@@ -99,7 +99,7 @@ function walk(
 
 function getPatchFlag(node: PlainElementNode): number | undefined {
   let codegenNode = node.codegenNode as ElementCodegenNode
-  if (codegenNode.callee === APPLY_DIRECTIVES) {
+  if (codegenNode.callee === WITH_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0]
   }
   const flag = codegenNode.arguments[3]

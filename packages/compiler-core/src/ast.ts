@@ -2,7 +2,7 @@ import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RENDER_SLOT,
   CREATE_SLOTS,
   RENDER_LIST,
@@ -393,7 +393,7 @@ export interface DynamicSlotFnProperty extends Property {
 // ])
 export interface CodegenNodeWithDirective<T extends CallExpression>
   extends CallExpression {
-  callee: typeof APPLY_DIRECTIVES
+  callee: typeof WITH_DIRECTIVES
   arguments: [T, DirectiveArguments]
 }
 
@@ -548,7 +548,7 @@ type InferCodegenNodeType<T> = T extends
   | typeof CREATE_VNODE
   | typeof CREATE_BLOCK
   ? PlainElementCodegenNode | PlainComponentCodegenNode
-  : T extends typeof APPLY_DIRECTIVES
+  : T extends typeof WITH_DIRECTIVES
     ?
         | CodegenNodeWithDirective<PlainElementCodegenNode>
         | CodegenNodeWithDirective<PlainComponentCodegenNode>

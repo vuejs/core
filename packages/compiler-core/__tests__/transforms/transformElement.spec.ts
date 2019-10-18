@@ -4,7 +4,7 @@ import {
   CREATE_VNODE,
   MERGE_PROPS,
   RESOLVE_DIRECTIVE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   TO_HANDLERS,
   helperNameMap,
   PORTAL,
@@ -368,7 +368,7 @@ describe('compiler: element transform', () => {
     expect(root.helpers).toContain(RESOLVE_DIRECTIVE)
     expect(root.directives).toContain(`foo`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(WITH_DIRECTIVES)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION,
@@ -438,7 +438,7 @@ describe('compiler: element transform', () => {
     expect(root.directives).toContain(`bar`)
     expect(root.directives).toContain(`baz`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(WITH_DIRECTIVES)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION

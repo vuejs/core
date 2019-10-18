@@ -1,6 +1,6 @@
 import {
   h,
-  applyDirectives,
+  withDirectives,
   ref,
   render,
   nodeOps,
@@ -107,7 +107,7 @@ describe('directives', () => {
       },
       render() {
         _prevVnode = _vnode
-        _vnode = applyDirectives(h('div', count.value), [
+        _vnode = withDirectives(h('div', count.value), [
           [
             {
               beforeMount,
@@ -174,7 +174,7 @@ describe('directives', () => {
       },
       render() {
         _prevVnode = _vnode
-        _vnode = applyDirectives(h('div', count.value), [
+        _vnode = withDirectives(h('div', count.value), [
           [
             fn,
             // value

@@ -11,8 +11,8 @@ return applyDirectives(h(comp), [
 ])
 */
 
-import { VNode, cloneVNode } from './vnode'
-import { extend, isArray, isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
+import { VNode } from './vnode'
+import { isArray, isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
@@ -120,11 +120,10 @@ export type DirectiveArguments = Array<
   | [Directive, any, string, DirectiveModifiers]
 >
 
-export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
+export function withDirectives(vnode: VNode, directives: DirectiveArguments) {
   const instance = currentRenderingInstance
   if (instance !== null) {
-    vnode = cloneVNode(vnode)
-    vnode.props = vnode.props != null ? extend({}, vnode.props) : {}
+    vnode.props = vnode.props || {}
     for (let i = 0; i < directives.length; i++) {
       const [dir, value, arg, modifiers] = directives[i]
       applyDirective(vnode.props, instance, dir, value, arg, modifiers)

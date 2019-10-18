@@ -9,7 +9,7 @@ import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   FRAGMENT,
   RENDER_LIST
 } from '../../src/runtimeHelpers'
@@ -304,7 +304,7 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.ELEMENT,
         codegenNode: {
-          callee: APPLY_DIRECTIVES,
+          callee: WITH_DIRECTIVES,
           arguments: [
             {
               callee: CREATE_VNODE,
