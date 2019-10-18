@@ -657,18 +657,6 @@ describe('compiler: hoistStatic transform', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
-    test('should NOT hoist expressions that refer scope variables (v-slot)', () => {
-      const { root } = transformWithHoist(
-        `<Comp v-slot="{ foo }">{{ foo }}</Comp>`,
-        {
-          prefixIdentifiers: true
-        }
-      )
-
-      expect(root.hoists.length).toBe(0)
-      expect(generate(root).code).toMatchSnapshot()
-    })
-
     test('hoist element with static ref', () => {
       const { root, args } = transformWithHoist(
         `<div><span ref="o"></span></div>`,
