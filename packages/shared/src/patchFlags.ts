@@ -41,8 +41,8 @@ export const enum PatchFlags {
   FULL_PROPS = 1 << 4,
 
   // Indicates an element that only needs non-props patching, e.g. ref or
-  // directives (vnodeXXX hooks). It simply marks the vnode as "need patch",
-  // since every patched vnode checks for refs and vnodeXXX hooks.
+  // directives (onVnodeXXX hooks). It simply marks the vnode as "need patch",
+  // since every patched vnode checks for refs and onVnodeXXX hooks.
   // This flag is never directly matched against, it simply serves as a non-zero
   // value.
   NEED_PATCH = 1 << 5,

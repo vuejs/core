@@ -52,9 +52,8 @@ export const toTypeString = (value: unknown): string =>
 export const isPlainObject = (val: any): val is object =>
   toTypeString(val) === '[object Object]'
 
-const vnodeHooksRE = /^vnode/
 export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref' || key === '$once' || vnodeHooksRE.test(key)
+  key === 'key' || key === 'ref' || key === '$once' || key.startsWith(`onVnode`)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {

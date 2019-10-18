@@ -84,7 +84,7 @@ function applyDirective(
 
   for (const key in directive) {
     const hook = directive[key as keyof ObjectDirective]!
-    const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
+    const hookKey = `onVnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue
       if (prevVNode != null) {
