@@ -15,7 +15,9 @@ import { isFunction } from '@vue/shared'
 // (uses user defined props interface)
 export function createComponent<Props>(
   setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
-): (props: Props) => any
+): {
+  new (): ComponentPublicInstance<Props>
+}
 
 // overload 2: object format with no props
 // (uses user defined props interface)
