@@ -64,7 +64,7 @@ function walk(
       } else {
         // node may contain dynamic children, but its props may be eligible for
         // hoisting.
-        const flag = getPatchFlag(child)
+        const { flag } = getPatchFlag(child)
         if (
           (!flag ||
             flag === PatchFlags.NEED_PATCH ||
@@ -97,13 +97,23 @@ function walk(
   }
 }
 
-function getPatchFlag(node: PlainElementNode): number | undefined {
+function getPatchFlag(
+  node: PlainElementNode
+): {
+  flag: number | undefined
+  needApplyDirectives: boolean
+} {
   let codegenNode = node.codegenNode as ElementCodegenNode
+  let needApplyDirectives: boolean = false
   if (codegenNode.callee === APPLY_DIRECTIVES) {
     codegenNode = codegenNode.arguments[0]
+    needApplyDirectives = true
   }
   const flag = codegenNode.arguments[3]
-  return flag ? parseInt(flag, 10) : undefined
+  return {
+    flag: flag ? parseInt(flag, 10) : undefined,
+    needApplyDirectives
+  }
 }
 
 export function isStaticNode(
@@ -119,8 +129,8 @@ export function isStaticNode(
       if (cached !== undefined) {
         return cached
       }
-      const flag = getPatchFlag(node)
-      if (!flag) {
+      const { flag, needApplyDirectives } = getPatchFlag(node)
+      if (!flag || (flag === PatchFlags.NEED_PATCH && !needApplyDirectives)) {
         // element self is static. check its children.
         for (let i = 0; i < node.children.length; i++) {
           if (!isStaticNode(node.children[i], resultCache)) {
