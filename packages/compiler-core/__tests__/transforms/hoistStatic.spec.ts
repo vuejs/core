@@ -677,6 +677,7 @@ describe('compiler: hoistStatic transform', () => {
         }).code
       ).toMatchSnapshot()
     })
+
     test('should NOT hoist expressions that refer scope variables (v-slot)', () => {
       const { root } = transformWithHoist(
         `<Comp v-slot="{ foo }">{{ foo }}</Comp>`,
