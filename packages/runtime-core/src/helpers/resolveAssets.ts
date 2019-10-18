@@ -1,7 +1,13 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
 import { currentInstance, Component } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  isString,
+  isObject,
+  isFunction
+} from '@vue/shared'
 import { warn } from '../warning'
 
 export function resolveComponent(name: string): Component | undefined {
@@ -12,10 +18,10 @@ export function resolveDynamicComponent(
   component: unknown
 ): Component | undefined {
   if (!component) return
-  if (typeof component === 'string') {
+  if (isString(component)) {
     return resolveAsset('components', component)
-  } else if (typeof component === 'function' || typeof component === 'object') {
-    return component || undefined
+  } else if (isFunction(component) || isObject(component)) {
+    return component
   }
 }
 

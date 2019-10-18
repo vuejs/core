@@ -59,8 +59,8 @@ export const transformElement: NodeTransform = (node, context) => {
     let dynamicComponent: string | CallExpression | undefined
 
     // handle dynamic component
+    const isProp = findProp(node, 'is')
     if (node.tag === 'component') {
-      const isProp = findProp(node, 'is')
       if (isProp) {
         // static <component is="foo" />
         if (isProp.type === NodeTypes.ATTRIBUTE) {
@@ -99,7 +99,11 @@ export const transformElement: NodeTransform = (node, context) => {
     ]
     // props
     if (hasProps) {
-      const propsBuildResult = buildProps(node, context)
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        node.props.filter(p => p !== isProp) // skip reserved "is" prop <component is>
+      )
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
       runtimeDirectives = propsBuildResult.directives
@@ -241,17 +245,6 @@ export function buildProps(
   for (let i = 0; i < props.length; i++) {
     // static attribute
     const prop = props[i]
-    // skip reserved "is" prop <component is>
-    if (
-      prop.type === NodeTypes.ATTRIBUTE
-        ? prop.name === 'is'
-        : prop.name === 'bind' &&
-          prop.arg &&
-          prop.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-          prop.arg.content === 'is'
-    ) {
-      continue
-    }
     if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, value } = prop
       if (name === 'ref') {

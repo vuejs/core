@@ -744,16 +744,5 @@ describe('compiler: element transform', () => {
         }
       ])
     })
-
-    test('empty "is" prop', () => {
-      const result = {
-        callee: CREATE_VNODE,
-        arguments: ['"component"']
-      }
-      const { node: node1 } = parseWithBind(`<component is />`)
-      expect(node1).toMatchObject(result)
-      const { node: node2 } = parseWithBind(`<component :is />`)
-      expect(node2).toMatchObject(result)
-    })
   })
 })
