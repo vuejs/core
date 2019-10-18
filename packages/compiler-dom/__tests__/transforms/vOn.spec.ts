@@ -9,7 +9,7 @@ import {
   Property
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
-import { V_ON_MODIFIERS_GUARD, V_ON_KEYS_GUARD } from '../../src/runtimeHelpers'
+import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformExpression } from '../../../compiler-core/src/transforms/transformExpression'
 import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
@@ -38,7 +38,7 @@ describe('compiler-dom: transform v-on', () => {
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       value: {
-        callee: V_ON_MODIFIERS_GUARD,
+        callee: V_ON_WITH_MODIFIERS,
         arguments: [{ content: '_ctx.test' }, '["stop","prevent"]']
       }
     })
@@ -53,7 +53,7 @@ describe('compiler-dom: transform v-on', () => {
       type: NodeTypes.JS_PROPERTY,
       value: createObjectMatcher({
         handler: {
-          callee: V_ON_MODIFIERS_GUARD,
+          callee: V_ON_WITH_MODIFIERS,
           arguments: [{ content: '_ctx.test' }, '["stop"]']
         },
         options: createObjectMatcher({
@@ -74,10 +74,10 @@ describe('compiler-dom: transform v-on', () => {
       type: NodeTypes.JS_PROPERTY,
       value: createObjectMatcher({
         handler: {
-          callee: V_ON_KEYS_GUARD,
+          callee: V_ON_WITH_KEYS,
           arguments: [
             {
-              callee: V_ON_MODIFIERS_GUARD,
+              callee: V_ON_WITH_MODIFIERS,
               arguments: [{ content: '_ctx.test' }, '["stop","ctrl"]']
             },
             '["a"]'
@@ -98,7 +98,7 @@ describe('compiler-dom: transform v-on', () => {
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       value: {
-        callee: V_ON_MODIFIERS_GUARD,
+        callee: V_ON_WITH_MODIFIERS,
         arguments: [{ content: '_ctx.test' }, '["exact"]']
       }
     })
@@ -111,7 +111,7 @@ describe('compiler-dom: transform v-on', () => {
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       value: {
-        callee: V_ON_KEYS_GUARD,
+        callee: V_ON_WITH_KEYS,
         arguments: [{ content: '_ctx.test' }, '["enter"]']
       }
     })

@@ -7,7 +7,7 @@ import {
   createSimpleExpression,
   NodeTypes
 } from '@vue/compiler-core'
-import { V_ON_MODIFIERS_GUARD, V_ON_KEYS_GUARD } from '../runtimeHelpers'
+import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap } from '@vue/shared'
 
 const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
@@ -39,7 +39,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
   // built-in modifiers that are not keys
   const nonKeyModifiers = runtimeModifiers.filter(isNonKeyModifier)
   if (nonKeyModifiers.length) {
-    handlerExp = createCallExpression(context.helper(V_ON_MODIFIERS_GUARD), [
+    handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
       handlerExp,
       JSON.stringify(nonKeyModifiers)
     ])
@@ -53,7 +53,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       !key.isStatic ||
       isKeyboardEvent(key.content))
   ) {
-    handlerExp = createCallExpression(context.helper(V_ON_KEYS_GUARD), [
+    handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
       handlerExp,
       JSON.stringify(keyModifiers)
     ])
