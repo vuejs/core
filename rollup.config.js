@@ -79,8 +79,6 @@ function createConfig(output, plugins = []) {
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
   const isRuntimeCompileBuild = /\/vue\./.test(output.file)
 
-  console.log(isBundlerESMBuild)
-
   if (isGlobalBuild) {
     output.name = packageOptions.name
   }
