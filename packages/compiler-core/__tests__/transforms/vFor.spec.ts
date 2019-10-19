@@ -857,7 +857,7 @@ describe('compiler: v-for', () => {
         type: NodeTypes.JS_SEQUENCE_EXPRESSION,
         expressions: [
           { callee: OPEN_BLOCK },
-          // should wrap applyDirectives() around createBlock()
+          // should wrap withDirectives() around createBlock()
           {
             callee: WITH_DIRECTIVES,
             arguments: [

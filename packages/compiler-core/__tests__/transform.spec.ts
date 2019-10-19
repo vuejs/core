@@ -313,7 +313,7 @@ describe('compiler: transform', () => {
           },
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            // should wrap applyDirectives() around createBlock()
+            // should wrap withDirectives() around createBlock()
             callee: WITH_DIRECTIVES,
             arguments: [
               { callee: CREATE_BLOCK },

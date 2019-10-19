@@ -5,7 +5,7 @@ const comp = resolveComponent('comp')
 const foo = resolveDirective('foo')
 const bar = resolveDirective('bar')
 
-return applyDirectives(h(comp), [
+return withDirectives(h(comp), [
   [foo, this.x],
   [bar, this.y]
 ])
@@ -129,7 +129,7 @@ export function withDirectives(vnode: VNode, directives: DirectiveArguments) {
       applyDirective(vnode.props, instance, dir, value, arg, modifiers)
     }
   } else if (__DEV__) {
-    warn(`applyDirectives can only be used inside render functions.`)
+    warn(`withDirectives can only be used inside render functions.`)
   }
   return vnode
 }

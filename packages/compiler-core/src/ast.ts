@@ -396,7 +396,7 @@ export interface DynamicSlotFnProperty extends Property {
   value: SlotFunctionExpression
 }
 
-// applyDirectives(createVNode(...), [
+// withDirectives(createVNode(...), [
 //    [_directive_foo, someValue],
 //    [_directive_bar, someValue, "arg", { mod: true }]
 // ])
