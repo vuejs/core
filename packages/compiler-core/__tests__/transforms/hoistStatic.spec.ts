@@ -707,9 +707,7 @@ describe('compiler: hoistStatic transform', () => {
             `"span"`,
             createObjectMatcher({
               ref: `o`
-            }),
-            `null`,
-            `32 /* NEED_PATCH */`
+            })
           ]
         }
       ])
