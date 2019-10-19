@@ -67,6 +67,7 @@ export interface SetupContext {
   attrs: Data
   slots: Slots
   emit: Emit
+  refs: Data
 }
 
 export type RenderFunction = () => VNodeChild
