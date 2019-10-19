@@ -249,6 +249,36 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(newFunc)
   })
 
+  it('should observe chained getters relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      get b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
+  it('should observe methods relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b()))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
   it('should not observe set operations without a value change', () => {
     let hasDummy, getDummy
     const obj = reactive({ prop: 'value' })

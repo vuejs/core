@@ -15,7 +15,7 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_SLOT,
-  APPLY_DIRECTIVES
+  WITH_DIRECTIVES
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
@@ -314,7 +314,7 @@ describe('compiler: transform', () => {
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
             // should wrap applyDirectives() around createBlock()
-            callee: APPLY_DIRECTIVES,
+            callee: WITH_DIRECTIVES,
             arguments: [
               { callee: CREATE_BLOCK },
               { type: NodeTypes.JS_ARRAY_EXPRESSION }

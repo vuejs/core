@@ -32,7 +32,7 @@ import {
   CREATE_BLOCK,
   COMMENT,
   FRAGMENT,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   CREATE_VNODE
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
@@ -196,7 +196,7 @@ function createChildrenCodegenNode(
       | SlotOutletCodegenNode
     let vnodeCall = childCodegen
     // Element with custom directives. Locate the actual createVNode() call.
-    if (vnodeCall.callee === APPLY_DIRECTIVES) {
+    if (vnodeCall.callee === WITH_DIRECTIVES) {
       vnodeCall = vnodeCall.arguments[0]
     }
     // Change createVNode to createBlock.

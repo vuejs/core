@@ -4,7 +4,8 @@ import { CompilerOptions } from '@vue/compiler-dom'
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
-  hoistStatic: false
+  hoistStatic: false,
+  cacheHandlers: false
 })
 
 const App = {
@@ -70,7 +71,20 @@ const App = {
             compilerOptions.hoistStatic = (<HTMLInputElement>e.target).checked
           }
         }),
-        h('label', { for: 'hoist' }, 'hoistStatic')
+        h('label', { for: 'hoist' }, 'hoistStatic'),
+
+        // toggle cacheHandlers
+        h('input', {
+          type: 'checkbox',
+          id: 'cache',
+          checked:
+            compilerOptions.cacheHandlers && compilerOptions.prefixIdentifiers,
+          disabled: !compilerOptions.prefixIdentifiers,
+          onChange(e: Event) {
+            compilerOptions.cacheHandlers = (<HTMLInputElement>e.target).checked
+          }
+        }),
+        h('label', { for: 'cache' }, 'cacheHandlers')
       ])
     ]
   }
