@@ -16,6 +16,7 @@ export const enum ErrorCodes {
   DIRECTIVE_HOOK,
   APP_ERROR_HANDLER,
   APP_WARN_HANDLER,
+  APP_LOG_ERROR,
   SCHEDULER
 }
 
@@ -43,6 +44,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.DIRECTIVE_HOOK]: 'directive hook',
   [ErrorCodes.APP_ERROR_HANDLER]: 'app errorHandler',
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
+  [ErrorCodes.APP_LOG_ERROR]: 'app logError',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
@@ -115,12 +117,21 @@ export function handleError(
       return
     }
   }
-  logError(err, type, contextVNode)
+
+  // default behavior is crash in prod & test, recover in dev. It can be overriden via app config
+  if (instance && instance.appContext.config.logError) {
+    callWithErrorHandling(
+      instance.appContext.config.logError,
+      instance,
+      ErrorCodes.APP_LOG_ERROR,
+      [err, type, instance.vnode]
+    )
+  } else {
+    logError(err, type, contextVNode)
+  }
 }
 
 function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
-  // default behavior is crash in prod & test, recover in dev.
-  // TODO we should probably make this configurable via `createApp`
   if (
     __DEV__ &&
     !(typeof process !== 'undefined' && process.env.NODE_ENV === 'test')

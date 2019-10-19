@@ -6,7 +6,8 @@ import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
 import { isFunction, NO } from '@vue/shared'
 import { warn } from './warning'
-import { createVNode } from './vnode'
+import { createVNode, VNode } from './vnode'
+import { ErrorTypes } from './errorHandling'
 
 export interface App<HostElement = any> {
   config: AppConfig
@@ -39,6 +40,7 @@ export interface AppConfig {
     instance: ComponentPublicInstance | null,
     trace: string
   ) => void
+  logError?: (err: Error, type: ErrorTypes, contextVNode: VNode) => void
 }
 
 export interface AppContext {
@@ -65,7 +67,8 @@ export function createAppContext(): AppContext {
       isNativeTag: NO,
       isCustomElement: NO,
       errorHandler: undefined,
-      warnHandler: undefined
+      warnHandler: undefined,
+      logError: undefined
     },
     mixins: [],
     components: {},

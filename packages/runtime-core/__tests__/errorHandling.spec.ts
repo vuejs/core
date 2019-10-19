@@ -7,8 +7,10 @@ import {
   watch,
   ref,
   nextTick,
-  mockWarn
+  mockWarn,
+  createApp
 } from '@vue/runtime-test'
+import { ErrorCodes } from '../src/errorHandling'
 
 describe('error handling', () => {
   mockWarn()
@@ -400,6 +402,34 @@ describe('error handling', () => {
     groupCollapsed.mockRestore()
     log.mockRestore()
     process.env.NODE_ENV = 'test'
+  })
+
+  it('should run custom logError', () => {
+    const fn = jest.fn()
+    const err = new Error()
+
+    const app = createApp()
+    app.config.logError = fn
+
+    const Comp = {
+      setup() {
+        return () => h(Child)
+      }
+    }
+
+    const Child = {
+      setup() {
+        throw err
+      },
+      render() {}
+    }
+
+    app.mount(Comp, nodeOps.createElement('div'))
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn.mock.calls[0][0]).toBe(err)
+    expect(fn.mock.calls[0][1]).toBe(ErrorCodes.SETUP_FUNCTION)
+    expect(fn.mock.calls[0][2]._isVNode).toBeTruthy()
   })
 
   // native event handler handling should be tested in respective renderers
