@@ -222,9 +222,10 @@ export function buildProps(
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       if (
-        (value.type === NodeTypes.SIMPLE_EXPRESSION ||
+        value.type === NodeTypes.JS_CACHE_EXPRESSION ||
+        ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-        isStaticNode(value)
+          isStaticNode(value))
       ) {
         return
       }

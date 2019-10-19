@@ -42,7 +42,8 @@ export const enum NodeTypes {
   JS_ARRAY_EXPRESSION,
   JS_FUNCTION_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
-  JS_CONDITIONAL_EXPRESSION
+  JS_CONDITIONAL_EXPRESSION,
+  JS_CACHE_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -93,6 +94,7 @@ export interface RootNode extends Node {
   components: string[]
   directives: string[]
   hoists: JSChildNode[]
+  cached: number
   codegenNode: TemplateChildNode | JSChildNode | undefined
 }
 
@@ -236,6 +238,7 @@ export type JSChildNode =
   | FunctionExpression
   | ConditionalExpression
   | SequenceExpression
+  | CacheExpression
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
@@ -281,6 +284,12 @@ export interface ConditionalExpression extends Node {
   test: ExpressionNode
   consequent: JSChildNode
   alternate: JSChildNode
+}
+
+export interface CacheExpression extends Node {
+  type: NodeTypes.JS_CACHE_EXPRESSION
+  index: number
+  value: JSChildNode
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -602,6 +611,18 @@ export function createConditionalExpression(
     test,
     consequent,
     alternate,
+    loc: locStub
+  }
+}
+
+export function createCacheExpression(
+  index: number,
+  value: JSChildNode
+): CacheExpression {
+  return {
+    type: NodeTypes.JS_CACHE_EXPRESSION,
+    index,
+    value,
     loc: locStub
   }
 }

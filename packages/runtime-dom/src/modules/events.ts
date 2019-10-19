@@ -17,7 +17,6 @@ type EventValue = (Function | Function[]) & {
 type EventValueWithOptions = {
   handler: EventValue
   options: AddEventListenerOptions
-  persistent?: boolean
   invoker?: Invoker | null
 }
 
@@ -77,10 +76,8 @@ export function patchEvent(
   const invoker = prevValue && prevValue.invoker
   const value =
     nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
-  const persistent =
-    nextValue && 'persistent' in nextValue && nextValue.persistent
 
-  if (!persistent && (prevOptions || nextOptions)) {
+  if (prevOptions || nextOptions) {
     const prev = prevOptions || EMPTY_OBJ
     const next = nextOptions || EMPTY_OBJ
     if (

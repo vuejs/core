@@ -13,7 +13,9 @@ import {
   ElementTypes,
   ElementCodegenNode,
   ComponentCodegenNode,
-  createCallExpression
+  createCallExpression,
+  CacheExpression,
+  createCacheExpression
 } from './ast'
 import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
@@ -45,8 +47,13 @@ export type NodeTransform = (
 export type DirectiveTransform = (
   dir: DirectiveNode,
   node: ElementNode,
-  context: TransformContext
-) => {
+  context: TransformContext,
+  // a platform specific compiler can import the base transform and augment
+  // it by passing in this optional argument.
+  augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult
+) => DirectiveTransformResult
+
+export interface DirectiveTransformResult {
   props: Property[]
   needRuntime: boolean | symbol
 }
@@ -64,6 +71,7 @@ export interface TransformOptions {
   directiveTransforms?: { [name: string]: DirectiveTransform }
   prefixIdentifiers?: boolean
   hoistStatic?: boolean
+  cacheHandlers?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -73,6 +81,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
     vFor: number
@@ -91,6 +100,7 @@ export interface TransformContext extends Required<TransformOptions> {
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
+  cache<T extends JSChildNode>(exp: T): CacheExpression | T
 }
 
 function createTransformContext(
@@ -98,6 +108,7 @@ function createTransformContext(
   {
     prefixIdentifiers = false,
     hoistStatic = false,
+    cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
     onError = defaultOnError
@@ -109,6 +120,7 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    cached: 0,
     identifiers: {},
     scopes: {
       vFor: 0,
@@ -118,6 +130,7 @@ function createTransformContext(
     },
     prefixIdentifiers,
     hoistStatic,
+    cacheHandlers,
     nodeTransforms,
     directiveTransforms,
     onError,
@@ -204,6 +217,14 @@ function createTransformContext(
         false,
         exp.loc
       )
+    },
+    cache(exp) {
+      if (cacheHandlers) {
+        context.cached++
+        return createCacheExpression(context.cached, exp)
+      } else {
+        return exp
+      }
     }
   }
 
@@ -273,6 +294,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   root.components = [...context.components]
   root.directives = [...context.directives]
   root.hoists = context.hoists
+  root.cached = context.cached
 }
 
 export function traverseChildren(
