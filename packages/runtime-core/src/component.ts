@@ -67,6 +67,8 @@ export interface SetupContext {
   attrs: Data
   slots: Slots
   emit: Emit
+  parent: ComponentInternalInstance | null
+  root: ComponentInternalInstance
 }
 
 export type RenderFunction = () => VNodeChild
@@ -430,7 +432,9 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
     refs: new Proxy(instance, SetupProxyHandlers.refs),
-    emit: instance.emit
+    emit: instance.emit,
+    parent: instance.parent,
+    root: instance.root
   }
   return __DEV__ ? Object.freeze(context) : context
 }

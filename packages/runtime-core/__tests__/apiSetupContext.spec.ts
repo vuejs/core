@@ -204,4 +204,36 @@ describe('api: setup context', () => {
     await nextTick()
     expect(serializeInner(root)).toMatch(`<div>1</div>`)
   })
+
+  it('context.root', () => {
+    const Parent = {
+      render: () => h(Child)
+    }
+
+    const Child = createComponent({
+      setup(props, { root }) {
+        return () => h('div', root.vnode._isVNode)
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toMatch(`<div>true</div>`)
+  })
+
+  it('context.parent', () => {
+    const Parent = {
+      render: () => h(Child)
+    }
+
+    const Child = createComponent({
+      setup(props, { parent }) {
+        return () => h('div', parent!.vnode._isVNode)
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(serializeInner(root)).toMatch(`<div>true</div>`)
+  })
 })
