@@ -13,7 +13,8 @@ import {
   createCallExpression,
   createConditionalExpression,
   IfCodegenNode,
-  ForCodegenNode
+  ForCodegenNode,
+  createCacheExpression
 } from '../src'
 import {
   CREATE_VNODE,
@@ -34,6 +35,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     components: [],
     directives: [],
     hoists: [],
+    cached: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
@@ -133,6 +135,12 @@ describe('compiler: codegen', () => {
     expect(code).toMatch(`const _hoisted_1 = hello`)
     expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
     expect(code).toMatchSnapshot()
+  })
+
+  test('cached', () => {
+    const root = createRoot({ cached: 3 })
+    const { code } = generate(root)
+    expect(code).toMatch(`let _cached_1, _cached_2, _cached_3`)
   })
 
   test('prefixIdentifiers: true should inject _ctx statement', () => {
@@ -358,5 +366,17 @@ describe('compiler: codegen', () => {
         : baz()`
     )
     expect(code).toMatchSnapshot()
+  })
+
+  test('CacheExpression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createCacheExpression(
+          1,
+          createSimpleExpression(`foo`, false)
+        )
+      })
+    )
+    expect(code).toMatch(`_cached_1 || (_cached_1 = foo)`)
   })
 })

@@ -31,7 +31,7 @@ import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
-  APPLY_DIRECTIVES
+  WITH_DIRECTIVES
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -151,7 +151,7 @@ export const transformFor = createStructuralDirectiveTransform(
         // Normal element v-for. Directly use the child's codegenNode
         // arguments, but replace createVNode() with createBlock()
         let codegenNode = node.codegenNode as ElementCodegenNode
-        if (codegenNode.callee === APPLY_DIRECTIVES) {
+        if (codegenNode.callee === WITH_DIRECTIVES) {
           codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
         } else {
           codegenNode.callee = helper(CREATE_BLOCK)

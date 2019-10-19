@@ -1,17 +1,14 @@
-import { DirectiveTransform, TransformContext } from '../transform'
+import { DirectiveTransform } from '../transform'
 import {
   createSimpleExpression,
   createObjectProperty,
   createCompoundExpression,
   NodeTypes,
   Property,
-  CompoundExpressionNode,
-  createInterpolation,
   ElementTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { isMemberExpression, isSimpleIdentifier } from '../utils'
-import { isObject } from '@vue/shared'
+import { isMemberExpression, isSimpleIdentifier, hasScopeRef } from '../utils'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -54,16 +51,6 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         ])
     : createSimpleExpression('onUpdate:modelValue', true)
 
-  let assignmentChildren =
-    exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children
-  // For a member expression used in assignment, it only needs to be updated
-  // if the expression involves scope variables. Otherwise we can mark the
-  // expression as constant to avoid it being included in `dynamicPropNames`
-  // of the element. This optimization relies on `prefixIdentifiers: true`.
-  if (!__BROWSER__ && context.prefixIdentifiers) {
-    assignmentChildren = assignmentChildren.map(c => toConstant(c, context))
-  }
-
   const props = [
     // modelValue: foo
     createObjectProperty(propName, dir.exp!),
@@ -72,11 +59,20 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       eventName,
       createCompoundExpression([
         `$event => (`,
-        ...assignmentChildren,
+        ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
         ` = $event)`
       ])
     )
   ]
+
+  // cache v-model handler if applicable (when it doesn't refer any scope vars)
+  if (
+    !__BROWSER__ &&
+    context.prefixIdentifiers &&
+    !hasScopeRef(exp, context.identifiers)
+  ) {
+    props[1].value = context.cache(props[1].value)
+  }
 
   // modelModifiers: { foo: true, "bar-baz": true }
   if (dir.modifiers.length && node.tagType === ElementTypes.COMPONENT) {
@@ -92,30 +88,6 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   return createTransformProps(props)
-}
-
-function toConstant(
-  exp: CompoundExpressionNode | CompoundExpressionNode['children'][0],
-  context: TransformContext
-): any {
-  if (!isObject(exp) || exp.type === NodeTypes.TEXT) {
-    return exp
-  }
-  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    if (exp.isStatic || context.identifiers[exp.content]) {
-      return exp
-    }
-    return {
-      ...exp,
-      isConstant: true
-    }
-  } else if (exp.type === NodeTypes.COMPOUND_EXPRESSION) {
-    return createCompoundExpression(
-      exp.children.map(c => toConstant(c, context))
-    )
-  } else if (exp.type === NodeTypes.INTERPOLATION) {
-    return createInterpolation(toConstant(exp.content, context), exp.loc)
-  }
 }
 
 function createTransformProps(props: Property[] = []) {

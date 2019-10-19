@@ -16,7 +16,8 @@ import {
   SimpleExpressionNode,
   FunctionExpression,
   SequenceExpression,
-  ConditionalExpression
+  ConditionalExpression,
+  CacheExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -218,6 +219,7 @@ export function generate(
       }
     }
     genHoists(ast.hoists, context)
+    genCached(ast.cached, context)
     newline()
     push(`return `)
   } else {
@@ -226,6 +228,7 @@ export function generate(
       push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
+    genCached(ast.cached, context)
     newline()
     push(`export default `)
   }
@@ -313,6 +316,18 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
     genNode(exp, context)
     context.newline()
   })
+}
+
+function genCached(cached: number, context: CodegenContext) {
+  if (cached > 0) {
+    context.newline()
+    context.push(`let `)
+    for (let i = 0; i < cached; i++) {
+      context.push(`_cached_${i + 1}`)
+      if (i !== cached - 1) context.push(`, `)
+    }
+    context.newline()
+  }
 }
 
 function isText(n: string | CodegenNode) {
@@ -418,6 +433,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
     case NodeTypes.JS_CONDITIONAL_EXPRESSION:
       genConditionalExpression(node, context)
+      break
+    case NodeTypes.JS_CACHE_EXPRESSION:
+      genCacheExpression(node, context)
       break
     /* istanbul ignore next */
     default:
@@ -610,5 +628,11 @@ function genSequenceExpression(
 ) {
   context.push(`(`)
   genNodeList(node.expressions, context)
+  context.push(`)`)
+}
+
+function genCacheExpression(node: CacheExpression, context: CodegenContext) {
+  context.push(`_cached_${node.index} || (_cached_${node.index} = `)
+  genNode(node.value, context)
   context.push(`)`)
 }

@@ -31,7 +31,7 @@ export {
   vModelDynamic
 } from './directives/vModel'
 
-export { vOnModifiersGuard, vOnKeysGuard } from './directives/vOn'
+export { withModifiers, withKeys } from './directives/vOn'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types

@@ -74,7 +74,6 @@ export type UnwrapRef<T> = {
   ref: T extends Ref<infer V> ? UnwrapRef<V> : T
   array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
-  stop: T
 }[T extends ComputedRef<any>
   ? 'cRef'
   : T extends Ref
@@ -82,5 +81,5 @@ export type UnwrapRef<T> = {
     : T extends Array<any>
       ? 'array'
       : T extends BailTypes
-        ? 'stop' // bail out on types that shouldn't be unwrapped
-        : T extends object ? 'object' : 'stop']
+        ? 'ref' // bail out on types that shouldn't be unwrapped
+        : T extends object ? 'object' : 'ref']

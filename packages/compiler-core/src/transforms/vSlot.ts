@@ -19,21 +19,13 @@ import {
   FunctionExpression,
   CallExpression,
   createCallExpression,
-  createArrayExpression,
-  IfBranchNode
+  createArrayExpression
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import {
-  findDir,
-  isTemplateNode,
-  assert,
-  isVSlot,
-  isSimpleIdentifier
-} from '../utils'
+import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
-import { isObject } from '@vue/shared'
 
 const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -336,50 +328,4 @@ function buildDynamicSlot(
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
   ])
-}
-
-function hasScopeRef(
-  node: TemplateChildNode | IfBranchNode | SimpleExpressionNode | undefined,
-  ids: TransformContext['identifiers']
-): boolean {
-  if (!node || Object.keys(ids).length === 0) {
-    return false
-  }
-  switch (node.type) {
-    case NodeTypes.ELEMENT:
-      for (let i = 0; i < node.props.length; i++) {
-        const p = node.props[i]
-        if (
-          p.type === NodeTypes.DIRECTIVE &&
-          (hasScopeRef(p.arg, ids) || hasScopeRef(p.exp, ids))
-        ) {
-          return true
-        }
-      }
-      return node.children.some(c => hasScopeRef(c, ids))
-    case NodeTypes.FOR:
-      if (hasScopeRef(node.source, ids)) {
-        return true
-      }
-      return node.children.some(c => hasScopeRef(c, ids))
-    case NodeTypes.IF:
-      return node.branches.some(b => hasScopeRef(b, ids))
-    case NodeTypes.IF_BRANCH:
-      if (hasScopeRef(node.condition, ids)) {
-        return true
-      }
-      return node.children.some(c => hasScopeRef(c, ids))
-    case NodeTypes.SIMPLE_EXPRESSION:
-      return (
-        !node.isStatic &&
-        isSimpleIdentifier(node.content) &&
-        !!ids[node.content]
-      )
-    case NodeTypes.COMPOUND_EXPRESSION:
-      return node.children.some(c => isObject(c) && hasScopeRef(c, ids))
-    case NodeTypes.INTERPOLATION:
-      return hasScopeRef(node.content, ids)
-    default:
-      return false
-  }
 }
