@@ -1,7 +1,7 @@
 import { VNode } from './vnode'
 import { ComponentInternalInstance, LifecycleHooks } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
-import { isPromise, isArray } from '@vue/shared'
+import { isPromise, isFunction } from '@vue/shared'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -71,8 +71,8 @@ export function callWithAsyncErrorHandling(
   type: ErrorTypes,
   args?: any[]
 ) {
-  function call(handler: Function) {
-    const res = callWithErrorHandling(handler, instance, type, args)
+  if (isFunction(fn)) {
+    const res = callWithErrorHandling(fn, instance, type, args)
     if (res != null && !res._isVue && isPromise(res)) {
       res.catch((err: Error) => {
         handleError(err, instance, type)
@@ -81,7 +81,9 @@ export function callWithAsyncErrorHandling(
     return res
   }
 
-  return isArray(fn) ? fn.map(call) : call(fn)
+  for (let i = 0; i < fn.length; i++) {
+    callWithAsyncErrorHandling(fn[i], instance, type, args)
+  }
 }
 
 export function handleError(
