@@ -83,7 +83,11 @@ export interface ComponentInternalInstance {
   render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
-  accessCache: Data
+  // cache for renderProxy access type to avoid hasOwnProperty calls
+  accessCache: Data | null
+  // cache for render function values that rely on _ctx but won't need updates
+  // after initialized (e.g. inline handlers)
+  renderCache: any[] | null
 
   components: Record<string, Component>
   directives: Record<string, Directive>
@@ -149,6 +153,7 @@ export function createComponentInstance(
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
+    renderCache: null,
 
     // setup context properties
     renderContext: EMPTY_OBJ,

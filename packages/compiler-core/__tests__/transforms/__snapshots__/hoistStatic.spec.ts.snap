@@ -204,20 +204,18 @@ return function render() {
 `;
 
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers 1`] = `
-"const _Vue = Vue
+"import { createVNode, createBlock, openBlock } from \\"vue\\"
 
-let _cached_1
-
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
-    return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", {
-        onClick: _cached_1 || (_cached_1 = $event => (_ctx.foo($event)))
+export default function render() {
+  const _ctx = this
+  const _cache = _ctx.$cache
+  return (openBlock(), createBlock(\\"div\\", null, [
+    createVNode(\\"div\\", null, [
+      createVNode(\\"div\\", {
+        onClick: _cache[1] || (_cache[1] = $event => (_ctx.foo($event)))
       })
-    ]))
-  }
+    ])
+  ]))
 }"
 `;
 

@@ -219,7 +219,6 @@ export function generate(
       }
     }
     genHoists(ast.hoists, context)
-    genCached(ast.cached, context)
     newline()
     push(`return `)
   } else {
@@ -228,7 +227,6 @@ export function generate(
       push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
     genHoists(ast.hoists, context)
-    genCached(ast.cached, context)
     newline()
     push(`export default `)
   }
@@ -253,6 +251,10 @@ export function generate(
     }
   } else {
     push(`const _ctx = this`)
+    if (ast.cached > 0) {
+      newline()
+      push(`const _cache = _ctx.$cache`)
+    }
     newline()
   }
 
@@ -316,18 +318,6 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
     genNode(exp, context)
     context.newline()
   })
-}
-
-function genCached(cached: number, context: CodegenContext) {
-  if (cached > 0) {
-    context.newline()
-    context.push(`let `)
-    for (let i = 0; i < cached; i++) {
-      context.push(`_cached_${i + 1}`)
-      if (i !== cached - 1) context.push(`, `)
-    }
-    context.newline()
-  }
 }
 
 function isText(n: string | CodegenNode) {
@@ -632,7 +622,7 @@ function genSequenceExpression(
 }
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
-  context.push(`_cached_${node.index} || (_cached_${node.index} = `)
+  context.push(`_cache[${node.index}] || (_cache[${node.index}] = `)
   genNode(node.value, context)
   context.push(`)`)
 }

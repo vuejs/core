@@ -137,12 +137,6 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('cached', () => {
-    const root = createRoot({ cached: 3 })
-    const { code } = generate(root)
-    expect(code).toMatch(`let _cached_1, _cached_2, _cached_3`)
-  })
-
   test('prefixIdentifiers: true should inject _ctx statement', () => {
     const { code } = generate(createRoot(), { prefixIdentifiers: true })
     expect(code).toMatch(`const _ctx = this\n`)
@@ -371,12 +365,19 @@ describe('compiler: codegen', () => {
   test('CacheExpression', () => {
     const { code } = generate(
       createRoot({
+        cached: 1,
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false)
         )
-      })
+      }),
+      {
+        mode: 'module',
+        prefixIdentifiers: true
+      }
     )
-    expect(code).toMatch(`_cached_1 || (_cached_1 = foo)`)
+    expect(code).toMatch(`const _cache = _ctx.$cache`)
+    expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
+    expect(code).toMatchSnapshot()
   })
 })

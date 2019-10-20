@@ -660,14 +660,22 @@ describe('compiler: hoistStatic transform', () => {
     })
 
     test('should NOT hoist elements with cached handlers', () => {
-      const { root } = transformWithHoist(`<div><div @click="foo"/></div>`, {
-        prefixIdentifiers: true,
-        cacheHandlers: true
-      })
+      const { root } = transformWithHoist(
+        `<div><div><div @click="foo"/></div></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
 
       expect(root.cached).toBe(1)
       expect(root.hoists.length).toBe(0)
-      expect(generate(root).code).toMatchSnapshot()
+      expect(
+        generate(root, {
+          mode: 'module',
+          prefixIdentifiers: true
+        }).code
+      ).toMatchSnapshot()
     })
   })
 })

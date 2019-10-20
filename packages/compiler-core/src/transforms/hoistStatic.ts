@@ -50,12 +50,7 @@ function walk(
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
     ) {
-      const hasBailoutProp = hasDynamicKeyOrRef(child) || hasCachedProps(child)
-      if (
-        !doNotHoistNode &&
-        !hasBailoutProp &&
-        isStaticNode(child, resultCache)
-      ) {
+      if (!doNotHoistNode && isStaticNode(child, resultCache)) {
         // whole tree is static
         child.codegenNode = context.hoist(child.codegenNode!)
         continue
@@ -67,7 +62,8 @@ function walk(
           (!flag ||
             flag === PatchFlags.NEED_PATCH ||
             flag === PatchFlags.TEXT) &&
-          !hasBailoutProp
+          !hasDynamicKeyOrRef(child) &&
+          !hasCachedProps(child)
         ) {
           const props = getNodeProps(child)
           if (props && props !== `null`) {
@@ -105,7 +101,7 @@ export function isStaticNode(
         return cached
       }
       const flag = getPatchFlag(node)
-      if (!flag) {
+      if (!flag && !hasDynamicKeyOrRef(node) && !hasCachedProps(node)) {
         // element self is static. check its children.
         for (let i = 0; i < node.children.length; i++) {
           if (!isStaticNode(node.children[i], resultCache)) {

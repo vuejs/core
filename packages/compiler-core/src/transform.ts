@@ -219,12 +219,7 @@ function createTransformContext(
       )
     },
     cache(exp) {
-      if (cacheHandlers) {
-        context.cached++
-        return createCacheExpression(context.cached, exp)
-      } else {
-        return exp
-      }
+      return cacheHandlers ? createCacheExpression(++context.cached, exp) : exp
     }
   }
 
