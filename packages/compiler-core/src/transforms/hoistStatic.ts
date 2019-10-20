@@ -112,6 +112,7 @@ export function isStaticNode(
         resultCache.set(node, true)
         return true
       } else {
+        resultCache.set(node, false)
         return false
       }
     case NodeTypes.TEXT:
