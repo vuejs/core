@@ -79,7 +79,10 @@ const App = {
           id: 'cache',
           checked:
             compilerOptions.cacheHandlers && compilerOptions.prefixIdentifiers,
-          disabled: !compilerOptions.prefixIdentifiers,
+          disabled: !(
+            compilerOptions.prefixIdentifiers ||
+            compilerOptions.mode === 'module'
+          ),
           onChange(e: Event) {
             compilerOptions.cacheHandlers = (<HTMLInputElement>e.target).checked
           }
