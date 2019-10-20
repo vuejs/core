@@ -12,7 +12,9 @@ export {
   computed,
   ComputedRef,
   WritableComputedRef,
-  WritableComputedOptions
+  WritableComputedOptions,
+  ComputedGetter,
+  ComputedSetter
 } from './computed'
 export {
   effect,

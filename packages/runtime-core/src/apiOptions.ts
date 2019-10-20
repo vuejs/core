@@ -29,7 +29,11 @@ import {
   DebuggerHook,
   ErrorCapturedHook
 } from './apiLifecycle'
-import { reactive } from '@vue/reactivity'
+import {
+  reactive,
+  ComputedGetter,
+  WritableComputedOptions
+} from '@vue/reactivity'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { VNodeChild } from './vnode'
@@ -101,12 +105,7 @@ export type ComponentOptions =
 type LegacyComponent = ComponentOptions
 
 export interface ComputedOptions {
-  [key: string]:
-    | Function
-    | {
-        get: Function
-        set: Function
-      }
+  [key: string]: ComputedGetter<any> | WritableComputedOptions<any>
 }
 
 export interface MethodOptions {
