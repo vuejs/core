@@ -22,7 +22,9 @@ export function renderComponentRoot(
     props,
     slots,
     attrs,
-    emit
+    emit,
+    parent,
+    root
   } = instance
 
   let result
@@ -38,7 +40,9 @@ export function renderComponentRoot(
           ? render(props, {
               attrs,
               slots,
-              emit
+              emit,
+              parent,
+              root
             })
           : render(props, null as any /* we know it doesn't it */)
       )
