@@ -2,7 +2,8 @@ import {
   ComponentInternalInstance,
   Data,
   Component,
-  SetupContext
+  SetupContext,
+  RenderFunction
 } from './component'
 import {
   isFunction,
@@ -32,7 +33,6 @@ import {
 import { reactive } from '@vue/reactivity'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
-import { VNodeChild } from './vnode'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
 
@@ -47,7 +47,7 @@ interface ComponentOptionsBase<
     this: null,
     props: Props,
     ctx: SetupContext
-  ) => RawBindings | (() => VNodeChild) | void
+  ) => RawBindings | RenderFunction | void
   name?: string
   template?: string
   // Note: we are intentionally using the signature-less `Function` type here
