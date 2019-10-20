@@ -98,7 +98,8 @@ export function parse(content: string, options: ParserOptions = {}): RootNode {
     directives: [],
     hoists: [],
     codegenNode: undefined,
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
+    cached: 0
   }
 }
 
