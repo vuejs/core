@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, Data } from './component'
+import { ComponentInternalInstance, Data, Emit } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
@@ -24,7 +24,7 @@ export type ComponentPublicInstance<
   $slots: Data
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: (event: string, ...args: unknown[]) => void
+  $emit: Emit
   $el: any
   $options: any
   $forceUpdate: ReactiveEffect
