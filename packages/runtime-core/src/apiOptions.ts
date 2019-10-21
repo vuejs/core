@@ -192,7 +192,7 @@ function cachingComponentOptions(
   optionCache: Record<string, any>,
   optionType: string,
   key: string
-) {
+): void {
   if (optionCache[key]) {
     warn(
       `${optionType} property "${key}" is already defined in ${
@@ -222,7 +222,7 @@ export function applyOptions(
     props: propsOptions,
     data: dataOptions,
     computed: computedOptions,
-    methods: methodsOptions,
+    methods,
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
@@ -316,9 +316,9 @@ export function applyOptions(
     }
   }
 
-  if (methodsOptions) {
-    for (const key in methodsOptions) {
-      const methodHandler = (methodsOptions as MethodOptions)[key]
+  if (methods) {
+    for (const key in methods) {
+      const methodHandler = (methods as MethodOptions)[key]
       if (!isFunction(methodHandler)) {
         __DEV__ &&
           warn(
