@@ -11,8 +11,7 @@ import {
   isObject,
   isArray,
   EMPTY_OBJ,
-  NOOP,
-  hasOwn
+  NOOP
 } from '@vue/shared'
 import { computed } from './apiReactivity'
 import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
@@ -180,6 +179,32 @@ export interface LegacyOptions<
   errorCaptured?: ErrorCapturedHook
 }
 
+const enum OptionTypes {
+  PROPS = 'Props',
+  DATA = 'Data',
+  COMPUTED = 'Computed',
+  METHODS = 'Methods',
+  PROVIDE = 'Provide',
+  INJECT = 'Inject'
+}
+
+// validate repeatedly declared property, only use in dev
+function cachingComponentOptions(
+  optionCache: Record<string, any>,
+  optionType: string,
+  key: string
+) {
+  if (optionCache[key]) {
+    warn(
+      `${optionType} property "${key}" is already defined in ${
+        optionCache[key]
+      }.`
+    )
+  } else {
+    optionCache[key] = optionType
+  }
+}
+
 export function applyOptions(
   instance: ComponentInternalInstance,
   options: ComponentOptions,
@@ -195,10 +220,10 @@ export function applyOptions(
     mixins,
     extends: extendsOptions,
     // state
-    props,
+    props: propsOptions,
     data: dataOptions,
     computed: computedOptions,
-    methods,
+    methods: methodsOptions,
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
@@ -220,6 +245,9 @@ export function applyOptions(
   } = options
 
   const globalMixins = instance.appContext.mixins
+  // used to validate repeatedly declared property
+  const optionCache: Record<string, any> = Object.create(null)
+  const cachingOptions = cachingComponentOptions.bind(null, optionCache)
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     callSyncHook('beforeCreate', options, ctx, globalMixins)
@@ -235,6 +263,12 @@ export function applyOptions(
     applyMixins(instance, mixins)
   }
 
+  if (__DEV__ && propsOptions) {
+    for (const key in propsOptions) {
+      cachingOptions(OptionTypes.PROPS, key)
+    }
+  }
+
   // state options
   if (dataOptions) {
     const data = isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions
@@ -243,13 +277,7 @@ export function applyOptions(
     } else if (instance.data === EMPTY_OBJ) {
       if (__DEV__) {
         for (const key in data) {
-          if (props && hasOwn(props, key)) {
-            __DEV__ &&
-              warn(
-                `Data property "${key}" is already declared as a prop. ` +
-                  `Use prop default value instead.`
-              )
-          }
+          cachingOptions(OptionTypes.DATA, key)
         }
       }
 
@@ -261,59 +289,46 @@ export function applyOptions(
   }
   if (computedOptions) {
     for (const key in computedOptions) {
-      if (instance.data && hasOwn(instance.data, key)) {
-        __DEV__ &&
-          warn(`Computed property "${key}" is already defined in data.`)
-      } else if (props && hasOwn(props, key)) {
-        __DEV__ &&
-          warn(`Computed property "${key}" is already defined in prop.`)
-      } else {
-        const opt = (computedOptions as ComputedOptions)[key]
+      const opt = (computedOptions as ComputedOptions)[key]
 
-        if (isFunction(opt)) {
-          renderContext[key] = computed(opt.bind(ctx))
-        } else {
-          const { get, set } = opt
-          if (isFunction(get)) {
-            renderContext[key] = computed({
-              get: get.bind(ctx),
-              set: isFunction(set)
-                ? set.bind(ctx)
-                : __DEV__
-                  ? () => {
-                      warn(
-                        `Computed property "${key}" was assigned to but it has no setter.`
-                      )
-                    }
-                  : NOOP
-            })
-          } else if (__DEV__) {
-            warn(`Computed property "${key}" has no getter.`)
-          }
+      __DEV__ && cachingOptions(OptionTypes.COMPUTED, key)
+
+      if (isFunction(opt)) {
+        renderContext[key] = computed(opt.bind(ctx))
+      } else {
+        const { get, set } = opt
+        if (isFunction(get)) {
+          renderContext[key] = computed({
+            get: get.bind(ctx),
+            set: isFunction(set)
+              ? set.bind(ctx)
+              : __DEV__
+                ? () => {
+                    warn(
+                      `Computed property "${key}" was assigned to but it has no setter.`
+                    )
+                  }
+                : NOOP
+          })
+        } else if (__DEV__) {
+          warn(`Computed property "${key}" has no getter.`)
         }
       }
     }
   }
-  if (methods) {
-    for (const key in methods) {
-      const methodHandler = (methods as MethodOptions)[key]
+
+  if (methodsOptions) {
+    for (const key in methodsOptions) {
+      const methodHandler = (methodsOptions as MethodOptions)[key]
       if (!isFunction(methodHandler)) {
         __DEV__ &&
           warn(
             `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
               `Did you reference the function correctly?`
           )
-      } else if (instance.data && hasOwn(instance.data, key)) {
-        __DEV__ &&
-          warn(`Method "${key}" has already been defined as a data property.`)
-      } else if (props && hasOwn(props, key)) {
-        __DEV__ && warn(`Method "${key}" has already been defined as a prop.`)
-      } else if (computedOptions && hasOwn(computedOptions, key)) {
-        __DEV__ &&
-          warn(
-            `Method "${key}" has already been defined as a compute property.`
-          )
       } else {
+        __DEV__ && cachingOptions(OptionTypes.METHODS, key)
+
         renderContext[key] = methodHandler.bind(ctx)
       }
     }
@@ -351,10 +366,14 @@ export function applyOptions(
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
+        __DEV__ && cachingOptions(OptionTypes.INJECT, key)
+
         renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
+        __DEV__ && cachingOptions(OptionTypes.INJECT, key)
+
         const opt = injectOptions[key]
         if (isObject(opt)) {
           renderContext[key] = inject(opt.from, opt.default)

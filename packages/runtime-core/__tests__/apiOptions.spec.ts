@@ -588,8 +588,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Data property "foo" is already declared as a prop. ` +
-          `Use prop default value instead.`
+        `Data property "foo" is already defined in Props.`
       ).toHaveBeenWarned()
     })
 
@@ -607,11 +606,11 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "foo" is already defined in data.`
+        `Computed property "foo" is already defined in Data.`
       ).toHaveBeenWarned()
     })
 
-    test('computed property is already declared in prop', () => {
+    test('computed property is already declared in props', () => {
       const Comp = {
         props: { foo: Number },
         computed: {
@@ -623,7 +622,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Computed property "foo" is already defined in prop.`
+        `Computed property "foo" is already defined in Props.`
       ).toHaveBeenWarned()
     })
 
@@ -657,7 +656,7 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Method "foo" has already been defined as a data property.`
+        `Methods property "foo" is already defined in Data.`
       ).toHaveBeenWarned()
     })
 
@@ -675,14 +674,17 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Method "foo" has already been defined as a prop.`
+        `Methods property "foo" is already defined in Props.`
       ).toHaveBeenWarned()
     })
 
     test('methods property is already declared in computed', () => {
       const Comp = {
         computed: {
-          foo() {}
+          foo: {
+            get() {},
+            set() {}
+          }
         },
         methods: {
           foo() {}
@@ -693,7 +695,142 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
       expect(
-        `Method "foo" has already been defined as a compute property.`
+        `Methods property "foo" is already defined in Computed.`
+      ).toHaveBeenWarned()
+    })
+
+    test('inject property is already declared in data', () => {
+      const Comp = {
+        data() {
+          return {
+            a: 1
+          }
+        },
+        provide() {
+          return {
+            a: this.a
+          }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        data() {
+          return {
+            a: 1
+          }
+        },
+        inject: ['a'],
+        render() {
+          return this.a
+        }
+      } as any
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Inject property "a" is already defined in Data.`
+      ).toHaveBeenWarned()
+    })
+
+    test('inject property is already declared in props', () => {
+      const Comp = {
+        data() {
+          return {
+            a: 1
+          }
+        },
+        provide() {
+          return {
+            a: this.a
+          }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        props: { a: Number },
+        inject: ['a'],
+        render() {
+          return this.a
+        }
+      } as any
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Inject property "a" is already defined in Props.`
+      ).toHaveBeenWarned()
+    })
+
+    test('inject property is already declared in computed', () => {
+      const Comp = {
+        data() {
+          return {
+            a: 1
+          }
+        },
+        provide() {
+          return {
+            a: this.a
+          }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        computed: {
+          a: {
+            get() {},
+            set() {}
+          }
+        },
+        inject: ['a'],
+        render() {
+          return this.a
+        }
+      } as any
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Inject property "a" is already defined in Computed.`
+      ).toHaveBeenWarned()
+    })
+
+    test('inject property is already declared in methods', () => {
+      const Comp = {
+        data() {
+          return {
+            a: 1
+          }
+        },
+        provide() {
+          return {
+            a: this.a
+          }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        methods: {
+          a: () => null
+        },
+        inject: ['a'],
+        render() {
+          return this.a
+        }
+      } as any
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(
+        `Inject property "a" is already defined in Methods.`
       ).toHaveBeenWarned()
     })
   })
