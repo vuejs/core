@@ -11,14 +11,18 @@ const HTML_TAGS =
   'option,output,progress,select,textarea,details,dialog,menu,menuitem,' +
   'summary,content,element,shadow,template,blockquote,iframe,tfoot'
 
-/**
- * this list is intentionally selective, only covering SVG elements that may
- * contain child elements.
- */
+// https://developer.mozilla.org/en-US/docs/Web/SVG/Element
 const SVG_TAGS =
-  'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font-face,' +
-  'foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
-  'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view'
+  'svg,animate,animateMotion,animateTransform,circle,clipPath,color-profile,' +
+  'defs,desc,discard,ellipse,feBlend,feColorMatrix,feComponentTransfer,' +
+  'feComposite,feConvolveMatrix,feDiffuseLighting,feDisplacementMap,' +
+  'feDistanceLight,feDropShadow,feFlood,feFuncA,feFuncB,feFuncG,feFuncR,' +
+  'feGaussianBlur,feImage,feMerge,feMergeNode,feMorphology,feOffset,' +
+  'fePointLight,feSpecularLighting,feSpotLight,feTile,feTurbulence,filter,' +
+  'foreignObject,g,hatch,hatchpath,image,line,lineGradient,marker,mask,' +
+  'mesh,meshgradient,meshpatch,meshrow,metadata,mpath,path,pattern,' +
+  'polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,' +
+  'text,textPath,title,tspan,unknown,use,view'
 
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
