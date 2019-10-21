@@ -241,19 +241,19 @@ export function applyOptions(
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
-      let uniqueData: Record<any, any> = {}
-      for (const key in data) {
-        if (props && hasOwn(props, key)) {
-          __DEV__ &&
-            warn(
-              `Data property "${key}" is already declared as a prop. ` +
-                `Use prop default value instead.`
-            )
-        } else {
-          uniqueData[key] = data[key]
+      if (__DEV__) {
+        for (const key in data) {
+          if (props && hasOwn(props, key)) {
+            __DEV__ &&
+              warn(
+                `Data property "${key}" is already declared as a prop. ` +
+                  `Use prop default value instead.`
+              )
+          }
         }
       }
-      instance.data = reactive(uniqueData)
+
+      instance.data = reactive(data)
     } else {
       // existing data: this is a mixin or extends.
       extend(instance.data, data)
