@@ -1,5 +1,4 @@
 export * from './patchFlags'
-export * from './element'
 export { isGloballyWhitelisted } from './globalsWhitelist'
 export { makeMap } from './makeMap'
 

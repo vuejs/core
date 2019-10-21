@@ -1,4 +1,4 @@
-import { makeMap } from './makeMap'
+import { makeMap } from '../../shared/src/makeMap'
 
 const HTML_TAGS =
   'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +

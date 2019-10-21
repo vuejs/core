@@ -1,7 +1,8 @@
 import { createRenderer } from '@vue/runtime-core'
-import { isHTMLTag, isSVGTag } from '@vue/shared'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+// Importing from the compiler, will be tree-shaken in prod
+import { isHTMLTag, isSVGTag } from '@vue/compiler-dom'
 
 const { render, createApp } = createRenderer<Node, Element>({
   patchProp,
