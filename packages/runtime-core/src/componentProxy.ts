@@ -1,11 +1,11 @@
-import { ComponentInternalInstance, Data } from './component'
+import { ComponentInternalInstance, Data, Emit } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
-import { Emit } from './component'
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
