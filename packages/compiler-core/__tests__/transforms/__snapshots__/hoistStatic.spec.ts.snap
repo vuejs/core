@@ -169,6 +169,23 @@ return function render() {
 }"
 `;
 
+exports[`compiler: hoistStatic transform prefixIdentifiers hoist element with static ref 1`] = `
+"const _Vue = Vue
+const _createVNode = Vue.createVNode
+
+const _hoisted_1 = _createVNode(\\"span\\", { ref: \\"o\\" })
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(\\"div\\", null, [
+      _hoisted_1
+    ]))
+  }
+}"
+`;
+
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static interpolation 1`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
