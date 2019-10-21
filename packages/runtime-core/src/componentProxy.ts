@@ -5,7 +5,7 @@ import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
 import { ExtractComputedReturns } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
-
+import { Emit } from './component'
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -24,7 +24,7 @@ export type ComponentPublicInstance<
   $slots: Data
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: (event: string, ...args: unknown[]) => void
+  $emit: Emit
   $el: any
   $options: any
   $forceUpdate: ReactiveEffect
