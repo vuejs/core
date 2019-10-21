@@ -1,4 +1,4 @@
-import { isArray, EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -128,25 +128,12 @@ function createInvoker(
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated - 1) {
-      const args = [e]
-      const value = invoker.value
-      if (isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          callWithAsyncErrorHandling(
-            value[i],
-            instance,
-            ErrorCodes.NATIVE_EVENT_HANDLER,
-            args
-          )
-        }
-      } else {
-        callWithAsyncErrorHandling(
-          value,
-          instance,
-          ErrorCodes.NATIVE_EVENT_HANDLER,
-          args
-        )
-      }
+      callWithAsyncErrorHandling(
+        invoker.value,
+        instance,
+        ErrorCodes.NATIVE_EVENT_HANDLER,
+        [e]
+      )
     }
   }
   invoker.value = initialValue

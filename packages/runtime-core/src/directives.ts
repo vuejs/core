@@ -12,7 +12,7 @@ return withDirectives(h(comp), [
 */
 
 import { VNode } from './vnode'
-import { isArray, isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
+import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
@@ -140,17 +140,8 @@ export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null = null
 ) {
-  const args = [vnode, prevVNode]
-  if (isArray(hook)) {
-    for (let i = 0; i < hook.length; i++) {
-      callWithAsyncErrorHandling(
-        hook[i],
-        instance,
-        ErrorCodes.DIRECTIVE_HOOK,
-        args
-      )
-    }
-  } else if (isFunction(hook)) {
-    callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, args)
-  }
+  callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
+    vnode,
+    prevVNode
+  ])
 }

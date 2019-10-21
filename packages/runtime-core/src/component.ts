@@ -20,7 +20,6 @@ import {
   isFunction,
   capitalize,
   NOOP,
-  isArray,
   isObject,
   NO,
   makeMap,
@@ -196,23 +195,12 @@ export function createComponentInstance(
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
-        if (isArray(handler)) {
-          for (let i = 0; i < handler.length; i++) {
-            callWithAsyncErrorHandling(
-              handler[i],
-              instance,
-              ErrorCodes.COMPONENT_EVENT_HANDLER,
-              args
-            )
-          }
-        } else {
-          callWithAsyncErrorHandling(
-            handler,
-            instance,
-            ErrorCodes.COMPONENT_EVENT_HANDLER,
-            args
-          )
-        }
+        callWithAsyncErrorHandling(
+          handler,
+          instance,
+          ErrorCodes.COMPONENT_EVENT_HANDLER,
+          args
+        )
       }
     }
   }
