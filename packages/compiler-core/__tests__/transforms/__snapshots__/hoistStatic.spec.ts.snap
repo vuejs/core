@@ -227,7 +227,7 @@ return function render() {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+      (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
           _createVNode(\\"span\\", null, _toString(o + 'foo'), 1 /* TEXT */)
         ]))
@@ -262,7 +262,7 @@ return function render() {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+      (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
           _createVNode(\\"span\\", null, _toString(o), 1 /* TEXT */)
         ]))
@@ -354,7 +354,7 @@ return function render() {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(), _createBlock(_Fragment, null, _renderList(list, (i) => {
+      (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
         return (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
           _hoisted_2
         ]))

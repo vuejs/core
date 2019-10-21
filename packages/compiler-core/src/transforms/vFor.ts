@@ -71,7 +71,8 @@ export const transformFor = createStructuralDirectiveTransform(
       ? PatchFlags.KEYED_FRAGMENT
       : PatchFlags.UNKEYED_FRAGMENT
     const codegenNode = createSequenceExpression([
-      createCallExpression(helper(OPEN_BLOCK)),
+      // fragment blocks disable tracking since they always diff their children
+      createCallExpression(helper(OPEN_BLOCK), [`false`]),
       createCallExpression(helper(CREATE_BLOCK), [
         helper(FRAGMENT),
         `null`,
