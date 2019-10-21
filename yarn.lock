@@ -1031,13 +1031,13 @@
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.5.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.0.tgz#5dd0f50bb7a30f8512b65ed9aba94a2b76c68a21"
-  integrity sha512-CxKNZFD9TRo/y8MQzlk4z/Z5jPCaQsDq7ON9baE544CKnmF4sNlmoS9ydkt0As3v6OYKjp50d2N4NAmZoOVXzg==
+  version "7.5.1"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.1.tgz#363c95af2546aa83e6c0086ffbf7368daf0c7bef"
+  integrity sha512-pUMrXO+nW31piHhmBznlBdYEiemSOQ8sYcEm8T6tfDvAQdPxg3oaHfrau/DseUY5haAFh+2hY+rl0GUl5CEKbQ==
   dependencies:
     "@microsoft/api-extractor-model" "7.5.1"
     "@microsoft/node-core-library" "3.15.1"
-    "@microsoft/ts-command-line" "4.3.2"
+    "@microsoft/ts-command-line" "4.3.3"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
     lodash "~4.17.15"
@@ -1056,10 +1056,10 @@
     jju "~1.4.0"
     z-schema "~3.18.3"
 
-"@microsoft/ts-command-line@4.3.2":
-  version "4.3.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.2.tgz#87341de2e24f279259297ebd38530300a9f97bc3"
-  integrity sha512-2QeyilabCe6IpBylPXuY6dCA1S9ym3Ii0zakXVPpyfjSj1NesnyuUeuh6e8kyIqzqJ+3LYjfPG63XzUBtwGqqw==
+"@microsoft/ts-command-line@4.3.3":
+  version "4.3.3"
+  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.3.tgz#bcbebafedd2f8af7e40bc6b6c1d24018f821d3d6"
+  integrity sha512-dzAdHwmw0p0T2Nra91nPd5n57fw5bRQEWGPe5iZOsqoLpjU/NCgBpmBdbvx1Oy3+YRnrV4lSeSbN6C7sSniwmQ==
   dependencies:
     "@types/argparse" "1.0.33"
     argparse "~1.0.9"
