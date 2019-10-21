@@ -186,7 +186,7 @@ return function render() {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static interpolation 1`] = `
+exports[`compiler: hoistStatic transform prefixIdentifiers hoist element with static ref 2`] = `
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
