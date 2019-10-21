@@ -414,7 +414,7 @@ function finishComponentSetup(
 export const SetupProxySymbol = Symbol()
 
 const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
-;['attrs', 'slots', 'refs'].forEach((type: string) => {
+;['attrs', 'slots'].forEach((type: string) => {
   SetupProxyHandlers[type] = {
     get: (instance, key) => instance[type][key],
     has: (instance, key) => key === SetupProxySymbol || key in instance[type],
@@ -429,12 +429,11 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
 
 function createSetupContext(instance: ComponentInternalInstance): SetupContext {
   const context = {
-    // attrs, slots & refs are non-reactive, but they need to always expose
+    // attrs & slots are non-reactive, but they need to always expose
     // the latest values (instance.xxx may get replaced during updates) so we
     // need to expose them through a proxy
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
-    refs: new Proxy(instance, SetupProxyHandlers.refs),
     emit: instance.emit
   }
   return __DEV__ ? Object.freeze(context) : context
