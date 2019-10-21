@@ -184,7 +184,6 @@ const enum OptionTypes {
   DATA = 'Data',
   COMPUTED = 'Computed',
   METHODS = 'Methods',
-  PROVIDE = 'Provide',
   INJECT = 'Inject'
 }
 
