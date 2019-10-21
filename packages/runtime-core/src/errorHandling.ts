@@ -120,7 +120,6 @@ export function handleError(
 
 function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   // default behavior is crash in prod & test, recover in dev.
-  // TODO we should probably make this configurable via `createApp`
   if (
     __DEV__ &&
     !(typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
