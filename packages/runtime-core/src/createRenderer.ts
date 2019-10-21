@@ -488,7 +488,7 @@ export function createRenderer<
         }
         return // terminal
       }
-    } else if (!optimized) {
+    } else if (!optimized && dynamicChildren == null) {
       // unoptimized, full diff
       patchProps(
         el,

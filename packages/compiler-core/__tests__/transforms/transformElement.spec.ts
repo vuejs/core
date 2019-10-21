@@ -23,7 +23,7 @@ import { transformOn } from '../../src/transforms/vOn'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
-import { optimizeText } from '../../src/transforms/optimizeText'
+import { transformText } from '../../src/transforms/transformText'
 
 function parseWithElementTransform(
   template: string,
@@ -36,7 +36,7 @@ function parseWithElementTransform(
   // block as root node
   const ast = parse(`<div>${template}</div>`, options)
   transform(ast, {
-    nodeTransforms: [transformElement, optimizeText],
+    nodeTransforms: [transformElement, transformText],
     ...options
   })
   const codegenNode = (ast as any).children[0].children[0]

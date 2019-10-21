@@ -35,6 +35,7 @@ export const enum NodeTypes {
   IF,
   IF_BRANCH,
   FOR,
+  TEXT_CALL,
   // codegen
   JS_CALL_EXPRESSION,
   JS_OBJECT_EXPRESSION,
@@ -86,6 +87,7 @@ export type TemplateChildNode =
   | CommentNode
   | IfNode
   | ForNode
+  | TextCallNode
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
@@ -225,6 +227,12 @@ export interface ForNode extends Node {
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
   codegenNode: ForCodegenNode
+}
+
+export interface TextCallNode extends Node {
+  type: NodeTypes.TEXT_CALL
+  content: TextNode | InterpolationNode | CompoundExpressionNode
+  codegenNode: CallExpression
 }
 
 // We also include a number of JavaScript AST nodes for code generation.

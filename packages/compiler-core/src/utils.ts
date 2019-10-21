@@ -293,9 +293,16 @@ export function hasScopeRef(
     case NodeTypes.COMPOUND_EXPRESSION:
       return node.children.some(c => isObject(c) && hasScopeRef(c, ids))
     case NodeTypes.INTERPOLATION:
+    case NodeTypes.TEXT_CALL:
       return hasScopeRef(node.content, ids)
+    case NodeTypes.TEXT:
+    case NodeTypes.COMMENT:
+      return false
     default:
-      // TextNode or CommentNode
+      if (__DEV__) {
+        const exhaustiveCheck: never = node
+        exhaustiveCheck
+      }
       return false
   }
 }

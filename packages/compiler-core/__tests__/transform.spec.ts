@@ -21,7 +21,7 @@ import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
-import { optimizeText } from '../src/transforms/optimizeText'
+import { transformText } from '../src/transforms/transformText'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -243,7 +243,7 @@ describe('compiler: transform', () => {
         nodeTransforms: [
           transformIf,
           transformFor,
-          optimizeText,
+          transformText,
           transformSlotOutlet,
           transformElement
         ]

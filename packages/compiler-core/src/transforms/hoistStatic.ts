@@ -122,6 +122,7 @@ export function isStaticNode(
     case NodeTypes.FOR:
       return false
     case NodeTypes.INTERPOLATION:
+    case NodeTypes.TEXT_CALL:
       return isStaticNode(node.content, resultCache)
     case NodeTypes.SIMPLE_EXPRESSION:
       return node.isConstant
