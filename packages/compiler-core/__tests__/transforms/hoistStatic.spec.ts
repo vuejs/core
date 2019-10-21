@@ -677,42 +677,5 @@ describe('compiler: hoistStatic transform', () => {
         }).code
       ).toMatchSnapshot()
     })
-
-    test('hoist element with static ref', () => {
-      const { root, args } = transformWithHoist(
-        `<div><span ref="o"></span></div>`,
-        {
-          prefixIdentifiers: true
-        }
-      )
-
-      expect(root.hoists.length).toBe(1)
-      expect(root.hoists).toMatchObject([
-        {
-          type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: CREATE_VNODE,
-          arguments: [
-            `"span"`,
-            createObjectMatcher({
-              ref: `o`
-            })
-          ]
-        }
-      ])
-      expect(args).toMatchObject([
-        `"div"`,
-        `null`,
-        [
-          {
-            type: NodeTypes.ELEMENT,
-            codegenNode: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_hoisted_1`
-            }
-          }
-        ]
-      ])
-      expect(generate(root).code).toMatchSnapshot()
-    })
   })
 })

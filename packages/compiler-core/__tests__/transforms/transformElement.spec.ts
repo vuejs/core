@@ -699,15 +699,10 @@ describe('compiler: element transform', () => {
       expect(node.arguments[3]).toBe(genFlagText(PatchFlags.FULL_PROPS))
     })
 
-    test('NO NEED_PATCH (static ref)', () => {
+    test('NEED_PATCH (static ref)', () => {
       const { node } = parseWithBind(`<div ref="foo" />`)
-      expect(node.arguments.length).toBe(2)
-      expect(node.arguments).toMatchObject([
-        `"div"`,
-        createObjectMatcher({
-          ref: `foo`
-        })
-      ])
+      expect(node.arguments.length).toBe(4)
+      expect(node.arguments[3]).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
     test('NEED_PATCH (dynamic ref)', () => {

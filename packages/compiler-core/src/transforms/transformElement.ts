@@ -249,6 +249,9 @@ export function buildProps(
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, value } = prop
+      if (name === 'ref') {
+        hasRef = true
+      }
       properties.push(
         createObjectProperty(
           createSimpleExpression(
