@@ -6,7 +6,7 @@ import {
   Text,
   cloneVNode
 } from '@vue/runtime-core'
-import { mergeProps, normalizeVNode } from '../src/vnode'
+import { mergeProps, normalizeVNode, normalizeClass } from '../src/vnode'
 import { Data } from '../src/component'
 
 describe('vnode', () => {
@@ -171,6 +171,23 @@ describe('vnode', () => {
       anchor: null,
       component: null,
       suspense: null
+    })
+  })
+
+  describe('normalizeClass', () => {
+    test('isString', () => {
+      const value = ' abcd '
+      expect(normalizeClass(value)).toMatch('abcd')
+    })
+
+    test('isObject', () => {
+      const value = { a: 'aValue', b: 'bValue', c: 'cValue' }
+      expect(normalizeClass(value)).toMatch('a b c')
+    })
+
+    test('isArray', () => {
+      const value = [' abcd ', { a: 'aValue', b: 'bValue', c: 'cValue' }]
+      expect(normalizeClass(value)).toMatch('abcd a b c')
     })
   })
 
