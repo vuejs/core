@@ -272,7 +272,6 @@ export function applyOptions(
           checkDuplicateProperties!(OptionTypes.DATA, key)
         }
       }
-
       instance.data = reactive(data)
     } else {
       // existing data: this is a mixin or extends.
@@ -312,16 +311,14 @@ export function applyOptions(
   if (methods) {
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
-      if (!isFunction(methodHandler)) {
-        __DEV__ &&
-          warn(
-            `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
-              `Did you reference the function correctly?`
-          )
-      } else {
+      if (isFunction(methodHandler)) {
         __DEV__ && checkDuplicateProperties!(OptionTypes.METHODS, key)
-
         renderContext[key] = methodHandler.bind(ctx)
+      } else if (__DEV__) {
+        warn(
+          `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
+            `Did you reference the function correctly?`
+        )
       }
     }
   }
@@ -359,13 +356,11 @@ export function applyOptions(
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
         __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
-
         renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
         __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
-
         const opt = injectOptions[key]
         if (isObject(opt)) {
           renderContext[key] = inject(opt.from, opt.default)
