@@ -446,7 +446,9 @@ export function createRenderer<
         // style
         // this flag is matched when the element has dynamic style bindings
         if (patchFlag & PatchFlags.STYLE) {
-          hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
+          if (oldProps.style !== newProps.style) {
+            hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
+          }
         }
 
         // props
