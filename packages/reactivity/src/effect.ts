@@ -24,7 +24,7 @@ export interface ReactiveEffectOptions {
   onStop?: () => void
 }
 
-type DebuggerEvent = {
+export type DebuggerEvent = {
   effect: ReactiveEffect
   target: object
   type: OperationTypes
