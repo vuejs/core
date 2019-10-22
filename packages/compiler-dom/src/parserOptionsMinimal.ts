@@ -6,6 +6,12 @@ import {
   NodeTypes
 } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
+import { makeMap } from '@vue/shared'
+
+const isSpecificTag = /*#__PURE__*/ makeMap(
+  'style,xmp,iframe,noembed,noframes,script,noscript',
+  true
+)
 
 export const enum DOMNamespaces {
   HTML = Namespaces.HTML,
@@ -73,9 +79,7 @@ export const parserOptionsMinimal: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (
-        /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i.test(tag)
-      ) {
+      if (isSpecificTag(tag)) {
         return TextModes.RAWTEXT
       }
     }
