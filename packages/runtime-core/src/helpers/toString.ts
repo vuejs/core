@@ -5,6 +5,6 @@ export function toString(val: unknown): string {
   return val == null
     ? ''
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
-    ? JSON.stringify(val, null, 2)
-    : String(val)
+      ? JSON.stringify(val, null, 2)
+      : String(val)
 }

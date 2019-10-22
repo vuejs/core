@@ -61,7 +61,7 @@ export function watch<T>(
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
-export function watch<T extends readonly WatcherSource<unknown>[]>(
+export function watch<T extends Readonly<WatcherSource<unknown>[]>>(
   sources: T,
   cb: WatchHandler<MapSources<T>>,
   options?: WatchOptions
@@ -94,10 +94,11 @@ function doWatch(
   let getter: () => any
   if (isArray(source)) {
     getter = () =>
-      source.map(s =>
-        isRef(s)
-          ? s.value
-          : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+      source.map(
+        s =>
+          isRef(s)
+            ? s.value
+            : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
       )
   } else if (isRef(source)) {
     getter = () => source.value

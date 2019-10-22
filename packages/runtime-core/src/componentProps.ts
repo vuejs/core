@@ -53,12 +53,10 @@ type OptionalKeys<T, MakeDefaultRequired> = Exclude<
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-  ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
-  : T extends ObjectConstructor | { type: ObjectConstructor }
-  ? { [key: string]: any }
-  : T extends Prop<infer V>
-  ? V
-  : T
+    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
+    : T extends ObjectConstructor | { type: ObjectConstructor }
+      ? { [key: string]: any }
+      : T extends Prop<infer V> ? V : T
 
 export type ExtractPropTypes<
   O,
