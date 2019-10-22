@@ -60,7 +60,7 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export type Emit = ((event: string, ...args: unknown[]) => void)
+export type Emit = (event: string, ...args: unknown[]) => void
 
 export interface SetupContext {
   attrs: Data
@@ -86,13 +86,13 @@ export interface ComponentInternalInstance {
   accessCache: Data | null
   // cache for render function values that rely on _ctx but won't need updates
   // after initialized (e.g. inline handlers)
-  renderCache: any[] | null
+  renderCache: Function[] | null
 
   components: Record<string, Component>
   directives: Record<string, Directive>
 
   asyncDep: Promise<any> | null
-  asyncResult: any
+  asyncResult: unknown
   asyncResolved: boolean
 
   // the rest are only for stateful components

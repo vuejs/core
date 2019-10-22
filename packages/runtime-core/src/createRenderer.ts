@@ -14,7 +14,8 @@ import {
   createComponentInstance,
   setupStatefulComponent,
   handleSetupResult,
-  Component
+  Component,
+  Data
 } from './component'
 import {
   renderComponentRoot,
@@ -36,7 +37,8 @@ import {
   ReactiveEffectOptions,
   isRef,
   Ref,
-  toRaw
+  toRaw,
+  DebuggerEvent
 } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
@@ -70,7 +72,7 @@ function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
-function invokeHooks(hooks: Function[], arg?: any) {
+function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
   for (let i = 0; i < hooks.length; i++) {
     hooks[i](arg)
   }
@@ -555,8 +557,8 @@ export function createRenderer<
   function patchProps(
     el: HostElement,
     vnode: HostVNode,
-    oldProps: any,
-    newProps: any,
+    oldProps: Data,
+    newProps: Data,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
@@ -1160,72 +1162,83 @@ export function createRenderer<
   ) {
     // create reactive effect for rendering
     let mounted = false
-    instance.update = effect(function componentEffect() {
-      if (!mounted) {
-        const subTree = (instance.subTree = renderComponentRoot(instance))
-        // beforeMount hook
-        if (instance.bm !== null) {
-          invokeHooks(instance.bm)
-        }
-        patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
-        initialVNode.el = subTree.el
-        // mounted hook
-        if (instance.m !== null) {
-          queuePostRenderEffect(instance.m, parentSuspense)
-        }
-        mounted = true
-      } else {
-        // updateComponent
-        // This is triggered by mutation of component's own state (next: null)
-        // OR parent calling processComponent (next: HostVNode)
-        const { next } = instance
+    instance.update = effect(
+      function componentEffect() {
+        if (!mounted) {
+          const subTree = (instance.subTree = renderComponentRoot(instance))
+          // beforeMount hook
+          if (instance.bm !== null) {
+            invokeHooks(instance.bm)
+          }
+          patch(
+            null,
+            subTree,
+            container,
+            anchor,
+            instance,
+            parentSuspense,
+            isSVG
+          )
+          initialVNode.el = subTree.el
+          // mounted hook
+          if (instance.m !== null) {
+            queuePostRenderEffect(instance.m, parentSuspense)
+          }
+          mounted = true
+        } else {
+          // updateComponent
+          // This is triggered by mutation of component's own state (next: null)
+          // OR parent calling processComponent (next: HostVNode)
+          const { next } = instance
 
-        if (__DEV__) {
-          pushWarningContext(next || instance.vnode)
-        }
+          if (__DEV__) {
+            pushWarningContext(next || instance.vnode)
+          }
 
-        if (next !== null) {
-          updateComponentPreRender(instance, next)
-        }
-        const prevTree = instance.subTree
-        const nextTree = (instance.subTree = renderComponentRoot(instance))
-        // beforeUpdate hook
-        if (instance.bu !== null) {
-          invokeHooks(instance.bu)
-        }
-        // reset refs
-        // only needed if previous patch had refs
-        if (instance.refs !== EMPTY_OBJ) {
-          instance.refs = {}
-        }
-        patch(
-          prevTree,
-          nextTree,
-          // parent may have changed if it's in a portal
-          hostParentNode(prevTree.el as HostNode) as HostElement,
-          // anchor may have changed if it's in a fragment
-          getNextHostNode(prevTree),
-          instance,
-          parentSuspense,
-          isSVG
-        )
-        instance.vnode.el = nextTree.el
-        if (next === null) {
-          // self-triggered update. In case of HOC, update parent component
-          // vnode el. HOC is indicated by parent instance's subTree pointing
-          // to child component's vnode
-          updateHOCHostEl(instance, nextTree.el)
-        }
-        // updated hook
-        if (instance.u !== null) {
-          queuePostRenderEffect(instance.u, parentSuspense)
-        }
+          if (next !== null) {
+            updateComponentPreRender(instance, next)
+          }
+          const prevTree = instance.subTree
+          const nextTree = (instance.subTree = renderComponentRoot(instance))
+          // beforeUpdate hook
+          if (instance.bu !== null) {
+            invokeHooks(instance.bu)
+          }
+          // reset refs
+          // only needed if previous patch had refs
+          if (instance.refs !== EMPTY_OBJ) {
+            instance.refs = {}
+          }
+          patch(
+            prevTree,
+            nextTree,
+            // parent may have changed if it's in a portal
+            hostParentNode(prevTree.el as HostNode) as HostElement,
+            // anchor may have changed if it's in a fragment
+            getNextHostNode(prevTree),
+            instance,
+            parentSuspense,
+            isSVG
+          )
+          instance.vnode.el = nextTree.el
+          if (next === null) {
+            // self-triggered update. In case of HOC, update parent component
+            // vnode el. HOC is indicated by parent instance's subTree pointing
+            // to child component's vnode
+            updateHOCHostEl(instance, nextTree.el)
+          }
+          // updated hook
+          if (instance.u !== null) {
+            queuePostRenderEffect(instance.u, parentSuspense)
+          }
 
-        if (__DEV__) {
-          popWarningContext()
+          if (__DEV__) {
+            popWarningContext()
+          }
         }
-      }
-    }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+      },
+      __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions
+    )
   }
 
   function updateComponentPreRender(

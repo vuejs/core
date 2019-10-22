@@ -30,12 +30,12 @@ interface PropOptions<T = any> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: T | null | undefined | (() => T | null | undefined)
-  validator?(value: any): boolean
+  validator?(value: unknown): boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
-type PropConstructor<T> = { new (...args: any[]): T & object } | { (): T }
+type PropConstructor<T = any> = { new (...args: any[]): T & object } | { (): T }
 
 type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends
@@ -53,10 +53,12 @@ type OptionalKeys<T, MakeDefaultRequired> = Exclude<
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
-    : T extends ObjectConstructor | { type: ObjectConstructor }
-      ? { [key: string]: any }
-      : T extends Prop<infer V> ? V : T
+  ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
+  : T extends ObjectConstructor | { type: ObjectConstructor }
+  ? { [key: string]: any }
+  : T extends Prop<infer V>
+  ? V
+  : T
 
 export type ExtractPropTypes<
   O,
@@ -96,7 +98,7 @@ type NormalizedPropsOptions = Record<string, NormalizedProp>
 
 export function resolveProps(
   instance: ComponentInternalInstance,
-  rawProps: any,
+  rawProps: Data | null,
   _options: ComponentPropsOptions | void
 ) {
   const hasDeclaredProps = _options != null
@@ -105,18 +107,18 @@ export function resolveProps(
     return
   }
 
-  const props: any = {}
-  let attrs: any = void 0
+  const props: Data = {}
+  let attrs: Data | undefined = void 0
 
   // update the instance propsProxy (passed to setup()) to trigger potential
   // changes
   const propsProxy = instance.propsProxy
   const setProp = propsProxy
-    ? (key: string, val: any) => {
+    ? (key: string, val: unknown) => {
         props[key] = val
         propsProxy[key] = val
       }
-    : (key: string, val: any) => {
+    : (key: string, val: unknown) => {
         props[key] = val
       }
 
@@ -192,7 +194,7 @@ export function resolveProps(
   instance.attrs = options
     ? __DEV__ && attrs != null
       ? readonly(attrs)
-      : attrs
+      : attrs!
     : instance.props
 }
 
@@ -279,8 +281,8 @@ type AssertionResult = {
 
 function validateProp(
   name: string,
-  value: any,
-  prop: PropOptions<any>,
+  value: unknown,
+  prop: PropOptions,
   isAbsent: boolean
 ) {
   const { type, required, validator } = prop
@@ -317,7 +319,7 @@ function validateProp(
 
 const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
 
-function assertType(value: any, type: PropConstructor<any>): AssertionResult {
+function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
   if (simpleCheckRE.test(expectedType)) {
@@ -342,7 +344,7 @@ function assertType(value: any, type: PropConstructor<any>): AssertionResult {
 
 function getInvalidTypeMessage(
   name: string,
-  value: any,
+  value: unknown,
   expectedTypes: string[]
 ): string {
   let message =
@@ -368,7 +370,7 @@ function getInvalidTypeMessage(
   return message
 }
 
-function styleValue(value: any, type: string): string {
+function styleValue(value: unknown, type: string): string {
   if (type === 'String') {
     return `"${value}"`
   } else if (type === 'Number') {
@@ -378,7 +380,7 @@ function styleValue(value: any, type: string): string {
   }
 }
 
-function toRawType(value: any): string {
+function toRawType(value: unknown): string {
   return toTypeString(value).slice(8, -1)
 }
 
