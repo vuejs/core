@@ -187,20 +187,14 @@ const enum OptionTypes {
   INJECT = 'Inject'
 }
 
-// validate repeatedly declared property, only use in dev
-function cachingComponentOptions(
-  optionCache: Record<string, any>,
-  optionType: string,
-  key: string
-): void {
-  if (optionCache[key]) {
-    warn(
-      `${optionType} property "${key}" is already defined in ${
-        optionCache[key]
-      }.`
-    )
-  } else {
-    optionCache[key] = optionType
+function createDuplicateChecker() {
+  const cache = Object.create(null)
+  return (type: OptionTypes, key: string) => {
+    if (cache[key]) {
+      warn(`${type} property "${key}" is already defined in ${cache[key]}.`)
+    } else {
+      cache[key] = type
+    }
   }
 }
 
@@ -244,9 +238,8 @@ export function applyOptions(
   } = options
 
   const globalMixins = instance.appContext.mixins
-  // used to validate repeatedly declared property
-  const optionCache: Record<string, any> = Object.create(null)
-  const cachingOptions = cachingComponentOptions.bind(null, optionCache)
+  // call it only during dev
+  const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     callSyncHook('beforeCreate', options, ctx, globalMixins)
@@ -264,7 +257,7 @@ export function applyOptions(
 
   if (__DEV__ && propsOptions) {
     for (const key in propsOptions) {
-      cachingOptions(OptionTypes.PROPS, key)
+      checkDuplicateProperties!(OptionTypes.PROPS, key)
     }
   }
 
@@ -276,7 +269,7 @@ export function applyOptions(
     } else if (instance.data === EMPTY_OBJ) {
       if (__DEV__) {
         for (const key in data) {
-          cachingOptions(OptionTypes.DATA, key)
+          checkDuplicateProperties!(OptionTypes.DATA, key)
         }
       }
 
@@ -290,7 +283,8 @@ export function applyOptions(
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
 
-      __DEV__ && cachingOptions(OptionTypes.COMPUTED, key)
+      checkDuplicateProperties &&
+        checkDuplicateProperties(OptionTypes.COMPUTED, key)
 
       if (isFunction(opt)) {
         renderContext[key] = computed(opt.bind(ctx))
@@ -326,7 +320,8 @@ export function applyOptions(
               `Did you reference the function correctly?`
           )
       } else {
-        __DEV__ && cachingOptions(OptionTypes.METHODS, key)
+        checkDuplicateProperties &&
+          checkDuplicateProperties(OptionTypes.METHODS, key)
 
         renderContext[key] = methodHandler.bind(ctx)
       }
@@ -365,13 +360,15 @@ export function applyOptions(
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
-        __DEV__ && cachingOptions(OptionTypes.INJECT, key)
+        checkDuplicateProperties &&
+          checkDuplicateProperties(OptionTypes.INJECT, key)
 
         renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
-        __DEV__ && cachingOptions(OptionTypes.INJECT, key)
+        checkDuplicateProperties &&
+          checkDuplicateProperties(OptionTypes.INJECT, key)
 
         const opt = injectOptions[key]
         if (isObject(opt)) {
