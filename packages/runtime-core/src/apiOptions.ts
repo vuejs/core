@@ -368,7 +368,7 @@ export function applyOptions(
 function callSyncHook(
   name: 'beforeCreate' | 'created',
   options: ComponentOptions,
-  ctx: any,
+  ctx: ComponentPublicInstance,
   globalMixins: ComponentOptions[]
 ) {
   callHookFromMixins(name, globalMixins, ctx)
@@ -389,7 +389,7 @@ function callSyncHook(
 function callHookFromMixins(
   name: 'beforeCreate' | 'created',
   mixins: ComponentOptions[],
-  ctx: any
+  ctx: ComponentPublicInstance
 ) {
   for (let i = 0; i < mixins.length; i++) {
     const fn = mixins[i][name]
