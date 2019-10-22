@@ -5,6 +5,10 @@ import { LOCKED } from './lock'
 import { isObject, hasOwn, isSymbol } from '@vue/shared'
 import { isRef } from './ref'
 
+function isNaN(value:any, oldValue:any): boolean {
+  return value !== value && oldValue !== oldValue
+}
+
 const builtInSymbols = new Set(
   Object.getOwnPropertyNames(Symbol)
     .map(key => (Symbol as any)[key])
@@ -52,13 +56,13 @@ function set(
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else if (value !== oldValue) {
+      } else if (value !== oldValue && isNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key)
-      } else if (value !== oldValue) {
+      } else if (value !== oldValue && isNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key)
       }
     }
