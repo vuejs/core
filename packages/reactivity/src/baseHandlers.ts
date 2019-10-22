@@ -11,8 +11,8 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-function isNaN(value:any, oldValue:any): boolean {
-  return value !== value && oldValue !== oldValue
+function isNaN(value: any, oldValue: any): boolean {
+  return value === value && oldValue === oldValue
 }
 
 function createGetter(isReadonly: boolean) {
