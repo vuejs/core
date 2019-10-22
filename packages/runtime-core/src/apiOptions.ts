@@ -283,8 +283,7 @@ export function applyOptions(
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
 
-      checkDuplicateProperties &&
-        checkDuplicateProperties(OptionTypes.COMPUTED, key)
+      __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
 
       if (isFunction(opt)) {
         renderContext[key] = computed(opt.bind(ctx))
@@ -320,8 +319,7 @@ export function applyOptions(
               `Did you reference the function correctly?`
           )
       } else {
-        checkDuplicateProperties &&
-          checkDuplicateProperties(OptionTypes.METHODS, key)
+        __DEV__ && checkDuplicateProperties!(OptionTypes.METHODS, key)
 
         renderContext[key] = methodHandler.bind(ctx)
       }
@@ -360,15 +358,13 @@ export function applyOptions(
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
-        checkDuplicateProperties &&
-          checkDuplicateProperties(OptionTypes.INJECT, key)
+        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
 
         renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
-        checkDuplicateProperties &&
-          checkDuplicateProperties(OptionTypes.INJECT, key)
+        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
 
         const opt = injectOptions[key]
         if (isObject(opt)) {
