@@ -30,6 +30,28 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('text do not ignore spaces', () => {
+      const ast = parse(' ', { ignoreSpaces: false })
+      const text = ast.children[0] as TextNode
+
+      expect(text).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: ' ',
+        isEmpty: true,
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 1, line: 1, column: 2 },
+          source: ' '
+        }
+      })
+    })
+
+    test('text ignore spaces', () => {
+      const ast = parse(' ', { ignoreSpaces: true })
+      const childrenLen = ast.children.length
+      expect(childrenLen).toBe(0)
+    })
+
     test('simple text with invalid end tag', () => {
       const ast = parse('some text</div>', {
         onError: () => {}
