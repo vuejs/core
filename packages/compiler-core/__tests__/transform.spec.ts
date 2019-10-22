@@ -15,13 +15,13 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_SLOT,
-  APPLY_DIRECTIVES
+  WITH_DIRECTIVES
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
-import { optimizeText } from '../src/transforms/optimizeText'
+import { transformText } from '../src/transforms/transformText'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -243,7 +243,7 @@ describe('compiler: transform', () => {
         nodeTransforms: [
           transformIf,
           transformFor,
-          optimizeText,
+          transformText,
           transformSlotOutlet,
           transformElement
         ]
@@ -313,8 +313,8 @@ describe('compiler: transform', () => {
           },
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            // should wrap applyDirectives() around createBlock()
-            callee: APPLY_DIRECTIVES,
+            // should wrap withDirectives() around createBlock()
+            callee: WITH_DIRECTIVES,
             arguments: [
               { callee: CREATE_BLOCK },
               { type: NodeTypes.JS_ARRAY_EXPRESSION }

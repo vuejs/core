@@ -5,7 +5,7 @@ import {
   Namespaces,
   NodeTypes
 } from '@vue/compiler-core'
-import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
 
 export const enum DOMNamespaces {
   HTML = Namespaces.HTML,

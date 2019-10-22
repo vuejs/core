@@ -5,14 +5,14 @@ const comp = resolveComponent('comp')
 const foo = resolveDirective('foo')
 const bar = resolveDirective('bar')
 
-return applyDirectives(h(comp), [
+return withDirectives(h(comp), [
   [foo, this.x],
   [bar, this.y]
 ])
 */
 
-import { VNode, cloneVNode } from './vnode'
-import { extend, isArray, isFunction, EMPTY_OBJ } from '@vue/shared'
+import { VNode } from './vnode'
+import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
@@ -51,6 +51,16 @@ type DirectiveModifiers = Record<string, boolean>
 
 const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
 
+const isBuiltInDirective = /*#__PURE__*/ makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
+)
+
+export function validateDirectiveName(name: string) {
+  if (isBuiltInDirective(name)) {
+    warn('Do not use built-in directive ids as custom directive id: ' + name)
+  }
+}
+
 function applyDirective(
   props: Record<any, any>,
   instance: ComponentInternalInstance,
@@ -74,7 +84,7 @@ function applyDirective(
 
   for (const key in directive) {
     const hook = directive[key as keyof ObjectDirective]!
-    const hookKey = `vnode` + key[0].toUpperCase() + key.slice(1)
+    const hookKey = `onVnode` + key[0].toUpperCase() + key.slice(1)
     const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
       let oldValue
       if (prevVNode != null) {
@@ -110,17 +120,16 @@ export type DirectiveArguments = Array<
   | [Directive, any, string, DirectiveModifiers]
 >
 
-export function applyDirectives(vnode: VNode, directives: DirectiveArguments) {
+export function withDirectives(vnode: VNode, directives: DirectiveArguments) {
   const instance = currentRenderingInstance
   if (instance !== null) {
-    vnode = cloneVNode(vnode)
-    vnode.props = vnode.props != null ? extend({}, vnode.props) : {}
+    vnode.props = vnode.props || {}
     for (let i = 0; i < directives.length; i++) {
       const [dir, value, arg, modifiers] = directives[i]
       applyDirective(vnode.props, instance, dir, value, arg, modifiers)
     }
   } else if (__DEV__) {
-    warn(`applyDirectives can only be used inside render functions.`)
+    warn(`withDirectives can only be used inside render functions.`)
   }
   return vnode
 }
@@ -131,17 +140,8 @@ export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null = null
 ) {
-  const args = [vnode, prevVNode]
-  if (isArray(hook)) {
-    for (let i = 0; i < hook.length; i++) {
-      callWithAsyncErrorHandling(
-        hook[i],
-        instance,
-        ErrorCodes.DIRECTIVE_HOOK,
-        args
-      )
-    }
-  } else if (isFunction(hook)) {
-    callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, args)
-  }
+  callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
+    vnode,
+    prevVNode
+  ])
 }

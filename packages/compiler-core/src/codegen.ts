@@ -16,7 +16,8 @@ import {
   SimpleExpressionNode,
   FunctionExpression,
   SequenceExpression,
-  ConditionalExpression
+  ConditionalExpression,
+  CacheExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -250,6 +251,10 @@ export function generate(
     }
   } else {
     push(`const _ctx = this`)
+    if (ast.cached > 0) {
+      newline()
+      push(`const _cache = _ctx.$cache`)
+    }
     newline()
   }
 
@@ -395,6 +400,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.INTERPOLATION:
       genInterpolation(node, context)
       break
+    case NodeTypes.TEXT_CALL:
+      genNode(node.codegenNode, context)
+      break
     case NodeTypes.COMPOUND_EXPRESSION:
       genCompoundExpression(node, context)
       break
@@ -418,6 +426,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
     case NodeTypes.JS_CONDITIONAL_EXPRESSION:
       genConditionalExpression(node, context)
+      break
+    case NodeTypes.JS_CACHE_EXPRESSION:
+      genCacheExpression(node, context)
       break
     /* istanbul ignore next */
     default:
@@ -610,5 +621,11 @@ function genSequenceExpression(
 ) {
   context.push(`(`)
   genNodeList(node.expressions, context)
+  context.push(`)`)
+}
+
+function genCacheExpression(node: CacheExpression, context: CodegenContext) {
+  context.push(`_cache[${node.index}] || (_cache[${node.index}] = `)
+  genNode(node.value, context)
   context.push(`)`)
 }

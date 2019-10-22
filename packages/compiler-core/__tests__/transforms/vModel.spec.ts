@@ -9,7 +9,8 @@ import {
   ForNode,
   PlainElementNode,
   PlainElementCodegenNode,
-  ComponentNode
+  ComponentNode,
+  NodeTypes
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
@@ -338,25 +339,36 @@ describe('compiler: transform v-model', () => {
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
 
-  test('should not mark update handler dynamic', () => {
+  test('should cache update handler w/ cacheHandlers: true', () => {
     const root = parseWithVModel('<input v-model="foo" />', {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
+      cacheHandlers: true
     })
+    expect(root.cached).toBe(1)
     const codegen = (root.children[0] as PlainElementNode)
       .codegenNode as PlainElementCodegenNode
+    // should not list cached prop in dynamicProps
     expect(codegen.arguments[4]).toBe(`["modelValue"]`)
+    expect(
+      (codegen.arguments[1] as ObjectExpression).properties[1].value.type
+    ).toBe(NodeTypes.JS_CACHE_EXPRESSION)
   })
 
-  test('should mark update handler dynamic if it refers v-for scope variables', () => {
+  test('should not cache update handler if it refers v-for scope variables', () => {
     const root = parseWithVModel(
       '<input v-for="i in list" v-model="foo[i]" />',
       {
-        prefixIdentifiers: true
+        prefixIdentifiers: true,
+        cacheHandlers: true
       }
     )
+    expect(root.cached).toBe(0)
     const codegen = ((root.children[0] as ForNode)
       .children[0] as PlainElementNode).codegenNode as PlainElementCodegenNode
     expect(codegen.arguments[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
+    expect(
+      (codegen.arguments[1] as ObjectExpression).properties[1].value.type
+    ).not.toBe(NodeTypes.JS_CACHE_EXPRESSION)
   })
 
   test('should mark update handler dynamic if it refers slot scope variables', () => {
@@ -389,7 +401,7 @@ describe('compiler: transform v-model', () => {
     })
     // should NOT include modelModifiers in dynamicPropNames because it's never
     // gonna change
-    expect(args[4]).toBe(`["modelValue"]`)
+    expect(args[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
   })
 
   describe('errors', () => {

@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, Data } from './component'
+import { ComponentInternalInstance, Data, Emit } from './component'
 import { nextTick } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
@@ -24,7 +24,7 @@ export type ComponentPublicInstance<
   $slots: Data
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: (event: string, ...args: unknown[]) => void
+  $emit: Emit
   $el: any
   $options: any
   $forceUpdate: ReactiveEffect
@@ -56,13 +56,13 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
-    const { renderContext, data, props, propsProxy, accessCache } = target
+    const { renderContext, data, props, propsProxy, accessCache, type } = target
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
-    const n = accessCache[key]
+    const n = accessCache![key]
     if (n !== undefined) {
       switch (n) {
         case AccessTypes.DATA:
@@ -73,15 +73,20 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return propsProxy![key]
       }
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
-      accessCache[key] = AccessTypes.DATA
+      accessCache![key] = AccessTypes.DATA
       return data[key]
     } else if (hasOwn(renderContext, key)) {
-      accessCache[key] = AccessTypes.CONTEXT
+      accessCache![key] = AccessTypes.CONTEXT
       return renderContext[key]
     } else if (hasOwn(props, key)) {
-      accessCache[key] = AccessTypes.PROPS
+      // only cache props access if component has declared (thus stable) props
+      if (type.props != null) {
+        accessCache![key] = AccessTypes.PROPS
+      }
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
+    } else if (key === '$cache') {
+      return target.renderCache || (target.renderCache = [])
     } else if (key === '$el') {
       return target.vnode.el
     } else if (hasOwn(publicPropertiesMap, key)) {

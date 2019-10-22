@@ -2,7 +2,7 @@ import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RENDER_SLOT,
   CREATE_SLOTS,
   RENDER_LIST,
@@ -35,6 +35,7 @@ export const enum NodeTypes {
   IF,
   IF_BRANCH,
   FOR,
+  TEXT_CALL,
   // codegen
   JS_CALL_EXPRESSION,
   JS_OBJECT_EXPRESSION,
@@ -42,7 +43,8 @@ export const enum NodeTypes {
   JS_ARRAY_EXPRESSION,
   JS_FUNCTION_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
-  JS_CONDITIONAL_EXPRESSION
+  JS_CONDITIONAL_EXPRESSION,
+  JS_CACHE_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -85,6 +87,7 @@ export type TemplateChildNode =
   | CommentNode
   | IfNode
   | ForNode
+  | TextCallNode
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
@@ -93,6 +96,7 @@ export interface RootNode extends Node {
   components: string[]
   directives: string[]
   hoists: JSChildNode[]
+  cached: number
   codegenNode: TemplateChildNode | JSChildNode | undefined
 }
 
@@ -190,7 +194,6 @@ export interface InterpolationNode extends Node {
   content: ExpressionNode
 }
 
-// always dynamic
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
   children: (
@@ -226,6 +229,12 @@ export interface ForNode extends Node {
   codegenNode: ForCodegenNode
 }
 
+export interface TextCallNode extends Node {
+  type: NodeTypes.TEXT_CALL
+  content: TextNode | InterpolationNode | CompoundExpressionNode
+  codegenNode: CallExpression
+}
+
 // We also include a number of JavaScript AST nodes for code generation.
 // The AST is an intentionally minimal subset just to meet the exact needs of
 // Vue render function generation.
@@ -237,6 +246,7 @@ export type JSChildNode =
   | FunctionExpression
   | ConditionalExpression
   | SequenceExpression
+  | CacheExpression
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
@@ -282,6 +292,12 @@ export interface ConditionalExpression extends Node {
   test: ExpressionNode
   consequent: JSChildNode
   alternate: JSChildNode
+}
+
+export interface CacheExpression extends Node {
+  type: NodeTypes.JS_CACHE_EXPRESSION
+  index: number
+  value: JSChildNode
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -388,13 +404,13 @@ export interface DynamicSlotFnProperty extends Property {
   value: SlotFunctionExpression
 }
 
-// applyDirectives(createVNode(...), [
+// withDirectives(createVNode(...), [
 //    [_directive_foo, someValue],
 //    [_directive_bar, someValue, "arg", { mod: true }]
 // ])
 export interface CodegenNodeWithDirective<T extends CallExpression>
   extends CallExpression {
-  callee: typeof APPLY_DIRECTIVES
+  callee: typeof WITH_DIRECTIVES
   arguments: [T, DirectiveArguments]
 }
 
@@ -549,7 +565,7 @@ type InferCodegenNodeType<T> = T extends
   | typeof CREATE_VNODE
   | typeof CREATE_BLOCK
   ? PlainElementCodegenNode | PlainComponentCodegenNode
-  : T extends typeof APPLY_DIRECTIVES
+  : T extends typeof WITH_DIRECTIVES
     ?
         | CodegenNodeWithDirective<PlainElementCodegenNode>
         | CodegenNodeWithDirective<PlainComponentCodegenNode>
@@ -603,6 +619,18 @@ export function createConditionalExpression(
     test,
     consequent,
     alternate,
+    loc: locStub
+  }
+}
+
+export function createCacheExpression(
+  index: number,
+  value: JSChildNode
+): CacheExpression {
+  return {
+    type: NodeTypes.JS_CACHE_EXPRESSION,
+    index,
+    value,
     loc: locStub
   }
 }

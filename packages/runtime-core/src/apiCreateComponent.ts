@@ -5,17 +5,18 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps
 } from './apiOptions'
-import { SetupContext } from './component'
-import { VNodeChild } from './vnode'
+import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes } from './componentProps'
 import { isFunction } from '@vue/shared'
 
 // overload 1: direct setup function
 // (uses user defined props interface)
-export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
-): (props: Props) => any
+export function createComponent<Props, RawBindings = object>(
+  setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction
+): {
+  new (): ComponentPublicInstance<Props, RawBindings>
+}
 
 // overload 2: object format with no props
 // (uses user defined props interface)

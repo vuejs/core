@@ -13,7 +13,8 @@ import {
   createCallExpression,
   createConditionalExpression,
   IfCodegenNode,
-  ForCodegenNode
+  ForCodegenNode,
+  createCacheExpression
 } from '../src'
 import {
   CREATE_VNODE,
@@ -34,6 +35,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     components: [],
     directives: [],
     hoists: [],
+    cached: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
@@ -357,6 +359,25 @@ describe('compiler: codegen', () => {
         ? bar()
         : baz()`
     )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('CacheExpression', () => {
+    const { code } = generate(
+      createRoot({
+        cached: 1,
+        codegenNode: createCacheExpression(
+          1,
+          createSimpleExpression(`foo`, false)
+        )
+      }),
+      {
+        mode: 'module',
+        prefixIdentifiers: true
+      }
+    )
+    expect(code).toMatch(`const _cache = _ctx.$cache`)
+    expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
     expect(code).toMatchSnapshot()
   })
 })

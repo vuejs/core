@@ -19,15 +19,16 @@ import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
+  RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
   SUSPENSE
 } from '../runtimeHelpers'
-import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
+import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
 
@@ -55,24 +56,55 @@ export const transformElement: NodeTransform = (node, context) => {
     let patchFlag: number = 0
     let runtimeDirectives: DirectiveNode[] | undefined
     let dynamicPropNames: string[] | undefined
+    let dynamicComponent: string | CallExpression | undefined
 
-    if (isComponent) {
+    // handle dynamic component
+    const isProp = findProp(node, 'is')
+    if (node.tag === 'component') {
+      if (isProp) {
+        // static <component is="foo" />
+        if (isProp.type === NodeTypes.ATTRIBUTE) {
+          const tag = isProp.value && isProp.value.content
+          if (tag) {
+            context.helper(RESOLVE_COMPONENT)
+            context.components.add(tag)
+            dynamicComponent = toValidAssetId(tag, `component`)
+          }
+        }
+        // dynamic <component :is="asdf" />
+        else if (isProp.exp) {
+          dynamicComponent = createCallExpression(
+            context.helper(RESOLVE_DYNAMIC_COMPONENT),
+            [isProp.exp]
+          )
+        }
+      }
+    }
+
+    if (isComponent && !dynamicComponent) {
       context.helper(RESOLVE_COMPONENT)
       context.components.add(node.tag)
     }
 
     const args: CallExpression['arguments'] = [
-      isComponent
-        ? toValidAssetId(node.tag, `component`)
-        : node.tagType === ElementTypes.PORTAL
-          ? context.helper(PORTAL)
-          : node.tagType === ElementTypes.SUSPENSE
-            ? context.helper(SUSPENSE)
-            : `"${node.tag}"`
+      dynamicComponent
+        ? dynamicComponent
+        : isComponent
+          ? toValidAssetId(node.tag, `component`)
+          : node.tagType === ElementTypes.PORTAL
+            ? context.helper(PORTAL)
+            : node.tagType === ElementTypes.SUSPENSE
+              ? context.helper(SUSPENSE)
+              : `"${node.tag}"`
     ]
     // props
     if (hasProps) {
-      const propsBuildResult = buildProps(node, context)
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        // skip reserved "is" prop <component is>
+        node.props.filter(p => p !== isProp)
+      )
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
       runtimeDirectives = propsBuildResult.directives
@@ -145,7 +177,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     if (runtimeDirectives && runtimeDirectives.length) {
       node.codegenNode = createCallExpression(
-        context.helper(APPLY_DIRECTIVES),
+        context.helper(WITH_DIRECTIVES),
         [
           vnode,
           createArrayExpression(
@@ -190,9 +222,10 @@ export function buildProps(
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       if (
-        (value.type === NodeTypes.SIMPLE_EXPRESSION ||
+        value.type === NodeTypes.JS_CACHE_EXPRESSION ||
+        ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-        isStaticNode(value)
+          isStaticNode(value))
       ) {
         return
       }

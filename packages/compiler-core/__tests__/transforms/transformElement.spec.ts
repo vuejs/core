@@ -4,10 +4,11 @@ import {
   CREATE_VNODE,
   MERGE_PROPS,
   RESOLVE_DIRECTIVE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   TO_HANDLERS,
   helperNameMap,
-  PORTAL
+  PORTAL,
+  RESOLVE_DYNAMIC_COMPONENT
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -22,7 +23,7 @@ import { transformOn } from '../../src/transforms/vOn'
 import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
-import { optimizeText } from '../../src/transforms/optimizeText'
+import { transformText } from '../../src/transforms/transformText'
 
 function parseWithElementTransform(
   template: string,
@@ -35,7 +36,7 @@ function parseWithElementTransform(
   // block as root node
   const ast = parse(`<div>${template}</div>`, options)
   transform(ast, {
-    nodeTransforms: [transformElement, optimizeText],
+    nodeTransforms: [transformElement, transformText],
     ...options
   })
   const codegenNode = (ast as any).children[0].children[0]
@@ -45,6 +46,14 @@ function parseWithElementTransform(
     root: ast,
     node: codegenNode
   }
+}
+
+function parseWithBind(template: string) {
+  return parseWithElementTransform(template, {
+    directiveTransforms: {
+      bind: transformBind
+    }
+  })
 }
 
 describe('compiler: element transform', () => {
@@ -359,7 +368,7 @@ describe('compiler: element transform', () => {
     expect(root.helpers).toContain(RESOLVE_DIRECTIVE)
     expect(root.directives).toContain(`foo`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(WITH_DIRECTIVES)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION,
@@ -429,7 +438,7 @@ describe('compiler: element transform', () => {
     expect(root.directives).toContain(`bar`)
     expect(root.directives).toContain(`baz`)
 
-    expect(node.callee).toBe(APPLY_DIRECTIVES)
+    expect(node.callee).toBe(WITH_DIRECTIVES)
     expect(node.arguments).toMatchObject([
       {
         type: NodeTypes.JS_CALL_EXPRESSION
@@ -626,14 +635,6 @@ describe('compiler: element transform', () => {
   })
 
   describe('patchFlag analysis', () => {
-    function parseWithBind(template: string) {
-      return parseWithElementTransform(template, {
-        directiveTransforms: {
-          bind: transformBind
-        }
-      })
-    }
-
     test('TEXT', () => {
       const { node } = parseWithBind(`<div>foo</div>`)
       expect(node.arguments.length).toBe(3)
@@ -715,6 +716,33 @@ describe('compiler: element transform', () => {
       const vnodeCall = node.arguments[0] as CallExpression
       expect(vnodeCall.arguments.length).toBe(4)
       expect(vnodeCall.arguments[3]).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+  })
+
+  describe('dynamic component', () => {
+    test('static binding', () => {
+      const { node, root } = parseWithBind(`<component is="foo" />`)
+      expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        callee: CREATE_VNODE,
+        arguments: ['_component_foo']
+      })
+    })
+
+    test('dynamic binding', () => {
+      const { node, root } = parseWithBind(`<component :is="foo" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node.arguments).toMatchObject([
+        {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo'
+            }
+          ]
+        }
+      ])
     })
   })
 })

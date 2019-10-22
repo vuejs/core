@@ -9,7 +9,7 @@ import {
   OPEN_BLOCK,
   CREATE_BLOCK,
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   FRAGMENT,
   RENDER_LIST
 } from '../../src/runtimeHelpers'
@@ -18,6 +18,7 @@ import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformBind } from '../../src/transforms/vBind'
+import { transformOn } from '../../src/transforms/vOn'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 
@@ -25,7 +26,6 @@ function transformWithHoist(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     hoistStatic: true,
-    prefixIdentifiers: options.prefixIdentifiers,
     nodeTransforms: [
       transformIf,
       transformFor,
@@ -33,8 +33,10 @@ function transformWithHoist(template: string, options: CompilerOptions = {}) {
       transformElement
     ],
     directiveTransforms: {
+      on: transformOn,
       bind: transformBind
-    }
+    },
+    ...options
   })
   expect(ast.codegenNode).toMatchObject({
     type: NodeTypes.JS_SEQUENCE_EXPRESSION,
@@ -304,7 +306,7 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.ELEMENT,
         codegenNode: {
-          callee: APPLY_DIRECTIVES,
+          callee: WITH_DIRECTIVES,
           arguments: [
             {
               callee: CREATE_VNODE,
@@ -655,6 +657,25 @@ describe('compiler: hoistStatic transform', () => {
 
       expect(root.hoists.length).toBe(0)
       expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('should NOT hoist elements with cached handlers', () => {
+      const { root } = transformWithHoist(
+        `<div><div><div @click="foo"/></div></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+
+      expect(root.cached).toBe(1)
+      expect(root.hoists.length).toBe(0)
+      expect(
+        generate(root, {
+          mode: 'module',
+          prefixIdentifiers: true
+        }).code
+      ).toMatchSnapshot()
     })
   })
 })

@@ -1031,13 +1031,13 @@
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.5.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.0.tgz#5dd0f50bb7a30f8512b65ed9aba94a2b76c68a21"
-  integrity sha512-CxKNZFD9TRo/y8MQzlk4z/Z5jPCaQsDq7ON9baE544CKnmF4sNlmoS9ydkt0As3v6OYKjp50d2N4NAmZoOVXzg==
+  version "7.5.1"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.1.tgz#363c95af2546aa83e6c0086ffbf7368daf0c7bef"
+  integrity sha512-pUMrXO+nW31piHhmBznlBdYEiemSOQ8sYcEm8T6tfDvAQdPxg3oaHfrau/DseUY5haAFh+2hY+rl0GUl5CEKbQ==
   dependencies:
     "@microsoft/api-extractor-model" "7.5.1"
     "@microsoft/node-core-library" "3.15.1"
-    "@microsoft/ts-command-line" "4.3.2"
+    "@microsoft/ts-command-line" "4.3.3"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
     lodash "~4.17.15"
@@ -1056,10 +1056,10 @@
     jju "~1.4.0"
     z-schema "~3.18.3"
 
-"@microsoft/ts-command-line@4.3.2":
-  version "4.3.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.2.tgz#87341de2e24f279259297ebd38530300a9f97bc3"
-  integrity sha512-2QeyilabCe6IpBylPXuY6dCA1S9ym3Ii0zakXVPpyfjSj1NesnyuUeuh6e8kyIqzqJ+3LYjfPG63XzUBtwGqqw==
+"@microsoft/ts-command-line@4.3.3":
+  version "4.3.3"
+  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.3.tgz#bcbebafedd2f8af7e40bc6b6c1d24018f821d3d6"
+  integrity sha512-dzAdHwmw0p0T2Nra91nPd5n57fw5bRQEWGPe5iZOsqoLpjU/NCgBpmBdbvx1Oy3+YRnrV4lSeSbN6C7sSniwmQ==
   dependencies:
     "@types/argparse" "1.0.33"
     argparse "~1.0.9"
@@ -6042,9 +6042,9 @@ rimraf@^2.6.3:
     glob "^7.1.3"
 
 rollup-plugin-alias@^2.0.0:
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/rollup-plugin-alias/-/rollup-plugin-alias-2.0.1.tgz#2f11b0a09e0bab1bbd1f130536fe99ef8f35c0dd"
-  integrity sha512-/wOySYmFzR1TPijsiNBOAV12HYPs7GZtAuim2LKdk5V6RnQSZ34ueVgkFfjJffe/HIFR6Jdwc4+7YOlY5uty4w==
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/rollup-plugin-alias/-/rollup-plugin-alias-2.2.0.tgz#5004a2bc542a2eebb45b5a0fff8c6f540439decc"
+  integrity sha512-9ZK410qeFed4gGrHoojBpxLsHF74vPgsheGg9JRW5RbALAxqdvJbd357mSqWBqUrBfRVnZnNUXTZdYLxxQEA5A==
   dependencies:
     slash "^3.0.0"
 
@@ -6100,9 +6100,9 @@ rollup-pluginutils@^2.5.0, rollup-pluginutils@^2.6.0, rollup-pluginutils@^2.8.1:
     estree-walker "^0.6.1"
 
 rollup@^1.19.4:
-  version "1.24.0"
-  resolved "https://registry.yarnpkg.com/rollup/-/rollup-1.24.0.tgz#0ace969508babb7a5fcb228e831e9c9a2873c2b0"
-  integrity sha512-PiFETY/rPwodQ8TTC52Nz2DSCYUATznGh/ChnxActCr8rV5FIk3afBUb3uxNritQW/Jpbdn3kq1Rwh1HHYMwdQ==
+  version "1.25.1"
+  resolved "https://registry.yarnpkg.com/rollup/-/rollup-1.25.1.tgz#905707d686dc8d7218af63dcfb9e37d1f3dc3c34"
+  integrity sha512-K8ytdEzMa6anHSnfTIs2BLB+NXlQ4qmWwdNHBpYQNWCbZAzj+DRVk7+ssbLSgddwpFW1nThr2GElR+jASF2NPA==
   dependencies:
     "@types/estree" "*"
     "@types/node" "*"
