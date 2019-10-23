@@ -691,4 +691,14 @@ describe('reactivity/effect', () => {
     obj.foo = { prop: 1 }
     expect(dummy).toBe(1)
   })
+
+  it('should not be trigger when the value and the old value both are NaN', () => {
+    const obj = reactive({
+      foo: NaN
+    })
+    const fnSpy = jest.fn(() => obj.foo)
+    effect(fnSpy)
+    obj.foo = NaN
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+  })
 })
