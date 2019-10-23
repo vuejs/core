@@ -10,6 +10,7 @@ import {
 } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
+import { Slots } from './componentSlots'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -26,7 +27,7 @@ export type ComponentPublicInstance<
   $props: PublicProps
   $attrs: Data
   $refs: Data
-  $slots: Data
+  $slots: Slots
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
   $emit: Emit

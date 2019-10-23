@@ -11,7 +11,8 @@ import {
   isReservedProp,
   hasOwn,
   toTypeString,
-  PatchFlags
+  PatchFlags,
+  makeMap
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
@@ -315,12 +316,14 @@ function validateProp(
   }
 }
 
-const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
+const isSimpleType = /*#__PURE__*/ makeMap(
+  'String,Number,Boolean,Function,Symbol'
+)
 
 function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (simpleCheckRE.test(expectedType)) {
+  if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects

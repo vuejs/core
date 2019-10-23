@@ -14,7 +14,7 @@ return function render() {
       _createVNode(\\"div\\", { textContent: text }, null, 8 /* PROPS */, [\\"textContent\\"]),
       _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
       _createVNode(\\"div\\", null, \\"test\\"),
-      _createVNode(\\"div\\", { style: _hoisted_1 }, \\"red\\", 4 /* STYLE */),
+      _createVNode(\\"div\\", { style: _hoisted_1 }, \\"red\\"),
       _createVNode(\\"div\\", { style: {color: 'green'}}, null, 4 /* STYLE */)
     ]))
   }
