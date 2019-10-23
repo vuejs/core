@@ -68,21 +68,19 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const hadKey = proto.has.call(target, key)
   const oldValue = proto.get.call(target, key)
   const result = proto.set.call(target, key, value)
-  if (value !== oldValue) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else {
-        trigger(target, OperationTypes.SET, key, extraInfo)
-      }
-    } else {
-      if (!hadKey) {
-        trigger(target, OperationTypes.ADD, key)
-      } else {
-        trigger(target, OperationTypes.SET, key)
-      }
+  /* istanbul ignore else */
+  if (__DEV__) {
+    const extraInfo = { oldValue, newValue: value }
+    if (!hadKey) {
+      trigger(target, OperationTypes.ADD, key, extraInfo)
+    } else if (value !== oldValue) {
+      trigger(target, OperationTypes.SET, key, extraInfo)
+    }
+  } else {
+    if (!hadKey) {
+      trigger(target, OperationTypes.ADD, key)
+    } else if (value !== oldValue) {
+      trigger(target, OperationTypes.SET, key)
     }
   }
   return result
