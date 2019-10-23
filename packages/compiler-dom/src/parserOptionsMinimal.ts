@@ -8,7 +8,7 @@ import {
 import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
 import { makeMap } from '@vue/shared'
 
-const isSpecificTag = /*#__PURE__*/ makeMap(
+const isRawTextContainer = /*#__PURE__*/ makeMap(
   'style,xmp,iframe,noembed,noframes,script,noscript',
   true
 )
@@ -79,7 +79,7 @@ export const parserOptionsMinimal: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (isSpecificTag(tag)) {
+      if (isRawTextContainer(tag)) {
         return TextModes.RAWTEXT
       }
     }
