@@ -2,7 +2,7 @@ import { reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
-import { isObject, hasOwn, isSymbol } from '@vue/shared'
+import { isObject, hasOwn, isSymbol, notNaN } from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -10,10 +10,6 @@ const builtInSymbols = new Set(
     .map(key => (Symbol as any)[key])
     .filter(isSymbol)
 )
-
-function notNaN(value: any, oldValue: any): boolean {
-  return value === value || oldValue === oldValue
-}
 
 function createGetter(isReadonly: boolean) {
   return function get(target: object, key: string | symbol, receiver: object) {

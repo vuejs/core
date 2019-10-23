@@ -2,13 +2,9 @@ import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
-import { isObject, capitalize, hasOwn } from '@vue/shared'
+import { isObject, capitalize, hasOwn, notNaN } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
-
-function notNaN(value: any, oldValue: any): boolean {
-  return value === value || oldValue === oldValue
-}
 
 type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
