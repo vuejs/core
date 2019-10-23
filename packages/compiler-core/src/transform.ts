@@ -215,7 +215,8 @@ function createTransformContext(
       return createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
         false,
-        exp.loc
+        exp.loc,
+        true
       )
     },
     cache(exp) {
