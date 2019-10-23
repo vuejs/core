@@ -179,14 +179,10 @@ export function createRenderer<
     optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
-    if (n1 != null) {
-      if (!isSameType(n1, n2)) {
-        anchor = getNextHostNode(n1)
-        unmount(n1, parentComponent, parentSuspense, true)
-        n1 = null
-      } else if (n1.props && n1.props.$once) {
-        return
-      }
+    if (n1 != null && !isSameType(n1, n2)) {
+      anchor = getNextHostNode(n1)
+      unmount(n1, parentComponent, parentSuspense, true)
+      n1 = null
     }
 
     const { type, shapeFlag } = n2

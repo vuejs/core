@@ -34,7 +34,8 @@ import {
   COMMENT,
   helperNameMap,
   RESOLVE_COMPONENT,
-  RESOLVE_DIRECTIVE
+  RESOLVE_DIRECTIVE,
+  SET_BLOCK_TRACKING
 } from './runtimeHelpers'
 
 type CodegenNode = TemplateChildNode | JSChildNode
@@ -247,6 +248,10 @@ export function generate(
           .join(', ')} } = _Vue`
       )
       newline()
+      if (ast.cached > 0) {
+        push(`const _cache = $cache`)
+        newline()
+      }
       newline()
     }
   } else {
@@ -625,7 +630,22 @@ function genSequenceExpression(
 }
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {
-  context.push(`_cache[${node.index}] || (_cache[${node.index}] = `)
+  const { push, helper, indent, deindent, newline } = context
+  push(`_cache[${node.index}] || (`)
+  if (node.isVNode) {
+    indent()
+    push(`${helper(SET_BLOCK_TRACKING)}(-1),`)
+    newline()
+  }
+  push(`_cache[${node.index}] = `)
   genNode(node.value, context)
-  context.push(`)`)
+  if (node.isVNode) {
+    push(`,`)
+    newline()
+    push(`${helper(SET_BLOCK_TRACKING)}(1),`)
+    newline()
+    push(`_cache[${node.index}]`)
+    deindent()
+  }
+  push(`)`)
 }

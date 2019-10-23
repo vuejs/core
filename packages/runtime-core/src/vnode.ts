@@ -105,7 +105,24 @@ export function openBlock(disableTracking?: boolean) {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
 
-let shouldTrack = true
+// Whether we should be tracking dynamic child nodes inside a block.
+// Only tracks when this value is > 0
+// We are not using a simple boolean because this value may need to be
+// incremented/decremented by nested usage of v-once (see below)
+let shouldTrack = 1
+
+// Block tracking sometimes needs to be disabled, for example during the
+// creation of a tree that needs to be cached by v-once. The compiler generates
+// code like this:
+//   _cache[1] || (
+//     setBlockTracking(-1),
+//     _cache[1] = createVNode(...),
+//     setBlockTracking(1),
+//     _cache[1]
+//   )
+export function setBlockTracking(value: number) {
+  shouldTrack += value
+}
 
 // Create a block root vnode. Takes the same exact arguments as `createVNode`.
 // A block root keeps track of dynamic nodes within the block in the
@@ -118,9 +135,9 @@ export function createBlock(
   dynamicProps?: string[]
 ): VNode {
   // avoid a block with patchFlag tracking itself
-  shouldTrack = false
+  shouldTrack--
   const vnode = createVNode(type, props, children, patchFlag, dynamicProps)
-  shouldTrack = true
+  shouldTrack++
   // save current block children on the block vnode
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // close block
@@ -200,7 +217,7 @@ export function createVNode(
   // component doesn't need to update, it needs to persist the instance on to
   // the next vnode so that it can be properly unmounted later.
   if (
-    shouldTrack &&
+    shouldTrack > 0 &&
     currentBlock !== null &&
     (patchFlag > 0 ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||

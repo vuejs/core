@@ -69,6 +69,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   if (
     !__BROWSER__ &&
     context.prefixIdentifiers &&
+    context.cacheHandlers &&
     !hasScopeRef(exp, context.identifiers)
   ) {
     props[1].value = context.cache(props[1].value)

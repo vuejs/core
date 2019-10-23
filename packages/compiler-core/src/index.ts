@@ -44,6 +44,7 @@ export function baseCompile(
     ...options,
     prefixIdentifiers,
     nodeTransforms: [
+      transformOnce,
       transformIf,
       transformFor,
       ...(prefixIdentifiers
@@ -62,7 +63,6 @@ export function baseCompile(
     directiveTransforms: {
       on: transformOn,
       bind: transformBind,
-      once: transformOnce,
       model: transformModel,
       ...(options.directiveTransforms || {}) // user transforms
     }

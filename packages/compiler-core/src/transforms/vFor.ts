@@ -15,7 +15,8 @@ import {
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
-  ElementCodegenNode
+  ElementCodegenNode,
+  SlotOutletCodegenNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -130,7 +131,7 @@ export const transformFor = createStructuralDirectiveTransform(
         : null
       if (slotOutlet) {
         // <slot v-for="..."> or <template v-for="..."><slot/></template>
-        childBlock = slotOutlet.codegenNode!
+        childBlock = slotOutlet.codegenNode as SlotOutletCodegenNode
         if (isTemplate && keyProperty) {
           // <template v-for="..." :key="..."><slot/></template>
           // we need to inject the key to the renderSlot() call.

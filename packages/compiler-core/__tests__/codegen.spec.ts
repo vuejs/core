@@ -380,4 +380,33 @@ describe('compiler: codegen', () => {
     expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
     expect(code).toMatchSnapshot()
   })
+
+  test('CacheExpression w/ isVNode: true', () => {
+    const { code } = generate(
+      createRoot({
+        cached: 1,
+        codegenNode: createCacheExpression(
+          1,
+          createSimpleExpression(`foo`, false),
+          true
+        )
+      }),
+      {
+        mode: 'module',
+        prefixIdentifiers: true
+      }
+    )
+    expect(code).toMatch(`const _cache = _ctx.$cache`)
+    expect(code).toMatch(
+      `
+  _cache[1] || (
+    setBlockTracking(-1),
+    _cache[1] = foo,
+    setBlockTracking(1),
+    _cache[1]
+  )
+    `.trim()
+    )
+    expect(code).toMatchSnapshot()
+  })
 })

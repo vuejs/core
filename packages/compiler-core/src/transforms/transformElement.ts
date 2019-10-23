@@ -280,6 +280,11 @@ export function buildProps(
         continue
       }
 
+      // skip v-once - it is handled by its dedicated transform.
+      if (name === 'once') {
+        continue
+      }
+
       // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
       const isOn = name === 'on'

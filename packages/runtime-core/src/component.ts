@@ -86,7 +86,7 @@ export interface ComponentInternalInstance {
   accessCache: Data | null
   // cache for render function values that rely on _ctx but won't need updates
   // after initialized (e.g. inline handlers)
-  renderCache: Function[] | null
+  renderCache: (Function | VNode)[] | null
 
   components: Record<string, Component>
   directives: Record<string, Directive>

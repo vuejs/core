@@ -365,7 +365,7 @@ describe('compiler: transform component slots', () => {
       } else {
         const innerComp = (root.children[0] as ComponentNode)
           .children[0] as ComponentNode
-        flag = innerComp.codegenNode!.arguments[3]
+        flag = (innerComp.codegenNode as CallExpression).arguments[3]
       }
       if (shouldForce) {
         expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))

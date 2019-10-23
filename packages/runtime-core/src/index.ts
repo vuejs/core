@@ -49,6 +49,7 @@ export { toString } from './helpers/toString'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { setBlockTracking } from './vnode'
 export { capitalize, camelize } from '@vue/shared'
 
 // Internal, for integration with runtime compiler

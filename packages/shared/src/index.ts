@@ -52,7 +52,7 @@ export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
 
 export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref' || key === '$once' || key.startsWith(`onVnode`)
+  key === 'key' || key === 'ref' || key.startsWith(`onVnode`)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {

@@ -387,7 +387,8 @@ describe('compiler: transform v-model', () => {
     const root = parseWithVModel('<Comp v-model.trim.bar-baz="foo" />', {
       prefixIdentifiers: true
     })
-    const args = (root.children[0] as ComponentNode).codegenNode!.arguments
+    const args = ((root.children[0] as ComponentNode)
+      .codegenNode as CallExpression).arguments
     // props
     expect(args[1]).toMatchObject({
       properties: [

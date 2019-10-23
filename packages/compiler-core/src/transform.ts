@@ -100,7 +100,7 @@ export interface TransformContext extends Required<TransformOptions> {
   addIdentifiers(exp: ExpressionNode | string): void
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: JSChildNode): SimpleExpressionNode
-  cache<T extends JSChildNode>(exp: T): CacheExpression | T
+  cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
 }
 
 function createTransformContext(
@@ -219,8 +219,8 @@ function createTransformContext(
         true
       )
     },
-    cache(exp) {
-      return cacheHandlers ? createCacheExpression(++context.cached, exp) : exp
+    cache(exp, isVNode = false) {
+      return createCacheExpression(++context.cached, exp, isVNode)
     }
   }
 
@@ -260,12 +260,17 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       const codegenNode = child.codegenNode as
         | ElementCodegenNode
         | ComponentCodegenNode
-      if (codegenNode.callee === WITH_DIRECTIVES) {
-        codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
+        | CacheExpression
+      if (codegenNode.type !== NodeTypes.JS_CACHE_EXPRESSION) {
+        if (codegenNode.callee === WITH_DIRECTIVES) {
+          codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
+        } else {
+          codegenNode.callee = helper(CREATE_BLOCK)
+        }
+        root.codegenNode = createBlockExpression(codegenNode, context)
       } else {
-        codegenNode.callee = helper(CREATE_BLOCK)
+        root.codegenNode = codegenNode
       }
-      root.codegenNode = createBlockExpression(codegenNode, context)
     } else {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.

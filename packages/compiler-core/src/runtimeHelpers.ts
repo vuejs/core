@@ -19,6 +19,7 @@ export const TO_STRING = Symbol(__DEV__ ? `toString` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
+export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -42,7 +43,8 @@ export const helperNameMap: any = {
   [TO_STRING]: `toString`,
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
-  [CAMELIZE]: `camelize`
+  [CAMELIZE]: `camelize`,
+  [SET_BLOCK_TRACKING]: `setBlockTracking`
 }
 
 export function registerRuntimeHelpers(helpers: any) {
