@@ -117,7 +117,7 @@ export function patchEvent(
 }
 
 function createInvoker(
-  initialValue: any,
+  initialValue: EventValue,
   instance: ComponentInternalInstance | null
 ) {
   const invoker: Invoker = (e: Event) => {

@@ -54,9 +54,9 @@ export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: any[]
+  args?: unknown[]
 ) {
-  let res: any
+  let res
   try {
     res = args ? fn(...args) : fn()
   } catch (err) {
@@ -69,7 +69,7 @@ export function callWithAsyncErrorHandling(
   fn: Function | Function[],
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: any[]
+  args?: unknown[]
 ) {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)

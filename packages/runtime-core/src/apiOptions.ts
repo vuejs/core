@@ -15,7 +15,7 @@ import {
   NOOP
 } from '@vue/shared'
 import { computed } from './apiReactivity'
-import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
+import { watch, WatchOptions, WatchHandler } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -40,7 +40,7 @@ import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
 
-interface ComponentOptionsBase<
+export interface ComponentOptionsBase<
   Props,
   RawBindings,
   D,
@@ -119,12 +119,6 @@ export type ExtractComputedReturns<T extends any> = {
     : ReturnType<T[key]>
 }
 
-export type WatchHandler<T = any> = (
-  val: T,
-  oldVal: T,
-  onCleanup: CleanupRegistrator
-) => any
-
 type ComponentWatchOptions = Record<
   string,
   string | WatchHandler | { handler: WatchHandler } & WatchOptions
@@ -134,7 +128,7 @@ type ComponentInjectOptions =
   | string[]
   | Record<
       string | symbol,
-      string | symbol | { from: string | symbol; default?: any }
+      string | symbol | { from: string | symbol; default?: unknown }
     >
 
 // TODO type inference for these options

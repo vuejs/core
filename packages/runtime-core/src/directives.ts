@@ -65,7 +65,7 @@ function applyDirective(
   props: Record<any, any>,
   instance: ComponentInternalInstance,
   directive: Directive,
-  value?: any,
+  value?: unknown,
   arg?: string,
   modifiers: DirectiveModifiers = EMPTY_OBJ
 ) {

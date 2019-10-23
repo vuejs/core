@@ -3,37 +3,39 @@ import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
 import { ComputedRef } from './computed'
+import { CollectionTypes } from './collectionHandlers'
 
 export interface Ref<T = any> {
   _isRef: true
   value: UnwrapRef<T>
 }
 
-const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
+const convert = <T extends unknown>(val: T): T =>
+  isObject(val) ? reactive(val) : val
 
 export function ref<T extends Ref>(raw: T): T
 export function ref<T>(raw: T): Ref<T>
-export function ref(raw: any) {
+export function ref(raw: unknown) {
   if (isRef(raw)) {
     return raw
   }
   raw = convert(raw)
-  const v = {
+  const r = {
     _isRef: true,
     get value() {
-      track(v, OperationTypes.GET, '')
+      track(r, OperationTypes.GET, '')
       return raw
     },
     set value(newVal) {
       raw = convert(newVal)
-      trigger(v, OperationTypes.SET, '')
+      trigger(r, OperationTypes.SET, '')
     }
   }
-  return v as Ref
+  return r as Ref
 }
 
-export function isRef(v: any): v is Ref {
-  return v ? v._isRef === true : false
+export function isRef(r: any): r is Ref {
+  return r ? r._isRef === true : false
 }
 
 export function toRefs<T extends object>(
@@ -61,13 +63,6 @@ function toProxyRef<T extends object, K extends keyof T>(
   }
 }
 
-type BailTypes =
-  | Function
-  | Map<any, any>
-  | Set<any>
-  | WeakMap<any, any>
-  | WeakSet<any>
-
 // Recursively unwraps nested value bindings.
 export type UnwrapRef<T> = {
   cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
@@ -80,6 +75,6 @@ export type UnwrapRef<T> = {
     ? 'ref'
     : T extends Array<any>
       ? 'array'
-      : T extends BailTypes
+      : T extends Function | CollectionTypes
         ? 'ref' // bail out on types that shouldn't be unwrapped
         : T extends object ? 'object' : 'ref']

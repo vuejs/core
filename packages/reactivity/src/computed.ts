@@ -24,7 +24,7 @@ export function computed<T>(
 ): WritableComputedRef<T>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
-): any {
+) {
   const isReadonly = isFunction(getterOrOptions)
   const getter = isReadonly
     ? (getterOrOptions as ComputedGetter<T>)

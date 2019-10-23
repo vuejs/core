@@ -16,7 +16,7 @@ function injectHook(
   target: ComponentInternalInstance | null
 ) {
   if (target) {
-    ;(target[type] || (target[type] = [])).push((...args: any[]) => {
+    ;(target[type] || (target[type] = [])).push((...args: unknown[]) => {
       if (target.isUnmounted) {
         return
       }
