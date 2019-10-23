@@ -7,7 +7,7 @@ import { isObject, capitalize, hasOwn } from '@vue/shared'
 const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
 const toReadonly = (value: any) => (isObject(value) ? readonly(value) : value)
 
-function isNaN(value: any, oldValue: any): boolean {
+function notNaN(value: any, oldValue: any): boolean {
   return value === value || oldValue === oldValue
 }
 
@@ -65,13 +65,13 @@ function set(this: any, key: any, value: any) {
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else if (isNaN(value, oldValue)) {
+      } else if (notNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key)
-      } else if (isNaN(value, oldValue)) {
+      } else if (notNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key)
       }
     }

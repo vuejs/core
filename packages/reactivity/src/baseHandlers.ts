@@ -11,7 +11,7 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-function isNaN(value: any, oldValue: any): boolean {
+function notNaN(value: any, oldValue: any): boolean {
   return value === value || oldValue === oldValue
 }
 
@@ -56,13 +56,13 @@ function set(
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else if (value !== oldValue && isNaN(value, oldValue)) {
+      } else if (value !== oldValue && notNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key)
-      } else if (value !== oldValue && isNaN(value, oldValue)) {
+      } else if (value !== oldValue && notNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key)
       }
     }
