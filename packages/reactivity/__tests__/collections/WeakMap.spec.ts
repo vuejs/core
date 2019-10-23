@@ -107,5 +107,15 @@ describe('reactivity/collections', () => {
       observed.get(key).a = 2
       expect(dummy).toBe(2)
     })
+
+    it('should not be trigger when the value and the old value both are NaN', () => {
+      const map = new WeakMap()
+      const key = {}
+      map.set(key, NaN)
+      const mapSpy = jest.fn(() => map.get(key))
+      effect(mapSpy)
+      map.set(key, NaN)
+      expect(mapSpy).toHaveBeenCalledTimes(1)
+    })
   })
 })

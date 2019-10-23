@@ -7,7 +7,14 @@ import {
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  isObject,
+  isArray,
+  isFunction,
+  isString,
+  hasChanged
+} from '@vue/shared'
 import { recordEffect } from './apiReactivity'
 import {
   currentInstance,
@@ -144,7 +151,7 @@ function doWatch(
           return
         }
         const newValue = runner()
-        if (deep || newValue !== oldValue) {
+        if (deep || hasChanged(newValue, oldValue)) {
           // cleanup before running cb again
           if (cleanup) {
             cleanup()

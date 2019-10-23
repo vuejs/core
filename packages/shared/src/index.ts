@@ -67,3 +67,7 @@ export const hyphenate = (str: string): string => {
 export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
+
+// compare whether a value has changed, accounting for NaN.
+export const hasChanged = (value: any, oldValue: any): boolean =>
+  value !== oldValue && (value === value || oldValue === oldValue)

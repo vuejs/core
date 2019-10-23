@@ -2,7 +2,7 @@ import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { LOCKED } from './lock'
-import { isObject, capitalize, hasOwn } from '@vue/shared'
+import { isObject, capitalize, hasOwn, hasChanged } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -73,13 +73,13 @@ function set(this: MapTypes, key: unknown, value: unknown) {
     const extraInfo = { oldValue, newValue: value }
     if (!hadKey) {
       trigger(target, OperationTypes.ADD, key, extraInfo)
-    } else if (value !== oldValue) {
+    } else if (hasChanged(value, oldValue)) {
       trigger(target, OperationTypes.SET, key, extraInfo)
     }
   } else {
     if (!hadKey) {
       trigger(target, OperationTypes.ADD, key)
-    } else if (value !== oldValue) {
+    } else if (hasChanged(value, oldValue)) {
       trigger(target, OperationTypes.SET, key)
     }
   }

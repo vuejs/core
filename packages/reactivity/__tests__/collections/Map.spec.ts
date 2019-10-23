@@ -311,5 +311,13 @@ describe('reactivity/collections', () => {
       map.get(key)!.foo++
       expect(dummy).toBe(2)
     })
+
+    it('should not be trigger when the value and the old value both are NaN', () => {
+      const map = reactive(new Map([['foo', NaN]]))
+      const mapSpy = jest.fn(() => map.get('foo'))
+      effect(mapSpy)
+      map.set('foo', NaN)
+      expect(mapSpy).toHaveBeenCalledTimes(1)
+    })
   })
 })

@@ -2,7 +2,7 @@ import { reactive, readonly, toRaw } from './reactive'
 import { OperationTypes } from './operations'
 import { track, trigger } from './effect'
 import { LOCKED } from './lock'
-import { isObject, hasOwn, isSymbol } from '@vue/shared'
+import { isObject, hasOwn, isSymbol, hasChanged } from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -52,13 +52,13 @@ function set(
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else if (value !== oldValue) {
+      } else if (hasChanged(value, oldValue)) {
         trigger(target, OperationTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key)
-      } else if (value !== oldValue) {
+      } else if (hasChanged(value, oldValue)) {
         trigger(target, OperationTypes.SET, key)
       }
     }
