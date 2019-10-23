@@ -40,7 +40,7 @@ export function renderComponentRoot(
               slots,
               emit
             })
-          : render(props, null as any /* we know it doesn't it */)
+          : render(props, null as any /* we know it doesn't need it */)
       )
     }
   } catch (err) {
