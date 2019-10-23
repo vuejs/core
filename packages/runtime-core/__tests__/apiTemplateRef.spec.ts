@@ -56,6 +56,29 @@ describe('api: template refs', () => {
     expect(barEl.value).toBe(root.children[0])
   })
 
+  it('string ref unmount', async () => {
+    const root = nodeOps.createElement('div')
+    const el = ref(null)
+    const toggle = ref(true)
+
+    const Comp = {
+      setup() {
+        return {
+          refKey: el
+        }
+      },
+      render() {
+        return toggle.value ? h('div', { ref: 'refKey' }) : null
+      }
+    }
+    render(h(Comp), root)
+    expect(el.value).toBe(root.children[0])
+
+    toggle.value = false
+    await nextTick()
+    expect(el.value).toBe(null)
+  })
+
   it('function ref mount', () => {
     const root = nodeOps.createElement('div')
     const fn = jest.fn()
@@ -83,29 +106,6 @@ describe('api: template refs', () => {
     expect(fn1.mock.calls).toHaveLength(1)
     expect(fn2.mock.calls).toHaveLength(1)
     expect(fn2.mock.calls[0][0]).toBe(root.children[0])
-  })
-
-  it('string ref unmount', async () => {
-    const root = nodeOps.createElement('div')
-    const el = ref(null)
-    const toggle = ref(true)
-
-    const Comp = {
-      setup() {
-        return {
-          refKey: el
-        }
-      },
-      render() {
-        return toggle.value ? h('div', { ref: 'refKey' }) : null
-      }
-    }
-    render(h(Comp), root)
-    expect(el.value).toBe(root.children[0])
-
-    toggle.value = false
-    await nextTick()
-    expect(el.value).toBe(null)
   })
 
   it('render function ref mount', () => {
