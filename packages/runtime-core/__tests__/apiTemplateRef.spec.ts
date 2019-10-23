@@ -108,6 +108,21 @@ describe('api: template refs', () => {
     expect(fn2.mock.calls[0][0]).toBe(root.children[0])
   })
 
+  it('function ref unmount', async () => {
+    const root = nodeOps.createElement('div')
+    const fn = jest.fn()
+    const toggle = ref(true)
+
+    const Comp = createComponent(() => () =>
+      toggle.value ? h('div', { ref: fn }) : null
+    )
+    render(h(Comp), root)
+    expect(fn.mock.calls[0][0]).toBe(root.children[0])
+    toggle.value = false
+    await nextTick()
+    expect(fn.mock.calls[1][0]).toBe(null)
+  })
+
   it('render function ref mount', () => {
     const root = nodeOps.createElement('div')
     const el = ref(null)
