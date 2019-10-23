@@ -7,6 +7,10 @@ import { isObject, capitalize, hasOwn } from '@vue/shared'
 const toReactive = (value: any) => (isObject(value) ? reactive(value) : value)
 const toReadonly = (value: any) => (isObject(value) ? readonly(value) : value)
 
+function isNaN(value: any, oldValue: any): boolean {
+  return value === value || oldValue === oldValue
+}
+
 function get(target: any, key: any, wrap: (t: any) => any): any {
   target = toRaw(target)
   key = toRaw(key)
@@ -61,13 +65,13 @@ function set(this: any, key: any, value: any) {
       const extraInfo = { oldValue, newValue: value }
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key, extraInfo)
-      } else {
+      } else if (isNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, OperationTypes.ADD, key)
-      } else {
+      } else if (isNaN(value, oldValue)) {
         trigger(target, OperationTypes.SET, key)
       }
     }

@@ -12,7 +12,7 @@ const builtInSymbols = new Set(
 )
 
 function isNaN(value: any, oldValue: any): boolean {
-  return value === value && oldValue === oldValue
+  return value === value || oldValue === oldValue
 }
 
 function createGetter(isReadonly: boolean) {
