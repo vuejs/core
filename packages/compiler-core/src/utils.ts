@@ -164,7 +164,7 @@ export function findProp(
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (dynamicOnly) continue
-      if (p.name === name && p.value && !p.value.isEmpty) {
+      if (p.name === name && p.value) {
         return p
       }
     } else if (
@@ -246,10 +246,6 @@ export function toValidAssetId(
   type: 'component' | 'directive'
 ): string {
   return `_${type}_${name.replace(/[^\w]/g, '_')}`
-}
-
-export function isEmptyExpression(node: ExpressionNode) {
-  return node.type === NodeTypes.SIMPLE_EXPRESSION && !node.content.trim()
 }
 
 // Check if a node contains expressions that reference current context scope ids
