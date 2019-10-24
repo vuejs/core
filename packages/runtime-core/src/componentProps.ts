@@ -128,12 +128,13 @@ export function resolveProps(
     for (const key in rawProps) {
       // key, ref are reserved
       if (isReservedProp(key)) continue
+      const camelKey = __RUNTIME_COMPILE__ ? camelize(key) : key
       // any non-declared data are put into a separate `attrs` object
       // for spreading
-      if (hasDeclaredProps && !hasOwn(options, key)) {
-        ;(attrs || (attrs = {}))[key] = rawProps[key]
+      if (hasDeclaredProps && !hasOwn(options, camelKey)) {
+        ;(attrs || (attrs = {}))[camelKey] = rawProps[key]
       } else {
-        setProp(key, rawProps[key])
+        setProp(camelKey, rawProps[key])
       }
     }
   }
@@ -163,7 +164,11 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__ && rawProps) {
-        validateProp(key, toRaw(rawProps[key]), opt, isAbsent)
+        let rawValue = rawProps[key]
+        if (__RUNTIME_COMPILE__ && !(key in rawProps)) {
+          rawValue = rawProps[hyphenate(key)]
+        }
+        validateProp(key, toRaw(rawValue), opt, isAbsent)
       }
     }
   } else {
