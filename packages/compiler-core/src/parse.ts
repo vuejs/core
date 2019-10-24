@@ -218,15 +218,16 @@ function parseChildren(
           const next = nodes[i + 1]
           // If:
           // - the whitespace is the first or last node, or:
-          // - the whitespace contains newline AND is between two element or comments
+          // - the whitespace is adjacent to a comment, or:
+          // - the whitespace is between two elements AND contains newline
           // Then the whitespace is ignored.
           if (
             !prev ||
             !next ||
-            ((prev.type === NodeTypes.ELEMENT ||
-              prev.type === NodeTypes.COMMENT) &&
-              (next.type === NodeTypes.ELEMENT ||
-                next.type === NodeTypes.COMMENT) &&
+            prev.type === NodeTypes.COMMENT ||
+            next.type === NodeTypes.COMMENT ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
               /[\r\n]/.test(node.content))
           ) {
             removedWhitespace = true

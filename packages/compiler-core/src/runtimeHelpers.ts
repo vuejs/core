@@ -1,11 +1,11 @@
 export const FRAGMENT = Symbol(__DEV__ ? `Fragment` : ``)
 export const PORTAL = Symbol(__DEV__ ? `Portal` : ``)
-export const COMMENT = Symbol(__DEV__ ? `Comment` : ``)
-export const TEXT = Symbol(__DEV__ ? `Text` : ``)
 export const SUSPENSE = Symbol(__DEV__ ? `Suspense` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
+export const CREATE_COMMENT = Symbol(__DEV__ ? `createCommentVNode` : ``)
+export const CREATE_TEXT = Symbol(__DEV__ ? `createTextVNode` : ``)
 export const RESOLVE_COMPONENT = Symbol(__DEV__ ? `resolveComponent` : ``)
 export const RESOLVE_DYNAMIC_COMPONENT = Symbol(
   __DEV__ ? `resolveDynamicComponent` : ``
@@ -27,12 +27,12 @@ export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
 export const helperNameMap: any = {
   [FRAGMENT]: `Fragment`,
   [PORTAL]: `Portal`,
-  [COMMENT]: `Comment`,
-  [TEXT]: `Text`,
   [SUSPENSE]: `Suspense`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,
+  [CREATE_COMMENT]: `createCommentVNode`,
+  [CREATE_TEXT]: `createTextVNode`,
   [RESOLVE_COMPONENT]: `resolveComponent`,
   [RESOLVE_DYNAMIC_COMPONENT]: `resolveDynamicComponent`,
   [RESOLVE_DIRECTIVE]: `resolveDirective`,

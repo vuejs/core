@@ -9,13 +9,12 @@ import {
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {
   TO_STRING,
-  CREATE_VNODE,
-  COMMENT,
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_SLOT,
-  WITH_DIRECTIVES
+  WITH_DIRECTIVES,
+  CREATE_COMMENT
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
@@ -232,8 +231,7 @@ describe('compiler: transform', () => {
   test('should inject createVNode and Comment for comments', () => {
     const ast = parse(`<!--foo-->`)
     transform(ast, {})
-    expect(ast.helpers).toContain(CREATE_VNODE)
-    expect(ast.helpers).toContain(COMMENT)
+    expect(ast.helpers).toContain(CREATE_COMMENT)
   })
 
   describe('root codegenNode', () => {

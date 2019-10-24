@@ -1612,6 +1612,14 @@ foo
       expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
     })
 
+    it('should remove whitespaces adjacent to comments', () => {
+      const ast = parse(`<div/> \n <!--foo--> <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
+    })
+
     it('should remove whitespaces w/ newline between comments and elements', () => {
       const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(3)

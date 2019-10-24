@@ -90,7 +90,7 @@ exports[`compiler: codegen comment 1`] = `
 "
 return function render() {
   with (this) {
-    return _createVNode(_Comment, null, \\"foo\\")
+    return _createCommentVNode(\\"foo\\")
   }
 }"
 `;

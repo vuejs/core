@@ -30,10 +30,10 @@ import { processExpression } from './transformExpression'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  COMMENT,
   FRAGMENT,
   WITH_DIRECTIVES,
-  CREATE_VNODE
+  CREATE_VNODE,
+  CREATE_COMMENT
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 
@@ -152,9 +152,7 @@ function createCodegenNodeForBranch(
     return createConditionalExpression(
       branch.condition,
       createChildrenCodegenNode(branch, index, context),
-      createCallExpression(context.helper(CREATE_BLOCK), [
-        context.helper(COMMENT)
-      ])
+      createCallExpression(context.helper(CREATE_COMMENT))
     ) as IfConditionalExpression
   } else {
     return createChildrenCodegenNode(branch, index, context) as BlockCodegenNode

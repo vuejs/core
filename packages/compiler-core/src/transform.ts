@@ -21,12 +21,11 @@ import { isString, isArray } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import {
   TO_STRING,
-  COMMENT,
-  CREATE_VNODE,
   FRAGMENT,
   helperNameMap,
   WITH_DIRECTIVES,
-  CREATE_BLOCK
+  CREATE_BLOCK,
+  CREATE_COMMENT
 } from './runtimeHelpers'
 import { isVSlot, createBlockExpression } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
@@ -346,8 +345,7 @@ export function traverseNode(
     case NodeTypes.COMMENT:
       // inject import for the Comment symbol, which is needed for creating
       // comment nodes with `createVNode`
-      context.helper(CREATE_VNODE)
-      context.helper(COMMENT)
+      context.helper(CREATE_COMMENT)
       break
     case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper

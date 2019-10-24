@@ -5,13 +5,13 @@ exports[`compiler: integration tests function mode 1`] = `
 
 return function render() {
   with (this) {
-    const { toString: _toString, openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, Comment: _Comment, Fragment: _Fragment, renderList: _renderList, Text: _Text } = _Vue
+    const { toString: _toString, openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment, renderList: _renderList, createTextVNode: _createTextVNode } = _Vue
     
     return (_openBlock(), _createBlock(\\"div\\", {
       id: \\"foo\\",
       class: bar.baz
     }, [
-      _createVNode(_Text, null, _toString(world.burn()) + \\" \\", 1 /* TEXT */),
+      _createTextVNode(_toString(world.burn()) + \\" \\", 1 /* TEXT */),
       (_openBlock(), ok
         ? _createBlock(\\"div\\", { key: 0 }, \\"yes\\")
         : _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
@@ -26,7 +26,7 @@ return function render() {
 `;
 
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
-"const { toString, openBlock, createVNode, createBlock, Comment, Fragment, renderList, Text } = Vue
+"const { toString, openBlock, createVNode, createBlock, createCommentVNode, Fragment, renderList, createTextVNode } = Vue
 
 return function render() {
   const _ctx = this
@@ -34,7 +34,7 @@ return function render() {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
-    createVNode(Text, null, toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
+    createTextVNode(toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),
@@ -48,7 +48,7 @@ return function render() {
 `;
 
 exports[`compiler: integration tests module mode 1`] = `
-"import { toString, openBlock, createVNode, createBlock, Comment, Fragment, renderList, Text } from \\"vue\\"
+"import { toString, openBlock, createVNode, createBlock, createCommentVNode, Fragment, renderList, createTextVNode } from \\"vue\\"
 
 export default function render() {
   const _ctx = this
@@ -56,7 +56,7 @@ export default function render() {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
-    createVNode(Text, null, toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
+    createTextVNode(toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),

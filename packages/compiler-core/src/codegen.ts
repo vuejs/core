@@ -29,13 +29,13 @@ import {
 } from './utils'
 import { isString, isArray, isSymbol } from '@vue/shared'
 import {
+  helperNameMap,
   TO_STRING,
   CREATE_VNODE,
-  COMMENT,
-  helperNameMap,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
-  SET_BLOCK_TRACKING
+  SET_BLOCK_TRACKING,
+  CREATE_COMMENT
 } from './runtimeHelpers'
 
 type CodegenNode = TemplateChildNode | JSChildNode
@@ -212,9 +212,17 @@ export function generate(
         // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
         if (ast.hoists.length) {
-          push(`const _${helperNameMap[CREATE_VNODE]} = Vue.createVNode\n`)
-          if (ast.helpers.includes(COMMENT)) {
-            push(`const _${helperNameMap[COMMENT]} = Vue.Comment\n`)
+          push(
+            `const _${helperNameMap[CREATE_VNODE]} = Vue.${
+              helperNameMap[CREATE_VNODE]
+            }\n`
+          )
+          if (ast.helpers.includes(CREATE_COMMENT)) {
+            push(
+              `const _${helperNameMap[CREATE_COMMENT]} = Vue.${
+                helperNameMap[CREATE_COMMENT]
+              }\n`
+            )
           }
         }
       }
@@ -502,12 +510,7 @@ function genExpressionAsPropertyKey(
 function genComment(node: CommentNode, context: CodegenContext) {
   if (__DEV__) {
     const { push, helper } = context
-    push(
-      `${helper(CREATE_VNODE)}(${helper(COMMENT)}, null, ${JSON.stringify(
-        node.content
-      )})`,
-      node
-    )
+    push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
   }
 }
 

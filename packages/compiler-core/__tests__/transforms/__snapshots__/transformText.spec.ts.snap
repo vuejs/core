@@ -17,11 +17,11 @@ exports[`compiler: transform text consecutive text between elements 1`] = `
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, Text: _Text, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
-      _createVNode(_Text, null, _toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
       _createVNode(\\"div\\")
     ]))
   }
@@ -33,13 +33,13 @@ exports[`compiler: transform text consecutive text mixed with elements 1`] = `
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, Text: _Text, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
-      _createVNode(_Text, null, _toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
       _createVNode(\\"div\\"),
-      _createVNode(_Text, null, \\"hello\\"),
+      _createTextVNode(\\"hello\\"),
       _createVNode(\\"div\\")
     ]))
   }
@@ -63,11 +63,11 @@ exports[`compiler: transform text text between elements (static) 1`] = `
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, Text: _Text, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
-      _createVNode(_Text, null, \\"hello\\"),
+      _createTextVNode(\\"hello\\"),
       _createVNode(\\"div\\")
     ]))
   }

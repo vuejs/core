@@ -5,9 +5,10 @@ import {
   TextNode,
   InterpolationNode,
   CompoundExpressionNode,
-  createCallExpression
+  createCallExpression,
+  CallExpression
 } from '../ast'
-import { TEXT, CREATE_VNODE } from '../runtimeHelpers'
+import { CREATE_TEXT } from '../runtimeHelpers'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 const isText = (
@@ -54,11 +55,17 @@ export const transformText: NodeTransform = (node, context) => {
 
       if (hasText && children.length > 1) {
         // when an element has mixed text/element children, convert text nodes
-        // into createVNode(Text) calls.
+        // into createTextVNode(text) calls.
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
           if (isText(child) || child.type === NodeTypes.COMPOUND_EXPRESSION) {
-            const callArgs = [context.helper(TEXT), `null`, child]
+            const callArgs: CallExpression['arguments'] = []
+            // createTextVNode defaults to single whitespace, so if it is a
+            // single space the code could be an empty call to save bytes.
+            if (child.type !== NodeTypes.TEXT || child.content !== ' ') {
+              callArgs.push(child)
+            }
+            // mark dynamic text with flag so it gets patched inside a block
             if (child.type !== NodeTypes.TEXT) {
               callArgs.push(
                 `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
@@ -69,7 +76,7 @@ export const transformText: NodeTransform = (node, context) => {
               content: child,
               loc: child.loc,
               codegenNode: createCallExpression(
-                context.helper(CREATE_VNODE),
+                context.helper(CREATE_TEXT),
                 callArgs
               )
             }

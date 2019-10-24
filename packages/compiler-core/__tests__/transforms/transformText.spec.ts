@@ -8,7 +8,7 @@ import {
 import { transformText } from '../../src/transforms/transformText'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformElement } from '../../src/transforms/transformElement'
-import { CREATE_VNODE, TEXT } from '../../src/runtimeHelpers'
+import { CREATE_TEXT } from '../../src/runtimeHelpers'
 import { genFlagText } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 
@@ -62,10 +62,8 @@ describe('compiler: transform text', () => {
       type: NodeTypes.TEXT_CALL,
       codegenNode: {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: CREATE_VNODE,
+        callee: CREATE_TEXT,
         arguments: [
-          TEXT,
-          `null`,
           {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
@@ -93,10 +91,8 @@ describe('compiler: transform text', () => {
       type: NodeTypes.TEXT_CALL,
       codegenNode: {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: CREATE_VNODE,
+        callee: CREATE_TEXT,
         arguments: [
-          TEXT,
-          `null`,
           {
             type: NodeTypes.TEXT,
             content: `hello`
@@ -119,10 +115,8 @@ describe('compiler: transform text', () => {
       type: NodeTypes.TEXT_CALL,
       codegenNode: {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: CREATE_VNODE,
+        callee: CREATE_TEXT,
         arguments: [
-          TEXT,
-          `null`,
           {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
@@ -142,10 +136,8 @@ describe('compiler: transform text', () => {
       type: NodeTypes.TEXT_CALL,
       codegenNode: {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: CREATE_VNODE,
+        callee: CREATE_TEXT,
         arguments: [
-          TEXT,
-          `null`,
           {
             type: NodeTypes.TEXT,
             content: `hello`
