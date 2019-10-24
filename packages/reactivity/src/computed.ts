@@ -25,17 +25,20 @@ export function computed<T>(
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
 ) {
-  const isReadonly = isFunction(getterOrOptions)
-  const getter = isReadonly
-    ? (getterOrOptions as ComputedGetter<T>)
-    : (getterOrOptions as WritableComputedOptions<T>).get
-  const setter = isReadonly
-    ? __DEV__
+  let getter: ComputedGetter<T>
+  let setter: ComputedSetter<T>
+
+  if (isFunction(getterOrOptions)) {
+    getter = getterOrOptions
+    setter = __DEV__
       ? () => {
           console.warn('Write operation failed: computed value is readonly')
         }
       : NOOP
-    : (getterOrOptions as WritableComputedOptions<T>).set
+  } else {
+    getter = getterOrOptions.get
+    setter = getterOrOptions.set
+  }
 
   let dirty = true
   let value: T
