@@ -197,21 +197,52 @@ function parseChildren(
 
     if (Array.isArray(node)) {
       for (let i = 0; i < node.length; i++) {
-        pushNode(context, nodes, node[i])
+        pushNode(nodes, node[i])
       }
     } else {
-      pushNode(context, nodes, node)
+      pushNode(nodes, node)
     }
   }
 
-  return nodes
+  // Whitespace management for more efficient output
+  // (same as v2 whitespance: 'condense')
+  let removedWhitespace = false
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    if (node.type === NodeTypes.TEXT) {
+      if (!node.content.trim()) {
+        const prev = nodes[i - 1]
+        const next = nodes[i + 1]
+        // If:
+        // - the whitespace is the first or last node, or:
+        // - the whitespace contains newline AND is between two element or comments
+        // Then the whitespace is ignored.
+        if (
+          !prev ||
+          !next ||
+          ((prev.type === NodeTypes.ELEMENT ||
+            prev.type === NodeTypes.COMMENT) &&
+            (next.type === NodeTypes.ELEMENT ||
+              next.type === NodeTypes.COMMENT) &&
+            /[\r\n]/.test(node.content))
+        ) {
+          removedWhitespace = true
+          nodes[i] = null as any
+        } else {
+          // Otherwise, condensed consecutive whitespace inside the text down to
+          // a single space
+          node.content = ' '
+        }
+      } else {
+        node.content = node.content.replace(/\s+/g, ' ')
+      }
+    }
+  }
+
+  return removedWhitespace ? nodes.filter(node => node !== null) : nodes
 }
 
-function pushNode(
-  context: ParserContext,
-  nodes: TemplateChildNode[],
-  node: TemplateChildNode
-): void {
+function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
   // ignore comments in production
   /* istanbul ignore next */
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
@@ -219,20 +250,15 @@ function pushNode(
   }
 
   if (node.type === NodeTypes.TEXT) {
-    if (node.isEmpty) {
-      return
-    }
-
+    const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
     // consecutive. This happens for cases like "a < b".
-    const prev = last(nodes)
     if (
       prev &&
       prev.type === NodeTypes.TEXT &&
       prev.loc.end.offset === node.loc.start.offset
     ) {
       prev.content += node.content
-      prev.isEmpty = prev.content.trim().length === 0
       prev.loc.end = node.loc.end
       prev.loc.source += node.loc.source
       return
@@ -624,7 +650,6 @@ function parseAttribute(
     value: value && {
       type: NodeTypes.TEXT,
       content: value.content,
-      isEmpty: value.content.trim().length === 0,
       loc: value.loc
     },
     loc
@@ -729,6 +754,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
   const [open] = context.options.delimiters
+  // TODO could probably use some perf optimization
   const endIndex = Math.min(
     ...[
       context.source.indexOf('<', 1),
@@ -745,8 +771,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   return {
     type: NodeTypes.TEXT,
     content,
-    loc: getSelection(context, start),
-    isEmpty: !content.trim()
+    loc: getSelection(context, start)
   }
 }
 

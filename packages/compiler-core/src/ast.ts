@@ -160,7 +160,6 @@ export interface SuspenseNode extends BaseElementNode {
 export interface TextNode extends Node {
   type: NodeTypes.TEXT
   content: string
-  isEmpty: boolean
 }
 
 export interface CommentNode extends Node {

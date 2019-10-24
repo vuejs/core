@@ -173,7 +173,12 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
-const _hoisted_1 = _createVNode(\\"span\\", null, [\\"foo \\", _toString(1), _toString(true)])
+const _hoisted_1 = _createVNode(\\"span\\", null, [
+  \\"foo \\",
+  _toString(1),
+  \\" \\",
+  _toString(true)
+])
 
 return function render() {
   with (this) {

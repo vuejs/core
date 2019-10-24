@@ -25,7 +25,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some<div>text</div>and<!--comment-->',
-        isEmpty: false,
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 46, line: 1, column: 47 },
@@ -42,7 +41,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&',
-        isEmpty: false,
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 15, line: 1, column: 16 },
@@ -62,7 +60,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some<div>text</div>and<!--comment-->',
-        isEmpty: false,
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 43, line: 1, column: 44 },
@@ -79,7 +76,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&amp;',
-        isEmpty: false,
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 12, line: 1, column: 13 },
@@ -95,7 +91,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
-        isEmpty: false,
         loc: {
           start: { offset: 14, line: 1, column: 15 },
           end: { offset: 23, line: 1, column: 24 },
@@ -196,7 +191,6 @@ describe('DOM parser', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'hello</textarea</textarea0>',
-        isEmpty: false,
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 37, line: 1, column: 38 },

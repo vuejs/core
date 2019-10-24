@@ -11,7 +11,7 @@ return function render() {
       id: \\"foo\\",
       class: bar.baz
     }, [
-      _createVNode(_Text, null, _toString(world.burn()), 1 /* TEXT */),
+      _createVNode(_Text, null, _toString(world.burn()) + \\" \\", 1 /* TEXT */),
       (_openBlock(), ok
         ? _createBlock(\\"div\\", { key: 0 }, \\"yes\\")
         : _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
@@ -34,7 +34,7 @@ return function render() {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
-    createVNode(Text, null, toString(_ctx.world.burn()), 1 /* TEXT */),
+    createVNode(Text, null, toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),
@@ -56,7 +56,7 @@ export default function render() {
     id: \\"foo\\",
     class: _ctx.bar.baz
   }, [
-    createVNode(Text, null, toString(_ctx.world.burn()), 1 /* TEXT */),
+    createVNode(Text, null, toString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
     (openBlock(), (_ctx.ok)
       ? createBlock(\\"div\\", { key: 0 }, \\"yes\\")
       : createBlock(Fragment, { key: 1 }, [\\"no\\"])),

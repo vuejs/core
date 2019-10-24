@@ -245,7 +245,6 @@ Object {
           "type": 6,
           "value": Object {
             "content": "c",
-            "isEmpty": false,
             "loc": Object {
               "end": Object {
                 "column": 23,
@@ -331,7 +330,6 @@ Object {
           "type": 6,
           "value": Object {
             "content": "&#a;",
-            "isEmpty": false,
             "loc": Object {
               "end": Object {
                 "column": 22,
@@ -417,7 +415,6 @@ Object {
           "type": 6,
           "value": Object {
             "content": "ÿ",
-            "isEmpty": false,
             "loc": Object {
               "end": Object {
                 "column": 24,
@@ -503,7 +500,6 @@ Object {
           "type": 6,
           "value": Object {
             "content": "&#xg;",
-            "isEmpty": false,
             "loc": Object {
               "end": Object {
                 "column": 23,
@@ -556,7 +552,6 @@ Object {
       "children": Array [
         Object {
           "content": "c",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 16,
@@ -625,7 +620,6 @@ Object {
       "children": Array [
         Object {
           "content": "&#a;",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 15,
@@ -694,7 +688,6 @@ Object {
       "children": Array [
         Object {
           "content": "ÿ",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 17,
@@ -763,7 +756,6 @@ Object {
       "children": Array [
         Object {
           "content": "&#xg;",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 16,
@@ -902,7 +894,6 @@ Object {
           "children": Array [
             Object {
               "content": "cdata",
-              "isEmpty": false,
               "loc": Object {
                 "end": Object {
                   "column": 30,
@@ -993,7 +984,6 @@ Object {
       "children": Array [
         Object {
           "content": "�",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 21,
@@ -1062,7 +1052,6 @@ Object {
       "children": Array [
         Object {
           "content": "",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 18,
@@ -1131,7 +1120,6 @@ Object {
       "children": Array [
         Object {
           "content": "",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 17,
@@ -1235,7 +1223,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 21,
@@ -1270,7 +1257,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -1493,7 +1479,6 @@ Object {
       "children": Array [
         Object {
           "content": "<",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 12,
@@ -1562,7 +1547,6 @@ Object {
       "children": Array [
         Object {
           "content": "</",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 13,
@@ -1707,7 +1691,6 @@ Object {
           "children": Array [
             Object {
               "content": "cdata",
-              "isEmpty": false,
               "loc": Object {
                 "end": Object {
                   "column": 30,
@@ -2138,7 +2121,6 @@ Object {
       "children": Array [
         Object {
           "content": "<!--console.log('hello')",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 33,
@@ -2207,7 +2189,6 @@ Object {
       "children": Array [
         Object {
           "content": "console.log('hello')",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 29,
@@ -2738,7 +2719,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -2848,7 +2828,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -2958,7 +2937,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -3068,7 +3046,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -3178,7 +3155,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -3288,7 +3264,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -3398,7 +3373,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 22,
@@ -3508,7 +3482,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 22,
@@ -3967,7 +3940,6 @@ Object {
       "children": Array [
         Object {
           "content": "<�>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 14,
@@ -4122,7 +4094,6 @@ Object {
       "children": Array [
         Object {
           "content": "a < b",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 16,
@@ -4191,7 +4162,6 @@ Object {
       "children": Array [
         Object {
           "content": "a ",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 13,
@@ -4312,7 +4282,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "/",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 21,
@@ -4623,7 +4592,6 @@ Object {
       "children": Array [
         Object {
           "content": "(",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 15,
@@ -4692,7 +4660,6 @@ Object {
       "children": Array [
         Object {
           "content": "@",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 16,
@@ -4761,7 +4728,6 @@ Object {
       "children": Array [
         Object {
           "content": "&",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 15,
@@ -4866,7 +4832,6 @@ class=\\"bar\\"></div>",
               "type": 6,
               "value": Object {
                 "content": "foo",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -4901,7 +4866,6 @@ class=\\"bar\\"></div>",
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 12,
@@ -5013,7 +4977,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "foo",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -5048,7 +5011,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 35,
@@ -5395,7 +5357,6 @@ Object {
       "children": Array [
         Object {
           "content": "🿿",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 20,
@@ -5464,7 +5425,6 @@ Object {
       "children": Array [
         Object {
           "content": "￾",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 19,
@@ -5533,7 +5493,6 @@ Object {
       "children": Array [
         Object {
           "content": "�",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 18,
@@ -5602,7 +5561,6 @@ Object {
       "children": Array [
         Object {
           "content": "�",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 19,
@@ -5706,7 +5664,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -5816,7 +5773,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -5926,7 +5882,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -6036,7 +5991,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar\\"",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6146,7 +6100,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar'",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6256,7 +6209,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar<div",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -6366,7 +6318,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar=baz",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -6476,7 +6427,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar\`",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6679,7 +6629,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6933,7 +6882,6 @@ Object {
       "children": Array [
         Object {
           "content": "&unknown;",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 20,
@@ -7002,7 +6950,6 @@ Object {
       "children": Array [
         Object {
           "content": "</div>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 21,
@@ -7325,7 +7272,6 @@ Object {
       "children": Array [
         Object {
           "content": "</div>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 17,
@@ -7647,7 +7593,6 @@ Object {
   "children": Array [
     Object {
       "content": "{{",
-      "isEmpty": false,
       "loc": Object {
         "end": Object {
           "column": 3,
@@ -7692,7 +7637,6 @@ Object {
   "children": Array [
     Object {
       "content": "{{ foo",
-      "isEmpty": false,
       "loc": Object {
         "end": Object {
           "column": 7,
