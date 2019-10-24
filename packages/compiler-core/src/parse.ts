@@ -36,7 +36,6 @@ export interface ParserOptions {
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
-  ignoreSpaces?: boolean
 
   // Map to HTML entities. E.g., `{ "amp;": "&" }`
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
@@ -51,7 +50,6 @@ type MergedParserOptions = Omit<Required<ParserOptions>, 'isNativeTag'> &
 
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
-  ignoreSpaces: true,
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
@@ -219,30 +217,29 @@ function pushNode(
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
     return
   }
-  if (
-    context.options.ignoreSpaces &&
-    node.type === NodeTypes.TEXT &&
-    node.isEmpty
-  ) {
-    return
+
+  if (node.type === NodeTypes.TEXT) {
+    if (node.isEmpty) {
+      return
+    }
+
+    // Merge if both this and the previous node are text and those are
+    // consecutive. This happens for cases like "a < b".
+    const prev = last(nodes)
+    if (
+      prev &&
+      prev.type === NodeTypes.TEXT &&
+      prev.loc.end.offset === node.loc.start.offset
+    ) {
+      prev.content += node.content
+      prev.isEmpty = prev.content.trim().length === 0
+      prev.loc.end = node.loc.end
+      prev.loc.source += node.loc.source
+      return
+    }
   }
 
-  // Merge if both this and the previous node are text and those are consecutive.
-  // This happens on "a < b" or something like.
-  const prev = last(nodes)
-  if (
-    prev &&
-    prev.type === NodeTypes.TEXT &&
-    node.type === NodeTypes.TEXT &&
-    prev.loc.end.offset === node.loc.start.offset
-  ) {
-    prev.content += node.content
-    prev.isEmpty = prev.content.trim().length === 0
-    prev.loc.end = node.loc.end
-    prev.loc.source += node.loc.source
-  } else {
-    nodes.push(node)
-  }
+  nodes.push(node)
 }
 
 function parseCDATA(
