@@ -98,6 +98,15 @@ describe('DOM parser', () => {
         }
       })
     })
+
+    test('<pre> tag should preserve raw whitespace', () => {
+      const rawText = `  \na    b    \n   c`
+      const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
+      expect((ast.children[0] as ElementNode).children[0]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: rawText
+      })
+    })
   })
 
   describe('Interpolation', () => {

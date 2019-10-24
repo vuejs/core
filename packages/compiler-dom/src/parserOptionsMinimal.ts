@@ -15,8 +15,8 @@ export const enum DOMNamespaces {
 
 export const parserOptionsMinimal: ParserOptions = {
   isVoidTag,
-
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
+  isPreTag: tag => tag === 'pre',
 
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {

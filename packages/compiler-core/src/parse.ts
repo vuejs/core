@@ -32,6 +32,7 @@ import { extend } from '@vue/shared'
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
   isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
+  isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
   isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
@@ -53,6 +54,7 @@ export const defaultParserOptions: MergedParserOptions = {
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
+  isPreTag: NO,
   isCustomElement: NO,
   namedCharacterReferences: {
     'gt;': '>',
@@ -207,34 +209,36 @@ function parseChildren(
   // Whitespace management for more efficient output
   // (same as v2 whitespance: 'condense')
   let removedWhitespace = false
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i]
-    if (node.type === NodeTypes.TEXT) {
-      if (!node.content.trim()) {
-        const prev = nodes[i - 1]
-        const next = nodes[i + 1]
-        // If:
-        // - the whitespace is the first or last node, or:
-        // - the whitespace contains newline AND is between two element or comments
-        // Then the whitespace is ignored.
-        if (
-          !prev ||
-          !next ||
-          ((prev.type === NodeTypes.ELEMENT ||
-            prev.type === NodeTypes.COMMENT) &&
-            (next.type === NodeTypes.ELEMENT ||
-              next.type === NodeTypes.COMMENT) &&
-            /[\r\n]/.test(node.content))
-        ) {
-          removedWhitespace = true
-          nodes[i] = null as any
+  if (!parent || !context.options.isPreTag(parent.tag)) {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (node.type === NodeTypes.TEXT) {
+        if (!node.content.trim()) {
+          const prev = nodes[i - 1]
+          const next = nodes[i + 1]
+          // If:
+          // - the whitespace is the first or last node, or:
+          // - the whitespace contains newline AND is between two element or comments
+          // Then the whitespace is ignored.
+          if (
+            !prev ||
+            !next ||
+            ((prev.type === NodeTypes.ELEMENT ||
+              prev.type === NodeTypes.COMMENT) &&
+              (next.type === NodeTypes.ELEMENT ||
+                next.type === NodeTypes.COMMENT) &&
+              /[\r\n]/.test(node.content))
+          ) {
+            removedWhitespace = true
+            nodes[i] = null as any
+          } else {
+            // Otherwise, condensed consecutive whitespace inside the text down to
+            // a single space
+            node.content = ' '
+          }
         } else {
-          // Otherwise, condensed consecutive whitespace inside the text down to
-          // a single space
-          node.content = ' '
+          node.content = node.content.replace(/\s+/g, ' ')
         }
-      } else {
-        node.content = node.content.replace(/\s+/g, ' ')
       }
     }
   }

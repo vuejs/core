@@ -1600,6 +1600,55 @@ foo
     })
   })
 
+  describe('whitespace management', () => {
+    it('should remove whitespaces at start/end inside an element', () => {
+      const ast = parse(`<div>   <span/>    </div>`)
+      expect((ast.children[0] as ElementNode).children.length).toBe(1)
+    })
+
+    it('should remove whitespaces w/ newline between elements', () => {
+      const ast = parse(`<div/> \n <div/> \n <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
+    })
+
+    it('should remove whitespaces w/ newline between comments and elements', () => {
+      const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
+    })
+
+    it('should NOT remove whitespaces w/ newline between interpolations', () => {
+      const ast = parse(`{{ foo }} \n {{ bar }}`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: ' '
+      })
+      expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
+    })
+
+    it('should NOT remove whitespaces w/o newline between elements', () => {
+      const ast = parse(`<div/> <div/> <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should condense consecutive whitespaces in text', () => {
+      const ast = parse(`   foo  \n    bar     baz     `)
+      expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
+    })
+  })
+
   describe('Errors', () => {
     const patterns: {
       [key: string]: Array<{
