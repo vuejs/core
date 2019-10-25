@@ -10,7 +10,7 @@ import {
   isObject,
   isReservedProp,
   hasOwn,
-  toTypeString,
+  toRawType,
   PatchFlags,
   makeMap
 } from '@vue/shared'
@@ -388,10 +388,6 @@ function styleValue(value: unknown, type: string): string {
   } else {
     return `${value}`
   }
-}
-
-function toRawType(value: unknown): string {
-  return toTypeString(value).slice(8, -1)
 }
 
 function isExplicable(type: string): boolean {
