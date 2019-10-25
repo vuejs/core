@@ -124,7 +124,7 @@ export function resolveProps(
   // allow mutation of propsProxy (which is readonly by default)
   unlock()
 
-  if (rawProps != null) {
+  if (isObject(rawProps)) {
     for (const key in rawProps) {
       // key, ref are reserved
       if (isReservedProp(key)) continue

@@ -163,7 +163,7 @@ export function createVNode(
   dynamicProps: string[] | null = null
 ): VNode {
   // class & style normalization.
-  if (props !== null) {
+  if (isObject(props)) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
     if (isReactive(props) || SetupProxySymbol in props) {
       props = extend({}, props)
