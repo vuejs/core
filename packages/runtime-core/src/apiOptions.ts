@@ -321,7 +321,7 @@ export function applyOptions(
   }
   if (watchOptions) {
     for (const key in watchOptions) {
-      createWatch(watchOptions[key], renderContext, ctx, key)
+      createWatcher(watchOptions[key], renderContext, ctx, key)
     }
   }
   if (provideOptions) {
@@ -436,7 +436,7 @@ function applyMixins(
   }
 }
 
-function createWatch(
+function createWatcher(
   raw: ComponentWatchOptionItem,
   renderContext: Data,
   ctx: ComponentPublicInstance,
