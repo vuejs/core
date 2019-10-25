@@ -515,6 +515,16 @@ describe('reactivity/effect', () => {
     expect(childSpy).toHaveBeenCalledTimes(5)
   })
 
+  it('should observe json methods', () => {
+    let dummy = <Record<string, number>>{}
+    const obj = reactive<Record<string, number>>({})
+    effect(() => {
+      dummy = JSON.parse(JSON.stringify(obj))
+    })
+    obj.a = 1
+    expect(dummy.a).toBe(1)
+  })
+
   it('should observe class method invocations', () => {
     class Model {
       count: number
