@@ -74,7 +74,7 @@ describe('api: setup context', () => {
     expect(dummy).toBe(1)
   })
 
-  it('setup props should resolve the correct types from props object', async () => {
+  it.only('setup props should resolve the correct types from props object', async () => {
     const count = ref(0)
     let dummy
 

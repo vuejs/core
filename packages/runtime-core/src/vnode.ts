@@ -229,11 +229,15 @@ export function createVNode(
   return vnode
 }
 
-export function cloneVNode(vnode: VNode): VNode {
+export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
   return {
     _isVNode: true,
     type: vnode.type,
-    props: vnode.props,
+    props: extraProps
+      ? vnode.props
+        ? mergeProps(vnode.props, extraProps)
+        : extraProps
+      : vnode.props,
     key: vnode.key,
     ref: vnode.ref,
     children: vnode.children,

@@ -202,7 +202,7 @@ export function resolveProps(
   instance.attrs = options
     ? __DEV__ && attrs != null
       ? readonly(attrs)
-      : attrs!
+      : attrs || EMPTY_OBJ
     : instance.props
 }
 

@@ -11,7 +11,10 @@ import {
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
-import { currentRenderingInstance } from './componentRenderUtils'
+import {
+  currentRenderingInstance,
+  markAttrsAccessed
+} from './componentRenderUtils'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -109,6 +112,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (key === '$el') {
       return target.vnode.el
     } else if (hasOwn(publicPropertiesMap, key)) {
+      if (__DEV__ && key === '$attrs') {
+        markAttrsAccessed()
+      }
       return target[publicPropertiesMap[key]]
     }
     // methods are only exposed when options are supported

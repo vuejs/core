@@ -37,6 +37,7 @@ export type Data = { [key: string]: unknown }
 export interface FunctionalComponent<P = {}> {
   (props: P, ctx: SetupContext): VNodeChild
   props?: ComponentPropsOptions<P>
+  inheritAttrs?: boolean
   displayName?: string
 }
 
