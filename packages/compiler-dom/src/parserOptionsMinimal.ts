@@ -6,6 +6,12 @@ import {
   NodeTypes
 } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
+import { makeMap } from '@vue/shared'
+
+const isRawTextContainer = /*#__PURE__*/ makeMap(
+  'style,iframe,script,noscript',
+  true
+)
 
 export const enum DOMNamespaces {
   HTML = Namespaces.HTML,
@@ -73,9 +79,7 @@ export const parserOptionsMinimal: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (
-        /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i.test(tag)
-      ) {
+      if (isRawTextContainer(tag)) {
         return TextModes.RAWTEXT
       }
     }
