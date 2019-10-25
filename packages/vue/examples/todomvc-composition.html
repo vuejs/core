@@ -44,7 +44,8 @@
         <li><a href="#/active" :class="{ selected: state.visibility === 'active' }">Active</a></li>
         <li><a href="#/completed" :class="{ selected: state.visibility === 'completed' }">Completed</a></li>
       </ul>
-      <button class="clear-completed" @click="removeCompleted" v-if="state.todos.length > remaining">
+      
+      <button class="clear-completed" @click="removeCompleted" v-if="state.todos.length > state.remaining">
         Clear completed
       </button>
     </footer>
