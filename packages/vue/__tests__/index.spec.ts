@@ -46,7 +46,7 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe('<custom></custom>')
   })
 
-  it('should support element innerHTML', () => {
+  it('should support using element innerHTML as template', () => {
     const app = createApp()
     let container = document.createElement('div')
     container.innerHTML = '{{msg}}'
