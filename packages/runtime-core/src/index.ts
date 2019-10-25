@@ -29,6 +29,7 @@ export { getCurrentInstance } from './component'
 
 // For custom renderers
 export { createRenderer } from './createRenderer'
+export { warn } from './warning'
 export {
   handleError,
   callWithErrorHandling,
@@ -37,13 +38,18 @@ export {
 
 // Internal, for compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
-export { applyDirectives } from './directives'
-export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
+export { withDirectives } from './directives'
+export {
+  resolveComponent,
+  resolveDirective,
+  resolveDynamicComponent
+} from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
 export { toString } from './helpers/toString'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { setBlockTracking, createTextVNode, createCommentVNode } from './vnode'
 export { capitalize, camelize } from '@vue/shared'
 
 // Internal, for integration with runtime compiler
@@ -63,18 +69,27 @@ export {
 export {
   ComponentOptions,
   ComponentOptionsWithoutProps,
-  ComponentOptionsWithProps,
+  ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
 } from './apiOptions'
 
 export { ComponentPublicInstance } from './componentProxy'
 export { RendererOptions } from './createRenderer'
 export { Slot, Slots } from './componentSlots'
-export { Prop, PropType, ComponentPropsOptions } from './componentProps'
+export {
+  Prop,
+  PropType,
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions
+} from './componentProps'
 export {
   Directive,
   DirectiveBinding,
   DirectiveHook,
+  ObjectDirective,
+  FunctionDirective,
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './suspense'
+
+export const version = __VERSION__

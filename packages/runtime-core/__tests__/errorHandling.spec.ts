@@ -13,7 +13,7 @@ import {
 describe('error handling', () => {
   mockWarn()
 
-  test('propagtaion', () => {
+  test('propagation', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -365,8 +365,8 @@ describe('error handling', () => {
 
     const onError = jest.spyOn(console, 'error')
     onError.mockImplementation(() => {})
-    const groupCollpased = jest.spyOn(console, 'groupCollapsed')
-    groupCollpased.mockImplementation(() => {})
+    const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
+    groupCollapsed.mockImplementation(() => {})
     const log = jest.spyOn(console, 'log')
     log.mockImplementation(() => {})
 
@@ -397,7 +397,7 @@ describe('error handling', () => {
     expect(onError).toHaveBeenCalledWith(err)
 
     onError.mockRestore()
-    groupCollpased.mockRestore()
+    groupCollapsed.mockRestore()
     log.mockRestore()
     process.env.NODE_ENV = 'test'
   })

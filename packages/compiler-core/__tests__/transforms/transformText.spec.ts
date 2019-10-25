@@ -5,16 +5,19 @@ import {
   NodeTypes,
   generate
 } from '../../src'
-import { optimizeText } from '../../src/transforms/optimizeText'
+import { transformText } from '../../src/transforms/transformText'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformElement } from '../../src/transforms/transformElement'
+import { CREATE_TEXT } from '../../src/runtimeHelpers'
+import { genFlagText } from '../testUtils'
+import { PatchFlags } from '@vue/shared'
 
 function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
       ...(options.prefixIdentifiers ? [transformExpression] : []),
-      optimizeText,
+      transformText,
       transformElement
     ],
     ...options
@@ -22,7 +25,7 @@ function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
   return ast
 }
 
-describe('compiler: optimize interpolation', () => {
+describe('compiler: transform text', () => {
   test('no consecutive text', () => {
     const root = transformWithTextOpt(`{{ foo }}`)
     expect(root.children[0]).toMatchObject({
@@ -55,14 +58,48 @@ describe('compiler: optimize interpolation', () => {
     expect(root.children.length).toBe(3)
     expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
     expect(root.children[1]).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        { type: NodeTypes.INTERPOLATION, content: { content: `foo` } },
-        ` + `,
-        { type: NodeTypes.TEXT, content: ` bar ` },
-        ` + `,
-        { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-      ]
+      // when mixed with elements, should convert it into a text node call
+      type: NodeTypes.TEXT_CALL,
+      codegenNode: {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              { type: NodeTypes.INTERPOLATION, content: { content: `foo` } },
+              ` + `,
+              { type: NodeTypes.TEXT, content: ` bar ` },
+              ` + `,
+              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
+            ]
+          },
+          genFlagText(PatchFlags.TEXT)
+        ]
+      }
+    })
+    expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('text between elements (static)', () => {
+    const root = transformWithTextOpt(`<div/>hello<div/>`)
+    expect(root.children.length).toBe(3)
+    expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
+    expect(root.children[1]).toMatchObject({
+      // when mixed with elements, should convert it into a text node call
+      type: NodeTypes.TEXT_CALL,
+      codegenNode: {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.TEXT,
+            content: `hello`
+          }
+          // should have no flag
+        ]
+      }
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()
@@ -70,30 +107,43 @@ describe('compiler: optimize interpolation', () => {
 
   test('consecutive text mixed with elements', () => {
     const root = transformWithTextOpt(
-      `<div/>{{ foo }} bar {{ baz }}<div/>{{ foo }} bar {{ baz }}<div/>`
+      `<div/>{{ foo }} bar {{ baz }}<div/>hello<div/>`
     )
     expect(root.children.length).toBe(5)
     expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
     expect(root.children[1]).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        { type: NodeTypes.INTERPOLATION, content: { content: `foo` } },
-        ` + `,
-        { type: NodeTypes.TEXT, content: ` bar ` },
-        ` + `,
-        { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-      ]
+      type: NodeTypes.TEXT_CALL,
+      codegenNode: {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              { type: NodeTypes.INTERPOLATION, content: { content: `foo` } },
+              ` + `,
+              { type: NodeTypes.TEXT, content: ` bar ` },
+              ` + `,
+              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
+            ]
+          },
+          genFlagText(PatchFlags.TEXT)
+        ]
+      }
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(root.children[3]).toMatchObject({
-      type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [
-        { type: NodeTypes.INTERPOLATION, content: { content: `foo` } },
-        ` + `,
-        { type: NodeTypes.TEXT, content: ` bar ` },
-        ` + `,
-        { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-      ]
+      type: NodeTypes.TEXT_CALL,
+      codegenNode: {
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.TEXT,
+            content: `hello`
+          }
+        ]
+      }
     })
     expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()

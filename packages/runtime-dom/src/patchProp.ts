@@ -29,6 +29,10 @@ export function patchProp(
     case 'style':
       patchStyle(el, prevValue, nextValue)
       break
+    case 'modelValue':
+    case 'onUpdate:modelValue':
+      // Do nothing. This is handled by v-model directives.
+      break
     default:
       if (isOn(key)) {
         patchEvent(
@@ -49,7 +53,7 @@ export function patchProp(
           unmountChildren
         )
       } else {
-        patchAttr(el, key, nextValue, isSVG)
+        patchAttr(el, key, nextValue)
       }
       break
   }

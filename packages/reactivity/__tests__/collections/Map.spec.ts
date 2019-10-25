@@ -185,21 +185,24 @@ describe('reactivity/collections', () => {
 
       expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(1)
-      map.set('key', 'value')
-      expect(dummy).toBe('value')
+      map.set('key', undefined)
+      expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(2)
       map.set('key', 'value')
       expect(dummy).toBe('value')
-      expect(mapSpy).toHaveBeenCalledTimes(2)
-      map.delete('key')
-      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(3)
+      map.set('key', 'value')
+      expect(dummy).toBe('value')
       expect(mapSpy).toHaveBeenCalledTimes(3)
       map.delete('key')
       expect(dummy).toBe(undefined)
-      expect(mapSpy).toHaveBeenCalledTimes(3)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
+      map.delete('key')
+      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
       map.clear()
       expect(dummy).toBe(undefined)
-      expect(mapSpy).toHaveBeenCalledTimes(3)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
     })
 
     it('should not observe raw data', () => {
@@ -254,7 +257,7 @@ describe('reactivity/collections', () => {
         })
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -269,7 +272,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -287,7 +290,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -305,8 +308,16 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
+    })
+
+    it('should not be trigger when the value and the old value both are NaN', () => {
+      const map = reactive(new Map([['foo', NaN]]))
+      const mapSpy = jest.fn(() => map.get('foo'))
+      effect(mapSpy)
+      map.set('foo', NaN)
+      expect(mapSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

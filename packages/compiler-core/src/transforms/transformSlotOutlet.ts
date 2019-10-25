@@ -8,7 +8,7 @@ import {
 import { isSlotOutlet } from '../utils'
 import { buildProps } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { RENDER_SLOT } from '../runtimeConstants'
+import { RENDER_SLOT } from '../runtimeHelpers'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -52,14 +52,14 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
     let hasProps = propsWithoutName.length > 0
     if (hasProps) {
       const { props: propsExpression, directives } = buildProps(
-        propsWithoutName,
-        loc,
-        context
+        node,
+        context,
+        propsWithoutName
       )
       if (directives.length) {
         context.onError(
           createCompilerError(
-            ErrorCodes.X_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+            ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
             directives[0].loc
           )
         )

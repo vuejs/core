@@ -102,7 +102,7 @@ describe('reactivity/collections', () => {
 
     it('should observe entries iteration', () => {
       let dummy
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
@@ -196,7 +196,7 @@ describe('reactivity/collections', () => {
 
     it('should not observe raw iterations', () => {
       let dummy = 0
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         for (let [num] of toRaw(set).entries()) {

@@ -9,7 +9,7 @@ import {
 } from '../../src'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
-import { CAMELIZE } from '../../src/runtimeConstants'
+import { CAMELIZE, helperNameMap } from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithVBind(
@@ -123,7 +123,7 @@ describe('compiler: transform v-bind', () => {
       .arguments[1] as ObjectExpression
     expect(props.properties[0]).toMatchObject({
       key: {
-        content: `_${CAMELIZE}(foo)`,
+        content: `_${helperNameMap[CAMELIZE]}(foo)`,
         isStatic: false
       },
       value: {
@@ -142,7 +142,7 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         children: [
-          `${CAMELIZE}(`,
+          `${helperNameMap[CAMELIZE]}(`,
           { content: `_ctx.foo` },
           `(`,
           { content: `_ctx.bar` },

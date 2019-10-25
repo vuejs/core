@@ -1,5 +1,7 @@
+import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
 import { mockWarn } from '@vue/runtime-test'
+import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
   mockWarn()
@@ -19,7 +21,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('Array', () => {
-    const original: any[] = [{ foo: 1 }]
+    const original = [{ foo: 1 }]
     const observed = reactive(original)
     expect(observed).not.toBe(original)
     expect(isReactive(observed)).toBe(true)
@@ -88,7 +90,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('setting a property with an unobserved value should wrap with reactive', () => {
-    const observed: any = reactive({})
+    const observed = reactive<{ foo?: object }>({})
     const raw = {}
     observed.foo = raw
     expect(observed.foo).not.toBe(raw)
@@ -124,6 +126,30 @@ describe('reactivity/reactive', () => {
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('should not unwrap Ref<T>', () => {
+    const observedNumberRef = reactive(ref(1))
+    const observedObjectRef = reactive(ref({ foo: 1 }))
+
+    expect(isRef(observedNumberRef)).toBe(true)
+    expect(isRef(observedObjectRef)).toBe(true)
+  })
+
+  test('should unwrap computed refs', () => {
+    // readonly
+    const a = computed(() => 1)
+    // writable
+    const b = computed({
+      get: () => 1,
+      set: () => {}
+    })
+    const obj = reactive({ a, b })
+    // check type
+    obj.a + 1
+    obj.b + 1
+    expect(typeof obj.a).toBe(`number`)
+    expect(typeof obj.b).toBe(`number`)
   })
 
   test('non-observable values', () => {

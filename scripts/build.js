@@ -1,7 +1,7 @@
 /*
-Produce prodcution builds and stitch toegether d.ts files.
+Produces production builds and stitches together d.ts files.
 
-To specific the package to build, simply pass its name and the desired build
+To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
 or "esm,cjs"):
 
@@ -16,7 +16,6 @@ yarn build core --formats cjs
 
 const fs = require('fs-extra')
 const path = require('path')
-const zlib = require('zlib')
 const chalk = require('chalk')
 const execa = require('execa')
 const { gzipSync } = require('zlib')
@@ -29,8 +28,12 @@ const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildAllMatching = args.all || args.a
+const lean = args.lean || args.l
 const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
-;(async () => {
+
+run()
+
+async function run() {
   if (!targets.length) {
     await buildAll(allTargets)
     checkAllSizes(allTargets)
@@ -38,7 +41,7 @@ const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
     await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
     checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
   }
-})()
+}
 
 async function buildAll(targets) {
   for (const target of targets) {
@@ -55,7 +58,6 @@ async function build(target) {
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
     (devOnly ? 'development' : 'production')
-
   await execa(
     'rollup',
     [
@@ -67,9 +69,10 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         args.types ? `TYPES:true` : ``,
-        prodOnly ? `PROD_ONLY:true` : ``
+        prodOnly ? `PROD_ONLY:true` : ``,
+        lean ? `LEAN:true` : ``
       ]
-        .filter(_ => _)
+        .filter(Boolean)
         .join(',')
     ],
     { stdio: 'inherit' }
@@ -119,7 +122,7 @@ function checkAllSizes(targets) {
 
 function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
-  const esmProdBuild = `${pkgDir}/dist/${target}.esm-browser.prod.js`
+  const esmProdBuild = `${pkgDir}/dist/${target}.global.prod.js`
   if (fs.existsSync(esmProdBuild)) {
     const file = fs.readFileSync(esmProdBuild)
     const minSize = (file.length / 1024).toFixed(2) + 'kb'

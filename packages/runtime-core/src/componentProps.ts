@@ -11,12 +11,17 @@ import {
   isReservedProp,
   hasOwn,
   toTypeString,
-  PatchFlags
+  PatchFlags,
+  makeMap
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
 
-export type ComponentPropsOptions<P = Data> = {
+export type ComponentPropsOptions<P = Data> =
+  | ComponentObjectPropsOptions<P>
+  | string[]
+
+export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
 
@@ -26,43 +31,43 @@ interface PropOptions<T = any> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: T | null | undefined | (() => T | null | undefined)
-  validator?(value: any): boolean
+  validator?(value: unknown): boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
-type PropConstructor<T> = { new (...args: any[]): T & object } | { (): T }
+type PropConstructor<T = any> = { new (...args: any[]): T & object } | { (): T }
 
-type RequiredKeys<T, MakeDefautRequired> = {
+type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends
     | { required: true }
-    | (MakeDefautRequired extends true ? { default: any } : never)
+    | (MakeDefaultRequired extends true ? { default: any } : never)
     ? K
     : never
 }[keyof T]
 
-type OptionalKeys<T, MakeDefautRequired> = Exclude<
+type OptionalKeys<T, MakeDefaultRequired> = Exclude<
   keyof T,
-  RequiredKeys<T, MakeDefautRequired>
+  RequiredKeys<T, MakeDefaultRequired>
 >
 
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-    ? any // somehow `ObjectContructor` when inferred from { (): T } becomes `any`
+    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
     : T extends ObjectConstructor | { type: ObjectConstructor }
       ? { [key: string]: any }
       : T extends Prop<infer V> ? V : T
 
 export type ExtractPropTypes<
   O,
-  MakeDefautRequired extends boolean = true
+  MakeDefaultRequired extends boolean = true
 > = O extends object
   ? {
-      readonly [K in RequiredKeys<O, MakeDefautRequired>]: InferPropType<O[K]>
+      readonly [K in RequiredKeys<O, MakeDefaultRequired>]: InferPropType<O[K]>
     } &
       {
-        readonly [K in OptionalKeys<O, MakeDefautRequired>]?: InferPropType<
+        readonly [K in OptionalKeys<O, MakeDefaultRequired>]?: InferPropType<
           O[K]
         >
       }
@@ -92,27 +97,27 @@ type NormalizedPropsOptions = Record<string, NormalizedProp>
 
 export function resolveProps(
   instance: ComponentInternalInstance,
-  rawProps: any,
+  rawProps: Data | null,
   _options: ComponentPropsOptions | void
 ) {
   const hasDeclaredProps = _options != null
-  const options = normalizePropsOptions(_options) as NormalizedPropsOptions
+  const options = normalizePropsOptions(_options)!
   if (!rawProps && !hasDeclaredProps) {
     return
   }
 
-  const props: any = {}
-  let attrs: any = void 0
+  const props: Data = {}
+  let attrs: Data | undefined = void 0
 
   // update the instance propsProxy (passed to setup()) to trigger potential
   // changes
   const propsProxy = instance.propsProxy
   const setProp = propsProxy
-    ? (key: string, val: any) => {
+    ? (key: string, val: unknown) => {
         props[key] = val
         propsProxy[key] = val
       }
-    : (key: string, val: any) => {
+    : (key: string, val: unknown) => {
         props[key] = val
       }
 
@@ -123,12 +128,15 @@ export function resolveProps(
     for (const key in rawProps) {
       // key, ref are reserved
       if (isReservedProp(key)) continue
-      // any non-declared data are put into a separate `attrs` object
-      // for spreading
-      if (hasDeclaredProps && !hasOwn(options, key)) {
+      // prop option names are camelized during normalization, so to support
+      // kebab -> camel conversion here we need to camelize the key.
+      const camelKey = camelize(key)
+      if (hasDeclaredProps && !hasOwn(options, camelKey)) {
+        // Any non-declared props are put into a separate `attrs` object
+        // for spreading. Make sure to preserve original key casing
         ;(attrs || (attrs = {}))[key] = rawProps[key]
       } else {
-        setProp(key, rawProps[key])
+        setProp(camelKey, rawProps[key])
       }
     }
   }
@@ -158,7 +166,13 @@ export function resolveProps(
       }
       // runtime validation
       if (__DEV__ && rawProps) {
-        validateProp(key, toRaw(rawProps[key]), opt, isAbsent)
+        let rawValue
+        if (!(key in rawProps) && hyphenate(key) in rawProps) {
+          rawValue = rawProps[hyphenate(key)]
+        } else {
+          rawValue = rawProps[key]
+        }
+        validateProp(key, toRaw(rawValue), opt, isAbsent)
       }
     }
   } else {
@@ -188,7 +202,7 @@ export function resolveProps(
   instance.attrs = options
     ? __DEV__ && attrs != null
       ? readonly(attrs)
-      : attrs
+      : attrs!
     : instance.props
 }
 
@@ -196,9 +210,9 @@ const normalizationMap = new WeakMap()
 
 function normalizePropsOptions(
   raw: ComponentPropsOptions | void
-): NormalizedPropsOptions | void {
+): NormalizedPropsOptions | null {
   if (!raw) {
-    return
+    return null
   }
   if (normalizationMap.has(raw)) {
     return normalizationMap.get(raw)
@@ -275,8 +289,8 @@ type AssertionResult = {
 
 function validateProp(
   name: string,
-  value: any,
-  prop: PropOptions<any>,
+  value: unknown,
+  prop: PropOptions,
   isAbsent: boolean
 ) {
   const { type, required, validator } = prop
@@ -311,12 +325,14 @@ function validateProp(
   }
 }
 
-const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
+const isSimpleType = /*#__PURE__*/ makeMap(
+  'String,Number,Boolean,Function,Symbol'
+)
 
-function assertType(value: any, type: PropConstructor<any>): AssertionResult {
+function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
   const expectedType = getType(type)
-  if (simpleCheckRE.test(expectedType)) {
+  if (isSimpleType(expectedType)) {
     const t = typeof value
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
@@ -338,7 +354,7 @@ function assertType(value: any, type: PropConstructor<any>): AssertionResult {
 
 function getInvalidTypeMessage(
   name: string,
-  value: any,
+  value: unknown,
   expectedTypes: string[]
 ): string {
   let message =
@@ -364,7 +380,7 @@ function getInvalidTypeMessage(
   return message
 }
 
-function styleValue(value: any, type: string): string {
+function styleValue(value: unknown, type: string): string {
   if (type === 'String') {
     return `"${value}"`
   } else if (type === 'Number') {
@@ -374,7 +390,7 @@ function styleValue(value: any, type: string): string {
   }
 }
 
-function toRawType(value: any): string {
+function toRawType(value: unknown): string {
   return toTypeString(value).slice(8, -1)
 }
 

@@ -8,7 +8,7 @@ import { ComponentPublicInstance } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
-import { pauseTracking, resumeTracking } from '@vue/reactivity'
+import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
 
 function injectHook(
   type: LifecycleHooks,
@@ -16,7 +16,7 @@ function injectHook(
   target: ComponentInternalInstance | null
 ) {
   if (target) {
-    ;(target[type] || (target[type] = [])).push((...args: any[]) => {
+    ;(target[type] || (target[type] = [])).push((...args: unknown[]) => {
       if (target.isUnmounted) {
         return
       }
@@ -48,69 +48,31 @@ function injectHook(
   }
 }
 
-export function onBeforeMount(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_MOUNT, hook, target)
-}
+const createHook = <T extends Function = () => any>(
+  lifecycle: LifecycleHooks
+) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  injectHook(lifecycle, hook, target)
 
-export function onMounted(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.MOUNTED, hook, target)
-}
+export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
+export const onMounted = createHook(LifecycleHooks.MOUNTED)
+export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
+export const onUpdated = createHook(LifecycleHooks.UPDATED)
+export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
+export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 
-export function onBeforeUpdate(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_UPDATE, hook, target)
-}
+export type DebuggerHook = (e: DebuggerEvent) => void
+export const onRenderTriggered = createHook<DebuggerHook>(
+  LifecycleHooks.RENDER_TRIGGERED
+)
+export const onRenderTracked = createHook<DebuggerHook>(
+  LifecycleHooks.RENDER_TRACKED
+)
 
-export function onUpdated(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.UPDATED, hook, target)
-}
-
-export function onBeforeUnmount(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.BEFORE_UNMOUNT, hook, target)
-}
-
-export function onUnmounted(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.UNMOUNTED, hook, target)
-}
-
-export function onRenderTriggered(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRIGGERED, hook, target)
-}
-
-export function onRenderTracked(
-  hook: Function,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.RENDER_TRACKED, hook, target)
-}
-
-export function onErrorCaptured(
-  hook: (
-    err: Error,
-    instance: ComponentPublicInstance | null,
-    info: string
-  ) => boolean | void,
-  target: ComponentInternalInstance | null = currentInstance
-) {
-  injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
-}
+export type ErrorCapturedHook = (
+  err: Error,
+  instance: ComponentPublicInstance | null,
+  info: string
+) => boolean | void
+export const onErrorCaptured = createHook<ErrorCapturedHook>(
+  LifecycleHooks.ERROR_CAPTURED
+)

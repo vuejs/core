@@ -23,7 +23,7 @@
 
 interface HTMLAttributes {
   class?: any
-  style?: string | { [key: string]: string | number }
+  style?: string | Partial<CSSStyleDeclaration>
   accesskey?: string
   contenteditable?: boolean
   contextmenu?: string

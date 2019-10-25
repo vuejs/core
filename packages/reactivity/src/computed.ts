@@ -1,41 +1,47 @@
-import { effect, ReactiveEffect, activeReactiveEffectStack } from './effect'
-import { UnwrapNestedRefs } from './ref'
-import { isFunction } from '@vue/shared'
+import { effect, ReactiveEffect, effectStack } from './effect'
+import { Ref, UnwrapRef } from './ref'
+import { isFunction, NOOP } from '@vue/shared'
 
-export interface ComputedRef<T> {
-  _isRef: true
-  readonly value: UnwrapNestedRefs<T>
-  readonly effect: ReactiveEffect
+export interface ComputedRef<T> extends WritableComputedRef<T> {
+  readonly value: UnwrapRef<T>
 }
 
-export interface WritableComputedRef<T> {
-  _isRef: true
-  value: UnwrapNestedRefs<T>
-  readonly effect: ReactiveEffect
+export interface WritableComputedRef<T> extends Ref<T> {
+  readonly effect: ReactiveEffect<T>
 }
+
+export type ComputedGetter<T> = () => T
+export type ComputedSetter<T> = (v: T) => void
 
 export interface WritableComputedOptions<T> {
-  get: () => T
-  set: (v: T) => void
+  get: ComputedGetter<T>
+  set: ComputedSetter<T>
 }
 
-export function computed<T>(getter: () => T): ComputedRef<T>
+export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
 export function computed<T>(
   options: WritableComputedOptions<T>
 ): WritableComputedRef<T>
 export function computed<T>(
-  getterOrOptions: (() => T) | WritableComputedOptions<T>
-): any {
-  const isReadonly = isFunction(getterOrOptions)
-  const getter = isReadonly
-    ? (getterOrOptions as (() => T))
-    : (getterOrOptions as WritableComputedOptions<T>).get
-  const setter = isReadonly
-    ? null
-    : (getterOrOptions as WritableComputedOptions<T>).set
+  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
+) {
+  let getter: ComputedGetter<T>
+  let setter: ComputedSetter<T>
 
-  let dirty: boolean = true
-  let value: any = undefined
+  if (isFunction(getterOrOptions)) {
+    getter = getterOrOptions
+    setter = __DEV__
+      ? () => {
+          console.warn('Write operation failed: computed value is readonly')
+        }
+      : NOOP
+  } else {
+    getter = getterOrOptions.get
+    setter = getterOrOptions.set
+  }
+
+  let dirty = true
+  let value: T
 
   const runner = effect(getter, {
     lazy: true,
@@ -60,26 +66,22 @@ export function computed<T>(
       trackChildRun(runner)
       return value
     },
-    set value(newValue) {
-      if (setter) {
-        setter(newValue)
-      } else {
-        // TODO warn attempting to mutate readonly computed value
-      }
+    set value(newValue: T) {
+      setter(newValue)
     }
   }
 }
 
 function trackChildRun(childRunner: ReactiveEffect) {
-  const parentRunner =
-    activeReactiveEffectStack[activeReactiveEffectStack.length - 1]
-  if (parentRunner) {
-    for (let i = 0; i < childRunner.deps.length; i++) {
-      const dep = childRunner.deps[i]
-      if (!dep.has(parentRunner)) {
-        dep.add(parentRunner)
-        parentRunner.deps.push(dep)
-      }
+  if (effectStack.length === 0) {
+    return
+  }
+  const parentRunner = effectStack[effectStack.length - 1]
+  for (let i = 0; i < childRunner.deps.length; i++) {
+    const dep = childRunner.deps[i]
+    if (!dep.has(parentRunner)) {
+      dep.add(parentRunner)
+      parentRunner.deps.push(dep)
     }
   }
 }

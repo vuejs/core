@@ -71,7 +71,7 @@ describe('reactivity/effect', () => {
 
   it('should observe has operations', () => {
     let dummy
-    const obj: any = reactive({ prop: 'value' })
+    const obj = reactive<{ prop: string | number }>({ prop: 'value' })
     effect(() => (dummy = 'prop' in obj))
 
     expect(dummy).toBe(true)
@@ -115,7 +115,7 @@ describe('reactivity/effect', () => {
 
   it('should observe inherited property accessors', () => {
     let dummy, parentDummy, hiddenValue: any
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: number }>({})
     const parent = reactive({
       set prop(value) {
         hiddenValue = value
@@ -179,7 +179,7 @@ describe('reactivity/effect', () => {
 
   it('should observe sparse array mutations', () => {
     let dummy
-    const list: any[] = reactive([])
+    const list = reactive<string[]>([])
     list[1] = 'World!'
     effect(() => (dummy = list.join(' ')))
 
@@ -192,7 +192,7 @@ describe('reactivity/effect', () => {
 
   it('should observe enumeration', () => {
     let dummy = 0
-    const numbers: any = reactive({ num1: 3 })
+    const numbers = reactive<Record<string, number>>({ num1: 3 })
     effect(() => {
       dummy = 0
       for (let key in numbers) {
@@ -249,6 +249,36 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(newFunc)
   })
 
+  it('should observe chained getters relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      get b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
+  it('should observe methods relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b()))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
   it('should not observe set operations without a value change', () => {
     let hasDummy, getDummy
     const obj = reactive({ prop: 'value' })
@@ -269,7 +299,7 @@ describe('reactivity/effect', () => {
 
   it('should not observe raw mutations', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: string }>({})
     effect(() => (dummy = toRaw(obj).prop))
 
     expect(dummy).toBe(undefined)
@@ -279,7 +309,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered by raw mutations', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: string }>({})
     effect(() => (dummy = obj.prop))
 
     expect(dummy).toBe(undefined)
@@ -289,7 +319,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered by inherited raw setters', () => {
     let dummy, parentDummy, hiddenValue: any
-    const obj: any = reactive({})
+    const obj = reactive<{ prop?: number }>({})
     const parent = reactive({
       set prop(value) {
         hiddenValue = value
@@ -437,7 +467,7 @@ describe('reactivity/effect', () => {
 
   it('should not run multiple times for a single mutation', () => {
     let dummy
-    const obj: any = reactive({})
+    const obj = reactive<Record<string, number>>({})
     const fnSpy = jest.fn(() => {
       for (const key in obj) {
         dummy = obj[key]
@@ -503,6 +533,18 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(0)
     model.inc()
     expect(dummy).toBe(1)
+  })
+
+  it('lazy', () => {
+    const obj = reactive({ foo: 1 })
+    let dummy
+    const runner = effect(() => (dummy = obj.foo), { lazy: true })
+    expect(dummy).toBe(undefined)
+
+    expect(runner()).toBe(1)
+    expect(dummy).toBe(1)
+    obj.foo = 2
+    expect(dummy).toBe(2)
   })
 
   it('scheduler', () => {
@@ -648,5 +690,15 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(0)
     obj.foo = { prop: 1 }
     expect(dummy).toBe(1)
+  })
+
+  it('should not be trigger when the value and the old value both are NaN', () => {
+    const obj = reactive({
+      foo: NaN
+    })
+    const fnSpy = jest.fn(() => obj.foo)
+    effect(fnSpy)
+    obj.foo = NaN
+    expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 })

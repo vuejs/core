@@ -1,10 +1,10 @@
-import { Component, Data, ComponentInternalInstance } from './component'
+import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
-import { Directive } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './createRenderer'
 import { InjectionKey } from './apiInject'
-import { isFunction } from '@vue/shared'
+import { isFunction, NO } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -18,7 +18,7 @@ export interface App<HostElement = any> {
   directive(name: string, directive: Directive): this
   mount(
     rootComponent: Component,
-    rootContainer: HostElement,
+    rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
   provide<T>(key: InjectionKey<T> | string, value: T): void
@@ -27,6 +27,8 @@ export interface App<HostElement = any> {
 export interface AppConfig {
   devtools: boolean
   performance: boolean
+  readonly isNativeTag?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean
   errorHandler?: (
     err: Error,
     instance: ComponentPublicInstance | null,
@@ -60,6 +62,8 @@ export function createAppContext(): AppContext {
     config: {
       devtools: true,
       performance: false,
+      isNativeTag: NO,
+      isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
     },
@@ -110,10 +114,12 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      component(name: string, component?: Component) {
-        // TODO component name validation
+      component(name: string, component?: Component): any {
+        if (__DEV__) {
+          validateComponentName(name, context.config)
+        }
         if (!component) {
-          return context.components[name] as any
+          return context.components[name]
         } else {
           context.components[name] = component
           return app
@@ -121,7 +127,10 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       directive(name: string, directive?: Directive) {
-        // TODO directive name validation
+        if (__DEV__) {
+          validateDirectiveName(name)
+        }
+
         if (!directive) {
           return context.directives[name] as any
         } else {
@@ -132,7 +141,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       mount(
         rootComponent: Component,
-        rootContainer: string | HostElement,
+        rootContainer: HostElement,
         rootProps?: Data
       ): any {
         if (!isMounted) {
@@ -142,7 +151,7 @@ export function createAppAPI<HostNode, HostElement>(
           vnode.appContext = context
           render(vnode, rootContainer)
           isMounted = true
-          return (vnode.component as ComponentInternalInstance).renderProxy
+          return vnode.component!.renderProxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted. Create a new app instance instead.`
@@ -157,7 +166,9 @@ export function createAppAPI<HostNode, HostElement>(
               `It will be overwritten with the new value.`
           )
         }
-        context.provides[key as any] = value
+        // TypeScript doesn't allow symbols as index type
+        // https://github.com/Microsoft/TypeScript/issues/24587
+        context.provides[key as string] = value
       }
     }
 

@@ -2,34 +2,40 @@ import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive } from './reactive'
+import { ComputedRef } from './computed'
+import { CollectionTypes } from './collectionHandlers'
 
-export interface Ref<T> {
+export interface Ref<T = any> {
   _isRef: true
-  value: UnwrapNestedRefs<T>
+  value: UnwrapRef<T>
 }
 
-export type UnwrapNestedRefs<T> = T extends Ref<any> ? T : UnwrapRef<T>
+const convert = <T extends unknown>(val: T): T =>
+  isObject(val) ? reactive(val) : val
 
-const convert = (val: any): any => (isObject(val) ? reactive(val) : val)
-
-export function ref<T>(raw: T): Ref<T> {
+export function ref<T extends Ref>(raw: T): T
+export function ref<T>(raw: T): Ref<T>
+export function ref(raw: unknown) {
+  if (isRef(raw)) {
+    return raw
+  }
   raw = convert(raw)
-  const v = {
+  const r = {
     _isRef: true,
     get value() {
-      track(v, OperationTypes.GET, '')
+      track(r, OperationTypes.GET, '')
       return raw
     },
     set value(newVal) {
       raw = convert(newVal)
-      trigger(v, OperationTypes.SET, '')
+      trigger(r, OperationTypes.SET, '')
     }
   }
-  return v as Ref<T>
+  return r as Ref
 }
 
-export function isRef(v: any): v is Ref<any> {
-  return v ? v._isRef === true : false
+export function isRef(r: any): r is Ref {
+  return r ? r._isRef === true : false
 }
 
 export function toRefs<T extends object>(
@@ -46,100 +52,29 @@ function toProxyRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  const v = {
+  return {
     _isRef: true,
-    get value() {
+    get value(): any {
       return object[key]
     },
     set value(newVal) {
       object[key] = newVal
     }
   }
-  return v as Ref<T[K]>
 }
 
-type BailTypes =
-  | Function
-  | Map<any, any>
-  | Set<any>
-  | WeakMap<any, any>
-  | WeakSet<any>
-
 // Recursively unwraps nested value bindings.
-// Unfortunately TS cannot do recursive types, but this should be enough for
-// practical use cases...
-export type UnwrapRef<T> = T extends Ref<infer V>
-  ? UnwrapRef2<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef2<V>>
-    : T extends BailTypes
-      ? T // bail out on types that shouldn't be unwrapped
-      : T extends object ? { [K in keyof T]: UnwrapRef2<T[K]> } : T
-
-type UnwrapRef2<T> = T extends Ref<infer V>
-  ? UnwrapRef3<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef3<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef3<T[K]> } : T
-
-type UnwrapRef3<T> = T extends Ref<infer V>
-  ? UnwrapRef4<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef4<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef4<T[K]> } : T
-
-type UnwrapRef4<T> = T extends Ref<infer V>
-  ? UnwrapRef5<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef5<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef5<T[K]> } : T
-
-type UnwrapRef5<T> = T extends Ref<infer V>
-  ? UnwrapRef6<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef6<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef6<T[K]> } : T
-
-type UnwrapRef6<T> = T extends Ref<infer V>
-  ? UnwrapRef7<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef7<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef7<T[K]> } : T
-
-type UnwrapRef7<T> = T extends Ref<infer V>
-  ? UnwrapRef8<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef8<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef8<T[K]> } : T
-
-type UnwrapRef8<T> = T extends Ref<infer V>
-  ? UnwrapRef9<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef9<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef9<T[K]> } : T
-
-type UnwrapRef9<T> = T extends Ref<infer V>
-  ? UnwrapRef10<V>
-  : T extends Array<infer V>
-    ? Array<UnwrapRef10<V>>
-    : T extends BailTypes
-      ? T
-      : T extends object ? { [K in keyof T]: UnwrapRef10<T[K]> } : T
-
-type UnwrapRef10<T> = T extends Ref<infer V>
-  ? V // stop recursion
-  : T
+export type UnwrapRef<T> = {
+  cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
+  ref: T extends Ref<infer V> ? UnwrapRef<V> : T
+  array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
+  object: { [K in keyof T]: UnwrapRef<T[K]> }
+}[T extends ComputedRef<any>
+  ? 'cRef'
+  : T extends Ref
+    ? 'ref'
+    : T extends Array<any>
+      ? 'array'
+      : T extends Function | CollectionTypes
+        ? 'ref' // bail out on types that shouldn't be unwrapped
+        : T extends object ? 'object' : 'ref']

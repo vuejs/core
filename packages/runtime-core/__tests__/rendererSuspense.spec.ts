@@ -285,7 +285,7 @@ describe('renderer: suspense', () => {
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
     expect(calls).toEqual([])
 
-    // remvoe the async dep before it's resolved
+    // remove the async dep before it's resolved
     toggle.value = false
     await nextTick()
     // should cause the suspense to resolve immediately
@@ -517,7 +517,7 @@ describe('renderer: suspense', () => {
 
     const Comp = {
       setup() {
-        const error = ref<any>(null)
+        const error = ref<Error | null>(null)
         onErrorCaptured(e => {
           error.value = e
           return true
