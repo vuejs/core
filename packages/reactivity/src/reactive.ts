@@ -1,4 +1,4 @@
-import { isObject, toTypeString } from '@vue/shared'
+import { isObject, toRawType } from '@vue/shared'
 import { mutableHandlers, readonlyHandlers } from './baseHandlers'
 import {
   mutableCollectionHandlers,
@@ -29,16 +29,14 @@ const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
 const isObservableType = /*#__PURE__*/ makeMap(
-  ['Object', 'Array', 'Map', 'Set', 'WeakMap', 'WeakSet']
-    .map(t => `[object ${t}]`)
-    .join(',')
+  'Object,Array,Map,Set,WeakMap,WeakSet'
 )
 
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
     !value._isVNode &&
-    isObservableType(toTypeString(value)) &&
+    isObservableType(toRawType(value)) &&
     !nonReactiveValues.has(value)
   )
 }
