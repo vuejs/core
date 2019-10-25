@@ -44,7 +44,7 @@ describe('reactivity/reactive', () => {
     expect(clone[0]).toBe(observed[0])
   })
 
-  test('nested reactives', () => {
+  test('nested object reactives', () => {
     const original = {
       nested: {
         foo: 1
@@ -55,6 +55,20 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed.nested)).toBe(true)
     expect(isReactive(observed.array)).toBe(true)
     expect(isReactive(observed.array[0])).toBe(true)
+  })
+
+  test('nested array reactives', () => {
+    const original = [
+      {
+        nested: { foo: 1 },
+        array: [{ bar: 2 }]
+      }
+    ]
+    const observed = reactive(original)
+    expect(isReactive(observed[0])).toBe(true)
+    expect(isReactive(observed[0].nested)).toBe(true)
+    expect(isReactive(observed[0].array)).toBe(true)
+    expect(isReactive(observed[0].array[0])).toBe(true)
   })
 
   test('observed value should proxy mutations to original (Object)', () => {
