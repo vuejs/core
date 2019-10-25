@@ -123,7 +123,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
 
 export type RootRenderFunction<HostNode, HostElement> = (
   vnode: VNode<HostNode, HostElement> | null,
-  dom: HostElement | string
+  dom: HostElement
 ) => void
 
 /**
@@ -1858,19 +1858,12 @@ export function createRenderer<
     }
   }
 
-  function render(vnode: HostVNode | null, rawContainer: HostElement | string) {
-    let container: any = rawContainer
-    if (isString(container)) {
-      container = hostQuerySelector(container)
-      if (!container) {
-        if (__DEV__) {
-          warn(
-            `Failed to locate root container: ` + `querySelector returned null.`
-          )
-        }
-        return
-      }
+  const render: RootRenderFunction<
+    HostNode,
+    HostElement & {
+      _vnode: HostVNode | null
     }
+  > = (vnode, container) => {
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)

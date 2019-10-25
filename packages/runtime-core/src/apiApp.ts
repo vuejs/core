@@ -18,7 +18,7 @@ export interface App<HostElement = any> {
   directive(name: string, directive: Directive): this
   mount(
     rootComponent: Component,
-    rootContainer: HostElement,
+    rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
   provide<T>(key: InjectionKey<T> | string, value: T): void
@@ -141,7 +141,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       mount(
         rootComponent: Component,
-        rootContainer: string | HostElement,
+        rootContainer: HostElement,
         rootProps?: Data
       ): any {
         if (!isMounted) {

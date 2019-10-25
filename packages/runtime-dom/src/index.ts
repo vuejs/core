@@ -1,27 +1,54 @@
-import { createRenderer } from '@vue/runtime-core'
+import { createRenderer, warn } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isHTMLTag, isSVGTag } from '@vue/compiler-dom'
+import { isFunction, isString } from '@vue/shared'
 
-const { render, createApp } = createRenderer<Node, Element>({
+const { render, createApp: baseCreateApp } = createRenderer<Node, Element>({
   patchProp,
   ...nodeOps
 })
 
-const wrappedCreateApp = () => {
-  const app = createApp()
-  // inject `isNativeTag` dev only
-  Object.defineProperty(app.config, 'isNativeTag', {
-    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
-    writable: false
-  })
+const createApp = () => {
+  const app = baseCreateApp()
+
+  if (__DEV__) {
+    // Inject `isNativeTag`
+    // this is used for component name validation (dev only)
+    Object.defineProperty(app.config, 'isNativeTag', {
+      value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
+      writable: false
+    })
+  }
+
+  const mount = app.mount
+  app.mount = (component, container, props): any => {
+    if (isString(container)) {
+      container = document.querySelector(container)!
+      if (!container) {
+        __DEV__ &&
+          warn(`Failed to mount app: mount target selector returned null.`)
+        return
+      }
+    }
+    if (
+      __RUNTIME_COMPILE__ &&
+      !isFunction(component) &&
+      !component.render &&
+      !component.template
+    ) {
+      component.template = container.innerHTML
+    }
+    // clear content before mounting
+    container.innerHTML = ''
+    return mount(component, container, props)
+  }
+
   return app
 }
 
-const exportedCreateApp = __DEV__ ? wrappedCreateApp : createApp
-
-export { render, exportedCreateApp as createApp }
+export { render, createApp }
 
 // DOM-only runtime helpers
 export {
