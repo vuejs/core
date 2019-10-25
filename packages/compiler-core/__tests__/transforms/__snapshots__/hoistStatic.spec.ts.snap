@@ -389,7 +389,7 @@ return function render() {
         ? _createBlock(\\"div\\", _hoisted_1, [
             _hoisted_2
           ])
-        : _createCommentVNode())
+        : _createCommentVNode(\\"v-if\\", true))
     ]))
   }
 }"

@@ -9,7 +9,7 @@ return function render() {
     
     return (_openBlock(), ok
       ? _createBlock(\\"div\\", { key: 0 })
-      : _createCommentVNode())
+      : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;
@@ -27,7 +27,7 @@ return function render() {
           \\"hello\\",
           _createVNode(\\"p\\")
         ])
-      : _createCommentVNode())
+      : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;
@@ -41,7 +41,7 @@ return function render() {
     
     return (_openBlock(), ok
       ? _renderSlot($slots, \\"default\\", { key: 0 })
-      : _createCommentVNode())
+      : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;
@@ -87,7 +87,7 @@ return function render() {
       ? _createBlock(\\"div\\", { key: 0 })
       : orNot
         ? _createBlock(\\"p\\", { key: 1 })
-        : _createCommentVNode())
+        : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;
@@ -101,7 +101,7 @@ return function render() {
     
     return (_openBlock(), ok
       ? _renderSlot($slots, \\"default\\", { key: 0 })
-      : _createCommentVNode())
+      : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;

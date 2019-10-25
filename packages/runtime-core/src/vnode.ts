@@ -258,8 +258,15 @@ export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
-export function createCommentVNode(text: string = ''): VNode {
-  return createVNode(Comment, null, text)
+export function createCommentVNode(
+  text: string = '',
+  // when used as the v-else branch, the comment node must be created as a
+  // block to ensure correct updates.
+  asBlock: boolean = false
+): VNode {
+  return asBlock
+    ? createBlock(Comment, null, text)
+    : createVNode(Comment, null, text)
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {

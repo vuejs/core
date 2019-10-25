@@ -152,7 +152,12 @@ function createCodegenNodeForBranch(
     return createConditionalExpression(
       branch.condition,
       createChildrenCodegenNode(branch, index, context),
-      createCallExpression(context.helper(CREATE_COMMENT))
+      // make sure to pass in asBlock: true so that the comment node call
+      // closes the current block.
+      createCallExpression(context.helper(CREATE_COMMENT), [
+        __DEV__ ? '"v-if"' : '""',
+        'true'
+      ])
     ) as IfConditionalExpression
   } else {
     return createChildrenCodegenNode(branch, index, context) as BlockCodegenNode

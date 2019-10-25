@@ -161,7 +161,7 @@ return function render() {
       ? _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createBlock(\\"div\\"))
         }), 128 /* UNKEYED_FRAGMENT */)
-      : _createCommentVNode())
+      : _createCommentVNode(\\"v-if\\", true))
   }
 }"
 `;
