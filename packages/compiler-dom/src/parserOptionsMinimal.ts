@@ -9,7 +9,7 @@ import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
 import { makeMap } from '@vue/shared'
 
 const isRawTextContainer = /*#__PURE__*/ makeMap(
-  'style,xmp,iframe,noembed,noframes,script,noscript',
+  'style,iframe,script,noscript',
   true
 )
 
