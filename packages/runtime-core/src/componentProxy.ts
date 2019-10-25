@@ -11,6 +11,7 @@ import {
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
+import { currentRenderingInstance } from './componentRenderUtils'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -62,7 +63,19 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
-    const { renderContext, data, props, propsProxy, accessCache, type } = target
+    const {
+      renderContext,
+      data,
+      props,
+      propsProxy,
+      accessCache,
+      type,
+      user
+    } = target
+    // fast path for unscopables when using `with` block
+    if (__RUNTIME_COMPILE__ && (key as any) === Symbol.unscopables) {
+      return
+    }
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
@@ -109,7 +122,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return instanceWatch.bind(target)
       }
     }
-    return target.user[key]
+    if (hasOwn(user, key)) {
+      return user[key]
+    } else if (__DEV__ && currentRenderingInstance != null) {
+      warn(
+        `Property ${JSON.stringify(key)} was accessed during render ` +
+          `but is not defined on instance.`
+      )
+    }
   },
 
   set(target: ComponentInternalInstance, key: string, value: any): boolean {
