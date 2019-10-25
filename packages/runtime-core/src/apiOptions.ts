@@ -454,7 +454,7 @@ function createWatcher(
     watch(getter, raw.bind(ctx))
   } else if (isObject(raw)) {
     if (isArray(raw)) {
-      raw.forEach(r => createWatch(r, renderContext, ctx, key))
+      raw.forEach(r => createWatcher(r, renderContext, ctx, key))
     } else {
       watch(getter, raw.handler.bind(ctx), raw)
     }
