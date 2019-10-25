@@ -53,7 +53,7 @@ export function toRawType(value: unknown): string {
 }
 
 export const isPlainObject = (val: unknown): val is object =>
-  toRawType(val) === 'Object'
+  toTypeString(val) === '[object Object]'
 
 export const isReservedProp = (key: string): boolean =>
   key === 'key' || key === 'ref' || key.startsWith(`onVnode`)
