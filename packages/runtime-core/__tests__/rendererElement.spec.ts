@@ -25,7 +25,7 @@ describe('renderer: element', () => {
   test('with direct text children', () => {
     const root = nodeOps.createElement('div')
 
-    render(h('div', ['I ❤ Vue']), root)
+    render(h('div', 'I ❤ Vue'), root)
 
     expect(serialize(root)).toMatchSnapshot()
   })
