@@ -288,6 +288,26 @@ describe('compiler: element transform', () => {
     ])
   })
 
+  test('should error on <portal> element with no target', () => {
+    const onError = jest.fn()
+    parseWithElementTransform(`<portal foo="bar"><span /></portal>`, {
+      onError
+    })
+
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_PORTAL_NO_TARGET
+    })
+  })
+
+  test('should not error on <portal> element with bound target', () => {
+    const onError = jest.fn()
+    parseWithElementTransform(`<portal :target="bar"><span /></portal>`, {
+      onError
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+  })
+
   test('should handle <Portal> element', () => {
     const { node } = parseWithElementTransform(
       `<Portal target="#foo"><span /></Portal>`
