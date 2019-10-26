@@ -27,7 +27,6 @@ However, there are still some 2.x parity features not completed yet:
 - [ ] `<keep-alive>`
 - [ ] `<transition>`
 - [ ] `v-show` with transition
-- [ ] `<component :is>`
 
 The current implementation also requires native ES2015+ in the runtime environment and does not support IE11 (yet).
 
