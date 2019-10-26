@@ -55,6 +55,14 @@ export const transformExpression: NodeTransform = (node, context) => {
         if (arg && !arg.isStatic) {
           dir.arg = processExpression(arg, context)
         }
+
+        for (let i = 0; i < dir.modifiers.length; i++) {
+          const modifier = dir.modifiers[i] as SimpleExpressionNode
+
+          if (!modifier.isStatic) {
+            dir.modifiers[i] = processExpression(modifier, context)
+          }
+        }
       }
     }
   }

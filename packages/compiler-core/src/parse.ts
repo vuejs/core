@@ -617,6 +617,38 @@ function parseAttribute(
       }
     }
 
+    let modifiers: ExpressionNode[] = []
+
+    if (match[3]) {
+      const rawModifiers = match[3].substr(1).split('.')
+
+      for (let i = 0; i < rawModifiers.length; i++) {
+        let content = rawModifiers[i]
+        let isStatic = true
+
+        if (content.startsWith('[')) {
+          isStatic = false
+
+          if (!content.endsWith(']')) {
+            emitError(
+              context,
+              ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_END
+            )
+          }
+
+          content = content.substr(1, content.length - 2)
+        }
+
+        modifiers.push({
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content,
+          isStatic,
+          isConstant: isStatic,
+          loc
+        })
+      }
+    }
+
     if (value && value.isQuoted) {
       const valueLoc = value.loc
       valueLoc.start.offset++
@@ -644,7 +676,7 @@ function parseAttribute(
         loc: value.loc
       },
       arg,
-      modifiers: match[3] ? match[3].substr(1).split('.') : [],
+      modifiers,
       loc
     }
   }

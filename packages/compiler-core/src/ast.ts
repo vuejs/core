@@ -178,7 +178,7 @@ export interface DirectiveNode extends Node {
   name: string
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
-  modifiers: string[]
+  modifiers: ExpressionNode[]
   // optional property to cache the expression parse result for v-for
   parseResult?: ForParseResult
 }
