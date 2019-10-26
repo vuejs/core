@@ -104,11 +104,14 @@ export type DirectiveArguments = Array<
   | [Directive, any, string, DirectiveModifiers]
 >
 
-export function withDirectives(vnode: VNode, directives: DirectiveArguments) {
+export function withDirectives<T extends VNode>(
+  vnode: T,
+  directives: DirectiveArguments
+): T {
   const internalInstance = currentRenderingInstance
   if (internalInstance === null) {
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
-    return
+    return vnode
   }
   const instance = internalInstance.renderProxy
   const props = vnode.props || (vnode.props = {})
