@@ -115,32 +115,10 @@ export const transformElement: NodeTransform = (node, context) => {
       }
     }
 
-    if (node.tagType === ElementTypes.PORTAL) {
-      // If node is a portal, check if it has target
-      let noTarget = true
-
-      for (let i = 0; i < node.props.length; i++) {
-        const prop = node.props[i]
-        if (prop.type === NodeTypes.ATTRIBUTE && prop.name === 'target') {
-          noTarget = false
-          break
-        } else if (
-          prop.type === NodeTypes.DIRECTIVE &&
-          prop.name === 'bind' &&
-          prop.arg &&
-          prop.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-          prop.arg.content === 'target'
-        ) {
-          noTarget = false
-          break
-        }
-      }
-
-      if (noTarget) {
-        context.onError(
-          createCompilerError(ErrorCodes.X_PORTAL_NO_TARGET, node.loc)
-        )
-      }
+    if (node.tagType === ElementTypes.PORTAL && !findProp(node, 'target')) {
+      context.onError(
+        createCompilerError(ErrorCodes.X_PORTAL_NO_TARGET, node.loc)
+      )
     }
 
     // children
