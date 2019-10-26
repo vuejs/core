@@ -1,5 +1,6 @@
 import { currentInstance } from './component'
 import { warn } from './warning'
+import { isString } from '@vue/shared'
 
 export interface InjectionKey<T> extends Symbol {}
 
@@ -39,7 +40,7 @@ export function inject(
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {
-      warn(`injection "${key}" not found.`)
+      warn(`injection "${isString(key) ? key : key.toString()}" not found.`)
     }
   } else if (__DEV__) {
     warn(`inject() can only be used inside setup().`)
