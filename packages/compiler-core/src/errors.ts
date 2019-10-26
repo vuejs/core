@@ -176,7 +176,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Invalid JavaScript expression.`,
-  [ErrorCodes.X_PORTAL_NO_TARGET]: `Portal doesn't have "target" prop.`,
+  [ErrorCodes.X_PORTAL_NO_TARGET]: `Portal requires a "target" prop.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
