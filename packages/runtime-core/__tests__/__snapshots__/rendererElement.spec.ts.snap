@@ -1,13 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`renderer: element handle already mounted VNode: root 1 1`] = `"<div><div></div></div>"`;
+exports[`renderer: element handle already mounted VNode 1`] = `"<div><div><test></test></div></div>"`;
 
-exports[`renderer: element handle already mounted VNode: root 2 1`] = `"<div><div></div></div>"`;
+exports[`renderer: element handle already mounted VNode 2`] = `"<div><div><test></test></div></div>"`;
 
 exports[`renderer: element simple 1`] = `"<div><div></div></div>"`;
 
-exports[`renderer: element with direct text children 1`] = `"<div><div>I ❤ Vue</div></div>"`;
+exports[`renderer: element with direct text children 1`] = `"<div><div>Hello, world!</div></div>"`;
 
-exports[`renderer: element with props 1`] = `"<div><div id=\\"test\\"></div></div>"`;
+exports[`renderer: element with direct text children 2`] = `"<div><div>I ❤ Vue</div></div>"`;
+
+exports[`renderer: element with props 1`] = `"<div><div id=\\"test1\\"></div></div>"`;
+
+exports[`renderer: element with props 2`] = `"<div><div id=\\"test2\\"></div></div>"`;
 
 exports[`renderer: element with text node children 1`] = `"<div><div>I ❤ Vue</div></div>"`;

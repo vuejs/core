@@ -1,4 +1,4 @@
-import { nodeOps, render, h, serialize, Text } from '@vue/runtime-test'
+import { nodeOps, render, h, serialize, Text, VNode } from '@vue/runtime-test'
 
 describe('renderer: element', () => {
   test('simple', () => {
@@ -11,22 +11,37 @@ describe('renderer: element', () => {
 
   test('with props', () => {
     const root = nodeOps.createElement('div')
+    let id = 'test1'
 
     render(
       h('div', {
-        id: 'test'
+        id
       }),
       root
     )
+    expect(serialize(root)).toMatchSnapshot()
 
+    id = 'test2'
+
+    render(
+      h('div', {
+        id
+      }),
+      root
+    )
     expect(serialize(root)).toMatchSnapshot()
   })
 
   test('with direct text children', () => {
     const root = nodeOps.createElement('div')
+    let text = 'Hello, world!'
 
-    render(h('div', 'I ❤ Vue'), root)
+    render(h('div', text), root)
+    expect(serialize(root)).toMatchSnapshot()
 
+    text = 'I ❤ Vue'
+
+    render(h('div', text), root)
     expect(serialize(root)).toMatchSnapshot()
   })
 
@@ -39,17 +54,17 @@ describe('renderer: element', () => {
   })
 
   test('handle already mounted VNode', () => {
-    const root1 = nodeOps.createElement('div')
-    const root2 = nodeOps.createElement('div')
-    const vnode = h('div')
+    const root = nodeOps.createElement('div')
+    const vnode = h('test')
+    const tree1 = h('div', vnode)
+    const tree2 = h('div', vnode)
 
-    render(vnode, root1)
-    expect(vnode.el).toBe(root1.children[0])
+    render(tree1, root)
+    expect(serialize(root)).toMatchSnapshot()
+    expect((tree1.children as VNode[])[0]).toMatchObject(vnode)
 
-    render(vnode, root2)
-    expect(vnode.el).toBe(root2.children[0])
-
-    expect(serialize(root1)).toMatchSnapshot('root 1')
-    expect(serialize(root2)).toMatchSnapshot('root 2')
+    render(tree2, root)
+    expect(serialize(root)).toMatchSnapshot()
+    expect((tree2.children as VNode[])[0]).toMatchObject(vnode)
   })
 })
