@@ -39,7 +39,7 @@ export function inject(
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {
-      warn(`injection "${key}" not found.`)
+      warn(`injection "${String(key)}" not found.`)
     }
   } else if (__DEV__) {
     warn(`inject() can only be used inside setup().`)
