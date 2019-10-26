@@ -657,7 +657,7 @@ export function createRenderer<
     if (n1 == null) {
       const target = (n2.target = isString(targetSelector)
         ? hostQuerySelector(targetSelector)
-        : null)
+        : targetSelector)
       if (target != null) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
           hostSetElementText(target, children as string)
