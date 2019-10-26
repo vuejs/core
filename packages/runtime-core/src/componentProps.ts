@@ -276,7 +276,7 @@ function getTypeIndex(
         return i
       }
     }
-  } else if (isObject(expectedTypes)) {
+  } else if (isFunction(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }
   return -1
