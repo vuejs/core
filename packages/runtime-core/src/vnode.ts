@@ -17,6 +17,7 @@ import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
 import { SuspenseBoundary } from './suspense'
+import { DirectiveBinding } from './directives'
 
 export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined)
 export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
@@ -66,6 +67,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
+  dirs: DirectiveBinding[] | null
 
   // DOM
   el: HostNode | null
@@ -200,6 +202,7 @@ export function createVNode(
     children: null,
     component: null,
     suspense: null,
+    dirs: null,
     el: null,
     anchor: null,
     target: null,
@@ -247,6 +250,7 @@ export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
+    dirs: vnode.dirs,
 
     // these should be set to null since they should only be present on
     // mounted VNodes. If they are somehow not null, this means we have
