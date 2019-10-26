@@ -4,7 +4,7 @@ import { isFunction } from '@vue/shared'
 import { ComponentInternalInstance } from './component'
 import { Slots } from './componentSlots'
 
-export const SuspenseSymbol = __DEV__ ? Symbol('Suspense key') : Symbol()
+export const SuspenseSymbol = Symbol(__DEV__ ? 'Suspense key' : undefined)
 
 export interface SuspenseBoundary<
   HostNode = any,

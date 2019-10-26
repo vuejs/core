@@ -18,11 +18,11 @@ import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
 import { SuspenseBoundary } from './suspense'
 
-export const Fragment = __DEV__ ? Symbol('Fragment') : Symbol()
-export const Portal = __DEV__ ? Symbol('Portal') : Symbol()
-export const Suspense = __DEV__ ? Symbol('Suspense') : Symbol()
-export const Text = __DEV__ ? Symbol('Text') : Symbol()
-export const Comment = __DEV__ ? Symbol('Comment') : Symbol()
+export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined)
+export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
+export const Suspense = Symbol(__DEV__ ? 'Suspense' : undefined)
+export const Text = Symbol(__DEV__ ? 'Text' : undefined)
+export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
 
 export type VNodeTypes =
   | string
