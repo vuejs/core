@@ -7,7 +7,8 @@ import {
   watch,
   ref,
   nextTick,
-  mockWarn
+  mockWarn,
+  computed
 } from '@vue/runtime-test'
 
 describe('error handling', () => {
@@ -233,6 +234,69 @@ describe('error handling', () => {
 
     render(h(Comp), nodeOps.createElement('div'))
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
+  })
+
+  test('in read-only computed', () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () => h(Child)
+      }
+    }
+
+    const Child = {
+      setup() {
+        const comp = computed(() => {
+          throw err
+        })
+        comp.value
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'computed getter')
+  })
+
+  test('in writable computed', () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () => h(Child)
+      }
+    }
+
+    const Child = {
+      setup() {
+        const comp = computed({
+          get: () => {
+            throw err
+          },
+          set: (v: string) => {
+            throw err
+          }
+        })
+
+        comp.value = 'a'
+
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'computed setter')
   })
 
   test('in watch getter', () => {
