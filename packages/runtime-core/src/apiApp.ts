@@ -21,7 +21,7 @@ export interface App<HostElement = any> {
     rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
-  provide<T>(key: InjectionKey<T> | string, value: T): void
+  provide<T>(key: InjectionKey<T> | string, value: T): this
 }
 
 export interface AppConfig {
@@ -169,6 +169,8 @@ export function createAppAPI<HostNode, HostElement>(
         // TypeScript doesn't allow symbols as index type
         // https://github.com/Microsoft/TypeScript/issues/24587
         context.provides[key as string] = value
+
+        return app
       }
     }
 
