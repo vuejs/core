@@ -10,6 +10,11 @@ export function renderList(
   ) => VNodeChild
 ): VNodeChild[] {
   let ret: VNodeChild[]
+
+  if (source instanceof Set) {
+    source = [...source]
+  }
+
   if (isArray(source) || isString(source)) {
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
@@ -21,7 +26,16 @@ export function renderList(
       ret[i] = renderItem(i + 1, i)
     }
   } else if (isObject(source)) {
-    if (source[Symbol.iterator as any]) {
+    if (source instanceof Map) {
+      const pairs = Array.from(source)
+      ret = new Array(pairs.length)
+      for (let i = 0; i < pairs.length; i++) {
+        const key = pairs[i][0]
+        const value = pairs[i][1]
+
+        ret[i] = renderItem(value, key, i)
+      }
+    } else if (source[Symbol.iterator as any]) {
       ret = Array.from(source as Iterable<any>, renderItem)
     } else {
       const keys = Object.keys(source)
