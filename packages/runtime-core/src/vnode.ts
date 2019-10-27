@@ -234,23 +234,13 @@ export function createVNode(
 
 export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
   return {
-    _isVNode: true,
-    type: vnode.type,
+    ...vnode,
+
     props: extraProps
       ? vnode.props
         ? mergeProps(vnode.props, extraProps)
         : extraProps
       : vnode.props,
-    key: vnode.key,
-    ref: vnode.ref,
-    children: vnode.children,
-    target: vnode.target,
-    shapeFlag: vnode.shapeFlag,
-    patchFlag: vnode.patchFlag,
-    dynamicProps: vnode.dynamicProps,
-    dynamicChildren: vnode.dynamicChildren,
-    appContext: vnode.appContext,
-    dirs: vnode.dirs,
 
     // these should be set to null since they should only be present on
     // mounted VNodes. If they are somehow not null, this means we have
