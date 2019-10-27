@@ -110,7 +110,16 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
-        context.mixins.push(mixin)
+        if (__DEV__ && !__FEATURE_OPTIONS__) {
+          warn('Mixins are only available in builds supporting Options API')
+        }
+
+        if (!context.mixins.includes(mixin)) {
+          context.mixins.push(mixin)
+        } else if (__DEV__) {
+          warn('This mixin is already applied to this app')
+        }
+
         return app
       },
 
@@ -121,6 +130,9 @@ export function createAppAPI<HostNode, HostElement>(
         if (!component) {
           return context.components[name]
         } else {
+          if (__DEV__ && context.components[name]) {
+            warn(`Component "${name}" is already registered on this app.`)
+          }
           context.components[name] = component
           return app
         }
@@ -134,6 +146,9 @@ export function createAppAPI<HostNode, HostElement>(
         if (!directive) {
           return context.directives[name] as any
         } else {
+          if (__DEV__ && context.directives[name]) {
+            warn(`Directive "${name}" is already registered on this app.`)
+          }
           context.directives[name] = directive
           return app
         }
