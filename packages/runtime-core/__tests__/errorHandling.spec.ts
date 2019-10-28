@@ -7,7 +7,8 @@ import {
   watch,
   ref,
   nextTick,
-  mockWarn
+  mockWarn,
+  createComponent
 } from '@vue/runtime-test'
 
 describe('error handling', () => {
@@ -206,6 +207,29 @@ describe('error handling', () => {
 
     render(h(Comp), nodeOps.createElement('div'))
     expect(fn).toHaveBeenCalledWith(err, 'render function')
+  })
+
+  test('in function ref', () => {
+    const err = new Error('foo')
+    const ref = () => {
+      throw err
+    }
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () => h(Child)
+      }
+    }
+
+    const Child = createComponent(() => () => h('div', { ref }))
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'ref function')
   })
 
   test('in watch (simple usage)', () => {
