@@ -147,7 +147,7 @@ export function createAppAPI<HostNode, HostElement>(
           return context.directives[name] as any
         } else {
           if (__DEV__ && context.directives[name]) {
-            warn(`Directive "${name}" is already registered on this app.`)
+            warn(`Directive "${name}" has already been registered in target app.`)
           }
           context.directives[name] = directive
           return app
