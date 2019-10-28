@@ -52,7 +52,7 @@ import {
   createSuspenseBoundary,
   normalizeSuspenseChildren
 } from './suspense'
-import { handleError, ErrorCodes } from './errorHandling'
+import { handleError, ErrorCodes, callWithErrorHandling } from './errorHandling'
 
 const prodEffectOptions = {
   scheduler: queueJob
@@ -1852,7 +1852,7 @@ export function createRenderer<
     } else if (isRef(ref)) {
       ref.value = value
     } else if (isFunction(ref)) {
-      ref(value, refs)
+      callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value, refs])
     } else if (__DEV__) {
       warn('Invalid template ref type:', value, `(${typeof value})`)
     }
