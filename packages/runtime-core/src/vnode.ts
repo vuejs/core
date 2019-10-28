@@ -232,7 +232,10 @@ export function createVNode(
   return vnode
 }
 
-export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
+export function cloneVNode<T, U>(
+  vnode: VNode<T, U>,
+  extraProps?: Data
+): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
@@ -279,7 +282,7 @@ export function createCommentVNode(
     : createVNode(Comment, null, text)
 }
 
-export function normalizeVNode(child: VNodeChild): VNode {
+export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
   if (child == null) {
     // empty placeholder
     return createVNode(Comment)
