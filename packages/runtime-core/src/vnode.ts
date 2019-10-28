@@ -233,6 +233,8 @@ export function createVNode(
 }
 
 export function cloneVNode(vnode: VNode, extraProps?: Data): VNode {
+  // This is intentionally NOT using spread or extend to avoid the runtime
+  // key enumeration cost.
   return {
     _isVNode: true,
     type: vnode.type,
