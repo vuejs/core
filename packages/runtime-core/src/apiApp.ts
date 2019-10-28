@@ -117,7 +117,7 @@ export function createAppAPI<HostNode, HostElement>(
         if (!context.mixins.includes(mixin)) {
           context.mixins.push(mixin)
         } else if (__DEV__) {
-          warn('This mixin is already applied to this app')
+          warn('Mixin has already been applied to target app:', mixin)
         }
 
         return app
