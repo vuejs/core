@@ -83,7 +83,7 @@ describe('api: createApp', () => {
 
     app.component('BarBaz', () => 'barbaz!')
     expect(
-      'Component "BarBaz" is already registered on this app.'
+      'Component "BarBaz" has already been registered in target app.'
     ).toHaveBeenWarnedTimes(1)
 
     const Root = {
@@ -126,7 +126,7 @@ describe('api: createApp', () => {
       mounted: spy2
     })
     expect(
-      'Directive "BarBaz" is already registered on this app.'
+      'Directive "BarBaz" has already been registered in target app.'
     ).toHaveBeenWarnedTimes(1)
 
     const Root = {
@@ -176,6 +176,7 @@ describe('api: createApp', () => {
       }
     }
     const mixinB = {
+      name: 'mixinB',
       data() {
         return {
           b: 2
@@ -215,8 +216,14 @@ describe('api: createApp', () => {
     app.mixin(mixinA)
     app.mixin(mixinB)
 
+    app.mixin(mixinA)
     app.mixin(mixinB)
-    expect('This mixin is already applied to this app').toHaveBeenWarnedTimes(1)
+    expect(
+      'Mixin has already been applied to target app'
+    ).toHaveBeenWarnedTimes(2)
+    expect(
+      'Mixin has already been applied to target app: mixinB'
+    ).toHaveBeenWarnedTimes(1)
 
     const root = nodeOps.createElement('div')
     app.mount(Comp, root)

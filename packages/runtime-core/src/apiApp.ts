@@ -117,7 +117,10 @@ export function createAppAPI<HostNode, HostElement>(
         if (!context.mixins.includes(mixin)) {
           context.mixins.push(mixin)
         } else if (__DEV__) {
-          warn('Mixin has already been applied to target app:', mixin)
+          warn(
+            'Mixin has already been applied to target app' +
+              (mixin.name ? `: ${mixin.name}` : '')
+          )
         }
 
         return app
@@ -131,7 +134,9 @@ export function createAppAPI<HostNode, HostElement>(
           return context.components[name]
         } else {
           if (__DEV__ && context.components[name]) {
-            warn(`Component "${name}" has already been registered in target app.`)
+            warn(
+              `Component "${name}" has already been registered in target app.`
+            )
           }
           context.components[name] = component
           return app
@@ -147,7 +152,9 @@ export function createAppAPI<HostNode, HostElement>(
           return context.directives[name] as any
         } else {
           if (__DEV__ && context.directives[name]) {
-            warn(`Directive "${name}" has already been registered in target app.`)
+            warn(
+              `Directive "${name}" has already been registered in target app.`
+            )
           }
           context.directives[name] = directive
           return app
