@@ -449,15 +449,17 @@ function createWatcher(
     if (isFunction(handler)) {
       watch(getter, handler as WatchHandler)
     } else if (__DEV__) {
-      warn(`Invalid watch handler specified by key "${raw}"`, handler)
+      warn(`Invalid watch handler specified by key "${key}"`, raw)
     }
   } else if (isFunction(raw)) {
     watch(getter, raw.bind(ctx))
   } else if (isObject(raw)) {
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, renderContext, ctx, key))
-    } else {
+    } else if (isFunction(raw.handler)) {
       watch(getter, raw.handler.bind(ctx), raw)
+    } else if (__DEV__) {
+      warn(`Invalid watch handler specified by key "${key}"`, raw)
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`)

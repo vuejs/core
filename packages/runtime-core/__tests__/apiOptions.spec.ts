@@ -582,7 +582,8 @@ describe('api: options', () => {
     test('Expected a function as watch handler', () => {
       const Comp = {
         watch: {
-          foo: 'notExistingMethod'
+          foo: 'notExistingMethod',
+          bar: ['notExistingMethod']
         },
         render() {}
       }
@@ -590,9 +591,8 @@ describe('api: options', () => {
       const root = nodeOps.createElement('div')
       render(h(Comp), root)
 
-      expect(
-        'Invalid watch handler specified by key "notExistingMethod"'
-      ).toHaveBeenWarned()
+      expect('Invalid watch handler specified by key "foo"').toHaveBeenWarned()
+      expect('Invalid watch handler specified by key "bar"').toHaveBeenWarned()
     })
 
     test('Invalid watch option', () => {
