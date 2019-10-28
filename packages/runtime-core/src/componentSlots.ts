@@ -9,6 +9,7 @@ import {
 import { isArray, isFunction } from '@vue/shared'
 import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
+import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
 export type Slot = (...args: any[]) => VNodeChildren
 
@@ -38,7 +39,9 @@ const normalizeSlot = (key: string, rawSlot: Function): Slot => (
         `Invoke the slot function inside the render function instead.`
     )
   }
-  return normalizeSlotValue(rawSlot(props))
+  return normalizeSlotValue(
+    callWithErrorHandling(rawSlot, currentInstance, ErrorCodes.SLOT, [props])
+  )
 }
 
 export function resolveSlots(
