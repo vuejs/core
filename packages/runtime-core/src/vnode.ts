@@ -236,6 +236,8 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data
 ): VNode<T, U> {
+  // This is intentionally NOT using spread or extend to avoid the runtime
+  // key enumeration cost.
   return {
     _isVNode: true,
     type: vnode.type,
