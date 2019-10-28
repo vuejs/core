@@ -680,7 +680,11 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const targetSelector = n2.props && n2.props.target
+    let targetSelector = n2.props && n2.props.target
+    if (isRef(targetSelector)) {
+      targetSelector = targetSelector.value
+    }
+
     const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
       const target = (n2.target = isString(targetSelector)
@@ -733,7 +737,7 @@ export function createRenderer<
       if (targetSelector !== (n1.props && n1.props.target)) {
         const nextTarget = (n2.target = isString(targetSelector)
           ? hostQuerySelector(targetSelector)
-          : null)
+          : targetSelector)
         if (nextTarget != null) {
           // move content
           if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
