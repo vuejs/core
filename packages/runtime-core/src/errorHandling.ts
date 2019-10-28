@@ -114,7 +114,7 @@ export function handleError(
     if (appErrorHandler) {
       callWithErrorHandling(
         appErrorHandler,
-        null,
+        instance,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo]
       )
