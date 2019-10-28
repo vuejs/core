@@ -131,7 +131,7 @@ export function createAppAPI<HostNode, HostElement>(
           return context.components[name]
         } else {
           if (__DEV__ && context.components[name]) {
-            warn(`Component "${name}" is already registered on this app.`)
+            warn(`Component "${name}" has already been registered in target app.`)
           }
           context.components[name] = component
           return app
