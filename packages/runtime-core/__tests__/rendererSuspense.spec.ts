@@ -10,7 +10,8 @@ import {
   onMounted,
   watch,
   onUnmounted,
-  onErrorCaptured
+  onErrorCaptured,
+  Portal
 } from '@vue/runtime-test'
 
 describe('renderer: suspense', () => {
@@ -711,5 +712,138 @@ describe('renderer: suspense', () => {
     )
   })
 
-  test.todo('portal inside suspense')
+  test('portal inside suspense', async () => {
+    const portalRoot = nodeOps.createElement('div')
+
+    const ChildA = createAsyncComponent({
+      setup() {
+        return () => h(Portal, { target: portalRoot }, 'portal content')
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Suspense, null, {
+            default: [h(ChildA)],
+            fallback: h('div', 'root fallback')
+          })
+        ]
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<!----><div>root fallback</div><!---->`)
+    expect(serializeInner(portalRoot)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!--portal content--><!----><!---->`
+    )
+    expect(serializeInner(portalRoot)).toBe(`portal content`)
+  })
+
+  test('async inside portal inside suspense', async () => {
+    const portalRoot = nodeOps.createElement('div')
+
+    const AsyncChildInPortal = createAsyncComponent({
+      setup() {
+        return () => h('div', 'portal content')
+      }
+    })
+
+    const AsyncParentWithPortal = createAsyncComponent({
+      setup() {
+        return () => h(Portal, { target: portalRoot }, [h(AsyncChildInPortal)])
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Suspense, null, {
+            default: [h(AsyncParentWithPortal)],
+            fallback: h('div', 'root fallback')
+          })
+        ]
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<!----><div>root fallback</div><!---->`)
+    expect(serializeInner(portalRoot)).toBe(``)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!----><div>root fallback</div><!---->`)
+    expect(serializeInner(portalRoot)).toBe(`<!---->`)
+
+    await deps[1]
+    await nextTick()
+
+    // TODO: the text node of the comment is an array of vnodes. I don't think this is correct.
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!--[object Object]--><!----><!---->`
+    )
+    expect(serializeInner(portalRoot)).toBe(`<!----><div>portal content</div>`)
+  })
+
+  test('suspense inside portal inside suspense', async () => {
+    const portalRoot = nodeOps.createElement('div')
+
+    const AsyncChildInPortal = createAsyncComponent({
+      setup() {
+        return () => h('div', 'portal content')
+      }
+    })
+
+    const AsyncParentWithPortal = createAsyncComponent({
+      setup() {
+        return () =>
+          h(Portal, { target: portalRoot }, [
+            h(Suspense, null, {
+              default: [h(AsyncChildInPortal)],
+              fallback: h('div', 'portal fallback')
+            })
+          ])
+      }
+    })
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(Suspense, null, {
+            default: [h(AsyncParentWithPortal)],
+            fallback: h('div', 'root fallback')
+          })
+        ]
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<!----><div>root fallback</div><!---->`)
+    expect(serializeInner(portalRoot)).toBe(``)
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!--[object Object]--><!----><!---->`
+    )
+    expect(serializeInner(portalRoot)).toBe(`<div>portal fallback</div>`)
+
+    await deps[1]
+    await nextTick()
+
+    // TODO: the text node of the comment is an array of vnodes. I don't think this is correct.
+    expect(serializeInner(root)).toBe(
+      `<!----><!----><!--[object Object]--><!----><!---->`
+    )
+    expect(serializeInner(portalRoot)).toBe(
+      `<!----><div>portal content</div><!---->`
+    )
+  })
 })
