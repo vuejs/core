@@ -196,7 +196,7 @@ export interface SuspenseBoundary<
   isUnmounted: boolean
   effects: Function[]
   resolve(): void
-  restart(): void
+  recede(): void
   move(container: HostElement, anchor: HostNode | null): void
   next(): HostNode | null
   registerDep(
@@ -315,7 +315,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
       }
     },
 
-    restart() {
+    recede() {
       suspense.isResolved = false
       const {
         vnode,
@@ -349,10 +349,10 @@ function createSuspenseBoundary<HostNode, HostElement>(
         updateHOCHostEl(parentComponent, el)
       }
 
-      // invoke @suspense event
-      const onSuspense = vnode.props && vnode.props.onSuspense
-      if (isFunction(onSuspense)) {
-        onSuspense()
+      // invoke @recede event
+      const onRecede = vnode.props && vnode.props.onRecede
+      if (isFunction(onRecede)) {
+        onRecede()
       }
     },
 
@@ -377,7 +377,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
       // suspense tree
       if (suspense.isResolved) {
         queueJob(() => {
-          suspense.restart()
+          suspense.recede()
         })
       }
 

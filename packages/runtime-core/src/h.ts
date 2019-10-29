@@ -5,7 +5,8 @@ import {
   VNodeChildren,
   Fragment,
   Portal,
-  isVNode
+  isVNode,
+  Suspense
 } from './vnode'
 import { isObject, isArray } from '@vue/shared'
 import { Ref } from '@vue/reactivity'
@@ -100,6 +101,19 @@ export function h(
   type: typeof Portal,
   props?: (RawProps & { target: any }) | null,
   children?: RawChildren
+): VNode
+
+// suspense
+export function h(type: typeof Suspense, children?: RawChildren): VNode
+export function h(
+  type: typeof Suspense,
+  props?:
+    | (RawProps & {
+        onResolve?: () => void
+        onRecede?: () => void
+      })
+    | null,
+  children?: RawChildren | RawSlots
 ): VNode
 
 // functional component

@@ -25,7 +25,9 @@ export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
 
-const Suspense = __FEATURE_SUSPENSE__ ? SuspenseImpl : null
+const Suspense = (__FEATURE_SUSPENSE__
+  ? SuspenseImpl
+  : null) as typeof SuspenseImpl
 export { Suspense }
 
 export type VNodeTypes =
