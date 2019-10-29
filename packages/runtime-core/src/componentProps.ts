@@ -19,7 +19,7 @@ import { Data, ComponentInternalInstance } from './component'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
-  | string[]
+  | Extract<keyof P, string>[]
 
 export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
@@ -27,16 +27,22 @@ export type ComponentObjectPropsOptions<P = Data> = {
 
 export type Prop<T> = PropOptions<T> | PropType<T>
 
+type DefaultFactory<T> = () => T | null | undefined
+
 interface PropOptions<T = any> {
   type?: PropType<T> | true | null
   required?: boolean
-  default?: T | null | undefined | (() => T | null | undefined)
-  validator?(value: unknown): boolean
+  default?:
+    | DefaultFactory<T>
+    | null
+    | undefined
+    | (T extends Function ? never : T) // If type of prop is function, only allow factory function
+  validator?(value: T): boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
-type PropConstructor<T = any> = { new (...args: any[]): T & object } | { (): T }
+type PropConstructor<T = any> = { new (): T & object } | { (): T }
 
 type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends
@@ -282,11 +288,6 @@ function getTypeIndex(
   return -1
 }
 
-type AssertionResult = {
-  valid: boolean
-  expectedType: string
-}
-
 function validateProp(
   name: string,
   value: unknown,
@@ -300,7 +301,7 @@ function validateProp(
     return
   }
   // missing but optional
-  if (value == null && !prop.required) {
+  if (value == null && !required) {
     return
   }
   // type check
@@ -328,6 +329,11 @@ function validateProp(
 const isSimpleType = /*#__PURE__*/ makeMap(
   'String,Number,Boolean,Function,Symbol'
 )
+
+type AssertionResult = {
+  valid: boolean
+  expectedType: string
+}
 
 function assertType(value: unknown, type: PropConstructor): AssertionResult {
   let valid
