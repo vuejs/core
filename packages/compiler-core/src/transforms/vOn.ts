@@ -109,7 +109,7 @@ export const transformOn: DirectiveTransform = (
 
   if (isCacheable) {
     // cache handlers so that it's always the same handler being passed down.
-    // this avoids unnecessary re-renders when users use inline hanlders on
+    // this avoids unnecessary re-renders when users use inline handlers on
     // components.
     ret.props[0].value = context.cache(ret.props[0].value)
   }
