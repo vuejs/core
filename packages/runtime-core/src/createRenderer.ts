@@ -26,7 +26,6 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  isArray,
   PatchFlags
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
@@ -46,7 +45,11 @@ import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { App, createAppAPI } from './apiApp'
-import { SuspenseBoundary, SuspenseImpl } from './suspense'
+import {
+  SuspenseBoundary,
+  SuspenseImpl,
+  queueEffectWithSuspense
+} from './suspense'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
@@ -135,20 +138,7 @@ function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
 }
 
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
-  ? (
-      fn: Function | Function[],
-      suspense: SuspenseBoundary<any, any> | null
-    ) => {
-      if (suspense !== null && !suspense.isResolved) {
-        if (isArray(fn)) {
-          suspense.effects.push(...fn)
-        } else {
-          suspense.effects.push(fn)
-        }
-      } else {
-        queuePostFlushCb(fn)
-      }
-    }
+  ? queueEffectWithSuspense
   : queuePostFlushCb
 
 /**
@@ -1354,13 +1344,7 @@ export function createRenderer<
       return
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-      const suspense = vnode.suspense!
-      move(
-        suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
-        container,
-        anchor
-      )
-      suspense.container = container
+      vnode.suspense!.move(container, anchor)
       return
     }
     if (vnode.type === Fragment) {
@@ -1503,10 +1487,7 @@ export function createRenderer<
       return getNextHostNode(vnode.component!.subTree)
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-      const suspense = vnode.suspense!
-      return getNextHostNode(
-        suspense.isResolved ? suspense.subTree : suspense.fallbackTree
-      )
+      return vnode.suspense!.next()
     }
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }

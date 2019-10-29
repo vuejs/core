@@ -1,6 +1,6 @@
 import { VNode, normalizeVNode, VNodeChild, VNodeTypes } from './vnode'
 import { ShapeFlags } from './shapeFlags'
-import { isFunction } from '@vue/shared'
+import { isFunction, isArray } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from './component'
 import { Slots } from './componentSlots'
 import { RendererInternals } from './createRenderer'
@@ -197,6 +197,8 @@ export interface SuspenseBoundary<
   effects: Function[]
   resolve(): void
   restart(): void
+  move(container: HostElement, anchor: HostNode | null): void
+  next(): HostNode | null
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: (
@@ -354,6 +356,21 @@ function createSuspenseBoundary<HostNode, HostElement>(
       }
     },
 
+    move(container, anchor) {
+      move(
+        suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
+        container,
+        anchor
+      )
+      suspense.container = container
+    },
+
+    next() {
+      return next(
+        suspense.isResolved ? suspense.subTree : suspense.fallbackTree
+      )
+    },
+
     registerDep(instance, setupRenderEffect) {
       // suspense is already resolved, need to recede.
       // use queueJob so it's handled synchronously after patching the current
@@ -437,5 +454,20 @@ function normalizeSuspenseChildren(
       content: normalizeVNode(children as VNodeChild),
       fallback: normalizeVNode(null)
     }
+  }
+}
+
+export function queueEffectWithSuspense(
+  fn: Function | Function[],
+  suspense: SuspenseBoundary | null
+): void {
+  if (suspense !== null && !suspense.isResolved) {
+    if (isArray(fn)) {
+      suspense.effects.push(...fn)
+    } else {
+      suspense.effects.push(fn)
+    }
+  } else {
+    queuePostFlushCb(fn)
   }
 }
