@@ -18,6 +18,7 @@ export const enum ErrorCodes {
   APP_WARN_HANDLER,
   COMPUTED_GETTER,
   COMPUTED_SETTER,
+  FUNCTION_REF,
   SCHEDULER
 }
 
@@ -47,6 +48,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.COMPUTED_GETTER]: 'computed getter',
   [ErrorCodes.COMPUTED_SETTER]: 'computed setter',
+  [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'

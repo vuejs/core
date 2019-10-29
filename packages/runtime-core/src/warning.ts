@@ -2,6 +2,7 @@ import { VNode } from './vnode'
 import { Data, ComponentInternalInstance, Component } from './component'
 import { isString, isFunction } from '@vue/shared'
 import { toRaw } from '@vue/reactivity'
+import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
 type ComponentVNode = VNode & {
   type: Component
@@ -30,10 +31,15 @@ export function warn(msg: string, ...args: any[]) {
   const trace = getComponentTrace()
 
   if (appWarnHandler) {
-    appWarnHandler(
-      msg + args.join(''),
-      instance && instance.renderProxy,
-      formatTrace(trace).join('')
+    callWithErrorHandling(
+      appWarnHandler,
+      instance,
+      ErrorCodes.APP_WARN_HANDLER,
+      [
+        msg + args.join(''),
+        instance && instance.renderProxy,
+        formatTrace(trace).join('')
+      ]
     )
     return
   }
