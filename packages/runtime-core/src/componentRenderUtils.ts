@@ -149,3 +149,13 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
   }
   return false
 }
+
+export function updateHOCHostEl(
+  { vnode, parent }: ComponentInternalInstance,
+  el: object // HostNode
+) {
+  while (parent && parent.subTree === vnode) {
+    ;(vnode = parent.vnode).el = el
+    parent = parent.parent
+  }
+}

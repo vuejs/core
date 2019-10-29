@@ -7,6 +7,7 @@ export const enum ShapeFlags {
   TEXT_CHILDREN = 1 << 3,
   ARRAY_CHILDREN = 1 << 4,
   SLOTS_CHILDREN = 1 << 5,
+  SUSPENSE = 1 << 6,
   COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT
 }
 
@@ -18,5 +19,6 @@ export const PublicShapeFlags = {
   TEXT_CHILDREN: ShapeFlags.TEXT_CHILDREN,
   ARRAY_CHILDREN: ShapeFlags.ARRAY_CHILDREN,
   SLOTS_CHILDREN: ShapeFlags.SLOTS_CHILDREN,
+  SUSPENSE: ShapeFlags.SUSPENSE,
   COMPONENT: ShapeFlags.COMPONENT
 }

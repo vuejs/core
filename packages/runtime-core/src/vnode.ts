@@ -16,14 +16,17 @@ import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive } from '@vue/reactivity'
 import { AppContext } from './apiApp'
-import { SuspenseBoundary } from './suspense'
+import { SuspenseBoundary, isSuspenseType } from './suspense'
 import { DirectiveBinding } from './directives'
+import { SuspenseImpl } from './suspense'
 
 export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined)
 export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
-export const Suspense = Symbol(__DEV__ ? 'Suspense' : undefined)
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
+
+const Suspense = __FEATURE_SUSPENSE__ ? SuspenseImpl : null
+export { Suspense }
 
 export type VNodeTypes =
   | string
@@ -32,7 +35,7 @@ export type VNodeTypes =
   | typeof Portal
   | typeof Text
   | typeof Comment
-  | typeof Suspense
+  | typeof SuspenseImpl
 
 type VNodeChildAtom<HostNode, HostElement> =
   | VNode<HostNode, HostElement>
@@ -187,11 +190,13 @@ export function createVNode(
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
-    : isObject(type)
-      ? ShapeFlags.STATEFUL_COMPONENT
-      : isFunction(type)
-        ? ShapeFlags.FUNCTIONAL_COMPONENT
-        : 0
+    : __FEATURE_SUSPENSE__ && isSuspenseType(type)
+      ? ShapeFlags.SUSPENSE
+      : isObject(type)
+        ? ShapeFlags.STATEFUL_COMPONENT
+        : isFunction(type)
+          ? ShapeFlags.FUNCTIONAL_COMPONENT
+          : 0
 
   const vnode: VNode = {
     _isVNode: true,
