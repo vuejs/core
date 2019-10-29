@@ -9,6 +9,7 @@ export interface ReactiveEffect<T = any> {
   raw: () => T
   deps: Array<Dep>
   computed?: boolean
+  _options?: ReactiveEffectOptions
   scheduler?: (run: Function) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
@@ -59,6 +60,12 @@ export function effect<T = any>(
   return effect
 }
 
+export function start(oEffect: ReactiveEffect) {
+  if (isEffect(oEffect) && !oEffect.active) {
+    effect(oEffect.raw, oEffect._options)
+  }
+}
+
 export function stop(effect: ReactiveEffect) {
   if (effect.active) {
     cleanup(effect)
@@ -79,6 +86,7 @@ function createReactiveEffect<T = any>(
   effect._isEffect = true
   effect.active = true
   effect.raw = fn
+  effect._options = options
   effect.scheduler = options.scheduler
   effect.onTrack = options.onTrack
   effect.onTrigger = options.onTrigger

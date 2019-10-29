@@ -1,6 +1,7 @@
 import {
   reactive,
   effect,
+  start,
   stop,
   toRaw,
   OperationTypes,
@@ -659,7 +660,7 @@ describe('reactivity/effect', () => {
     })
   })
 
-  it('stop', () => {
+  it('start and stop', () => {
     let dummy
     const obj = reactive({ prop: 1 })
     const runner = effect(() => {
@@ -674,6 +675,13 @@ describe('reactivity/effect', () => {
     // stopped effect should still be manually callable
     runner()
     expect(dummy).toBe(3)
+    // stopped effect call will not start observe
+    obj.prop = 2
+    expect(dummy).toBe(3)
+
+    start(runner)
+    obj.prop = 2
+    expect(dummy).toBe(2)
   })
 
   it('events: onStop', () => {

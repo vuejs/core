@@ -18,6 +18,7 @@ export {
 } from './computed'
 export {
   effect,
+  start,
   stop,
   pauseTracking,
   resumeTracking,
