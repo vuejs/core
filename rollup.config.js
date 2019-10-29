@@ -1,9 +1,10 @@
-const fs = require('fs')
-const path = require('path')
-const ts = require('rollup-plugin-typescript2')
-const replace = require('rollup-plugin-replace')
-const alias = require('rollup-plugin-alias')
-const json = require('rollup-plugin-json')
+import fs from 'fs'
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
+import replace from 'rollup-plugin-replace'
+import alias from 'rollup-plugin-alias'
+import json from 'rollup-plugin-json'
+import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -19,9 +20,11 @@ const packageOptions = pkg.buildOptions || {}
 // build aliases dynamically
 const aliasOptions = { resolve: ['.ts'] }
 fs.readdirSync(packagesDir).forEach(dir => {
+  if (dir === 'vue') {
+    return
+  }
   if (fs.statSync(path.resolve(packagesDir, dir)).isDirectory()) {
-    const name = dir === `vue` ? dir : `@vue/${dir}`
-    aliasOptions[name] = path.resolve(packagesDir, `${dir}/src/index`)
+    aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)
   }
 })
 const aliasPlugin = alias(aliasOptions)
@@ -49,8 +52,8 @@ const configs = {
 }
 
 const defaultFormats = ['esm', 'cjs']
-const inlineFromats = process.env.FORMATS && process.env.FORMATS.split(',')
-const packageFormats = inlineFromats || packageOptions.formats || defaultFormats
+const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
+const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
   ? []
   : packageFormats.map(format => createConfig(configs[format]))
@@ -66,14 +69,15 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
-module.exports = packageConfigs
+export default packageConfigs
 
 function createConfig(output, plugins = []) {
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
-  const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
+  const isBundlerESMBuild = /\.esm-bundler\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
+  const isRuntimeCompileBuild = /vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -116,9 +120,10 @@ function createConfig(output, plugins = []) {
       aliasPlugin,
       createReplacePlugin(
         isProductionBuild,
-        isBunlderESMBuild,
+        isBundlerESMBuild,
         (isGlobalBuild || isBrowserESMBuild) &&
-          !packageOptions.enableNonBrowserBranches
+          !packageOptions.enableNonBrowserBranches,
+        isRuntimeCompileBuild
       ),
       ...plugins
     ],
@@ -131,19 +136,27 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
+function createReplacePlugin(
+  isProduction,
+  isBundlerESMBuild,
+  isBrowserBuild,
+  isRuntimeCompileBuild
+) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
-    __DEV__: isBunlderESMBuild
+    __VERSION__: `"${lernaJson.version}"`,
+    __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
         `process.env.NODE_ENV !== 'production'`
       : // hard coded dev/prod builds
         !isProduction,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
+    // support compile in browser?
+    __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean,
+    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
     __FEATURE_SUSPENSE__: true,
     // this is only used during tests
     __JSDOM__: false

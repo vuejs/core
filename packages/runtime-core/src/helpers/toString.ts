@@ -1,7 +1,7 @@
 import { isArray, isPlainObject, objectToString } from '@vue/shared'
 
-// for conversting {{ interpolation }} values to displayed strings.
-export function toString(val: any): string {
+// for converting {{ interpolation }} values to displayed strings.
+export function toString(val: unknown): string {
   return val == null
     ? ''
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)

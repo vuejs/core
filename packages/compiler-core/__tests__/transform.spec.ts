@@ -9,18 +9,18 @@ import {
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {
   TO_STRING,
-  CREATE_VNODE,
-  COMMENT,
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
-  RENDER_SLOT
-} from '../src/runtimeConstants'
+  RENDER_SLOT,
+  WITH_DIRECTIVES,
+  CREATE_COMMENT
+} from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
 import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
-import { optimizeText } from '../src/transforms/optimizeText'
+import { transformText } from '../src/transforms/transformText'
 
 describe('compiler: transform', () => {
   test('context state', () => {
@@ -225,14 +225,13 @@ describe('compiler: transform', () => {
   test('should inject toString helper for interpolations', () => {
     const ast = parse(`{{ foo }}`)
     transform(ast, {})
-    expect(ast.imports).toContain(TO_STRING)
+    expect(ast.helpers).toContain(TO_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
     const ast = parse(`<!--foo-->`)
     transform(ast, {})
-    expect(ast.imports).toContain(CREATE_VNODE)
-    expect(ast.imports).toContain(COMMENT)
+    expect(ast.helpers).toContain(CREATE_COMMENT)
   })
 
   describe('root codegenNode', () => {
@@ -242,7 +241,7 @@ describe('compiler: transform', () => {
         nodeTransforms: [
           transformIf,
           transformFor,
-          optimizeText,
+          transformText,
           transformSlotOutlet,
           transformElement
         ]
@@ -256,18 +255,18 @@ describe('compiler: transform', () => {
         expressions: [
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${OPEN_BLOCK}`
+            callee: OPEN_BLOCK
           },
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${CREATE_BLOCK}`,
+            callee: CREATE_BLOCK,
             arguments: args
           }
         ]
       }
     }
 
-    test('no chidlren', () => {
+    test('no children', () => {
       const ast = transformWithCodegen(``)
       expect(ast.codegenNode).toBeUndefined()
     })
@@ -277,7 +276,7 @@ describe('compiler: transform', () => {
       expect(ast.codegenNode).toMatchObject({
         codegenNode: {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`
+          callee: RENDER_SLOT
         }
       })
     })
@@ -298,6 +297,28 @@ describe('compiler: transform', () => {
       const ast = transformWithCodegen(`<div v-for="i in list" />`)
       expect(ast.codegenNode).toMatchObject({
         type: NodeTypes.FOR
+      })
+    })
+
+    test('root element with custom directive', () => {
+      const ast = transformWithCodegen(`<div v-foo/>`)
+      expect(ast.codegenNode).toMatchObject({
+        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+        expressions: [
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: OPEN_BLOCK
+          },
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            // should wrap withDirectives() around createBlock()
+            callee: WITH_DIRECTIVES,
+            arguments: [
+              { callee: CREATE_BLOCK },
+              { type: NodeTypes.JS_ARRAY_EXPRESSION }
+            ]
+          }
+        ]
       })
     })
 
@@ -326,7 +347,7 @@ describe('compiler: transform', () => {
       const ast = transformWithCodegen(`<div/><div/>`)
       expect(ast.codegenNode).toMatchObject(
         createBlockMatcher([
-          `_${FRAGMENT}`,
+          FRAGMENT,
           `null`,
           [
             { type: NodeTypes.ELEMENT, tag: `div` },

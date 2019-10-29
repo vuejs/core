@@ -22,11 +22,11 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   RENDER_LIST,
-  RENDER_SLOT
-} from '../../src/runtimeConstants'
+  RENDER_SLOT,
+  WITH_DIRECTIVES
+} from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/runtime-dom'
-import { PatchFlagNames } from '@vue/shared'
-import { createObjectMatcher } from '../testUtils'
+import { createObjectMatcher, genFlagText } from '../testUtils'
 
 function parseWithForTransform(
   template: string,
@@ -219,7 +219,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_NO_EXPRESSION
+          code: ErrorCodes.X_V_FOR_NO_EXPRESSION
         })
       )
     })
@@ -231,7 +231,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -243,7 +243,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -255,7 +255,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -267,7 +267,7 @@ describe('compiler: v-for', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_FOR_MALFORMED_EXPRESSION
+          code: ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION
         })
       )
     })
@@ -575,17 +575,17 @@ describe('compiler: v-for', () => {
         expressions: [
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${OPEN_BLOCK}`
+            callee: OPEN_BLOCK
           },
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${CREATE_BLOCK}`,
+            callee: CREATE_BLOCK,
             arguments: [
-              `_${FRAGMENT}`,
+              FRAGMENT,
               `null`,
               {
                 type: NodeTypes.JS_CALL_EXPRESSION,
-                callee: `_${RENDER_LIST}`,
+                callee: RENDER_LIST,
                 arguments: [
                   {}, // to be asserted by each test
                   {
@@ -597,11 +597,11 @@ describe('compiler: v-for', () => {
                           expressions: [
                             {
                               type: NodeTypes.JS_CALL_EXPRESSION,
-                              callee: `_${OPEN_BLOCK}`
+                              callee: OPEN_BLOCK
                             },
                             {
                               type: NodeTypes.JS_CALL_EXPRESSION,
-                              callee: `_${CREATE_BLOCK}`
+                              callee: CREATE_BLOCK
                             }
                           ]
                         }
@@ -609,12 +609,8 @@ describe('compiler: v-for', () => {
                 ]
               },
               keyed
-                ? `${PatchFlags.KEYED_FRAGMENT} /* ${
-                    PatchFlagNames[PatchFlags.KEYED_FRAGMENT]
-                  } */`
-                : `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-                    PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
-                  } */`
+                ? genFlagText(PatchFlags.KEYED_FRAGMENT)
+                : genFlagText(PatchFlags.UNKEYED_FRAGMENT)
             ]
           }
         ]
@@ -703,7 +699,7 @@ describe('compiler: v-for', () => {
         source: { content: `items` },
         params: [{ content: `item` }],
         blockArgs: [
-          `_${FRAGMENT}`,
+          FRAGMENT,
           `null`,
           [
             { type: NodeTypes.TEXT, content: `hello` },
@@ -728,7 +724,7 @@ describe('compiler: v-for', () => {
         params: [{ content: `item` }],
         returns: {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`
+          callee: RENDER_SLOT
         }
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -746,7 +742,7 @@ describe('compiler: v-for', () => {
         params: [{ content: `item` }],
         returns: {
           type: NodeTypes.JS_CALL_EXPRESSION,
-          callee: `_${RENDER_SLOT}`
+          callee: RENDER_SLOT
         }
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -781,7 +777,7 @@ describe('compiler: v-for', () => {
         source: { content: `items` },
         params: [{ content: `item` }],
         blockArgs: [
-          `_${FRAGMENT}`,
+          FRAGMENT,
           createObjectMatcher({
             key: `[item]`
           }),
@@ -804,7 +800,7 @@ describe('compiler: v-for', () => {
         expressions: [
           {
             type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: `_${OPEN_BLOCK}`,
+            callee: OPEN_BLOCK,
             arguments: []
           },
           {
@@ -812,14 +808,14 @@ describe('compiler: v-for', () => {
             test: { content: `ok` },
             consequent: {
               type: NodeTypes.JS_CALL_EXPRESSION,
-              callee: `_${CREATE_BLOCK}`,
+              callee: CREATE_BLOCK,
               // should optimize v-if + v-for into a single Fragment block
               arguments: [
-                `_${FRAGMENT}`,
+                FRAGMENT,
                 createObjectMatcher({ key: `[0]` }),
                 {
                   type: NodeTypes.JS_CALL_EXPRESSION,
-                  callee: `_${RENDER_LIST}`,
+                  callee: RENDER_LIST,
                   arguments: [
                     { content: `list` },
                     {
@@ -830,11 +826,11 @@ describe('compiler: v-for', () => {
                         expressions: [
                           {
                             type: NodeTypes.JS_CALL_EXPRESSION,
-                            callee: `_${OPEN_BLOCK}`
+                            callee: OPEN_BLOCK
                           },
                           {
                             type: NodeTypes.JS_CALL_EXPRESSION,
-                            callee: `_${CREATE_BLOCK}`,
+                            callee: CREATE_BLOCK,
                             arguments: [`"div"`]
                           }
                         ]
@@ -842,11 +838,32 @@ describe('compiler: v-for', () => {
                     }
                   ]
                 },
-                `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-                  PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
-                } */`
+                genFlagText(PatchFlags.UNKEYED_FRAGMENT)
               ]
             }
+          }
+        ]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-for on element with custom directive', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<div v-for="i in list" v-foo/>')
+      const { returns } = assertSharedCodegen(codegenNode, false, true)
+      expect(returns).toMatchObject({
+        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+        expressions: [
+          { callee: OPEN_BLOCK },
+          // should wrap withDirectives() around createBlock()
+          {
+            callee: WITH_DIRECTIVES,
+            arguments: [
+              { callee: CREATE_BLOCK },
+              { type: NodeTypes.JS_ARRAY_EXPRESSION }
+            ]
           }
         ]
       })

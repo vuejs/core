@@ -1,18 +1,71 @@
-import { createRenderer } from '@vue/runtime-core'
+import { createRenderer, warn } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
+// Importing from the compiler, will be tree-shaken in prod
+import { isHTMLTag, isSVGTag } from '@vue/compiler-dom'
+import { isFunction, isString } from '@vue/shared'
 
-const { render, createApp } = createRenderer<Node, Element>({
+const { render, createApp: baseCreateApp } = createRenderer<Node, Element>({
   patchProp,
   ...nodeOps
 })
 
+const createApp = () => {
+  const app = baseCreateApp()
+
+  if (__DEV__) {
+    // Inject `isNativeTag`
+    // this is used for component name validation (dev only)
+    Object.defineProperty(app.config, 'isNativeTag', {
+      value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
+      writable: false
+    })
+  }
+
+  const mount = app.mount
+  app.mount = (component, container, props): any => {
+    if (isString(container)) {
+      container = document.querySelector(container)!
+      if (!container) {
+        __DEV__ &&
+          warn(`Failed to mount app: mount target selector returned null.`)
+        return
+      }
+    }
+    if (
+      __RUNTIME_COMPILE__ &&
+      !isFunction(component) &&
+      !component.render &&
+      !component.template
+    ) {
+      component.template = container.innerHTML
+    }
+    // clear content before mounting
+    container.innerHTML = ''
+    return mount(component, container, props)
+  }
+
+  return app
+}
+
 export { render, createApp }
+
+// DOM-only runtime helpers
+export {
+  vModelText,
+  vModelCheckbox,
+  vModelRadio,
+  vModelSelect,
+  vModelDynamic
+} from './directives/vModel'
+
+export { withModifiers, withKeys } from './directives/vOn'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'
 
+// Type augmentations
 export interface ComponentPublicInstance {
   $el: Element
 }

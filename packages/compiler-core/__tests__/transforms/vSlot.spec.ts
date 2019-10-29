@@ -7,7 +7,8 @@ import {
   NodeTypes,
   ErrorCodes,
   ForNode,
-  CallExpression
+  CallExpression,
+  ComponentNode
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -17,9 +18,9 @@ import {
   trackSlotScopes,
   trackVForSlotScopes
 } from '../../src/transforms/vSlot'
-import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeConstants'
-import { createObjectMatcher } from '../testUtils'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
+import { createObjectMatcher, genFlagText } from '../testUtils'
+import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
@@ -32,8 +33,8 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
       ...(options.prefixIdentifiers
         ? [trackVForSlotScopes, transformExpression]
         : []),
-      trackSlotScopes,
-      transformElement
+      transformElement,
+      trackSlotScopes
     ],
     directiveTransforms: {
       on: transformOn,
@@ -308,13 +309,15 @@ describe('compiler: transform component slots', () => {
                   }),
                   // nested slot should be forced dynamic, since scope variables
                   // are not tracked as dependencies of the slot.
-                  `${PatchFlags.DYNAMIC_SLOTS} /* ${
-                    PatchFlagNames[PatchFlags.DYNAMIC_SLOTS]
-                  } */`
+                  genFlagText(PatchFlags.DYNAMIC_SLOTS)
                 ]
               }
             },
             // test scope
+            {
+              type: NodeTypes.TEXT,
+              content: ` `
+            },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
@@ -349,7 +352,60 @@ describe('compiler: transform component slots', () => {
     const div = ((root.children[0] as ForNode).children[0] as ElementNode)
       .codegenNode as any
     const comp = div.arguments[2][0]
-    expect(comp.codegenNode.arguments[3]).toMatch(PatchFlags.DYNAMIC_SLOTS + '')
+    expect(comp.codegenNode.arguments[3]).toBe(
+      genFlagText(PatchFlags.DYNAMIC_SLOTS)
+    )
+  })
+
+  test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
+    function assertDynamicSlots(template: string, shouldForce: boolean) {
+      const { root } = parseWithSlots(template, { prefixIdentifiers: true })
+      let flag: any
+      if (root.children[0].type === NodeTypes.FOR) {
+        const div = (root.children[0].children[0] as ElementNode)
+          .codegenNode as any
+        const comp = div.arguments[2][0]
+        flag = comp.codegenNode.arguments[3]
+      } else {
+        const innerComp = (root.children[0] as ComponentNode)
+          .children[0] as ComponentNode
+        flag = (innerComp.codegenNode as CallExpression).arguments[3]
+      }
+      if (shouldForce) {
+        expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))
+      } else {
+        expect(flag).toBeUndefined()
+      }
+    }
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar">foo</Comp>
+      </div>`,
+      false
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="bar">{{ i }}</Comp>
+      </div>`,
+      true
+    )
+
+    // reference the component's own slot variable should not force dynamic slots
+    assertDynamicSlots(
+      `<Comp v-slot="foo">
+        <Comp v-slot="bar">{{ bar }}</Comp>
+      </Comp>`,
+      false
+    )
+
+    assertDynamicSlots(
+      `<Comp v-slot="foo">
+        <Comp v-slot="bar">{{ foo }}</Comp>
+      </Comp>`,
+      true
+    )
   })
 
   test('named slot with v-if', () => {
@@ -360,7 +416,7 @@ describe('compiler: transform component slots', () => {
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${CREATE_SLOTS}`,
+      callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
           _compiled: `[true]`
@@ -451,7 +507,7 @@ describe('compiler: transform component slots', () => {
     )
     expect(slots).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
-      callee: `_${CREATE_SLOTS}`,
+      callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
           _compiled: `[true]`
@@ -558,7 +614,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN,
+        code: ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
         loc: {
           source: `bar`,
           start: {
@@ -581,7 +637,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_DUPLICATE_SLOT_NAMES,
+        code: ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
         loc: {
           source: `#foo`,
           start: {
@@ -604,7 +660,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_MIXED_SLOT_USAGE,
+        code: ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE,
         loc: {
           source: `#foo`,
           start: {
@@ -627,7 +683,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_MISPLACED_V_SLOT,
+        code: ErrorCodes.X_V_SLOT_MISPLACED,
         loc: {
           source: `v-slot`,
           start: {
@@ -650,7 +706,7 @@ describe('compiler: transform component slots', () => {
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_NAMED_SLOT_ON_COMPONENT,
+        code: ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
         loc: {
           source: `v-slot:foo`,
           start: {

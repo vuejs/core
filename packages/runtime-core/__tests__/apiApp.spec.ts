@@ -8,7 +8,7 @@ import {
   inject,
   resolveComponent,
   resolveDirective,
-  applyDirectives,
+  withDirectives,
   Plugin,
   ref,
   getCurrentInstance
@@ -81,6 +81,11 @@ describe('api: createApp', () => {
 
     app.component('BarBaz', () => 'barbaz!')
 
+    app.component('BarBaz', () => 'barbaz!')
+    expect(
+      'Component "BarBaz" has already been registered in target app.'
+    ).toHaveBeenWarnedTimes(1)
+
     const Root = {
       // local override
       components: {
@@ -117,6 +122,13 @@ describe('api: createApp', () => {
       mounted: spy2
     })
 
+    app.directive('BarBaz', {
+      mounted: spy2
+    })
+    expect(
+      'Directive "BarBaz" has already been registered in target app.'
+    ).toHaveBeenWarnedTimes(1)
+
     const Root = {
       // local override
       directives: {
@@ -124,11 +136,11 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveDirective('foo-bar') as any
+        const FooBar = resolveDirective('foo-bar')!
         return () => {
           // resolve in render
-          const BarBaz = resolveDirective('bar-baz') as any
-          return applyDirectives(h('div'), [[FooBar], [BarBaz]])
+          const BarBaz = resolveDirective('bar-baz')!
+          return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       }
     }
@@ -138,6 +150,11 @@ describe('api: createApp', () => {
     expect(spy1).toHaveBeenCalled()
     expect(spy2).not.toHaveBeenCalled()
     expect(spy3).toHaveBeenCalled()
+
+    app.directive('bind', FooBar)
+    expect(
+      `Do not use built-in directive ids as custom directive id: bind`
+    ).toHaveBeenWarned()
   })
 
   test('mixin', () => {
@@ -159,6 +176,7 @@ describe('api: createApp', () => {
       }
     }
     const mixinB = {
+      name: 'mixinB',
       data() {
         return {
           b: 2
@@ -197,6 +215,15 @@ describe('api: createApp', () => {
     const app = createApp()
     app.mixin(mixinA)
     app.mixin(mixinB)
+
+    app.mixin(mixinA)
+    app.mixin(mixinB)
+    expect(
+      'Mixin has already been applied to target app'
+    ).toHaveBeenWarnedTimes(2)
+    expect(
+      'Mixin has already been applied to target app: mixinB'
+    ).toHaveBeenWarnedTimes(1)
 
     const root = nodeOps.createElement('div')
     app.mount(Comp, root)
@@ -270,7 +297,7 @@ describe('api: createApp', () => {
 
     const handler = (app.config.warnHandler = jest.fn(
       (msg, instance, trace) => {
-        expect(msg).toMatch(`Component is missing render function`)
+        expect(msg).toMatch(`Component is missing template or render function`)
         expect(instance).toBe(ctx.renderProxy)
         expect(trace).toMatch(`Hello`)
       }
@@ -285,5 +312,113 @@ describe('api: createApp', () => {
 
     app.mount(Root, nodeOps.createElement('div'))
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  describe('config.isNativeTag', () => {
+    const isNativeTag = jest.fn(tag => tag === 'div')
+
+    test('Component.name', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        name: 'div',
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('Component.components', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        components: {
+          div: () => 'div'
+        },
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
+
+    test('Component.directives', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        directives: {
+          bind: () => {}
+        },
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in directive ids as custom directive id: bind`
+      ).toHaveBeenWarned()
+    })
+
+    test('register using app.component', () => {
+      const app = createApp()
+      Object.defineProperty(app.config, 'isNativeTag', {
+        value: isNativeTag,
+        writable: false
+      })
+
+      const Root = {
+        setup() {
+          return {
+            count: ref(0)
+          }
+        },
+        render() {
+          return null
+        }
+      }
+
+      app.component('div', () => 'div')
+      app.mount(Root, nodeOps.createElement('div'))
+      expect(
+        `Do not use built-in or reserved HTML elements as component id: div`
+      ).toHaveBeenWarned()
+    })
   })
 })

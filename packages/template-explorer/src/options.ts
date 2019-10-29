@@ -4,7 +4,8 @@ import { CompilerOptions } from '@vue/compiler-dom'
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
-  hoistStatic: false
+  hoistStatic: false,
+  cacheHandlers: false
 })
 
 const App = {
@@ -53,9 +54,10 @@ const App = {
           checked:
             compilerOptions.prefixIdentifiers ||
             compilerOptions.mode === 'module',
-          onChange(e: any) {
+          onChange(e: Event) {
             compilerOptions.prefixIdentifiers =
-              e.target.checked || compilerOptions.mode === 'module'
+              (<HTMLInputElement>e.target).checked ||
+              compilerOptions.mode === 'module'
           }
         }),
         h('label', { for: 'prefix' }, 'prefixIdentifiers'),
@@ -65,16 +67,29 @@ const App = {
           type: 'checkbox',
           id: 'hoist',
           checked: compilerOptions.hoistStatic,
-          onChange(e: any) {
-            compilerOptions.hoistStatic = e.target.checked
+          onChange(e: Event) {
+            compilerOptions.hoistStatic = (<HTMLInputElement>e.target).checked
           }
         }),
-        h('label', { for: 'hoist' }, 'hoistStatic')
+        h('label', { for: 'hoist' }, 'hoistStatic'),
+
+        // toggle cacheHandlers
+        h('input', {
+          type: 'checkbox',
+          id: 'cache',
+          checked:
+            compilerOptions.cacheHandlers && compilerOptions.prefixIdentifiers,
+          disabled: !compilerOptions.prefixIdentifiers,
+          onChange(e: Event) {
+            compilerOptions.cacheHandlers = (<HTMLInputElement>e.target).checked
+          }
+        }),
+        h('label', { for: 'cache' }, 'cacheHandlers')
       ])
     ]
   }
 }
 
 export function initOptions() {
-  createApp().mount(App, document.getElementById('header') as HTMLElement)
+  createApp().mount(App, document.getElementById('header')!)
 }

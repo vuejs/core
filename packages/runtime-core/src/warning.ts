@@ -1,18 +1,23 @@
 import { VNode } from './vnode'
-import { Data, ComponentInternalInstance } from './component'
-import { isString } from '@vue/shared'
+import { Data, ComponentInternalInstance, Component } from './component'
+import { isString, isFunction } from '@vue/shared'
 import { toRaw } from '@vue/reactivity'
+import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
-let stack: VNode[] = []
+type ComponentVNode = VNode & {
+  type: Component
+}
+
+const stack: VNode[] = []
 
 type TraceEntry = {
-  vnode: VNode
+  vnode: ComponentVNode
   recurseCount: number
 }
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: VNode) {
+export function pushWarningContext(vnode: ComponentVNode) {
   stack.push(vnode)
 }
 
@@ -26,10 +31,15 @@ export function warn(msg: string, ...args: any[]) {
   const trace = getComponentTrace()
 
   if (appWarnHandler) {
-    appWarnHandler(
-      msg + args.join(''),
-      instance && instance.renderProxy,
-      formatTrace(trace).join('')
+    callWithErrorHandling(
+      appWarnHandler,
+      instance,
+      ErrorCodes.APP_WARN_HANDLER,
+      [
+        msg + args.join(''),
+        instance && instance.renderProxy,
+        formatTrace(trace).join('')
+      ]
     )
     return
   }
@@ -65,24 +75,24 @@ function getComponentTrace(): ComponentTraceStack {
   // we can't just use the stack because it will be incomplete during updates
   // that did not start from the root. Re-construct the parent chain using
   // instance parent pointers.
-  const normlaizedStack: ComponentTraceStack = []
+  const normalizedStack: ComponentTraceStack = []
 
   while (currentVNode) {
-    const last = normlaizedStack[0]
+    const last = normalizedStack[0]
     if (last && last.vnode === currentVNode) {
       last.recurseCount++
     } else {
-      normlaizedStack.push({
+      normalizedStack.push({
         vnode: currentVNode,
         recurseCount: 0
       })
     }
-    const parentInstance: ComponentInternalInstance | null = (currentVNode.component as ComponentInternalInstance)
+    const parentInstance: ComponentInternalInstance | null = currentVNode.component!
       .parent
     currentVNode = parentInstance && parentInstance.vnode
   }
 
-  return normlaizedStack
+  return normalizedStack
 }
 
 function formatTrace(trace: ComponentTraceStack): string[] {
@@ -107,10 +117,7 @@ function formatTraceEntry(
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
   const open = padding + `<${formatComponentName(vnode)}`
   const close = `>` + postfix
-  const rootLabel =
-    (vnode.component as ComponentInternalInstance).parent == null
-      ? `(Root)`
-      : ``
+  const rootLabel = vnode.component!.parent == null ? `(Root)` : ``
   return vnode.props
     ? [open, ...formatProps(vnode.props), close, rootLabel]
     : [open + close, rootLabel]
@@ -120,9 +127,9 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
-function formatComponentName(vnode: VNode, file?: string): string {
-  const Component = vnode.type as any
-  let name = Component.displayName || Component.name
+function formatComponentName(vnode: ComponentVNode, file?: string): string {
+  const Component = vnode.type
+  let name = isFunction(Component) ? Component.displayName : Component.name
   if (!name && file) {
     const match = file.match(/([^/\\]+)\.vue$/)
     if (match) {
@@ -139,7 +146,7 @@ function formatProps(props: Data): string[] {
     if (isString(value)) {
       res.push(`${key}=${JSON.stringify(value)}`)
     } else {
-      res.push(`${key}=`, toRaw(value) as any)
+      res.push(`${key}=`, String(toRaw(value)))
     }
   }
   return res

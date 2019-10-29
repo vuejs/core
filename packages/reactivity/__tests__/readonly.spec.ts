@@ -13,6 +13,11 @@ import {
 } from '../src'
 import { mockWarn } from '@vue/runtime-test'
 
+/**
+ * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
+ */
+type Writable<T> = { -readonly [P in keyof T]: T[P] }
+
 describe('reactivity/readonly', () => {
   mockWarn()
 
@@ -38,26 +43,50 @@ describe('reactivity/readonly', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
+      const qux = Symbol('qux')
+      const original = {
+        foo: 1,
+        bar: {
+          baz: 2
+        },
+        [qux]: 3
+      }
+      const observed: Writable<typeof original> = readonly(original)
+
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       observed.bar.baz = 3
       expect(observed.bar.baz).toBe(2)
       expect(
         `Set operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
+      observed[qux] = 4
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Set operation on key "Symbol(qux)" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
       delete observed.foo
       expect(observed.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       delete observed.bar.baz
       expect(observed.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
+      delete observed[qux]
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Delete operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
     })
 
@@ -106,7 +135,7 @@ describe('reactivity/readonly', () => {
 
   describe('Array', () => {
     it('should make nested values readonly', () => {
-      const original: any[] = [{ foo: 1 }]
+      const original = [{ foo: 1 }]
       const observed = readonly(original)
       expect(observed).not.toBe(original)
       expect(isReactive(observed)).toBe(true)
@@ -264,7 +293,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Map) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
@@ -334,7 +363,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Set) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
           const observed: any = readonly(original)
           for (const value of observed) {

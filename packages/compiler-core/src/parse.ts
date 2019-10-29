@@ -1,8 +1,9 @@
+import { NO } from '@vue/shared'
 import {
   ErrorCodes,
-  CompilerError,
   createCompilerError,
-  defaultOnError
+  defaultOnError,
+  CompilerError
 } from './errors'
 import {
   assert,
@@ -26,13 +27,16 @@ import {
   TemplateChildNode,
   InterpolationNode
 } from './ast'
+import { extend } from '@vue/shared'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
+  isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
+  isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
+  isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
-  ignoreSpaces?: boolean
 
   // Map to HTML entities. E.g., `{ "amp;": "&" }`
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
@@ -41,12 +45,17 @@ export interface ParserOptions {
   onError?: (error: CompilerError) => void
 }
 
-export const defaultParserOptions: Required<ParserOptions> = {
+// `isNativeTag` is optional, others are required
+type MergedParserOptions = Omit<Required<ParserOptions>, 'isNativeTag'> &
+  Pick<ParserOptions, 'isNativeTag'>
+
+export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
-  ignoreSpaces: true,
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
-  isVoidTag: () => false,
+  isVoidTag: NO,
+  isPreTag: NO,
+  isCustomElement: NO,
   namedCharacterReferences: {
     'gt;': '>',
     'lt;': '<',
@@ -67,13 +76,14 @@ export const enum TextModes {
 }
 
 interface ParserContext {
-  options: Required<ParserOptions>
+  options: MergedParserOptions
   readonly originalSource: string
   source: string
   offset: number
   line: number
   column: number
   maxCRNameLength: number
+  inPre: boolean
 }
 
 export function parse(content: string, options: ParserOptions = {}): RootNode {
@@ -83,9 +93,11 @@ export function parse(content: string, options: ParserOptions = {}): RootNode {
   return {
     type: NodeTypes.ROOT,
     children: parseChildren(context, TextModes.DATA, []),
-    imports: [],
-    statements: [],
+    helpers: [],
+    components: [],
+    directives: [],
     hoists: [],
+    cached: 0,
     codegenNode: undefined,
     loc: getSelection(context, start)
   }
@@ -108,7 +120,8 @@ function createParserContext(
     maxCRNameLength: Object.keys(
       options.namedCharacterReferences ||
         defaultParserOptions.namedCharacterReferences
-    ).reduce((max, name) => Math.max(max, name.length), 0)
+    ).reduce((max, name) => Math.max(max, name.length), 0),
+    inPre: false
   }
 }
 
@@ -126,7 +139,7 @@ function parseChildren(
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
-    if (startsWith(s, context.options.delimiters[0])) {
+    if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
       // '{{'
       node = parseInterpolation(context, mode)
     } else if (mode === TextModes.DATA && s[0] === '<') {
@@ -186,50 +199,78 @@ function parseChildren(
 
     if (Array.isArray(node)) {
       for (let i = 0; i < node.length; i++) {
-        pushNode(context, nodes, node[i])
+        pushNode(nodes, node[i])
       }
     } else {
-      pushNode(context, nodes, node)
+      pushNode(nodes, node)
     }
   }
 
-  return nodes
+  // Whitespace management for more efficient output
+  // (same as v2 whitespance: 'condense')
+  let removedWhitespace = false
+  if (!parent || !context.options.isPreTag(parent.tag)) {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (node.type === NodeTypes.TEXT) {
+        if (!node.content.trim()) {
+          const prev = nodes[i - 1]
+          const next = nodes[i + 1]
+          // If:
+          // - the whitespace is the first or last node, or:
+          // - the whitespace is adjacent to a comment, or:
+          // - the whitespace is between two elements AND contains newline
+          // Then the whitespace is ignored.
+          if (
+            !prev ||
+            !next ||
+            prev.type === NodeTypes.COMMENT ||
+            next.type === NodeTypes.COMMENT ||
+            (prev.type === NodeTypes.ELEMENT &&
+              next.type === NodeTypes.ELEMENT &&
+              /[\r\n]/.test(node.content))
+          ) {
+            removedWhitespace = true
+            nodes[i] = null as any
+          } else {
+            // Otherwise, condensed consecutive whitespace inside the text down to
+            // a single space
+            node.content = ' '
+          }
+        } else {
+          node.content = node.content.replace(/\s+/g, ' ')
+        }
+      }
+    }
+  }
+
+  return removedWhitespace ? nodes.filter(node => node !== null) : nodes
 }
 
-function pushNode(
-  context: ParserContext,
-  nodes: TemplateChildNode[],
-  node: TemplateChildNode
-): void {
+function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
   // ignore comments in production
   /* istanbul ignore next */
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
     return
   }
-  if (
-    context.options.ignoreSpaces &&
-    node.type === NodeTypes.TEXT &&
-    node.isEmpty
-  ) {
-    return
+
+  if (node.type === NodeTypes.TEXT) {
+    const prev = last(nodes)
+    // Merge if both this and the previous node are text and those are
+    // consecutive. This happens for cases like "a < b".
+    if (
+      prev &&
+      prev.type === NodeTypes.TEXT &&
+      prev.loc.end.offset === node.loc.start.offset
+    ) {
+      prev.content += node.content
+      prev.loc.end = node.loc.end
+      prev.loc.source += node.loc.source
+      return
+    }
   }
 
-  // Merge if both this and the previous node are text and those are consecutive.
-  // This happens on "a < b" or something like.
-  const prev = last(nodes)
-  if (
-    prev &&
-    prev.type === NodeTypes.TEXT &&
-    node.type === NodeTypes.TEXT &&
-    prev.loc.end.offset === node.loc.start.offset
-  ) {
-    prev.content += node.content
-    prev.isEmpty = prev.content.trim().length === 0
-    prev.loc.end = node.loc.end
-    prev.loc.source += node.loc.source
-  } else {
-    nodes.push(node)
-  }
+  nodes.push(node)
 }
 
 function parseCDATA(
@@ -324,8 +365,10 @@ function parseElement(
   __DEV__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
+  const wasInPre = context.inPre
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
+  const isPreBoundary = context.inPre && !wasInPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
@@ -333,10 +376,7 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
-  const mode = (context.options.getTextMode(
-    element.tag,
-    element.ns
-  ) as unknown) as TextModes
+  const mode = context.options.getTextMode(element.tag, element.ns)
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
@@ -356,6 +396,10 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
+
+  if (isPreBoundary) {
+    context.inPre = false
+  }
   return element
 }
 
@@ -382,18 +426,76 @@ function parseTag(
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
-  const props = []
   const ns = context.options.getNamespace(tag, parent)
-
-  let tagType = ElementTypes.ELEMENT
-  if (tag === 'slot') tagType = ElementTypes.SLOT
-  else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-  else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
 
   advanceBy(context, match[0].length)
   advanceSpaces(context)
 
+  // save current state in case we need to re-parse attributes with v-pre
+  const cursor = getCursor(context)
+  const currentSource = context.source
+
   // Attributes.
+  let props = parseAttributes(context, type)
+
+  // check v-pre
+  if (
+    !context.inPre &&
+    props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
+  ) {
+    context.inPre = true
+    // reset context
+    extend(context, cursor)
+    context.source = currentSource
+    // re-parse attrs and filter out v-pre itself
+    props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+  }
+
+  // Tag close.
+  let isSelfClosing = false
+  if (context.source.length === 0) {
+    emitError(context, ErrorCodes.EOF_IN_TAG)
+  } else {
+    isSelfClosing = startsWith(context.source, '/>')
+    if (type === TagType.End && isSelfClosing) {
+      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
+    }
+    advanceBy(context, isSelfClosing ? 2 : 1)
+  }
+
+  let tagType = ElementTypes.ELEMENT
+  if (!context.inPre && !context.options.isCustomElement(tag)) {
+    if (context.options.isNativeTag) {
+      if (!context.options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
+    } else {
+      if (/^[A-Z]/.test(tag)) tagType = ElementTypes.COMPONENT
+    }
+
+    if (tag === 'slot') tagType = ElementTypes.SLOT
+    else if (tag === 'template') tagType = ElementTypes.TEMPLATE
+    else if (tag === 'portal' || tag === 'Portal') tagType = ElementTypes.PORTAL
+    else if (tag === 'suspense' || tag === 'Suspense')
+      tagType = ElementTypes.SUSPENSE
+  }
+
+  return {
+    type: NodeTypes.ELEMENT,
+    ns,
+    tag,
+    tagType,
+    props,
+    isSelfClosing,
+    children: [],
+    loc: getSelection(context, start),
+    codegenNode: undefined // to be created during transform phase
+  }
+}
+
+function parseAttributes(
+  context: ParserContext,
+  type: TagType
+): (AttributeNode | DirectiveNode)[] {
+  const props = []
   const attributeNames = new Set<string>()
   while (
     context.source.length > 0 &&
@@ -420,30 +522,7 @@ function parseTag(
     }
     advanceSpaces(context)
   }
-
-  // Tag close.
-  let isSelfClosing = false
-  if (context.source.length === 0) {
-    emitError(context, ErrorCodes.EOF_IN_TAG)
-  } else {
-    isSelfClosing = startsWith(context.source, '/>')
-    if (type === TagType.End && isSelfClosing) {
-      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
-    }
-    advanceBy(context, isSelfClosing ? 2 : 1)
-  }
-
-  return {
-    type: NodeTypes.ELEMENT,
-    ns,
-    tag,
-    tagType,
-    props,
-    isSelfClosing,
-    children: [],
-    loc: getSelection(context, start),
-    codegenNode: undefined // to be created during transform phase
-  }
+  return props
 }
 
 function parseAttribute(
@@ -499,7 +578,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (/^(v-|:|@|#)/.test(name)) {
+  if (!context.inPre && /^(v-|:|@|#)/.test(name)) {
     const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
       name
     )!
@@ -533,6 +612,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
+        isConstant: isStatic,
         loc
       }
     }
@@ -558,6 +638,9 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
+        // Treat as non-constant by default. This can be potentially set to
+        // true by `transformExpression` to make it eligible for hoisting.
+        isConstant: false,
         loc: value.loc
       },
       arg,
@@ -572,7 +655,6 @@ function parseAttribute(
     value: value && {
       type: NodeTypes.TEXT,
       content: value.content,
-      isEmpty: value.content.trim().length === 0,
       loc: value.loc
     },
     loc
@@ -664,6 +746,8 @@ function parseInterpolation(
     content: {
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
+      // Set `isConstant` to false by default and will decide in transformExpression
+      isConstant: false,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },
@@ -675,6 +759,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
   const [open] = context.options.delimiters
+  // TODO could probably use some perf optimization
   const endIndex = Math.min(
     ...[
       context.source.indexOf('<', 1),
@@ -691,8 +776,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   return {
     type: NodeTypes.TEXT,
     content,
-    loc: getSelection(context, start),
-    isEmpty: !content.trim()
+    loc: getSelection(context, start)
   }
 }
 

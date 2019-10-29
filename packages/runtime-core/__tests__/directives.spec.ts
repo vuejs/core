@@ -1,6 +1,6 @@
 import {
   h,
-  applyDirectives,
+  withDirectives,
   ref,
   render,
   nodeOps,
@@ -107,7 +107,7 @@ describe('directives', () => {
       },
       render() {
         _prevVnode = _vnode
-        _vnode = applyDirectives(h('div', count.value), [
+        _vnode = withDirectives(h('div', count.value), [
           [
             {
               beforeMount,
@@ -143,5 +143,59 @@ describe('directives', () => {
     render(null, root)
     expect(beforeUnmount).toHaveBeenCalled()
     expect(unmounted).toHaveBeenCalled()
+  })
+
+  it('should work with a function directive', async () => {
+    const count = ref(0)
+
+    function assertBindings(binding: DirectiveBinding) {
+      expect(binding.value).toBe(count.value)
+      expect(binding.arg).toBe('foo')
+      expect(binding.instance).toBe(_instance && _instance.renderProxy)
+      expect(binding.modifiers && binding.modifiers.ok).toBe(true)
+    }
+
+    const fn = jest.fn(((el, binding, vnode, prevVNode) => {
+      expect(el.tag).toBe('div')
+      expect(el.parentNode).toBe(root)
+
+      assertBindings(binding)
+
+      expect(vnode).toBe(_vnode)
+      expect(prevVNode).toBe(_prevVnode)
+    }) as DirectiveHook)
+
+    let _instance: ComponentInternalInstance | null = null
+    let _vnode: VNode | null = null
+    let _prevVnode: VNode | null = null
+    const Comp = {
+      setup() {
+        _instance = currentInstance
+      },
+      render() {
+        _prevVnode = _vnode
+        _vnode = withDirectives(h('div', count.value), [
+          [
+            fn,
+            // value
+            count.value,
+            // argument
+            'foo',
+            // modifiers
+            { ok: true }
+          ]
+        ])
+        return _vnode
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(fn).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 })
