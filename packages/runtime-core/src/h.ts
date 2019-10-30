@@ -61,12 +61,12 @@ export interface RawProps {
   [Symbol.iterator]?: never
 }
 
-export type RawChildren =
+export type RawChildren<N = any, E = any> =
   | string
   | number
   | boolean
-  | VNode
-  | VNodeChildren
+  | VNode<N, E>
+  | VNodeChildren<N, E>
   | (() => any)
 
 export { RawSlots }
@@ -80,32 +80,38 @@ interface Constructor<P = any> {
 // manually written render functions.
 
 // element
-export function h(type: string, children?: RawChildren): VNode
-export function h(
+export function h<N, E>(type: string, children?: RawChildren<N, E>): VNode<N, E>
+export function h<N, E>(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren
-): VNode
+  children?: RawChildren<N, E>
+): VNode<N, E>
 
 // keyed fragment
-export function h(type: typeof Fragment, children?: RawChildren): VNode
-export function h(
+export function h<N, E>(
+  type: typeof Fragment,
+  children?: RawChildren<N, E>
+): VNode<N, E>
+export function h<N, E>(
   type: typeof Fragment,
   props?: (RawProps & { key?: string | number }) | null,
-  children?: RawChildren
-): VNode
+  children?: RawChildren<N, E>
+): VNode<N, E>
 
 // portal
-export function h(type: typeof Portal, children?: RawChildren): VNode
-export function h(
+// Portal without props (target) will create a runtime error
+export function h<N, E>(
   type: typeof Portal,
-  props?: (RawProps & { target: any }) | null,
-  children?: RawChildren
-): VNode
+  props?: (RawProps & { target: string | E }) | null,
+  children?: RawChildren<N, E>
+): VNode<N, E>
 
 // suspense
-export function h(type: typeof Suspense, children?: RawChildren): VNode
-export function h(
+export function h<N, E>(
+  type: typeof Suspense,
+  children?: RawChildren<N, E>
+): VNode<N, E>
+export function h<N, E>(
   type: typeof Suspense,
   props?:
     | (RawProps & {
@@ -113,44 +119,53 @@ export function h(
         onRecede?: () => void
       })
     | null,
-  children?: RawChildren | RawSlots
-): VNode
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
 
 // functional component
-export function h(type: FunctionalComponent, children?: RawChildren): VNode
-export function h<P>(
+export function h<N, E>(
+  type: FunctionalComponent,
+  children?: RawChildren<N, E>
+): VNode<N, E>
+export function h<P, N, E>(
   type: FunctionalComponent<P>,
   props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots
-): VNode
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
 
 // stateful component
-export function h(type: ComponentOptions, children?: RawChildren): VNode
-export function h<P>(
+export function h<N, E>(
+  type: ComponentOptions,
+  children?: RawChildren<N, E>
+): VNode<N, E>
+export function h<P, N, E>(
   type: ComponentOptionsWithoutProps<P>,
   props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots
-): VNode
-export function h<P extends string>(
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
+export function h<P extends string, N, E>(
   type: ComponentOptionsWithArrayProps<P>,
   // TODO for now this doesn't really do anything, but it would become useful
   // if we make props required by default
   props?: (RawProps & { [key in P]?: any }) | null,
-  children?: RawChildren | RawSlots
-): VNode
-export function h<P>(
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
+export function h<P, N, E>(
   type: ComponentOptionsWithObjectProps<P>,
   props?: (RawProps & ExtractPropTypes<P>) | null,
-  children?: RawChildren | RawSlots
-): VNode
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
 
 // fake constructor type returned by `createComponent`
-export function h(type: Constructor, children?: RawChildren): VNode
-export function h<P>(
+export function h<N, E>(
+  type: Constructor,
+  children?: RawChildren<N, E>
+): VNode<N, E>
+export function h<P, N, E>(
   type: Constructor<P>,
   props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots
-): VNode
+  children?: RawChildren<N, E> | RawSlots
+): VNode<N, E>
 
 // Actual implementation
 export function h(
