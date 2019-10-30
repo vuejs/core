@@ -7,7 +7,7 @@ import { RendererInternals } from './createRenderer'
 import { queuePostFlushCb, queueJob } from './scheduler'
 import { updateHOCHostEl } from './componentRenderUtils'
 import { handleError, ErrorCodes } from './errorHandling'
-import { pushWarningContext, popWarningContext, warn } from './warning'
+import { pushWarningContext, popWarningContext } from './warning'
 
 export function isSuspenseType(type: VNodeTypes): type is typeof SuspenseImpl {
   return (type as any).__isSuspenseImpl === true
@@ -254,16 +254,14 @@ function createSuspenseBoundary<HostNode, HostElement>(
     resolve() {
       if (__DEV__) {
         if (suspense.isResolved) {
-          warn(
+          throw new Error(
             `resolveSuspense() is called on an already resolved suspense boundary.`
           )
-          return
         }
         if (suspense.isUnmounted) {
-          warn(
+          throw new Error(
             `resolveSuspense() is called on an already unmounted suspense boundary.`
           )
-          return
         }
       }
       const {
