@@ -150,7 +150,7 @@ This project uses a [monorepo](https://github.com/lerna/lerna#about) structure a
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
 
-- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` ad open its `index.html` to get a repl of template compilation based on current source code.
+- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
 
   A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
