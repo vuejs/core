@@ -51,6 +51,7 @@ import {
   queueEffectWithSuspense
 } from './suspense'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { KeepAliveSink } from './keepAlive'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
@@ -131,7 +132,7 @@ function isSameType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
-function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
+export function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
   for (let i = 0; i < hooks.length; i++) {
     hooks[i](arg)
   }
@@ -755,14 +756,22 @@ export function createRenderer<
     optimized: boolean
   ) {
     if (n1 == null) {
-      mountComponent(
-        n2,
-        container,
-        anchor,
-        parentComponent,
-        parentSuspense,
-        isSVG
-      )
+      if (n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT_KEPT_ALIVE) {
+        ;(parentComponent!.sink as KeepAliveSink).activate(
+          n2,
+          container,
+          anchor
+        )
+      } else {
+        mountComponent(
+          n2,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
+      }
     } else {
       const instance = (n2.component = n1.component)!
 
@@ -816,8 +825,17 @@ export function createRenderer<
       pushWarningContext(initialVNode)
     }
 
+    const Comp = initialVNode.type as Component
+
+    // inject renderer internals for keepAlive
+    if ((Comp as any).__isKeepAlive) {
+      const sink = instance.sink as KeepAliveSink
+      sink.renderer = internals
+      sink.parentSuspense = parentSuspense
+    }
+
     // resolve props and slots for setup context
-    const propsOptions = (initialVNode.type as Component).props
+    const propsOptions = Comp.props
     resolveProps(instance, initialVNode.props, propsOptions)
     resolveSlots(instance, initialVNode.children)
 
@@ -1381,7 +1399,11 @@ export function createRenderer<
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      unmountComponent(vnode.component!, parentSuspense, doRemove)
+      if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE) {
+        ;(parentComponent!.sink as KeepAliveSink).deactivate(vnode)
+      } else {
+        unmountComponent(vnode.component!, parentSuspense, doRemove)
+      }
       return
     }
 

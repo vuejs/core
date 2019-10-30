@@ -26,6 +26,8 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
+  onActivated,
+  onDeactivated,
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook
@@ -226,8 +228,8 @@ export function applyOptions(
     mounted,
     beforeUpdate,
     updated,
-    // TODO activated
-    // TODO deactivated
+    activated,
+    deactivated,
     beforeUnmount,
     unmounted,
     renderTracked,
@@ -376,6 +378,12 @@ export function applyOptions(
   }
   if (updated) {
     onUpdated(updated.bind(ctx))
+  }
+  if (activated) {
+    onActivated(activated.bind(ctx))
+  }
+  if (deactivated) {
+    onDeactivated(deactivated.bind(ctx))
   }
   if (errorCaptured) {
     onErrorCaptured(errorCaptured.bind(ctx))

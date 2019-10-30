@@ -264,13 +264,14 @@ export function cloneVNode<T, U>(
     appContext: vnode.appContext,
     dirs: vnode.dirs,
 
-    // these should be set to null since they should only be present on
-    // mounted VNodes. If they are somehow not null, this means we have
-    // encountered an already-mounted vnode being used again.
-    component: null,
-    suspense: null,
-    el: null,
-    anchor: null
+    // These should technically only be non-null on mounted VNodes. However,
+    // they *should* be copied for kept-alive vnodes. So we just always copy
+    // them since them being non-null during a mount doesn't affect the logic as
+    // they will simply be overwritten.
+    component: vnode.component,
+    suspense: vnode.suspense,
+    el: vnode.el,
+    anchor: vnode.anchor
   }
 }
 

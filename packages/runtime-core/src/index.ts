@@ -20,6 +20,8 @@ export {
 } from './vnode'
 // VNode type symbols
 export { Text, Comment, Fragment, Portal, Suspense } from './vnode'
+// Internal Components
+export { KeepAlive } from './keepAlive'
 // VNode flags
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 export { PublicPatchFlags as PatchFlags } from '@vue/shared'

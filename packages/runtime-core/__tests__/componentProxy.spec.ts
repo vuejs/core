@@ -111,7 +111,7 @@ describe('component: proxy', () => {
     expect(`Attempting to mutate public property "$data"`).toHaveBeenWarned()
   })
 
-  it('user', async () => {
+  it('sink', async () => {
     const app = createApp()
     let instance: ComponentInternalInstance
     let instanceProxy: any
@@ -127,6 +127,6 @@ describe('component: proxy', () => {
     app.mount(Comp, nodeOps.createElement('div'))
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
-    expect(instance!.user.foo).toBe(1)
+    expect(instance!.sink.foo).toBe(1)
   })
 })

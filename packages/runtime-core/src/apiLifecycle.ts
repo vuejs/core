@@ -9,14 +9,17 @@ import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
+import { registerKeepAliveHook } from './keepAlive'
 
-function injectHook(
+export function injectHook(
   type: LifecycleHooks,
   hook: Function,
-  target: ComponentInternalInstance | null
+  target: ComponentInternalInstance | null = currentInstance,
+  prepend: boolean = false
 ) {
   if (target) {
-    ;(target[type] || (target[type] = [])).push((...args: unknown[]) => {
+    const hooks = target[type] || (target[type] = [])
+    const wrappedHook = (...args: unknown[]) => {
       if (target.isUnmounted) {
         return
       }
@@ -31,7 +34,12 @@ function injectHook(
       setCurrentInstance(null)
       resumeTracking()
       return res
-    })
+    }
+    if (prepend) {
+      hooks.unshift(wrappedHook)
+    } else {
+      hooks.push(wrappedHook)
+    }
   } else if (__DEV__) {
     const apiName = `on${capitalize(
       ErrorTypeStrings[type].replace(/ hook$/, '')
@@ -48,7 +56,7 @@ function injectHook(
   }
 }
 
-const createHook = <T extends Function = () => any>(
+export const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
 ) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
   injectHook(lifecycle, hook, target)
@@ -76,3 +84,17 @@ export type ErrorCapturedHook = (
 export const onErrorCaptured = createHook<ErrorCapturedHook>(
   LifecycleHooks.ERROR_CAPTURED
 )
+
+export function onActivated(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
+}
+
+export function onDeactivated(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
+}
