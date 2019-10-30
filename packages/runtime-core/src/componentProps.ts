@@ -42,7 +42,7 @@ interface PropOptions<T = any> {
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
-type PropConstructor<T = any> = { new (): T & object } | { (): T }
+type PropConstructor<T = any> = { new (...args: never[]): T & object } | { (): T }
 
 type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends
