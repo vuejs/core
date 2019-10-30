@@ -686,6 +686,28 @@ describe('reactivity/effect', () => {
     expect(onStop).toHaveBeenCalled()
   })
 
+  it('stop: a stopped effect is nested in a normal effect', () => {
+    let dummy
+    const obj = reactive({ prop: 1 })
+    const runner = effect(() => {
+      dummy = obj.prop
+    })
+    stop(runner)
+    obj.prop = 2
+    expect(dummy).toBe(1)
+
+    // observed value in inner stopped effect
+    // will track outer effect as an dependency
+    effect(() => {
+      runner()
+    })
+    expect(dummy).toBe(2)
+
+    // notify outer effect to run
+    obj.prop = 3
+    expect(dummy).toBe(3)
+  })
+
   it('markNonReactive', () => {
     const obj = reactive({
       foo: markNonReactive({
