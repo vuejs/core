@@ -848,8 +848,8 @@ export function createRenderer<
     // before proceeding
     if (__FEATURE_SUSPENSE__ && instance.asyncDep) {
       if (!parentSuspense) {
-        // TODO handle this properly
-        throw new Error('Async setup() is used without a suspense boundary!')
+        if (__DEV__) warn('async setup() is used without a suspense boundary!')
+        return
       }
 
       parentSuspense.registerDep(instance, setupRenderEffect)
