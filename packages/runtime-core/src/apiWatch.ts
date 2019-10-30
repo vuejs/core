@@ -138,8 +138,7 @@ function doWatch(
 
   let cleanup: Function
   const registerCleanup: CleanupRegistrator = (fn: () => void) => {
-    // TODO wrap the cleanup fn for error handling
-    cleanup = runner.onStop = () => {
+    cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
