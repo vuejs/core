@@ -677,12 +677,13 @@ describe('reactivity/effect', () => {
   })
 
   it('events: onStop', () => {
+    const onStop = jest.fn()
     const runner = effect(() => {}, {
-      onStop: jest.fn()
+      onStop
     })
 
     stop(runner)
-    expect(runner.onStop).toHaveBeenCalled()
+    expect(onStop).toHaveBeenCalled()
   })
 
   it('markNonReactive', () => {

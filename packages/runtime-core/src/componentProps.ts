@@ -27,10 +27,12 @@ export type ComponentObjectPropsOptions<P = Data> = {
 
 export type Prop<T> = PropOptions<T> | PropType<T>
 
+type DefaultFactory<T> = () => T | null | undefined
+
 interface PropOptions<T = any> {
   type?: PropType<T> | true | null
   required?: boolean
-  default?: T | null | undefined | (() => T | null | undefined)
+  default?: T | DefaultFactory<T> | null | undefined
   validator?(value: unknown): boolean
 }
 
