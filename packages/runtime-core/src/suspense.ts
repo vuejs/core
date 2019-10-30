@@ -1,4 +1,10 @@
-import { VNode, normalizeVNode, VNodeChild, VNodeTypes } from './vnode'
+import {
+  VNode,
+  normalizeVNode,
+  VNodeTypes,
+  createVNode,
+  Fragment
+} from './vnode'
 import { ShapeFlags } from './shapeFlags'
 import { isFunction, isArray } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from './component'
@@ -80,7 +86,7 @@ function mountSuspense(
     rendererInternals
   ))
 
-  const { content, fallback } = normalizeSuspenseChildren(n2)
+  const { content, fallback } = normalizeSuspenseChildren(n2, optimized)
   suspense.subTree = content
   suspense.fallbackTree = fallback
 
@@ -127,7 +133,7 @@ function patchSuspense(
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
-  const { content, fallback } = normalizeSuspenseChildren(n2)
+  const { content, fallback } = normalizeSuspenseChildren(n2, optimized)
   const oldSubTree = suspense.subTree
   const oldFallbackTree = suspense.fallbackTree
   if (!suspense.isResolved) {
@@ -437,7 +443,8 @@ function createSuspenseBoundary<HostNode, HostElement>(
 }
 
 function normalizeSuspenseChildren(
-  vnode: VNode
+  vnode: VNode,
+  optimized: boolean
 ): {
   content: VNode
   fallback: VNode
@@ -445,14 +452,22 @@ function normalizeSuspenseChildren(
   const { shapeFlag, children } = vnode
   if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const { default: d, fallback } = children as Slots
+
+    if (optimized) {
+      return {
+        content: createVNode(Fragment, null, d()),
+        fallback: createVNode(Fragment, null, fallback())
+      }
+    }
+
     return {
       content: normalizeVNode(isFunction(d) ? d() : d),
       fallback: normalizeVNode(isFunction(fallback) ? fallback() : fallback)
     }
   } else {
     return {
-      content: normalizeVNode(children as VNodeChild),
-      fallback: normalizeVNode(null)
+      content: createVNode(Fragment, null, children),
+      fallback: createVNode(Comment)
     }
   }
 }
