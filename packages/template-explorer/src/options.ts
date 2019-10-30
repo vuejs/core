@@ -1,11 +1,13 @@
 import { h, reactive, createApp } from '@vue/runtime-dom'
 import { CompilerOptions } from '@vue/compiler-dom'
+import persistedState from './persistedState'
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
   hoistStatic: false,
-  cacheHandlers: false
+  cacheHandlers: false,
+  ...persistedState.get().options
 })
 
 const App = {
