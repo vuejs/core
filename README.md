@@ -23,10 +23,9 @@ We have achieved most of the architectural goals and new features planned for v3
 
 However, there are still some 2.x parity features not completed yet:
 
-- [ ] Server-side rendering
-- [ ] `<keep-alive>`
 - [ ] `<transition>`
 - [ ] `v-show` with transition
+- [ ] Server-side rendering
 
 The current implementation also requires native ES2015+ in the runtime environment and does not support IE11 (yet).
 
