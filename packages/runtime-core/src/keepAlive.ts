@@ -41,13 +41,24 @@ export interface KeepAliveSink {
 
 export const KeepAlive = {
   name: `KeepAlive`,
+
+  // Marker for special handling inside the renderer. We are not using a ===
+  // check directly on KeepAlive in the renderer, because importing it directly
+  // would prevent it from being tree-shaken.
   __isKeepAlive: true,
+
   setup(props: KeepAliveProps, { slots }: SetupContext) {
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     let current: VNode | null = null
 
     const instance = getCurrentInstance()!
+
+    // KeepAlive communicates with the instantiated renderer via the "sink"
+    // where the renderer passes in platform-specific functions, and the
+    // KeepAlivei instance expses activcate/decativate implementations.
+    // The whole point of this is to avoid importing KeepAlive directly in the
+    // renderer to facilitate tree-shaking.
     const sink = instance.sink as KeepAliveSink
     const {
       renderer: {
