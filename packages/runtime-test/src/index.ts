@@ -20,5 +20,5 @@ export function renderToString(vnode: VNode) {
 export * from './triggerEvent'
 export * from './serialize'
 export * from './nodeOps'
-export * from './jestUtils'
+export * from './utils/mockWarn'
 export * from '@vue/runtime-core'
