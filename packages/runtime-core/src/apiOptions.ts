@@ -65,6 +65,10 @@ export interface ComponentOptionsBase<
   components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
+
+  // type-only differentiator to separate OptionWihtoutProps from a constructor
+  // type returned by createComponent()
+  __isConstructor?: never
 }
 
 export type ComponentOptionsWithoutProps<

@@ -133,9 +133,7 @@ export function h<P>(
 ): VNode
 export function h<P extends string>(
   type: ComponentOptionsWithArrayProps<P>,
-  // TODO for now this doesn't really do anything, but it would become useful
-  // if we make props required by default
-  props?: (RawProps & { [key in P]?: any }) | null,
+  props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode
 export function h<P>(

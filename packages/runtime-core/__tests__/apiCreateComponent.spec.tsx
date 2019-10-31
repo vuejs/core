@@ -67,7 +67,14 @@ test('createComponent type inference', () => {
     }
   })
   // test TSX props inference
-  ;<MyComponent a={1} b="foo" dd={['foo']} ddd={['foo']} />
+  ;<MyComponent
+    a={1}
+    b="foo"
+    dd={['foo']}
+    ddd={['foo']}
+    // should allow extraneous as attrs
+    class="bar"
+  />
 })
 
 test('type inference w/ optional props declaration', () => {
