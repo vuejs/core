@@ -901,7 +901,11 @@ export function createRenderer<
           queuePostRenderEffect(instance.m, parentSuspense)
         }
         // activated hook for keep-alive roots.
-        if (instance.a !== null) {
+        if (
+          instance.a !== null &&
+          instance.vnode.shapeFlag &
+            ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE
+        ) {
           queuePostRenderEffect(instance.a, parentSuspense)
         }
         mounted = true
@@ -1477,7 +1481,11 @@ export function createRenderer<
       queuePostRenderEffect(um, parentSuspense)
     }
     // deactivated hook
-    if (da !== null && !isDeactivated) {
+    if (
+      da !== null &&
+      !isDeactivated &&
+      instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE
+    ) {
       queuePostRenderEffect(da, parentSuspense)
     }
     queuePostFlushCb(() => {

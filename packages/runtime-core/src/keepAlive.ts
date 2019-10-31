@@ -22,7 +22,7 @@ import {
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
-interface KeepAliveProps {
+export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
@@ -62,16 +62,22 @@ export const KeepAlive = {
     sink.activate = (vnode, container, anchor) => {
       move(vnode, container, anchor)
       queuePostRenderEffect(() => {
-        vnode.component!.isDeactivated = false
-        invokeHooks(vnode.component!.a!)
+        const component = vnode.component!
+        component.isDeactivated = false
+        if (component.a !== null) {
+          invokeHooks(component.a)
+        }
       }, parentSuspense)
     }
 
     sink.deactivate = (vnode: VNode) => {
       move(vnode, storageContainer, null)
       queuePostRenderEffect(() => {
-        invokeHooks(vnode.component!.da!)
-        vnode.component!.isDeactivated = true
+        const component = vnode.component!
+        if (component.da !== null) {
+          invokeHooks(component.da)
+        }
+        component.isDeactivated = true
       }, parentSuspense)
     }
 
@@ -94,6 +100,10 @@ export const KeepAlive = {
       const cached = cache.get(key) as VNode
       if (!current || cached.type !== current.type) {
         unmount(cached)
+      } else if (current) {
+        // current active instance should no longer be kept-alive.
+        // we can't unmount it now but it might be later, so reset its flag now.
+        current.shapeFlag = ShapeFlags.STATEFUL_COMPONENT
       }
       cache.delete(key)
       keys.delete(key)
