@@ -7,7 +7,7 @@ import {
 } from './apiOptions'
 import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
-import { ExtractPropTypes } from './componentProps'
+import { ExtractPropTypes, PropOptions } from './componentProps'
 import { isFunction } from '@vue/shared'
 
 // overload 1: direct setup function
@@ -15,6 +15,11 @@ import { isFunction } from '@vue/shared'
 export function createComponent<Props, RawBindings = object>(
   setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction
 ): {
+  props: {
+    [K in keyof Props]: PropOptions<Props[K]> & {
+      required: Extract<Props[K], undefined> extends never ? true : false // If prop can't take undefined, it's required
+    }
+  }
   new (): ComponentPublicInstance<Props, RawBindings>
 }
 

@@ -88,6 +88,22 @@ test('type inference w/ optional props declaration', () => {
   ;<Comp msg="hello" />
 })
 
+test('type inference for props in setup', () => {
+  const Comp = createComponent(
+    (_props: { a: string | number; b: object; c: number }) => () => h('div')
+  )
+  ;<Comp a="a" b={{}} c={1} />
+  ;<Comp a={1} b={{}} c={1} />
+})
+
+test('optional props in setup', () => {
+  const Comp = createComponent(
+    (_props: { a?: string; b?: object; c: number }) => () => h('div')
+  )
+  ;<Comp c={1} />
+  ;<Comp a="a" c={1} />
+})
+
 test('type inference w/ direct setup function', () => {
   const Comp = createComponent((props: { msg: string }) => {
     return () => <div>{props.msg}</div>
