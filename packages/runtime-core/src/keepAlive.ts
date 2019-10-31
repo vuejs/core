@@ -9,7 +9,7 @@ import {
 } from './component'
 import { VNode, cloneVNode, isVNode } from './vnode'
 import { warn } from './warning'
-import { onBeforeUnmount, injectHook } from './apiLifecycle'
+import { onBeforeUnmount, injectHook, onUnmounted } from './apiLifecycle'
 import { isString, isArray } from '@vue/shared'
 import { watch } from './apiWatch'
 import { ShapeFlags } from './shapeFlags'
@@ -203,47 +203,67 @@ function matches(pattern: MatchPattern, name: string): boolean {
   return false
 }
 
-export function registerKeepAliveHook(
+export function onActivated(
   hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
+}
+
+export function onDeactivated(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
+}
+
+function registerKeepAliveHook(
+  hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance | null = currentInstance
 ) {
-  // When registering an activated/deactivated hook, instead of registering it
-  // on the target instance, we walk up the parent chain and register it on
-  // every ancestor instance that is a keep-alive root. This avoids the need
-  // to walk the entire component tree when invoking these hooks, and more
-  // importantly, avoids the need to track child components in arrays.
+  // cache the deactivate branch check wrapper for injected hooks so the same
+  // hook can be properly deduped by the scheduler. "__wdc" stands for "with
+  // deactivation check".
+  const wrappedHook =
+    hook.__wdc ||
+    (hook.__wdc = () => {
+      // only fire the hook if the target instance is NOT in a deactivated branch.
+      let current: ComponentInternalInstance | null = target
+      while (current) {
+        if (current.isDeactivated) {
+          return
+        }
+        current = current.parent
+      }
+      hook()
+    })
+  injectHook(type, wrappedHook, target)
+  // In addition to registering it on the target instance, we walk up the parent
+  // chain and register it on all ancestor instances that are keep-alive roots.
+  // This avoids the need to walk the entire component tree when invoking these
+  // hooks, and more importantly, avoids the need to track child components in
+  // arrays.
   if (target) {
-    let current = target
-    while (current.parent) {
+    let current = target.parent
+    while (current && current.parent) {
       if (current.parent.type === KeepAlive) {
-        register(hook, type, target, current)
+        injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
       current = current.parent
     }
   }
 }
 
-function register(
+function injectToKeepAliveRoot(
   hook: Function,
   type: LifecycleHooks,
   target: ComponentInternalInstance,
   keepAliveRoot: ComponentInternalInstance
 ) {
-  const wrappedHook = () => {
-    // only fire the hook if the target instance is NOT in a deactivated branch.
-    let current: ComponentInternalInstance | null = target
-    while (current) {
-      if (current.isDeactivated) {
-        return
-      }
-      current = current.parent
-    }
-    hook()
-  }
-  injectHook(type, wrappedHook, keepAliveRoot, true)
-  onBeforeUnmount(() => {
+  injectHook(type, hook, keepAliveRoot, true /* prepend */)
+  onUnmounted(() => {
     const hooks = keepAliveRoot[type]!
-    hooks.splice(hooks.indexOf(wrappedHook), 1)
+    hooks.splice(hooks.indexOf(hook), 1)
   }, target)
 }

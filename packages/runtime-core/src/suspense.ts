@@ -203,6 +203,7 @@ export interface SuspenseBoundary<
     instance: ComponentInternalInstance,
     setupRenderEffect: (
       instance: ComponentInternalInstance,
+      parentComponent: ComponentInternalInstance | null,
       parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
       initialVNode: VNode<HostNode, HostElement>,
       container: HostElement,
@@ -402,6 +403,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
           handleSetupResult(instance, asyncSetupResult, suspense)
           setupRenderEffect(
             instance,
+            parentComponent,
             suspense,
             vnode,
             // component may have been moved before resolve

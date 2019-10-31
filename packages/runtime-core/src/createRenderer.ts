@@ -863,6 +863,7 @@ export function createRenderer<
 
     setupRenderEffect(
       instance,
+      parentComponent,
       parentSuspense,
       initialVNode,
       container,
@@ -877,6 +878,7 @@ export function createRenderer<
 
   function setupRenderEffect(
     instance: ComponentInternalInstance,
+    parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     initialVNode: HostVNode,
     container: HostElement,
@@ -897,6 +899,10 @@ export function createRenderer<
         // mounted hook
         if (instance.m !== null) {
           queuePostRenderEffect(instance.m, parentSuspense)
+        }
+        // activated hook for keep-alive roots.
+        if (instance.a !== null) {
+          queuePostRenderEffect(instance.a, parentSuspense)
         }
         mounted = true
       } else {
@@ -1450,7 +1456,7 @@ export function createRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
-    const { bum, effects, update, subTree, um } = instance
+    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
     // beforeUnmount hook
     if (bum !== null) {
       invokeHooks(bum)
@@ -1469,6 +1475,10 @@ export function createRenderer<
     // unmounted hook
     if (um !== null) {
       queuePostRenderEffect(um, parentSuspense)
+    }
+    // deactivated hook
+    if (da !== null && !isDeactivated) {
+      queuePostRenderEffect(da, parentSuspense)
     }
     queuePostFlushCb(() => {
       instance.isUnmounted = true

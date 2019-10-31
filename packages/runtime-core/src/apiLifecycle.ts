@@ -9,32 +9,38 @@ import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
-import { registerKeepAliveHook } from './keepAlive'
+
+export { onActivated, onDeactivated } from './keepAlive'
 
 export function injectHook(
   type: LifecycleHooks,
-  hook: Function,
+  hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false
 ) {
   if (target) {
     const hooks = target[type] || (target[type] = [])
-    const wrappedHook = (...args: unknown[]) => {
-      if (target.isUnmounted) {
-        return
-      }
-      // disable tracking inside all lifecycle hooks
-      // since they can potentially be called inside effects.
-      pauseTracking()
-      // Set currentInstance during hook invocation.
-      // This assumes the hook does not synchronously trigger other hooks, which
-      // can only be false when the user does something really funky.
-      setCurrentInstance(target)
-      const res = callWithAsyncErrorHandling(hook, target, type, args)
-      setCurrentInstance(null)
-      resumeTracking()
-      return res
-    }
+    // cache the error handling wrapper for injected hooks so the same hook
+    // can be properly deduped by the scheduler. "__weh" stands for "with error
+    // handling".
+    const wrappedHook =
+      hook.__weh ||
+      (hook.__weh = (...args: unknown[]) => {
+        if (target.isUnmounted) {
+          return
+        }
+        // disable tracking inside all lifecycle hooks
+        // since they can potentially be called inside effects.
+        pauseTracking()
+        // Set currentInstance during hook invocation.
+        // This assumes the hook does not synchronously trigger other hooks, which
+        // can only be false when the user does something really funky.
+        setCurrentInstance(target)
+        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        setCurrentInstance(null)
+        resumeTracking()
+        return res
+      })
     if (prepend) {
       hooks.unshift(wrappedHook)
     } else {
@@ -84,17 +90,3 @@ export type ErrorCapturedHook = (
 export const onErrorCaptured = createHook<ErrorCapturedHook>(
   LifecycleHooks.ERROR_CAPTURED
 )
-
-export function onActivated(
-  hook: Function,
-  target?: ComponentInternalInstance | null
-) {
-  registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
-}
-
-export function onDeactivated(
-  hook: Function,
-  target?: ComponentInternalInstance | null
-) {
-  registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
-}
