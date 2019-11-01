@@ -67,8 +67,8 @@ export interface ComponentOptionsBase<
   inheritAttrs?: boolean
 
   // type-only differentiator to separate OptionWihtoutProps from a constructor
-  // type returned by createComponent()
-  __isConstructor?: never
+  // type returned by createComponent() or FunctionalComponent
+  call?: never
 }
 
 export type ComponentOptionsWithoutProps<

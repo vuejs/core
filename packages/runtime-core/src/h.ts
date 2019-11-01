@@ -1,5 +1,4 @@
 import {
-  VNodeTypes,
   VNode,
   VNodeProps,
   createVNode,
@@ -146,11 +145,7 @@ export function h<P>(
 ): VNode
 
 // Actual implementation
-export function h(
-  type: VNodeTypes,
-  propsOrChildren?: any,
-  children?: any
-): VNode {
+export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   if (arguments.length === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props

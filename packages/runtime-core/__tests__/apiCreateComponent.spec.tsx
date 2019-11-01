@@ -35,7 +35,7 @@ test('createComponent type inference', () => {
         type: Array as () => string[],
         required: true
       }
-    } as const, // required to narrow for conditional check
+    },
     setup(props) {
       props.a && props.a * 2
       props.b.slice()
