@@ -1,6 +1,7 @@
 import {
   VNodeTypes,
   VNode,
+  VNodeProps,
   createVNode,
   VNodeChildren,
   Fragment,
@@ -9,7 +10,6 @@ import {
   Suspense
 } from './vnode'
 import { isObject, isArray } from '@vue/shared'
-import { Ref } from '@vue/reactivity'
 import { RawSlots } from './componentSlots'
 import { FunctionalComponent } from './component'
 import {
@@ -51,25 +51,20 @@ h(Component, {}, {}) // named slots
 h(Component, null, {})
 **/
 
-export interface RawProps {
-  [key: string]: any
-  key?: string | number
-  ref?: string | Ref | Function
+type RawProps = VNodeProps & {
   // used to differ from a single VNode object as children
   _isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
 }
 
-export type RawChildren =
+type RawChildren =
   | string
   | number
   | boolean
   | VNode
   | VNodeChildren
   | (() => any)
-
-export { RawSlots }
 
 // fake constructor type returned from `createComponent`
 interface Constructor<P = any> {

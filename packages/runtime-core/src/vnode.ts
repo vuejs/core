@@ -14,7 +14,7 @@ import {
 } from './component'
 import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
-import { isReactive } from '@vue/reactivity'
+import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiApp'
 import { SuspenseBoundary, isSuspenseType } from './suspense'
 import { DirectiveBinding } from './directives'
@@ -38,6 +38,12 @@ export type VNodeTypes =
   | typeof Text
   | typeof Comment
   | typeof SuspenseImpl
+
+export interface VNodeProps {
+  [key: string]: any
+  key?: string | number
+  ref?: string | Ref | Function
+}
 
 type VNodeChildAtom<HostNode, HostElement> =
   | VNode<HostNode, HostElement>
@@ -66,7 +72,7 @@ export type NormalizedChildren<HostNode = any, HostElement = any> =
 export interface VNode<HostNode = any, HostElement = any> {
   _isVNode: true
   type: VNodeTypes
-  props: Record<any, any> | null
+  props: VNodeProps | null
   key: string | number | null
   ref: string | Function | null
   children: NormalizedChildren<HostNode, HostElement>

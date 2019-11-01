@@ -60,8 +60,7 @@ export { registerRuntimeCompiler } from './component'
 // Types -----------------------------------------------------------------------
 
 export { App, AppConfig, AppContext, Plugin } from './apiApp'
-export { RawProps, RawChildren, RawSlots } from './h'
-export { VNode, VNodeTypes } from './vnode'
+export { VNode, VNodeTypes, VNodeProps } from './vnode'
 export {
   Component,
   FunctionalComponent,

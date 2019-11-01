@@ -9,13 +9,7 @@ import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes } from './componentProps'
 import { isFunction } from '@vue/shared'
-import { Ref } from '@vue/reactivity'
-
-interface BaseProps {
-  [key: string]: any
-  key?: string | number
-  ref?: string | Ref | Function
-}
+import { VNodeProps } from './vnode'
 
 // overload 1: direct setup function
 // (uses user defined props interface)
@@ -32,7 +26,7 @@ export function createComponent<Props, RawBindings = object>(
     {},
     {},
     // public props
-    BaseProps & Props
+    VNodeProps & Props
   >
 }
 
@@ -55,7 +49,7 @@ export function createComponent<
     D,
     C,
     M,
-    BaseProps & Props
+    VNodeProps & Props
   >
 }
 
@@ -73,7 +67,7 @@ export function createComponent<
 ): {
   __isConstructor: true
   // array props technically doesn't place any contraints on props in TSX
-  new (): ComponentPublicInstance<BaseProps, RawBindings, D, C, M>
+  new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M>
 }
 
 // overload 4: object format with object props declaration
@@ -95,7 +89,7 @@ export function createComponent<
     D,
     C,
     M,
-    BaseProps & ExtractPropTypes<PropsOptions, false>
+    VNodeProps & ExtractPropTypes<PropsOptions, false>
   >
 }
 
