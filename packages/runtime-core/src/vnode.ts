@@ -25,12 +25,14 @@ export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
 
-// Export as {} to avoid circular type dependency between `suspense.ts` and
-// `createRenderer.ts` in exported types.
+// Export Suspense with casting to avoid circular type dependency between
+// `suspense.ts` and `createRenderer.ts` in exported types.
 // A circular type dependency causes tsc to generate d.ts with dynmaic import()
 // calls using realtive paths, which works for separate d.ts files, but will
 // fail after d.ts rollup with API Extractor.
-const Suspense = (__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as {}
+const Suspense = ((__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any) as {
+  __isSuspense: true
+}
 export { Suspense }
 
 export type VNodeTypes =

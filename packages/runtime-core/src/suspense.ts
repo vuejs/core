@@ -10,11 +10,11 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { pushWarningContext, popWarningContext } from './warning'
 
 export function isSuspenseType(type: VNodeTypes): type is typeof SuspenseImpl {
-  return (type as any).__isSuspenseImpl === true
+  return (type as any).__isSuspense === true
 }
 
 export const SuspenseImpl = {
-  __isSuspenseImpl: true,
+  __isSuspense: true,
   process(
     n1: VNode | null,
     n2: VNode,
