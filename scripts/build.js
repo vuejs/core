@@ -99,7 +99,7 @@ async function build(target) {
 
     if (result.succeeded) {
       // concat additional d.ts to rolled-up dts (mostly for JSX)
-      if (pkg.buildOptions.dts) {
+      if (pkg.buildOptions && pkg.buildOptions.dts) {
         const dtsPath = path.resolve(pkgDir, pkg.types)
         const existing = await fs.readFile(dtsPath, 'utf-8')
         const toAdd = await Promise.all(
