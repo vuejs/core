@@ -190,18 +190,23 @@ export function createBlockExpression(
   ])
 }
 
-export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
-  p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+}
 
-export const isTemplateNode = (
+export function isTemplateNode(
   node: RootNode | TemplateChildNode
-): node is TemplateNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+): node is TemplateNode {
+  return (
+    node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+  )
+}
 
-export const isSlotOutlet = (
+export function isSlotOutlet(
   node: RootNode | TemplateChildNode
-): node is SlotOutletNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+): node is SlotOutletNode {
+  return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+}
 
 export function injectProp(
   node: ElementCodegenNode | ComponentCodegenNode | SlotOutletCodegenNode,

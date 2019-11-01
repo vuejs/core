@@ -30,7 +30,7 @@ export { PublicPatchFlags as PatchFlags } from '@vue/shared'
 export { getCurrentInstance } from './component'
 
 // For custom renderers
-export { createRenderer } from './createRenderer'
+export { createRenderer, RootRenderFunction } from './createRenderer'
 export { warn } from './warning'
 export {
   handleError,

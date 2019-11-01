@@ -135,7 +135,7 @@ export const KeepAlive = {
 
     return () => {
       if (!slots.default) {
-        return
+        return null
       }
 
       const children = slots.default()

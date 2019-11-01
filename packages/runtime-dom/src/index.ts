@@ -1,16 +1,24 @@
-import { createRenderer, warn } from '@vue/runtime-core'
+import {
+  createRenderer,
+  warn,
+  App,
+  RootRenderFunction
+} from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isHTMLTag, isSVGTag } from '@vue/compiler-dom'
 import { isFunction, isString } from '@vue/shared'
 
-const { render, createApp: baseCreateApp } = createRenderer<Node, Element>({
+const { render: baseRender, createApp: baseCreateApp } = createRenderer({
   patchProp,
   ...nodeOps
 })
 
-const createApp = () => {
+// use explicit type casts here to avoid import() calls in rolled-up d.ts
+export const render = baseRender as RootRenderFunction<Node, Element>
+
+export const createApp = (): App<Element> => {
   const app = baseCreateApp()
 
   if (__DEV__) {
@@ -47,8 +55,6 @@ const createApp = () => {
 
   return app
 }
-
-export { render, createApp }
 
 // DOM-only runtime helpers
 export {

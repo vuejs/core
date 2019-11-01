@@ -16,7 +16,8 @@ import {
   createObjectProperty,
   ForCodegenNode,
   ElementCodegenNode,
-  SlotOutletCodegenNode
+  SlotOutletCodegenNode,
+  SlotOutletNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -119,7 +120,7 @@ export const transformFor = createStructuralDirectiveTransform(
         : isTemplate &&
           node.children.length === 1 &&
           isSlotOutlet(node.children[0])
-          ? node.children[0]
+          ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
           : null
       const keyProperty = keyProp
         ? createObjectProperty(
