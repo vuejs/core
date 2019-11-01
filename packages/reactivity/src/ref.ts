@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
-import { reactive } from './reactive'
+import { reactive, UnwrapNestedRefs } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
@@ -39,7 +39,7 @@ export function isRef(r: any): r is Ref {
 }
 
 export function toRefs<T extends object>(
-  object: T
+  object: UnwrapNestedRefs<T>
 ): { [K in keyof T]: Ref<T[K]> } {
   const ret: any = {}
   for (const key in object) {
