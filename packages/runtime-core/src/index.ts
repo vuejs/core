@@ -22,10 +22,11 @@ export {
 export { Text, Comment, Fragment, Portal, Suspense } from './vnode'
 // Internal Components
 export { KeepAlive } from './keepAlive'
-// VNode patchFlags
+// VNode flags
+export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 import { PublicPatchFlags } from '@vue/shared'
 export const PatchFlags = PublicPatchFlags as {
-  // export flags as plain numbers to avoid d.ts relying on @vue/shared
+  // export patch flags as plain numbers to avoid d.ts relying on @vue/shared
   // the enum type is internal anyway.
   TEXT: number
   CLASS: number
