@@ -16,7 +16,7 @@ import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiApp'
-import { SuspenseBoundary, isSuspenseType } from './suspense'
+import { SuspenseBoundary } from './suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './suspense'
 
@@ -209,7 +209,7 @@ export function createVNode(
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
-    : __FEATURE_SUSPENSE__ && isSuspenseType(type)
+    : __FEATURE_SUSPENSE__ && (type as any).__isSuspense === true
       ? ShapeFlags.SUSPENSE
       : isObject(type)
         ? ShapeFlags.STATEFUL_COMPONENT
