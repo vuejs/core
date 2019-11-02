@@ -68,6 +68,8 @@ export function createComponent<
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
 export function createComponent<
+  // the Readonly constraint allows TS to treat the type of { required: true }
+  // as constant instead of boolean.
   PropsOptions extends Readonly<ComponentPropsOptions>,
   RawBindings,
   D,
