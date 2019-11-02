@@ -20,8 +20,14 @@ import { SuspenseBoundary, isSuspenseType } from './suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './suspense'
 
-export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined)
-export const Portal = Symbol(__DEV__ ? 'Portal' : undefined)
+export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
+  // type differentiator for h()
+  __isFragment: true
+}
+export const Portal = (Symbol(__DEV__ ? 'Portal' : undefined) as any) as {
+  // type differentiator for h()
+  __isPortal: true
+}
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
 
@@ -47,7 +53,7 @@ export type VNodeTypes =
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref | Function
+  ref?: string | Ref | ((ref: object) => void)
 }
 
 type VNodeChildAtom<HostNode, HostElement> =

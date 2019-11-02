@@ -15,7 +15,8 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function ref<T extends Ref>(raw: T): T
 export function ref<T>(raw: T): Ref<T>
-export function ref(raw: unknown) {
+export function ref<T = any>(): Ref<T>
+export function ref(raw?: unknown) {
   if (isRef(raw)) {
     return raw
   }

@@ -342,7 +342,8 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
-export function registerRuntimeCompiler(_compile: CompileFunction) {
+// exported method uses any to avoid d.ts relying on the compiler types.
+export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 

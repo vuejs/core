@@ -81,20 +81,19 @@ export function h(
   children?: RawChildren
 ): VNode
 
-// keyed fragment
-export function h(type: typeof Fragment, children?: RawChildren): VNode
+// fragment
+export function h(type: typeof Fragment, children?: VNodeChildren): VNode
 export function h(
   type: typeof Fragment,
-  props?: (RawProps & { key?: string | number }) | null,
-  children?: RawChildren
+  props?: RawProps | null,
+  children?: VNodeChildren
 ): VNode
 
-// portal
-export function h(type: typeof Portal, children?: RawChildren): VNode
+// portal (target prop is required)
 export function h(
   type: typeof Portal,
-  props?: (RawProps & { target: any }) | null,
-  children?: RawChildren
+  props: RawProps & { target: any },
+  children: RawChildren
 ): VNode
 
 // suspense
@@ -114,25 +113,22 @@ export function h(
 export function h(type: FunctionalComponent, children?: RawChildren): VNode
 export function h<P>(
   type: FunctionalComponent<P>,
-  props?: (RawProps & P) | null,
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
 // stateful component
 export function h(type: ComponentOptions, children?: RawChildren): VNode
-export function h<P>(
-  type: ComponentOptionsWithoutProps<P>,
-  props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots
-): VNode
-export function h<P extends string>(
-  type: ComponentOptionsWithArrayProps<P>,
+export function h(
+  type: ComponentOptionsWithoutProps | ComponentOptionsWithArrayProps,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode
-export function h<P>(
-  type: ComponentOptionsWithObjectProps<P>,
-  props?: (RawProps & ExtractPropTypes<P>) | null,
+export function h<O>(
+  type: ComponentOptionsWithObjectProps<O>,
+  props?:
+    | (RawProps & ExtractPropTypes<O>)
+    | ({} extends ExtractPropTypes<O> ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
@@ -140,7 +136,7 @@ export function h<P>(
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
-  props?: (RawProps & P) | null,
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 

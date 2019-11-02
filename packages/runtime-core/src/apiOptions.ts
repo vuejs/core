@@ -69,6 +69,11 @@ export interface ComponentOptionsBase<
   // type-only differentiator to separate OptionWihtoutProps from a constructor
   // type returned by createComponent() or FunctionalComponent
   call?: never
+  // type-only differentiators for built-in Vnode types
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
+  __isKeepAlive?: never
 }
 
 export type ComponentOptionsWithoutProps<
