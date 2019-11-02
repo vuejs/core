@@ -17,7 +17,7 @@ type TraceEntry = {
 
 type ComponentTraceStack = TraceEntry[]
 
-export function pushWarningContext(vnode: ComponentVNode) {
+export function pushWarningContext(vnode: VNode) {
   stack.push(vnode)
 }
 
@@ -83,7 +83,7 @@ function getComponentTrace(): ComponentTraceStack {
       last.recurseCount++
     } else {
       normalizedStack.push({
-        vnode: currentVNode,
+        vnode: currentVNode as ComponentVNode,
         recurseCount: 0
       })
     }

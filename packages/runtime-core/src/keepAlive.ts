@@ -100,7 +100,7 @@ export const KeepAlive = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getName(vnode.type)
+        const name = getName(vnode.type as Component)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }

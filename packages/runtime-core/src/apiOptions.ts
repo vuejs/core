@@ -73,7 +73,6 @@ export interface ComponentOptionsBase<
   __isFragment?: never
   __isPortal?: never
   __isSuspense?: never
-  __isKeepAlive?: never
 }
 
 export type ComponentOptionsWithoutProps<

@@ -145,7 +145,7 @@ export function createComponentInstance(
     vnode,
     parent,
     appContext,
-    type: vnode.type,
+    type: vnode.type as Component,
     root: null!, // set later so it can point to itself
     next: null,
     subTree: null!, // will be set synchronously right after creation
