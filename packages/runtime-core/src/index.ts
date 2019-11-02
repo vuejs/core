@@ -1,13 +1,17 @@
 // Public API ------------------------------------------------------------------
 
-export { createComponent } from './apiCreateComponent'
-export { nextTick } from './scheduler'
 export * from './apiReactivity'
 export * from './apiWatch'
 export * from './apiLifecycle'
 export * from './apiInject'
+export { nextTick } from './scheduler'
+export { createComponent } from './apiCreateComponent'
 
 // Advanced API ----------------------------------------------------------------
+
+// For getting a hold of the internal instance in setup() - useful for advanced
+// plugins
+export { getCurrentInstance } from './component'
 
 // For raw render function users
 export { h } from './h'
@@ -21,7 +25,7 @@ export {
 // VNode type symbols
 export { Text, Comment, Fragment, Portal, Suspense } from './vnode'
 // Internal Components
-export { KeepAlive } from './keepAlive'
+export { KeepAlive } from './components/KeepAlive'
 // VNode flags
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 import { PublicPatchFlags } from '@vue/shared'
@@ -40,11 +44,8 @@ export const PatchFlags = PublicPatchFlags as {
   BAIL: number
 }
 
-// For advanced plugins
-export { getCurrentInstance } from './component'
-
 // For custom renderers
-export { createRenderer, RootRenderFunction } from './createRenderer'
+export { createRenderer, RootRenderFunction } from './renderer'
 export { warn } from './warning'
 export {
   handleError,
@@ -94,7 +95,7 @@ export {
 } from './apiOptions'
 
 export { ComponentPublicInstance } from './componentProxy'
-export { RendererOptions } from './createRenderer'
+export { RendererOptions } from './renderer'
 export { Slot, Slots } from './componentSlots'
 export {
   Prop,
@@ -110,6 +111,6 @@ export {
   FunctionDirective,
   DirectiveArguments
 } from './directives'
-export { SuspenseBoundary } from './suspense'
+export { SuspenseBoundary } from './rendererSuspense'
 
 export const version = __VERSION__

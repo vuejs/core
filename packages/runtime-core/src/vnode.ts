@@ -16,9 +16,9 @@ import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiApp'
-import { SuspenseBoundary } from './suspense'
+import { SuspenseBoundary } from './rendererSuspense'
 import { DirectiveBinding } from './directives'
-import { SuspenseImpl } from './suspense'
+import { Suspense as SuspenseImpl } from './rendererSuspense'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   // type differentiator for h()
@@ -48,7 +48,7 @@ export type VNodeTypes =
   | typeof Portal
   | typeof Text
   | typeof Comment
-  | typeof SuspenseImpl
+  | typeof Suspense
 
 export interface VNodeProps {
   [key: string]: any

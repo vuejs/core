@@ -10,7 +10,7 @@ import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
 
-export { onActivated, onDeactivated } from './keepAlive'
+export { onActivated, onDeactivated } from './components/KeepAlive'
 
 export function injectHook(
   type: LifecycleHooks,

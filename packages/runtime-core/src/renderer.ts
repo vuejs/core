@@ -47,11 +47,11 @@ import { ComponentPublicInstance } from './componentProxy'
 import { App, createAppAPI } from './apiApp'
 import {
   SuspenseBoundary,
-  SuspenseImpl,
+  Suspense,
   queueEffectWithSuspense
-} from './suspense'
+} from './rendererSuspense'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { KeepAliveSink } from './keepAlive'
+import { KeepAliveSink } from './components/KeepAlive'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
@@ -265,7 +265,7 @@ export function createRenderer<
             optimized
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          ;(type as typeof SuspenseImpl).process(
+          ;(type as typeof Suspense).process(
             n1,
             n2,
             container,

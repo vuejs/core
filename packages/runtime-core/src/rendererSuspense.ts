@@ -3,13 +3,13 @@ import { ShapeFlags } from './shapeFlags'
 import { isFunction, isArray } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from './component'
 import { Slots } from './componentSlots'
-import { RendererInternals } from './createRenderer'
+import { RendererInternals } from './renderer'
 import { queuePostFlushCb, queueJob } from './scheduler'
 import { updateHOCHostEl } from './componentRenderUtils'
 import { handleError, ErrorCodes } from './errorHandling'
 import { pushWarningContext, popWarningContext } from './warning'
 
-export const SuspenseImpl = {
+export const Suspense = {
   __isSuspense: true,
   process(
     n1: VNode | null,

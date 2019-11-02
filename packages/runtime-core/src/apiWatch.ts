@@ -27,7 +27,7 @@ import {
   callWithAsyncErrorHandling
 } from './errorHandling'
 import { onBeforeUnmount } from './apiLifecycle'
-import { queuePostRenderEffect } from './createRenderer'
+import { queuePostRenderEffect } from './renderer'
 
 export type WatchHandler<T = any> = (
   value: T,

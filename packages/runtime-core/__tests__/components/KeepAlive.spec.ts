@@ -1,4 +1,3 @@
-import { ComponentOptions } from '../src/component'
 import {
   h,
   TestElement,
@@ -7,9 +6,10 @@ import {
   ref,
   KeepAlive,
   serializeInner,
-  nextTick
+  nextTick,
+  ComponentOptions
 } from '@vue/runtime-test'
-import { KeepAliveProps } from '../src/keepAlive'
+import { KeepAliveProps } from '../../src/components/KeepAlive'
 
 describe('keep-alive', () => {
   let one: ComponentOptions

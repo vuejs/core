@@ -6,19 +6,19 @@ import {
   ComponentInternalInstance,
   LifecycleHooks,
   currentInstance
-} from './component'
-import { VNode, cloneVNode, isVNode } from './vnode'
-import { warn } from './warning'
-import { onBeforeUnmount, injectHook, onUnmounted } from './apiLifecycle'
+} from '../component'
+import { VNode, cloneVNode, isVNode } from '../vnode'
+import { warn } from '../warning'
+import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
 import { isString, isArray } from '@vue/shared'
-import { watch } from './apiWatch'
-import { ShapeFlags } from './shapeFlags'
-import { SuspenseBoundary } from './suspense'
+import { watch } from '../apiWatch'
+import { ShapeFlags } from '../shapeFlags'
+import { SuspenseBoundary } from '../rendererSuspense'
 import {
   RendererInternals,
   queuePostRenderEffect,
   invokeHooks
-} from './createRenderer'
+} from '../renderer'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
