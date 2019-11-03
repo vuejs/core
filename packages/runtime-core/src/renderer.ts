@@ -804,6 +804,14 @@ export function createRenderer<
       }
     }
     if (n2.ref !== null && parentComponent !== null) {
+      if (__DEV__ && !(n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT)) {
+        pushWarningContext(n2)
+        warn(
+          `Functional components do not support "ref" because they do not ` +
+            `have instances.`
+        )
+        popWarningContext()
+      }
       setRef(n2.ref, n1 && n1.ref, parentComponent, n2.component!.renderProxy)
     }
   }
