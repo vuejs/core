@@ -756,7 +756,7 @@ export function createRenderer<
     optimized: boolean
   ) {
     if (n1 == null) {
-      if (n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT_KEPT_ALIVE) {
+      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.sink as KeepAliveSink).activate(
           n2,
           container,
@@ -903,8 +903,7 @@ export function createRenderer<
         // activated hook for keep-alive roots.
         if (
           instance.a !== null &&
-          instance.vnode.shapeFlag &
-            ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE
+          instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
         ) {
           queuePostRenderEffect(instance.a, parentSuspense)
         }
@@ -1409,7 +1408,7 @@ export function createRenderer<
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE) {
+      if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
         ;(parentComponent!.sink as KeepAliveSink).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
@@ -1484,7 +1483,7 @@ export function createRenderer<
     if (
       da !== null &&
       !isDeactivated &&
-      instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE
+      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     ) {
       queuePostRenderEffect(da, parentSuspense)
     }

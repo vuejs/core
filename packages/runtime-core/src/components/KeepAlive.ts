@@ -180,7 +180,7 @@ export const KeepAlive = {
         vnode.anchor = cached.anchor
         vnode.component = cached.component
         // avoid vnode being mounted as fresh
-        vnode.shapeFlag |= ShapeFlags.STATEFUL_COMPONENT_KEPT_ALIVE
+        vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
         keys.delete(key)
         keys.add(key)
@@ -192,7 +192,7 @@ export const KeepAlive = {
         }
       }
       // avoid vnode being unmounted
-      vnode.shapeFlag |= ShapeFlags.STATEFUL_COMPONENT_SHOULD_KEEP_ALIVE
+      vnode.shapeFlag |= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
 
       current = vnode
       return vnode
