@@ -39,7 +39,7 @@ describe('renderer: portal', () => {
 
     const Comp = createComponent(() => () =>
       h(Fragment, [
-        h(Portal, { target }, h('div', 'teleported')),
+        h(Portal, { target: target.value }, h('div', 'teleported')),
         h('div', 'root')
       ])
     )

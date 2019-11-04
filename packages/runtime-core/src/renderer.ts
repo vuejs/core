@@ -680,11 +680,7 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    let targetSelector = n2.props && n2.props.target
-    if (isRef(targetSelector)) {
-      targetSelector = targetSelector.value
-    }
-
+    const targetSelector = n2.props && n2.props.target
     const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
       const target = (n2.target = isString(targetSelector)
