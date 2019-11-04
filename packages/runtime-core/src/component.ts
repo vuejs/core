@@ -25,7 +25,7 @@ import {
   makeMap,
   isPromise
 } from '@vue/shared'
-import { SuspenseBoundary } from './rendererSuspense'
+import { SuspenseBoundary } from './components/Suspense'
 import {
   CompilerError,
   CompilerOptions,

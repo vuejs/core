@@ -83,7 +83,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Props>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -459,7 +459,7 @@ function createWatcher(
   ctx: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => ctx[key]
+  const getter = () => (ctx as Data)[key]
   if (isString(raw)) {
     const handler = renderContext[raw]
     if (isFunction(handler)) {

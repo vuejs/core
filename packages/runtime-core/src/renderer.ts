@@ -47,9 +47,9 @@ import { ComponentPublicInstance } from './componentProxy'
 import { App, createAppAPI } from './apiApp'
 import {
   SuspenseBoundary,
-  Suspense,
-  queueEffectWithSuspense
-} from './rendererSuspense'
+  queueEffectWithSuspense,
+  SuspenseImpl
+} from './components/Suspense'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink } from './components/KeepAlive'
 
@@ -265,7 +265,7 @@ export function createRenderer<
             optimized
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          ;(type as typeof Suspense).process(
+          ;(type as typeof SuspenseImpl).process(
             n1,
             n2,
             container,

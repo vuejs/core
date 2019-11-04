@@ -22,7 +22,7 @@ describe('keep-alive', () => {
     one = {
       name: 'one',
       data: () => ({ msg: 'one' }),
-      render() {
+      render(this: any) {
         return h('div', this.msg)
       },
       created: jest.fn(),
@@ -34,7 +34,7 @@ describe('keep-alive', () => {
     two = {
       name: 'two',
       data: () => ({ msg: 'two' }),
-      render() {
+      render(this: any) {
         return h('div', this.msg)
       },
       created: jest.fn(),

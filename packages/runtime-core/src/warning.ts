@@ -116,7 +116,7 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 function formatComponentName(vnode: ComponentVNode, file?: string): string {
-  const Component = vnode.type
+  const Component = vnode.type as Component
   let name = isFunction(Component)
     ? Component.displayName || Component.name
     : Component.name

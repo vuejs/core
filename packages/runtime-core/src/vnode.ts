@@ -16,30 +16,24 @@ import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiApp'
-import { SuspenseBoundary } from './rendererSuspense'
+import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
-import { Suspense as SuspenseImpl } from './rendererSuspense'
+import { SuspenseImpl } from './components/Suspense'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
-  // type differentiator for h()
   __isFragment: true
+  new (): {
+    $props: VNodeProps
+  }
 }
 export const Portal = (Symbol(__DEV__ ? 'Portal' : undefined) as any) as {
-  // type differentiator for h()
   __isPortal: true
+  new (): {
+    $props: VNodeProps & { target: string | object }
+  }
 }
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
 export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
-
-// Export Suspense with casting to avoid circular type dependency between
-// `suspense.ts` and `createRenderer.ts` in exported types.
-// A circular type dependency causes tsc to generate d.ts with dynmaic import()
-// calls using realtive paths, which works for separate d.ts files, but will
-// fail after d.ts rollup with API Extractor.
-const Suspense = ((__FEATURE_SUSPENSE__ ? SuspenseImpl : null) as any) as {
-  __isSuspense: true
-}
-export { Suspense }
 
 export type VNodeTypes =
   | string
@@ -48,12 +42,12 @@ export type VNodeTypes =
   | typeof Portal
   | typeof Text
   | typeof Comment
-  | typeof Suspense
+  | typeof SuspenseImpl
 
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref | ((ref: object) => void)
+  ref?: string | Ref | ((ref: object | null) => void)
 }
 
 type VNodeChildAtom<HostNode, HostElement> =

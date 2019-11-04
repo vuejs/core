@@ -1,5 +1,6 @@
 // Public API ------------------------------------------------------------------
 
+export const version = __VERSION__
 export * from './apiReactivity'
 export * from './apiWatch'
 export * from './apiLifecycle'
@@ -23,9 +24,10 @@ export {
   createBlock
 } from './vnode'
 // VNode type symbols
-export { Text, Comment, Fragment, Portal, Suspense } from './vnode'
+export { Text, Comment, Fragment, Portal } from './vnode'
 // Internal Components
-export { KeepAlive } from './components/KeepAlive'
+export { Suspense, SuspenseProps } from './components/Suspense'
+export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 // VNode flags
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 import { PublicPatchFlags } from '@vue/shared'
@@ -111,6 +113,4 @@ export {
   FunctionDirective,
   DirectiveArguments
 } from './directives'
-export { SuspenseBoundary } from './rendererSuspense'
-
-export const version = __VERSION__
+export { SuspenseBoundary } from './components/Suspense'

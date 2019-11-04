@@ -174,6 +174,12 @@ Unit tests are collocated with the code being tested in each package, inside dir
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
 
+### Testing Type Definition Correctness
+
+This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
+
+Type tests are located in the `test-dts` directory. To run the dts tests, run `yarn test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `./node_modules/.bin/tsd`.
+
 ## Financial Contribution
 
 As a pure community-driven project without major corporate backing, we also welcome financial contributions via Patreon and OpenCollective.

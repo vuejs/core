@@ -26,7 +26,6 @@ export type ComponentPublicInstance<
   M extends MethodOptions = {},
   PublicProps = P
 > = {
-  [key: string]: any
   $data: D
   $props: PublicProps
   $attrs: Data

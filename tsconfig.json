@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "removeComments": false,
-    "jsx": "react",
+    "jsx": "preserve",
     "lib": ["esnext", "dom"],
     "types": ["jest", "node"],
     "rootDir": ".",
@@ -35,6 +35,7 @@
     "packages/global.d.ts",
     "packages/runtime-dom/jsx.d.ts",
     "packages/*/src",
-    "packages/*/__tests__"
+    "packages/*/__tests__",
+    "test-dts"
   ]
 }

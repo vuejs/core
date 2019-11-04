@@ -5,9 +5,9 @@ import {
   VNodeChildren,
   Fragment,
   Portal,
-  isVNode,
-  Suspense
+  isVNode
 } from './vnode'
+import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import { FunctionalComponent } from './component'
@@ -67,6 +67,9 @@ type RawChildren =
 
 // fake constructor type returned from `createComponent`
 interface Constructor<P = any> {
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
   new (): { $props: P }
 }
 
@@ -100,12 +103,7 @@ export function h(
 export function h(type: typeof Suspense, children?: RawChildren): VNode
 export function h(
   type: typeof Suspense,
-  props?:
-    | (RawProps & {
-        onResolve?: () => void
-        onRecede?: () => void
-      })
-    | null,
+  props?: (RawProps & SuspenseProps) | null,
   children?: RawChildren | RawSlots
 ): VNode
 

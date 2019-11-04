@@ -19,7 +19,8 @@ import { recordEffect } from './apiReactivity'
 import {
   currentInstance,
   ComponentInternalInstance,
-  currentSuspense
+  currentSuspense,
+  Data
 } from './component'
 import {
   ErrorCodes,
@@ -219,7 +220,7 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): StopHandle {
-  const ctx = this.renderProxy!
+  const ctx = this.renderProxy as Data
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)
