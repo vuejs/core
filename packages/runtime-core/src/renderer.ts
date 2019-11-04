@@ -619,6 +619,8 @@ export function createRenderer<
     }
   }
 
+  let devFragmentID = 0
+
   function processFragment(
     n1: HostVNode | null,
     n2: HostVNode,
@@ -629,10 +631,16 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateComment(''))!
+    const showID = __DEV__ && !__TEST__
+    const fragmentStartAnchor = (n2.el = n1
+      ? n1.el
+      : hostCreateComment(showID ? `fragment-${devFragmentID}-start` : ''))!
     const fragmentEndAnchor = (n2.anchor = n1
       ? n1.anchor
-      : hostCreateComment(''))!
+      : hostCreateComment(showID ? `fragment-${devFragmentID}-end` : ''))!
+    if (showID) {
+      devFragmentID++
+    }
     if (n1 == null) {
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
