@@ -246,7 +246,13 @@ describe('api: createApp', () => {
     }
 
     const app = createApp()
-    app.use(PluginA)
+    app.use(PluginA).use(PluginA) // call repeatedly
+
+    expect(
+      `App already provides property with key "foo". ` +
+        `It will be overwritten with the new value.`
+    ).toHaveBeenWarnedTimes(1)
+
     app.use(PluginB)
 
     const Root = {
