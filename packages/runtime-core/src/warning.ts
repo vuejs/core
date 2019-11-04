@@ -53,7 +53,7 @@ export function warn(msg: string, ...args: any[]) {
     if (
       trace.length &&
       // avoid spamming console during tests
-      (typeof process === 'undefined' || process.env.NODE_ENV !== 'test')
+      !__TEST__
     ) {
       warnArgs.push(`\n`, ...formatTrace(trace))
     }

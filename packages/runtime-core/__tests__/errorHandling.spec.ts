@@ -10,9 +10,18 @@ import {
   mockWarn,
   createComponent
 } from '@vue/runtime-test'
+import { setErrorRecovery } from '../src/errorHandling'
 
 describe('error handling', () => {
   mockWarn()
+
+  beforeEach(() => {
+    setErrorRecovery(true)
+  })
+
+  afterEach(() => {
+    setErrorRecovery(false)
+  })
 
   test('propagation', () => {
     const err = new Error('foo')
@@ -384,9 +393,6 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
-    // temporarily simulate non-test env
-    process.env.NODE_ENV = 'dev'
-
     const onError = jest.spyOn(console, 'error')
     onError.mockImplementation(() => {})
     const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
@@ -423,7 +429,6 @@ describe('error handling', () => {
     onError.mockRestore()
     groupCollapsed.mockRestore()
     log.mockRestore()
-    process.env.NODE_ENV = 'test'
   })
 
   // native event handler handling should be tested in respective renderers

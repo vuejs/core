@@ -4,9 +4,9 @@ module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
+    __TEST__: true,
     __VERSION__: lernaJson.version,
     __BROWSER__: false,
-    __JSDOM__: true,
     __RUNTIME_COMPILE__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true

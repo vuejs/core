@@ -147,9 +147,11 @@ function createReplacePlugin(
     __VERSION__: `"${lernaJson.version}"`,
     __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
-        `process.env.NODE_ENV !== 'production'`
+        `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
+    // this is only used during tests
+    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
     // support compile in browser?
@@ -157,9 +159,7 @@ function createReplacePlugin(
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
-    __FEATURE_SUSPENSE__: true,
-    // this is only used during tests
-    __JSDOM__: false
+    __FEATURE_SUSPENSE__: true
   })
 }
 

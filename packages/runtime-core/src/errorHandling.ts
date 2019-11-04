@@ -126,12 +126,15 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
+// Test-only toggle for testing the uhandled warning behavior
+let forceRecover = false
+export function setErrorRecovery(value: boolean) {
+  forceRecover = value
+}
+
 function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   // default behavior is crash in prod & test, recover in dev.
-  if (
-    __DEV__ &&
-    !(typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
-  ) {
+  if (__DEV__ && (forceRecover || !__TEST__)) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {
       pushWarningContext(contextVNode)
