@@ -1024,21 +1024,21 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@microsoft/api-extractor-model@7.5.2":
-  version "7.5.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.5.2.tgz#39a3c015ca01a3435b5f161b8fce07117e6039be"
-  integrity sha512-wDXQ6IvrVg7tp3iqA+7f7yrSzjUPQ2kVNKsrxD5AqbGeohsJYePbmWvz6V8yxxO7ZuM9W7V5zLY6pYh4epq8Dg==
+"@microsoft/api-extractor-model@7.5.4":
+  version "7.5.4"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.5.4.tgz#c5ad3823a59ee9c81b685e4f1a6f55e0e64218be"
+  integrity sha512-pzY1EVHw8dMCRBba8PDEV71vnsmvhOSgLUIXxB45Ts0Po69tz2H7YZQ4DsAetyv0aSLHG5QVXmGEn65A1DDvDQ==
   dependencies:
-    "@microsoft/node-core-library" "3.16.0"
+    "@microsoft/node-core-library" "3.17.0"
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.5.2"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.2.tgz#4da588e71c6342ec66b6b087a471aa773a232c81"
-  integrity sha512-IGMpxhiTaUsGGdrGqCwhwGbyJNMwrVe0wi3vYqFL0G93N+DO2uI89/JNGxaiGjgQ8nCem6u8hPd0NhOcGU6DcA==
+  version "7.5.4"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.4.tgz#f841c66740f804d81ace185c1974044e9f559abb"
+  integrity sha512-zt+1WAQ1VRMBltpmaRiycDphWvdOt2dQ9u5B1gG8hHL9kR07DHbAws5p3eUcTI3QBqtBVGGuhK8Kt8IRnKZGOw==
   dependencies:
-    "@microsoft/api-extractor-model" "7.5.2"
-    "@microsoft/node-core-library" "3.16.0"
+    "@microsoft/api-extractor-model" "7.5.4"
+    "@microsoft/node-core-library" "3.17.0"
     "@microsoft/ts-command-line" "4.3.4"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
@@ -1047,15 +1047,17 @@
     source-map "~0.6.1"
     typescript "~3.5.3"
 
-"@microsoft/node-core-library@3.16.0":
-  version "3.16.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.16.0.tgz#cdd3a27b1513cb470d1098ba32d50ca22a1fb75c"
-  integrity sha512-zjgOAmOhWgE5eX8ofmRagcomeIhs96GizRm7m9UfAuzhEmWtQSOE33/WpZzoyw41S/bjevHi7YbkY+R70mdjFg==
+"@microsoft/node-core-library@3.17.0":
+  version "3.17.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.17.0.tgz#3576431711b65951b5059d564ac9dc0897f75743"
+  integrity sha512-i49LbZxPU35Vq50lV1oN331WPp+BmmhGs0Ee2PT/OAZR7qOm/UdQ3vpG70zhkLHymJNUyb0vUh0UU3ZHU6mgsg==
   dependencies:
     "@types/node" "8.10.54"
     colors "~1.2.1"
     fs-extra "~7.0.1"
     jju "~1.4.0"
+    semver "~5.3.0"
+    timsort "~0.3.0"
     z-schema "~3.18.3"
 
 "@microsoft/ts-command-line@4.3.4":
@@ -7028,6 +7030,11 @@ timed-out@^4.0.0:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/timed-out/-/timed-out-4.0.1.tgz#f32eacac5a175bea25d7fab565ab3ed8741ef56f"
   integrity sha1-8y6srFoXW+ol1/q1Zas+2HQe9W8=
+
+timsort@~0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/timsort/-/timsort-0.3.0.tgz#405411a8e7e6339fe64db9a234de11dc31e02bd4"
+  integrity sha1-QFQRqOfmM5/mTbmiNN4R3DHgK9Q=
 
 tmp@^0.0.33:
   version "0.0.33"
