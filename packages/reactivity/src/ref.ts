@@ -47,10 +47,8 @@ export function isRef(r: any): r is Ref {
 export function toRefs<T extends object>(
   object: T
 ): { [K in keyof T]: Ref<T[K]> } {
-  if (!isReactive(object)) {
-    if (__DEV__) {
-      console.warn(`toRefs() should pass a reactive value: ${String(object)}`)
-    }
+  if (__DEV__ && !isReactive(object)) {
+    console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = {}
   for (const key in object) {
