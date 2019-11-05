@@ -79,6 +79,7 @@ export function createAppAPI<HostNode, HostElement>(
 ): () => App<HostElement> {
   return function createApp(): App {
     const context = createAppContext()
+    const installedPlugins = new Set()
 
     let isMounted = false
 
@@ -96,9 +97,13 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       use(plugin: Plugin) {
-        if (isFunction(plugin)) {
+        if (installedPlugins.has(plugin)) {
+          __DEV__ && warn(`Plugin has already been applied to target app.`)
+        } else if (isFunction(plugin)) {
+          installedPlugins.add(plugin)
           plugin(app)
         } else if (isFunction(plugin.install)) {
+          installedPlugins.add(plugin)
           plugin.install(app)
         } else if (__DEV__) {
           warn(

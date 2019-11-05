@@ -259,6 +259,11 @@ describe('api: createApp', () => {
     const root = nodeOps.createElement('div')
     app.mount(Root, root)
     expect(serializeInner(root)).toBe(`1,2`)
+
+    app.use(PluginA)
+    expect(
+      `Plugin has already been applied to target app`
+    ).toHaveBeenWarnedTimes(1)
   })
 
   test('config.errorHandler', () => {
