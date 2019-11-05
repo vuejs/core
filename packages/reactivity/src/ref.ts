@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { OperationTypes } from './operations'
 import { isObject } from '@vue/shared'
-import { reactive } from './reactive'
+import { reactive, isReactive } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
@@ -47,6 +47,9 @@ export function isRef(r: any): r is Ref {
 export function toRefs<T extends object>(
   object: T
 ): { [K in keyof T]: Ref<T[K]> } {
+  if (__DEV__ && !isReactive(object)) {
+    console.warn(`toRefs() expects a reactive object but received a plain one.`)
+  }
   const ret: any = {}
   for (const key in object) {
     ret[key] = toProxyRef(object, key)
