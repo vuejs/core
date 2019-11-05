@@ -51,9 +51,7 @@ export const enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
-  TEMPLATE,
-  PORTAL,
-  SUSPENSE
+  TEMPLATE
 }
 
 export interface Node {
@@ -105,8 +103,6 @@ export type ElementNode =
   | ComponentNode
   | SlotOutletNode
   | TemplateNode
-  | PortalNode
-  | SuspenseNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -144,16 +140,6 @@ export interface SlotOutletNode extends BaseElementNode {
 
 export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
-  codegenNode: ElementCodegenNode | undefined | CacheExpression
-}
-
-export interface PortalNode extends BaseElementNode {
-  tagType: ElementTypes.PORTAL
-  codegenNode: ElementCodegenNode | undefined | CacheExpression
-}
-
-export interface SuspenseNode extends BaseElementNode {
-  tagType: ElementTypes.SUSPENSE
   codegenNode: ElementCodegenNode | undefined | CacheExpression
 }
 

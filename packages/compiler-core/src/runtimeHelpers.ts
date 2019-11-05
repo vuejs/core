@@ -1,6 +1,7 @@
 export const FRAGMENT = Symbol(__DEV__ ? `Fragment` : ``)
 export const PORTAL = Symbol(__DEV__ ? `Portal` : ``)
 export const SUSPENSE = Symbol(__DEV__ ? `Suspense` : ``)
+export const KEEP_ALIVE = Symbol(__DEV__ ? `KeepAlive` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
@@ -28,6 +29,7 @@ export const helperNameMap: any = {
   [FRAGMENT]: `Fragment`,
   [PORTAL]: `Portal`,
   [SUSPENSE]: `Suspense`,
+  [KEEP_ALIVE]: `KeepAlive`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,
