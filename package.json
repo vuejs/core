@@ -51,7 +51,7 @@
     "rollup-plugin-typescript2": "^0.24.0",
     "ts-jest": "^24.0.2",
     "tsd": "^0.10.0",
-    "typescript": "^3.6.4",
+    "typescript": "^3.7.0",
     "yorkie": "^2.0.0"
   }
 }
