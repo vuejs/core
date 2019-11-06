@@ -54,7 +54,10 @@ async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   const pkg = require(`${pkgDir}/package.json`)
 
-  await fs.remove(`${pkgDir}/dist`)
+  // if building a specific format, do not remove dist.
+  if (!formats) {
+    await fs.remove(`${pkgDir}/dist`)
+  }
 
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
