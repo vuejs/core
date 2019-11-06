@@ -1,4 +1,4 @@
-import { readonly, toRaw, lock, unlock } from '@vue/reactivity'
+import { toRaw, lock, unlock } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -200,12 +200,8 @@ export function resolveProps(
   // lock readonly
   lock()
 
-  instance.props = __DEV__ ? readonly(props) : props
-  instance.attrs = options
-    ? __DEV__ && attrs != null
-      ? readonly(attrs)
-      : attrs || EMPTY_OBJ
-    : instance.props
+  instance.props = props
+  instance.attrs = options ? attrs || EMPTY_OBJ : props
 }
 
 const normalizationMap = new WeakMap()

@@ -9,7 +9,8 @@ import {
   lock,
   unlock,
   effect,
-  ref
+  ref,
+  readonlyProps
 } from '../src'
 import { mockWarn } from '@vue/runtime-test'
 
@@ -441,5 +442,33 @@ describe('reactivity/readonly', () => {
     expect(
       `Set operation on key "value" failed: target is readonly.`
     ).toHaveBeenWarned()
+  })
+
+  describe('readonlyProps', () => {
+    test('should not unwrap root-level refs', () => {
+      const props = readonlyProps({ n: ref(1) })
+      expect(props.n.value).toBe(1)
+    })
+
+    test('should unwrap nested refs', () => {
+      const props = readonlyProps({ foo: { bar: ref(1) } })
+      expect(props.foo.bar).toBe(1)
+    })
+
+    test('should make properties readonly', () => {
+      const props = readonlyProps({ n: ref(1) })
+      props.n.value = 2
+      expect(props.n.value).toBe(1)
+      expect(
+        `Set operation on key "value" failed: target is readonly.`
+      ).toHaveBeenWarned()
+
+      // @ts-ignore
+      props.n = 2
+      expect(props.n.value).toBe(1)
+      expect(
+        `Set operation on key "n" failed: target is readonly.`
+      ).toHaveBeenWarned()
+    })
   })
 })

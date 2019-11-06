@@ -14,6 +14,7 @@ import { ShapeFlags } from './shapeFlags'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, EMPTY_OBJ } from '@vue/shared'
 import { warn } from './warning'
+import { readonlyProps } from '@vue/reactivity'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -52,14 +53,15 @@ export function renderComponentRoot(
     } else {
       // functional
       const render = Component as FunctionalComponent
+      const propsToPass = __DEV__ ? readonlyProps(props) : props
       result = normalizeVNode(
         render.length > 1
-          ? render(props, {
+          ? render(propsToPass, {
               attrs,
               slots,
               emit
             })
-          : render(props, null as any /* we know it doesn't need it */)
+          : render(propsToPass, null as any /* we know it doesn't need it */)
       )
     }
 
