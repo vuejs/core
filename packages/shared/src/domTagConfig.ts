@@ -1,4 +1,6 @@
-import { makeMap } from '../../shared/src/makeMap'
+// These tag configs are shared between compiler-dom and runtime-dom, so they
+// must be extracted in shared to avoid creating a dependency between the two.
+import { makeMap } from './makeMap'
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 const HTML_TAGS =

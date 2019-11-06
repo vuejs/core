@@ -28,4 +28,3 @@ export function compile(
 }
 
 export * from '@vue/compiler-core'
-export * from './tagConfig'
