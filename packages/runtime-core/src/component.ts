@@ -23,14 +23,11 @@ import {
   isObject,
   NO,
   makeMap,
-  isPromise
+  isPromise,
+  generateCodeFrame
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
-import {
-  CompilerError,
-  CompilerOptions,
-  generateCodeFrame
-} from '@vue/compiler-dom'
+import { CompilerError, CompilerOptions } from '@vue/compiler-core'
 
 export type Data = { [key: string]: unknown }
 

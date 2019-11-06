@@ -99,7 +99,6 @@ export {
 } from './errors'
 export * from './ast'
 export * from './utils'
-export * from './codeframe'
 export { registerRuntimeHelpers } from './runtimeHelpers'
 
 // expose transforms so higher-order compilers can import and extend them
