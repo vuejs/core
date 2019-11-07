@@ -72,20 +72,18 @@ function toProxyRef<T extends object, K extends keyof T>(
   }
 }
 
-type UnwrapRefPropValue<T> = T extends Array<infer V>
-  ? Array<UnwrapRef<V>>
-  : T extends ComputedRef<infer V>
-    ? UnwrapRef<V>
-    : T extends Ref<infer V>
-      ? UnwrapRef<V>
+// Recursively unwraps nested value bindings.
+export type UnwrapRef<T> = {
+  cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
+  ref: T extends Ref<infer V> ? UnwrapRef<V> : T
+  array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
+  object: { [K in keyof T]: UnwrapRef<T[K]> }
+}[T extends ComputedRef<any>
+  ? 'cRef'
+  : T extends Ref
+    ? 'ref'
+    : T extends Array<any>
+      ? 'array'
       : T extends Function | CollectionTypes
-        ? T
-        : T extends object ? { [K in keyof T]: UnwrapRefPropValue<T[K]> } : T
-
-export type UnwrapRef<T> = T extends Function | CollectionTypes
-  ? T
-  : T extends object
-    ? T extends Ref<infer V>
-      ? { [K in keyof V]: UnwrapRefPropValue<V[K]> }
-      : { [K in keyof T]: UnwrapRefPropValue<T[K]> }
-    : T
+        ? 'ref' // bail out on types that shouldn't be unwrapped
+        : T extends object ? 'object' : 'ref']
