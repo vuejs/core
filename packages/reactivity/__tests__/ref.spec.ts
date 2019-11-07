@@ -119,11 +119,11 @@ describe('reactivity/ref', () => {
 
     tupleRef.value[0]++
     expect(tupleRef.value[0]).toBe(1)
-    tupleRef.value[1].concat('1')
+    tupleRef.value[1] += '1'
     expect(tupleRef.value[1]).toBe('11')
     tupleRef.value[2].a++
     expect(tupleRef.value[2].a).toBe(2)
-    expect(tupleRef.value[3]()).toBe(2)
+    expect(tupleRef.value[3]()).toBe(0)
     tupleRef.value[4]++
     expect(tupleRef.value[4]).toBe(1)
   })
