@@ -1,13 +1,3 @@
-export interface Attr {
-  name: string
-  value: string
-}
-
-export interface ASTNode {
-  tag: string
-  attrs: Attr[]
-}
-
 import { UrlWithStringQuery, parse as uriParse } from 'url'
 
 // TODO use imports instead.
