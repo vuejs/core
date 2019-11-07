@@ -61,6 +61,14 @@ describe('reactivity/ref', () => {
     expect(dummy1).toBe(3)
     expect(dummy2).toBe(3)
     expect(dummy3).toBe(3)
+    obj.b.c++
+    expect(dummy1).toBe(4)
+    expect(dummy2).toBe(4)
+    expect(dummy3).toBe(4)
+    obj.b.d[0]++
+    expect(dummy1).toBe(5)
+    expect(dummy2).toBe(5)
+    expect(dummy3).toBe(5)
   })
 
   it('should unwrap nested ref in types', () => {
