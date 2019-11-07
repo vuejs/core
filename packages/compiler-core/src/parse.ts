@@ -215,7 +215,10 @@ function parseChildren(
   // Whitespace management for more efficient output
   // (same as v2 whitespance: 'condense')
   let removedWhitespace = false
-  if (!parent || !context.options.isPreTag(parent.tag)) {
+  if (
+    mode !== TextModes.RAWTEXT &&
+    (!parent || !context.options.isPreTag(parent.tag))
+  ) {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
       if (node.type === NodeTypes.TEXT) {
