@@ -82,8 +82,10 @@ type UnwrapRefPropValue<T> = T extends Array<infer V>
         ? T
         : T extends object ? { [K in keyof T]: UnwrapRefPropValue<T[K]> } : T
 
-export type UnwrapRef<T> = T extends object
-  ? T extends Ref<infer V>
-    ? { [K in keyof V]: UnwrapRefPropValue<V[K]> }
-    : { [K in keyof T]: UnwrapRefPropValue<T[K]> }
-  : T
+export type UnwrapRef<T> = T extends Function | CollectionTypes
+  ? T
+  : T extends object
+    ? T extends Ref<infer V>
+      ? { [K in keyof V]: UnwrapRefPropValue<V[K]> }
+      : { [K in keyof T]: UnwrapRefPropValue<T[K]> }
+    : T
