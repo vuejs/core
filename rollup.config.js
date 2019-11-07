@@ -60,7 +60,7 @@ const packageConfigs = process.env.PROD_ONLY
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
-    if (format === 'cjs') {
+    if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
     if (format === 'global' || format === 'esm-browser') {
@@ -107,7 +107,9 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const externals = Object.keys(aliasOptions).filter(p => p !== '@vue/shared')
+  const externals = Object.keys(aliasOptions)
+    .concat(Object.keys(pkg.dependencies || []))
+    .filter(p => p !== '@vue/shared')
 
   return {
     input: resolve(`src/index.ts`),
