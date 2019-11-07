@@ -10,10 +10,11 @@ export interface ASTNode {
 
 import { UrlWithStringQuery, parse as uriParse } from 'url'
 
-// TODO use imports instead
+// TODO use imports instead.
+// We need an extra transform context API for injecting arbitrary import
+// statements.
 export function urlToRequire(url: string): string {
   const returnValue = `"${url}"`
-  // same logic as in transform-require.js
   const firstChar = url.charAt(0)
   if (firstChar === '.' || firstChar === '~' || firstChar === '@') {
     if (firstChar === '~') {
