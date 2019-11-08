@@ -1,4 +1,4 @@
-import { NO, makeMap } from '@vue/shared'
+import { NO, makeMap, isArray } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -203,7 +203,7 @@ function parseChildren(
       node = parseText(context, mode)
     }
 
-    if (Array.isArray(node)) {
+    if (isArray(node)) {
       for (let i = 0; i < node.length; i++) {
         pushNode(nodes, node[i])
       }
