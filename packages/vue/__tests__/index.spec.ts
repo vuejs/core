@@ -48,7 +48,7 @@ describe('compiler + runtime integration', () => {
 
   it('should support using element innerHTML as template', () => {
     const app = createApp()
-    let container = document.createElement('div')
+    const container = document.createElement('div')
     container.innerHTML = '{{msg}}'
     const App = {
       data: {
