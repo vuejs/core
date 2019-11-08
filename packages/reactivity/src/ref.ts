@@ -5,13 +5,27 @@ import { reactive, isReactive } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
+const isRefSymbol = Symbol()
+
 export interface Ref<T = any> {
-  _isRef: true
+  // This field is necessary to allow TS to differentiate a Ref from a plain
+  // object that happens to have a "value" field.
+  // However, checking a symbol on an arbitrary object is much slower than
+  // checking a plain property, so we use a _isRef plain property for isRef()
+  // check in the actual implementation.
+  // The reason for not just declaring _isRef in the interface is because we
+  // don't want this internal field to leak into userland autocompletion -
+  // a private symbol, on the other hand, achieves just that.
+  [isRefSymbol]: true
   value: UnwrapRef<T>
 }
 
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
+
+export function isRef(r: any): r is Ref {
+  return r ? r._isRef === true : false
+}
 
 export function ref<T extends Ref>(raw: T): T
 export function ref<T>(raw: T): Ref<T>
@@ -37,11 +51,7 @@ export function ref(raw?: unknown) {
       )
     }
   }
-  return r as Ref
-}
-
-export function isRef(r: any): r is Ref {
-  return r ? r._isRef === true : false
+  return r
 }
 
 export function toRefs<T extends object>(
@@ -69,7 +79,7 @@ function toProxyRef<T extends object, K extends keyof T>(
     set value(newVal) {
       object[key] = newVal
     }
-  }
+  } as any
 }
 
 type UnwrapArray<T> = { [P in keyof T]: UnwrapRef<T[P]> }
