@@ -425,8 +425,8 @@ function dedupeProperties(properties: Property[]): Property[] {
       if (
         name === 'style' ||
         name === 'class' ||
-        name.startsWith('on') ||
-        name.startsWith('vnode')
+        name.indexOf('on') === 0 ||
+        name.indexOf('vnode') === 0
       ) {
         mergeAsArray(existing, prop)
       }

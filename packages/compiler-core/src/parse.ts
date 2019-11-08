@@ -939,7 +939,7 @@ function last<T>(xs: T[]): T | undefined {
 }
 
 function startsWith(source: string, searchString: string): boolean {
-  return source.startsWith(searchString)
+  return source.indexOf(searchString) === 0
 }
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
