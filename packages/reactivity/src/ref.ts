@@ -72,11 +72,13 @@ function toProxyRef<T extends object, K extends keyof T>(
   }
 }
 
+type UnwrapArray<T> = { [P in keyof T]: UnwrapRef<T[P]> }
+
 // Recursively unwraps nested value bindings.
 export type UnwrapRef<T> = {
   cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
   ref: T extends Ref<infer V> ? UnwrapRef<V> : T
-  array: T extends Array<infer V> ? Array<UnwrapRef<V>> : T
+  array: T extends Array<infer V> ? Array<UnwrapRef<V>> & UnwrapArray<T> : T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
 }[T extends ComputedRef<any>
   ? 'cRef'

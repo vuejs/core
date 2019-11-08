@@ -1,4 +1,4 @@
-import { ref, effect, reactive, isRef, toRefs } from '../src/index'
+import { ref, effect, reactive, isRef, toRefs, Ref } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 
 describe('reactivity/ref', () => {
@@ -105,6 +105,27 @@ describe('reactivity/ref', () => {
       // and not contain any Ref type
       value.has('foo')
     }
+  })
+
+  it('should keep tuple types', () => {
+    const tuple: [number, string, { a: number }, () => number, Ref<number>] = [
+      0,
+      '1',
+      { a: 1 },
+      () => 0,
+      ref(0)
+    ]
+    const tupleRef = ref(tuple)
+
+    tupleRef.value[0]++
+    expect(tupleRef.value[0]).toBe(1)
+    tupleRef.value[1] += '1'
+    expect(tupleRef.value[1]).toBe('11')
+    tupleRef.value[2].a++
+    expect(tupleRef.value[2].a).toBe(2)
+    expect(tupleRef.value[3]()).toBe(0)
+    tupleRef.value[4]++
+    expect(tupleRef.value[4]).toBe(1)
   })
 
   test('isRef', () => {
