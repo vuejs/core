@@ -1,6 +1,6 @@
 import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
-import { EMPTY_OBJ, extend } from '@vue/shared'
+import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
 export interface ReactiveEffect<T = any> {
   (): T
@@ -170,7 +170,7 @@ export function trigger(
     }
     // also run for iteration key on ADD | DELETE
     if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {
-      const iterationKey = Array.isArray(target) ? 'length' : ITERATE_KEY
+      const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
   }
