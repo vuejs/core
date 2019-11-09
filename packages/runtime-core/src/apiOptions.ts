@@ -37,11 +37,7 @@ import {
   ComputedGetter,
   WritableComputedOptions
 } from '@vue/reactivity'
-import {
-  ComponentObjectPropsOptions,
-  ExtractPropTypes,
-  ComponentPropsOptions
-} from './componentProps'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
