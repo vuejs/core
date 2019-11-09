@@ -82,7 +82,7 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent({
+    const Child = createComponent<{ count?: number }, {}, {}>({
       props: {
         count: Number
       },
@@ -205,5 +205,19 @@ describe('api: setup context', () => {
     expect(spy).toHaveBeenCalled()
     await nextTick()
     expect(serializeInner(root)).toMatch(`<div>1</div>`)
+  })
+
+  it('The props attribute is read-only ', async () => {
+    createComponent<{ count?: number }, {}, {}>({
+      props: {
+        count: Number
+      },
+
+      setup(props) {
+        //Cannot assign to 'count' because it is a read-only property.ts(2540)
+        // props.count = 1
+        return () => h('a')
+      }
+    })
   })
 })

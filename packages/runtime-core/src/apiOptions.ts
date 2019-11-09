@@ -37,7 +37,11 @@ import {
   ComputedGetter,
   WritableComputedOptions
 } from '@vue/reactivity'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentObjectPropsOptions,
+  ExtractPropTypes,
+  ComponentPropsOptions
+} from './componentProps'
 import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
@@ -82,7 +86,7 @@ export type ComponentOptionsWithoutProps<
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
-  props?: undefined
+  props?: ComponentPropsOptions
 } & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Props>>
 
 export type ComponentOptionsWithArrayProps<
