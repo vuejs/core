@@ -14,16 +14,19 @@ import { VNodeProps } from './vnode'
 // overload 1: direct setup function
 // (uses user defined props interface)
 export function createComponent<Props, RawBindings = object>(
-  setup: (props: Props, ctx: SetupContext) => RawBindings | RenderFunction
+  setup: (
+    props: Readonly<Props>,
+    ctx: SetupContext
+  ) => RawBindings | RenderFunction
 ): {
   new (): ComponentPublicInstance<
-    Props,
+    Readonly<Props>,
     RawBindings,
     {},
     {},
     {},
     // public props
-    VNodeProps & Props
+    VNodeProps & Readonly<Props>
   >
 }
 
@@ -37,15 +40,15 @@ export function createComponent<
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
 >(
-  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
+  options: ComponentOptionsWithoutProps<Readonly<Props>, RawBindings, D, C, M>
 ): {
   new (): ComponentPublicInstance<
-    Props,
+    Readonly<Props>,
     RawBindings,
     D,
     C,
     M,
-    VNodeProps & Props
+    VNodeProps & Readonly<Props>
   >
 }
 
