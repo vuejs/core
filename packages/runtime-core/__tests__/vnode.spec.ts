@@ -182,10 +182,10 @@ describe('vnode', () => {
         style: [
           {
             color: 'blue',
-            with: '200px'
+            width: '200px'
           },
           {
-            with: '300px',
+            width: '300px',
             height: '300px',
             fontSize: 30
           }
@@ -194,7 +194,7 @@ describe('vnode', () => {
       expect(mergeProps(props1, props2)).toMatchObject({
         style: {
           color: 'blue',
-          with: '300px',
+          width: '300px',
           height: '300px',
           fontSize: 30
         }
