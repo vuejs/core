@@ -7,7 +7,7 @@ export function generateCodeFrame(
 ): string {
   const lines = source.split(/\r?\n/)
   let count = 0
-  const res = []
+  const res: string[] = []
   for (let i = 0; i < lines.length; i++) {
     count += lines[i].length + 1
     if (count >= start) {
