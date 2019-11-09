@@ -12,7 +12,10 @@ describe('with object props', () => {
     ccc?: string[] | undefined
     ddd: string[]
   }
-
+  createComponent<ExpectedProps>(props => () => {
+    // props should be readonly
+    expectError((props.a = 1))
+  })
   const MyComponent = createComponent({
     props: {
       a: Number,
