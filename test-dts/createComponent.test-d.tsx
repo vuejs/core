@@ -50,6 +50,9 @@ describe('with object props', () => {
       expectType<ExpectedProps['ccc']>(props.ccc)
       expectType<ExpectedProps['ddd']>(props.ddd)
 
+      // props should be readonly
+      expectError((props.a = 1))
+
       // setup context
       return {
         c: ref(1),
