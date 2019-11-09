@@ -32,7 +32,7 @@ window.init = () => {
         filename: 'template.vue',
         ...compilerOptions,
         sourceMap: true,
-        onError: (err: CompilerError) => {
+        onError: err => {
           errors.push(err)
         }
       })
