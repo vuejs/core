@@ -83,7 +83,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Props>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -91,7 +91,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: any }
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -102,7 +102,7 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
+  Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
