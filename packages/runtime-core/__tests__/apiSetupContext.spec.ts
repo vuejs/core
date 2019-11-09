@@ -82,7 +82,7 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent<{ count?: number }, {}, {}>({
+    const Child = createComponent({
       props: {
         count: Number
       },
@@ -211,7 +211,7 @@ describe('api: setup context', () => {
     createComponent<{ count?: number }, {}, {}>({
       props: {
         count: Number
-      },
+      } as any,
 
       setup(props) {
         //Cannot assign to 'count' because it is a read-only property.ts(2540)

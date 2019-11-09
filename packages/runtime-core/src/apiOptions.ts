@@ -86,7 +86,7 @@ export type ComponentOptionsWithoutProps<
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
-  props?: ComponentPropsOptions
+  props?: undefined
 } & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Props>>
 
 export type ComponentOptionsWithArrayProps<
