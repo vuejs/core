@@ -45,4 +45,33 @@ describe(`module style`, () => {
     expect(el.style.getPropertyValue('color')).toBe('red')
     expect(el.style.getPropertyValue('margin-right')).toBe('10px')
   })
+
+  // JSDOM doesn't support custom properties on style object so we have to
+  // mock it here.
+  function mockElementWithStyle() {
+    const store: any = {}
+    return {
+      style: {
+        WebkitTransition: '',
+        setProperty(key: string, val: string) {
+          store[key] = val
+        },
+        getPropertyValue(key: string) {
+          return store[key]
+        }
+      }
+    }
+  }
+
+  it('CSS custom properties', () => {
+    const el = mockElementWithStyle()
+    patchStyle(el as any, {}, { '--theme': 'red' } as any)
+    expect(el.style.getPropertyValue('--theme')).toBe('red')
+  })
+
+  it('auto vendor prefixing', () => {
+    const el = mockElementWithStyle()
+    patchStyle(el as any, {}, { transition: 'all 1s' })
+    expect(el.style.WebkitTransition).toBe('all 1s')
+  })
 })
