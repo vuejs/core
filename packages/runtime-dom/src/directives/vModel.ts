@@ -101,7 +101,7 @@ export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else {
-        assign(checked)
+        assign(getCheckboxValue(el, checked))
       }
     })
   },
@@ -119,7 +119,7 @@ function setChecked(
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (value !== oldValue) {
-    el.checked = !!value
+    el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
 }
 
@@ -226,6 +226,15 @@ function looseIndexOf(arr: any[], val: any): number {
 // retrieve raw value set via :value bindings
 function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
+}
+
+// retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
+function getCheckboxValue(
+  el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
+  checked: boolean
+) {
+  const key = checked ? '_trueValue' : '_falseValue'
+  return key in el ? el[key] : checked
 }
 
 export const vModelDynamic: ObjectDirective<

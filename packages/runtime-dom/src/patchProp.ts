@@ -5,9 +5,9 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn } from '@vue/shared'
 import {
-  VNode,
   ComponentInternalInstance,
-  SuspenseBoundary
+  SuspenseBoundary,
+  VNode
 } from '@vue/runtime-core'
 
 export function patchProp(
@@ -52,6 +52,16 @@ export function patchProp(
           parentSuspense,
           unmountChildren
         )
+      } else if (key === 'true-value') {
+        // special case for :true-value
+        // store value as _trueValue since
+        // non-string values will be stringified.
+        ;(el as any)._trueValue = nextValue
+      } else if (key === 'false-value') {
+        // special case for :false-value
+        // store value as _falseValue since
+        // non-string values will be stringified.
+        ;(el as any)._falseValue = nextValue
       } else {
         patchAttr(el, key, nextValue)
       }
