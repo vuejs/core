@@ -52,17 +52,16 @@ export function patchProp(
           parentSuspense,
           unmountChildren
         )
-      } else if (key === 'true-value') {
-        // special case for :true-value
-        // store value as _trueValue since
-        // non-string values will be stringified.
-        ;(el as any)._trueValue = nextValue
-      } else if (key === 'false-value') {
-        // special case for :false-value
-        // store value as _falseValue since
-        // non-string values will be stringified.
-        ;(el as any)._falseValue = nextValue
       } else {
+        // special case for <input v-model type="checkbox"> with
+        // :true-value & :false-value
+        // store value as dom properties since non-string values will be
+        // stringified.
+        if (key === 'true-value') {
+          ;(el as any)._trueValue = nextValue
+        } else if (key === 'false-value') {
+          ;(el as any)._falseValue = nextValue
+        }
         patchAttr(el, key, nextValue)
       }
       break
