@@ -47,6 +47,7 @@ export interface SFCDescriptor {
   customBlocks: SFCBlock[]
 }
 
+const sourceToSFC = new Map<string, SFCDescriptor>()
 export function parse(
   source: string,
   {
@@ -55,7 +56,11 @@ export function parse(
     sourceRoot = ''
   }: SFCParseOptions = {}
 ): SFCDescriptor {
-  // TODO check cache
+  const sourceKey = source + needMap + filename + sourceRoot
+  const cache = sourceToSFC.get(sourceKey)
+  if (cache) {
+    return cache
+  }
 
   const sfc: SFCDescriptor = {
     filename,
@@ -100,7 +105,7 @@ export function parse(
   if (needMap) {
     // TODO source map
   }
-  // TODO set cache
+  sourceToSFC.set(sourceKey, sfc)
 
   return sfc
 }
