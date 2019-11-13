@@ -207,3 +207,27 @@ describe('api: setup context', () => {
     expect(serializeInner(root)).toMatch(`<div>1</div>`)
   })
 })
+
+it('Event auto-binding', async () => {
+  // 当给父组件传递一个事件  但是子组件并没有主动绑定
+  // 仍然会子组件中的所有元素添加上这个事件
+  // 在组件里包含表单控件时候 有明显的问题 不知道这个特性是正确的吗？
+  const id = ref(1)
+
+  const Parent = {
+    render: () => h(Child, { onClick: () => id.value++ })
+  }
+
+  const Child = {
+    setup(props: any, { slots }: any) {
+      const div1 = ref(null)
+      const div2 = ref(null)
+      return () => h('div', [h('div', { id: div1 }), h('div', { ref: div2 })])
+    }
+  }
+
+  const root = nodeOps.createElement('div')
+  render(h(Parent), root)
+
+  //expect 当点击子组件时不会触发click事件
+})
