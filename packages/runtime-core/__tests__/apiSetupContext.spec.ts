@@ -206,4 +206,36 @@ describe('api: setup context', () => {
     await nextTick()
     expect(serializeInner(root)).toMatch(`<div>1</div>`)
   })
+
+  it('组件外部传进来的事件会绑定到组件内的所有dom上', async () => {
+    //这个测试时没有问题的 但是我在实际使用过程中 确实会出现
+    const count = ref(0)
+    const div1 = ref(null)
+    const div2 = ref(null)
+    const Parent = {
+      render: () =>
+        h(Child, {
+          onClick: () => count.value++
+        })
+    }
+
+    const Child = createComponent({
+      props: {},
+      setup(props) {
+        return () =>
+          h('div', [h('div', { ref: div1 }), h('div', { ref: div2 })])
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    await nextTick()
+
+    triggerEvent((div1.value as unknown) as TestElement, 'click')
+    expect(count.value).toBe(0)
+    // expect(count.value).toBe(1)
+    triggerEvent((div2.value as unknown) as TestElement, 'click')
+    expect(count.value).toBe(0)
+    // expect(count.value).toBe(2)
+  })
 })
