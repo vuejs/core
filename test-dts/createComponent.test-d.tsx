@@ -71,6 +71,9 @@ describe('with object props', () => {
       expectType<ExpectedProps['ccc']>(props.ccc)
       expectType<ExpectedProps['ddd']>(props.ddd)
 
+      // props should be readonly
+      expectError((props.a = 1))
+
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
       expectType<ExpectedProps['b']>(this.b)
@@ -80,9 +83,15 @@ describe('with object props', () => {
       expectType<ExpectedProps['ccc']>(this.ccc)
       expectType<ExpectedProps['ddd']>(this.ddd)
 
+      // props on `this` should be readonly
+      expectError((this.a = 1))
+
       // assert setup context unwrapping
       expectType<number>(this.c)
       expectType<string>(this.d.e)
+
+      // setup context properties should be mutable
+      this.c = 2
 
       return null
     }
@@ -126,6 +135,9 @@ describe('type inference w/ optional props declaration', () => {
     },
     render() {
       expectType<string>(this.$props.msg)
+      // props should be readonly
+      expectError((this.$props.msg = 'foo'))
+      // should not expose on `this`
       expectError(this.msg)
       expectType<number>(this.a)
       return null
@@ -148,14 +160,18 @@ describe('type inference w/ array props declaration', () => {
   createComponent({
     props: ['a', 'b'],
     setup(props) {
-      props.a
-      props.b
+      // props should be readonly
+      expectError((props.a = 1))
+      expectType<any>(props.a)
+      expectType<any>(props.b)
       return {
         c: 1
       }
     },
     render() {
-      expectType<{ a?: any; b?: any }>(this.$props)
+      expectType<any>(this.$props.a)
+      expectType<any>(this.$props.b)
+      expectError((this.$props.a = 1))
       expectType<any>(this.a)
       expectType<any>(this.b)
       expectType<number>(this.c)
