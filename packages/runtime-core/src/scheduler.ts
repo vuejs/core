@@ -8,6 +8,9 @@ const p = Promise.resolve()
 let isFlushing = false
 let isFlushPending = false
 
+const RECURSION_LIMIT = 100
+type CountMap = Map<Function, number>
+
 export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
 }
@@ -53,26 +56,6 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 
-const RECURSION_LIMIT = 100
-type CountMap = Map<Function, number>
-
-function checkRecursiveUpdates(seen: CountMap, fn: Function) {
-  if (!seen.has(fn)) {
-    seen.set(fn, 1)
-  } else {
-    const count = seen.get(fn)!
-    if (count > RECURSION_LIMIT) {
-      throw new Error(
-        'Maximum recursive updates exceeded. ' +
-          "You may have code that is mutating state in your component's " +
-          'render function or updated hook or watcher source function.'
-      )
-    } else {
-      seen.set(fn, count + 1)
-    }
-  }
-}
-
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
   isFlushing = true
@@ -92,5 +75,22 @@ function flushJobs(seen?: CountMap) {
   // keep flushing until it drains.
   if (queue.length || postFlushCbs.length) {
     flushJobs(seen)
+  }
+}
+
+function checkRecursiveUpdates(seen: CountMap, fn: Function) {
+  if (!seen.has(fn)) {
+    seen.set(fn, 1)
+  } else {
+    const count = seen.get(fn)!
+    if (count > RECURSION_LIMIT) {
+      throw new Error(
+        'Maximum recursive updates exceeded. ' +
+          "You may have code that is mutating state in your component's " +
+          'render function or updated hook or watcher source function.'
+      )
+    } else {
+      seen.set(fn, count + 1)
+    }
   }
 }
