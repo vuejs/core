@@ -307,3 +307,19 @@ export function hasScopeRef(
       return false
   }
 }
+
+export function getMinPositive(...values: number[]) {
+  const size = values.length
+  let minPositive = Infinity
+
+  for (let i = 0; i < size; i++) {
+    const number = values[i]
+
+    if (number < 0) continue
+
+    if (number === 0) return 0
+    if (number < minPositive) minPositive = number
+  }
+
+  return minPositive
+}

@@ -1,5 +1,9 @@
 import { Position } from '../src/ast'
-import { getInnerRange, advancePositionWithClone } from '../src/utils'
+import {
+  getInnerRange,
+  advancePositionWithClone,
+  getMinPositive
+} from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
   return { column, line, offset }
@@ -65,5 +69,25 @@ describe('getInnerRange', () => {
     expect(loc2.end.column).toBe(4)
     expect(loc2.end.line).toBe(2)
     expect(loc2.end.offset).toBe(7)
+  })
+})
+
+describe('getMinPositive', () => {
+  test('min positive at last position', () => {
+    const minPositive = getMinPositive(-1, 10, 8, 3, 0)
+
+    expect(minPositive).toBe(0)
+  })
+
+  test('min positive at random position', () => {
+    const minPositive = getMinPositive(7, 4, 1, -1, 2)
+
+    expect(minPositive).toBe(1)
+  })
+
+  test('min positive at first position', () => {
+    const minPositive = getMinPositive(2, -1, 10, 8, 6)
+
+    expect(minPositive).toBe(2)
   })
 })
