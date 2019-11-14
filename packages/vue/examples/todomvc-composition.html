@@ -2,6 +2,7 @@
 <link rel="stylesheet" href="https://unpkg.com/todomvc-app-css/index.css">
 
 <div id="app">
+  <child @click="click" ></child>
   <section class="todoapp">
     <header class="header">
       <h1>todos</h1>
@@ -53,7 +54,7 @@
 </div>
 
 <script>
-const { createApp, reactive, computed, watch, onMounted, onUnmounted } = Vue
+const { createApp, reactive, computed, watch, onMounted,h, onUnmounted } = Vue
 
 const STORAGE_KEY = 'todos-vuejs-3.x'
 const todoStorage = {
@@ -90,7 +91,19 @@ function pluralize (n) {
   return n === 1 ? 'item' : 'items'
 }
 
+const child = {
+  props:{},
+  setup(){
+    return ()=> h("div", {},[
+        h("button", { id: "div1" }, "button"),
+        h("button", { id: "div2" }, "button"),
+        h("button", { id: "div3" }, "button"),
+        h("button", { id: "div4" }, "button")
+      ]);
+  }
+}
 const App = {
+  components: {child},
   setup () {
     const state = reactive({
       todos: todoStorage.fetch(),
@@ -184,6 +197,9 @@ const App = {
       state.todos = filters.active(state.todos)
     }
 
+    function click(){
+      console.log('没有绑定事件的dom触发了事件');
+    }
     return {
       state,
       addTodo,
@@ -191,6 +207,7 @@ const App = {
       editTodo,
       doneEdit,
       cancelEdit,
+      click,
       removeCompleted
     }
   },
