@@ -1,6 +1,6 @@
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/directives/class.spec.js
 
-import { h, render, ComponentOptions } from '../src'
+import { h, render, ComponentOptions } from '../../src'
 
 function assertClass(assertions: Array<Array<any>>) {
   const root = document.createElement('div')
@@ -89,6 +89,57 @@ describe('class', () => {
     expect(root.children[0].className).toBe('c a bar baz foo')
   })
 
+  test('class merge between parent and child with props', () => {
+    const root = document.createElement('div')
+    type ClassItem = {
+      value: string | object | string[]
+    }
+    const childClass: ClassItem = { value: 'd' }
+
+    const child = {
+      setup() {
+        return () => h('div', { class: ['c', childClass.value] })
+      }
+    }
+
+    const parentClass: ClassItem = { value: 'b' }
+    const parent = {
+      setup() {
+        return () => h(child, { class: ['a', parentClass.value] })
+      }
+    }
+
+    const child2 = {
+      props: [],
+      setup() {
+        return () => h('div', { class: ['c', childClass.value] })
+      }
+    }
+    const parent2 = {
+      setup() {
+        return () => h(child2, { class: ['a', parentClass.value] })
+      }
+    }
+    const aaa = h(parent)
+    const bbb = h(parent2)
+    console.log(aaa, bbb)
+
+    render(h(parent), root)
+    expect(root.children[0].className).toBe('c a d b')
+
+    parentClass.value = 'e'
+    render(h(parent), root)
+    expect(root.children[0].className).toBe('c a d e')
+
+    parentClass.value = 'f'
+    render(h(parent), root)
+    expect(root.children[0].className).toBe('c a f e')
+
+    parentClass.value = { foo: true }
+    childClass.value = ['bar', 'baz']
+    expect(root.children[0].className).toBe('c a bar baz foo')
+  })
+
   test('class merge between multiple nested components sharing same element', () => {
     const component1: ComponentOptions = {
       render() {
@@ -113,7 +164,7 @@ describe('class', () => {
             class: 'staticClass'
           },
           // @ts-ignore
-          this.$slots.default()
+          [this.$slots.default()]
         )
       }
     }
