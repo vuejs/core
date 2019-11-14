@@ -16,10 +16,10 @@ export type KeyToDepMap = Map<string | symbol, Dep>
 export const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // WeakMaps that store {raw <-> observed} pairs.
-const rawToReactive = new WeakMap<any, any>()
-const reactiveToRaw = new WeakMap<any, any>()
-const rawToReadonly = new WeakMap<any, any>()
-const readonlyToRaw = new WeakMap<any, any>()
+const rawToReactive = new WeakMap<any, any>() // 原始数据 转换为 响应式 map
+const reactiveToRaw = new WeakMap<any, any>() // 响应式数据 转换为 原始数据 map
+const rawToReadonly = new WeakMap<any, any>() // 原始数据 转换为 只读 map
+const readonlyToRaw = new WeakMap<any, any>() // 只读数据 转换为 原始数据 map
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
@@ -44,17 +44,20 @@ type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
+  // 已经在只读map里，说明已经是响应式数据，直接 return
   if (readonlyToRaw.has(target)) {
     return target
   }
   // target is explicitly marked as readonly by user
+  // 被用户标记为只读类型，调用只读方法
   if (readonlyValues.has(target)) {
     return readonly(target)
   }
+  // 调用 创建响应式对象方法
   return createReactiveObject(
-    target,
-    rawToReactive,
-    reactiveToRaw,
+    target, // 目标对象
+    rawToReactive, // 原始数据 map
+    reactiveToRaw, // 响应式数据 map
     mutableHandlers,
     mutableCollectionHandlers
   )
@@ -65,6 +68,7 @@ export function readonly<T extends object>(
 ): Readonly<UnwrapNestedRefs<T>> {
   // value is a mutable observable, retrieve its original and return
   // a readonly version.
+  // 如果响应式 map 里有目标对象，从 map 里取出
   if (reactiveToRaw.has(target)) {
     target = reactiveToRaw.get(target)
   }
@@ -78,12 +82,13 @@ export function readonly<T extends object>(
 }
 
 function createReactiveObject(
-  target: any,
-  toProxy: WeakMap<any, any>,
-  toRaw: WeakMap<any, any>,
+  target: any, // 目标对象
+  toProxy: WeakMap<any, any>, // 原始数据的 map
+  toRaw: WeakMap<any, any>, // 响应式数据的 map
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>
 ) {
+  // 判断 target 是否是对象
   if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
@@ -91,24 +96,30 @@ function createReactiveObject(
     return target
   }
   // target already has corresponding Proxy
+  // 原始数据 已经有 对应的 响应式数据
+  // 直接返回 对应的 响应式数据
   let observed = toProxy.get(target)
   if (observed !== void 0) {
     return observed
   }
   // target is already a Proxy
+  // 原始数据 已经在 toRaw 里，说明已经是响应式数据
+  // 直接返回 target
   if (toRaw.has(target)) {
     return target
   }
   // only a whitelist of value types can be observed.
+  // 目标数据不能被 监听
   if (!canObserve(target)) {
     return target
   }
+  // 对应的 handler
   const handlers = collectionTypes.has(target.constructor)
     ? collectionHandlers
     : baseHandlers
-  observed = new Proxy(target, handlers)
-  toProxy.set(target, observed)
-  toRaw.set(observed, target)
+  observed = new Proxy(target, handlers) // 使用 new Proxy 监听
+  toProxy.set(target, observed) // 放进 原始数据 map，原始数据当 key，转换为响应式之后的对象当 value
+  toRaw.set(observed, target) // 放进 响应式数据 map，转换为响应式之后的对象 key，原始数据当 value
   if (!targetMap.has(target)) {
     targetMap.set(target, new Map())
   }
