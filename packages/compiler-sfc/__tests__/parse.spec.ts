@@ -4,17 +4,17 @@ import { mockWarn } from '@vue/runtime-test'
 describe('compiler:sfc', () => {
   mockWarn()
   describe('error', () => {
-    test('should only single template element', () => {
+    test('should only allow single template element', () => {
       parse(`<template><div/></template><template><div/></template>`)
       expect(
-        `The component.vue should contain exactly one template element`
+        `Single file component can contain only one template element`
       ).toHaveBeenWarned()
     })
 
-    test('should only single script element', () => {
+    test('should only allow single script element', () => {
       parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
       expect(
-        `The component.vue should contain exactly one script element`
+        `Single file component can contain only one script element`
       ).toHaveBeenWarned()
     })
   })
