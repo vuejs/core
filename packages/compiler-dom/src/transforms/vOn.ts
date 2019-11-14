@@ -24,6 +24,33 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
   true
 )
 
+const generateModifiers = (modifiers: string[]) => {
+  const modifiersSize = modifiers.length
+
+  const keyModifiers = []
+  const nonKeyModifiers = []
+  const eventOptionModifiers = []
+
+  for (let i = 0; i < modifiersSize; i++) {
+    const modifier = modifiers[i]
+
+    if (isEventOptionModifier(modifier)) {
+      eventOptionModifiers.push(modifier)
+    } else {
+      if (isNonKeyModifier(modifier)) {
+        nonKeyModifiers.push(modifier)
+      } else {
+        keyModifiers.push(modifier)
+      }
+    }
+  }
+
+  return {
+    runtimeModifiers: [keyModifiers, nonKeyModifiers],
+    eventOptionModifiers
+  }
+}
+
 export const transformOn: DirectiveTransform = (dir, node, context) => {
   return baseTransform(dir, node, context, baseResult => {
     const { modifiers } = dir
@@ -31,13 +58,15 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
 
     let { key, value: handlerExp } = baseResult.props[0]
 
-    // modifiers for addEventListener() options, e.g. .passive & .capture
-    const eventOptionModifiers = modifiers.filter(isEventOptionModifier)
-    // modifiers that needs runtime guards
-    const runtimeModifiers = modifiers.filter(m => !isEventOptionModifier(m))
+    // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
+    // runtimeModifiers: modifiers that needs runtime guards
+    const { runtimeModifiers, eventOptionModifiers } = generateModifiers(
+      modifiers
+    )
 
-    // built-in modifiers that are not keys
-    const nonKeyModifiers = runtimeModifiers.filter(isNonKeyModifier)
+    // built-in modifiers
+    const [keyModifiers, nonKeyModifiers] = runtimeModifiers
+
     if (nonKeyModifiers.length) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
         handlerExp,
@@ -45,7 +74,6 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       ])
     }
 
-    const keyModifiers = runtimeModifiers.filter(m => !isNonKeyModifier(m))
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
