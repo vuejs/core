@@ -54,7 +54,7 @@ describe('compiler-dom: transform v-on', () => {
     )
     const [clickProp, keyUpProp] = props
 
-    expect(props.length).toBe(2)
+    expect(props).toHaveLength(2)
     expect(clickProp).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       value: {
