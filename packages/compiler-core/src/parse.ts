@@ -8,7 +8,8 @@ import {
 import {
   assert,
   advancePositionWithMutation,
-  advancePositionWithClone
+  advancePositionWithClone,
+  getMinPositive
 } from './utils'
 import {
   Namespace,
@@ -768,14 +769,11 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
   const [open] = context.options.delimiters
-  // TODO could probably use some perf optimization
-  const endIndex = Math.min(
-    ...[
-      context.source.indexOf('<', 1),
-      context.source.indexOf(open, 1),
-      mode === TextModes.CDATA ? context.source.indexOf(']]>') : -1,
-      context.source.length
-    ].filter(n => n !== -1)
+  const endIndex = getMinPositive(
+    context.source.indexOf('<', 1),
+    context.source.indexOf(open, 1),
+    mode === TextModes.CDATA ? context.source.indexOf(']]>') : -1,
+    context.source.length
   )
   __DEV__ && assert(endIndex > 0)
 
