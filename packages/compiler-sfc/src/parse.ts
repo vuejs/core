@@ -116,10 +116,11 @@ function warnDuplicateBlock(
     node.loc.start.offset,
     node.loc.end.offset
   )
+  const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
   console.warn(
-    `The ${filename} should contain exactly one ${
+    `Single file component can contain only one ${
       node.tag
-    } element in root \n ${codeFrame}`
+    } element (${location}):\n\n${codeFrame}`
   )
 }
 
