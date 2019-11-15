@@ -21,13 +21,14 @@ import {
   ElementCodegenNode,
   SlotOutletCodegenNode,
   ComponentCodegenNode,
-  ExpressionNode
+  ExpressionNode,
+  IfBranchNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import { OPEN_BLOCK, MERGE_PROPS, RENDER_SLOT } from './runtimeHelpers'
-import { isString, isFunction } from '@vue/shared'
+import { isString, isFunction, isObject } from '@vue/shared'
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -163,7 +164,7 @@ export function findProp(
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (dynamicOnly) continue
-      if (p.name === name && p.value && !p.value.isEmpty) {
+      if (p.name === name && p.value) {
         return p
       }
     } else if (
@@ -189,18 +190,23 @@ export function createBlockExpression(
   ])
 }
 
-export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
-  p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+}
 
-export const isTemplateNode = (
+export function isTemplateNode(
   node: RootNode | TemplateChildNode
-): node is TemplateNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+): node is TemplateNode {
+  return (
+    node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+  )
+}
 
-export const isSlotOutlet = (
+export function isSlotOutlet(
   node: RootNode | TemplateChildNode
-): node is SlotOutletNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+): node is SlotOutletNode {
+  return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+}
 
 export function injectProp(
   node: ElementCodegenNode | ComponentCodegenNode | SlotOutletCodegenNode,
@@ -247,6 +253,57 @@ export function toValidAssetId(
   return `_${type}_${name.replace(/[^\w]/g, '_')}`
 }
 
-export function isEmptyExpression(node: ExpressionNode) {
-  return node.type === NodeTypes.SIMPLE_EXPRESSION && !node.content.trim()
+// Check if a node contains expressions that reference current context scope ids
+export function hasScopeRef(
+  node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
+  ids: TransformContext['identifiers']
+): boolean {
+  if (!node || Object.keys(ids).length === 0) {
+    return false
+  }
+  switch (node.type) {
+    case NodeTypes.ELEMENT:
+      for (let i = 0; i < node.props.length; i++) {
+        const p = node.props[i]
+        if (
+          p.type === NodeTypes.DIRECTIVE &&
+          (hasScopeRef(p.arg, ids) || hasScopeRef(p.exp, ids))
+        ) {
+          return true
+        }
+      }
+      return node.children.some(c => hasScopeRef(c, ids))
+    case NodeTypes.FOR:
+      if (hasScopeRef(node.source, ids)) {
+        return true
+      }
+      return node.children.some(c => hasScopeRef(c, ids))
+    case NodeTypes.IF:
+      return node.branches.some(b => hasScopeRef(b, ids))
+    case NodeTypes.IF_BRANCH:
+      if (hasScopeRef(node.condition, ids)) {
+        return true
+      }
+      return node.children.some(c => hasScopeRef(c, ids))
+    case NodeTypes.SIMPLE_EXPRESSION:
+      return (
+        !node.isStatic &&
+        isSimpleIdentifier(node.content) &&
+        !!ids[node.content]
+      )
+    case NodeTypes.COMPOUND_EXPRESSION:
+      return node.children.some(c => isObject(c) && hasScopeRef(c, ids))
+    case NodeTypes.INTERPOLATION:
+    case NodeTypes.TEXT_CALL:
+      return hasScopeRef(node.content, ids)
+    case NodeTypes.TEXT:
+    case NodeTypes.COMMENT:
+      return false
+    default:
+      if (__DEV__) {
+        const exhaustiveCheck: never = node
+        exhaustiveCheck
+      }
+      return false
+  }
 }

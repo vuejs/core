@@ -1,5 +1,5 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
-import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
+import { ReactiveEffect, reactive, readonlyProps } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
   ComponentPublicInstance
@@ -13,35 +13,33 @@ import {
   callWithAsyncErrorHandling
 } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiApp'
-import { Directive } from './directives'
+import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './apiOptions'
 import {
   EMPTY_OBJ,
   isFunction,
   capitalize,
   NOOP,
-  isArray,
   isObject,
   NO,
   makeMap,
-  isPromise
-} from '@vue/shared'
-import { SuspenseBoundary } from './suspense'
-import {
-  CompilerError,
-  CompilerOptions,
+  isPromise,
   generateCodeFrame
-} from '@vue/compiler-dom'
+} from '@vue/shared'
+import { SuspenseBoundary } from './components/Suspense'
+import { CompilerError, CompilerOptions } from '@vue/compiler-core'
 
 export type Data = { [key: string]: unknown }
 
 export interface FunctionalComponent<P = {}> {
   (props: P, ctx: SetupContext): VNodeChild
   props?: ComponentPropsOptions<P>
+  inheritAttrs?: boolean
   displayName?: string
 }
 
 export type Component = ComponentOptions | FunctionalComponent
+export { ComponentOptions }
 
 type LifecycleHook = Function[] | null
 
@@ -61,7 +59,7 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-type Emit = ((event: string, ...args: unknown[]) => void)
+export type Emit = (event: string, ...args: unknown[]) => void
 
 export interface SetupContext {
   attrs: Data
@@ -83,14 +81,15 @@ export interface ComponentInternalInstance {
   render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
-  accessCache: Data
+  // cache for renderProxy access type to avoid hasOwnProperty calls
+  accessCache: Data | null
+  // cache for render function values that rely on _ctx but won't need updates
+  // after initialized (e.g. inline handlers)
+  renderCache: (Function | VNode)[] | null
 
+  // assets for fast resolution
   components: Record<string, Component>
   directives: Record<string, Directive>
-
-  asyncDep: Promise<any> | null
-  asyncResult: any
-  asyncResolved: boolean
 
   // the rest are only for stateful components
   renderContext: Data
@@ -104,11 +103,17 @@ export interface ComponentInternalInstance {
   refs: Data
   emit: Emit
 
-  // user namespace
-  user: { [key: string]: any }
+  // suspense related
+  asyncDep: Promise<any> | null
+  asyncResult: unknown
+  asyncResolved: boolean
+
+  // storage for any extra properties
+  sink: { [key: string]: any }
 
   // lifecycle
   isUnmounted: boolean
+  isDeactivated: boolean
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
   [LifecycleHooks.CREATED]: LifecycleHook
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
@@ -137,7 +142,7 @@ export function createComponentInstance(
     vnode,
     parent,
     appContext,
-    type: vnode.type,
+    type: vnode.type as Component,
     root: null!, // set later so it can point to itself
     next: null,
     subTree: null!, // will be set synchronously right after creation
@@ -149,6 +154,7 @@ export function createComponentInstance(
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
+    renderCache: null,
 
     // setup context properties
     renderContext: EMPTY_OBJ,
@@ -168,11 +174,13 @@ export function createComponentInstance(
     asyncResolved: false,
 
     // user namespace for storing whatever the user assigns to `this`
-    user: {},
+    // can also be used as a wildcard storage for ad-hoc injections internally
+    sink: {},
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
     isUnmounted: false,
+    isDeactivated: false,
     bc: null,
     c: null,
     bm: null,
@@ -191,23 +199,12 @@ export function createComponentInstance(
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
-        if (isArray(handler)) {
-          for (let i = 0; i < handler.length; i++) {
-            callWithAsyncErrorHandling(
-              handler[i],
-              instance,
-              ErrorCodes.COMPONENT_EVENT_HANDLER,
-              args
-            )
-          }
-        } else {
-          callWithAsyncErrorHandling(
-            handler,
-            instance,
-            ErrorCodes.COMPONENT_EVENT_HANDLER,
-            args
-          )
-        }
+        callWithAsyncErrorHandling(
+          handler,
+          instance,
+          ErrorCodes.COMPONENT_EVENT_HANDLER,
+          args
+        )
       }
     }
   }
@@ -252,19 +249,24 @@ export function setupStatefulComponent(
     if (Component.components) {
       const names = Object.keys(Component.components)
       for (let i = 0; i < names.length; i++) {
-        const name = names[i]
-        validateComponentName(name, instance.appContext.config)
+        validateComponentName(names[i], instance.appContext.config)
+      }
+    }
+    if (Component.directives) {
+      const names = Object.keys(Component.directives)
+      for (let i = 0; i < names.length; i++) {
+        validateDirectiveName(names[i])
       }
     }
   }
   // 0. create render proxy property access cache
-  instance.accessCache = Object.create(null)
+  instance.accessCache = {}
   // 1. create render proxy
   instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = readonly(instance.props))
+  const propsProxy = (instance.propsProxy = readonlyProps(instance.props))
   // 3. call setup()
   const { setup } = Component
   if (setup) {
@@ -337,7 +339,8 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
-export function registerRuntimeCompiler(_compile: CompileFunction) {
+// exported method uses any to avoid d.ts relying on the compiler types.
+export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
@@ -403,7 +406,7 @@ function finishComponentSetup(
 export const SetupProxySymbol = Symbol()
 
 const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
-;['attrs', 'slots', 'refs'].forEach((type: string) => {
+;['attrs', 'slots'].forEach((type: string) => {
   SetupProxyHandlers[type] = {
     get: (instance, key) => instance[type][key],
     has: (instance, key) => key === SetupProxySymbol || key in instance[type],
@@ -418,12 +421,11 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
 
 function createSetupContext(instance: ComponentInternalInstance): SetupContext {
   const context = {
-    // attrs, slots & refs are non-reactive, but they need to always expose
+    // attrs & slots are non-reactive, but they need to always expose
     // the latest values (instance.xxx may get replaced during updates) so we
     // need to expose them through a proxy
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
-    refs: new Proxy(instance, SetupProxyHandlers.refs),
     emit: instance.emit
   }
   return __DEV__ ? Object.freeze(context) : context

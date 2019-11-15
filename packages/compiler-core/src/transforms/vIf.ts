@@ -30,10 +30,10 @@ import { processExpression } from './transformExpression'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  COMMENT,
   FRAGMENT,
-  APPLY_DIRECTIVES,
-  CREATE_VNODE
+  WITH_DIRECTIVES,
+  CREATE_VNODE,
+  CREATE_COMMENT
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 
@@ -152,8 +152,11 @@ function createCodegenNodeForBranch(
     return createConditionalExpression(
       branch.condition,
       createChildrenCodegenNode(branch, index, context),
-      createCallExpression(context.helper(CREATE_BLOCK), [
-        context.helper(COMMENT)
+      // make sure to pass in asBlock: true so that the comment node call
+      // closes the current block.
+      createCallExpression(context.helper(CREATE_COMMENT), [
+        __DEV__ ? '"v-if"' : '""',
+        'true'
       ])
     ) as IfConditionalExpression
   } else {
@@ -196,7 +199,7 @@ function createChildrenCodegenNode(
       | SlotOutletCodegenNode
     let vnodeCall = childCodegen
     // Element with custom directives. Locate the actual createVNode() call.
-    if (vnodeCall.callee === APPLY_DIRECTIVES) {
+    if (vnodeCall.callee === WITH_DIRECTIVES) {
       vnodeCall = vnodeCall.arguments[0]
     }
     // Change createVNode to createBlock.

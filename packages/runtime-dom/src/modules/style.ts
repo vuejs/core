@@ -1,4 +1,5 @@
-import { isString } from '@vue/shared'
+import { isString, hyphenate, capitalize } from '@vue/shared'
+import { camelize } from '@vue/runtime-core'
 
 type Style = string | Partial<CSSStyleDeclaration> | null
 
@@ -10,14 +11,57 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     style.cssText = next
   } else {
     for (const key in next) {
-      style[key] = next[key] as string
+      setStyle(style, key, next[key] as string)
     }
     if (prev && !isString(prev)) {
       for (const key in prev) {
         if (!next[key]) {
-          style[key] = ''
+          setStyle(style, key, '')
         }
       }
     }
   }
+}
+
+const importantRE = /\s*!important$/
+
+function setStyle(style: CSSStyleDeclaration, name: string, val: string) {
+  if (name.startsWith('--')) {
+    // custom property definition
+    style.setProperty(name, val)
+  } else {
+    const prefixed = autoPrefix(style, name)
+    if (importantRE.test(val)) {
+      // !important
+      style.setProperty(
+        hyphenate(prefixed),
+        val.replace(importantRE, ''),
+        'important'
+      )
+    } else {
+      style[prefixed as any] = val
+    }
+  }
+}
+
+const prefixes = ['Webkit', 'Moz', 'ms']
+const prefixCache: Record<string, string> = {}
+
+function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
+  const cached = prefixCache[rawName]
+  if (cached) {
+    return cached
+  }
+  let name = camelize(rawName)
+  if (name !== 'filter' && name in style) {
+    return (prefixCache[rawName] = name)
+  }
+  name = capitalize(name)
+  for (let i = 0; i < prefixes.length; i++) {
+    const prefixed = prefixes[i] + name
+    if (prefixed in style) {
+      return (prefixCache[rawName] = prefixed)
+    }
+  }
+  return rawName
 }

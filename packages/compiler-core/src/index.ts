@@ -12,7 +12,7 @@ import { transformOn } from './transforms/vOn'
 import { transformBind } from './transforms/vBind'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 import { trackSlotScopes, trackVForSlotScopes } from './transforms/vSlot'
-import { optimizeText } from './transforms/optimizeText'
+import { transformText } from './transforms/transformText'
 import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
 
@@ -44,6 +44,7 @@ export function baseCompile(
     ...options,
     prefixIdentifiers,
     nodeTransforms: [
+      transformOnce,
       transformIf,
       transformFor,
       ...(prefixIdentifiers
@@ -56,13 +57,12 @@ export function baseCompile(
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
-      optimizeText,
+      transformText,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
       on: transformOn,
       bind: transformBind,
-      once: transformOnce,
       model: transformModel,
       ...(options.directiveTransforms || {}) // user transforms
     }
@@ -99,7 +99,6 @@ export {
 } from './errors'
 export * from './ast'
 export * from './utils'
-export * from './codeframe'
 export { registerRuntimeHelpers } from './runtimeHelpers'
 
 // expose transforms so higher-order compilers can import and extend them

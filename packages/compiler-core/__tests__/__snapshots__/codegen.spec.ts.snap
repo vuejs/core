@@ -12,6 +12,29 @@ return function render() {
 }"
 `;
 
+exports[`compiler: codegen CacheExpression 1`] = `
+"
+export default function render() {
+  const _ctx = this
+  const _cache = _ctx.$cache
+  return _cache[1] || (_cache[1] = foo)
+}"
+`;
+
+exports[`compiler: codegen CacheExpression w/ isVNode: true 1`] = `
+"
+export default function render() {
+  const _ctx = this
+  const _cache = _ctx.$cache
+  return _cache[1] || (
+    setBlockTracking(-1),
+    _cache[1] = foo,
+    setBlockTracking(1),
+    _cache[1]
+  )
+}"
+`;
+
 exports[`compiler: codegen ConditionalExpression 1`] = `
 "
 return function render() {
@@ -67,7 +90,7 @@ exports[`compiler: codegen comment 1`] = `
 "
 return function render() {
   with (this) {
-    return _createVNode(_Comment, null, \\"foo\\")
+    return _createCommentVNode(\\"foo\\")
   }
 }"
 `;

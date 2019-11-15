@@ -1,20 +1,14 @@
 import { OperationTypes } from './operations'
 import { Dep, targetMap } from './reactive'
-import { EMPTY_OBJ, extend } from '@vue/shared'
-
-export const effectSymbol = Symbol(__DEV__ ? 'effect' : void 0)
+import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
 export interface ReactiveEffect<T = any> {
   (): T
-  [effectSymbol]: true
+  _isEffect: true
   active: boolean
   raw: () => T
   deps: Array<Dep>
-  computed?: boolean
-  scheduler?: (run: Function) => void
-  onTrack?: (event: DebuggerEvent) => void
-  onTrigger?: (event: DebuggerEvent) => void
-  onStop?: () => void
+  options: ReactiveEffectOptions
 }
 
 export interface ReactiveEffectOptions {
@@ -26,11 +20,17 @@ export interface ReactiveEffectOptions {
   onStop?: () => void
 }
 
-export interface DebuggerEvent {
+export type DebuggerEvent = {
   effect: ReactiveEffect
-  target: any
+  target: object
   type: OperationTypes
-  key: string | symbol | undefined
+  key: any
+} & DebuggerEventExtraInfo
+
+export interface DebuggerEventExtraInfo {
+  newValue?: any
+  oldValue?: any
+  oldTarget?: Map<any, any> | Set<any>
 }
 
 export const effectStack: ReactiveEffect[] = []
@@ -38,7 +38,7 @@ export const effectStack: ReactiveEffect[] = []
 export const ITERATE_KEY = Symbol('iterate')
 
 export function isEffect(fn: any): fn is ReactiveEffect {
-  return fn != null && fn[effectSymbol] === true
+  return fn != null && fn._isEffect === true
 }
 
 export function effect<T = any>(
@@ -58,8 +58,8 @@ export function effect<T = any>(
 export function stop(effect: ReactiveEffect) {
   if (effect.active) {
     cleanup(effect)
-    if (effect.onStop) {
-      effect.onStop()
+    if (effect.options.onStop) {
+      effect.options.onStop()
     }
     effect.active = false
   }
@@ -69,22 +69,18 @@ function createReactiveEffect<T = any>(
   fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(...args: any[]): any {
+  const effect = function reactiveEffect(...args: unknown[]): unknown {
     return run(effect, fn, args)
   } as ReactiveEffect
-  effect[effectSymbol] = true
+  effect._isEffect = true
   effect.active = true
   effect.raw = fn
-  effect.scheduler = options.scheduler
-  effect.onTrack = options.onTrack
-  effect.onTrigger = options.onTrigger
-  effect.onStop = options.onStop
-  effect.computed = options.computed
   effect.deps = []
+  effect.options = options
   return effect
 }
 
-function run(effect: ReactiveEffect, fn: Function, args: any[]): any {
+function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
   if (!effect.active) {
     return fn(...args)
   }
@@ -119,11 +115,7 @@ export function resumeTracking() {
   shouldTrack = true
 }
 
-export function track(
-  target: any,
-  type: OperationTypes,
-  key?: string | symbol
-) {
+export function track(target: object, type: OperationTypes, key?: unknown) {
   if (!shouldTrack || effectStack.length === 0) {
     return
   }
@@ -142,8 +134,8 @@ export function track(
   if (!dep.has(effect)) {
     dep.add(effect)
     effect.deps.push(dep)
-    if (__DEV__ && effect.onTrack) {
-      effect.onTrack({
+    if (__DEV__ && effect.options.onTrack) {
+      effect.options.onTrack({
         effect,
         target,
         type,
@@ -154,10 +146,10 @@ export function track(
 }
 
 export function trigger(
-  target: any,
+  target: object,
   type: OperationTypes,
-  key?: string | symbol,
-  extraInfo?: any
+  key?: unknown,
+  extraInfo?: DebuggerEventExtraInfo
 ) {
   const depsMap = targetMap.get(target)
   if (depsMap === void 0) {
@@ -178,7 +170,7 @@ export function trigger(
     }
     // also run for iteration key on ADD | DELETE
     if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {
-      const iterationKey = Array.isArray(target) ? 'length' : ITERATE_KEY
+      const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
   }
@@ -198,7 +190,7 @@ function addRunners(
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
-      if (effect.computed) {
+      if (effect.options.computed) {
         computedRunners.add(effect)
       } else {
         effects.add(effect)
@@ -209,26 +201,22 @@ function addRunners(
 
 function scheduleRun(
   effect: ReactiveEffect,
-  target: any,
+  target: object,
   type: OperationTypes,
-  key: string | symbol | undefined,
-  extraInfo: any
+  key: unknown,
+  extraInfo?: DebuggerEventExtraInfo
 ) {
-  if (__DEV__ && effect.onTrigger) {
-    effect.onTrigger(
-      extend(
-        {
-          effect,
-          target,
-          key,
-          type
-        },
-        extraInfo
-      )
-    )
+  if (__DEV__ && effect.options.onTrigger) {
+    const event: DebuggerEvent = {
+      effect,
+      target,
+      key,
+      type
+    }
+    effect.options.onTrigger(extraInfo ? extend(event, extraInfo) : event)
   }
-  if (effect.scheduler !== void 0) {
-    effect.scheduler(effect)
+  if (effect.options.scheduler !== void 0) {
+    effect.options.scheduler(effect)
   } else {
     effect()
   }

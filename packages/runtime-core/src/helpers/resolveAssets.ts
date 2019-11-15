@@ -1,11 +1,28 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
 import { currentInstance, Component } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  isString,
+  isObject,
+  isFunction
+} from '@vue/shared'
 import { warn } from '../warning'
 
 export function resolveComponent(name: string): Component | undefined {
   return resolveAsset('components', name)
+}
+
+export function resolveDynamicComponent(
+  component: unknown
+): Component | undefined {
+  if (!component) return
+  if (isString(component)) {
+    return resolveAsset('components', component)
+  } else if (isFunction(component) || isObject(component)) {
+    return component
+  }
 }
 
 export function resolveDirective(name: string): Directive | undefined {

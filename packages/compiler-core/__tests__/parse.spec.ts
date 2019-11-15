@@ -21,7 +21,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
@@ -39,7 +38,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
@@ -56,7 +54,6 @@ describe('compiler: parse', () => {
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some ',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
@@ -66,7 +63,6 @@ describe('compiler: parse', () => {
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
         content: ' text',
-        isEmpty: false,
         loc: {
           start: { offset: 20, line: 1, column: 21 },
           end: { offset: 25, line: 1, column: 26 },
@@ -83,7 +79,6 @@ describe('compiler: parse', () => {
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some ',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
@@ -93,7 +88,6 @@ describe('compiler: parse', () => {
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
         content: ' text',
-        isEmpty: false,
         loc: {
           start: { offset: 21, line: 1, column: 22 },
           end: { offset: 26, line: 1, column: 27 },
@@ -110,7 +104,6 @@ describe('compiler: parse', () => {
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some ',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
@@ -120,7 +113,6 @@ describe('compiler: parse', () => {
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
         content: ' text',
-        isEmpty: false,
         loc: {
           start: { offset: 32, line: 1, column: 33 },
           end: { offset: 37, line: 1, column: 38 },
@@ -142,7 +134,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'a < b',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
@@ -164,7 +155,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'a {{ b',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
@@ -184,7 +174,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&ersand;',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
@@ -220,7 +209,6 @@ describe('compiler: parse', () => {
       expect(text1).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&ampersand;',
-        isEmpty: false,
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 20, line: 1, column: 21 },
@@ -230,7 +218,6 @@ describe('compiler: parse', () => {
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&ersand;',
-        isEmpty: false,
         loc: {
           start: { offset: 23, line: 1, column: 24 },
           end: { offset: 37, line: 1, column: 38 },
@@ -240,7 +227,6 @@ describe('compiler: parse', () => {
       expect(text3).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '&!',
-        isEmpty: false,
         loc: {
           start: { offset: 40, line: 1, column: 41 },
           end: { offset: 47, line: 1, column: 48 },
@@ -267,7 +253,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: '†',
-        isEmpty: false,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
@@ -514,7 +499,6 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.TEXT,
             content: 'hello',
-            isEmpty: false,
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
@@ -713,7 +697,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: '',
-              isEmpty: true,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
@@ -755,7 +738,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: '',
-              isEmpty: true,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
@@ -797,7 +779,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: ">'",
-              isEmpty: false,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
@@ -839,7 +820,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: '>"',
-              isEmpty: false,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
@@ -881,7 +861,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: 'a/',
-              isEmpty: false,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
@@ -923,7 +902,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: 'a',
-              isEmpty: false,
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 9, line: 1, column: 10 },
@@ -942,7 +920,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: 'c',
-              isEmpty: false,
               loc: {
                 start: { offset: 16, line: 1, column: 17 },
                 end: { offset: 19, line: 1, column: 20 },
@@ -971,7 +948,6 @@ describe('compiler: parse', () => {
             value: {
               type: NodeTypes.TEXT,
               content: '',
-              isEmpty: true,
               loc: {
                 start: { offset: 32, line: 1, column: 33 },
                 end: { offset: 34, line: 1, column: 35 },
@@ -1481,7 +1457,6 @@ describe('compiler: parse', () => {
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'hello',
-        isEmpty: false,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 10, line: 1, column: 11 },
@@ -1622,6 +1597,63 @@ foo
       expect(ast.children.length).toBe(1)
       expect(ast.children[0].type).toBe(NodeTypes.TEXT)
       expect(ast.children[0].content).toBe('&amp;\u222A\uFE00')
+    })
+  })
+
+  describe('whitespace management', () => {
+    it('should remove whitespaces at start/end inside an element', () => {
+      const ast = parse(`<div>   <span/>    </div>`)
+      expect((ast.children[0] as ElementNode).children.length).toBe(1)
+    })
+
+    it('should remove whitespaces w/ newline between elements', () => {
+      const ast = parse(`<div/> \n <div/> \n <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
+    })
+
+    it('should remove whitespaces adjacent to comments', () => {
+      const ast = parse(`<div/> \n <!--foo--> <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
+    })
+
+    it('should remove whitespaces w/ newline between comments and elements', () => {
+      const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
+      expect(ast.children[1].type).toBe(NodeTypes.COMMENT)
+      expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
+    })
+
+    it('should NOT remove whitespaces w/ newline between interpolations', () => {
+      const ast = parse(`{{ foo }} \n {{ bar }}`)
+      expect(ast.children.length).toBe(3)
+      expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: ' '
+      })
+      expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
+    })
+
+    it('should NOT remove whitespaces w/o newline between elements', () => {
+      const ast = parse(`<div/> <div/> <div/>`)
+      expect(ast.children.length).toBe(5)
+      expect(ast.children.map(c => c.type)).toMatchObject([
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT,
+        NodeTypes.TEXT,
+        NodeTypes.ELEMENT
+      ])
+    })
+
+    it('should condense consecutive whitespaces in text', () => {
+      const ast = parse(`   foo  \n    bar     baz     `)
+      expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
   })
 

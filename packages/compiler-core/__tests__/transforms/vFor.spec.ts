@@ -23,7 +23,7 @@ import {
   FRAGMENT,
   RENDER_LIST,
   RENDER_SLOT,
-  APPLY_DIRECTIVES
+  WITH_DIRECTIVES
 } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/runtime-dom'
 import { createObjectMatcher, genFlagText } from '../testUtils'
@@ -857,9 +857,9 @@ describe('compiler: v-for', () => {
         type: NodeTypes.JS_SEQUENCE_EXPRESSION,
         expressions: [
           { callee: OPEN_BLOCK },
-          // should wrap applyDirectives() around createBlock()
+          // should wrap withDirectives() around createBlock()
           {
-            callee: APPLY_DIRECTIVES,
+            callee: WITH_DIRECTIVES,
             arguments: [
               { callee: CREATE_BLOCK },
               { type: NodeTypes.JS_ARRAY_EXPRESSION }

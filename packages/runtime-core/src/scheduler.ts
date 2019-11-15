@@ -6,6 +6,7 @@ const postFlushCbs: Function[] = []
 const p = Promise.resolve()
 
 let isFlushing = false
+let isFlushPending = false
 
 export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
@@ -14,9 +15,7 @@ export function nextTick(fn?: () => void): Promise<void> {
 export function queueJob(job: () => void) {
   if (!queue.includes(job)) {
     queue.push(job)
-    if (!isFlushing) {
-      nextTick(flushJobs)
-    }
+    queueFlush()
   }
 }
 
@@ -26,8 +25,12 @@ export function queuePostFlushCb(cb: Function | Function[]) {
   } else {
     postFlushCbs.push(...cb)
   }
+  queueFlush()
+}
 
-  if (!isFlushing) {
+function queueFlush() {
+  if (!isFlushing && !isFlushPending) {
+    isFlushPending = true
     nextTick(flushJobs)
   }
 }
@@ -48,6 +51,7 @@ const RECURSION_LIMIT = 100
 type JobCountMap = Map<Function, number>
 
 function flushJobs(seenJobs?: JobCountMap) {
+  isFlushPending = false
   isFlushing = true
   let job
   if (__DEV__) {
@@ -77,7 +81,7 @@ function flushJobs(seenJobs?: JobCountMap) {
   isFlushing = false
   // some postFlushCb queued jobs!
   // keep flushing until it drains.
-  if (queue.length) {
+  if (queue.length || postFlushCbs.length) {
     flushJobs(seenJobs)
   }
 }

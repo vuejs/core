@@ -160,6 +160,7 @@ return function render() {
         default: ({ bar }) => [toString(foo), toString(bar), toString(_ctx.baz)],
         _compiled: true
       }, 256 /* DYNAMIC_SLOTS */),
+      \\" \\",
       toString(foo),
       toString(_ctx.bar),
       toString(_ctx.baz)

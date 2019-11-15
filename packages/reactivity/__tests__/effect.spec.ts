@@ -249,6 +249,36 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(newFunc)
   })
 
+  it('should observe chained getters relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      get b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
+  it('should observe methods relying on this', () => {
+    const obj = reactive({
+      a: 1,
+      b() {
+        return this.a
+      }
+    })
+
+    let dummy
+    effect(() => (dummy = obj.b()))
+    expect(dummy).toBe(1)
+    obj.a++
+    expect(dummy).toBe(2)
+  })
+
   it('should not observe set operations without a value change', () => {
     let hasDummy, getDummy
     const obj = reactive({ prop: 'value' })
@@ -485,6 +515,16 @@ describe('reactivity/effect', () => {
     expect(childSpy).toHaveBeenCalledTimes(5)
   })
 
+  it('should observe json methods', () => {
+    let dummy = <Record<string, number>>{}
+    const obj = reactive<Record<string, number>>({})
+    effect(() => {
+      dummy = JSON.parse(JSON.stringify(obj))
+    })
+    obj.a = 1
+    expect(dummy.a).toBe(1)
+  })
+
   it('should observe class method invocations', () => {
     class Model {
       count: number
@@ -637,12 +677,35 @@ describe('reactivity/effect', () => {
   })
 
   it('events: onStop', () => {
+    const onStop = jest.fn()
     const runner = effect(() => {}, {
-      onStop: jest.fn()
+      onStop
     })
 
     stop(runner)
-    expect(runner.onStop).toHaveBeenCalled()
+    expect(onStop).toHaveBeenCalled()
+  })
+
+  it('stop: a stopped effect is nested in a normal effect', () => {
+    let dummy
+    const obj = reactive({ prop: 1 })
+    const runner = effect(() => {
+      dummy = obj.prop
+    })
+    stop(runner)
+    obj.prop = 2
+    expect(dummy).toBe(1)
+
+    // observed value in inner stopped effect
+    // will track outer effect as an dependency
+    effect(() => {
+      runner()
+    })
+    expect(dummy).toBe(2)
+
+    // notify outer effect to run
+    obj.prop = 3
+    expect(dummy).toBe(3)
   })
 
   it('markNonReactive', () => {
@@ -660,5 +723,15 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(0)
     obj.foo = { prop: 1 }
     expect(dummy).toBe(1)
+  })
+
+  it('should not be trigger when the value and the old value both are NaN', () => {
+    const obj = reactive({
+      foo: NaN
+    })
+    const fnSpy = jest.fn(() => obj.foo)
+    effect(fnSpy)
+    obj.foo = NaN
+    expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 })

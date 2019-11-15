@@ -150,7 +150,7 @@ This project uses a [monorepo](https://github.com/lerna/lerna#about) structure a
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
 
-- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` ad open its `index.html` to get a repl of template compilation based on current source code.
+- `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
 
   A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
@@ -173,6 +173,12 @@ Unit tests are collocated with the code being tested in each package, inside dir
 - If testing platform agnostic behavior or asserting low-level virtual DOM operations, use `@vue/runtime-test`.
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
+
+### Testing Type Definition Correctness
+
+This project uses [tsd](https://github.com/SamVerschueren/tsd) to test the built definition files (`*.d.ts`).
+
+Type tests are located in the `test-dts` directory. To run the dts tests, run `yarn test-dts`. Note that the type test requires all relevant `*.d.ts` files to be built first (and the script does it for you). Once the `d.ts` files are built and up-to-date, the tests can be re-run by simply running `./node_modules/.bin/tsd`.
 
 ## Financial Contribution
 

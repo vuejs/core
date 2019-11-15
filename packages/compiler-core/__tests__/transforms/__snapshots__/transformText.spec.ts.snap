@@ -1,0 +1,84 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: transform text consecutive text 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { toString: _toString } = _Vue
+    
+    return _toString(foo) + \\" bar \\" + _toString(baz)
+  }
+}"
+`;
+
+exports[`compiler: transform text consecutive text between elements 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(_Fragment, null, [
+      _createVNode(\\"div\\"),
+      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createVNode(\\"div\\")
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform text consecutive text mixed with elements 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(_Fragment, null, [
+      _createVNode(\\"div\\"),
+      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createVNode(\\"div\\"),
+      _createTextVNode(\\"hello\\"),
+      _createVNode(\\"div\\")
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform text no consecutive text 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { toString: _toString } = _Vue
+    
+    return _toString(foo)
+  }
+}"
+`;
+
+exports[`compiler: transform text text between elements (static) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _createBlock(_Fragment, null, [
+      _createVNode(\\"div\\"),
+      _createTextVNode(\\"hello\\"),
+      _createVNode(\\"div\\")
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
+"const { toString } = Vue
+
+return function render() {
+  const _ctx = this
+  return toString(_ctx.foo) + \\" bar \\" + toString(_ctx.baz + _ctx.qux)
+}"
+`;

@@ -1,3 +1,4 @@
+import { isArray } from '@vue/shared'
 import { TestElement } from './nodeOps'
 
 export function triggerEvent(
@@ -9,7 +10,7 @@ export function triggerEvent(
   if (eventListeners) {
     const listener = eventListeners[event]
     if (listener) {
-      if (Array.isArray(listener)) {
+      if (isArray(listener)) {
         for (let i = 0; i < listener.length; i++) {
           listener[i](...payload)
         }

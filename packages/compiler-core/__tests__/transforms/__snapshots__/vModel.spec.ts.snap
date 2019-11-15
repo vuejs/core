@@ -8,7 +8,7 @@ export default function render() {
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model[_ctx.index],
     \\"onUpdate:modelValue\\": $event => (_ctx.model[_ctx.index] = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\"]))
+  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
 }"
 `;
 
@@ -35,7 +35,7 @@ export default function render() {
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model,
     \\"onUpdate:modelValue\\": $event => (_ctx.model = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\"]))
+  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
 }"
 `;
 
@@ -76,7 +76,7 @@ export default function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"input\\", {
     [_ctx.value]: _ctx.model,
-    [\\"onUpdate:\\"+_ctx.value]: $event => (_ctx.model = $event)
+    [\\"onUpdate:\\" + _ctx.value]: $event => (_ctx.model = $event)
   }, null, 16 /* FULL_PROPS */))
 }"
 `;
@@ -90,7 +90,7 @@ return function render() {
     
     return (_openBlock(), _createBlock(\\"input\\", {
       [value]: model,
-      [\\"onUpdate:\\"+value]: $event => (model = $event)
+      [\\"onUpdate:\\" + value]: $event => (model = $event)
     }, null, 16 /* FULL_PROPS */))
   }
 }"

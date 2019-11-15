@@ -45,4 +45,17 @@ describe('compiler + runtime integration', () => {
     app.mount(App, container)
     expect(container.innerHTML).toBe('<custom></custom>')
   })
+
+  it('should support using element innerHTML as template', () => {
+    const app = createApp()
+    const container = document.createElement('div')
+    container.innerHTML = '{{msg}}'
+    const App = {
+      data: {
+        msg: 'hello'
+      }
+    }
+    app.mount(App, container)
+    expect(container.innerHTML).toBe('hello')
+  })
 })

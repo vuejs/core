@@ -19,11 +19,11 @@ import { CompilerOptions, generate } from '../../src'
 import {
   OPEN_BLOCK,
   CREATE_BLOCK,
-  COMMENT,
   FRAGMENT,
   MERGE_PROPS,
-  APPLY_DIRECTIVES,
-  RENDER_SLOT
+  WITH_DIRECTIVES,
+  RENDER_SLOT,
+  CREATE_COMMENT
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
 
@@ -265,7 +265,11 @@ describe('compiler: v-if', () => {
   })
 
   describe('codegen', () => {
-    function assertSharedCodegen(node: SequenceExpression, depth: number = 0) {
+    function assertSharedCodegen(
+      node: SequenceExpression,
+      depth: number = 0,
+      hasElse: boolean = false
+    ) {
       expect(node).toMatchObject({
         type: NodeTypes.JS_SEQUENCE_EXPRESSION,
         expressions: [
@@ -287,7 +291,7 @@ describe('compiler: v-if', () => {
               depth < 1
                 ? {
                     type: NodeTypes.JS_CALL_EXPRESSION,
-                    callee: CREATE_BLOCK
+                    callee: hasElse ? CREATE_BLOCK : CREATE_COMMENT
                   }
                 : {
                     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -300,7 +304,7 @@ describe('compiler: v-if', () => {
                     },
                     alternate: {
                       type: NodeTypes.JS_CALL_EXPRESSION,
-                      callee: CREATE_BLOCK
+                      callee: hasElse ? CREATE_BLOCK : CREATE_COMMENT
                     }
                   }
           }
@@ -322,7 +326,10 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([COMMENT])
+      expect(branch2).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_COMMENT
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -345,7 +352,10 @@ describe('compiler: v-if', () => {
       ])
       const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
         .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([COMMENT])
+      expect(branch2).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_COMMENT
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -386,7 +396,7 @@ describe('compiler: v-if', () => {
         root,
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok"/><p v-else/>`)
-      assertSharedCodegen(codegenNode)
+      assertSharedCodegen(codegenNode, 0, true)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
       expect(branch1.arguments).toMatchObject([
@@ -430,7 +440,7 @@ describe('compiler: v-if', () => {
       } = parseWithIfTransform(
         `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`
       )
-      assertSharedCodegen(codegenNode, 1)
+      assertSharedCodegen(codegenNode, 1, true)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
       expect(branch1.arguments).toMatchObject([
@@ -513,7 +523,7 @@ describe('compiler: v-if', () => {
       } = parseWithIfTransform(`<div v-if="ok" v-foo />`)
       const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
         .consequent as CallExpression
-      expect(branch1.callee).toBe(APPLY_DIRECTIVES)
+      expect(branch1.callee).toBe(WITH_DIRECTIVES)
       const realBranch = branch1.arguments[0] as CallExpression
       expect(realBranch.arguments[1]).toMatchObject(
         createObjectMatcher({ key: `[0]` })

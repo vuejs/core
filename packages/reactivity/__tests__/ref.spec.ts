@@ -1,4 +1,4 @@
-import { ref, effect, reactive, isRef, toRefs } from '../src/index'
+import { ref, effect, reactive, isRef, toRefs, Ref } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 
 describe('reactivity/ref', () => {
@@ -61,6 +61,14 @@ describe('reactivity/ref', () => {
     expect(dummy1).toBe(3)
     expect(dummy2).toBe(3)
     expect(dummy3).toBe(3)
+    obj.b.c++
+    expect(dummy1).toBe(4)
+    expect(dummy2).toBe(4)
+    expect(dummy3).toBe(4)
+    obj.b.d[0]++
+    expect(dummy1).toBe(5)
+    expect(dummy2).toBe(5)
+    expect(dummy3).toBe(5)
   })
 
   it('should unwrap nested ref in types', () => {
@@ -78,6 +86,46 @@ describe('reactivity/ref', () => {
     const c = ref(a)
 
     expect(typeof (c.value.b + 1)).toBe('number')
+  })
+
+  it('should properly unwrap ref types nested inside arrays', () => {
+    const arr = ref([1, ref(1)]).value
+    // should unwrap to number[]
+    arr[0]++
+    arr[1]++
+
+    const arr2 = ref([1, new Map<string, any>(), ref('1')]).value
+    const value = arr2[0]
+    if (typeof value === 'string') {
+      value + 'foo'
+    } else if (typeof value === 'number') {
+      value + 1
+    } else {
+      // should narrow down to Map type
+      // and not contain any Ref type
+      value.has('foo')
+    }
+  })
+
+  it('should keep tuple types', () => {
+    const tuple: [number, string, { a: number }, () => number, Ref<number>] = [
+      0,
+      '1',
+      { a: 1 },
+      () => 0,
+      ref(0)
+    ]
+    const tupleRef = ref(tuple)
+
+    tupleRef.value[0]++
+    expect(tupleRef.value[0]).toBe(1)
+    tupleRef.value[1] += '1'
+    expect(tupleRef.value[1]).toBe('11')
+    tupleRef.value[2].a++
+    expect(tupleRef.value[2].a).toBe(2)
+    expect(tupleRef.value[3]()).toBe(0)
+    tupleRef.value[4]++
+    expect(tupleRef.value[4]).toBe(1)
   })
 
   test('isRef', () => {

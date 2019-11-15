@@ -2,8 +2,12 @@ import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
 
 export function renderList(
-  source: any,
-  renderItem: (value: any, key: string | number, index?: number) => VNodeChild
+  source: unknown,
+  renderItem: (
+    value: unknown,
+    key: string | number,
+    index?: number
+  ) => VNodeChild
 ): VNodeChild[] {
   let ret: VNodeChild[]
   if (isArray(source) || isString(source)) {

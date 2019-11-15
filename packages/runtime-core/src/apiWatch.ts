@@ -7,12 +7,20 @@ import {
   ReactiveEffectOptions
 } from '@vue/reactivity'
 import { queueJob } from './scheduler'
-import { EMPTY_OBJ, isObject, isArray, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  isObject,
+  isArray,
+  isFunction,
+  isString,
+  hasChanged
+} from '@vue/shared'
 import { recordEffect } from './apiReactivity'
 import {
   currentInstance,
   ComponentInternalInstance,
-  currentSuspense
+  currentSuspense,
+  Data
 } from './component'
 import {
   ErrorCodes,
@@ -20,8 +28,13 @@ import {
   callWithAsyncErrorHandling
 } from './errorHandling'
 import { onBeforeUnmount } from './apiLifecycle'
-import { queuePostRenderEffect } from './createRenderer'
-import { WatchHandler } from './apiOptions'
+import { queuePostRenderEffect } from './renderer'
+
+export type WatchHandler<T = any> = (
+  value: T,
+  oldValue: T,
+  onCleanup: CleanupRegistrator
+) => any
 
 export interface WatchOptions {
   lazy?: boolean
@@ -56,13 +69,12 @@ export function watch<T>(
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
-export function watch<T extends readonly WatcherSource<unknown>[]>(
+// Readonly constraint helps the callback to correctly infer value types based
+// on position in the source array. Otherwise the values will get a union type
+// of all possible value types.
+export function watch<T extends Readonly<WatcherSource<unknown>[]>>(
   sources: T,
-  cb: (
-    newValues: MapSources<T>,
-    oldValues: MapSources<T>,
-    onCleanup: CleanupRegistrator
-  ) => any,
+  cb: WatchHandler<MapSources<T>>,
   options?: WatchOptions
 ): StopHandle
 
@@ -84,9 +96,7 @@ export function watch<T = any>(
 
 function doWatch(
   source: WatcherSource | WatcherSource[] | SimpleEffect,
-  cb:
-    | ((newValue: any, oldValue: any, onCleanup: CleanupRegistrator) => any)
-    | null,
+  cb: WatchHandler | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
   const instance = currentInstance
@@ -132,8 +142,7 @@ function doWatch(
 
   let cleanup: Function
   const registerCleanup: CleanupRegistrator = (fn: () => void) => {
-    // TODO wrap the cleanup fn for error handling
-    cleanup = runner.onStop = () => {
+    cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
   }
@@ -145,7 +154,7 @@ function doWatch(
           return
         }
         const newValue = runner()
-        if (deep || newValue !== oldValue) {
+        if (deep || hasChanged(newValue, oldValue)) {
           // cleanup before running cb again
           if (cleanup) {
             cleanup()
@@ -211,14 +220,14 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): StopHandle {
-  const ctx = this.renderProxy!
+  const ctx = this.renderProxy as Data
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)
   return stop
 }
 
-function traverse(value: any, seen: Set<any> = new Set()) {
+function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
     return
   }

@@ -46,18 +46,21 @@ describe('reactivity/collections', () => {
 
       expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(1)
-      map.set(key, 'value')
-      expect(dummy).toBe('value')
+      map.set(key, undefined)
+      expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(2)
       map.set(key, 'value')
       expect(dummy).toBe('value')
-      expect(mapSpy).toHaveBeenCalledTimes(2)
-      map.delete(key)
-      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(3)
+      map.set(key, 'value')
+      expect(dummy).toBe('value')
       expect(mapSpy).toHaveBeenCalledTimes(3)
       map.delete(key)
       expect(dummy).toBe(undefined)
-      expect(mapSpy).toHaveBeenCalledTimes(3)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
+      map.delete(key)
+      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
     })
 
     it('should not observe raw data', () => {
@@ -103,6 +106,16 @@ describe('reactivity/collections', () => {
       })
       observed.get(key).a = 2
       expect(dummy).toBe(2)
+    })
+
+    it('should not be trigger when the value and the old value both are NaN', () => {
+      const map = new WeakMap()
+      const key = {}
+      map.set(key, NaN)
+      const mapSpy = jest.fn(() => map.get(key))
+      effect(mapSpy)
+      map.set(key, NaN)
+      expect(mapSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

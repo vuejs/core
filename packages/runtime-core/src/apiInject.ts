@@ -1,4 +1,5 @@
 import { currentInstance } from './component'
+import { currentRenderingInstance } from './componentRenderUtils'
 import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
@@ -27,18 +28,24 @@ export function provide<T>(key: InjectionKey<T> | string, value: T) {
 
 export function inject<T>(key: InjectionKey<T> | string): T | undefined
 export function inject<T>(key: InjectionKey<T> | string, defaultValue: T): T
-export function inject(key: InjectionKey<any> | string, defaultValue?: any) {
-  if (currentInstance) {
-    const provides = currentInstance.provides
+export function inject(
+  key: InjectionKey<any> | string,
+  defaultValue?: unknown
+) {
+  // fallback to `currentRenderingInstance` so that this can be called in
+  // a functional component
+  const instance = currentInstance || currentRenderingInstance
+  if (instance) {
+    const provides = instance.provides
     if (key in provides) {
       // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (defaultValue !== undefined) {
       return defaultValue
     } else if (__DEV__) {
-      warn(`injection "${key}" not found.`)
+      warn(`injection "${String(key)}" not found.`)
     }
   } else if (__DEV__) {
-    warn(`inject() can only be used inside setup().`)
+    warn(`inject() can only be used inside setup() or functional components.`)
   }
 }

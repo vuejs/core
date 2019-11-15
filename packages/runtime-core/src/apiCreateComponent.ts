@@ -5,17 +5,30 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps
 } from './apiOptions'
-import { SetupContext } from './component'
-import { VNodeChild } from './vnode'
+import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
-import { ExtractPropTypes } from './componentProps'
+import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { isFunction } from '@vue/shared'
+import { VNodeProps } from './vnode'
 
 // overload 1: direct setup function
 // (uses user defined props interface)
-export function createComponent<Props>(
-  setup: (props: Props, ctx: SetupContext) => object | (() => VNodeChild)
-): (props: Props) => any
+export function createComponent<Props, RawBindings = object>(
+  setup: (
+    props: Readonly<Props>,
+    ctx: SetupContext
+  ) => RawBindings | RenderFunction
+): {
+  new (): ComponentPublicInstance<
+    Props,
+    RawBindings,
+    {},
+    {},
+    {},
+    // public props
+    VNodeProps & Props
+  >
+}
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -29,11 +42,18 @@ export function createComponent<
 >(
   options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
 ): {
-  new (): ComponentPublicInstance<Props, RawBindings, D, C, M>
+  new (): ComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    VNodeProps & Props
+  >
 }
 
 // overload 3: object format with array props declaration
-// props inferred as { [key in PropNames]?: unknown }
+// props inferred as { [key in PropNames]?: any }
 // return type is for Vetur and TSX support
 export function createComponent<
   PropNames extends string,
@@ -44,19 +64,16 @@ export function createComponent<
 >(
   options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
 ): {
-  new (): ComponentPublicInstance<
-    { [key in PropNames]?: unknown },
-    RawBindings,
-    D,
-    C,
-    M
-  >
+  // array props technically doesn't place any contraints on props in TSX
+  new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M>
 }
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
 export function createComponent<
-  PropsOptions,
+  // the Readonly constraint allows TS to treat the type of { required: true }
+  // as constant instead of boolean.
+  PropsOptions extends Readonly<ComponentPropsOptions>,
   RawBindings,
   D,
   C extends ComputedOptions = {},
@@ -71,11 +88,11 @@ export function createComponent<
     D,
     C,
     M,
-    ExtractPropTypes<PropsOptions, false>
+    VNodeProps & ExtractPropTypes<PropsOptions, false>
   >
 }
 
 // implementation, close to no-op
-export function createComponent(options: any) {
+export function createComponent(options: unknown) {
   return isFunction(options) ? { setup: options } : options
 }
