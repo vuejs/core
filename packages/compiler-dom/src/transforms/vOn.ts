@@ -25,18 +25,18 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
 )
 
 const generateModifiers = (modifiers: string[]) => {
-  const modifiersSize = modifiers.length
-
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
 
-  for (let i = 0; i < modifiersSize; i++) {
+  for (let i = 0; i < modifiers.length; i++) {
     const modifier = modifiers[i]
 
     if (isEventOptionModifier(modifier)) {
+      // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
     } else {
+      // runtimeModifiers: modifiers that needs runtime guards
       if (isNonKeyModifier(modifier)) {
         nonKeyModifiers.push(modifier)
       } else {
@@ -46,7 +46,8 @@ const generateModifiers = (modifiers: string[]) => {
   }
 
   return {
-    runtimeModifiers: [keyModifiers, nonKeyModifiers],
+    keyModifiers,
+    nonKeyModifiers,
     eventOptionModifiers
   }
 }
@@ -57,15 +58,11 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (!modifiers.length) return baseResult
 
     let { key, value: handlerExp } = baseResult.props[0]
-
-    // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
-    // runtimeModifiers: modifiers that needs runtime guards
-    const { runtimeModifiers, eventOptionModifiers } = generateModifiers(
-      modifiers
-    )
-
-    // built-in modifiers
-    const [keyModifiers, nonKeyModifiers] = runtimeModifiers
+    const {
+      keyModifiers,
+      nonKeyModifiers,
+      eventOptionModifiers
+    } = generateModifiers(modifiers)
 
     if (nonKeyModifiers.length) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
