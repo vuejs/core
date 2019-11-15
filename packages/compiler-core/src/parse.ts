@@ -767,16 +767,19 @@ function parseInterpolation(
 function parseText(context: ParserContext, mode: TextModes): TextNode {
   __TEST__ && assert(context.source.length > 0)
 
-  const [open] = context.options.delimiters
-  // TODO could probably use some perf optimization
-  const endIndex = Math.min(
-    ...[
-      context.source.indexOf('<', 1),
-      context.source.indexOf(open, 1),
-      mode === TextModes.CDATA ? context.source.indexOf(']]>') : -1,
-      context.source.length
-    ].filter(n => n !== -1)
-  )
+  const endTokens = ['<', context.options.delimiters[0]]
+  if (mode === TextModes.CDATA) {
+    endTokens.push(']]>')
+  }
+
+  let endIndex = context.source.length
+  for (let i = 0; i < endTokens.length; i++) {
+    const index = context.source.indexOf(endTokens[i], 1)
+    if (index !== -1 && endIndex > index) {
+      endIndex = index
+    }
+  }
+
   __TEST__ && assert(endIndex > 0)
 
   const start = getCursor(context)
