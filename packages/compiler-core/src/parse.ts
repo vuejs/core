@@ -767,19 +767,18 @@ function parseInterpolation(
 function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
-  const [open] = context.options.delimiters
-
-  const findBy = ['<', open]
-  if (mode === TextModes.CDATA) findBy.push(']]>')
-
-  let endIndex = context.source.length
-
-  for (let i = 0; i < findBy.length; i++) {
-    const index = context.source.indexOf(findBy[i], 1)
-
-    if (index !== -1 && endIndex > index) endIndex = index
+  const endTokens = ['<', context.options.delimiters[0]]
+  if (mode === TextModes.CDATA) {
+    endTokens.push(']]>')
   }
 
+  let endIndex = context.source.length
+  for (let i = 0; i < endTokens.length; i++) {
+    const index = context.source.indexOf(endTokens[i], 1)
+    if (index !== -1 && endIndex > index) {
+      endIndex = index
+    }
+  }
   __DEV__ && assert(endIndex > 0)
 
   const start = getCursor(context)
