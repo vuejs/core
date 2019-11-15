@@ -120,24 +120,24 @@ describe('class', () => {
         return () => h(child2, { class: ['a', parentClass.value] })
       }
     }
-    const aaa = h(parent)
-    const bbb = h(parent2)
-    console.log(aaa, bbb)
+
+    render(h(parent2), root)
+    expect(root.children[0].className).toBe('c d a b')
 
     render(h(parent), root)
-    expect(root.children[0].className).toBe('c a d b')
+    expect(root.children[0].className).toBe('c d a b')
 
     parentClass.value = 'e'
     render(h(parent), root)
-    expect(root.children[0].className).toBe('c a d e')
+    expect(root.children[0].className).toBe('c d a e')
 
     parentClass.value = 'f'
     render(h(parent), root)
-    expect(root.children[0].className).toBe('c a f e')
+    expect(root.children[0].className).toBe('c f a e')
 
     parentClass.value = { foo: true }
     childClass.value = ['bar', 'baz']
-    expect(root.children[0].className).toBe('c a bar baz foo')
+    expect(root.children[0].className).toBe('c bar baz a foo')
   })
 
   test('class merge between multiple nested components sharing same element', () => {
