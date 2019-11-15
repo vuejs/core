@@ -45,6 +45,32 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
+  it('should support multiple events and modifiers options w/ prefixIdentifiers: true', () => {
+    const { props } = parseWithVOn(
+      `<div @click.stop="test" @keyup.enter="test" />`,
+      {
+        prefixIdentifiers: true
+      }
+    )
+    const [clickProp, keyUpProp] = props
+
+    expect(props).toHaveLength(2)
+    expect(clickProp).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_MODIFIERS,
+        arguments: [{ content: '_ctx.test' }, '["stop"]']
+      }
+    })
+    expect(keyUpProp).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [{ content: '_ctx.test' }, '["enter"]']
+      }
+    })
+  })
+
   it('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const {
       props: [prop]

@@ -156,7 +156,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist class with stat
 "const _Vue = Vue
 const _createVNode = Vue.createVNode
 
-const _hoisted_1 = { class: { foo: true }}
+const _hoisted_1 = { class: { foo: true } }
 
 return function render() {
   with (this) {

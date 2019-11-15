@@ -552,8 +552,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     }
   }
   multilines && deindent()
-  const lastChar = context.code[context.code.length - 1]
-  push(multilines || /[\])}]/.test(lastChar) ? `}` : ` }`)
+  push(multilines ? `}` : ` }`)
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {

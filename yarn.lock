@@ -1023,21 +1023,21 @@
     npmlog "^4.1.2"
     write-file-atomic "^2.3.0"
 
-"@microsoft/api-extractor-model@7.5.5":
-  version "7.5.5"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.5.5.tgz#562f420f3a32d65a09984534f0af205e9e3d606f"
-  integrity sha512-OovDAQWxGChGDBH10Pf4Y7eJlVhbkCDv37RrKyuMyXurB8MEvZtHABjgknYsZD9MrfRUUvs5X80MIDcM2kSiYw==
+"@microsoft/api-extractor-model@7.5.6":
+  version "7.5.6"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.5.6.tgz#49336bd77e4a6e9e2dfb5dc10ed2f52b110a9d3d"
+  integrity sha512-eQ0PKmk2cUVSL+0GjbpjPhep13IbWByFwZxz6TKAqSb+FCHNWmj6F2t+KZw8bG4CXcAdlmxGHEUTOLnK5b5N9Q==
   dependencies:
-    "@microsoft/node-core-library" "3.17.1"
+    "@microsoft/node-core-library" "3.18.0"
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.5.6"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.5.6.tgz#3327c60724bb94df8ca159e21010caf5ae28c24d"
-  integrity sha512-SH2BOGef9dWERGIrd10sG2Rtoh5xnmh9xbwsXtQgGvjShwJWOlOEdxpRoARIsVxE6tyuQYtW60E/1YwwuigDQw==
+  version "7.6.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.6.0.tgz#1d2a94f3bf1b2bf35bb8fd18cfda37621986e50a"
+  integrity sha512-CWWARagbgvbegE74oeGCbjvQn13nTiVjTE8DjTB2tvGE2yvB5HxorhWaff+Dvu7kUnQ5Jf44FLibdq8QJssoaw==
   dependencies:
-    "@microsoft/api-extractor-model" "7.5.5"
-    "@microsoft/node-core-library" "3.17.1"
+    "@microsoft/api-extractor-model" "7.5.6"
+    "@microsoft/node-core-library" "3.18.0"
     "@microsoft/ts-command-line" "4.3.5"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
@@ -1046,10 +1046,10 @@
     source-map "~0.6.1"
     typescript "~3.7.2"
 
-"@microsoft/node-core-library@3.17.1":
-  version "3.17.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.17.1.tgz#c82087fefdda3a16c1eb5a70a55c892c6c79612b"
-  integrity sha512-SwsOJGefU8Ue5tRePEPq+ukuc7bURhTikuARsTGK8i/m2eVnKLZvUxFWdPxV5ntFqxYQcHr8UEh8EXSu3CiXVQ==
+"@microsoft/node-core-library@3.18.0":
+  version "3.18.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.18.0.tgz#9a9123354b3e067bb8a975ba791959ffee1322ed"
+  integrity sha512-VzzSHtcwgHVW1xbHqpngfn+OS1trAZ1Tw3XXBlMsEKe7Wz7FF2gLr0hZa6x9Pemk5pkd4tu4+GTSOJjCKGjrgg==
   dependencies:
     "@types/node" "8.10.54"
     colors "~1.2.1"
@@ -4527,9 +4527,9 @@ levn@~0.3.0:
     type-check "~0.3.2"
 
 lint-staged@^9.2.3:
-  version "9.4.2"
-  resolved "https://registry.yarnpkg.com/lint-staged/-/lint-staged-9.4.2.tgz#14cb577a9512f520691f8b5aefce6a8f7ead6c04"
-  integrity sha512-OFyGokJSWTn2M6vngnlLXjaHhi8n83VIZZ5/1Z26SULRUWgR3ITWpAEQC9Pnm3MC/EpCxlwts/mQWDHNji2+zA==
+  version "9.4.3"
+  resolved "https://registry.yarnpkg.com/lint-staged/-/lint-staged-9.4.3.tgz#f55ad5f94f6e105294bfd6499b23142961f7b982"
+  integrity sha512-PejnI+rwOAmKAIO+5UuAZU9gxdej/ovSEOAY34yMfC3OS4Ac82vCBPzAWLReR9zCPOMqeVwQRaZ3bUBpAsaL2Q==
   dependencies:
     chalk "^2.4.2"
     commander "^2.20.0"
