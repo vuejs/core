@@ -141,7 +141,7 @@ function parseChildren(
   const nodes: TemplateChildNode[] = []
 
   while (!isEnd(context, mode, ancestors)) {
-    __DEV__ && assert(context.source.length > 0)
+    __TEST__ && assert(context.source.length > 0)
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
@@ -286,16 +286,16 @@ function parseCDATA(
   context: ParserContext,
   ancestors: ElementNode[]
 ): TemplateChildNode[] {
-  __DEV__ &&
+  __TEST__ &&
     assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
-  __DEV__ && assert(startsWith(context.source, '<![CDATA['))
+  __TEST__ && assert(startsWith(context.source, '<![CDATA['))
 
   advanceBy(context, 9)
   const nodes = parseChildren(context, TextModes.CDATA, ancestors)
   if (context.source.length === 0) {
     emitError(context, ErrorCodes.EOF_IN_CDATA)
   } else {
-    __DEV__ && assert(startsWith(context.source, ']]>'))
+    __TEST__ && assert(startsWith(context.source, ']]>'))
     advanceBy(context, 3)
   }
 
@@ -303,7 +303,7 @@ function parseCDATA(
 }
 
 function parseComment(context: ParserContext): CommentNode {
-  __DEV__ && assert(startsWith(context.source, '<!--'))
+  __TEST__ && assert(startsWith(context.source, '<!--'))
 
   const start = getCursor(context)
   let content: string
@@ -345,7 +345,7 @@ function parseComment(context: ParserContext): CommentNode {
 }
 
 function parseBogusComment(context: ParserContext): CommentNode | undefined {
-  __DEV__ && assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
+  __TEST__ && assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
 
   const start = getCursor(context)
   const contentStart = context.source[1] === '?' ? 1 : 2
@@ -371,7 +371,7 @@ function parseElement(
   context: ParserContext,
   ancestors: ElementNode[]
 ): ElementNode | undefined {
-  __DEV__ && assert(/^<[a-z]/i.test(context.source))
+  __TEST__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
   const wasInPre = context.inPre
@@ -425,8 +425,8 @@ function parseTag(
   type: TagType,
   parent: ElementNode | undefined
 ): ElementNode {
-  __DEV__ && assert(/^<\/?[a-z]/i.test(context.source))
-  __DEV__ &&
+  __TEST__ && assert(/^<\/?[a-z]/i.test(context.source))
+  __TEST__ &&
     assert(
       type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
     )
@@ -538,7 +538,7 @@ function parseAttribute(
   context: ParserContext,
   nameSet: Set<string>
 ): AttributeNode | DirectiveNode {
-  __DEV__ && assert(/^[^\t\r\n\f />]/.test(context.source))
+  __TEST__ && assert(/^[^\t\r\n\f />]/.test(context.source))
 
   // Name.
   const start = getCursor(context)
@@ -725,7 +725,7 @@ function parseInterpolation(
   mode: TextModes
 ): InterpolationNode | undefined {
   const [open, close] = context.options.delimiters
-  __DEV__ && assert(startsWith(context.source, open))
+  __TEST__ && assert(startsWith(context.source, open))
 
   const closeIndex = context.source.indexOf(close, open.length)
   if (closeIndex === -1) {
@@ -765,7 +765,7 @@ function parseInterpolation(
 }
 
 function parseText(context: ParserContext, mode: TextModes): TextNode {
-  __DEV__ && assert(context.source.length > 0)
+  __TEST__ && assert(context.source.length > 0)
 
   const [open] = context.options.delimiters
   // TODO could probably use some perf optimization
@@ -777,7 +777,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
       context.source.length
     ].filter(n => n !== -1)
   )
-  __DEV__ && assert(endIndex > 0)
+  __TEST__ && assert(endIndex > 0)
 
   const start = getCursor(context)
   const content = parseTextData(context, endIndex, mode)
@@ -951,7 +951,7 @@ function startsWith(source: string, searchString: string): boolean {
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   const { source } = context
-  __DEV__ && assert(numberOfCharacters <= source.length)
+  __TEST__ && assert(numberOfCharacters <= source.length)
   advancePositionWithMutation(context, source, numberOfCharacters)
   context.source = source.slice(numberOfCharacters)
 }

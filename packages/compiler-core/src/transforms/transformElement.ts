@@ -51,7 +51,7 @@ export const transformElement: NodeTransform = (node, context) => {
   }
   // perform the work on exit, after all child expressions have been
   // processed and merged.
-  return () => {
+  return function postTransformElement() {
     const { tag, tagType, props } = node
     const isPortal = tag === 'portal' || tag === 'Portal'
     const isSuspense = tag === 'suspense' || tag === 'Suspense'
@@ -113,7 +113,7 @@ export const transformElement: NodeTransform = (node, context) => {
         node,
         context,
         // skip reserved "is" prop <component is>
-        node.props.filter(p => p !== isProp)
+        isProp ? node.props.filter(p => p !== isProp) : node.props
       )
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
@@ -177,9 +177,7 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(patchFlag + '')
       }
       if (dynamicPropNames && dynamicPropNames.length) {
-        args.push(
-          `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
-        )
+        args.push(stringifyDynamicPropNames(dynamicPropNames))
       }
     }
 
@@ -202,6 +200,15 @@ export const transformElement: NodeTransform = (node, context) => {
       node.codegenNode = vnode
     }
   }
+}
+
+function stringifyDynamicPropNames(props: string[]): string {
+  let propsNamesString = `[`
+  for (let i = 0, l = props.length; i < l; i++) {
+    propsNamesString += JSON.stringify(props[i])
+    if (i < l - 1) propsNamesString += ', '
+  }
+  return propsNamesString + `]`
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -410,7 +417,7 @@ export function buildProps(
 // - onXXX handlers / style: merge into array
 // - class: merge into single expression with concatenation
 function dedupeProperties(properties: Property[]): Property[] {
-  const knownProps: Record<string, Property> = {}
+  const knownProps: Map<string, Property> = new Map()
   const deduped: Property[] = []
   for (let i = 0; i < properties.length; i++) {
     const prop = properties[i]
@@ -420,7 +427,7 @@ function dedupeProperties(properties: Property[]): Property[] {
       continue
     }
     const name = prop.key.content
-    const existing = knownProps[name]
+    const existing = knownProps.get(name)
     if (existing) {
       if (
         name === 'style' ||
@@ -432,7 +439,7 @@ function dedupeProperties(properties: Property[]): Property[] {
       }
       // unexpected duplicate, should have emitted error during parse
     } else {
-      knownProps[name] = prop
+      knownProps.set(name, prop)
       deduped.push(prop)
     }
   }
