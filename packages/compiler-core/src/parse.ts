@@ -8,8 +8,7 @@ import {
 import {
   assert,
   advancePositionWithMutation,
-  advancePositionWithClone,
-  getMinPositive
+  advancePositionWithClone
 } from './utils'
 import {
   Namespace,
@@ -769,12 +768,21 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   __DEV__ && assert(context.source.length > 0)
 
   const [open] = context.options.delimiters
-  const endIndex = getMinPositive(
-    context.source.indexOf('<', 1),
-    context.source.indexOf(open, 1),
-    mode === TextModes.CDATA ? context.source.indexOf(']]>') : -1,
-    context.source.length
-  )
+
+  const findBy = ['<', open]
+  if (mode === TextModes.CDATA) findBy.push(']]>')
+
+  let endIndex = Infinity
+
+  for (let i = 0; i < findBy.length; i++) {
+    const index = context.source.indexOf(findBy[i], 1)
+
+    if (index === -1) continue
+    if (endIndex > index) endIndex = index
+  }
+
+  if (endIndex === Infinity) endIndex = context.source.length
+
   __DEV__ && assert(endIndex > 0)
 
   const start = getCursor(context)
