@@ -798,40 +798,49 @@ function parseTextData(
   length: number,
   mode: TextModes
 ): string {
-  if (mode === TextModes.RAWTEXT || mode === TextModes.CDATA) {
-    const text = context.source.slice(0, length)
+  let rawText = context.source.slice(0, length)
+  if (
+    mode === TextModes.RAWTEXT ||
+    mode === TextModes.CDATA ||
+    rawText.indexOf('&') === -1
+  ) {
     advanceBy(context, length)
-    return text
+    return rawText
   }
 
-  // DATA or RCDATA. Entity decoding required.
+  // DATA or RCDATA containing "&"". Entity decoding required.
   const end = context.offset + length
-  let text: string = ''
+  let decodedText = ''
+
+  function advance(length: number) {
+    advanceBy(context, length)
+    rawText = rawText.slice(length)
+  }
 
   while (context.offset < end) {
-    const head = /&(?:#x?)?/i.exec(context.source)
+    const head = /&(?:#x?)?/i.exec(rawText)
     if (!head || context.offset + head.index >= end) {
       const remaining = end - context.offset
-      text += context.source.slice(0, remaining)
-      advanceBy(context, remaining)
+      decodedText += rawText.slice(0, remaining)
+      advance(remaining)
       break
     }
 
     // Advance to the "&".
-    text += context.source.slice(0, head.index)
-    advanceBy(context, head.index)
+    decodedText += rawText.slice(0, head.index)
+    advance(head.index)
 
     if (head[0] === '&') {
       // Named character reference.
       let name = '',
         value: string | undefined = undefined
-      if (/[0-9a-z]/i.test(context.source[1])) {
+      if (/[0-9a-z]/i.test(rawText[1])) {
         for (
           let length = context.maxCRNameLength;
           !value && length > 0;
           --length
         ) {
-          name = context.source.substr(1, length)
+          name = rawText.substr(1, length)
           value = context.options.namedCharacterReferences[name]
         }
         if (value) {
@@ -839,14 +848,13 @@ function parseTextData(
           if (
             mode === TextModes.ATTRIBUTE_VALUE &&
             !semi &&
-            /[=a-z0-9]/i.test(context.source[1 + name.length] || '')
+            /[=a-z0-9]/i.test(rawText[1 + name.length] || '')
           ) {
-            text += '&'
-            text += name
-            advanceBy(context, 1 + name.length)
+            decodedText += '&' + name
+            advance(1 + name.length)
           } else {
-            text += value
-            advanceBy(context, 1 + name.length)
+            decodedText += value
+            advance(1 + name.length)
             if (!semi) {
               emitError(
                 context,
@@ -856,26 +864,25 @@ function parseTextData(
           }
         } else {
           emitError(context, ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE)
-          text += '&'
-          text += name
-          advanceBy(context, 1 + name.length)
+          decodedText += '&' + name
+          advance(1 + name.length)
         }
       } else {
-        text += '&'
-        advanceBy(context, 1)
+        decodedText += '&'
+        advance(1)
       }
     } else {
       // Numeric character reference.
       const hex = head[0] === '&#x'
       const pattern = hex ? /^&#x([0-9a-f]+);?/i : /^&#([0-9]+);?/
-      const body = pattern.exec(context.source)
+      const body = pattern.exec(rawText)
       if (!body) {
-        text += head[0]
+        decodedText += head[0]
         emitError(
           context,
           ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
         )
-        advanceBy(context, head[0].length)
+        advance(head[0].length)
       } else {
         // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
         let cp = Number.parseInt(body[1], hex ? 16 : 10)
@@ -902,8 +909,8 @@ function parseTextData(
           emitError(context, ErrorCodes.CONTROL_CHARACTER_REFERENCE)
           cp = CCR_REPLACEMENTS[cp] || cp
         }
-        text += String.fromCodePoint(cp)
-        advanceBy(context, body[0].length)
+        decodedText += String.fromCodePoint(cp)
+        advance(body[0].length)
         if (!body![0].endsWith(';')) {
           emitError(
             context,
@@ -913,7 +920,7 @@ function parseTextData(
       }
     }
   }
-  return text
+  return decodedText
 }
 
 function getCursor(context: ParserContext): Position {
