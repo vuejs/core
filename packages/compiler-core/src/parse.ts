@@ -595,7 +595,7 @@ function parseAttribute(
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
-      const startOffset = name.split(match[2], 2)!.shift()!.length
+      const startOffset = name.indexOf(match[2])
       const loc = getSelection(
         context,
         getNewPosition(context, start, startOffset),
