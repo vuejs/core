@@ -772,16 +772,13 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   const findBy = ['<', open]
   if (mode === TextModes.CDATA) findBy.push(']]>')
 
-  let endIndex = Infinity
+  let endIndex = context.source.length
 
   for (let i = 0; i < findBy.length; i++) {
     const index = context.source.indexOf(findBy[i], 1)
 
-    if (index === -1) continue
-    if (endIndex > index) endIndex = index
+    if (index !== -1 && endIndex > index) endIndex = index
   }
-
-  if (endIndex === Infinity) endIndex = context.source.length
 
   __DEV__ && assert(endIndex > 0)
 
