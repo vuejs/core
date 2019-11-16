@@ -46,7 +46,10 @@ export interface ParserOptions {
 
   // Map to HTML entities. E.g., `{ "amp;": "&" }`
   // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences?: { [name: string]: string | undefined }
+  namedCharacterReferences?: Record<string, string>
+  // this number is based on the map above, but it should be pre-computed
+  // to avoid the cost on every parse() call.
+  maxCRNameLength?: number
 
   onError?: (error: CompilerError) => void
 }
@@ -69,6 +72,7 @@ export const defaultParserOptions: MergedParserOptions = {
     'apos;': "'",
     'quot;': '"'
   },
+  maxCRNameLength: 5,
   onError: defaultOnError
 }
 
@@ -88,7 +92,6 @@ interface ParserContext {
   offset: number
   line: number
   column: number
-  maxCRNameLength: number
   inPre: boolean
 }
 
@@ -123,10 +126,6 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    maxCRNameLength: Object.keys(
-      options.namedCharacterReferences ||
-        defaultParserOptions.namedCharacterReferences
-    ).reduce((max, name) => Math.max(max, name.length), 0),
     inPre: false
   }
 }
@@ -839,7 +838,7 @@ function parseTextData(
         value: string | undefined = undefined
       if (/[0-9a-z]/i.test(rawText[1])) {
         for (
-          let length = context.maxCRNameLength;
+          let length = context.options.maxCRNameLength;
           !value && length > 0;
           --length
         ) {
