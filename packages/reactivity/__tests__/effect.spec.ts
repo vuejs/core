@@ -25,7 +25,18 @@ describe('reactivity/effect', () => {
     counter.num = 7
     expect(dummy).toBe(7)
   })
+  it('should not cause infinite loop when getter or setter operations occur in effect', () => {
+    let dummy
+    const counter = reactive({ num: 0 })
+    effect(() => {
+      dummy = counter.num
+      counter.num++
+    })
 
+    expect(dummy).toBe(0)
+    counter.num = 7
+    expect(dummy).toBe(7)
+  })
   it('should observe multiple properties', () => {
     let dummy
     const counter = reactive({ num1: 0, num2: 0 })
