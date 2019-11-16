@@ -1,4 +1,4 @@
-import { queueJob, nextTick } from '../src/scheduler'
+import { queueJob, nextTick, queuePostFlushCb } from '../src/scheduler'
 
 describe('scheduler', () => {
   it('nextTick', async () => {
@@ -67,6 +67,67 @@ describe('scheduler', () => {
 
       await nextTick()
       expect(calls).toEqual(['job1', 'job2'])
+    })
+  })
+
+  describe('queuePostFlushCb', () => {
+    it('basic usage', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+
+      queuePostFlushCb([cb1, cb2])
+      queuePostFlushCb(cb3)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('should dedupe queued postFlushCb', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+
+      queuePostFlushCb([cb1, cb2])
+      queuePostFlushCb(cb3)
+
+      queuePostFlushCb([cb1, cb3])
+      queuePostFlushCb(cb2)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('queuePostFlushCb while flushing', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+        // cb2 will be excuted after cb1 at the same tick
+        queuePostFlushCb(cb2)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      queuePostFlushCb(cb1)
+
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2'])
     })
   })
 })
