@@ -130,4 +130,104 @@ describe('scheduler', () => {
       expect(calls).toEqual(['cb1', 'cb2'])
     })
   })
+
+  describe('queueJob w/ queuePostFlushCb', () => {
+    it('queueJob inside postFlushCb', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        // queueJob in postFlushCb
+        calls.push('cb1')
+        queueJob(job1)
+      }
+
+      queuePostFlushCb(cb1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'job1'])
+    })
+
+    it('queueJob & postFlushCb inside postFlushCb', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+        queuePostFlushCb(cb2)
+        // job1 will executed before cb2
+        // Job has higher priority than postFlushCb
+        queueJob(job1)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+
+      queuePostFlushCb(cb1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'job1', 'cb2'])
+    })
+
+    it('postFlushCb inside queueJob', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+        // postFlushCb in queueJob
+        queuePostFlushCb(cb1)
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+
+      queueJob(job1)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'cb1'])
+    })
+
+    it('queueJob & postFlushCb inside queueJob', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+        // cb1 will executed after job2
+        // Job has higher priority than postFlushCb
+        queuePostFlushCb(cb1)
+        queueJob(job2)
+      }
+      const job2 = () => {
+        calls.push('job2')
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+
+      queueJob(job1)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job2', 'cb1'])
+    })
+
+    it('nested queueJob w/ postFlushCb', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+
+        queuePostFlushCb(cb1)
+        queueJob(job2)
+      }
+      const job2 = () => {
+        calls.push('job2')
+        queuePostFlushCb(cb2)
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+
+      queueJob(job1)
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
+    })
+  })
 })
