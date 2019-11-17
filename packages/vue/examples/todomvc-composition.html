@@ -50,6 +50,8 @@
       </button>
     </footer>
   </section>
+  <Child/>
+
 </div>
 
 <script>
@@ -89,8 +91,20 @@ const filters = {
 function pluralize (n) {
   return n === 1 ? 'item' : 'items'
 }
+//当dom层级达到三级， _createTextVNode is not defined
+const Child = {
+  template:`
+  <div>
+    <div>
+      <div>111</div>
+      11
+    </div>
+  </div>
+  `
+}
 
 const App = {
+  components:{Child},
   setup () {
     const state = reactive({
       todos: todoStorage.fetch(),
