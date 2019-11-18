@@ -7,6 +7,7 @@ import {
   SourceLocation
 } from '@vue/compiler-core'
 import { RawSourceMap } from 'source-map'
+import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 
 export interface SFCParseOptions {
@@ -48,6 +49,8 @@ export interface SFCDescriptor {
   customBlocks: SFCBlock[]
 }
 
+const SFC_CACHE_MAX_SIZE = 500
+const sourceToSFC = new LRUCache<string, SFCDescriptor>(SFC_CACHE_MAX_SIZE)
 export function parse(
   source: string,
   {
@@ -56,7 +59,11 @@ export function parse(
     sourceRoot = ''
   }: SFCParseOptions = {}
 ): SFCDescriptor {
-  // TODO check cache
+  const sourceKey = source + needMap + filename + sourceRoot
+  const cache = sourceToSFC.get(sourceKey)
+  if (cache) {
+    return cache
+  }
 
   const sfc: SFCDescriptor = {
     filename,
@@ -101,7 +108,7 @@ export function parse(
   if (needMap) {
     // TODO source map
   }
-  // TODO set cache
+  sourceToSFC.set(sourceKey, sfc)
 
   return sfc
 }
