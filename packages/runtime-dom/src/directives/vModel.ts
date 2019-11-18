@@ -261,26 +261,17 @@ function callModelHook(
   prevVNode: VNode | null,
   hook: keyof ObjectDirective
 ) {
-  let modelToUse: ObjectDirective
-  switch (el.tagName) {
-    case 'SELECT':
-      modelToUse = vModelSelect
-      break
-    case 'TEXTAREA':
-      modelToUse = vModelText
-      break
-    default:
-      switch (el.type) {
-        case 'checkbox':
-          modelToUse = vModelCheckbox
-          break
-        case 'radio':
-          modelToUse = vModelRadio
-          break
-        default:
-          modelToUse = vModelText
-      }
+  const tagNameMap: { [p: string]: ObjectDirective } = {
+    SELECT: vModelSelect,
+    TEXTAREA: vModelText
   }
+  const typeMap: { [p: string]: ObjectDirective } = {
+    checkbox: vModelCheckbox,
+    radio: vModelRadio
+  }
+  const modelToUse: ObjectDirective =
+    tagNameMap[el.tagName] || typeMap[el.type] || vModelText
+
   const fn = modelToUse[hook]
   fn && fn(el, binding, vnode, prevVNode)
 }
