@@ -77,7 +77,7 @@ export function getInnerRange(
   offset: number,
   length?: number
 ): SourceLocation {
-  __DEV__ && assert(offset <= loc.source.length)
+  __TEST__ && assert(offset <= loc.source.length)
   const source = loc.source.substr(offset, length)
   const newLoc: SourceLocation = {
     source,
@@ -86,7 +86,7 @@ export function getInnerRange(
   }
 
   if (length != null) {
-    __DEV__ && assert(offset + length <= loc.source.length)
+    __TEST__ && assert(offset + length <= loc.source.length)
     newLoc.end = advancePositionWithClone(
       loc.start,
       loc.source,

@@ -189,6 +189,101 @@ describe('vModel', () => {
     data.value = false
     await nextTick()
     expect(input.checked).toEqual(false)
+
+    data.value = true
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(false)
+  })
+
+  it('should work with checkbox and true-value/false-value', async () => {
+    const component = createComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'true-value': 'yes',
+              'false-value': 'no',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    app.mount(component, root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('yes')
+
+    data.value = 'no'
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('no')
+  })
+
+  it('should work with checkbox and true-value/false-value with object values', async () => {
+    const component = createComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'true-value': { yes: 'yes' },
+              'false-value': { no: 'no' },
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    app.mount(component, root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual({ yes: 'yes' })
+
+    data.value = { no: 'no' }
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    data.value = { yes: 'yes' }
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual({ no: 'no' })
   })
 
   it(`should support array as a checkbox model`, async () => {

@@ -20,7 +20,10 @@ export function generateCodeFrame(
         if (j === i) {
           // push underline
           const pad = start - (count - lineLength) + 1
-          const length = end > count ? lineLength - pad : end - start
+          const length = Math.max(
+            0,
+            end > count ? lineLength - pad : end - start
+          )
           res.push(`   |  ` + ' '.repeat(pad) + '^'.repeat(length))
         } else if (j > i) {
           if (end > count) {

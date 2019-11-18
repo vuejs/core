@@ -35,7 +35,8 @@ import {
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
   SET_BLOCK_TRACKING,
-  CREATE_COMMENT
+  CREATE_COMMENT,
+  CREATE_TEXT
 } from './runtimeHelpers'
 
 type CodegenNode = TemplateChildNode | JSChildNode
@@ -212,18 +213,11 @@ export function generate(
         // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
         if (ast.hoists.length) {
-          push(
-            `const _${helperNameMap[CREATE_VNODE]} = Vue.${
-              helperNameMap[CREATE_VNODE]
-            }\n`
-          )
-          if (ast.helpers.includes(CREATE_COMMENT)) {
-            push(
-              `const _${helperNameMap[CREATE_COMMENT]} = Vue.${
-                helperNameMap[CREATE_COMMENT]
-              }\n`
-            )
-          }
+          const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
+            .filter(helper => ast.helpers.includes(helper))
+            .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
+            .join(', ')
+          push(`const { ${staticHelpers} } = Vue\n`)
         }
       }
     }
@@ -552,8 +546,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
     }
   }
   multilines && deindent()
-  const lastChar = context.code[context.code.length - 1]
-  push(multilines || /[\])}]/.test(lastChar) ? `}` : ` }`)
+  push(multilines ? `}` : ` }`)
 }
 
 function genArrayExpression(node: ArrayExpression, context: CodegenContext) {

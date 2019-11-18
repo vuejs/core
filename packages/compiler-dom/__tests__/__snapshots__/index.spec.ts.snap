@@ -2,7 +2,7 @@
 
 exports[`compile should contain standard transforms 1`] = `
 "const _Vue = Vue
-const _createVNode = Vue.createVNode
+const { createVNode: _createVNode } = Vue
 
 const _hoisted_1 = {}
 
@@ -15,7 +15,7 @@ return function render() {
       _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
       _createVNode(\\"div\\", null, \\"test\\"),
       _createVNode(\\"div\\", { style: _hoisted_1 }, \\"red\\"),
-      _createVNode(\\"div\\", { style: {color: 'green'}}, null, 4 /* STYLE */)
+      _createVNode(\\"div\\", { style: {color: 'green'} }, null, 4 /* STYLE */)
     ]))
   }
 }"
