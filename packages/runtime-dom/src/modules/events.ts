@@ -1,16 +1,22 @@
-import { isArray } from '@vue/shared'
+import { EMPTY_OBJ } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
-interface Invoker extends Function {
+interface Invoker extends EventListener {
   value: EventValue
-  lastUpdated?: number
+  lastUpdated: number
 }
 
 type EventValue = (Function | Function[]) & {
+  invoker?: Invoker | null
+}
+
+type EventValueWithOptions = {
+  handler: EventValue
+  options: AddEventListenerOptions
   invoker?: Invoker | null
 }
 
@@ -40,59 +46,98 @@ const reset = () => {
 }
 const getNow = () => cachedNow || (p.then(reset), (cachedNow = _getNow()))
 
+export function addEventListener(
+  el: Element,
+  event: string,
+  handler: EventListener,
+  options?: EventListenerOptions
+) {
+  el.addEventListener(event, handler, options)
+}
+
+export function removeEventListener(
+  el: Element,
+  event: string,
+  handler: EventListener,
+  options?: EventListenerOptions
+) {
+  el.removeEventListener(event, handler, options)
+}
+
 export function patchEvent(
   el: Element,
   name: string,
-  prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  prevValue: EventValueWithOptions | EventValue | null,
+  nextValue: EventValueWithOptions | EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
+  const prevOptions = prevValue && 'options' in prevValue && prevValue.options
+  const nextOptions = nextValue && 'options' in nextValue && nextValue.options
   const invoker = prevValue && prevValue.invoker
-  if (nextValue) {
+  const value =
+    nextValue && 'handler' in nextValue ? nextValue.handler : nextValue
+
+  if (prevOptions || nextOptions) {
+    const prev = prevOptions || EMPTY_OBJ
+    const next = nextOptions || EMPTY_OBJ
+    if (
+      prev.capture !== next.capture ||
+      prev.passive !== next.passive ||
+      prev.once !== next.once
+    ) {
+      if (invoker) {
+        removeEventListener(el, name, invoker, prev)
+      }
+      if (nextValue && value) {
+        const invoker = createInvoker(value, instance)
+        nextValue.invoker = invoker
+        addEventListener(el, name, invoker, next)
+      }
+      return
+    }
+  }
+
+  if (nextValue && value) {
     if (invoker) {
       ;(prevValue as EventValue).invoker = null
-      invoker.value = nextValue
+      invoker.value = value
       nextValue.invoker = invoker
       invoker.lastUpdated = getNow()
     } else {
-      el.addEventListener(name, createInvoker(nextValue, instance))
+      addEventListener(
+        el,
+        name,
+        createInvoker(value, instance),
+        nextOptions || void 0
+      )
     }
   } else if (invoker) {
-    el.removeEventListener(name, invoker as any)
+    removeEventListener(el, name, invoker, prevOptions || void 0)
   }
 }
 
-function createInvoker(value: any, instance: ComponentInternalInstance | null) {
-  const invoker = ((e: Event) => {
+function createInvoker(
+  initialValue: EventValue,
+  instance: ComponentInternalInstance | null
+) {
+  const invoker: Invoker = (e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
     // attached to outer element during patch, and triggered again. This
     // happens because browsers fire microtask ticks between event propagation.
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
-    if (e.timeStamp >= invoker.lastUpdated) {
-      const args = [e]
-      if (isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          callWithAsyncErrorHandling(
-            value[i],
-            instance,
-            ErrorCodes.NATIVE_EVENT_HANDLER,
-            args
-          )
-        }
-      } else {
-        callWithAsyncErrorHandling(
-          value,
-          instance,
-          ErrorCodes.NATIVE_EVENT_HANDLER,
-          args
-        )
-      }
+    if (e.timeStamp >= invoker.lastUpdated - 1) {
+      callWithAsyncErrorHandling(
+        invoker.value,
+        instance,
+        ErrorCodes.NATIVE_EVENT_HANDLER,
+        [e]
+      )
     }
-  }) as any
-  invoker.value = value
-  value.invoker = invoker
+  }
+  invoker.value = initialValue
+  initialValue.invoker = invoker
   invoker.lastUpdated = getNow()
   return invoker
 }

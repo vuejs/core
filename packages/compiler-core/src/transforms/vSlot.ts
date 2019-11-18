@@ -23,7 +23,7 @@ import {
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { findDir, isTemplateNode, assert, isVSlot } from '../utils'
+import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
 
@@ -108,9 +108,12 @@ export function buildSlots(
 
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
-  // TODO: This can be further optimized to only make it dynamic when the slot
-  // actually uses the scope variables.
   let hasDynamicSlots = context.scopes.vSlot > 0 || context.scopes.vFor > 0
+  // with `prefixIdentifiers: true`, this can be further optimized to make
+  // it dynamic only when the slot actually uses the scope variables.
+  if (!__BROWSER__ && context.prefixIdentifiers) {
+    hasDynamicSlots = hasScopeRef(node, context.identifiers)
+  }
 
   // 1. Check for default slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>
@@ -119,7 +122,7 @@ export function buildSlots(
     const { arg, exp, loc } = explicitDefaultSlot
     if (arg) {
       context.onError(
-        createCompilerError(ErrorCodes.X_NAMED_SLOT_ON_COMPONENT, loc)
+        createCompilerError(ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT, loc)
       )
     }
     slotsProperties.push(buildDefaultSlot(exp, children, loc))
@@ -148,7 +151,7 @@ export function buildSlots(
     if (explicitDefaultSlot) {
       // already has on-component default slot - this is incorrect usage.
       context.onError(
-        createCompilerError(ErrorCodes.X_MIXED_SLOT_USAGE, slotDir.loc)
+        createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc)
       )
       break
     }
@@ -205,7 +208,7 @@ export function buildSlots(
         // remove node
         children.splice(i, 1)
         i--
-        __DEV__ && assert(dynamicSlots.length > 0)
+        __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
           dynamicSlots.length - 1
@@ -224,7 +227,7 @@ export function buildSlots(
           : buildDynamicSlot(slotName, slotFunction)
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_ELSE_NO_ADJACENT_IF, vElse.loc)
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
         )
       }
     } else if ((vFor = findDir(slotElement, 'for'))) {
@@ -247,7 +250,7 @@ export function buildSlots(
         )
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_FOR_MALFORMED_EXPRESSION, vFor.loc)
+          createCompilerError(ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION, vFor.loc)
         )
       }
     } else {
@@ -255,7 +258,10 @@ export function buildSlots(
       if (staticSlotName) {
         if (seenSlotNames.has(staticSlotName)) {
           context.onError(
-            createCompilerError(ErrorCodes.X_DUPLICATE_SLOT_NAMES, dirLoc)
+            createCompilerError(
+              ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
+              dirLoc
+            )
           )
           continue
         }
@@ -268,7 +274,7 @@ export function buildSlots(
   if (hasTemplateSlots && extraneousChild) {
     context.onError(
       createCompilerError(
-        ErrorCodes.X_EXTRANEOUS_NON_SLOT_CHILDREN,
+        ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
         extraneousChild.loc
       )
     )

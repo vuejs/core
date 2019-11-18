@@ -1,9 +1,10 @@
-const fs = require('fs')
-const path = require('path')
-const ts = require('rollup-plugin-typescript2')
-const replace = require('rollup-plugin-replace')
-const alias = require('rollup-plugin-alias')
-const json = require('rollup-plugin-json')
+import fs from 'fs'
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
+import replace from 'rollup-plugin-replace'
+import alias from 'rollup-plugin-alias'
+import json from 'rollup-plugin-json'
+import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -59,7 +60,7 @@ const packageConfigs = process.env.PROD_ONLY
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
-    if (format === 'cjs') {
+    if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
     if (format === 'global' || format === 'esm-browser') {
@@ -68,14 +69,17 @@ if (process.env.NODE_ENV === 'production') {
   })
 }
 
-module.exports = packageConfigs
+export default packageConfigs
 
 function createConfig(output, plugins = []) {
+  output.externalLiveBindings = false
+
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
-  const isBunlderESMBuild = /\.esm\.js$/.test(output.file)
+  const isBundlerESMBuild = /\.esm-bundler\.js$/.test(output.file)
   const isBrowserESMBuild = /esm-browser(\.prod)?\.js$/.test(output.file)
+  const isRuntimeCompileBuild = /vue\./.test(output.file)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -95,7 +99,7 @@ function createConfig(output, plugins = []) {
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
       },
-      exclude: ['**/__tests__']
+      exclude: ['**/__tests__', 'test-dts']
     }
   })
   // we only need to check TS and generate declarations once for each build.
@@ -103,7 +107,9 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const externals = Object.keys(aliasOptions).filter(p => p !== '@vue/shared')
+  const externals = Object.keys(aliasOptions)
+    .concat(Object.keys(pkg.dependencies || []))
+    .filter(p => p !== '@vue/shared')
 
   return {
     input: resolve(`src/index.ts`),
@@ -118,9 +124,10 @@ function createConfig(output, plugins = []) {
       aliasPlugin,
       createReplacePlugin(
         isProductionBuild,
-        isBunlderESMBuild,
+        isBundlerESMBuild,
         (isGlobalBuild || isBrowserESMBuild) &&
-          !packageOptions.enableNonBrowserBranches
+          !packageOptions.enableNonBrowserBranches,
+        isRuntimeCompileBuild
       ),
       ...plugins
     ],
@@ -133,22 +140,30 @@ function createConfig(output, plugins = []) {
   }
 }
 
-function createReplacePlugin(isProduction, isBunlderESMBuild, isBrowserBuild) {
+function createReplacePlugin(
+  isProduction,
+  isBundlerESMBuild,
+  isBrowserBuild,
+  isRuntimeCompileBuild
+) {
   return replace({
     __COMMIT__: `"${process.env.COMMIT}"`,
-    __DEV__: isBunlderESMBuild
+    __VERSION__: `"${lernaJson.version}"`,
+    __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
-        `process.env.NODE_ENV !== 'production'`
+        `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
+    // this is only used during tests
+    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
+    // support compile in browser?
+    __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean,
-    __FEATURE_SUSPENSE__: true,
-    // this is only used during tests
-    __JSDOM__: false
+    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
+    __FEATURE_SUSPENSE__: true
   })
 }
 

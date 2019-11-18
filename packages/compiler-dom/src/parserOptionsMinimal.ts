@@ -5,6 +5,12 @@ import {
   Namespaces,
   NodeTypes
 } from '@vue/compiler-core'
+import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+
+const isRawTextContainer = /*#__PURE__*/ makeMap(
+  'style,iframe,script,noscript',
+  true
+)
 
 export const enum DOMNamespaces {
   HTML = Namespaces.HTML,
@@ -13,6 +19,10 @@ export const enum DOMNamespaces {
 }
 
 export const parserOptionsMinimal: ParserOptions = {
+  isVoidTag,
+  isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
+  isPreTag: tag => tag === 'pre',
+
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
     let ns = parent ? parent.ns : DOMNamespaces.HTML
@@ -68,18 +78,10 @@ export const parserOptionsMinimal: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (
-        /^(?:style|xmp|iframe|noembed|noframes|script|noscript)$/i.test(tag)
-      ) {
+      if (isRawTextContainer(tag)) {
         return TextModes.RAWTEXT
       }
     }
     return TextModes.DATA
-  },
-
-  isVoidTag(tag: string): boolean {
-    return /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i.test(
-      tag
-    )
   }
 }

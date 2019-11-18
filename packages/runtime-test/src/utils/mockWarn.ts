@@ -1,6 +1,6 @@
 declare global {
   namespace jest {
-    interface Matchers<R> {
+    interface Matchers<R, T> {
       toHaveBeenWarned(): R
       toHaveBeenWarnedLast(): R
       toHaveBeenWarnedTimes(n: number): R

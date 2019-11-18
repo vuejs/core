@@ -1,6 +1,7 @@
 import { VNode } from './vnode'
 import { ComponentInternalInstance, LifecycleHooks } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
+import { isPromise, isFunction } from '@vue/shared'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -15,6 +16,7 @@ export const enum ErrorCodes {
   DIRECTIVE_HOOK,
   APP_ERROR_HANDLER,
   APP_WARN_HANDLER,
+  FUNCTION_REF,
   SCHEDULER
 }
 
@@ -42,6 +44,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.DIRECTIVE_HOOK]: 'directive hook',
   [ErrorCodes.APP_ERROR_HANDLER]: 'app errorHandler',
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
+  [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
@@ -53,9 +56,9 @@ export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: any[]
+  args?: unknown[]
 ) {
-  let res: any
+  let res
   try {
     res = args ? fn(...args) : fn()
   } catch (err) {
@@ -65,18 +68,24 @@ export function callWithErrorHandling(
 }
 
 export function callWithAsyncErrorHandling(
-  fn: Function,
+  fn: Function | Function[],
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
-  args?: any[]
+  args?: unknown[]
 ) {
-  const res = callWithErrorHandling(fn, instance, type, args)
-  if (res != null && !res._isVue && typeof res.then === 'function') {
-    res.catch((err: any) => {
-      handleError(err, instance, type)
-    })
+  if (isFunction(fn)) {
+    const res = callWithErrorHandling(fn, instance, type, args)
+    if (res != null && !res._isVue && isPromise(res)) {
+      res.catch((err: Error) => {
+        handleError(err, instance, type)
+      })
+    }
+    return res
   }
-  return res
+
+  for (let i = 0; i < fn.length; i++) {
+    callWithAsyncErrorHandling(fn[i], instance, type, args)
+  }
 }
 
 export function handleError(
@@ -117,13 +126,15 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
+// Test-only toggle for testing the uhandled warning behavior
+let forceRecover = false
+export function setErrorRecovery(value: boolean) {
+  forceRecover = value
+}
+
 function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   // default behavior is crash in prod & test, recover in dev.
-  // TODO we should probably make this configurable via `createApp`
-  if (
-    __DEV__ &&
-    !(typeof process !== 'undefined' && process.env.NODE_ENV === 'test')
-  ) {
+  if (__DEV__ && (forceRecover || !__TEST__)) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {
       pushWarningContext(contextVNode)

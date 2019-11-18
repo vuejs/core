@@ -9,9 +9,15 @@ import {
   lock,
   unlock,
   effect,
-  ref
+  ref,
+  readonlyProps
 } from '../src'
 import { mockWarn } from '@vue/runtime-test'
+
+/**
+ * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
+ */
+type Writable<T> = { -readonly [P in keyof T]: T[P] }
 
 describe('reactivity/readonly', () => {
   mockWarn()
@@ -38,26 +44,50 @@ describe('reactivity/readonly', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
+      const qux = Symbol('qux')
+      const original = {
+        foo: 1,
+        bar: {
+          baz: 2
+        },
+        [qux]: 3
+      }
+      const observed: Writable<typeof original> = readonly(original)
+
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       observed.bar.baz = 3
       expect(observed.bar.baz).toBe(2)
       expect(
         `Set operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
+      observed[qux] = 4
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Set operation on key "Symbol(qux)" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
       delete observed.foo
       expect(observed.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       delete observed.bar.baz
       expect(observed.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
+      delete observed[qux]
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Delete operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
     })
 
@@ -412,5 +442,33 @@ describe('reactivity/readonly', () => {
     expect(
       `Set operation on key "value" failed: target is readonly.`
     ).toHaveBeenWarned()
+  })
+
+  describe('readonlyProps', () => {
+    test('should not unwrap root-level refs', () => {
+      const props = readonlyProps({ n: ref(1) })
+      expect(props.n.value).toBe(1)
+    })
+
+    test('should unwrap nested refs', () => {
+      const props = readonlyProps({ foo: { bar: ref(1) } })
+      expect(props.foo.bar).toBe(1)
+    })
+
+    test('should make properties readonly', () => {
+      const props = readonlyProps({ n: ref(1) })
+      props.n.value = 2
+      expect(props.n.value).toBe(1)
+      expect(
+        `Set operation on key "value" failed: target is readonly.`
+      ).toHaveBeenWarned()
+
+      // @ts-ignore
+      props.n = 2
+      expect(props.n.value).toBe(1)
+      expect(
+        `Set operation on key "n" failed: target is readonly.`
+      ).toHaveBeenWarned()
+    })
   })
 })

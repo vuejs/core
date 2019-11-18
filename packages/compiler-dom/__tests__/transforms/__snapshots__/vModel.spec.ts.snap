@@ -1,0 +1,192 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: transform v-model modifiers .lazy 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { lazy: true }
+      ]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .number 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { number: true }
+      ]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .trim 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { trim: true }
+      ]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelText, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (checkbox) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelCheckbox: _vModelCheckbox, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      type: \\"checkbox\\",
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelCheckbox, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (dynamic type) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelDynamic: _vModelDynamic, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    const _directive_bind = _resolveDirective(\\"bind\\")
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_directive_bind, foo, \\"type\\"],
+      [_vModelDynamic, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (radio) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelRadio: _vModelRadio, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      type: \\"radio\\",
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelRadio, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (text) 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
+      type: \\"text\\",
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelText, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for select 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelSelect: _vModelSelect, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"select\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelSelect, model]
+    ]))
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for textarea 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    return (_openBlock(), _withDirectives(_createBlock(\\"textarea\\", {
+      modelValue: model,
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]), [
+      [_vModelText, model]
+    ]))
+  }
+}"
+`;

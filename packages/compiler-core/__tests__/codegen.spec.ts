@@ -13,15 +13,16 @@ import {
   createCallExpression,
   createConditionalExpression,
   IfCodegenNode,
-  ForCodegenNode
+  ForCodegenNode,
+  createCacheExpression
 } from '../src'
 import {
   CREATE_VNODE,
-  COMMENT,
   TO_STRING,
   RESOLVE_DIRECTIVE,
   helperNameMap,
-  RESOLVE_COMPONENT
+  RESOLVE_COMPONENT,
+  CREATE_COMMENT
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
 import { PatchFlags } from '@vue/shared'
@@ -34,7 +35,8 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     components: [],
     directives: [],
     hoists: [],
-    codegenNode: undefined,
+    cached: 0,
+    codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
   }
@@ -89,7 +91,7 @@ describe('compiler: codegen', () => {
 
   test('assets', () => {
     const root = createRoot({
-      components: [`Foo`, `bar-baz`],
+      components: [`Foo`, `bar-baz`, `barbaz`],
       directives: [`my_dir`]
     })
     const { code } = generate(root, { mode: 'function' })
@@ -97,9 +99,14 @@ describe('compiler: codegen', () => {
       `const _component_Foo = _${helperNameMap[RESOLVE_COMPONENT]}("Foo")\n`
     )
     expect(code).toMatch(
-      `const _component_barbaz = _${
+      `const _component_bar_baz = _${
         helperNameMap[RESOLVE_COMPONENT]
       }("bar-baz")\n`
+    )
+    expect(code).toMatch(
+      `const _component_barbaz = _${
+        helperNameMap[RESOLVE_COMPONENT]
+      }("barbaz")\n`
     )
     expect(code).toMatch(
       `const _directive_my_dir = _${
@@ -142,7 +149,6 @@ describe('compiler: codegen', () => {
         codegenNode: {
           type: NodeTypes.TEXT,
           content: 'hello',
-          isEmpty: false,
           loc: locStub
         }
       })
@@ -171,11 +177,7 @@ describe('compiler: codegen', () => {
         }
       })
     )
-    expect(code).toMatch(
-      `return _${helperNameMap[CREATE_VNODE]}(_${
-        helperNameMap[COMMENT]
-      }, 0, "foo")`
-    )
+    expect(code).toMatch(`return _${helperNameMap[CREATE_COMMENT]}("foo")`)
     expect(code).toMatchSnapshot()
   })
 
@@ -351,6 +353,54 @@ describe('compiler: codegen', () => {
       : orNot
         ? bar()
         : baz()`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('CacheExpression', () => {
+    const { code } = generate(
+      createRoot({
+        cached: 1,
+        codegenNode: createCacheExpression(
+          1,
+          createSimpleExpression(`foo`, false)
+        )
+      }),
+      {
+        mode: 'module',
+        prefixIdentifiers: true
+      }
+    )
+    expect(code).toMatch(`const _cache = _ctx.$cache`)
+    expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('CacheExpression w/ isVNode: true', () => {
+    const { code } = generate(
+      createRoot({
+        cached: 1,
+        codegenNode: createCacheExpression(
+          1,
+          createSimpleExpression(`foo`, false),
+          true
+        )
+      }),
+      {
+        mode: 'module',
+        prefixIdentifiers: true
+      }
+    )
+    expect(code).toMatch(`const _cache = _ctx.$cache`)
+    expect(code).toMatch(
+      `
+  _cache[1] || (
+    setBlockTracking(-1),
+    _cache[1] = foo,
+    setBlockTracking(1),
+    _cache[1]
+  )
+    `.trim()
     )
     expect(code).toMatchSnapshot()
   })

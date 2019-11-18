@@ -14,7 +14,9 @@ jobs:
           - v1-dependencies-{{ checksum "yarn.lock" }}
           - v1-dependencies-
 
-      - run: yarn install
+      - run:
+          name: Install Dependencies
+          command: yarn --frozen-lockfile
 
       - save_cache:
           paths:
@@ -22,4 +24,14 @@ jobs:
             - ~/.cache/yarn
           key: v1-dependencies-{{ checksum "yarn.lock" }}
 
-      - run: yarn test --ci --runInBand
+      - run:
+          name: Run Tests
+          command: yarn test --ci --runInBand
+
+      - run:
+          name: Test d.ts
+          command: yarn test-dts
+
+      - run:
+          name: Check size
+          command: yarn size

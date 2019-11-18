@@ -1,44 +1,52 @@
-import { isObject, toTypeString } from '@vue/shared'
-import { mutableHandlers, readonlyHandlers } from './baseHandlers'
-
+import { isObject, toRawType } from '@vue/shared'
+import {
+  mutableHandlers,
+  readonlyHandlers,
+  readonlyPropsHandlers
+} from './baseHandlers'
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-
-import { UnwrapNestedRefs } from './ref'
 import { ReactiveEffect } from './effect'
+import { UnwrapRef, Ref } from './ref'
+import { makeMap } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
 export type Dep = Set<ReactiveEffect>
-export type KeyToDepMap = Map<string | symbol, Dep>
-export const targetMap: WeakMap<any, KeyToDepMap> = new WeakMap()
+export type KeyToDepMap = Map<any, Dep>
+export const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // WeakMaps that store {raw <-> observed} pairs.
-const rawToReactive: WeakMap<any, any> = new WeakMap()
-const reactiveToRaw: WeakMap<any, any> = new WeakMap()
-const rawToReadonly: WeakMap<any, any> = new WeakMap()
-const readonlyToRaw: WeakMap<any, any> = new WeakMap()
+const rawToReactive = new WeakMap<any, any>()
+const reactiveToRaw = new WeakMap<any, any>()
+const rawToReadonly = new WeakMap<any, any>()
+const readonlyToRaw = new WeakMap<any, any>()
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const readonlyValues: WeakSet<any> = new WeakSet()
-const nonReactiveValues: WeakSet<any> = new WeakSet()
+const readonlyValues = new WeakSet<any>()
+const nonReactiveValues = new WeakSet<any>()
 
-const collectionTypes: Set<any> = new Set([Set, Map, WeakMap, WeakSet])
-const observableValueRE = /^\[object (?:Object|Array|Map|Set|WeakMap|WeakSet)\]$/
+const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
+const isObservableType = /*#__PURE__*/ makeMap(
+  'Object,Array,Map,Set,WeakMap,WeakSet'
+)
 
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
     !value._isVNode &&
-    observableValueRE.test(toTypeString(value)) &&
+    isObservableType(toRawType(value)) &&
     !nonReactiveValues.has(value)
   )
 }
+
+// only unwrap nested ref
+type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
@@ -61,8 +69,7 @@ export function reactive(target: object) {
 
 export function readonly<T extends object>(
   target: T
-): Readonly<UnwrapNestedRefs<T>>
-export function readonly(target: object) {
+): Readonly<UnwrapNestedRefs<T>> {
   // value is a mutable observable, retrieve its original and return
   // a readonly version.
   if (reactiveToRaw.has(target)) {
@@ -77,8 +84,25 @@ export function readonly(target: object) {
   )
 }
 
+// @internal
+// Return a readonly-copy of a props object, without unwrapping refs at the root
+// level. This is intended to allow explicitly passing refs as props.
+// Technically this should use different global cache from readonly(), but
+// since it is only used on internal objects so it's not really necessary.
+export function readonlyProps<T extends object>(
+  target: T
+): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
+  return createReactiveObject(
+    target,
+    rawToReadonly,
+    readonlyToRaw,
+    readonlyPropsHandlers,
+    readonlyCollectionHandlers
+  )
+}
+
 function createReactiveObject(
-  target: any,
+  target: unknown,
   toProxy: WeakMap<any, any>,
   toRaw: WeakMap<any, any>,
   baseHandlers: ProxyHandler<any>,
@@ -115,11 +139,11 @@ function createReactiveObject(
   return observed
 }
 
-export function isReactive(value: any): boolean {
+export function isReactive(value: unknown): boolean {
   return reactiveToRaw.has(value) || readonlyToRaw.has(value)
 }
 
-export function isReadonly(value: any): boolean {
+export function isReadonly(value: unknown): boolean {
   return readonlyToRaw.has(value)
 }
 

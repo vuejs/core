@@ -13,7 +13,8 @@
   "sideEffects": false,
   "buildOptions": {
     "name": "VueDOMRuntime",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": ["esm", "cjs", "global", "esm-browser"],
+    "dts": ["jsx.d.ts"]
   },
   "repository": {
     "type": "git",

@@ -1,3 +1,5 @@
+import { Ref, ComponentPublicInstance } from '@vue/runtime-core'
+
 // This code is based on https://github.com/wonderful-panda/vue-tsx-support
 // published under the MIT license.
 // Copyright by @wonderful-panda
@@ -23,7 +25,7 @@
 
 interface HTMLAttributes {
   class?: any
-  style?: string | { [key: string]: string | number }
+  style?: string | Partial<CSSStyleDeclaration>
   accesskey?: string
   contenteditable?: boolean
   contextmenu?: string
@@ -740,7 +742,12 @@ type EventHandlers<E> = {
   [K in StringKeyOf<E>]?: E[K] extends Function ? E[K] : (payload: E[K]) => void
 }
 
-type ElementAttrs<T> = T & EventHandlers<Events>
+type ReservedProps = {
+  key?: string | number
+  ref?: string | Ref | ((ref: Element | ComponentPublicInstance | null) => void)
+}
+
+type ElementAttrs<T> = T & EventHandlers<Events> & ReservedProps
 
 type NativeElements = {
   [K in StringKeyOf<IntrinsicElementAttributes>]: ElementAttrs<
@@ -748,16 +755,21 @@ type NativeElements = {
   >
 }
 
-declare namespace JSX {
-  interface Element {}
-  interface ElementClass {
-    $props: {}
-  }
-  interface ElementAttributesProperty {
-    $props: {}
-  }
-  interface IntrinsicElements extends NativeElements {
-    // allow arbitrary elements
-    [name: string]: any
+declare global {
+  namespace JSX {
+    interface Element {}
+    interface ElementClass {
+      $props: {}
+    }
+    interface ElementAttributesProperty {
+      $props: {}
+    }
+    interface IntrinsicElements extends NativeElements {
+      // allow arbitrary elements
+      [name: string]: any
+    }
   }
 }
+
+// suppress ts:2669
+export {}

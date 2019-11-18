@@ -1,10 +1,10 @@
-import { Component, Data } from './component'
+import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
-import { Directive } from './directives'
-import { RootRenderFunction } from './createRenderer'
+import { Directive, validateDirectiveName } from './directives'
+import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
-import { isFunction } from '@vue/shared'
+import { isFunction, NO } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -18,15 +18,17 @@ export interface App<HostElement = any> {
   directive(name: string, directive: Directive): this
   mount(
     rootComponent: Component,
-    rootContainer: HostElement,
+    rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
-  provide<T>(key: InjectionKey<T> | string, value: T): void
+  provide<T>(key: InjectionKey<T> | string, value: T): this
 }
 
 export interface AppConfig {
   devtools: boolean
   performance: boolean
+  readonly isNativeTag?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean
   errorHandler?: (
     err: Error,
     instance: ComponentPublicInstance | null,
@@ -60,6 +62,8 @@ export function createAppContext(): AppContext {
     config: {
       devtools: true,
       performance: false,
+      isNativeTag: NO,
+      isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
     },
@@ -75,6 +79,7 @@ export function createAppAPI<HostNode, HostElement>(
 ): () => App<HostElement> {
   return function createApp(): App {
     const context = createAppContext()
+    const installedPlugins = new Set()
 
     let isMounted = false
 
@@ -92,9 +97,13 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       use(plugin: Plugin) {
-        if (isFunction(plugin)) {
+        if (installedPlugins.has(plugin)) {
+          __DEV__ && warn(`Plugin has already been applied to target app.`)
+        } else if (isFunction(plugin)) {
+          installedPlugins.add(plugin)
           plugin(app)
         } else if (isFunction(plugin.install)) {
+          installedPlugins.add(plugin)
           plugin.install(app)
         } else if (__DEV__) {
           warn(
@@ -106,25 +115,52 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
-        context.mixins.push(mixin)
+        if (__DEV__ && !__FEATURE_OPTIONS__) {
+          warn('Mixins are only available in builds supporting Options API')
+        }
+
+        if (!context.mixins.includes(mixin)) {
+          context.mixins.push(mixin)
+        } else if (__DEV__) {
+          warn(
+            'Mixin has already been applied to target app' +
+              (mixin.name ? `: ${mixin.name}` : '')
+          )
+        }
+
         return app
       },
 
-      component(name: string, component?: Component) {
-        // TODO component name validation
+      component(name: string, component?: Component): any {
+        if (__DEV__) {
+          validateComponentName(name, context.config)
+        }
         if (!component) {
-          return context.components[name] as any
+          return context.components[name]
         } else {
+          if (__DEV__ && context.components[name]) {
+            warn(
+              `Component "${name}" has already been registered in target app.`
+            )
+          }
           context.components[name] = component
           return app
         }
       },
 
       directive(name: string, directive?: Directive) {
-        // TODO directive name validation
+        if (__DEV__) {
+          validateDirectiveName(name)
+        }
+
         if (!directive) {
           return context.directives[name] as any
         } else {
+          if (__DEV__ && context.directives[name]) {
+            warn(
+              `Directive "${name}" has already been registered in target app.`
+            )
+          }
           context.directives[name] = directive
           return app
         }
@@ -132,7 +168,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       mount(
         rootComponent: Component,
-        rootContainer: string | HostElement,
+        rootContainer: HostElement,
         rootProps?: Data
       ): any {
         if (!isMounted) {
@@ -157,7 +193,11 @@ export function createAppAPI<HostNode, HostElement>(
               `It will be overwritten with the new value.`
           )
         }
-        context.provides[key as any] = value
+        // TypeScript doesn't allow symbols as index type
+        // https://github.com/Microsoft/TypeScript/issues/24587
+        context.provides[key as string] = value
+
+        return app
       }
     }
 

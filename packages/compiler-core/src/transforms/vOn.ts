@@ -1,5 +1,6 @@
-import { DirectiveTransform } from '../transform'
+import { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
+  DirectiveNode,
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
@@ -10,16 +11,27 @@ import {
 import { capitalize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { isMemberExpression, hasScopeRef } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
-const simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['[^']*?']|\["[^"]*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*$/
 
-// v-on without arg is handled directly in ./element.ts due to it affecting
-// codegen for the entire props object. This transform here is only for v-on
-// *with* args.
-export const transformOn: DirectiveTransform = (dir, context) => {
-  const { loc, modifiers } = dir
-  const arg = dir.arg!
+export interface VOnDirectiveNode extends DirectiveNode {
+  // v-on without arg is handled directly in ./transformElements.ts due to it affecting
+  // codegen for the entire props object. This transform here is only for v-on
+  // *with* args.
+  arg: ExpressionNode
+  // exp is guaranteed to be a simple expression here because v-on w/ arg is
+  // skipped by transformExpression as a special case.
+  exp: SimpleExpressionNode | undefined
+}
+
+export const transformOn: DirectiveTransform = (
+  dir: VOnDirectiveNode,
+  node,
+  context,
+  augmentor
+) => {
+  const { loc, modifiers, arg } = dir
   if (!dir.exp && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
@@ -40,24 +52,37 @@ export const transformOn: DirectiveTransform = (dir, context) => {
     eventName.children.unshift(`"on" + (`)
     eventName.children.push(`)`)
   }
-  // TODO .once modifier handling since it is platform agnostic
-  // other modifiers are handled in compiler-dom
 
   // handler processing
-  if (dir.exp) {
-    // exp is guaranteed to be a simple expression here because v-on w/ arg is
-    // skipped by transformExpression as a special case.
-    let exp: ExpressionNode = dir.exp as SimpleExpressionNode
-    const isInlineStatement = !(
-      simplePathRE.test(exp.content) || fnExpRE.test(exp.content)
-    )
+  let exp: ExpressionNode | undefined = dir.exp
+  let isCacheable: boolean = !exp
+  if (exp) {
+    const isMemberExp = isMemberExpression(exp.content)
+    const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
       context.addIdentifiers(`$event`)
       exp = processExpression(exp, context)
       context.removeIdentifiers(`$event`)
+      // with scope analysis, the function is hoistable if it has no reference
+      // to scope variables.
+      isCacheable =
+        context.cacheHandlers && !hasScopeRef(exp, context.identifiers)
+      // If the expression is optimizable and is a member expression pointing
+      // to a function, turn it into invocation (and wrap in an arrow function
+      // below) so that it always accesses the latest value when called - thus
+      // avoiding the need to be patched.
+      if (isCacheable && isMemberExp) {
+        if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+          exp.content += `($event)`
+        } else {
+          exp.children.push(`($event)`)
+        }
+      }
     }
-    if (isInlineStatement) {
+
+    if (isInlineStatement || (isCacheable && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
         `$event => (`,
@@ -65,14 +90,29 @@ export const transformOn: DirectiveTransform = (dir, context) => {
         `)`
       ])
     }
-    dir.exp = exp
   }
 
-  return {
-    props: createObjectProperty(
-      eventName,
-      dir.exp || createSimpleExpression(`() => {}`, false, loc)
-    ),
+  let ret: DirectiveTransformResult = {
+    props: [
+      createObjectProperty(
+        eventName,
+        exp || createSimpleExpression(`() => {}`, false, loc)
+      )
+    ],
     needRuntime: false
   }
+
+  // apply extended compiler augmentor
+  if (augmentor) {
+    ret = augmentor(ret)
+  }
+
+  if (isCacheable) {
+    // cache handlers so that it's always the same handler being passed down.
+    // this avoids unnecessary re-renders when users use inline handlers on
+    // components.
+    ret.props[0].value = context.cache(ret.props[0].value)
+  }
+
+  return ret
 }

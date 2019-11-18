@@ -13,165 +13,218 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createObjectExpression,
-  Property,
-  SourceLocation
+  Property
 } from '../ast'
-import { isArray, PatchFlags, PatchFlagNames } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
-  APPLY_DIRECTIVES,
+  WITH_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
+  RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
-  TO_HANDLERS
+  TO_HANDLERS,
+  PORTAL,
+  SUSPENSE,
+  KEEP_ALIVE
 } from '../runtimeHelpers'
-import { getInnerRange, isVSlot, toValidAssetId } from '../utils'
+import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
 import { buildSlots } from './vSlot'
+import { isStaticNode } from './hoistStatic'
+
+// some directive transforms (e.g. v-model) may return a symbol for runtime
+// import, which should be used instead of a resolveDirective call.
+const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
-  if (node.type === NodeTypes.ELEMENT) {
-    if (
-      node.tagType === ElementTypes.ELEMENT ||
-      node.tagType === ElementTypes.COMPONENT ||
-      // <template> with v-if or v-for are ignored during traversal.
-      // <template> without v-slot should be treated as a normal element.
-      (node.tagType === ElementTypes.TEMPLATE && !node.props.some(isVSlot))
-    ) {
-      // perform the work on exit, after all child expressions have been
-      // processed and merged.
-      return () => {
-        const isComponent = node.tagType === ElementTypes.COMPONENT
-        let hasProps = node.props.length > 0
-        const hasChildren = node.children.length > 0
-        let patchFlag: number = 0
-        let runtimeDirectives: DirectiveNode[] | undefined
-        let dynamicPropNames: string[] | undefined
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    // handled by transformSlotOutlet
+    node.tagType === ElementTypes.SLOT ||
+    // <template v-if/v-for> should have already been replaced
+    // <templte v-slot> is handled by buildSlots
+    (node.tagType === ElementTypes.TEMPLATE && node.props.some(isVSlot))
+  ) {
+    return
+  }
+  // perform the work on exit, after all child expressions have been
+  // processed and merged.
+  return function postTransformElement() {
+    const { tag, tagType, props } = node
+    const isPortal = tag === 'portal' || tag === 'Portal'
+    const isSuspense = tag === 'suspense' || tag === 'Suspense'
+    const isKeepAlive = tag === 'keep-alive' || tag === 'KeepAlive'
+    const isComponent = tagType === ElementTypes.COMPONENT
 
-        if (isComponent) {
-          context.helper(RESOLVE_COMPONENT)
-          context.components.add(node.tag)
+    let hasProps = props.length > 0
+    let patchFlag: number = 0
+    let runtimeDirectives: DirectiveNode[] | undefined
+    let dynamicPropNames: string[] | undefined
+    let dynamicComponent: string | CallExpression | undefined
+
+    // handle dynamic component
+    const isProp = findProp(node, 'is')
+    if (tag === 'component') {
+      if (isProp) {
+        // static <component is="foo" />
+        if (isProp.type === NodeTypes.ATTRIBUTE) {
+          const tag = isProp.value && isProp.value.content
+          if (tag) {
+            context.helper(RESOLVE_COMPONENT)
+            context.components.add(tag)
+            dynamicComponent = toValidAssetId(tag, `component`)
+          }
         }
-
-        const args: CallExpression['arguments'] = [
-          isComponent ? toValidAssetId(node.tag, `component`) : `"${node.tag}"`
-        ]
-        // props
-        if (hasProps) {
-          const propsBuildResult = buildProps(
-            node.props,
-            node.loc,
-            context,
-            isComponent
+        // dynamic <component :is="asdf" />
+        else if (isProp.exp) {
+          dynamicComponent = createCallExpression(
+            context.helper(RESOLVE_DYNAMIC_COMPONENT),
+            [isProp.exp]
           )
-          patchFlag = propsBuildResult.patchFlag
-          dynamicPropNames = propsBuildResult.dynamicPropNames
-          runtimeDirectives = propsBuildResult.directives
-          if (!propsBuildResult.props) {
-            hasProps = false
-          } else {
-            args.push(propsBuildResult.props)
-          }
-        }
-        // children
-        if (hasChildren) {
-          if (!hasProps) {
-            args.push(`null`)
-          }
-          if (isComponent) {
-            const { slots, hasDynamicSlots } = buildSlots(node, context)
-            args.push(slots)
-            if (hasDynamicSlots) {
-              patchFlag |= PatchFlags.DYNAMIC_SLOTS
-            }
-          } else if (node.children.length === 1) {
-            const child = node.children[0]
-            const type = child.type
-            const hasDynamicTextChild =
-              type === NodeTypes.INTERPOLATION ||
-              type === NodeTypes.COMPOUND_EXPRESSION
-            if (hasDynamicTextChild) {
-              patchFlag |= PatchFlags.TEXT
-            }
-            // pass directly if the only child is a text node
-            // (plain / interpolation / expression)
-            if (hasDynamicTextChild || type === NodeTypes.TEXT) {
-              args.push(child)
-            } else {
-              args.push(node.children)
-            }
-          } else {
-            args.push(node.children)
-          }
-        }
-        // patchFlag & dynamicPropNames
-        if (patchFlag !== 0) {
-          if (!hasChildren) {
-            if (!hasProps) {
-              args.push(`null`)
-            }
-            args.push(`null`)
-          }
-          if (__DEV__) {
-            const flagNames = Object.keys(PatchFlagNames)
-              .map(Number)
-              .filter(n => n > 0 && patchFlag & n)
-              .map(n => PatchFlagNames[n])
-              .join(`, `)
-            args.push(patchFlag + ` /* ${flagNames} */`)
-          } else {
-            args.push(patchFlag + '')
-          }
-          if (dynamicPropNames && dynamicPropNames.length) {
-            args.push(
-              `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
-            )
-          }
-        }
-
-        const { loc } = node
-        const vnode = createCallExpression(
-          context.helper(CREATE_VNODE),
-          args,
-          loc
-        )
-
-        if (runtimeDirectives && runtimeDirectives.length) {
-          node.codegenNode = createCallExpression(
-            context.helper(APPLY_DIRECTIVES),
-            [
-              vnode,
-              createArrayExpression(
-                runtimeDirectives.map(dir => {
-                  return createDirectiveArgs(dir, context)
-                }),
-                loc
-              )
-            ],
-            loc
-          )
-        } else {
-          node.codegenNode = vnode
         }
       }
     }
+
+    let nodeType
+    if (dynamicComponent) {
+      nodeType = dynamicComponent
+    } else if (isPortal) {
+      nodeType = context.helper(PORTAL)
+    } else if (isSuspense) {
+      nodeType = context.helper(SUSPENSE)
+    } else if (isKeepAlive) {
+      nodeType = context.helper(KEEP_ALIVE)
+    } else if (isComponent) {
+      // user component w/ resolve
+      context.helper(RESOLVE_COMPONENT)
+      context.components.add(tag)
+      nodeType = toValidAssetId(tag, `component`)
+    } else {
+      // plain element
+      nodeType = `"${node.tag}"`
+    }
+
+    const args: CallExpression['arguments'] = [nodeType]
+    // props
+    if (hasProps) {
+      const propsBuildResult = buildProps(
+        node,
+        context,
+        // skip reserved "is" prop <component is>
+        isProp ? node.props.filter(p => p !== isProp) : node.props
+      )
+      patchFlag = propsBuildResult.patchFlag
+      dynamicPropNames = propsBuildResult.dynamicPropNames
+      runtimeDirectives = propsBuildResult.directives
+      if (!propsBuildResult.props) {
+        hasProps = false
+      } else {
+        args.push(propsBuildResult.props)
+      }
+    }
+    // children
+    const hasChildren = node.children.length > 0
+    if (hasChildren) {
+      if (!hasProps) {
+        args.push(`null`)
+      }
+      // Portal should have normal children instead of slots
+      if (isComponent && !isPortal) {
+        const { slots, hasDynamicSlots } = buildSlots(node, context)
+        args.push(slots)
+        if (hasDynamicSlots) {
+          patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        }
+      } else if (node.children.length === 1) {
+        const child = node.children[0]
+        const type = child.type
+        // check for dynamic text children
+        const hasDynamicTextChild =
+          type === NodeTypes.INTERPOLATION ||
+          type === NodeTypes.COMPOUND_EXPRESSION
+        if (hasDynamicTextChild && !isStaticNode(child)) {
+          patchFlag |= PatchFlags.TEXT
+        }
+        // pass directly if the only child is a text node
+        // (plain / interpolation / expression)
+        if (hasDynamicTextChild || type === NodeTypes.TEXT) {
+          args.push(child)
+        } else {
+          args.push(node.children)
+        }
+      } else {
+        args.push(node.children)
+      }
+    }
+    // patchFlag & dynamicPropNames
+    if (patchFlag !== 0) {
+      if (!hasChildren) {
+        if (!hasProps) {
+          args.push(`null`)
+        }
+        args.push(`null`)
+      }
+      if (__DEV__) {
+        const flagNames = Object.keys(PatchFlagNames)
+          .map(Number)
+          .filter(n => n > 0 && patchFlag & n)
+          .map(n => PatchFlagNames[n])
+          .join(`, `)
+        args.push(patchFlag + ` /* ${flagNames} */`)
+      } else {
+        args.push(patchFlag + '')
+      }
+      if (dynamicPropNames && dynamicPropNames.length) {
+        args.push(stringifyDynamicPropNames(dynamicPropNames))
+      }
+    }
+
+    const { loc } = node
+    const vnode = createCallExpression(context.helper(CREATE_VNODE), args, loc)
+
+    if (runtimeDirectives && runtimeDirectives.length) {
+      node.codegenNode = createCallExpression(
+        context.helper(WITH_DIRECTIVES),
+        [
+          vnode,
+          createArrayExpression(
+            runtimeDirectives.map(dir => buildDirectiveArgs(dir, context)),
+            loc
+          )
+        ],
+        loc
+      )
+    } else {
+      node.codegenNode = vnode
+    }
   }
+}
+
+function stringifyDynamicPropNames(props: string[]): string {
+  let propsNamesString = `[`
+  for (let i = 0, l = props.length; i < l; i++) {
+    propsNamesString += JSON.stringify(props[i])
+    if (i < l - 1) propsNamesString += ', '
+  }
+  return propsNamesString + `]`
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 
 export function buildProps(
-  props: ElementNode['props'],
-  elementLoc: SourceLocation,
+  node: ElementNode,
   context: TransformContext,
-  isComponent: boolean = false
+  props: ElementNode['props'] = node.props
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
   patchFlag: number
   dynamicPropNames: string[]
 } {
+  const elementLoc = node.loc
+  const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
@@ -186,17 +239,23 @@ export function buildProps(
 
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
-      if (value.type !== NodeTypes.SIMPLE_EXPRESSION || !value.isStatic) {
-        const name = key.content
-        if (name === 'ref') {
-          hasRef = true
-        } else if (name === 'class') {
-          hasClassBinding = true
-        } else if (name === 'style') {
-          hasStyleBinding = true
-        } else if (name !== 'key') {
-          dynamicPropNames.push(key.content)
-        }
+      if (
+        value.type === NodeTypes.JS_CACHE_EXPRESSION ||
+        ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
+          value.type === NodeTypes.COMPOUND_EXPRESSION) &&
+          isStaticNode(value))
+      ) {
+        return
+      }
+      const name = key.content
+      if (name === 'ref') {
+        hasRef = true
+      } else if (name === 'class') {
+        hasClassBinding = true
+      } else if (name === 'style') {
+        hasStyleBinding = true
+      } else if (name !== 'key') {
+        dynamicPropNames.push(name)
       }
     } else {
       hasDynamicKeys = true
@@ -233,9 +292,14 @@ export function buildProps(
       if (name === 'slot') {
         if (!isComponent) {
           context.onError(
-            createCompilerError(ErrorCodes.X_MISPLACED_V_SLOT, loc)
+            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc)
           )
         }
+        continue
+      }
+
+      // skip v-once - it is handled by its dedicated transform.
+      if (name === 'once') {
         continue
       }
 
@@ -278,16 +342,14 @@ export function buildProps(
       const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
         // has built-in directive transform.
-        const { props, needRuntime } = directiveTransform(prop, context)
-        if (isArray(props)) {
-          properties.push(...props)
-          properties.forEach(analyzePatchFlag)
-        } else {
-          properties.push(props)
-          analyzePatchFlag(props)
-        }
+        const { props, needRuntime } = directiveTransform(prop, node, context)
+        props.forEach(analyzePatchFlag)
+        properties.push(...props)
         if (needRuntime) {
           runtimeDirectives.push(prop)
+          if (isSymbol(needRuntime)) {
+            directiveImportMap.set(prop, needRuntime)
+          }
         }
       } else {
         // no built-in transform, this is a user custom directive.
@@ -355,7 +417,7 @@ export function buildProps(
 // - onXXX handlers / style: merge into array
 // - class: merge into single expression with concatenation
 function dedupeProperties(properties: Property[]): Property[] {
-  const knownProps: Record<string, Property> = {}
+  const knownProps: Map<string, Property> = new Map()
   const deduped: Property[] = []
   for (let i = 0; i < properties.length; i++) {
     const prop = properties[i]
@@ -365,14 +427,19 @@ function dedupeProperties(properties: Property[]): Property[] {
       continue
     }
     const name = prop.key.content
-    const existing = knownProps[name]
+    const existing = knownProps.get(name)
     if (existing) {
-      if (name.startsWith('on') || name === 'style' || name === 'class') {
+      if (
+        name === 'style' ||
+        name === 'class' ||
+        name.startsWith('on') ||
+        name.startsWith('vnode')
+      ) {
         mergeAsArray(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse
     } else {
-      knownProps[name] = prop
+      knownProps.set(name, prop)
       deduped.push(prop)
     }
   }
@@ -390,20 +457,36 @@ function mergeAsArray(existing: Property, incoming: Property) {
   }
 }
 
-function createDirectiveArgs(
+function buildDirectiveArgs(
   dir: DirectiveNode,
   context: TransformContext
 ): ArrayExpression {
-  // inject statement for resolving directive
-  context.helper(RESOLVE_DIRECTIVE)
-  context.directives.add(dir.name)
-  const dirArgs: ArrayExpression['elements'] = [
-    toValidAssetId(dir.name, `directive`)
-  ]
+  const dirArgs: ArrayExpression['elements'] = []
+  const runtime = directiveImportMap.get(dir)
+  if (runtime) {
+    context.helper(runtime)
+    dirArgs.push(context.helperString(runtime))
+  } else {
+    // inject statement for resolving directive
+    context.helper(RESOLVE_DIRECTIVE)
+    context.directives.add(dir.name)
+    dirArgs.push(toValidAssetId(dir.name, `directive`))
+  }
   const { loc } = dir
   if (dir.exp) dirArgs.push(dir.exp)
-  if (dir.arg) dirArgs.push(dir.arg)
+  if (dir.arg) {
+    if (!dir.exp) {
+      dirArgs.push(`void 0`)
+    }
+    dirArgs.push(dir.arg)
+  }
   if (Object.keys(dir.modifiers).length) {
+    if (!dir.arg) {
+      if (!dir.exp) {
+        dirArgs.push(`void 0`)
+      }
+      dirArgs.push(`void 0`)
+    }
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
