@@ -2,7 +2,7 @@
 
 exports[`compile should contain standard transforms 1`] = `
 "const _Vue = Vue
-const _createVNode = Vue.createVNode
+const { createVNode: _createVNode } = Vue
 
 const _hoisted_1 = {}
 
