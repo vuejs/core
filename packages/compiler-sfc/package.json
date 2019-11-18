@@ -35,5 +35,8 @@
     "postcss": "^7.0.21",
     "postcss-selector-parser": "^6.0.2",
     "source-map": "^0.7.3"
+  },
+  "devDependencies": {
+    "@types/lru-cache": "^5.1.0"
   }
 }

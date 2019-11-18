@@ -7,6 +7,7 @@ import {
   SourceLocation
 } from '@vue/compiler-core'
 import { RawSourceMap } from 'source-map'
+import LRUCache from 'lru-cache'
 
 export interface SFCParseOptions {
   needMap?: boolean
@@ -47,7 +48,8 @@ export interface SFCDescriptor {
   customBlocks: SFCBlock[]
 }
 
-const sourceToSFC = new Map<string, SFCDescriptor>()
+const SFC_CACHE_MAX_SIZE = 500
+const sourceToSFC = new LRUCache<string, SFCDescriptor>(SFC_CACHE_MAX_SIZE)
 export function parse(
   source: string,
   {
