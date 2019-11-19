@@ -74,6 +74,9 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
+    if (!node.children.length) {
+      return
+    }
     switch (node.tag) {
       case 'template':
         if (!sfc.template) {
