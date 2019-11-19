@@ -2,8 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
-import alias from 'rollup-plugin-alias'
-import json from 'rollup-plugin-json'
+import alias from '@rollup/plugin-alias'
+import json from '@rollup/plugin-json'
 import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
