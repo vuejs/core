@@ -4,7 +4,7 @@ import { mockWarn } from '@vue/runtime-test'
 describe('compiler:sfc', () => {
   mockWarn()
 
-  test('should not process if not children', () => {
+  test('should ignore nodes with no content', () => {
     expect(parse(`<template/>`).template).toBe(null)
     expect(parse(`<script/>`).script).toBe(null)
     expect(parse(`<style/>`).styles.length).toBe(0)
