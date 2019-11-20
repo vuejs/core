@@ -39,6 +39,9 @@ export interface KeepAliveSink {
   deactivate: (vnode: VNode) => void
 }
 
+export const isKeepAlive = (vnode: VNode): boolean =>
+  (vnode.type as any).__isKeepAlive
+
 const KeepAliveImpl = {
   name: `KeepAlive`,
 
@@ -46,6 +49,12 @@ const KeepAliveImpl = {
   // check directly on KeepAlive in the renderer, because importing it directly
   // would prevent it from being tree-shaken.
   __isKeepAlive: true,
+
+  props: {
+    include: [String, RegExp, Array],
+    exclude: [String, RegExp, Array],
+    max: [String, Number]
+  },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
     const cache: Cache = new Map()
@@ -197,14 +206,6 @@ const KeepAliveImpl = {
       current = vnode
       return vnode
     }
-  }
-}
-
-if (__DEV__) {
-  ;(KeepAliveImpl as any).props = {
-    include: [String, RegExp, Array],
-    exclude: [String, RegExp, Array],
-    max: [String, Number]
   }
 }
 

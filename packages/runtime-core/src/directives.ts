@@ -147,7 +147,7 @@ export function withDirectives<T extends VNode>(
 }
 
 export function invokeDirectiveHook(
-  hook: Function | Function[],
+  hook: ((...args: any[]) => any) | ((...args: any[]) => any)[],
   instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null

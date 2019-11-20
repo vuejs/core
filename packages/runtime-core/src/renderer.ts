@@ -6,7 +6,8 @@ import {
   normalizeVNode,
   VNode,
   VNodeChildren,
-  createVNode
+  createVNode,
+  isSameVNodeType
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -26,7 +27,8 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  PatchFlags
+  PatchFlags,
+  isArray
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
@@ -50,8 +52,12 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { KeepAliveSink } from './components/KeepAlive'
+import {
+  ErrorCodes,
+  callWithErrorHandling,
+  callWithAsyncErrorHandling
+} from './errorHandling'
+import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
@@ -128,10 +134,6 @@ function createDevEffectOptions(
   }
 }
 
-function isSameType(n1: VNode, n2: VNode): boolean {
-  return n1.type === n2.type && n1.key === n2.key
-}
-
 export function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
   for (let i = 0; i < hooks.length; i++) {
     hooks[i](arg)
@@ -203,7 +205,7 @@ export function createRenderer<
     optimized: boolean = false
   ) {
     // patching & not same type, unmount old tree
-    if (n1 != null && !isSameType(n1, n2)) {
+    if (n1 != null && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
@@ -386,7 +388,7 @@ export function createRenderer<
     hostInsert(el, container, anchor)
     if (props != null && props.onVnodeMounted != null) {
       queuePostRenderEffect(() => {
-        invokeDirectiveHook(props.onVnodeMounted, parentComponent, vnode)
+        invokeDirectiveHook(props.onVnodeMounted!, parentComponent, vnode)
       }, parentSuspense)
     }
   }
@@ -844,7 +846,7 @@ export function createRenderer<
     const Comp = initialVNode.type as Component
 
     // inject renderer internals for keepAlive
-    if ((Comp as any).__isKeepAlive) {
+    if (isKeepAlive(initialVNode)) {
       const sink = instance.sink as KeepAliveSink
       sink.renderer = internals
       sink.parentSuspense = parentSuspense
@@ -937,8 +939,9 @@ export function createRenderer<
         if (next !== null) {
           updateComponentPreRender(instance, next)
         }
+        const nextTree = renderComponentRoot(instance)
         const prevTree = instance.subTree
-        const nextTree = (instance.subTree = renderComponentRoot(instance))
+        instance.subTree = nextTree
         // beforeUpdate hook
         if (instance.bu !== null) {
           invokeHooks(instance.bu)
@@ -1167,7 +1170,7 @@ export function createRenderer<
       const n2 = optimized
         ? (c2[i] as HostVNode)
         : (c2[i] = normalizeVNode(c2[i]))
-      if (isSameType(n1, n2)) {
+      if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
           n2,
@@ -1192,7 +1195,7 @@ export function createRenderer<
       const n2 = optimized
         ? (c2[i] as HostVNode)
         : (c2[e2] = normalizeVNode(c2[e2]))
-      if (isSameType(n1, n2)) {
+      if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
           n2,
@@ -1308,7 +1311,7 @@ export function createRenderer<
           for (j = s2; j <= e2; j++) {
             if (
               newIndexToOldIndexMap[j - s2] === 0 &&
-              isSameType(prevChild, c2[j] as HostVNode)
+              isSameVNodeType(prevChild, c2[j] as HostVNode)
             ) {
               newIndex = j
               break
@@ -1459,14 +1462,68 @@ export function createRenderer<
     }
 
     if (doRemove) {
-      hostRemove(vnode.el!)
-      if (anchor != null) hostRemove(anchor)
+      const beforeRemoveHooks = props && props.onVnodeBeforeRemove
+      const remove = () => {
+        hostRemove(vnode.el!)
+        if (anchor != null) hostRemove(anchor)
+        const removedHook = props && props.onVnodeRemoved
+        removedHook && removedHook()
+      }
+      if (vnode.shapeFlag & ShapeFlags.ELEMENT && beforeRemoveHooks != null) {
+        const delayLeave = props && props.onVnodeDelayLeave
+        const performLeave = () => {
+          invokeBeforeRemoveHooks(
+            beforeRemoveHooks,
+            parentComponent,
+            vnode,
+            remove
+          )
+        }
+        if (delayLeave) {
+          delayLeave(performLeave)
+        } else {
+          performLeave()
+        }
+      } else {
+        remove()
+      }
     }
 
     if (props != null && props.onVnodeUnmounted != null) {
       queuePostRenderEffect(() => {
-        invokeDirectiveHook(props.onVnodeUnmounted, parentComponent, vnode)
+        invokeDirectiveHook(props.onVnodeUnmounted!, parentComponent, vnode)
       }, parentSuspense)
+    }
+  }
+
+  function invokeBeforeRemoveHooks(
+    hooks: ((...args: any[]) => any) | ((...args: any[]) => any)[],
+    instance: ComponentInternalInstance | null,
+    vnode: HostVNode,
+    done: () => void
+  ) {
+    if (!isArray(hooks)) {
+      hooks = [hooks]
+    }
+    let delayedRemoveCount = hooks.length
+    const doneRemove = () => {
+      delayedRemoveCount--
+      if (allHooksCalled && !delayedRemoveCount) {
+        done()
+      }
+    }
+    let allHooksCalled = false
+    for (let i = 0; i < hooks.length; i++) {
+      callWithAsyncErrorHandling(
+        hooks[i],
+        instance,
+        ErrorCodes.DIRECTIVE_HOOK,
+        [vnode, doneRemove]
+      )
+    }
+    allHooksCalled = true
+    if (!delayedRemoveCount) {
+      done()
     }
   }
 
