@@ -8,7 +8,7 @@ export const parserOptionsStandard: ParserOptions = {
 
   // https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
   namedCharacterReferences,
-  maxCRNameLength: Object.keys(namedCharacterReferences).reduce(
+  maxCRNameLength: /*#__PURE__*/ Object.keys(namedCharacterReferences).reduce(
     (max, name) => Math.max(max, name.length),
     0
   )
