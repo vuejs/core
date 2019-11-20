@@ -16,6 +16,7 @@ import { makeMap } from '@vue/shared'
 // Conceptually, it's easier to think of a dependency as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
+// ：raw = 原生
 export type Dep = Set<ReactiveEffect>
 export type KeyToDepMap = Map<any, Dep>
 export const targetMap = new WeakMap<any, KeyToDepMap>()
@@ -32,10 +33,13 @@ const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
+
+// ：可以被观察的类型 'Object,Array,Map,Set,WeakMap,WeakSet'
 const isObservableType = /*#__PURE__*/ makeMap(
   'Object,Array,Map,Set,WeakMap,WeakSet'
 )
 
+// 不是Vue 不是VNode 是可被观察的类型 nonReactiveValues（非响应式值）集合中没有这个对象
 const canObserve = (value: any): boolean => {
   return (
     !value._isVue &&
@@ -156,6 +160,7 @@ export function markReadonly<T>(value: T): T {
   return value
 }
 
+// (使一个响应式变量失去响应式，测试时候使用)
 export function markNonReactive<T>(value: T): T {
   nonReactiveValues.add(value)
   return value

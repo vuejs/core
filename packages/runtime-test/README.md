@@ -1,5 +1,7 @@
 # @vue/runtime-test
 
+这个模块的主要功能是用对象来表示 DOM 树，方便测试。
+
 ``` js
 import {
   h,

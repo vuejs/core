@@ -111,6 +111,9 @@ describe('reactivity/reactive', () => {
     expect(observed2).toBe(observed)
   })
 
+  // 不应使用代理污染原始对象
+  // 为代理对象1添加一个属性为另一个代理对象2时
+  // 原始对象1添加的属性应该是代理对象2的原始对象2
   test('should not pollute original object with Proxies', () => {
     const original: any = { foo: 1 }
     const original2 = { bar: 2 }
