@@ -1032,9 +1032,9 @@
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.6.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.6.0.tgz#1d2a94f3bf1b2bf35bb8fd18cfda37621986e50a"
-  integrity sha512-CWWARagbgvbegE74oeGCbjvQn13nTiVjTE8DjTB2tvGE2yvB5HxorhWaff+Dvu7kUnQ5Jf44FLibdq8QJssoaw==
+  version "7.6.1"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.6.1.tgz#12ba93af3d9b16a543cfafad07d1dbc20af67570"
+  integrity sha512-eR88qpvRowIF4eEvmHMN8F8ATMWw2vs2lBk7HlGqmj8uYPzKa673EsJ5hRazzv9VKoyj5O9oMKPs4paYPP2Iew==
   dependencies:
     "@microsoft/api-extractor-model" "7.5.6"
     "@microsoft/node-core-library" "3.18.0"
