@@ -1,5 +1,9 @@
-import { createComponent } from '../apiCreateComponent'
-import { getCurrentInstance, ComponentInternalInstance } from '../component'
+import {
+  getCurrentInstance,
+  ComponentInternalInstance,
+  SetupContext,
+  ComponentOptions
+} from '../component'
 import { cloneVNode, Comment, isSameVNodeType, VNode } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
@@ -26,9 +30,9 @@ export interface TransitionProps {
   onLeaveCancelled?: (el: any) => void
 }
 
-export const Transition = createComponent({
+const TransitionImpl = {
   name: `Transition`,
-  setup(props: TransitionProps, { slots }) {
+  setup(props: TransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     let isLeaving = false
     let isMounted = false
@@ -108,10 +112,10 @@ export const Transition = createComponent({
       return child
     }
   }
-})
+}
 
 if (__DEV__) {
-  ;(Transition as any).props = {
+  ;(TransitionImpl as ComponentOptions).props = {
     mode: String,
     appear: Boolean,
     // enter
@@ -124,6 +128,14 @@ if (__DEV__) {
     onLeave: Function,
     onAfterLeave: Function,
     onLeaveCancelled: Function
+  }
+}
+
+// export the public type for h/tsx inference
+// also to avoid inline import() in generated d.ts files
+export const Transition = (TransitionImpl as any) as {
+  new (): {
+    $props: TransitionProps
   }
 }
 
