@@ -8,7 +8,6 @@ import {
   isFunction,
   isArray,
   isObject,
-  isReservedProp,
   hasOwn,
   toRawType,
   PatchFlags,
@@ -122,8 +121,8 @@ export function resolveProps(
 
   if (rawProps != null) {
     for (const key in rawProps) {
-      // key, ref are reserved
-      if (isReservedProp(key)) continue
+      // key, ref are reserved and never passed down
+      if (key === 'key' || key === 'ref') continue
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       const camelKey = camelize(key)

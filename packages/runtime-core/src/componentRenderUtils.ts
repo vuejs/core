@@ -85,6 +85,12 @@ export function renderComponentRoot(
         )
       }
     }
+
+    // inherit transition data
+    if (vnode.transition != null) {
+      // TODO warn if component has transition data but root is a fragment
+      result.transition = vnode.transition
+    }
   } catch (err) {
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
     result = createVNode(Comment)

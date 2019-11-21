@@ -1,17 +1,12 @@
 import { createComponent } from '../apiCreateComponent'
-import { getCurrentInstance } from '../component'
-import {
-  cloneVNode,
-  Comment,
-  isSameVNodeType,
-  VNodeProps,
-  VNode,
-  mergeProps
-} from '../vnode'
+import { getCurrentInstance, ComponentInternalInstance } from '../component'
+import { cloneVNode, Comment, isSameVNodeType, VNode } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { onMounted } from '../apiLifecycle'
+import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
+import { ShapeFlags } from '../shapeFlags'
 
 // Using camel case here makes it easier to use in render functions & JSX.
 // In templates these will be written as @before-enter="xxx"
@@ -66,52 +61,51 @@ export const Transition = createComponent({
       }
 
       // at this point children has a guaranteed length of 1.
-      const rawChild = children[0]
+      const child = children[0]
       if (isLeaving) {
-        return placeholder(rawChild)
+        return placeholder(child)
       }
 
-      rawChild.transition = rawProps
+      let delayedLeave: (() => void) | undefined
+      const performDelayedLeave = () => delayedLeave && delayedLeave()
+      const transitionData = (child.transition = resolveTransitionData(
+        instance,
+        rawProps,
+        isMounted,
+        performDelayedLeave
+      ))
+
       // clone old subTree because we need to modify it
       const oldChild = instance.subTree
         ? (instance.subTree = cloneVNode(instance.subTree))
         : null
 
       // handle mode
-      let performDelayedLeave: (() => void) | undefined
       if (
         oldChild &&
-        !isSameVNodeType(rawChild, oldChild) &&
+        !isSameVNodeType(child, oldChild) &&
         oldChild.type !== Comment
       ) {
         // update old tree's hooks in case of dynamic transition
-        oldChild.transition = rawProps
+        // need to do this recursively in case of HOCs
+        updateHOCTransitionData(oldChild, transitionData)
         // switching between different views
         if (mode === 'out-in') {
           isLeaving = true
           // return placeholder node and queue update when leave finishes
-          oldChild.props = mergeProps(oldChild.props!, {
-            onVnodeRemoved() {
-              isLeaving = false
-              instance.update()
-            }
-          })
-          return placeholder(rawChild)
+          transitionData.afterLeave = () => {
+            isLeaving = false
+            instance.update()
+          }
+          return placeholder(child)
         } else if (mode === 'in-out') {
-          let delayedLeave: () => void
-          performDelayedLeave = () => delayedLeave()
-          oldChild.props = mergeProps(oldChild.props!, {
-            onVnodeDelayLeave(performLeave) {
-              delayedLeave = performLeave
-            }
-          })
+          transitionData.delayLeave = performLeave => {
+            delayedLeave = performLeave
+          }
         }
       }
 
-      return cloneVNode(
-        rawChild,
-        resolveTransitionInjections(rawProps, isMounted, performDelayedLeave)
-      )
+      return child
     }
   }
 })
@@ -133,7 +127,16 @@ if (__DEV__) {
   }
 }
 
-function resolveTransitionInjections(
+export interface TransitionData {
+  beforeEnter(el: object): void
+  enter(el: object): void
+  leave(el: object, remove: () => void): void
+  afterLeave?(): void
+  delayLeave?(performLeave: () => void): void
+}
+
+function resolveTransitionData(
+  instance: ComponentInternalInstance,
   {
     appear,
     onBeforeEnter,
@@ -146,24 +149,35 @@ function resolveTransitionInjections(
     onLeaveCancelled
   }: TransitionProps,
   isMounted: boolean,
-  performDelayedLeave?: () => void
-): VNodeProps {
-  // TODO handle appear
+  performDelayedLeave: () => void
+): TransitionData {
   // TODO handle cancel hooks
   return {
-    onVnodeBeforeMount(vnode) {
+    beforeEnter(el) {
       if (!isMounted && !appear) {
         return
       }
-      onBeforeEnter && onBeforeEnter(vnode.el)
+      onBeforeEnter &&
+        callWithAsyncErrorHandling(
+          onBeforeEnter,
+          instance,
+          ErrorCodes.TRANSITION_HOOK,
+          [el]
+        )
     },
-    onVnodeMounted({ el }) {
+    enter(el) {
       if (!isMounted && !appear) {
         return
       }
       const done = () => {
-        onAfterEnter && onAfterEnter(el)
-        performDelayedLeave && performDelayedLeave()
+        onAfterEnter &&
+          callWithAsyncErrorHandling(
+            onAfterEnter,
+            instance,
+            ErrorCodes.TRANSITION_HOOK,
+            [el]
+          )
+        performDelayedLeave()
       }
       if (onEnter) {
         onEnter(el, done)
@@ -171,16 +185,30 @@ function resolveTransitionInjections(
         done()
       }
     },
-    onVnodeBeforeRemove({ el }, remove) {
-      onBeforeLeave && onBeforeLeave(el)
+    leave(el, remove) {
+      onBeforeLeave &&
+        callWithAsyncErrorHandling(
+          onBeforeLeave,
+          instance,
+          ErrorCodes.TRANSITION_HOOK,
+          [el]
+        )
+      const afterLeave = () =>
+        onAfterLeave &&
+        callWithAsyncErrorHandling(
+          onAfterLeave,
+          instance,
+          ErrorCodes.TRANSITION_HOOK,
+          [el]
+        )
       if (onLeave) {
         onLeave(el, () => {
           remove()
-          onAfterLeave && onAfterLeave(el)
+          afterLeave()
         })
       } else {
         remove()
-        onAfterLeave && onAfterLeave(el)
+        afterLeave()
       }
     }
   }
@@ -195,5 +223,13 @@ function placeholder(vnode: VNode): VNode | undefined {
     vnode = cloneVNode(vnode)
     vnode.children = null
     return vnode
+  }
+}
+
+function updateHOCTransitionData(vnode: VNode, data: TransitionData) {
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    updateHOCTransitionData(vnode.component!.subTree, data)
+  } else {
+    vnode.transition = data
   }
 }

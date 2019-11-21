@@ -19,7 +19,7 @@ import { AppContext } from './apiApp'
 import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'
-import { TransitionProps } from './components/Transition'
+import { TransitionData } from './components/Transition'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -57,11 +57,6 @@ export interface VNodeProps {
   onVnodeUpdated?: (vnode: VNode, oldVNode: VNode) => void
   onVnodeBeforeUnmount?: (vnode: VNode) => void
   onVnodeUnmounted?: (vnode: VNode) => void
-
-  // transition hooks, internal.
-  onVnodeDelayLeave?: (performLeave: () => void) => void
-  onVnodeBeforeRemove?: (vnode: VNode, remove: () => void) => void
-  onVnodeRemoved?: () => void
 }
 
 type VNodeChildAtom<HostNode, HostElement> =
@@ -98,7 +93,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
   dirs: DirectiveBinding[] | null
-  transition: TransitionProps | null
+  transition: TransitionData | null
 
   // DOM
   el: HostNode | null

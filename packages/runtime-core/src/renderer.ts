@@ -27,8 +27,7 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  PatchFlags,
-  isArray
+  PatchFlags
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
@@ -52,11 +51,7 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import {
-  ErrorCodes,
-  callWithErrorHandling,
-  callWithAsyncErrorHandling
-} from './errorHandling'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
@@ -362,7 +357,7 @@ export function createRenderer<
     const tag = vnode.type as string
     isSVG = isSVG || tag === 'svg'
     const el = (vnode.el = hostCreateElement(tag, isSVG))
-    const { props, shapeFlag } = vnode
+    const { props, shapeFlag, transition } = vnode
     if (props != null) {
       for (const key in props) {
         if (isReservedProp(key)) continue
@@ -371,6 +366,9 @@ export function createRenderer<
       if (props.onVnodeBeforeMount != null) {
         invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
       }
+    }
+    if (transition != null) {
+      transition.beforeEnter(el)
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
@@ -386,9 +384,12 @@ export function createRenderer<
       )
     }
     hostInsert(el, container, anchor)
-    if (props != null && props.onVnodeMounted != null) {
+    const vnodeMountedHook = props && props.onVnodeMounted
+    if (vnodeMountedHook != null || transition != null) {
       queuePostRenderEffect(() => {
-        invokeDirectiveHook(props.onVnodeMounted!, parentComponent, vnode)
+        vnodeMountedHook &&
+          invokeDirectiveHook(vnodeMountedHook, parentComponent, vnode)
+        transition && transition.enter(el)
       }, parentSuspense)
     }
   }
@@ -1412,13 +1413,15 @@ export function createRenderer<
     doRemove?: boolean
   ) {
     const {
+      el,
       props,
       ref,
       type,
       children,
       dynamicChildren,
       shapeFlag,
-      anchor
+      anchor,
+      transition
     } = vnode
 
     // unset ref
@@ -1462,23 +1465,16 @@ export function createRenderer<
     }
 
     if (doRemove) {
-      const beforeRemoveHooks = props && props.onVnodeBeforeRemove
       const remove = () => {
         hostRemove(vnode.el!)
         if (anchor != null) hostRemove(anchor)
-        const removedHook = props && props.onVnodeRemoved
-        removedHook && removedHook()
-      }
-      if (vnode.shapeFlag & ShapeFlags.ELEMENT && beforeRemoveHooks != null) {
-        const delayLeave = props && props.onVnodeDelayLeave
-        const performLeave = () => {
-          invokeBeforeRemoveHooks(
-            beforeRemoveHooks,
-            parentComponent,
-            vnode,
-            remove
-          )
+        if (transition != null && transition.afterLeave) {
+          transition.afterLeave()
         }
+      }
+      if (vnode.shapeFlag & ShapeFlags.ELEMENT && transition != null) {
+        const { leave, delayLeave } = transition
+        const performLeave = () => leave(el!, remove)
         if (delayLeave) {
           delayLeave(performLeave)
         } else {
@@ -1493,37 +1489,6 @@ export function createRenderer<
       queuePostRenderEffect(() => {
         invokeDirectiveHook(props.onVnodeUnmounted!, parentComponent, vnode)
       }, parentSuspense)
-    }
-  }
-
-  function invokeBeforeRemoveHooks(
-    hooks: ((...args: any[]) => any) | ((...args: any[]) => any)[],
-    instance: ComponentInternalInstance | null,
-    vnode: HostVNode,
-    done: () => void
-  ) {
-    if (!isArray(hooks)) {
-      hooks = [hooks]
-    }
-    let delayedRemoveCount = hooks.length
-    const doneRemove = () => {
-      delayedRemoveCount--
-      if (allHooksCalled && !delayedRemoveCount) {
-        done()
-      }
-    }
-    let allHooksCalled = false
-    for (let i = 0; i < hooks.length; i++) {
-      callWithAsyncErrorHandling(
-        hooks[i],
-        instance,
-        ErrorCodes.DIRECTIVE_HOOK,
-        [vnode, doneRemove]
-      )
-    }
-    allHooksCalled = true
-    if (!delayedRemoveCount) {
-      done()
     }
   }
 
