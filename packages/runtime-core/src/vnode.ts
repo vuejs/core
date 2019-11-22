@@ -19,7 +19,7 @@ import { AppContext } from './apiApp'
 import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'
-import { TransitionData } from './components/Transition'
+import { TransitionHooks } from './components/Transition'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -93,7 +93,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
   dirs: DirectiveBinding[] | null
-  transition: TransitionData | null
+  transition: TransitionHooks | null
 
   // DOM
   el: HostNode | null

@@ -1,6 +1,5 @@
 import {
   getCurrentInstance,
-  ComponentInternalInstance,
   SetupContext,
   ComponentOptions
 } from '../component'
@@ -30,16 +29,37 @@ export interface TransitionProps {
   onLeaveCancelled?: (el: any) => void
 }
 
+type TransitionHookCaller = (
+  hook: ((el: any) => void) | undefined,
+  args?: any[]
+) => void
+
+interface PendingCallbacks {
+  enter?: (cancelled?: boolean) => void
+  leave?: (cancelled?: boolean) => void
+}
+
 const TransitionImpl = {
   name: `BaseTransition`,
   setup(props: TransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     let isLeaving = false
     let isMounted = false
+    const pendingCallbacks: PendingCallbacks = {}
 
     onMounted(() => {
       isMounted = true
     })
+
+    const callTransitionHook: TransitionHookCaller = (hook, args) => {
+      hook &&
+        callWithAsyncErrorHandling(
+          hook,
+          instance,
+          ErrorCodes.TRANSITION_HOOK,
+          args
+        )
+    }
 
     return () => {
       const children = slots.default && slots.default()
@@ -72,10 +92,11 @@ const TransitionImpl = {
 
       let delayedLeave: (() => void) | undefined
       const performDelayedLeave = () => delayedLeave && delayedLeave()
-      const transitionData = (child.transition = resolveTransitionData(
-        instance,
+      const transitionHooks = (child.transition = resolveTransitionHooks(
         rawProps,
+        callTransitionHook,
         isMounted,
+        pendingCallbacks,
         performDelayedLeave
       ))
 
@@ -92,18 +113,18 @@ const TransitionImpl = {
       ) {
         // update old tree's hooks in case of dynamic transition
         // need to do this recursively in case of HOCs
-        updateHOCTransitionData(oldChild, transitionData)
+        updateHOCTransitionData(oldChild, transitionHooks)
         // switching between different views
         if (mode === 'out-in') {
           isLeaving = true
           // return placeholder node and queue update when leave finishes
-          transitionData.afterLeave = () => {
+          transitionHooks.afterLeave = () => {
             isLeaving = false
             instance.update()
           }
           return placeholder(child)
         } else if (mode === 'in-out') {
-          transitionData.delayLeave = performLeave => {
+          transitionHooks.delayLeave = performLeave => {
             delayedLeave = performLeave
           }
         }
@@ -139,7 +160,7 @@ export const Transition = (TransitionImpl as any) as {
   }
 }
 
-export interface TransitionData {
+export interface TransitionHooks {
   beforeEnter(el: object): void
   enter(el: object): void
   leave(el: object, remove: () => void): void
@@ -147,8 +168,7 @@ export interface TransitionData {
   delayLeave?(performLeave: () => void): void
 }
 
-function resolveTransitionData(
-  instance: ComponentInternalInstance,
+function resolveTransitionHooks(
   {
     appear,
     onBeforeEnter,
@@ -160,66 +180,59 @@ function resolveTransitionData(
     onAfterLeave,
     onLeaveCancelled
   }: TransitionProps,
+  callHook: TransitionHookCaller,
   isMounted: boolean,
+  pendingCallbacks: PendingCallbacks,
   performDelayedLeave: () => void
-): TransitionData {
-  // TODO handle cancel hooks
+): TransitionHooks {
   return {
     beforeEnter(el) {
       if (!isMounted && !appear) {
         return
       }
-      onBeforeEnter &&
-        callWithAsyncErrorHandling(
-          onBeforeEnter,
-          instance,
-          ErrorCodes.TRANSITION_HOOK,
-          [el]
-        )
+      if (pendingCallbacks.leave) {
+        pendingCallbacks.leave(true /* cancelled */)
+      }
+      callHook(onBeforeEnter, [el])
     },
+
     enter(el) {
       if (!isMounted && !appear) {
         return
       }
-      const done = () => {
-        onAfterEnter &&
-          callWithAsyncErrorHandling(
-            onAfterEnter,
-            instance,
-            ErrorCodes.TRANSITION_HOOK,
-            [el]
-          )
-        performDelayedLeave()
-      }
+      const afterEnter = (pendingCallbacks.enter = (cancelled?) => {
+        if (cancelled) {
+          callHook(onEnterCancelled, [el])
+        } else {
+          callHook(onAfterEnter, [el])
+          performDelayedLeave()
+        }
+        pendingCallbacks.enter = undefined
+      })
       if (onEnter) {
-        onEnter(el, done)
+        onEnter(el, afterEnter)
       } else {
-        done()
+        afterEnter()
       }
     },
+
     leave(el, remove) {
-      onBeforeLeave &&
-        callWithAsyncErrorHandling(
-          onBeforeLeave,
-          instance,
-          ErrorCodes.TRANSITION_HOOK,
-          [el]
-        )
-      const afterLeave = () =>
-        onAfterLeave &&
-        callWithAsyncErrorHandling(
-          onAfterLeave,
-          instance,
-          ErrorCodes.TRANSITION_HOOK,
-          [el]
-        )
-      if (onLeave) {
-        onLeave(el, () => {
-          remove()
-          afterLeave()
-        })
-      } else {
+      if (pendingCallbacks.enter) {
+        pendingCallbacks.enter(true /* cancelled */)
+      }
+      callHook(onBeforeLeave, [el])
+      const afterLeave = (pendingCallbacks.leave = (cancelled?) => {
         remove()
+        if (cancelled) {
+          callHook(onLeaveCancelled, [el])
+        } else {
+          callHook(onAfterLeave, [el])
+        }
+        pendingCallbacks.leave = undefined
+      })
+      if (onLeave) {
+        onLeave(el, afterLeave)
+      } else {
         afterLeave()
       }
     }
@@ -238,7 +251,7 @@ function placeholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function updateHOCTransitionData(vnode: VNode, data: TransitionData) {
+function updateHOCTransitionData(vnode: VNode, data: TransitionHooks) {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
     updateHOCTransitionData(vnode.component!.subTree, data)
   } else {
