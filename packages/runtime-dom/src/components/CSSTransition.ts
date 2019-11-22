@@ -2,8 +2,8 @@ import {
   Transition as BaseTransition,
   TransitionProps,
   h,
-  SetupContext,
-  warn
+  warn,
+  FunctionalComponent
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
 
@@ -14,19 +14,22 @@ export interface CSSTransitionProps extends TransitionProps {
   name?: string
   type?: typeof TRANSITION | typeof ANIMATION
   duration?: number | { enter: number; leave: number }
-
+  // custom transition classes
   enterFromClass?: string
   enterActiveClass?: string
   enterToClass?: string
   leaveFromClass?: string
   leaveActiveClass?: string
   leaveToClass?: string
+  // if present, indicates this is a v-show transition by toggling the
+  // CSS display property instead of actually removing the element.
+  show?: boolean
 }
 
-export const CSSTransition = (
+export const CSSTransition: FunctionalComponent = (
   props: CSSTransitionProps,
-  { slots }: SetupContext
-) => h(BaseTransition, resolveCSSTransitionData(props), slots)
+  { slots }
+) => h(BaseTransition, resolveCSSTransitionProps(props), slots)
 
 if (__DEV__) {
   CSSTransition.props = {
@@ -43,7 +46,7 @@ if (__DEV__) {
   }
 }
 
-function resolveCSSTransitionData({
+function resolveCSSTransitionProps({
   name = 'v',
   type,
   duration,
@@ -176,7 +179,10 @@ function whenTransitionEnds(
   cb: () => void
 ) {
   const { type, timeout, propCount } = getTransitionInfo(el, expectedType)
-  if (!type) return cb()
+  if (!type) {
+    return cb()
+  }
+
   const endEvent = type + 'end'
   let ended = 0
   const end = () => {

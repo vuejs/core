@@ -1,6 +1,5 @@
-import { describe } from './util'
 import { expectError, expectType } from 'tsd'
-import { createComponent, PropType, ref } from './index'
+import { describe, createComponent, PropType, ref } from './index'
 
 describe('with object props', () => {
   interface ExpectedProps {

@@ -1,6 +1,13 @@
-import { describe } from './util'
 import { expectError } from 'tsd'
-import { h, createComponent, ref, Fragment, Portal, Suspense } from './index'
+import {
+  describe,
+  h,
+  createComponent,
+  ref,
+  Fragment,
+  Portal,
+  Suspense
+} from './index'
 
 describe('h inference w/ element', () => {
   // key

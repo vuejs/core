@@ -5,3 +5,5 @@
 // that would suppress the errors that should be caught.
 
 export * from '@vue/runtime-dom'
+
+export function describe(_name: string, _fn: () => void): void

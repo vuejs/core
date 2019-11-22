@@ -168,6 +168,8 @@ export interface TransitionHooks {
   delayLeave?(performLeave: () => void): void
 }
 
+// The transition hooks are attached to the vnode as vnode.transition
+// and will be called at appropriate timing in the renderer.
 function resolveTransitionHooks(
   {
     appear,
