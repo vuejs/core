@@ -88,7 +88,8 @@ export {
   Component,
   FunctionalComponent,
   ComponentInternalInstance,
-  RenderFunction
+  RenderFunction,
+  SetupContext
 } from './component'
 export {
   ComponentOptions,

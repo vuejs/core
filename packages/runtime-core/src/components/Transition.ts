@@ -31,7 +31,7 @@ export interface TransitionProps {
 }
 
 const TransitionImpl = {
-  name: `Transition`,
+  name: `BaseTransition`,
   setup(props: TransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     let isLeaving = false
