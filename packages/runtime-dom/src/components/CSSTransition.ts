@@ -64,19 +64,19 @@ function resolveCSSTransitionData({
     ...baseProps,
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
-      el.classList.add(enterActiveClass)
-      el.classList.add(enterFromClass)
+      addTransitionClass(el, enterActiveClass)
+      addTransitionClass(el, enterFromClass)
     },
     onEnter(el, done) {
       nextFrame(() => {
         const resolve = () => {
-          el.classList.remove(enterToClass)
-          el.classList.remove(enterActiveClass)
+          removeTransitionClass(el, enterToClass)
+          removeTransitionClass(el, enterActiveClass)
           done()
         }
         onEnter && onEnter(el, resolve)
-        el.classList.remove(enterFromClass)
-        el.classList.add(enterToClass)
+        removeTransitionClass(el, enterFromClass)
+        addTransitionClass(el, enterToClass)
         if (!(onEnter && onEnter.length > 1)) {
           if (enterDuration) {
             setTimeout(resolve, enterDuration)
@@ -87,17 +87,17 @@ function resolveCSSTransitionData({
       })
     },
     onLeave(el, done) {
-      el.classList.add(leaveActiveClass)
-      el.classList.add(leaveFromClass)
+      addTransitionClass(el, leaveActiveClass)
+      addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
         const resolve = () => {
-          el.classList.remove(leaveToClass)
-          el.classList.remove(leaveActiveClass)
+          removeTransitionClass(el, leaveToClass)
+          removeTransitionClass(el, leaveActiveClass)
           done()
         }
         onLeave && onLeave(el, resolve)
-        el.classList.remove(leaveFromClass)
-        el.classList.add(leaveToClass)
+        removeTransitionClass(el, leaveFromClass)
+        addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
           if (leaveDuration) {
             setTimeout(resolve, leaveDuration)
@@ -140,6 +140,27 @@ function validateDuration(val: unknown) {
       `<transition> explicit duration is NaN - ` +
         'the duration expression might be incorrect.'
     )
+  }
+}
+
+export interface ElementWithTransition extends Element {
+  // _vtc = Vue Transition Classes.
+  // Store the temporarily-added transition classes on the element
+  // so that we can avoid overwriting them if the element's class is patched
+  // during the transition.
+  _vtc?: Set<string>
+}
+
+function addTransitionClass(el: ElementWithTransition, cls: string) {
+  el.classList.add(cls)
+  ;(el._vtc || (el._vtc = new Set())).add(cls)
+}
+
+function removeTransitionClass(el: ElementWithTransition, cls: string) {
+  el.classList.remove(cls)
+  el._vtc!.delete(cls)
+  if (!el._vtc!.size) {
+    el._vtc = undefined
   }
 }
 
