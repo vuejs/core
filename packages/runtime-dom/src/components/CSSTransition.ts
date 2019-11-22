@@ -210,26 +210,14 @@ function getTransitionInfo(
 ): CSSTransitionInfo {
   const styles: any = window.getComputedStyle(el)
   // JSDOM may return undefined for transition properties
-  const transitionDelays: Array<string> = (
-    styles[TRANSITION + 'Delay'] || ''
-  ).split(', ')
-  const transitionDurations: Array<string> = (
-    styles[TRANSITION + 'Duration'] || ''
-  ).split(', ')
-  const transitionTimeout: number = getTimeout(
-    transitionDelays,
-    transitionDurations
+  const transitionDelays = (styles[TRANSITION + 'Delay'] || '').split(', ')
+  const transitionDurations = (styles[TRANSITION + 'Duration'] || '').split(
+    ', '
   )
-  const animationDelays: Array<string> = (
-    styles[ANIMATION + 'Delay'] || ''
-  ).split(', ')
-  const animationDurations: Array<string> = (
-    styles[ANIMATION + 'Duration'] || ''
-  ).split(', ')
-  const animationTimeout: number = getTimeout(
-    animationDelays,
-    animationDurations
-  )
+  const transitionTimeout = getTimeout(transitionDelays, transitionDurations)
+  const animationDelays = (styles[ANIMATION + 'Delay'] || '').split(', ')
+  const animationDurations = (styles[ANIMATION + 'Duration'] || '').split(', ')
+  const animationTimeout = getTimeout(animationDelays, animationDurations)
 
   let type: CSSTransitionInfo['type'] = null
   let timeout = 0
