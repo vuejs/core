@@ -115,7 +115,7 @@ const TransitionImpl = {
 }
 
 if (__DEV__) {
-  ;(TransitionImpl as ComponentOptions).props = {
+  (TransitionImpl as ComponentOptions).props = {
     mode: String,
     appear: Boolean,
     // enter
