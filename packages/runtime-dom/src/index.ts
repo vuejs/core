@@ -66,7 +66,7 @@ export {
 export { withModifiers, withKeys } from './directives/vOn'
 
 // DOM-only components
-export { CSSTransition } from './components/CSSTransition'
+export { CSSTransition, CSSTransitionProps } from './components/CSSTransition'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
