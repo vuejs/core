@@ -265,15 +265,31 @@ function getTransitionInfo(
   }
 }
 
+function getMaximumNumber<T>(
+  array: T[],
+  valueCallback: (value: T, index: number) => number,
+  intialMaximumNumber = -Infinity
+) {
+  let maximum = intialMaximumNumber
+
+  for (let i = 0; i < array.length; i++) {
+    const current = valueCallback(array[i], i)
+
+    if (current > maximum) {
+      maximum = current
+    }
+  }
+
+  return maximum
+}
+
 function getTimeout(delays: string[], durations: string[]): number {
   while (delays.length < durations.length) {
     delays = delays.concat(delays)
   }
-  return Math.max.apply(
-    null,
-    durations.map((d, i) => {
-      return toMs(d) + toMs(delays[i])
-    })
+  return getMaximumNumber(
+    durations,
+    (duration, i) => toMs(duration) + toMs(delays[i])
   )
 }
 
