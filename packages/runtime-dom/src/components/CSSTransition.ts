@@ -237,10 +237,8 @@ function getTransitionInfo(
   expectedType?: CSSTransitionProps['type']
 ): CSSTransitionInfo {
   const styles: any = window.getComputedStyle(el)
-
-  const getStyleProperties = (key: string) => (styles[key] || '').split(', ')
-
   // JSDOM may return undefined for transition properties
+  const getStyleProperties = (key: string) => (styles[key] || '').split(', ')
   const transitionDelays = getStyleProperties(TRANSITION + 'Delay')
   const transitionDurations = getStyleProperties(TRANSITION + 'Duration')
   const transitionTimeout = getTimeout(transitionDelays, transitionDurations)
