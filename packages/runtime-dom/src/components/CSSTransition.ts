@@ -4,9 +4,11 @@ import {
   h,
   warn,
   FunctionalComponent,
-  getCurrentInstance
+  getCurrentInstance,
+  callWithAsyncErrorHandling
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
+import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -27,6 +29,8 @@ export interface CSSTransitionProps extends TransitionProps {
   leaveToClass?: string
 }
 
+// CSSTransition is a higher-order-component based on the platform-agnostic
+// base Transition component, with DOM-specific logic.
 export const CSSTransition: FunctionalComponent = (
   props: CSSTransitionProps,
   { slots }
@@ -65,6 +69,7 @@ function resolveCSSTransitionProps({
   leaveToClass = `${name}-leave-to`,
   ...baseProps
 }: CSSTransitionProps): TransitionProps {
+  const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
@@ -77,16 +82,24 @@ function resolveCSSTransitionProps({
     enterToClass = appearToClass
   }
 
-  function finishEnter(el: Element, done?: () => void) {
+  type Hook = (el: Element, done?: () => void) => void
+
+  const finishEnter: Hook = (el, done) => {
     removeTransitionClass(el, enterToClass)
     removeTransitionClass(el, enterActiveClass)
     done && done()
   }
 
-  function finishLeave(el: Element, done?: () => void) {
+  const finishLeave: Hook = (el, done) => {
     removeTransitionClass(el, leaveToClass)
     removeTransitionClass(el, leaveActiveClass)
     done && done()
+  }
+
+  // only needed for user hooks called in nextFrame
+  // sync errors are already handled by BaseTransition
+  function callHookWithErrorHandling(hook: Hook, args: any[]) {
+    callWithAsyncErrorHandling(hook, instance, ErrorCodes.TRANSITION_HOOK, args)
   }
 
   return {
@@ -99,7 +112,7 @@ function resolveCSSTransitionProps({
     onEnter(el, done) {
       nextFrame(() => {
         const resolve = () => finishEnter(el, done)
-        onEnter && onEnter(el, resolve)
+        onEnter && callHookWithErrorHandling(onEnter, [el, resolve])
         removeTransitionClass(el, enterFromClass)
         addTransitionClass(el, enterToClass)
         if (!(onEnter && onEnter.length > 1)) {
@@ -116,7 +129,7 @@ function resolveCSSTransitionProps({
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
         const resolve = () => finishLeave(el, done)
-        onLeave && onLeave(el, resolve)
+        onLeave && callHookWithErrorHandling(onLeave, [el, resolve])
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
