@@ -215,14 +215,17 @@ function getTransitionInfo(
   expectedType?: CSSTransitionProps['type']
 ): CSSTransitionInfo {
   const styles: any = window.getComputedStyle(el)
+
+  function getStyleProperties(propertyName: string): string[] {
+    return (styles[propertyName] || '').split(', ')
+  }
+
   // JSDOM may return undefined for transition properties
-  const transitionDelays = (styles[TRANSITION + 'Delay'] || '').split(', ')
-  const transitionDurations = (styles[TRANSITION + 'Duration'] || '').split(
-    ', '
-  )
+  const transitionDelays = getStyleProperties(TRANSITION + 'Delay')
+  const transitionDurations = getStyleProperties(TRANSITION + 'Duration')
   const transitionTimeout = getTimeout(transitionDelays, transitionDurations)
-  const animationDelays = (styles[ANIMATION + 'Delay'] || '').split(', ')
-  const animationDurations = (styles[ANIMATION + 'Duration'] || '').split(', ')
+  const animationDelays = getStyleProperties(ANIMATION + 'Delay')
+  const animationDurations = getStyleProperties(ANIMATION + 'Duration')
   const animationTimeout = getTimeout(animationDelays, animationDurations)
 
   let type: CSSTransitionInfo['type'] = null
