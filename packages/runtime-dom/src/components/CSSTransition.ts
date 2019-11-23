@@ -251,13 +251,12 @@ function getTransitionInfo(
 ): CSSTransitionInfo {
   const styles: any = window.getComputedStyle(el)
   // JSDOM may return undefined for transition properties
-  const transitionDelays = (styles[TRANSITION + 'Delay'] || '').split(', ')
-  const transitionDurations = (styles[TRANSITION + 'Duration'] || '').split(
-    ', '
-  )
+  const getStyleProperties = (key: string) => (styles[key] || '').split(', ')
+  const transitionDelays = getStyleProperties(TRANSITION + 'Delay')
+  const transitionDurations = getStyleProperties(TRANSITION + 'Duration')
   const transitionTimeout = getTimeout(transitionDelays, transitionDurations)
-  const animationDelays = (styles[ANIMATION + 'Delay'] || '').split(', ')
-  const animationDurations = (styles[ANIMATION + 'Duration'] || '').split(', ')
+  const animationDelays = getStyleProperties(ANIMATION + 'Delay')
+  const animationDurations = getStyleProperties(ANIMATION + 'Duration')
   const animationTimeout = getTimeout(animationDelays, animationDurations)
 
   let type: CSSTransitionInfo['type'] = null
@@ -301,12 +300,7 @@ function getTimeout(delays: string[], durations: string[]): number {
   while (delays.length < durations.length) {
     delays = delays.concat(delays)
   }
-  return Math.max.apply(
-    null,
-    durations.map((d, i) => {
-      return toMs(d) + toMs(delays[i])
-    })
-  )
+  return Math.max(...durations.map((d, i) => toMs(d) + toMs(delays[i])))
 }
 
 // Old versions of Chromium (below 61.0.3163.100) formats floating pointer
