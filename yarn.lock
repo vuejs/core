@@ -359,10 +359,10 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@lerna/add@3.18.5":
-  version "3.18.5"
-  resolved "https://registry.yarnpkg.com/@lerna/add/-/add-3.18.5.tgz#b35d6584a20cddf8589269fe73be17cc3904d194"
-  integrity sha512-oxcQgfrr7KaPfxgbjXo6wcLp/YpHtKeNk8RvBhZDzFl73QS1MqXRM9jsqpEaCfuyYG0owkmaHqFUcUyXe09xVQ==
+"@lerna/add@3.19.0":
+  version "3.19.0"
+  resolved "https://registry.yarnpkg.com/@lerna/add/-/add-3.19.0.tgz#33b6251c669895f842c14f05961432d464166249"
+  integrity sha512-qzhxPyoczvvT1W0wwCK9I0iJ4B9WR+HzYsusmRuzM3mEhWjowhbuvKEl5BjGYuXc9AvEErM/S0Fm5K0RcuS39Q==
   dependencies:
     "@evocateur/pacote" "^9.6.3"
     "@lerna/bootstrap" "3.18.5"
@@ -4534,11 +4534,11 @@ left-pad@^1.3.0:
   integrity sha512-XI5MPzVNApjAyhQzphX8BkmKsKUxD4LdyK24iZeQGinBN9yTQT3bFlCBy/aVx2HrNcqQGsdot8ghrjyrvMCoEA==
 
 lerna@^3.16.4:
-  version "3.18.5"
-  resolved "https://registry.yarnpkg.com/lerna/-/lerna-3.18.5.tgz#9a902a6f17e9bbc31b3690e51ba5f85e2f1c51b5"
-  integrity sha512-PkvBgNpvpiz5WJoJMiJMhRVXhfa1eF/daGXILpBi8I7dhyymRwhgDuv+6T/25ztNjvj1ylf4zo33rDMXlrZY9A==
+  version "3.19.0"
+  resolved "https://registry.yarnpkg.com/lerna/-/lerna-3.19.0.tgz#6d53b613eca7da426ab1e97c01ce6fb39754da6c"
+  integrity sha512-YtMmwEqzWHQCh7Ynk7BvjrZri3EkSeVqTAcwZIqWlv9V/dCfvFPyRqp+2NIjPB5nj1FWXLRH6F05VT/qvzuuOA==
   dependencies:
-    "@lerna/add" "3.18.5"
+    "@lerna/add" "3.19.0"
     "@lerna/bootstrap" "3.18.5"
     "@lerna/changed" "3.18.5"
     "@lerna/clean" "3.18.5"
