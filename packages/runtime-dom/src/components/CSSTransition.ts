@@ -289,7 +289,6 @@ function getTimeout(delays: string[], durations: string[]): number {
   while (delays.length < durations.length) {
     delays = delays.concat(delays)
   }
-
   return Math.max(...durations.map((d, i) => toMs(d) + toMs(delays[i])))
 }
 
