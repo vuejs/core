@@ -6,6 +6,7 @@ import {
   FunctionalComponent
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
+import { currentRenderingInstance } from 'packages/runtime-core/src/componentRenderUtils'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -18,12 +19,12 @@ export interface CSSTransitionProps extends TransitionProps {
   enterFromClass?: string
   enterActiveClass?: string
   enterToClass?: string
+  appearFromClass?: string
+  appearActiveClass?: string
+  appearToClass?: string
   leaveFromClass?: string
   leaveActiveClass?: string
   leaveToClass?: string
-  // if present, indicates this is a v-show transition by toggling the
-  // CSS display property instead of actually removing the element.
-  show?: boolean
 }
 
 export const CSSTransition: FunctionalComponent = (
@@ -36,10 +37,13 @@ if (__DEV__) {
     ...(BaseTransition as any).props,
     name: String,
     type: String,
-    enterClass: String,
+    enterFromClass: String,
     enterActiveClass: String,
     enterToClass: String,
-    leaveClass: String,
+    appearFromClass: String,
+    appearActiveClass: String,
+    appearToClass: String,
+    leaveFromClass: String,
     leaveActiveClass: String,
     leaveToClass: String,
     duration: Object
@@ -53,6 +57,9 @@ function resolveCSSTransitionProps({
   enterFromClass = `${name}-enter-from`,
   enterActiveClass = `${name}-enter-active`,
   enterToClass = `${name}-enter-to`,
+  appearFromClass = enterFromClass,
+  appearActiveClass = enterActiveClass,
+  appearToClass = enterToClass,
   leaveFromClass = `${name}-leave-from`,
   leaveActiveClass = `${name}-leave-active`,
   leaveToClass = `${name}-leave-to`,
@@ -61,7 +68,26 @@ function resolveCSSTransitionProps({
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
-  const { onBeforeEnter, onEnter, onLeave } = baseProps
+  const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
+
+  // is appearing
+  if (appear && !currentRenderingInstance!.subTree) {
+    enterFromClass = appearFromClass
+    enterActiveClass = appearActiveClass
+    enterToClass = appearToClass
+  }
+
+  function finishEnter(el: Element, done?: () => void) {
+    removeTransitionClass(el, enterToClass)
+    removeTransitionClass(el, enterActiveClass)
+    done && done()
+  }
+
+  function finishLeave(el: Element, done?: () => void) {
+    removeTransitionClass(el, leaveToClass)
+    removeTransitionClass(el, leaveActiveClass)
+    done && done()
+  }
 
   return {
     ...baseProps,
@@ -72,11 +98,7 @@ function resolveCSSTransitionProps({
     },
     onEnter(el, done) {
       nextFrame(() => {
-        const resolve = () => {
-          removeTransitionClass(el, enterToClass)
-          removeTransitionClass(el, enterActiveClass)
-          done()
-        }
+        const resolve = () => finishEnter(el, done)
         onEnter && onEnter(el, resolve)
         removeTransitionClass(el, enterFromClass)
         addTransitionClass(el, enterToClass)
@@ -93,11 +115,7 @@ function resolveCSSTransitionProps({
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
-        const resolve = () => {
-          removeTransitionClass(el, leaveToClass)
-          removeTransitionClass(el, leaveActiveClass)
-          done()
-        }
+        const resolve = () => finishLeave(el, done)
         onLeave && onLeave(el, resolve)
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
@@ -109,7 +127,9 @@ function resolveCSSTransitionProps({
           }
         }
       })
-    }
+    },
+    onEnterCancelled: finishEnter,
+    onLeaveCancelled: finishLeave
   }
 }
 
@@ -161,9 +181,11 @@ function addTransitionClass(el: ElementWithTransition, cls: string) {
 
 function removeTransitionClass(el: ElementWithTransition, cls: string) {
   el.classList.remove(cls)
-  el._vtc!.delete(cls)
-  if (!el._vtc!.size) {
-    el._vtc = undefined
+  if (el._vtc) {
+    el._vtc.delete(cls)
+    if (!el._vtc!.size) {
+      el._vtc = undefined
+    }
   }
 }
 

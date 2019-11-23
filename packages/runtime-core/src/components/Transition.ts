@@ -17,6 +17,12 @@ import { ShapeFlags } from '../shapeFlags'
 export interface TransitionProps {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
+  // If true, indicates this is a transition that doesn't actually insert/remove
+  // the element, but toggles the show / hidden status instead.
+  // The transition hooks are injected, but will be skipped by the renderer.
+  // Instead, a custom directive can control the transition by calling the
+  // injected hooks (e.g. v-show).
+  persisted?: boolean
   // enter
   onBeforeEnter?: (el: any) => void
   onEnter?: (el: any, done: () => void) => void
@@ -139,6 +145,7 @@ if (__DEV__) {
   ;(TransitionImpl as ComponentOptions).props = {
     mode: String,
     appear: Boolean,
+    persisted: Boolean,
     // enter
     onBeforeEnter: Function,
     onEnter: Function,
@@ -161,6 +168,7 @@ export const Transition = (TransitionImpl as any) as {
 }
 
 export interface TransitionHooks {
+  persisted: boolean
   beforeEnter(el: object): void
   enter(el: object): void
   leave(el: object, remove: () => void): void
@@ -173,6 +181,7 @@ export interface TransitionHooks {
 function resolveTransitionHooks(
   {
     appear,
+    persisted = false,
     onBeforeEnter,
     onEnter,
     onAfterEnter,
@@ -188,6 +197,7 @@ function resolveTransitionHooks(
   performDelayedLeave: () => void
 ): TransitionHooks {
   return {
+    persisted,
     beforeEnter(el) {
       if (!isMounted && !appear) {
         return
@@ -202,7 +212,10 @@ function resolveTransitionHooks(
       if (!isMounted && !appear) {
         return
       }
+      let called = false
       const afterEnter = (pendingCallbacks.enter = (cancelled?) => {
+        if (called) return
+        called = true
         if (cancelled) {
           callHook(onEnterCancelled, [el])
         } else {
@@ -223,7 +236,10 @@ function resolveTransitionHooks(
         pendingCallbacks.enter(true /* cancelled */)
       }
       callHook(onBeforeLeave, [el])
+      let called = false
       const afterLeave = (pendingCallbacks.leave = (cancelled?) => {
+        if (called) return
+        called = true
         remove()
         if (cancelled) {
           callHook(onLeaveCancelled, [el])

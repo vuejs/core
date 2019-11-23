@@ -367,7 +367,7 @@ export function createRenderer<
         invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
       }
     }
-    if (transition != null) {
+    if (transition != null && !transition.persisted) {
       transition.beforeEnter(el)
     }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -385,11 +385,14 @@ export function createRenderer<
     }
     hostInsert(el, container, anchor)
     const vnodeMountedHook = props && props.onVnodeMounted
-    if (vnodeMountedHook != null || transition != null) {
+    if (
+      vnodeMountedHook != null ||
+      (transition != null && !transition.persisted)
+    ) {
       queuePostRenderEffect(() => {
         vnodeMountedHook &&
           invokeDirectiveHook(vnodeMountedHook, parentComponent, vnode)
-        transition && transition.enter(el)
+        transition && !transition.persisted && transition.enter(el)
       }, parentSuspense)
     }
   }
@@ -1468,11 +1471,19 @@ export function createRenderer<
       const remove = () => {
         hostRemove(vnode.el!)
         if (anchor != null) hostRemove(anchor)
-        if (transition != null && transition.afterLeave) {
+        if (
+          transition != null &&
+          !transition.persisted &&
+          transition.afterLeave
+        ) {
           transition.afterLeave()
         }
       }
-      if (vnode.shapeFlag & ShapeFlags.ELEMENT && transition != null) {
+      if (
+        vnode.shapeFlag & ShapeFlags.ELEMENT &&
+        transition != null &&
+        !transition.persisted
+      ) {
         const { leave, delayLeave } = transition
         const performLeave = () => leave(el!, remove)
         if (delayLeave) {
