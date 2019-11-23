@@ -3,10 +3,10 @@ import {
   TransitionProps,
   h,
   warn,
-  FunctionalComponent
+  FunctionalComponent,
+  getCurrentInstance
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
-import { currentRenderingInstance } from 'packages/runtime-core/src/componentRenderUtils'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -71,7 +71,7 @@ function resolveCSSTransitionProps({
   const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
 
   // is appearing
-  if (appear && !currentRenderingInstance!.subTree) {
+  if (appear && !getCurrentInstance()!.isMounted) {
     enterFromClass = appearFromClass
     enterActiveClass = appearActiveClass
     enterToClass = appearToClass
