@@ -287,32 +287,12 @@ function getTransitionInfo(
   }
 }
 
-function getMaximumNumber<T>(
-  array: T[],
-  valueCallback: (value: T, index: number) => number,
-  intialMaximumNumber = -Infinity
-) {
-  let maximum = intialMaximumNumber
-
-  for (let i = 0; i < array.length; i++) {
-    const current = valueCallback(array[i], i)
-
-    if (current > maximum) {
-      maximum = current
-    }
-  }
-
-  return maximum
-}
-
 function getTimeout(delays: string[], durations: string[]): number {
   while (delays.length < durations.length) {
     delays = delays.concat(delays)
   }
-  return getMaximumNumber(
-    durations,
-    (duration, i) => toMs(duration) + toMs(delays[i])
-  )
+
+  return Math.max(...durations.map((d, i) => toMs(d) + toMs(delays[i])))
 }
 
 // Old versions of Chromium (below 61.0.3163.100) formats floating pointer
