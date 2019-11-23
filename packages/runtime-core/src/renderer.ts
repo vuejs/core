@@ -885,7 +885,6 @@ export function createRenderer<
 
     setupRenderEffect(
       instance,
-      parentComponent,
       parentSuspense,
       initialVNode,
       container,
@@ -900,7 +899,6 @@ export function createRenderer<
 
   function setupRenderEffect(
     instance: ComponentInternalInstance,
-    parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     initialVNode: HostVNode,
     container: HostElement,
@@ -908,9 +906,8 @@ export function createRenderer<
     isSVG: boolean
   ) {
     // create reactive effect for rendering
-    let mounted = false
     instance.update = effect(function componentEffect() {
-      if (!mounted) {
+      if (!instance.isMounted) {
         const subTree = (instance.subTree = renderComponentRoot(instance))
         // beforeMount hook
         if (instance.bm !== null) {
@@ -929,7 +926,7 @@ export function createRenderer<
         ) {
           queuePostRenderEffect(instance.a, parentSuspense)
         }
-        mounted = true
+        instance.isMounted = true
       } else {
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)

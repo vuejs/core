@@ -7,22 +7,23 @@ import { cloneVNode, Comment, isSameVNodeType, VNode } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
-import { onMounted } from '../apiLifecycle'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags } from '../shapeFlags'
 
-// Using camel case here makes it easier to use in render functions & JSX.
-// In templates these will be written as @before-enter="xxx"
-// The compiler has special handling to convert them into the proper cases.
 export interface TransitionProps {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
+
   // If true, indicates this is a transition that doesn't actually insert/remove
   // the element, but toggles the show / hidden status instead.
   // The transition hooks are injected, but will be skipped by the renderer.
   // Instead, a custom directive can control the transition by calling the
   // injected hooks (e.g. v-show).
   persisted?: boolean
+
+  // Hooks. Using camel casef for easier usage in render functions & JSX.
+  // In templates these will be written as @before-enter="xxx"
+  // The compiler has special handling to convert them into the proper cases.
   // enter
   onBeforeEnter?: (el: any) => void
   onEnter?: (el: any, done: () => void) => void
@@ -49,13 +50,8 @@ const TransitionImpl = {
   name: `BaseTransition`,
   setup(props: TransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
-    let isLeaving = false
-    let isMounted = false
     const pendingCallbacks: PendingCallbacks = {}
-
-    onMounted(() => {
-      isMounted = true
-    })
+    let isLeaving = false
 
     const callTransitionHook: TransitionHookCaller = (hook, args) => {
       hook &&
@@ -101,7 +97,7 @@ const TransitionImpl = {
       const transitionHooks = (child.transition = resolveTransitionHooks(
         rawProps,
         callTransitionHook,
-        isMounted,
+        instance.isMounted,
         pendingCallbacks,
         performDelayedLeave
       ))
