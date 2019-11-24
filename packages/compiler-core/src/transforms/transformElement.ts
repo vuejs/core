@@ -15,7 +15,7 @@ import {
   createObjectExpression,
   Property
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol, hyphenate } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
@@ -27,7 +27,8 @@ import {
   TO_HANDLERS,
   PORTAL,
   SUSPENSE,
-  KEEP_ALIVE
+  KEEP_ALIVE,
+  TRANSITION
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
 import { buildSlots } from './vSlot'
@@ -36,6 +37,9 @@ import { isStaticNode } from './hoistStatic'
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
 const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
+
+const isBuiltInType = (tag: string, expected: string): boolean =>
+  tag === expected || tag === hyphenate(expected)
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
@@ -53,9 +57,10 @@ export const transformElement: NodeTransform = (node, context) => {
   // processed and merged.
   return function postTransformElement() {
     const { tag, tagType, props } = node
-    const isPortal = tag === 'portal' || tag === 'Portal'
-    const isSuspense = tag === 'suspense' || tag === 'Suspense'
-    const isKeepAlive = tag === 'keep-alive' || tag === 'KeepAlive'
+    const isPortal = isBuiltInType(tag, 'Portal')
+    const isSuspense = isBuiltInType(tag, 'Suspense')
+    const isKeepAlive = isBuiltInType(tag, 'KeepAlive')
+    const isTransition = isBuiltInType(tag, 'Transition')
     const isComponent = tagType === ElementTypes.COMPONENT
 
     let hasProps = props.length > 0
@@ -96,6 +101,8 @@ export const transformElement: NodeTransform = (node, context) => {
       nodeType = context.helper(SUSPENSE)
     } else if (isKeepAlive) {
       nodeType = context.helper(KEEP_ALIVE)
+    } else if (isTransition) {
+      nodeType = context.helper(TRANSITION)
     } else if (isComponent) {
       // user component w/ resolve
       context.helper(RESOLVE_COMPONENT)

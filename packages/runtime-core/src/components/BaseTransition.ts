@@ -9,6 +9,7 @@ import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags } from '../shapeFlags'
+import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 
 export interface BaseTransitionProps {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -22,9 +23,8 @@ export interface BaseTransitionProps {
   persisted?: boolean
 
   // Hooks. Using camel casef for easier usage in render functions & JSX.
-  // In templates these will be written as @before-enter="xxx"
-  // The compiler has special handling to convert them into the proper cases.
-  // enter
+  // In templates these can be written as @before-enter="xxx" as prop names
+  // are camelized
   onBeforeEnter?: (el: any) => void
   onEnter?: (el: any, done: () => void) => void
   onAfterEnter?: (el: any) => void
@@ -41,17 +41,29 @@ type TransitionHookCaller = (
   args?: any[]
 ) => void
 
-interface PendingCallbacks {
-  enter?: (cancelled?: boolean) => void
-  leave?: (cancelled?: boolean) => void
+interface TransitionState {
+  isMounted: boolean
+  isLeaving: boolean
+  isUnmounting: boolean
+  pendingEnter?: (cancelled?: boolean) => void
+  pendingLeave?: (cancelled?: boolean) => void
 }
 
 const BaseTransitionImpl = {
   name: `BaseTransition`,
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
-    const pendingCallbacks: PendingCallbacks = {}
-    let isLeaving = false
+    const state: TransitionState = {
+      isMounted: false,
+      isLeaving: false,
+      isUnmounting: false
+    }
+    onMounted(() => {
+      state.isMounted = true
+    })
+    onBeforeUnmount(() => {
+      state.isUnmounting = true
+    })
 
     const callTransitionHook: TransitionHookCaller = (hook, args) => {
       hook &&
@@ -88,17 +100,17 @@ const BaseTransitionImpl = {
 
       // at this point children has a guaranteed length of 1.
       const child = children[0]
-      if (isLeaving) {
+      if (state.isLeaving) {
         return placeholder(child)
       }
 
       let delayedLeave: (() => void) | undefined
       const performDelayedLeave = () => delayedLeave && delayedLeave()
+
       const transitionHooks = (child.transition = resolveTransitionHooks(
         rawProps,
+        state,
         callTransitionHook,
-        instance.isMounted,
-        pendingCallbacks,
         performDelayedLeave
       ))
 
@@ -118,10 +130,10 @@ const BaseTransitionImpl = {
         updateHOCTransitionData(oldChild, transitionHooks)
         // switching between different views
         if (mode === 'out-in') {
-          isLeaving = true
+          state.isLeaving = true
           // return placeholder node and queue update when leave finishes
           transitionHooks.afterLeave = () => {
-            isLeaving = false
+            state.isLeaving = false
             instance.update()
           }
           return placeholder(child)
@@ -187,29 +199,28 @@ function resolveTransitionHooks(
     onAfterLeave,
     onLeaveCancelled
   }: BaseTransitionProps,
+  state: TransitionState,
   callHook: TransitionHookCaller,
-  isMounted: boolean,
-  pendingCallbacks: PendingCallbacks,
   performDelayedLeave: () => void
 ): TransitionHooks {
   return {
     persisted,
     beforeEnter(el) {
-      if (!isMounted && !appear) {
-        return
+      if (state.pendingLeave) {
+        state.pendingLeave(true /* cancelled */)
       }
-      if (pendingCallbacks.leave) {
-        pendingCallbacks.leave(true /* cancelled */)
+      if (!appear && !state.isMounted) {
+        return
       }
       callHook(onBeforeEnter, [el])
     },
 
     enter(el) {
-      if (!isMounted && !appear) {
+      if (!appear && !state.isMounted) {
         return
       }
       let called = false
-      const afterEnter = (pendingCallbacks.enter = (cancelled?) => {
+      const afterEnter = (state.pendingEnter = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -218,7 +229,7 @@ function resolveTransitionHooks(
           callHook(onAfterEnter, [el])
           performDelayedLeave()
         }
-        pendingCallbacks.enter = undefined
+        state.pendingEnter = undefined
       })
       if (onEnter) {
         onEnter(el, afterEnter)
@@ -228,12 +239,15 @@ function resolveTransitionHooks(
     },
 
     leave(el, remove) {
-      if (pendingCallbacks.enter) {
-        pendingCallbacks.enter(true /* cancelled */)
+      if (state.pendingEnter) {
+        state.pendingEnter(true /* cancelled */)
+      }
+      if (state.isUnmounting) {
+        return remove()
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const afterLeave = (pendingCallbacks.leave = (cancelled?) => {
+      const afterLeave = (state.pendingLeave = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -242,7 +256,7 @@ function resolveTransitionHooks(
         } else {
           callHook(onAfterLeave, [el])
         }
-        pendingCallbacks.leave = undefined
+        state.pendingLeave = undefined
       })
       if (onLeave) {
         onLeave(el, afterLeave)

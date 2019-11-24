@@ -16,6 +16,7 @@ const ANIMATION = 'animation'
 export interface TransitionProps extends BaseTransitionProps {
   name?: string
   type?: typeof TRANSITION | typeof ANIMATION
+  css?: boolean
   duration?: number | { enter: number; leave: number }
   // custom transition classes
   enterFromClass?: string
@@ -41,6 +42,10 @@ if (__DEV__) {
     ...(BaseTransition as any).props,
     name: String,
     type: String,
+    // Cannot use Boolean otherwise it will be force casted to false when
+    // omitted
+    css: null,
+    duration: Object,
     enterFromClass: String,
     enterActiveClass: String,
     enterToClass: String,
@@ -49,14 +54,14 @@ if (__DEV__) {
     appearToClass: String,
     leaveFromClass: String,
     leaveActiveClass: String,
-    leaveToClass: String,
-    duration: Object
+    leaveToClass: String
   }
 }
 
 function resolveTransitionProps({
   name = 'v',
   type,
+  css = true,
   duration,
   enterFromClass = `${name}-enter-from`,
   enterActiveClass = `${name}-enter-active`,
@@ -69,6 +74,10 @@ function resolveTransitionProps({
   leaveToClass = `${name}-leave-to`,
   ...baseProps
 }: TransitionProps): BaseTransitionProps {
+  if (!css) {
+    return baseProps
+  }
+
   const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
