@@ -131,8 +131,12 @@ function formatComponentName(vnode: ComponentVNode, file?: string): string {
 
 function formatProps(props: Data): any[] {
   const res: any[] = []
-  for (const key in props) {
+  const keys = Object.keys(props)
+  keys.slice(0, 3).forEach(key => {
     res.push(...formatProp(key, props[key]))
+  })
+  if (keys.length > 3) {
+    res.push(` ...`)
   }
   return res
 }
@@ -143,11 +147,17 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)
     return raw ? value : [`${key}=${value}`]
-  } else if (typeof value === 'number' || value == null) {
+  } else if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value == null
+  ) {
     return raw ? value : [`${key}=${value}`]
   } else if (isRef(value)) {
     value = formatProp(key, toRaw(value.value), true)
     return raw ? value : [`${key}=Ref<`, value, `>`]
+  } else if (isFunction(value)) {
+    return [`${key}=fn${value.name ? `<${value.name}>` : ``}`]
   } else {
     value = toRaw(value)
     return raw ? value : [`${key}=`, value]
