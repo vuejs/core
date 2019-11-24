@@ -8,7 +8,8 @@ import {
   ref,
   nextTick,
   mockWarn,
-  createComponent
+  createComponent,
+  createApp
 } from '@vue/runtime-test'
 import { setErrorRecovery } from '../src/errorHandling'
 
@@ -429,6 +430,33 @@ describe('error handling', () => {
     onError.mockRestore()
     groupCollapsed.mockRestore()
     log.mockRestore()
+  })
+
+  it('app-level error handling', () => {
+    const app = createApp()
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    // custom app error handler
+    app.config.errorHandler = (err, instance, info) => {
+      fn(err, info)
+    }
+
+    const Comp = {
+      setup() {
+        return () => h(Child)
+      }
+    }
+
+    const Child = {
+      setup() {
+        throw err
+      },
+      render() {}
+    }
+
+    app.mount(Comp, nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'setup function')
   })
 
   // native event handler handling should be tested in respective renderers
