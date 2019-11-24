@@ -10,7 +10,7 @@ import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags } from '../shapeFlags'
 
-export interface TransitionProps {
+export interface BaseTransitionProps {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
 
@@ -46,9 +46,9 @@ interface PendingCallbacks {
   leave?: (cancelled?: boolean) => void
 }
 
-const TransitionImpl = {
+const BaseTransitionImpl = {
   name: `BaseTransition`,
-  setup(props: TransitionProps, { slots }: SetupContext) {
+  setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const pendingCallbacks: PendingCallbacks = {}
     let isLeaving = false
@@ -138,7 +138,7 @@ const TransitionImpl = {
 }
 
 if (__DEV__) {
-  ;(TransitionImpl as ComponentOptions).props = {
+  ;(BaseTransitionImpl as ComponentOptions).props = {
     mode: String,
     appear: Boolean,
     persisted: Boolean,
@@ -157,9 +157,9 @@ if (__DEV__) {
 
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
-export const Transition = (TransitionImpl as any) as {
+export const BaseTransition = (BaseTransitionImpl as any) as {
   new (): {
-    $props: TransitionProps
+    $props: BaseTransitionProps
   }
 }
 
@@ -186,7 +186,7 @@ function resolveTransitionHooks(
     onLeave,
     onAfterLeave,
     onLeaveCancelled
-  }: TransitionProps,
+  }: BaseTransitionProps,
   callHook: TransitionHookCaller,
   isMounted: boolean,
   pendingCallbacks: PendingCallbacks,
