@@ -1,14 +1,14 @@
 import {
-  applyDirectives,
+  withDirectives,
   createComponent,
   h,
   nextTick,
   VNode
 } from '@vue/runtime-core'
-import { createApp, vShowGuard } from '@vue/runtime-dom'
+import { createApp, vShow } from '@vue/runtime-dom'
 
-const withVShow = (node: VNode, arg: any, mods?: any) =>
-  applyDirectives(node, [[vShowGuard, arg, '', mods]])
+const withVShow = (node: VNode, exp: any) =>
+  withDirectives(node, [[vShow, exp]])
 
 let app: any, root: any
 
