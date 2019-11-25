@@ -9,7 +9,7 @@ export const V_MODEL_DYNAMIC = Symbol(__DEV__ ? `vModelDynamic` : ``)
 export const V_ON_WITH_MODIFIERS = Symbol(__DEV__ ? `vOnModifiersGuard` : ``)
 export const V_ON_WITH_KEYS = Symbol(__DEV__ ? `vOnKeysGuard` : ``)
 
-export const V_SHOW_GUARD = Symbol(__DEV__ ? `vShowGuard` : ``)
+export const V_SHOW = Symbol(__DEV__ ? `vShow` : ``)
 
 registerRuntimeHelpers({
   [V_MODEL_RADIO]: `vModelRadio`,
@@ -19,5 +19,5 @@ registerRuntimeHelpers({
   [V_MODEL_DYNAMIC]: `vModelDynamic`,
   [V_ON_WITH_MODIFIERS]: `withModifiers`,
   [V_ON_WITH_KEYS]: `withKeys`,
-  [V_SHOW_GUARD]: `vShowGuard`
+  [V_SHOW]: `vShow`
 })

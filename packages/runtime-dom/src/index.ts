@@ -68,7 +68,7 @@ export { withModifiers, withKeys } from './directives/vOn'
 // DOM-only components
 export { Transition, TransitionProps } from './components/Transition'
 
-export { vShowGuard } from './directives/vShow'
+export { vShow } from './directives/vShow'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types

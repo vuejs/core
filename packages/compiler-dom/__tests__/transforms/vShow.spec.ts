@@ -1,6 +1,6 @@
 import { parse, transform, generate, CompilerOptions } from '@vue/compiler-core'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
-import { transformVShow } from '../../src/transforms/vShow'
+import { transformShow } from '../../src/transforms/vShow'
 import { DOMErrorCodes } from '../../src/errors'
 
 function transformWithShow(template: string, options: CompilerOptions = {}) {
@@ -8,7 +8,7 @@ function transformWithShow(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms: [transformElement],
     directiveTransforms: {
-      show: transformVShow
+      show: transformShow
     },
     ...options
   })

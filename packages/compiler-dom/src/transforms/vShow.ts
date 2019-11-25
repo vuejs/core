@@ -1,8 +1,8 @@
 import { DirectiveTransform } from '@vue/compiler-core'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'
-import { V_SHOW_GUARD } from '../runtimeHelpers'
+import { V_SHOW } from '../runtimeHelpers'
 
-export const transformVShow: DirectiveTransform = (dir, node, context) => {
+export const transformShow: DirectiveTransform = (dir, node, context) => {
   const { exp, loc } = dir
   if (!exp) {
     context.onError(
@@ -12,6 +12,6 @@ export const transformVShow: DirectiveTransform = (dir, node, context) => {
 
   return {
     props: [],
-    needRuntime: context.helper(V_SHOW_GUARD)
+    needRuntime: context.helper(V_SHOW)
   }
 }

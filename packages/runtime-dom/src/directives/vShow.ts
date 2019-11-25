@@ -1,28 +1,45 @@
-import { Directive } from '@vue/runtime-core'
+import { ObjectDirective } from '@vue/runtime-core'
 
-type ShowGuardElement = ElementCSSInlineStyle & {
-  __vOriginalDisplay: string | null
+interface VShowElement extends HTMLElement {
+  // _vod = vue original display
+  _vod: string
 }
 
-//TODO: interaction with transition module
-export const vShowGuard: Directive<ShowGuardElement> = {
-  beforeMount: (el, { value }) => {
-    setOriginalDisplay(el)
-    setElementDisplayByValue(el, value)
+export const vShow: ObjectDirective<VShowElement> = {
+  beforeMount(el, { value }, { transition }) {
+    el._vod = el.style.display === 'none' ? '' : el.style.display
+    if (transition && value) {
+      transition.beforeEnter(el)
+    } else {
+      setDisplay(el, value)
+    }
   },
-  updated: (el, { value, oldValue }) => {
+  mounted(el, { value }, { transition }) {
+    if (transition && value) {
+      transition.enter(el)
+    }
+  },
+  updated(el, { value, oldValue }, { transition }) {
     if (!value === !oldValue) return
-    setElementDisplayByValue(el, value)
+    if (transition) {
+      if (value) {
+        transition.beforeEnter(el)
+        setDisplay(el, true)
+        transition.enter(el)
+      } else {
+        transition.leave(el, () => {
+          setDisplay(el, false)
+        })
+      }
+    } else {
+      setDisplay(el, value)
+    }
   },
-  beforeUnmount: el => {
-    setElementDisplayByValue(el, true)
+  beforeUnmount(el) {
+    setDisplay(el, true)
   }
 }
 
-function setOriginalDisplay(el: ShowGuardElement): void {
-  el.__vOriginalDisplay = el.style.display === 'none' ? '' : el.style.display
-}
-
-function setElementDisplayByValue(el: ShowGuardElement, value: any): void {
-  el.style.display = value ? el.__vOriginalDisplay : 'none'
+function setDisplay(el: VShowElement, value: unknown): void {
+  el.style.display = value ? el._vod : 'none'
 }
