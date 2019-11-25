@@ -2,7 +2,7 @@ import { ObjectDirective } from '@vue/runtime-core'
 
 interface VShowElement extends HTMLElement {
   // _vod = vue original display
-  _vod: string
+  _vod: string | null
 }
 
 export const vShow: ObjectDirective<VShowElement> = {
