@@ -1,4 +1,4 @@
-import { ElementWithTransition } from '../components/CSSTransition'
+import { ElementWithTransition } from '../components/Transition'
 
 // compiler should normalize class + :class bindings on the same element
 // into a single binding ['staticClass', dynamic]

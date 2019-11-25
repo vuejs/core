@@ -19,7 +19,8 @@ import { AppContext } from './apiApp'
 import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'
-import { TransitionHooks } from './components/Transition'
+import { TransitionHooks } from './components/BaseTransition'
+import { warn } from './warning'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -194,6 +195,11 @@ export function createVNode(
   patchFlag: number = 0,
   dynamicProps: string[] | null = null
 ): VNode {
+  if (__DEV__ && !type) {
+    warn(`Invalid vnode type when creating vnode: ${type}.`)
+    type = Comment
+  }
+
   // class & style normalization.
   if (props !== null) {
     // for reactive or proxy objects, we need to clone it to enable mutation.

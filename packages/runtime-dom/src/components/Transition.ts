@@ -1,6 +1,6 @@
 import {
-  Transition as BaseTransition,
-  TransitionProps,
+  BaseTransition,
+  BaseTransitionProps,
   h,
   warn,
   FunctionalComponent,
@@ -13,9 +13,10 @@ import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
 
-export interface CSSTransitionProps extends TransitionProps {
+export interface TransitionProps extends BaseTransitionProps {
   name?: string
   type?: typeof TRANSITION | typeof ANIMATION
+  css?: boolean
   duration?: number | { enter: number; leave: number }
   // custom transition classes
   enterFromClass?: string
@@ -29,18 +30,22 @@ export interface CSSTransitionProps extends TransitionProps {
   leaveToClass?: string
 }
 
-// CSSTransition is a higher-order-component based on the platform-agnostic
+// DOM Transition is a higher-order-component based on the platform-agnostic
 // base Transition component, with DOM-specific logic.
-export const CSSTransition: FunctionalComponent = (
-  props: CSSTransitionProps,
+export const Transition: FunctionalComponent = (
+  props: TransitionProps,
   { slots }
-) => h(BaseTransition, resolveCSSTransitionProps(props), slots)
+) => h(BaseTransition, resolveTransitionProps(props), slots)
 
 if (__DEV__) {
-  CSSTransition.props = {
+  Transition.props = {
     ...(BaseTransition as any).props,
     name: String,
     type: String,
+    // Cannot use Boolean otherwise it will be force casted to false when
+    // omitted
+    css: null,
+    duration: Object,
     enterFromClass: String,
     enterActiveClass: String,
     enterToClass: String,
@@ -49,14 +54,14 @@ if (__DEV__) {
     appearToClass: String,
     leaveFromClass: String,
     leaveActiveClass: String,
-    leaveToClass: String,
-    duration: Object
+    leaveToClass: String
   }
 }
 
-function resolveCSSTransitionProps({
+function resolveTransitionProps({
   name = 'v',
   type,
+  css = true,
   duration,
   enterFromClass = `${name}-enter-from`,
   enterActiveClass = `${name}-enter-active`,
@@ -68,7 +73,11 @@ function resolveCSSTransitionProps({
   leaveActiveClass = `${name}-leave-active`,
   leaveToClass = `${name}-leave-to`,
   ...baseProps
-}: CSSTransitionProps): TransitionProps {
+}: TransitionProps): BaseTransitionProps {
+  if (!css) {
+    return baseProps
+  }
+
   const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
@@ -147,7 +156,7 @@ function resolveCSSTransitionProps({
 }
 
 function normalizeDuration(
-  duration: CSSTransitionProps['duration']
+  duration: TransitionProps['duration']
 ): [number, number] | null {
   if (duration == null) {
     return null
@@ -210,7 +219,7 @@ function nextFrame(cb: () => void) {
 
 function whenTransitionEnds(
   el: Element,
-  expectedType: CSSTransitionProps['type'] | undefined,
+  expectedType: TransitionProps['type'] | undefined,
   cb: () => void
 ) {
   const { type, timeout, propCount } = getTransitionInfo(el, expectedType)
@@ -247,7 +256,7 @@ interface CSSTransitionInfo {
 
 function getTransitionInfo(
   el: Element,
-  expectedType?: CSSTransitionProps['type']
+  expectedType?: TransitionProps['type']
 ): CSSTransitionInfo {
   const styles: any = window.getComputedStyle(el)
   // JSDOM may return undefined for transition properties

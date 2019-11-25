@@ -69,8 +69,8 @@ export type ExtractPropTypes<
   : { [K in string]: any }
 
 const enum BooleanFlags {
-  shouldCast = '1',
-  shouldCastTrue = '2'
+  shouldCast,
+  shouldCastTrue
 }
 
 type NormalizedProp =

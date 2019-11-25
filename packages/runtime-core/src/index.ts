@@ -28,7 +28,10 @@ export { Text, Comment, Fragment, Portal } from './vnode'
 // Internal Components
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
-export { Transition, TransitionProps } from './components/Transition'
+export {
+  BaseTransition,
+  BaseTransitionProps
+} from './components/BaseTransition'
 // VNode flags
 export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
 import { PublicPatchFlags } from '@vue/shared'
