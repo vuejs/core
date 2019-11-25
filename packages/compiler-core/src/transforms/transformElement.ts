@@ -138,8 +138,11 @@ export const transformElement: NodeTransform = (node, context) => {
       if (!hasProps) {
         args.push(`null`)
       }
-      // Portal should have normal children instead of slots
-      if (isComponent && !isPortal) {
+      // Portal & KeepAlive should have normal children instead of slots
+      // Portal is not a real component has dedicated handling in the renderer
+      // KeepAlive should not track its own deps so that it can be used inside
+      // Transition
+      if (isComponent && !isPortal && !isKeepAlive) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {

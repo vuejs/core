@@ -3,7 +3,13 @@ import {
   SetupContext,
   ComponentOptions
 } from '../component'
-import { cloneVNode, Comment, isSameVNodeType, VNode } from '../vnode'
+import {
+  cloneVNode,
+  Comment,
+  isSameVNodeType,
+  VNode,
+  VNodeChildren
+} from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
@@ -36,17 +42,38 @@ export interface BaseTransitionProps {
   onLeaveCancelled?: (el: any) => void
 }
 
+export interface TransitionHooks {
+  persisted: boolean
+  beforeEnter(el: object): void
+  enter(el: object): void
+  leave(el: object, remove: () => void): void
+  afterLeave?(): void
+  delayLeave?(delayedLeave: () => void): void
+  delayedLeave?(): void
+}
+
 type TransitionHookCaller = (
   hook: ((el: any) => void) | undefined,
   args?: any[]
 ) => void
 
+type PendingCallback = (cancelled?: boolean) => void
+
 interface TransitionState {
   isMounted: boolean
   isLeaving: boolean
   isUnmounting: boolean
-  pendingEnter?: (cancelled?: boolean) => void
-  pendingLeave?: (cancelled?: boolean) => void
+  // Track pending leave callbacks for children of the same key.
+  // This is used to force remove leaving a child when a new copy is entering.
+  leavingVNodes: Record<string, VNode>
+}
+
+interface TransitionElement {
+  // in persisted mode (e.g. v-show), the same element is toggled, so the
+  // pending enter/leave callbacks may need to cancalled if the state is toggled
+  // before it finishes.
+  _enterCb?: PendingCallback
+  _leaveCb?: PendingCallback
 }
 
 const BaseTransitionImpl = {
@@ -56,7 +83,8 @@ const BaseTransitionImpl = {
     const state: TransitionState = {
       isMounted: false,
       isLeaving: false,
-      isUnmounting: false
+      isUnmounting: false,
+      leavingVNodes: Object.create(null)
     }
     onMounted(() => {
       state.isMounted = true
@@ -84,7 +112,7 @@ const BaseTransitionImpl = {
       // warn multiple elements
       if (__DEV__ && children.length > 1) {
         warn(
-          '<transition> can only be used on a single element. Use ' +
+          '<transition> can only be used on a single element or component. Use ' +
             '<transition-group> for lists.'
         )
       }
@@ -101,45 +129,53 @@ const BaseTransitionImpl = {
       // at this point children has a guaranteed length of 1.
       const child = children[0]
       if (state.isLeaving) {
-        return placeholder(child)
+        return emptyPlaceholder(child)
       }
 
-      let delayedLeave: (() => void) | undefined
-      const performDelayedLeave = () => delayedLeave && delayedLeave()
+      // in the case of <transition><keep-alive/></transition>, we need to
+      // compare the type of the kept-alive children.
+      const innerChild = getKeepAliveChild(child)
+      if (!innerChild) {
+        return emptyPlaceholder(child)
+      }
 
-      const transitionHooks = (child.transition = resolveTransitionHooks(
+      const enterHooks = (innerChild.transition = resolveTransitionHooks(
+        innerChild,
         rawProps,
         state,
-        callTransitionHook,
-        performDelayedLeave
+        callTransitionHook
       ))
 
-      // clone old subTree because we need to modify it
       const oldChild = instance.subTree
-        ? (instance.subTree = cloneVNode(instance.subTree))
-        : null
-
+      const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
       // handle mode
       if (
-        oldChild &&
-        !isSameVNodeType(child, oldChild) &&
-        oldChild.type !== Comment
+        oldInnerChild &&
+        oldInnerChild.type !== Comment &&
+        !isSameVNodeType(innerChild, oldInnerChild)
       ) {
+        const prevHooks = oldInnerChild.transition!
+        const leavingHooks = resolveTransitionHooks(
+          oldInnerChild,
+          rawProps,
+          state,
+          callTransitionHook
+        )
         // update old tree's hooks in case of dynamic transition
-        // need to do this recursively in case of HOCs
-        updateHOCTransitionData(oldChild, transitionHooks)
+        setTransitionHooks(oldInnerChild, leavingHooks)
         // switching between different views
         if (mode === 'out-in') {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
-          transitionHooks.afterLeave = () => {
+          leavingHooks.afterLeave = () => {
             state.isLeaving = false
             instance.update()
           }
-          return placeholder(child)
+          return emptyPlaceholder(child)
         } else if (mode === 'in-out') {
-          transitionHooks.delayLeave = performLeave => {
-            delayedLeave = performLeave
+          delete prevHooks.delayedLeave
+          leavingHooks.delayLeave = delayedLeave => {
+            enterHooks.delayedLeave = delayedLeave
           }
         }
       }
@@ -175,18 +211,10 @@ export const BaseTransition = (BaseTransitionImpl as any) as {
   }
 }
 
-export interface TransitionHooks {
-  persisted: boolean
-  beforeEnter(el: object): void
-  enter(el: object): void
-  leave(el: object, remove: () => void): void
-  afterLeave?(): void
-  delayLeave?(performLeave: () => void): void
-}
-
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
 function resolveTransitionHooks(
+  vnode: VNode,
   {
     appear,
     persisted = false,
@@ -200,36 +228,51 @@ function resolveTransitionHooks(
     onLeaveCancelled
   }: BaseTransitionProps,
   state: TransitionState,
-  callHook: TransitionHookCaller,
-  performDelayedLeave: () => void
+  callHook: TransitionHookCaller
 ): TransitionHooks {
-  return {
+  const { leavingVNodes } = state
+  const key = String(vnode.key)
+
+  const hooks: TransitionHooks = {
     persisted,
-    beforeEnter(el) {
-      if (state.pendingLeave) {
-        state.pendingLeave(true /* cancelled */)
-      }
+    beforeEnter(el: TransitionElement) {
       if (!appear && !state.isMounted) {
         return
+      }
+      // for same element (v-show)
+      if (el._leaveCb) {
+        el._leaveCb(true /* cancelled */)
+      }
+      // for toggled element with same key (v-if)
+      const leavingVNode = leavingVNodes[key]
+      if (
+        leavingVNode &&
+        isSameVNodeType(vnode, leavingVNode) &&
+        leavingVNode.el._leaveCb
+      ) {
+        // force early removal (not cancelled)
+        leavingVNode.el._leaveCb()
       }
       callHook(onBeforeEnter, [el])
     },
 
-    enter(el) {
+    enter(el: TransitionElement) {
       if (!appear && !state.isMounted) {
         return
       }
       let called = false
-      const afterEnter = (state.pendingEnter = (cancelled?) => {
+      const afterEnter = (el._enterCb = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
           callHook(onEnterCancelled, [el])
         } else {
           callHook(onAfterEnter, [el])
-          performDelayedLeave()
         }
-        state.pendingEnter = undefined
+        if (hooks.delayedLeave) {
+          hooks.delayedLeave()
+        }
+        el._enterCb = undefined
       })
       if (onEnter) {
         onEnter(el, afterEnter)
@@ -238,16 +281,17 @@ function resolveTransitionHooks(
       }
     },
 
-    leave(el, remove) {
-      if (state.pendingEnter) {
-        state.pendingEnter(true /* cancelled */)
+    leave(el: TransitionElement, remove) {
+      const key = String(vnode.key)
+      if (el._enterCb) {
+        el._enterCb(true /* cancelled */)
       }
       if (state.isUnmounting) {
         return remove()
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const afterLeave = (state.pendingLeave = (cancelled?) => {
+      const afterLeave = (el._leaveCb = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -256,8 +300,10 @@ function resolveTransitionHooks(
         } else {
           callHook(onAfterLeave, [el])
         }
-        state.pendingLeave = undefined
+        el._leaveCb = undefined
+        delete leavingVNodes[key]
       })
+      leavingVNodes[key] = vnode
       if (onLeave) {
         onLeave(el, afterLeave)
       } else {
@@ -265,13 +311,15 @@ function resolveTransitionHooks(
       }
     }
   }
+
+  return hooks
 }
 
 // the placeholder really only handles one special case: KeepAlive
 // in the case of a KeepAlive in a leave phase we need to return a KeepAlive
 // placeholder with empty content to avoid the KeepAlive instance from being
 // unmounted.
-function placeholder(vnode: VNode): VNode | undefined {
+function emptyPlaceholder(vnode: VNode): VNode | undefined {
   if (isKeepAlive(vnode)) {
     vnode = cloneVNode(vnode)
     vnode.children = null
@@ -279,10 +327,18 @@ function placeholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function updateHOCTransitionData(vnode: VNode, data: TransitionHooks) {
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    updateHOCTransitionData(vnode.component!.subTree, data)
+function getKeepAliveChild(vnode: VNode): VNode | undefined {
+  return isKeepAlive(vnode)
+    ? vnode.children
+      ? ((vnode.children as VNodeChildren)[0] as VNode)
+      : undefined
+    : vnode
+}
+
+export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    setTransitionHooks(vnode.component.subTree, hooks)
   } else {
-    vnode.transition = data
+    vnode.transition = hooks
   }
 }

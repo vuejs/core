@@ -91,7 +91,8 @@ export function renderComponentRoot(
       if (
         __DEV__ &&
         !(result.shapeFlag & ShapeFlags.COMPONENT) &&
-        !(result.shapeFlag & ShapeFlags.ELEMENT)
+        !(result.shapeFlag & ShapeFlags.ELEMENT) &&
+        result.type !== Comment
       ) {
         warn(
           `Component inside <Transition> renders non-element root node ` +

@@ -17,8 +17,10 @@ import { SuspenseBoundary } from './Suspense'
 import {
   RendererInternals,
   queuePostRenderEffect,
-  invokeHooks
+  invokeHooks,
+  MoveType
 } from '../renderer'
+import { setTransitionHooks } from './BaseTransition'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -80,7 +82,7 @@ const KeepAliveImpl = {
     const storageContainer = createElement('div')
 
     sink.activate = (vnode, container, anchor) => {
-      move(vnode, container, anchor)
+      move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
         component.isDeactivated = false
@@ -91,7 +93,7 @@ const KeepAliveImpl = {
     }
 
     sink.deactivate = (vnode: VNode) => {
-      move(vnode, storageContainer, null)
+      move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
         if (component.da !== null) {
@@ -188,6 +190,10 @@ const KeepAliveImpl = {
         vnode.el = cached.el
         vnode.anchor = cached.anchor
         vnode.component = cached.component
+        if (vnode.transition) {
+          // recursively update transition hooks on subTree
+          setTransitionHooks(vnode, vnode.transition!)
+        }
         // avoid vnode being mounted as fresh
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest

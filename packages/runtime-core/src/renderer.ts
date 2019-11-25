@@ -109,10 +109,18 @@ export interface RendererInternals<HostNode = any, HostElement = any> {
   move: (
     vnode: VNode<HostNode, HostElement>,
     container: HostElement,
-    anchor: HostNode | null
+    anchor: HostNode | null,
+    type: MoveType,
+    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null
   ) => void
   next: (vnode: VNode<HostNode, HostElement>) => HostNode | null
   options: RendererOptions<HostNode, HostElement>
+}
+
+export const enum MoveType {
+  ENTER,
+  LEAVE,
+  REORDER
 }
 
 const prodEffectOptions = {
@@ -367,9 +375,6 @@ export function createRenderer<
         invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
       }
     }
-    if (transition != null && !transition.persisted) {
-      transition.beforeEnter(el)
-    }
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -382,6 +387,9 @@ export function createRenderer<
         isSVG,
         optimized || vnode.dynamicChildren !== null
       )
+    }
+    if (transition != null && !transition.persisted) {
+      transition.beforeEnter(el)
     }
     hostInsert(el, container, anchor)
     const vnodeMountedHook = props && props.onVnodeMounted
@@ -747,7 +755,12 @@ export function createRenderer<
             hostSetElementText(nextTarget, children as string)
           } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
             for (let i = 0; i < (children as HostVNode[]).length; i++) {
-              move((children as HostVNode[])[i], nextTarget, null)
+              move(
+                (children as HostVNode[])[i],
+                nextTarget,
+                null,
+                MoveType.REORDER
+              )
             }
           }
         } else if (__DEV__) {
@@ -1372,7 +1385,7 @@ export function createRenderer<
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
           if (j < 0 || i !== increasingNewIndexSequence[j]) {
-            move(nextChild, container, anchor)
+            move(nextChild, container, anchor, MoveType.REORDER)
           } else {
             j--
           }
@@ -1384,25 +1397,54 @@ export function createRenderer<
   function move(
     vnode: HostVNode,
     container: HostElement,
-    anchor: HostNode | null
+    anchor: HostNode | null,
+    type: MoveType,
+    parentSuspense: HostSuspenseBoundary | null = null
   ) {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor)
+      move(vnode.component!.subTree, container, anchor, type)
       return
     }
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-      vnode.suspense!.move(container, anchor)
+      vnode.suspense!.move(container, anchor, type)
       return
     }
     if (vnode.type === Fragment) {
       hostInsert(vnode.el!, container, anchor)
       const children = vnode.children as HostVNode[]
       for (let i = 0; i < children.length; i++) {
-        move(children[i], container, anchor)
+        move(children[i], container, anchor, type)
       }
       hostInsert(vnode.anchor!, container, anchor)
     } else {
-      hostInsert(vnode.el!, container, anchor)
+      // Plain element
+      const { el, transition, shapeFlag } = vnode
+      const needTransition =
+        type !== MoveType.REORDER &&
+        shapeFlag & ShapeFlags.ELEMENT &&
+        transition != null
+      if (needTransition) {
+        if (type === MoveType.ENTER) {
+          transition!.beforeEnter(el!)
+          hostInsert(el!, container, anchor)
+          queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        } else {
+          const { leave, delayLeave, afterLeave } = transition!
+          const performLeave = () => {
+            leave(el!, () => {
+              hostInsert(el!, container, anchor)
+              afterLeave && afterLeave()
+            })
+          }
+          if (delayLeave) {
+            delayLeave(performLeave)
+          } else {
+            performLeave()
+          }
+        }
+      } else {
+        hostInsert(el!, container, anchor)
+      }
     }
   }
 
