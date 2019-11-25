@@ -859,7 +859,7 @@ export function createRenderer<
     // resolve props and slots for setup context
     const propsOptions = Comp.props
     resolveProps(instance, initialVNode.props, propsOptions)
-    resolveSlots(instance, initialVNode.children)
+    resolveSlots(instance, initialVNode.props, initialVNode.children)
 
     // setup stateful logic
     if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
@@ -990,7 +990,7 @@ export function createRenderer<
     instance.vnode = nextVNode
     instance.next = null
     resolveProps(instance, nextVNode.props, (nextVNode.type as Component).props)
-    resolveSlots(instance, nextVNode.children)
+    resolveSlots(instance, nextVNode.props, nextVNode.children)
   }
 
   function patchChildren(

@@ -121,8 +121,8 @@ export function resolveProps(
 
   if (rawProps != null) {
     for (const key in rawProps) {
-      // key, ref are reserved and never passed down
-      if (key === 'key' || key === 'ref') continue
+      // key, ref, slots are reserved and never passed down
+      if (key === 'key' || key === 'ref' || key === 'slots') continue
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
       const camelKey = camelize(key)

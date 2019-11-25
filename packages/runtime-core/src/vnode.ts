@@ -49,6 +49,7 @@ export interface VNodeProps {
   [key: string]: any
   key?: string | number
   ref?: string | Ref | ((ref: object | null) => void)
+  slots?: RawSlots
 
   // vnode hooks
   onVnodeBeforeMount?: (vnode: VNode) => void
