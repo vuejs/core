@@ -86,7 +86,8 @@ export const transformElement: NodeTransform = (node, context) => {
         else if (isProp.exp) {
           dynamicComponent = createCallExpression(
             context.helper(RESOLVE_DYNAMIC_COMPONENT),
-            [isProp.exp]
+            // _ctx.$ exposes the owner instance of current render function
+            [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
           )
         }
       }

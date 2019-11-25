@@ -1,5 +1,9 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import { currentInstance, Component } from '../component'
+import {
+  currentInstance,
+  Component,
+  ComponentInternalInstance
+} from '../component'
 import { Directive } from '../directives'
 import {
   camelize,
@@ -15,11 +19,16 @@ export function resolveComponent(name: string): Component | undefined {
 }
 
 export function resolveDynamicComponent(
-  component: unknown
+  component: unknown,
+  // Dynamic component resolution has to be called inline due to potential
+  // access to scope variables. When called inside slots it will be inside
+  // a different component's render cycle, so the owner instance must be passed
+  // in explicitly.
+  instance: ComponentInternalInstance
 ): Component | undefined {
   if (!component) return
   if (isString(component)) {
-    return resolveAsset('components', component)
+    return resolveAsset('components', component, instance)
   } else if (isFunction(component) || isObject(component)) {
     return component
   }
@@ -30,12 +39,24 @@ export function resolveDirective(name: string): Directive | undefined {
 }
 
 // overload 1: components
-function resolveAsset(type: 'components', name: string): Component | undefined
+function resolveAsset(
+  type: 'components',
+  name: string,
+  instance?: ComponentInternalInstance
+): Component | undefined
 // overload 2: directives
-function resolveAsset(type: 'directives', name: string): Directive | undefined
+function resolveAsset(
+  type: 'directives',
+  name: string,
+  instance?: ComponentInternalInstance
+): Directive | undefined
 
-function resolveAsset(type: 'components' | 'directives', name: string) {
-  const instance = currentRenderingInstance || currentInstance
+function resolveAsset(
+  type: 'components' | 'directives',
+  name: string,
+  instance: ComponentInternalInstance | null = currentRenderingInstance ||
+    currentInstance
+) {
   if (instance) {
     let camelized
     const registry = instance[type]

@@ -106,6 +106,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
+    } else if (key === '$') {
+      // reserved backdoor to access the internal instance
+      return target
     } else if (key === '$cache') {
       return target.renderCache || (target.renderCache = [])
     } else if (key === '$el') {
