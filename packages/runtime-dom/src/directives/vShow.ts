@@ -7,7 +7,8 @@ interface VShowElement extends HTMLElement {
 
 export const vShow: ObjectDirective<VShowElement> = {
   beforeMount(el, { value }, { transition }) {
-    el._vod = el.style.display === 'none' ? '' : el.style.display
+    const elmDisplay = el.style.display
+    el._vod = elmDisplay === 'none' || !elmDisplay ? '' : elmDisplay
     if (transition && value) {
       transition.beforeEnter(el)
     } else {
