@@ -7,6 +7,7 @@ import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
 import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
+import { transformShow } from './transforms/vShow'
 
 export function compile(
   template: string,
@@ -22,6 +23,7 @@ export function compile(
       text: transformVText,
       model: transformModel, // override compiler-core
       on: transformOn,
+      show: transformShow,
       ...(options.directiveTransforms || {})
     }
   })
