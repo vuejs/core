@@ -88,7 +88,16 @@ export function renderComponentRoot(
 
     // inherit transition data
     if (vnode.transition != null) {
-      // TODO warn if component has transition data but root is a fragment
+      if (
+        __DEV__ &&
+        !(result.shapeFlag & ShapeFlags.COMPONENT) &&
+        !(result.shapeFlag & ShapeFlags.ELEMENT)
+      ) {
+        warn(
+          `Component inside <Transition> renders non-element root node ` +
+            `that cannot be animated.`
+        )
+      }
       result.transition = vnode.transition
     }
   } catch (err) {
