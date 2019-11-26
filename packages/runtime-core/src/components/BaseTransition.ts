@@ -28,9 +28,9 @@ export interface BaseTransitionProps {
   // injected hooks (e.g. v-show).
   persisted?: boolean
 
-  // Hooks. Using camel casef for easier usage in render functions & JSX.
+  // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
-  // are camelized
+  // are camelized.
   onBeforeEnter?: (el: any) => void
   onEnter?: (el: any, done: () => void) => void
   onAfterEnter?: (el: any) => void
