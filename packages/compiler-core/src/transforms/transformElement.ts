@@ -498,13 +498,11 @@ function buildDirectiveArgs(
       }
       dirArgs.push(`void 0`)
     }
+    const trueExpression = createSimpleExpression(`true`, false, loc)
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
-          createObjectProperty(
-            modifier,
-            createSimpleExpression(`true`, false, loc)
-          )
+          createObjectProperty(modifier, trueExpression)
         ),
         loc
       )
