@@ -67,7 +67,7 @@ const KeepAliveImpl = {
 
     // KeepAlive communicates with the instantiated renderer via the "sink"
     // where the renderer passes in platform-specific functions, and the
-    // KeepAlivei instance expses activcate/decativate implementations.
+    // KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
     const sink = instance.sink as KeepAliveSink
