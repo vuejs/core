@@ -15,6 +15,9 @@ export type Slots = Readonly<InternalSlots>
 
 export type RawSlots = {
   [name: string]: unknown
+  // manual render fn hint to skip forced children updates
+  $stable?: boolean
+  // internal, indicates compiler generated slots = can skip normalization
   _compiled?: boolean
 }
 
@@ -49,6 +52,7 @@ export function resolveSlots(
     } else {
       slots = {}
       for (const key in rawSlots) {
+        if (key === '$stable') continue
         const value = rawSlots[key]
         if (isFunction(value)) {
           slots[key] = normalizeSlot(key, value)

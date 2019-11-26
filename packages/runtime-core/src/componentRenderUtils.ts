@@ -138,7 +138,9 @@ export function shouldUpdateComponent(
     // this path is only taken by manually written render functions
     // so presence of any children leads to a forced update
     if (prevChildren != null || nextChildren != null) {
-      return true
+      if (nextChildren == null || !(nextChildren as any).$stable) {
+        return true
+      }
     }
     if (prevProps === nextProps) {
       return false
