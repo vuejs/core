@@ -9,7 +9,7 @@ export function renderList(
     index?: number
   ) => VNodeChild
 ): VNodeChild[] {
-  let ret: VNodeChild[]
+  let ret: VNodeChild[] = []
   if (isArray(source) || isString(source)) {
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
@@ -32,5 +32,5 @@ export function renderList(
       }
     }
   }
-  return ret!
+  return ret
 }
