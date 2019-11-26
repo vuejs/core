@@ -80,7 +80,7 @@ export function renderComponentRoot(
       } else if (__DEV__ && !accessedAttrs) {
         warn(
           `Extraneous non-props attributes (${Object.keys(attrs).join(',')}) ` +
-            `were passed to component but could not be automatically inhertied ` +
+            `were passed to component but could not be automatically inherited ` +
             `because component renders fragment or text root nodes.`
         )
       }
