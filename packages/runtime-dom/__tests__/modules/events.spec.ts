@@ -12,6 +12,7 @@ describe(`events`, () => {
     el.dispatchEvent(event)
     await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     expect(fn).toHaveBeenCalledTimes(3)
   })
 
@@ -27,28 +28,31 @@ describe(`events`, () => {
     el.dispatchEvent(event)
     await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     expect(prevFn).toHaveBeenCalledTimes(1)
     expect(nextFn).toHaveBeenCalledTimes(2)
   })
 
-  it('should support multiple event handlers', () => {
+  it('should support multiple event handlers', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn1 = jest.fn()
     const fn2 = jest.fn()
     patchEvent(el, 'click', null, [fn1, fn2], null)
     el.dispatchEvent(event)
+    await nextTick()
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(1)
   })
 
-  it('should unassign event handler', () => {
+  it('should unassign event handler', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
     patchEvent(el, 'click', null, fn, null)
     patchEvent(el, 'click', fn, null, null)
     el.dispatchEvent(event)
+    await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })
 
@@ -66,6 +70,7 @@ describe(`events`, () => {
     el.dispatchEvent(event)
     await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
@@ -85,6 +90,7 @@ describe(`events`, () => {
     el.dispatchEvent(event)
     await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     expect(prevFn).not.toHaveBeenCalled()
     expect(nextFn).toHaveBeenCalledTimes(1)
   })
@@ -104,6 +110,7 @@ describe(`events`, () => {
     el.dispatchEvent(event)
     await nextTick()
     el.dispatchEvent(event)
+    await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })
 })
