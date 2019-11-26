@@ -39,7 +39,7 @@ export interface BaseTransitionProps {
   onBeforeLeave?: (el: any) => void
   onLeave?: (el: any, done: () => void) => void
   onAfterLeave?: (el: any) => void
-  onLeaveCancelled?: (el: any) => void
+  onLeaveCancelled?: (el: any) => void // only fired in persisted mode
 }
 
 export interface TransitionHooks {
