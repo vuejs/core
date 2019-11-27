@@ -1,5 +1,6 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
+import { warn } from '../warning'
 
 export function renderList(
   source: unknown,
@@ -9,7 +10,7 @@ export function renderList(
     index?: number
   ) => VNodeChild
 ): VNodeChild[] {
-  let ret: VNodeChild[] = []
+  let ret: VNodeChild[]
   if (isArray(source) || isString(source)) {
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
@@ -31,6 +32,11 @@ export function renderList(
         ret[i] = renderItem(source[key], key, i)
       }
     }
+  } else {
+    if (__DEV__) {
+      warn(`Invalid v-for property. Did you typed it correctly?`, source)
+    }
+    ret = []
   }
   return ret
 }
