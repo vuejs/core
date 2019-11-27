@@ -7,7 +7,8 @@ import {
   ref,
   nextTick,
   serializeInner,
-  serialize
+  serialize,
+  VNodeProps
 } from '@vue/runtime-test'
 
 function mount(props: BaseTransitionProps, slot: () => any) {
@@ -26,7 +27,9 @@ function mockProps(extra: BaseTransitionProps = {}) {
   }
   const props: BaseTransitionProps = {
     onBeforeEnter: jest.fn(el => {
-      expect(el.parentNode).toBeNull()
+      if (!extra.persisted) {
+        expect(el.parentNode).toBeNull()
+      }
     }),
     onEnter: jest.fn((el, done) => {
       cbs.doneEnter[serialize(el)] = done
@@ -67,8 +70,8 @@ interface ToggleOptions {
   falseSerialized: string
 }
 
-async function runTestWithElements(tester: (o: ToggleOptions) => void) {
-  await tester({
+function runTestWithElements(tester: (o: ToggleOptions) => void) {
+  return tester({
     trueBranch: () => h('div'),
     falseBranch: () => h('span'),
     trueSerialized: `<div></div>`,
@@ -76,12 +79,12 @@ async function runTestWithElements(tester: (o: ToggleOptions) => void) {
   })
 }
 
-async function runTestWithComponents(tester: (o: ToggleOptions) => void) {
+function runTestWithComponents(tester: (o: ToggleOptions) => void) {
   const CompA = ({ msg }: { msg: string }) => h('div', msg)
   // test HOC
   const CompB = ({ msg }: { msg: string }) => h(CompC, { msg })
   const CompC = ({ msg }: { msg: string }) => h('span', msg)
-  await tester({
+  return tester({
     trueBranch: () => h(CompA, { msg: 'foo' }),
     falseBranch: () => h(CompB, { msg: 'bar' }),
     trueSerialized: `<div>foo</div>`,
@@ -90,6 +93,89 @@ async function runTestWithComponents(tester: (o: ToggleOptions) => void) {
 }
 
 describe('BaseTransition', () => {
+  test('appear: true', () => {
+    const { props, cbs } = mockProps({ appear: true })
+    mount(props, () => h('div'))
+    expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(props.onEnter).toHaveBeenCalledTimes(1)
+    expect(props.onAfterEnter).not.toHaveBeenCalled()
+    cbs.doneEnter[`<div></div>`]()
+    expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+  })
+
+  describe('persisted: true', () => {
+    // this is pretty much how v-show is implemented
+    // (but using the directive API instead)
+    function mockPersistedHooks() {
+      const state = { show: true }
+      const toggle = ref(true)
+      const hooks: VNodeProps = {
+        onVnodeBeforeMount(vnode) {
+          vnode.transition!.beforeEnter(vnode.el)
+        },
+        onVnodeMounted(vnode) {
+          vnode.transition!.enter(vnode.el)
+        },
+        onVnodeUpdated(vnode, oldVnode) {
+          if (oldVnode.props!.id !== vnode.props!.id) {
+            if (vnode.props!.id) {
+              vnode.transition!.beforeEnter(vnode.el)
+              state.show = true
+              vnode.transition!.enter(vnode.el)
+            } else {
+              vnode.transition!.leave(vnode.el, () => {
+                state.show = false
+              })
+            }
+          }
+        }
+      }
+      return { state, toggle, hooks }
+    }
+
+    test('w/ appear: false', async () => {
+      const { props, cbs } = mockProps({ persisted: true })
+      const { toggle, state, hooks } = mockPersistedHooks()
+
+      mount(props, () => h('div', { id: toggle.value, ...hooks }))
+      // without appear: true, enter hooks should not be called on mount
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+      toggle.value = false
+      await nextTick()
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      expect(state.show).toBe(true) // should still be shown
+      cbs.doneLeave[`<div id=false></div>`]()
+      expect(state.show).toBe(false) // should be hidden now
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+
+      toggle.value = true
+      await nextTick()
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      expect(state.show).toBe(true) // should be shown now
+      cbs.doneEnter[`<div id=true></div>`]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+    })
+
+    test('w/ appear: true', () => {
+      const { props, cbs } = mockProps({ persisted: true, appear: true })
+      const { hooks } = mockPersistedHooks()
+      mount(props, () => h('div', hooks))
+
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      cbs.doneEnter[`<div></div>`]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('toggle on-off', () => {
     async function testToggleOnOff({
       trueBranch,
@@ -694,15 +780,181 @@ describe('BaseTransition', () => {
     })
   })
 
-  describe('mode: "in-out"', () => {})
+  describe('mode: "in-out"', () => {
+    async function testInOut({
+      trueBranch,
+      falseBranch,
+      trueSerialized,
+      falseSerialized
+    }: ToggleOptions) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'in-out' })
+      const root = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch())
+      )
 
-  describe('mode: "in-out" toggle before finish', () => {})
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`${trueSerialized}${falseSerialized}`)
+      // enter should start
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeEnter, falseSerialized)
+      expect(props.onEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onEnter, falseSerialized)
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      // leave should not start
+      expect(props.onBeforeLeave).not.toHaveBeenCalled()
+      expect(props.onLeave).not.toHaveBeenCalled()
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
 
-  test('persisted: true', () => {
-    // test onLeaveCancelled
+      // finish enter
+      cbs.doneEnter[falseSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterEnter, falseSerialized)
+
+      // leave should start now
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeLeave, trueSerialized)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onLeave, trueSerialized)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      // finish leave
+      cbs.doneLeave[trueSerialized]()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, trueSerialized)
+
+      // toggle again
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`${falseSerialized}${trueSerialized}`)
+      // enter should start
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onBeforeEnter, trueSerialized, 1)
+      expect(props.onEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onEnter, trueSerialized, 1)
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      // leave should not start
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+
+      // finish enter
+      cbs.doneEnter[trueSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterEnter, trueSerialized, 1)
+
+      // leave should start now
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onBeforeLeave, falseSerialized, 1)
+      expect(props.onLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onLeave, falseSerialized, 1)
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      // finish leave
+      cbs.doneLeave[falseSerialized]()
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterLeave, falseSerialized, 1)
+
+      assertCalls(props, {
+        onBeforeEnter: 2,
+        onEnter: 2,
+        onAfterEnter: 2,
+        onEnterCancelled: 0,
+        onBeforeLeave: 2,
+        onLeave: 2,
+        onAfterLeave: 2,
+        onLeaveCancelled: 0
+      })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testInOut)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testInOut)
+    })
   })
 
-  test('appear: true', () => {})
+  describe('mode: "in-out" toggle before finish', () => {
+    async function testInOutBeforeFinish({
+      trueBranch,
+      falseBranch,
+      trueSerialized,
+      falseSerialized
+    }: ToggleOptions) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'in-out' })
+      const root = mount(
+        props,
+        () => (toggle.value ? trueBranch() : falseBranch())
+      )
+
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`${trueSerialized}${falseSerialized}`)
+
+      // toggle back before enter finishes
+      toggle.value = true
+      await nextTick()
+      // should force remove stale true branch
+      expect(serializeInner(root)).toBe(`${falseSerialized}${trueSerialized}`)
+      expect(props.onBeforeEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onBeforeEnter, falseSerialized)
+      assertCalledWithEl(props.onBeforeEnter, trueSerialized, 1)
+      expect(props.onEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onEnter, falseSerialized)
+      assertCalledWithEl(props.onEnter, trueSerialized, 1)
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      expect(props.onEnterCancelled).not.toHaveBeenCalled()
+
+      // calling the enter done for false branch does fire the afterEnter
+      // hook, but should have no other effects since stale branch has already
+      // left
+      cbs.doneEnter[falseSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterEnter, falseSerialized)
+
+      // leave should not start for either branch
+      expect(props.onBeforeLeave).not.toHaveBeenCalled()
+      expect(props.onLeave).not.toHaveBeenCalled()
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+
+      cbs.doneEnter[trueSerialized]()
+      expect(props.onAfterEnter).toHaveBeenCalledTimes(2)
+      assertCalledWithEl(props.onAfterEnter, trueSerialized, 1)
+      // should start leave for false branch
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onBeforeLeave, falseSerialized)
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onLeave, falseSerialized)
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      // finish leave
+      cbs.doneLeave[falseSerialized]()
+      expect(serializeInner(root)).toBe(trueSerialized)
+      expect(props.onAfterLeave).toHaveBeenCalledTimes(1)
+      assertCalledWithEl(props.onAfterLeave, falseSerialized)
+
+      assertCalls(props, {
+        onBeforeEnter: 2,
+        onEnter: 2,
+        onAfterEnter: 2,
+        onEnterCancelled: 0,
+        onBeforeLeave: 1,
+        onLeave: 1,
+        onAfterLeave: 1,
+        onLeaveCancelled: 0
+      })
+    }
+
+    test('w/ elements', async () => {
+      await runTestWithElements(testInOutBeforeFinish)
+    })
+
+    test('w/ components', async () => {
+      await runTestWithComponents(testInOutBeforeFinish)
+    })
+  })
 
   describe('with KeepAlive', () => {
     // TODO

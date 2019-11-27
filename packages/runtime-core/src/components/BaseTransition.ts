@@ -48,7 +48,11 @@ export interface TransitionHooks {
   enter(el: object): void
   leave(el: object, remove: () => void): void
   afterLeave?(): void
-  delayLeave?(delayedLeave: () => void): void
+  delayLeave?(
+    el: object,
+    earlyRemove: () => void,
+    delayedLeave: () => void
+  ): void
   delayedLeave?(): void
 }
 
@@ -174,7 +178,22 @@ const BaseTransitionImpl = {
           return emptyPlaceholder(child)
         } else if (mode === 'in-out') {
           delete prevHooks.delayedLeave
-          leavingHooks.delayLeave = delayedLeave => {
+          leavingHooks.delayLeave = (
+            el: TransitionElement,
+            earlyRemove,
+            delayedLeave
+          ) => {
+            const leavingVNodesCache = getLeavingNodesForType(
+              state,
+              oldInnerChild
+            )
+            leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
+            // early removal callback
+            el._leaveCb = () => {
+              earlyRemove()
+              el._leaveCb = undefined
+              delete enterHooks.delayedLeave
+            }
             enterHooks.delayedLeave = delayedLeave
           }
         }
@@ -211,6 +230,19 @@ export const BaseTransition = (BaseTransitionImpl as any) as {
   }
 }
 
+function getLeavingNodesForType(
+  state: TransitionState,
+  vnode: VNode
+): Record<string, VNode> {
+  const { leavingVNodes } = state
+  let leavingVNodesCache = leavingVNodes.get(vnode.type)!
+  if (!leavingVNodesCache) {
+    leavingVNodesCache = Object.create(null)
+    leavingVNodes.set(vnode.type, leavingVNodesCache)
+  }
+  return leavingVNodesCache
+}
+
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
 function resolveTransitionHooks(
@@ -231,12 +263,7 @@ function resolveTransitionHooks(
   callHook: TransitionHookCaller
 ): TransitionHooks {
   const key = String(vnode.key)
-  const { leavingVNodes } = state
-  let leavingVNodesCache = leavingVNodes.get(vnode.type)!
-  if (!leavingVNodesCache) {
-    leavingVNodesCache = Object.create(null)
-    leavingVNodes.set(vnode.type, leavingVNodesCache)
-  }
+  const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
   const hooks: TransitionHooks = {
     persisted,
