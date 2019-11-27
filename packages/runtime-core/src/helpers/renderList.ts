@@ -33,9 +33,6 @@ export function renderList(
       }
     }
   } else {
-    if (__DEV__) {
-      warn(`Invalid v-for property. Did you typed it correctly?`)
-    }
     ret = []
   }
   return ret
