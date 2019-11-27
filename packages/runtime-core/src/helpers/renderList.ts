@@ -1,6 +1,5 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
-import { warn } from '../warning'
 
 export function renderList(
   source: unknown,
