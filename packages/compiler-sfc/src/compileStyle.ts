@@ -132,14 +132,8 @@ function preprocess(
   options: StyleCompileOptions,
   preprocessor: StylePreprocessor
 ): StylePreprocessorResults {
-  return preprocessor.render(
-    options.source,
-    options.map,
-    Object.assign(
-      {
-        filename: options.filename
-      },
-      options.preprocessOptions
-    )
-  )
+  return preprocessor.render(options.source, options.map, {
+    filename: options.filename,
+    ...options.preprocessOptions
+  })
 }
