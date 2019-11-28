@@ -10,15 +10,11 @@ import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 
-export interface VueTemplateCompilerParseOptions {
-  pad?: 'line' | 'space'
-}
-
 export interface SFCParseOptions {
   needMap?: boolean
   filename?: string
   sourceRoot?: string
-  compilerParseOptions?: VueTemplateCompilerParseOptions
+  pad?: 'line' | 'space'
 }
 
 export interface SFCBlock {
@@ -62,7 +58,7 @@ export function parse(
     needMap = true,
     filename = 'component.vue',
     sourceRoot = '',
-    compilerParseOptions = { pad: 'line' }
+    pad = 'line'
   }: SFCParseOptions = {}
 ): SFCDescriptor {
   const sourceKey = source + needMap + filename + sourceRoot
@@ -121,7 +117,7 @@ export function parse(
         source,
         sfc.script.content,
         sourceRoot,
-        compilerParseOptions.pad
+        pad
       )
     }
     if (sfc.styles) {
@@ -132,7 +128,7 @@ export function parse(
             source,
             style.content,
             sourceRoot,
-            compilerParseOptions.pad
+            pad
           )
         }
       })
