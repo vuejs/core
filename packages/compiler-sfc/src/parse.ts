@@ -74,6 +74,7 @@ export function parse(
     styles: [],
     customBlocks: []
   }
+
   const ast = baseParse(source, {
     isNativeTag: () => true,
     getTextMode: () => TextModes.RAWTEXT
@@ -86,6 +87,7 @@ export function parse(
     if (!node.children.length) {
       return
     }
+    // TODO handle pad option
     switch (node.tag) {
       case 'template':
         if (!sfc.template) {

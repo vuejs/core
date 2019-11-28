@@ -8,11 +8,13 @@ describe('compiler:sfc', () => {
     test('style block', () => {
       const style = parse(`<style>\n.color {\n color: red;\n }\n</style>\n`)
         .styles[0]
+      // TODO need to actually test this with SourceMapConsumer
       expect(style.map).not.toBeUndefined()
     })
 
     test('script block', () => {
       const script = parse(`<script>\nconsole.log(1)\n }\n</script>\n`).script
+      // TODO need to actually test this with SourceMapConsumer
       expect(script!.map).not.toBeUndefined()
     })
   })
