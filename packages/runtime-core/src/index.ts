@@ -58,6 +58,13 @@ export {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
+export {
+  useTransitionState,
+  TransitionState,
+  resolveTransitionHooks,
+  setTransitionHooks,
+  TransitionHooks
+} from './components/BaseTransition'
 
 // Internal, for compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'

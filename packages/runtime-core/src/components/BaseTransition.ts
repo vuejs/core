@@ -1,7 +1,8 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentOptions
+  ComponentOptions,
+  ComponentInternalInstance
 } from '../component'
 import {
   cloneVNode,
@@ -61,9 +62,9 @@ type TransitionHookCaller = (
   args?: any[]
 ) => void
 
-type PendingCallback = (cancelled?: boolean) => void
+export type PendingCallback = (cancelled?: boolean) => void
 
-interface TransitionState {
+export interface TransitionState {
   isMounted: boolean
   isLeaving: boolean
   isUnmounting: boolean
@@ -72,7 +73,7 @@ interface TransitionState {
   leavingVNodes: Map<any, Record<string, VNode>>
 }
 
-interface TransitionElement {
+export interface TransitionElement {
   // in persisted mode (e.g. v-show), the same element is toggled, so the
   // pending enter/leave callbacks may need to cancalled if the state is toggled
   // before it finishes.
@@ -80,32 +81,27 @@ interface TransitionElement {
   _leaveCb?: PendingCallback
 }
 
+export function useTransitionState(): TransitionState {
+  const state: TransitionState = {
+    isMounted: false,
+    isLeaving: false,
+    isUnmounting: false,
+    leavingVNodes: new Map()
+  }
+  onMounted(() => {
+    state.isMounted = true
+  })
+  onBeforeUnmount(() => {
+    state.isUnmounting = true
+  })
+  return state
+}
+
 const BaseTransitionImpl = {
   name: `BaseTransition`,
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
-    const state: TransitionState = {
-      isMounted: false,
-      isLeaving: false,
-      isUnmounting: false,
-      leavingVNodes: new Map()
-    }
-    onMounted(() => {
-      state.isMounted = true
-    })
-    onBeforeUnmount(() => {
-      state.isUnmounting = true
-    })
-
-    const callTransitionHook: TransitionHookCaller = (hook, args) => {
-      hook &&
-        callWithAsyncErrorHandling(
-          hook,
-          instance,
-          ErrorCodes.TRANSITION_HOOK,
-          args
-        )
-    }
+    const state = useTransitionState()
 
     return () => {
       const children = slots.default && slots.default()
@@ -147,7 +143,7 @@ const BaseTransitionImpl = {
         innerChild,
         rawProps,
         state,
-        callTransitionHook
+        instance
       ))
 
       const oldChild = instance.subTree
@@ -163,7 +159,7 @@ const BaseTransitionImpl = {
           oldInnerChild,
           rawProps,
           state,
-          callTransitionHook
+          instance
         )
         // update old tree's hooks in case of dynamic transition
         setTransitionHooks(oldInnerChild, leavingHooks)
@@ -245,7 +241,7 @@ function getLeavingNodesForType(
 
 // The transition hooks are attached to the vnode as vnode.transition
 // and will be called at appropriate timing in the renderer.
-function resolveTransitionHooks(
+export function resolveTransitionHooks(
   vnode: VNode,
   {
     appear,
@@ -260,10 +256,20 @@ function resolveTransitionHooks(
     onLeaveCancelled
   }: BaseTransitionProps,
   state: TransitionState,
-  callHook: TransitionHookCaller
+  instance: ComponentInternalInstance
 ): TransitionHooks {
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
+
+  const callHook: TransitionHookCaller = (hook, args) => {
+    hook &&
+      callWithAsyncErrorHandling(
+        hook,
+        instance,
+        ErrorCodes.TRANSITION_HOOK,
+        args
+      )
+  }
 
   const hooks: TransitionHooks = {
     persisted,

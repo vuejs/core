@@ -58,7 +58,7 @@ if (__DEV__) {
   }
 }
 
-function resolveTransitionProps({
+export function resolveTransitionProps({
   name = 'v',
   type,
   css = true,
@@ -91,7 +91,7 @@ function resolveTransitionProps({
     enterToClass = appearToClass
   }
 
-  type Hook = (el: Element, done?: () => void) => void
+  type Hook = (el: HTMLElement, done?: () => void) => void
 
   const finishEnter: Hook = (el, done) => {
     removeTransitionClass(el, enterToClass)
@@ -188,7 +188,7 @@ function validateDuration(val: unknown) {
   }
 }
 
-export interface ElementWithTransition extends Element {
+export interface ElementWithTransition extends HTMLElement {
   // _vtc = Vue Transition Classes.
   // Store the temporarily-added transition classes on the element
   // so that we can avoid overwriting them if the element's class is patched
@@ -196,12 +196,12 @@ export interface ElementWithTransition extends Element {
   _vtc?: Set<string>
 }
 
-function addTransitionClass(el: ElementWithTransition, cls: string) {
+export function addTransitionClass(el: ElementWithTransition, cls: string) {
   el.classList.add(cls)
   ;(el._vtc || (el._vtc = new Set())).add(cls)
 }
 
-function removeTransitionClass(el: ElementWithTransition, cls: string) {
+export function removeTransitionClass(el: ElementWithTransition, cls: string) {
   el.classList.remove(cls)
   if (el._vtc) {
     el._vtc.delete(cls)
@@ -252,9 +252,10 @@ interface CSSTransitionInfo {
   type: typeof TRANSITION | typeof ANIMATION | null
   propCount: number
   timeout: number
+  hasTransform: boolean
 }
 
-function getTransitionInfo(
+export function getTransitionInfo(
   el: Element,
   expectedType?: TransitionProps['type']
 ): CSSTransitionInfo {
@@ -298,10 +299,14 @@ function getTransitionInfo(
         : animationDurations.length
       : 0
   }
+  const hasTransform =
+    type === TRANSITION &&
+    /\b(transform|all)(,|$)/.test(styles[TRANSITION + 'Property'])
   return {
     type,
     timeout,
-    propCount
+    propCount,
+    hasTransform
   }
 }
 

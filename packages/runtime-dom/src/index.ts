@@ -55,7 +55,7 @@ export const createApp = (): App<Element> => {
   return app
 }
 
-// DOM-only runtime helpers
+// DOM-only runtime directive helpers
 export {
   vModelText,
   vModelCheckbox,
@@ -64,11 +64,14 @@ export {
   vModelDynamic
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
+export { vShow } from './directives/vShow'
 
 // DOM-only components
 export { Transition, TransitionProps } from './components/Transition'
-
-export { vShow } from './directives/vShow'
+export {
+  TransitionGroup,
+  TransitionGroupProps
+} from './components/TransitionGroup'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
