@@ -6,7 +6,7 @@ import {
   ElementNode,
   SourceLocation
 } from '@vue/compiler-core'
-import { RawSourceMap } from 'source-map'
+import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 
@@ -14,6 +14,7 @@ export interface SFCParseOptions {
   needMap?: boolean
   filename?: string
   sourceRoot?: string
+  pad?: 'line' | 'space'
 }
 
 export interface SFCBlock {
@@ -56,7 +57,8 @@ export function parse(
   {
     needMap = true,
     filename = 'component.vue',
-    sourceRoot = ''
+    sourceRoot = '',
+    pad = 'line'
   }: SFCParseOptions = {}
 ): SFCDescriptor {
   const sourceKey = source + needMap + filename + sourceRoot
@@ -109,7 +111,28 @@ export function parse(
   })
 
   if (needMap) {
-    // TODO source map
+    if (sfc.script && !sfc.script.src) {
+      sfc.script.map = generateSourceMap(
+        filename,
+        source,
+        sfc.script.content,
+        sourceRoot,
+        pad
+      )
+    }
+    if (sfc.styles) {
+      sfc.styles.forEach(style => {
+        if (!style.src) {
+          style.map = generateSourceMap(
+            filename,
+            source,
+            style.content,
+            sourceRoot,
+            pad
+          )
+        }
+      })
+    }
   }
   sourceToSFC.set(sourceKey, sfc)
 
@@ -163,4 +186,45 @@ function createBlock(node: ElementNode): SFCBlock {
     }
   })
   return block
+}
+
+const splitRE = /\r?\n/g
+const emptyRE = /^(?:\/\/)?\s*$/
+
+function generateSourceMap(
+  filename: string,
+  source: string,
+  generated: string,
+  sourceRoot: string,
+  pad?: 'line' | 'space'
+): RawSourceMap {
+  const map = new SourceMapGenerator({
+    file: filename.replace(/\\/g, '/'),
+    sourceRoot: sourceRoot.replace(/\\/g, '/')
+  })
+  let offset = 0
+  if (!pad) {
+    offset =
+      source
+        .split(generated)
+        .shift()!
+        .split(splitRE).length - 1
+  }
+  map.setSourceContent(filename, source)
+  generated.split(splitRE).forEach((line, index) => {
+    if (!emptyRE.test(line)) {
+      map.addMapping({
+        source: filename,
+        original: {
+          line: index + 1 + offset,
+          column: 0
+        },
+        generated: {
+          line: index + 1,
+          column: 0
+        }
+      })
+    }
+  })
+  return JSON.parse(map.toString())
 }

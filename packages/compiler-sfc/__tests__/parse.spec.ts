@@ -4,6 +4,19 @@ import { mockWarn } from '@vue/runtime-test'
 describe('compiler:sfc', () => {
   mockWarn()
 
+  describe('source map', () => {
+    test('style block', () => {
+      const style = parse(`<style>\n.color {\n color: red;\n }\n</style>\n`)
+        .styles[0]
+      expect(style.map).not.toBeUndefined()
+    })
+
+    test('script block', () => {
+      const script = parse(`<script>\nconsole.log(1)\n }\n</script>\n`).script
+      expect(script!.map).not.toBeUndefined()
+    })
+  })
+
   test('should ignore nodes with no content', () => {
     expect(parse(`<template/>`).template).toBe(null)
     expect(parse(`<script/>`).script).toBe(null)
