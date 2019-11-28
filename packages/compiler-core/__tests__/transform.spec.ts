@@ -30,7 +30,7 @@ describe('compiler: transform', () => {
     // across calls
     const calls: any[] = []
     const plugin: NodeTransform = (node, context) => {
-      calls.push([node, Object.assign({}, context)])
+      calls.push([node, { ...context }])
     }
 
     transform(ast, {
