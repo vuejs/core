@@ -614,8 +614,7 @@ export function createRenderer<
       }
       if (oldProps !== EMPTY_OBJ) {
         for (const key in oldProps) {
-          if (isReservedProp(key)) continue
-          if (!(key in newProps)) {
+          if (!isReservedProp(key) && !(key in newProps)) {
             hostPatchProp(
               el,
               key,
