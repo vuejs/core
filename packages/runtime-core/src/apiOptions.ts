@@ -66,7 +66,7 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
-  // type-only differentiator to separate OptionWihtoutProps from a constructor
+  // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by createComponent() or FunctionalComponent
   call?: never
   // type-only differentiators for built-in Vnode types
