@@ -95,6 +95,11 @@ export const TransitionGroup = {
       prevChildren = children
       children = slots.default ? slots.default() : []
 
+      // handle fragment children case, e.g. v-for
+      if (children.length === 1 && children[0].type === Fragment) {
+        children = children[0].children as VNode[]
+      }
+
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
         if (child.key != null) {

@@ -15,7 +15,7 @@ import {
   createObjectExpression,
   Property
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol, hyphenate } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   CREATE_VNODE,
@@ -26,20 +26,21 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
-  SUSPENSE,
-  KEEP_ALIVE,
-  BASE_TRANSITION
+  KEEP_ALIVE
 } from '../runtimeHelpers'
-import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
+import {
+  getInnerRange,
+  isVSlot,
+  toValidAssetId,
+  findProp,
+  isCoreComponent
+} from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
 const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
-
-const isBuiltInType = (tag: string, expected: string): boolean =>
-  tag === expected || tag === hyphenate(expected)
 
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
@@ -57,10 +58,8 @@ export const transformElement: NodeTransform = (node, context) => {
   // processed and merged.
   return function postTransformElement() {
     const { tag, tagType, props } = node
-    const isPortal = isBuiltInType(tag, 'Portal')
-    const isSuspense = isBuiltInType(tag, 'Suspense')
-    const isKeepAlive = isBuiltInType(tag, 'KeepAlive')
-    const isBaseTransition = isBuiltInType(tag, 'BaseTransition')
+    const builtInComponentSymbol =
+      isCoreComponent(tag) || context.isBuiltInComponent(tag)
     const isComponent = tagType === ElementTypes.COMPONENT
 
     let hasProps = props.length > 0
@@ -96,14 +95,8 @@ export const transformElement: NodeTransform = (node, context) => {
     let nodeType
     if (dynamicComponent) {
       nodeType = dynamicComponent
-    } else if (isPortal) {
-      nodeType = context.helper(PORTAL)
-    } else if (isSuspense) {
-      nodeType = context.helper(SUSPENSE)
-    } else if (isKeepAlive) {
-      nodeType = context.helper(KEEP_ALIVE)
-    } else if (isBaseTransition) {
-      nodeType = context.helper(BASE_TRANSITION)
+    } else if (builtInComponentSymbol) {
+      nodeType = context.helper(builtInComponentSymbol)
     } else if (isComponent) {
       // user component w/ resolve
       context.helper(RESOLVE_COMPONENT)
@@ -142,7 +135,11 @@ export const transformElement: NodeTransform = (node, context) => {
       // Portal is not a real component has dedicated handling in the renderer
       // KeepAlive should not track its own deps so that it can be used inside
       // Transition
-      if (isComponent && !isPortal && !isKeepAlive) {
+      if (
+        isComponent &&
+        builtInComponentSymbol !== PORTAL &&
+        builtInComponentSymbol !== KEEP_ALIVE
+      ) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {

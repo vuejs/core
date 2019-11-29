@@ -17,7 +17,7 @@ import {
   CacheExpression,
   createCacheExpression
 } from './ast'
-import { isString, isArray } from '@vue/shared'
+import { isString, isArray, NOOP } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import {
   TO_STRING,
@@ -68,6 +68,7 @@ export type StructuralDirectiveTransform = (
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
+  isBuiltInComponent?: (tag: string) => symbol | void
   prefixIdentifiers?: boolean
   hoistStatic?: boolean
   cacheHandlers?: boolean
@@ -110,6 +111,7 @@ function createTransformContext(
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
+    isBuiltInComponent = NOOP,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -132,6 +134,7 @@ function createTransformContext(
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
+    isBuiltInComponent,
     onError,
     parent: null,
     currentNode: root,

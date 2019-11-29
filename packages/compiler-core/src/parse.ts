@@ -1,4 +1,4 @@
-import { NO, makeMap, isArray } from '@vue/shared'
+import { NO, isArray } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -8,7 +8,8 @@ import {
 import {
   assert,
   advancePositionWithMutation,
-  advancePositionWithClone
+  advancePositionWithClone,
+  isCoreComponent
 } from './utils'
 import {
   Namespace,
@@ -29,22 +30,12 @@ import {
 } from './ast'
 import { extend } from '@vue/shared'
 
-// Portal and Fragment are native types, not components
-const isBuiltInComponent = /*#__PURE__*/ makeMap(
-  `suspense,keep-alive,base-transition`,
-  true
-)
-
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
   isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
   isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
   isCustomElement?: (tag: string) => boolean
-  // for importing platform-specific components from the runtime.
-  // e.g. <transition> for runtime-dom
-  // However this is only needed if isNativeTag is not specified, since when
-  // isNativeTag is specified anything that is not native is a component.
-  isBuiltInComponent?: (tag: string) => boolean
+  isBuiltInComponent?: (tag: string) => symbol | void
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (tag: string, ns: Namespace) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
@@ -483,7 +474,7 @@ function parseTag(
     if (options.isNativeTag) {
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else if (
-      isBuiltInComponent(tag) ||
+      isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
       /^[A-Z]/.test(tag)
     ) {
