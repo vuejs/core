@@ -439,6 +439,26 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe('World')
   })
 
+  it('should discover mutating a reactive property by sideEffectScheduler', () => {
+    let dummy
+    const obj = reactive({ prop: 'value', run: true })
+
+    const conditionalSpy = jest.fn(() => {
+      dummy = obj.run ? obj.prop : 'other'
+    })
+    effect(conditionalSpy, {
+      sideEffectScheduler: () => {
+        obj.run = !obj.run
+      }
+    })
+    expect(dummy).toBe('value')
+    expect(conditionalSpy).toHaveBeenCalledTimes(1)
+    obj.prop = 'value2'
+    expect(obj.run).toBe(false)
+    expect(dummy).toBe('other')
+    expect(conditionalSpy).toHaveBeenCalledTimes(2)
+  })
+
   it('should not be triggered by mutating a property, which is used in an inactive branch', () => {
     let dummy
     const obj = reactive({ prop: 'value', run: true })
@@ -447,6 +467,25 @@ describe('reactivity/effect', () => {
       dummy = obj.run ? obj.prop : 'other'
     })
     effect(conditionalSpy)
+
+    expect(dummy).toBe('value')
+    expect(conditionalSpy).toHaveBeenCalledTimes(1)
+    obj.run = false
+    expect(dummy).toBe('other')
+    expect(conditionalSpy).toHaveBeenCalledTimes(2)
+    obj.prop = 'value2'
+    expect(dummy).toBe('other')
+    expect(conditionalSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('effect with sideEffectScheduler should not be triggered by mutating a property, which is used in an inactive branch', () => {
+    let dummy
+    const obj = reactive({ prop: 'value', run: true })
+
+    const conditionalSpy = jest.fn(() => {
+      dummy = obj.run ? obj.prop : 'other'
+    })
+    effect(conditionalSpy, { sideEffectScheduler: () => {} })
 
     expect(dummy).toBe('value')
     expect(conditionalSpy).toHaveBeenCalledTimes(1)

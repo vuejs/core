@@ -15,9 +15,15 @@ export interface ReactiveEffectOptions {
   lazy?: boolean
   computed?: boolean
   scheduler?: (run: Function) => void
+  sideEffectScheduler?: SideEffectScheduler
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
+}
+
+interface SideEffectScheduler {
+  (run?: ReactiveEffect): void
+  isRunning?: boolean
 }
 
 export type DebuggerEvent = {
@@ -215,8 +221,16 @@ function scheduleRun(
     }
     effect.options.onTrigger(extraInfo ? extend(event, extraInfo) : event)
   }
+
   if (effect.options.scheduler !== void 0) {
     effect.options.scheduler(effect)
+  } else if (effect.options.sideEffectScheduler !== void 0) {
+    if (!effect.options.sideEffectScheduler.isRunning) {
+      effect.options.sideEffectScheduler.isRunning = true
+      effect.options.sideEffectScheduler(effect)
+      effect()
+      effect.options.sideEffectScheduler.isRunning = false
+    }
   } else {
     effect()
   }
