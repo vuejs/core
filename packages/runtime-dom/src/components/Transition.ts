@@ -41,9 +41,10 @@ export const TransitionPropsValidators = {
   ...(BaseTransition as any).props,
   name: String,
   type: String,
-  // Cannot use Boolean otherwise it will be force casted to false when
-  // omitted
-  css: null,
+  css: {
+    type: Boolean,
+    default: true
+  },
   duration: Object,
   enterFromClass: String,
   enterActiveClass: String,
