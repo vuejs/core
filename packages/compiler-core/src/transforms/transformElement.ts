@@ -28,7 +28,7 @@ import {
   PORTAL,
   SUSPENSE,
   KEEP_ALIVE,
-  TRANSITION
+  BASE_TRANSITION
 } from '../runtimeHelpers'
 import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
 import { buildSlots } from './vSlot'
@@ -60,7 +60,7 @@ export const transformElement: NodeTransform = (node, context) => {
     const isPortal = isBuiltInType(tag, 'Portal')
     const isSuspense = isBuiltInType(tag, 'Suspense')
     const isKeepAlive = isBuiltInType(tag, 'KeepAlive')
-    const isTransition = isBuiltInType(tag, 'Transition')
+    const isBaseTransition = isBuiltInType(tag, 'BaseTransition')
     const isComponent = tagType === ElementTypes.COMPONENT
 
     let hasProps = props.length > 0
@@ -102,8 +102,8 @@ export const transformElement: NodeTransform = (node, context) => {
       nodeType = context.helper(SUSPENSE)
     } else if (isKeepAlive) {
       nodeType = context.helper(KEEP_ALIVE)
-    } else if (isTransition) {
-      nodeType = context.helper(TRANSITION)
+    } else if (isBaseTransition) {
+      nodeType = context.helper(BASE_TRANSITION)
     } else if (isComponent) {
       // user component w/ resolve
       context.helper(RESOLVE_COMPONENT)

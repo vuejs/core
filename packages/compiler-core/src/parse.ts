@@ -31,7 +31,7 @@ import { extend } from '@vue/shared'
 
 // Portal and Fragment are native types, not components
 const isBuiltInComponent = /*#__PURE__*/ makeMap(
-  `suspense,keep-alive,keepalive,transition`,
+  `suspense,keep-alive,keepalive,base-transition`,
   true
 )
 
