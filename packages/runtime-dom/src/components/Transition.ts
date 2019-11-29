@@ -37,25 +37,27 @@ export const Transition: FunctionalComponent = (
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
+export const TransitionPropsValidators = {
+  ...(BaseTransition as any).props,
+  name: String,
+  type: String,
+  // Cannot use Boolean otherwise it will be force casted to false when
+  // omitted
+  css: null,
+  duration: Object,
+  enterFromClass: String,
+  enterActiveClass: String,
+  enterToClass: String,
+  appearFromClass: String,
+  appearActiveClass: String,
+  appearToClass: String,
+  leaveFromClass: String,
+  leaveActiveClass: String,
+  leaveToClass: String
+}
+
 if (__DEV__) {
-  Transition.props = {
-    ...(BaseTransition as any).props,
-    name: String,
-    type: String,
-    // Cannot use Boolean otherwise it will be force casted to false when
-    // omitted
-    css: null,
-    duration: Object,
-    enterFromClass: String,
-    enterActiveClass: String,
-    enterToClass: String,
-    appearFromClass: String,
-    appearActiveClass: String,
-    appearToClass: String,
-    leaveFromClass: String,
-    leaveActiveClass: String,
-    leaveToClass: String
-  }
+  Transition.props = TransitionPropsValidators
 }
 
 export function resolveTransitionProps({
