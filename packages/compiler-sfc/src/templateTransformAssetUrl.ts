@@ -63,7 +63,7 @@ function getImportsExpressionExp(
     const importsArray = Array.from(context.imports)
     const existing = importsArray.find(i => i.path === path)
     if (existing) {
-      return existing.exp
+      return existing.exp as ExpressionNode
     }
     const name = `_imports_${importsArray.length}`
     const exp = createSimpleExpression(name, false, loc, true)
