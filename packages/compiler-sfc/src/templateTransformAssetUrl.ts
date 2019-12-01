@@ -60,13 +60,12 @@ function getImportsExpressionExp(
   context: TransformContext
 ): ExpressionNode {
   if (path) {
-    const index = getImportsPathIndex(path, context)
-    if (index > -1) {
-      return Array.from(context.imports).map(o => o.exp)[
-        index
-      ] as ExpressionNode
+    const importsArray = Array.from(context.imports)
+    const existing = importsArray.find(i => i.path === path)
+    if (existing) {
+      return existing.exp
     }
-    const name = `_imports_${context.imports.size}`
+    const name = `_imports_${importsArray.length}`
     const exp = createSimpleExpression(name, false, loc, true)
     context.imports.add({ exp, path })
     if (hash && path) {
@@ -79,8 +78,4 @@ function getImportsExpressionExp(
   } else {
     return createSimpleExpression(`''`, false, loc, true)
   }
-}
-
-function getImportsPathIndex(path: string, context: TransformContext): number {
-  return Array.from(context.imports).findIndex(o => o.path === path)
 }
