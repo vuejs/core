@@ -11,6 +11,7 @@ import {
   FRAGMENT
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
+import { ImportsOption } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -94,6 +95,7 @@ export interface RootNode extends Node {
   components: string[]
   directives: string[]
   hoists: JSChildNode[]
+  imports: ImportsOption[]
   cached: number
   codegenNode: TemplateChildNode | JSChildNode | undefined
 }

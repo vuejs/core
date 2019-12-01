@@ -38,6 +38,7 @@ import {
   CREATE_COMMENT,
   CREATE_TEXT
 } from './runtimeHelpers'
+import { ImportsOption } from './transform'
 
 type CodegenNode = TemplateChildNode | JSChildNode
 
@@ -229,6 +230,10 @@ export function generate(
     if (hasHelpers) {
       push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
+    if (ast.imports.length) {
+      genImports(ast.imports, context)
+      newline()
+    }
     genHoists(ast.hoists, context)
     newline()
     push(`export default `)
@@ -323,6 +328,18 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   hoists.forEach((exp, i) => {
     context.push(`const _hoisted_${i + 1} = `)
     genNode(exp, context)
+    context.newline()
+  })
+}
+
+function genImports(importsOptions: ImportsOption[], context: CodegenContext) {
+  if (!importsOptions.length) {
+    return
+  }
+  importsOptions.forEach(imports => {
+    context.push(`import `)
+    genNode(imports.exp, context)
+    context.push(` from '${imports.path}'`)
     context.newline()
   })
 }

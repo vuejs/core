@@ -75,12 +75,18 @@ export interface TransformOptions {
   onError?: (error: CompilerError) => void
 }
 
+export interface ImportsOption {
+  exp: string | ExpressionNode
+  path: string
+}
+
 export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
   helpers: Set<symbol>
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  imports: Set<ImportsOption>
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -121,6 +127,7 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    imports: new Set(),
     cached: 0,
     identifiers: {},
     scopes: {
@@ -296,6 +303,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   root.helpers = [...context.helpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
+  root.imports = [...context.imports]
   root.hoists = context.hoists
   root.cached = context.cached
 }
