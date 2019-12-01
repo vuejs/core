@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler sfc: transform asset url support uri fragment 1`] = `
+"import { createVNode, createBlock, openBlock } from \\"vue\\"
+import _imports_0 from '@svg/file.svg'
+
+
+const _hoisted_1 = _imports_0 + '#fragment'
+
+export default function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(\\"use\\", { href: _hoisted_1 }))
+}"
+`;
+
+exports[`compiler sfc: transform asset url support uri is empty 1`] = `
+"import { createVNode, createBlock, openBlock } from \\"vue\\"
+
+export default function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(\\"use\\", { href: '' }))
+}"
+`;
+
+exports[`compiler sfc: transform asset url transform assetUrls 1`] = `
+"import { createVNode, createBlock, Fragment, openBlock } from \\"vue\\"
+import _imports_0 from './logo.png'
+import _imports_1 from 'fixtures/logo.png'
+
+
+export default function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(Fragment, null, [
+    createVNode(\\"img\\", { src: _imports_0 }),
+    createVNode(\\"img\\", { src: _imports_1 }),
+    createVNode(\\"img\\", { src: _imports_1 })
+  ]))
+}"
+`;
