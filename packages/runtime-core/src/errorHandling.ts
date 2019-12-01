@@ -128,7 +128,7 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
-// Test-only toggle for testing the uhandled warning behavior
+// Test-only toggle for testing the unhandled warning behavior
 let forceRecover = false
 export function setErrorRecovery(value: boolean) {
   forceRecover = value
