@@ -19,6 +19,51 @@ describe('compiler:sfc', () => {
     })
   })
 
+  test('pad content', () => {
+    const content = `
+<template>
+<div></div>
+</template>
+<script>
+export default {}
+</script>
+<style>
+h1 { color: red }
+</style>`
+    const padFalse = parse(content.trim(), { pad: false })
+    expect(padFalse.template!.content).toBe('\n<div></div>\n')
+    expect(padFalse.script!.content).toBe('\nexport default {}\n')
+    expect(padFalse.styles[0].content).toBe('\nh1 { color: red }\n')
+
+    const padTrue = parse(content.trim(), { pad: true })
+    expect(padTrue.script!.content).toBe(
+      Array(3 + 1).join('//\n') + '\nexport default {}\n'
+    )
+    expect(padTrue.styles[0].content).toBe(
+      Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
+    )
+
+    const padLine = parse(content.trim(), { pad: 'line' })
+    expect(padLine.script!.content).toBe(
+      Array(3 + 1).join('//\n') + '\nexport default {}\n'
+    )
+    expect(padLine.styles[0].content).toBe(
+      Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
+    )
+
+    const padSpace = parse(content.trim(), { pad: 'space' })
+    expect(padSpace.script!.content).toBe(
+      `<template>\n<div></div>\n</template>\n<script>`.replace(/./g, ' ') +
+        '\nexport default {}\n'
+    )
+    expect(padSpace.styles[0].content).toBe(
+      `<template>\n<div></div>\n</template>\n<script>\nexport default {}\n</script>\n<style>`.replace(
+        /./g,
+        ' '
+      ) + '\nh1 { color: red }\n'
+    )
+  })
+
   test('should ignore nodes with no content', () => {
     expect(parse(`<template/>`).template).toBe(null)
     expect(parse(`<script/>`).script).toBe(null)
