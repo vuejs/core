@@ -56,12 +56,14 @@ export const transformText: NodeTransform = (node, context) => {
 
       if (
         !hasText ||
-        // if this is a plain element with a single text child, leave it as-is
-        // since the runtime has dedicated fast path for this by directly
+        // if this is a plain element with a single text child, leave it
+        // as-is since the runtime has dedicated fast path for this by directly
         // setting textContent of the element.
-        (node.type === NodeTypes.ELEMENT &&
-          node.tagType === ElementTypes.ELEMENT &&
-          children.length === 1)
+        // for component root it's always normalized anyway.
+        (children.length === 1 &&
+          (node.type === NodeTypes.ROOT ||
+            (node.type === NodeTypes.ELEMENT &&
+              node.tagType === ElementTypes.ELEMENT)))
       ) {
         return
       }
