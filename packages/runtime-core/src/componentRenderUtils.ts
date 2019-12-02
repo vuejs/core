@@ -75,7 +75,7 @@ export function renderComponentRoot(
         result.shapeFlag & ShapeFlags.COMPONENT
       ) {
         result = cloneVNode(result, attrs)
-      } else if (__DEV__ && !accessedAttrs) {
+      } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
         warn(
           `Extraneous non-props attributes (${Object.keys(attrs).join(',')}) ` +
             `were passed to component but could not be automatically inherited ` +
