@@ -11,17 +11,21 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-function createGetter(isReadonly: boolean, unwrap = true) {
+function createGetter(isReadonly: boolean, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
     let res = Reflect.get(target, key, receiver)
     if (isSymbol(key) && builtInSymbols.has(key)) {
       return res
     }
-    if (unwrap && isRef(res)) {
-      res = res.value
-    } else {
+    if (shallow) {
       track(target, OperationTypes.GET, key)
+      // TODO strict mode that returns a shallow-readonly version of the value
+      return res
     }
+    if (isRef(res)) {
+      return res.value
+    }
+    track(target, OperationTypes.GET, key)
     return isObject(res)
       ? isReadonly
         ? // need to lazy access readonly and reactive here to avoid
@@ -146,7 +150,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
 // props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const readonlyPropsHandlers: ProxyHandler<object> = {
+export const shallowReadonlyHandlers: ProxyHandler<object> = {
   ...readonlyHandlers,
-  get: createGetter(true, false)
+  get: createGetter(true, true)
 }

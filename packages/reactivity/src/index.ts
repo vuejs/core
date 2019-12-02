@@ -4,7 +4,7 @@ export {
   isReactive,
   readonly,
   isReadonly,
-  readonlyProps,
+  shallowReadonly,
   toRaw,
   markReadonly,
   markNonReactive

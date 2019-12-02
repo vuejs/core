@@ -2,7 +2,7 @@ import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
-  readonlyPropsHandlers
+  shallowReadonlyHandlers
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
@@ -85,18 +85,17 @@ export function readonly<T extends object>(
 }
 
 // @internal
-// Return a readonly-copy of a props object, without unwrapping refs at the root
-// level. This is intended to allow explicitly passing refs as props.
-// Technically this should use different global cache from readonly(), but
-// since it is only used on internal objects so it's not really necessary.
-export function readonlyProps<T extends object>(
+// Return a reactive-copy of the original object, where only the root level
+// properties are readonly, and does not recursively convert returned properties.
+// This is used for creating the props proxy object for stateful components.
+export function shallowReadonly<T extends object>(
   target: T
 ): Readonly<{ [K in keyof T]: UnwrapNestedRefs<T[K]> }> {
   return createReactiveObject(
     target,
     rawToReadonly,
     readonlyToRaw,
-    readonlyPropsHandlers,
+    shallowReadonlyHandlers,
     readonlyCollectionHandlers
   )
 }
