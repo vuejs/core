@@ -17,7 +17,7 @@
     "removeComments": false,
     "jsx": "preserve",
     "lib": ["esnext", "dom"],
-    "types": ["jest", "node"],
+    "types": ["jest", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
       "@vue/shared": ["packages/shared/src"],

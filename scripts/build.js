@@ -128,6 +128,9 @@ async function build(target) {
 }
 
 function checkAllSizes(targets) {
+  if (devOnly) {
+    return
+  }
   console.log()
   for (const target of targets) {
     checkSize(target)
