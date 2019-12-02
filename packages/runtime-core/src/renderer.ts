@@ -568,11 +568,13 @@ export function createRenderer<
       patch(
         oldVNode,
         newChildren[i],
-        // in the case of a Fragment, we need to provide the actual parent
-        // of the Fragment itself so it can move its children. In other cases,
-        // the parent container is not actually used so we just pass the
-        // block element here to avoid a DOM parentNode call.
-        oldVNode.type === Fragment
+        // - In the case of a Fragment, we need to provide the actual parent
+        // of the Fragment itself so it can move its children.
+        // - In the case of a Comment, this is likely a v-if toggle, which also
+        // needs the correct parent container.
+        // In other cases, the parent container is not actually used so we just
+        // pass the block element here to avoid a DOM parentNode call.
+        oldVNode.type === Fragment || oldVNode.type === Comment
           ? hostParentNode(oldVNode.el!)!
           : fallbackContainer,
         null,
