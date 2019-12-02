@@ -1,5 +1,7 @@
 <script src="../../dist/vue.global.js"></script>
 <script>
+const { ref, reactive, computed, createApp } = Vue
+
 // math helper...
 function valueToPoint (value, index, total) {
   var x     = 0
@@ -24,7 +26,7 @@ const AxisLabel = {
   },
   setup(props) {
     return {
-      point: Vue.computed(() => valueToPoint(
+      point: computed(() => valueToPoint(
         +props.stat.value + 10,
         props.index,
         props.total
@@ -54,7 +56,7 @@ const Polygraph = {
   template: '#polygraph-template',
   setup(props) {
     return {
-      points: Vue.computed(() => {
+      points: computed(() => {
         const total = props.stats.length
         return props.stats.map((stat, i) => {
           const point = valueToPoint(stat.value, i, total)
@@ -95,8 +97,8 @@ const App = {
     Polygraph
   },
   setup() {
-    const newLabel = Vue.ref('')
-    const stats = Vue.reactive([
+    const newLabel = ref('')
+    const stats = reactive([
       { label: 'A', value: 100 },
       { label: 'B', value: 100 },
       { label: 'C', value: 100 },
@@ -132,7 +134,7 @@ const App = {
   }
 }
 
-Vue.createApp().mount(App, '#demo')
+createApp().mount(App, '#demo')
 </script>
 
 <style>
