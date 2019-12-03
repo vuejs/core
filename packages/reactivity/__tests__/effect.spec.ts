@@ -3,7 +3,8 @@ import {
   effect,
   stop,
   toRaw,
-  OperationTypes,
+  TrackOpTypes,
+  TriggerOpTypes,
   DebuggerEvent,
   markNonReactive
 } from '../src/index'
@@ -603,19 +604,19 @@ describe('reactivity/effect', () => {
       {
         effect: runner,
         target: toRaw(obj),
-        type: OperationTypes.GET,
+        type: TrackOpTypes.GET,
         key: 'foo'
       },
       {
         effect: runner,
         target: toRaw(obj),
-        type: OperationTypes.HAS,
+        type: TrackOpTypes.HAS,
         key: 'bar'
       },
       {
         effect: runner,
         target: toRaw(obj),
-        type: OperationTypes.ITERATE,
+        type: TrackOpTypes.ITERATE,
         key: ITERATE_KEY
       }
     ])
@@ -641,7 +642,7 @@ describe('reactivity/effect', () => {
     expect(events[0]).toEqual({
       effect: runner,
       target: toRaw(obj),
-      type: OperationTypes.SET,
+      type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
       newValue: 2
@@ -653,7 +654,7 @@ describe('reactivity/effect', () => {
     expect(events[1]).toEqual({
       effect: runner,
       target: toRaw(obj),
-      type: OperationTypes.DELETE,
+      type: TriggerOpTypes.DELETE,
       key: 'foo',
       oldValue: 2
     })

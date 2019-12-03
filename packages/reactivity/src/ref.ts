@@ -1,5 +1,5 @@
 import { track, trigger } from './effect'
-import { OperationTypes } from './operations'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject } from '@vue/shared'
 import { reactive, isReactive } from './reactive'
 import { ComputedRef } from './computed'
@@ -38,14 +38,14 @@ export function ref(raw?: unknown) {
   const r = {
     _isRef: true,
     get value() {
-      track(r, OperationTypes.GET, 'value')
+      track(r, TrackOpTypes.GET, 'value')
       return raw
     },
     set value(newVal) {
       raw = convert(newVal)
       trigger(
         r,
-        OperationTypes.SET,
+        TriggerOpTypes.SET,
         'value',
         __DEV__ ? { newValue: newVal } : void 0
       )

@@ -8,17 +8,8 @@ import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-import { ReactiveEffect } from './effect'
 import { UnwrapRef, Ref } from './ref'
 import { makeMap } from '@vue/shared'
-
-// The main WeakMap that stores {target -> key -> dep} connections.
-// Conceptually, it's easier to think of a dependency as a Dep class
-// which maintains a Set of subscribers, but we simply store them as
-// raw Sets to reduce memory overhead.
-export type Dep = Set<ReactiveEffect>
-export type KeyToDepMap = Map<any, Dep>
-export const targetMap = new WeakMap<any, KeyToDepMap>()
 
 // WeakMaps that store {raw <-> observed} pairs.
 const rawToReactive = new WeakMap<any, any>()
@@ -132,9 +123,6 @@ function createReactiveObject(
   observed = new Proxy(target, handlers)
   toProxy.set(target, observed)
   toRaw.set(observed, target)
-  if (!targetMap.has(target)) {
-    targetMap.set(target, new Map())
-  }
   return observed
 }
 
