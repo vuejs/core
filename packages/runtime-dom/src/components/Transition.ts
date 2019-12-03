@@ -32,8 +32,8 @@ export interface TransitionProps extends BaseTransitionProps {
 
 // DOM Transition is a higher-order-component based on the platform-agnostic
 // base Transition component, with DOM-specific logic.
-export const Transition: FunctionalComponent = (
-  props: TransitionProps,
+export const Transition: FunctionalComponent<TransitionProps> = (
+  props,
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
