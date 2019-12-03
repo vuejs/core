@@ -734,4 +734,35 @@ describe('reactivity/effect', () => {
     obj.foo = NaN
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
+  
+  it('should not trigger GET by adding/deleting undefined value', () => {
+    const obj = reactive<{ prop?: any }>({})
+    const fnSpy = jest.fn(() => obj.prop)
+    effect(fnSpy)
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    obj.prop = undefined
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    obj.prop = 2
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    obj.prop = undefined
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+    delete obj.prop
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('should not trigger HAS by updating value', () => {
+    const obj = reactive<{ prop?: any }>({})
+    const fnSpy = jest.fn(() => 'prop' in obj)
+    effect(fnSpy)
+    obj.prop = undefined
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    obj.prop = 2
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+    delete obj.prop
+    expect(fnSpy).toHaveBeenCalledTimes(3)
+    obj.prop = 4
+    expect(fnSpy).toHaveBeenCalledTimes(4)
+    obj.prop = 5
+    expect(fnSpy).toHaveBeenCalledTimes(4)
+  })
 })
