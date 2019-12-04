@@ -11,7 +11,7 @@
               v-model="state.newTodo"
               @keyup.enter="addTodo">
     </header>
-    <section class="main" v-if="state.todos.length">
+    <section class="main" v-show="state.todos.length">
       <input id="toggle-all" class="toggle-all" type="checkbox" v-model="state.allDone">
       <label for="toggle-all">Mark all as complete</label>
       <ul class="todo-list">
@@ -34,7 +34,7 @@
         </li>
       </ul>
     </section>
-    <footer class="footer" v-if="state.todos.length">
+    <footer class="footer" v-show="state.todos.length">
         <span class="todo-count">
           <strong>{{ state.remaining }}</strong>
           <span>{{ state.remainingText }}</span>
@@ -45,7 +45,7 @@
         <li><a href="#/completed" :class="{ selected: state.visibility === 'completed' }">Completed</a></li>
       </ul>
 
-      <button class="clear-completed" @click="removeCompleted" v-if="state.todos.length > state.remaining">
+      <button class="clear-completed" @click="removeCompleted" v-show="state.todos.length > state.remaining">
         Clear completed
       </button>
     </footer>
