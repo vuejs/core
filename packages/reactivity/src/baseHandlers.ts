@@ -13,7 +13,7 @@ const builtInSymbols = new Set(
 
 function createGetter(isReadonly: boolean, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
-    let res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(target, key, receiver)
     if (isSymbol(key) && builtInSymbols.has(key)) {
       return res
     }
