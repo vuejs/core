@@ -70,9 +70,8 @@ type VNodeChildAtom<HostNode, HostElement> =
 
 export interface VNodeChildren<HostNode = any, HostElement = any>
   extends Array<
-      | VNodeChildren<HostNode, HostElement>
-      | VNodeChildAtom<HostNode, HostElement>
-    > {}
+    VNodeChildren<HostNode, HostElement> | VNodeChildAtom<HostNode, HostElement>
+  > {}
 
 export type VNodeChild<HostNode = any, HostElement = any> =
   | VNodeChildAtom<HostNode, HostElement>
@@ -224,12 +223,12 @@ export function createVNode(
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && (type as any).__isSuspense === true
-      ? ShapeFlags.SUSPENSE
-      : isObject(type)
-        ? ShapeFlags.STATEFUL_COMPONENT
-        : isFunction(type)
-          ? ShapeFlags.FUNCTIONAL_COMPONENT
-          : 0
+    ? ShapeFlags.SUSPENSE
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : isFunction(type)
+    ? ShapeFlags.FUNCTIONAL_COMPONENT
+    : 0
 
   const vnode: VNode = {
     _isVNode: true,

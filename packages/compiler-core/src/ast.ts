@@ -193,7 +193,8 @@ export interface CompoundExpressionNode extends Node {
     | InterpolationNode
     | TextNode
     | string
-    | symbol)[]
+    | symbol
+  )[]
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
@@ -248,7 +249,8 @@ export interface CallExpression extends Node {
     | symbol
     | JSChildNode
     | TemplateChildNode
-    | TemplateChildNode[])[]
+    | TemplateChildNode[]
+  )[]
 }
 
 export interface ObjectExpression extends Node {
@@ -298,7 +300,8 @@ export interface CacheExpression extends Node {
 // createVNode(...)
 export interface PlainElementCodegenNode extends CallExpression {
   callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
-  arguments:  // tag, props, children, patchFlag, dynamicProps
+  // tag, props, children, patchFlag, dynamicProps
+  arguments:
     | [string | symbol]
     | [string | symbol, PropsExpression]
     | [string | symbol, 'null' | PropsExpression, TemplateChildNode[]]
@@ -324,7 +327,8 @@ export type ElementCodegenNode =
 // createVNode(...)
 export interface PlainComponentCodegenNode extends CallExpression {
   callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
-  arguments:  // Comp, props, slots, patchFlag, dynamicProps
+  // Comp, props, slots, patchFlag, dynamicProps
+  arguments:
     | [string | symbol]
     | [string | symbol, PropsExpression]
     | [string | symbol, 'null' | PropsExpression, SlotsExpression]
@@ -412,7 +416,8 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements:  // dir, exp, arg, modifiers
+  // dir, exp, arg, modifiers
+  elements:
     | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
@@ -422,7 +427,8 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface SlotOutletCodegenNode extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments:  // $slots, name, props, fallback
+  // $slots, name, props, fallback
+  arguments:
     | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
@@ -559,10 +565,12 @@ type InferCodegenNodeType<T> = T extends
   | typeof CREATE_BLOCK
   ? PlainElementCodegenNode | PlainComponentCodegenNode
   : T extends typeof WITH_DIRECTIVES
-    ?
-        | CodegenNodeWithDirective<PlainElementCodegenNode>
-        | CodegenNodeWithDirective<PlainComponentCodegenNode>
-    : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
+  ?
+      | CodegenNodeWithDirective<PlainElementCodegenNode>
+      | CodegenNodeWithDirective<PlainComponentCodegenNode>
+  : T extends typeof RENDER_SLOT
+  ? SlotOutletCodegenNode
+  : CallExpression
 
 export function createCallExpression<T extends CallExpression['callee']>(
   callee: T,

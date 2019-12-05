@@ -176,8 +176,8 @@ function createTransformContext(
       const removalIndex = node
         ? list.indexOf(node)
         : context.currentNode
-          ? context.childIndex
-          : -1
+        ? context.childIndex
+        : -1
       /* istanbul ignore if */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)

@@ -73,11 +73,13 @@ export const transformIf = createStructuralDirectiveTransform(
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
-        codegenNode.expressions.push(createCodegenNodeForBranch(
-          branch,
-          0,
-          context
-        ) as IfConditionalExpression)
+        codegenNode.expressions.push(
+          createCodegenNodeForBranch(
+            branch,
+            0,
+            context
+          ) as IfConditionalExpression
+        )
       }
     } else {
       // locate the adjacent v-if

@@ -643,8 +643,8 @@ function parseAttribute(
         (startsWith(name, ':')
           ? 'bind'
           : startsWith(name, '@')
-            ? 'on'
-            : 'slot'),
+          ? 'on'
+          : 'slot'),
       exp: value && {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,

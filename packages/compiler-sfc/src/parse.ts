@@ -152,9 +152,7 @@ function warnDuplicateBlock(
   )
   const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
   console.warn(
-    `Single file component can contain only one ${
-      node.tag
-    } element (${location}):\n\n${codeFrame}`
+    `Single file component can contain only one ${node.tag} element (${location}):\n\n${codeFrame}`
   )
 }
 

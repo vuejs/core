@@ -98,7 +98,9 @@ describe('compiler: transform component slots', () => {
   test('explicit default slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot="{ foo }">{{ foo }}{{ bar }}</Comp>`,
-      { prefixIdentifiers: true }
+      {
+        prefixIdentifiers: true
+      }
     )
     expect(slots).toMatchObject(
       createSlotMatcher({

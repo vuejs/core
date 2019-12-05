@@ -42,7 +42,10 @@ describe('createSlot', () => {
   it('should add each slot to the record when given slot is an array', () => {
     const dynamicSlot = [
       { name: 'descriptor', fn: slot },
-      [{ name: 'descriptor2', fn: slot }, { name: 'descriptor3', fn: slot }]
+      [
+        { name: 'descriptor2', fn: slot },
+        { name: 'descriptor3', fn: slot }
+      ]
     ]
 
     const actual = createSlots(record, dynamicSlot)

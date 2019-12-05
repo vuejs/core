@@ -2705,7 +2705,7 @@ foo
       ]
     }
 
-    for (const key of Object.keys(patterns) as (keyof (typeof patterns))[]) {
+    for (const key of Object.keys(patterns) as (keyof typeof patterns)[]) {
       describe(key, () => {
         for (const { code, errors, options } of patterns[key]) {
           test(

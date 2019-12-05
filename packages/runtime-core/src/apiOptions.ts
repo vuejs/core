@@ -133,7 +133,7 @@ export type ExtractComputedReturns<T extends any> = {
 type WatchOptionItem =
   | string
   | WatchHandler
-  | { handler: WatchHandler } & WatchOptions
+  | ({ handler: WatchHandler } & WatchOptions)
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -302,12 +302,12 @@ export function applyOptions(
             set: isFunction(set)
               ? set.bind(ctx)
               : __DEV__
-                ? () => {
-                    warn(
-                      `Computed property "${key}" was assigned to but it has no setter.`
-                    )
-                  }
-                : NOOP
+              ? () => {
+                  warn(
+                    `Computed property "${key}" was assigned to but it has no setter.`
+                  )
+                }
+              : NOOP
           })
         } else if (__DEV__) {
           warn(`Computed property "${key}" has no getter.`)

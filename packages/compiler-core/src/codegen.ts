@@ -110,7 +110,7 @@ function createCodegenContext(
     map:
       __BROWSER__ || !sourceMap
         ? undefined
-        : new (loadDep('source-map')).SourceMapGenerator(),
+        : new (loadDep('source-map').SourceMapGenerator)(),
 
     helper(key) {
       const name = helperNameMap[key]

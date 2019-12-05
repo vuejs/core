@@ -110,9 +110,11 @@ describe('runtime-dom: v-on directive', () => {
       const fn = jest.fn()
       const handler = withModifiers(fn, [button])
       patchEvent(el, 'mousedown', null, handler, null)
-      buttons.filter(b => b !== button).forEach(button => {
-        triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
-      })
+      buttons
+        .filter(b => b !== button)
+        .forEach(button => {
+          triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
+        })
       expect(fn).not.toBeCalled()
       triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
       expect(fn).toBeCalled()

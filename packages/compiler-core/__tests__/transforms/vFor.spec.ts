@@ -436,7 +436,9 @@ describe('compiler: v-for', () => {
     test('should prefix v-for source w/ complex expression', () => {
       const { node } = parseWithForTransform(
         `<div v-for="i in list.concat([foo])"/>`,
-        { prefixIdentifiers: true }
+        {
+          prefixIdentifiers: true
+        }
       )
       expect(node.source).toMatchObject({
         type: NodeTypes.COMPOUND_EXPRESSION,
@@ -454,7 +456,9 @@ describe('compiler: v-for', () => {
     test('should not prefix v-for alias', () => {
       const { node } = parseWithForTransform(
         `<div v-for="i in list">{{ i }}{{ j }}</div>`,
-        { prefixIdentifiers: true }
+        {
+          prefixIdentifiers: true
+        }
       )
       const div = node.children[0] as ElementNode
       expect((div.children[0] as InterpolationNode).content).toMatchObject({
@@ -468,7 +472,9 @@ describe('compiler: v-for', () => {
     })
 
     test('should not prefix v-for aliases (multiple)', () => {
-      const { node } = parseWithForTransform(
+      const {
+        node
+      } = parseWithForTransform(
         `<div v-for="(i, j, k) in list">{{ i + j + k }}{{ l }}</div>`,
         { prefixIdentifiers: true }
       )
@@ -492,7 +498,9 @@ describe('compiler: v-for', () => {
     test('should prefix id outside of v-for', () => {
       const { node } = parseWithForTransform(
         `<div><div v-for="i in list" />{{ i }}</div>`,
-        { prefixIdentifiers: true }
+        {
+          prefixIdentifiers: true
+        }
       )
       expect((node.children[1] as InterpolationNode).content).toMatchObject({
         type: NodeTypes.SIMPLE_EXPRESSION,

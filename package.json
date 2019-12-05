@@ -46,7 +46,7 @@
     "lerna": "^3.16.4",
     "lint-staged": "^9.2.3",
     "minimist": "^1.2.0",
-    "prettier": "~1.14.0",
+    "prettier": "1.19.1",
     "puppeteer": "^2.0.0",
     "rollup": "^1.19.4",
     "rollup-plugin-terser": "^5.1.1",

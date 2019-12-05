@@ -316,7 +316,13 @@ describe('renderer: keyed children', () => {
     }
 
     for (let n = 0; n < samples; ++n) {
-      render(h('span', arr.map(n => spanNumWithOpacity(n, '1'))), root)
+      render(
+        h(
+          'span',
+          arr.map(n => spanNumWithOpacity(n, '1'))
+        ),
+        root
+      )
       elm = root.children[0] as TestElement
 
       for (let i = 0; i < elms; ++i) {
@@ -330,7 +336,10 @@ describe('renderer: keyed children', () => {
 
       const shufArr = shuffle(arr.slice(0))
       render(
-        h('span', arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n]))),
+        h(
+          'span',
+          arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n]))
+        ),
         root
       )
       elm = root.children[0] as TestElement

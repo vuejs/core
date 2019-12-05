@@ -97,7 +97,10 @@ describe('api: watch', () => {
     state.count++
     count.value++
     await nextTick()
-    expect(dummy).toMatchObject([[2, 2, 3], [1, 1, 2]])
+    expect(dummy).toMatchObject([
+      [2, 2, 3],
+      [1, 1, 2]
+    ])
   })
 
   it('watching multiple sources: readonly array', async () => {
@@ -119,7 +122,10 @@ describe('api: watch', () => {
     state.count++
     status.value = false
     await nextTick()
-    expect(dummy).toMatchObject([[2, false], [1, false]])
+    expect(dummy).toMatchObject([
+      [2, false],
+      [1, false]
+    ])
   })
 
   it('stopping the watcher', async () => {
@@ -292,7 +298,10 @@ describe('api: watch', () => {
         count: ref(0)
       },
       array: [1, 2, 3],
-      map: new Map([['a', 1], ['b', 2]]),
+      map: new Map([
+        ['a', 1],
+        ['b', 2]
+      ]),
       set: new Set([1, 2, 3])
     })
 

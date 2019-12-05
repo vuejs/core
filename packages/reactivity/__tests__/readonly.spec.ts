@@ -247,7 +247,10 @@ describe('reactivity/readonly', () => {
       test('should make nested values readonly', () => {
         const key1 = {}
         const key2 = {}
-        const original = new Collection([[key1, {}], [key2, {}]])
+        const original = new Collection([
+          [key1, {}],
+          [key2, {}]
+        ])
         const observed = readonly(original)
         expect(observed).not.toBe(original)
         expect(isReactive(observed)).toBe(true)
@@ -297,7 +300,10 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Collection([[key1, {}], [key2, {}]])
+          const original = new Collection([
+            [key1, {}],
+            [key2, {}]
+          ])
           const observed: any = readonly(original)
           for (const [key, value] of observed) {
             expect(isReadonly(key)).toBe(true)

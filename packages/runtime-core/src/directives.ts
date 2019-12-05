@@ -73,28 +73,25 @@ const directiveToVnodeHooksMap = /*#__PURE__*/ [
   'updated',
   'beforeUnmount',
   'unmounted'
-].reduce(
-  (map, key: keyof ObjectDirective) => {
-    const vnodeKey = `onVnode` + key[0].toUpperCase() + key.slice(1)
-    const vnodeHook = (vnode: VNode, prevVnode: VNode | null) => {
-      const bindings = vnode.dirs!
-      const prevBindings = prevVnode ? prevVnode.dirs! : EMPTY_ARR
-      for (let i = 0; i < bindings.length; i++) {
-        const binding = bindings[i]
-        const hook = binding.dir[key]
-        if (hook != null) {
-          if (prevVnode != null) {
-            binding.oldValue = prevBindings[i].value
-          }
-          hook(vnode.el, binding, vnode, prevVnode)
+].reduce((map, key: keyof ObjectDirective) => {
+  const vnodeKey = `onVnode` + key[0].toUpperCase() + key.slice(1)
+  const vnodeHook = (vnode: VNode, prevVnode: VNode | null) => {
+    const bindings = vnode.dirs!
+    const prevBindings = prevVnode ? prevVnode.dirs! : EMPTY_ARR
+    for (let i = 0; i < bindings.length; i++) {
+      const binding = bindings[i]
+      const hook = binding.dir[key]
+      if (hook != null) {
+        if (prevVnode != null) {
+          binding.oldValue = prevBindings[i].value
         }
+        hook(vnode.el, binding, vnode, prevVnode)
       }
     }
-    map[key] = [vnodeKey, vnodeHook]
-    return map
-  },
-  {} as Record<string, [string, Function]>
-)
+  }
+  map[key] = [vnodeKey, vnodeHook]
+  return map
+}, {} as Record<string, [string, Function]>)
 
 // Directive, value, argument, modifiers
 export type DirectiveArguments = Array<

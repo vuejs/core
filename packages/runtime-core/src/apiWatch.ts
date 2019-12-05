@@ -105,11 +105,10 @@ function doWatch(
   let getter: () => any
   if (isArray(source)) {
     getter = () =>
-      source.map(
-        s =>
-          isRef(s)
-            ? s.value
-            : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+      source.map(s =>
+        isRef(s)
+          ? s.value
+          : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
       )
   } else if (isRef(source)) {
     getter = () => source.value

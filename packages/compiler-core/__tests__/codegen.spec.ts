@@ -50,9 +50,7 @@ describe('compiler: codegen', () => {
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
-      `import { ${helperNameMap[CREATE_VNODE]}, ${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } from "vue"`
+      `import { ${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]} } from "vue"`
     )
     expect(code).toMatchSnapshot()
   })
@@ -64,11 +62,7 @@ describe('compiler: codegen', () => {
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}: _${
-        helperNameMap[CREATE_VNODE]
-      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } = _Vue`
+      `const { ${helperNameMap[CREATE_VNODE]}: _${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${helperNameMap[RESOLVE_DIRECTIVE]} } = _Vue`
     )
     expect(code).toMatchSnapshot()
   })
@@ -83,9 +77,7 @@ describe('compiler: codegen', () => {
     })
     expect(code).not.toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}, ${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      } } = Vue`
+      `const { ${helperNameMap[CREATE_VNODE]}, ${helperNameMap[RESOLVE_DIRECTIVE]} } = Vue`
     )
     expect(code).toMatchSnapshot()
   })
@@ -100,19 +92,13 @@ describe('compiler: codegen', () => {
       `const _component_Foo = _${helperNameMap[RESOLVE_COMPONENT]}("Foo")\n`
     )
     expect(code).toMatch(
-      `const _component_bar_baz = _${
-        helperNameMap[RESOLVE_COMPONENT]
-      }("bar-baz")\n`
+      `const _component_bar_baz = _${helperNameMap[RESOLVE_COMPONENT]}("bar-baz")\n`
     )
     expect(code).toMatch(
-      `const _component_barbaz = _${
-        helperNameMap[RESOLVE_COMPONENT]
-      }("barbaz")\n`
+      `const _component_barbaz = _${helperNameMap[RESOLVE_COMPONENT]}("barbaz")\n`
     )
     expect(code).toMatch(
-      `const _directive_my_dir = _${
-        helperNameMap[RESOLVE_DIRECTIVE]
-      }("my_dir")\n`
+      `const _directive_my_dir = _${helperNameMap[RESOLVE_DIRECTIVE]}("my_dir")\n`
     )
     expect(code).toMatchSnapshot()
   })
