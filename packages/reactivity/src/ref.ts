@@ -60,11 +60,7 @@ export function toRefs<T extends object>(
   if (__DEV__ && !isReactive(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
-  const ret: any = {}
-  for (const key in object) {
-    ret[key] = toProxyRef(object, key)
-  }
-  return ret
+  return new Proxy(object, { get: toProxyRef }) as any
 }
 
 function toProxyRef<T extends object, K extends keyof T>(
