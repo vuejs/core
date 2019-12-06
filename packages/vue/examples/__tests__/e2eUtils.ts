@@ -33,6 +33,14 @@ export function setupPuppeteer() {
     return await page.$eval(selector, (node: any) => node.value)
   }
 
+  async function classList(selector: string) {
+    return await page.$eval(selector, (node: any) => [...node.classList])
+  }
+
+  async function children(selector: string) {
+    return await page.$eval(selector, (node: any) => [...node.children])
+  }
+
   async function isVisible(selector: string) {
     const display = await page.$eval(selector, (node: HTMLElement) => {
       return window.getComputedStyle(node).display
@@ -42,10 +50,6 @@ export function setupPuppeteer() {
 
   async function isChecked(selector: string) {
     return await page.$eval(selector, (node: any) => node.checked)
-  }
-
-  async function classList(selector: string) {
-    return await page.$eval(selector, (node: any) => [...node.classList])
   }
 
   async function isFocused(selector: string) {
@@ -70,6 +74,7 @@ export function setupPuppeteer() {
     text,
     value,
     classList,
+    children,
     isVisible,
     isChecked,
     isFocused,
