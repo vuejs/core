@@ -11,6 +11,9 @@ describe('e2e: commits', () => {
     )}`
 
     await page().goto(baseUrl)
+    await page().waitForResponse(
+      'https://api.github.com/repos/vuejs/vue-next/commits?per_page=3&sha=master'
+    )
     await page().waitFor('li')
     expect(await count('input')).toBe(2)
     expect(await count('label')).toBe(2)
@@ -23,6 +26,9 @@ describe('e2e: commits', () => {
     expect(await count('li .commit')).toBe(3)
     expect(await count('li .message')).toBe(3)
     await click('#sync')
+    await page().waitForResponse(
+      'https://api.github.com/repos/vuejs/vue-next/commits?per_page=3&sha=sync'
+    )
     expect(await text('p')).toBe('vuejs/vue@sync')
     expect(await count('li')).toBe(3)
     expect(await count('li .commit')).toBe(3)
