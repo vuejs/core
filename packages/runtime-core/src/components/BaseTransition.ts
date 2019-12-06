@@ -57,10 +57,7 @@ export interface TransitionHooks {
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
-  args?: any[]
-) => void
+type TransitionHookCaller = (hook?: (el: any) => void, args?: any[]) => void
 
 export type PendingCallback = (cancelled?: boolean) => void
 
