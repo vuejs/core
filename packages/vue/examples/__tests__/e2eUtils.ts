@@ -41,6 +41,10 @@ export function setupPuppeteer() {
     return await page.$eval(selector, (node: any) => [...node.children])
   }
 
+  async function html(selector: string) {
+    return await page.$eval(selector, node => node.innerHTML)
+  }
+
   async function isVisible(selector: string) {
     const display = await page.$eval(selector, (node: HTMLElement) => {
       return window.getComputedStyle(node).display
@@ -73,6 +77,7 @@ export function setupPuppeteer() {
     count,
     text,
     value,
+    html,
     classList,
     children,
     isVisible,
