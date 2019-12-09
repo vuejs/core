@@ -5,7 +5,8 @@ import scopedPlugin from './stylePluginScoped'
 import {
   processors,
   StylePreprocessor,
-  StylePreprocessorResults
+  StylePreprocessorResults,
+  PreprocessLang
 } from './stylePreprocessors'
 
 export interface StyleCompileOptions {
@@ -15,7 +16,7 @@ export interface StyleCompileOptions {
   map?: object
   scoped?: boolean
   trim?: boolean
-  preprocessLang?: string
+  preprocessLang?: PreprocessLang
   preprocessOptions?: any
   postcssOptions?: any
   postcssPlugins?: any[]
