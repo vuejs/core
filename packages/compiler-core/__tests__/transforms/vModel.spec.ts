@@ -265,11 +265,7 @@ describe('compiler: transform v-model', () => {
     expect(props[1]).toMatchObject({
       key: {
         children: [
-          {
-            content: 'onUpdate:',
-            isStatic: true
-          },
-          '+',
+          '"onUpdate:" + ',
           {
             content: 'value',
             isStatic: false
@@ -313,11 +309,7 @@ describe('compiler: transform v-model', () => {
     expect(props[1]).toMatchObject({
       key: {
         children: [
-          {
-            content: 'onUpdate:',
-            isStatic: true
-          },
-          '+',
+          '"onUpdate:" + ',
           {
             content: '_ctx.value',
             isStatic: false
@@ -403,6 +395,37 @@ describe('compiler: transform v-model', () => {
     // should NOT include modelModifiers in dynamicPropNames because it's never
     // gonna change
     expect(args[4]).toBe(`["modelValue", "onUpdate:modelValue"]`)
+  })
+
+  test('should generate modelModifers for component v-model with arguments', () => {
+    const root = parseWithVModel(
+      '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
+      {
+        prefixIdentifiers: true
+      }
+    )
+    const args = ((root.children[0] as ComponentNode)
+      .codegenNode as CallExpression).arguments
+    // props
+    expect(args[1]).toMatchObject({
+      properties: [
+        { key: { content: `foo` } },
+        { key: { content: `onUpdate:foo` } },
+        {
+          key: { content: 'fooModifiers' },
+          value: { content: `{ trim: true }`, isStatic: false }
+        },
+        { key: { content: `bar` } },
+        { key: { content: `onUpdate:bar` } },
+        {
+          key: { content: 'barModifiers' },
+          value: { content: `{ number: true }`, isStatic: false }
+        }
+      ]
+    })
+    // should NOT include modelModifiers in dynamicPropNames because it's never
+    // gonna change
+    expect(args[4]).toBe(`["foo", "onUpdate:foo", "bar", "onUpdate:bar"]`)
   })
 
   describe('errors', () => {

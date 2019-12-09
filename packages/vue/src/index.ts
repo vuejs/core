@@ -1,15 +1,38 @@
 // This package is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
 import { compile, CompilerOptions } from '@vue/compiler-dom'
-import { registerRuntimeCompiler, RenderFunction } from '@vue/runtime-dom'
+import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
+import { isString, NOOP } from '@vue/shared'
+
+const idToTemplateCache = Object.create(null)
 
 function compileToFunction(
-  template: string,
+  template: string | HTMLElement,
   options?: CompilerOptions
 ): RenderFunction {
-  const { code } = compile(template, {
+  if (isString(template)) {
+    if (template[0] === '#') {
+      if (template in idToTemplateCache) {
+        template = idToTemplateCache[template]
+      } else {
+        const el = document.querySelector(template)
+        if (__DEV__ && !el) {
+          warn(`Template element not found or is empty: ${template}`)
+        }
+        template = idToTemplateCache[template] = el ? el.innerHTML : ``
+      }
+    }
+  } else if (template.nodeType) {
+    template = template.innerHTML
+  } else {
+    __DEV__ && warn(`invalid template option: `, template)
+    return NOOP
+  }
+
+  const { code } = compile(template as string, {
     hoistStatic: true,
+    cacheHandlers: true,
     ...options
   })
 

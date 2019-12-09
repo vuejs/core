@@ -210,28 +210,28 @@ describe('DOM parser', () => {
   })
 
   describe('Namespaces', () => {
-    test('HTML namesapce', () => {
+    test('HTML namespace', () => {
       const ast = parse('<html>test</html>', parserOptions)
       const element = ast.children[0] as ElementNode
 
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('SVG namesapce', () => {
+    test('SVG namespace', () => {
       const ast = parse('<svg>test</svg>', parserOptions)
       const element = ast.children[0] as ElementNode
 
       expect(element.ns).toBe(DOMNamespaces.SVG)
     })
 
-    test('MATH_ML namesapce', () => {
+    test('MATH_ML namespace', () => {
       const ast = parse('<math>test</math>', parserOptions)
       const element = ast.children[0] as ElementNode
 
       expect(element.ns).toBe(DOMNamespaces.MATH_ML)
     })
 
-    test('SVG in MATH_ML namesapce', () => {
+    test('SVG in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml><svg></svg></annotation-xml></math>',
         parserOptions
@@ -244,7 +244,7 @@ describe('DOM parser', () => {
       expect(elementSvg.ns).toBe(DOMNamespaces.SVG)
     })
 
-    test('html text/html in MATH_ML namesapce', () => {
+    test('html text/html in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml encoding="text/html"><test/></annotation-xml></math>',
         parserOptions
@@ -258,7 +258,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('html application/xhtml+xml in MATH_ML namesapce', () => {
+    test('html application/xhtml+xml in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml encoding="application/xhtml+xml"><test/></annotation-xml></math>',
         parserOptions
@@ -271,7 +271,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('mtext malignmark in MATH_ML namesapce', () => {
+    test('mtext malignmark in MATH_ML namespace', () => {
       const ast = parse(
         '<math><mtext><malignmark/></mtext></math>',
         parserOptions
@@ -284,7 +284,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.MATH_ML)
     })
 
-    test('mtext and not malignmark tag in MATH_ML namesapce', () => {
+    test('mtext and not malignmark tag in MATH_ML namespace', () => {
       const ast = parse('<math><mtext><test/></mtext></math>', parserOptions)
       const elementMath = ast.children[0] as ElementNode
       const elementText = elementMath.children[0] as ElementNode
@@ -294,7 +294,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('foreignObject tag in SVG namesapce', () => {
+    test('foreignObject tag in SVG namespace', () => {
       const ast = parse(
         '<svg><foreignObject><test/></foreignObject></svg>',
         parserOptions
@@ -307,7 +307,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('desc tag in SVG namesapce', () => {
+    test('desc tag in SVG namespace', () => {
       const ast = parse('<svg><desc><test/></desc></svg>', parserOptions)
       const elementSvg = ast.children[0] as ElementNode
       const elementDesc = elementSvg.children[0] as ElementNode
@@ -317,7 +317,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('title tag in SVG namesapce', () => {
+    test('title tag in SVG namespace', () => {
       const ast = parse('<svg><title><test/></title></svg>', parserOptions)
       const elementSvg = ast.children[0] as ElementNode
       const elementTitle = elementSvg.children[0] as ElementNode
@@ -327,7 +327,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.HTML)
     })
 
-    test('SVG in HTML namesapce', () => {
+    test('SVG in HTML namespace', () => {
       const ast = parse('<html><svg></svg></html>', parserOptions)
       const elementHtml = ast.children[0] as ElementNode
       const element = elementHtml.children[0] as ElementNode
@@ -336,7 +336,7 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.SVG)
     })
 
-    test('MATH in HTML namesapce', () => {
+    test('MATH in HTML namespace', () => {
       const ast = parse('<html><math></math></html>', parserOptions)
       const elementHtml = ast.children[0] as ElementNode
       const element = elementHtml.children[0] as ElementNode

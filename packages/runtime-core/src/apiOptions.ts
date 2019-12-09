@@ -26,6 +26,8 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
+  onActivated,
+  onDeactivated,
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook
@@ -63,6 +65,14 @@ export interface ComponentOptionsBase<
   components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
+
+  // type-only differentiator to separate OptionWithoutProps from a constructor
+  // type returned by createComponent() or FunctionalComponent
+  call?: never
+  // type-only differentiators for built-in Vnode types
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
 }
 
 export type ComponentOptionsWithoutProps<
@@ -73,7 +83,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -81,7 +91,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: any }
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -92,7 +102,7 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
+  Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -226,8 +236,8 @@ export function applyOptions(
     mounted,
     beforeUpdate,
     updated,
-    // TODO activated
-    // TODO deactivated
+    activated,
+    deactivated,
     beforeUnmount,
     unmounted,
     renderTracked,
@@ -377,6 +387,12 @@ export function applyOptions(
   if (updated) {
     onUpdated(updated.bind(ctx))
   }
+  if (activated) {
+    onActivated(activated.bind(ctx))
+  }
+  if (deactivated) {
+    onDeactivated(deactivated.bind(ctx))
+  }
   if (errorCaptured) {
     onErrorCaptured(errorCaptured.bind(ctx))
   }
@@ -443,7 +459,7 @@ function createWatcher(
   ctx: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => ctx[key]
+  const getter = () => (ctx as Data)[key]
   if (isString(raw)) {
     const handler = renderContext[raw]
     if (isFunction(handler)) {

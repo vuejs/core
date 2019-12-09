@@ -1,16 +1,23 @@
-import { createRenderer, warn } from '@vue/runtime-core'
+import {
+  createRenderer,
+  warn,
+  App,
+  RootRenderFunction
+} from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
-import { isHTMLTag, isSVGTag } from '@vue/compiler-dom'
-import { isFunction, isString } from '@vue/shared'
+import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
 
-const { render, createApp: baseCreateApp } = createRenderer<Node, Element>({
+const { render: baseRender, createApp: baseCreateApp } = createRenderer({
   patchProp,
   ...nodeOps
 })
 
-const createApp = () => {
+// use explicit type casts here to avoid import() calls in rolled-up d.ts
+export const render = baseRender as RootRenderFunction<Node, Element>
+
+export const createApp = (): App<Element> => {
   const app = baseCreateApp()
 
   if (__DEV__) {
@@ -48,9 +55,7 @@ const createApp = () => {
   return app
 }
 
-export { render, createApp }
-
-// DOM-only runtime helpers
+// DOM-only runtime directive helpers
 export {
   vModelText,
   vModelCheckbox,
@@ -58,14 +63,16 @@ export {
   vModelSelect,
   vModelDynamic
 } from './directives/vModel'
-
 export { withModifiers, withKeys } from './directives/vOn'
+export { vShow } from './directives/vShow'
+
+// DOM-only components
+export { Transition, TransitionProps } from './components/Transition'
+export {
+  TransitionGroup,
+  TransitionGroupProps
+} from './components/TransitionGroup'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'
-
-// Type augmentations
-export interface ComponentPublicInstance {
-  $el: Element
-}

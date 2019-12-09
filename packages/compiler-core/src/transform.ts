@@ -17,7 +17,7 @@ import {
   CacheExpression,
   createCacheExpression
 } from './ast'
-import { isString, isArray } from '@vue/shared'
+import { isString, isArray, NOOP } from '@vue/shared'
 import { CompilerError, defaultOnError } from './errors'
 import {
   TO_STRING,
@@ -68,10 +68,16 @@ export type StructuralDirectiveTransform = (
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: { [name: string]: DirectiveTransform }
+  isBuiltInComponent?: (tag: string) => symbol | void
   prefixIdentifiers?: boolean
   hoistStatic?: boolean
   cacheHandlers?: boolean
   onError?: (error: CompilerError) => void
+}
+
+export interface ImportsOption {
+  exp: string | ExpressionNode
+  path: string
 }
 
 export interface TransformContext extends Required<TransformOptions> {
@@ -80,6 +86,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  imports: Set<ImportsOption>
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -110,6 +117,7 @@ function createTransformContext(
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
+    isBuiltInComponent = NOOP,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -119,6 +127,7 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    imports: new Set(),
     cached: 0,
     identifiers: {},
     scopes: {
@@ -132,6 +141,7 @@ function createTransformContext(
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
+    isBuiltInComponent,
     onError,
     parent: null,
     currentNode: root,
@@ -293,6 +303,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   root.helpers = [...context.helpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
+  root.imports = [...context.imports]
   root.hoists = context.hoists
   root.cached = context.cached
 }

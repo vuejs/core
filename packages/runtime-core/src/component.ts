@@ -1,5 +1,5 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
-import { ReactiveEffect, reactive, readonly } from '@vue/reactivity'
+import { ReactiveEffect, reactive, shallowReadonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
   ComponentPublicInstance
@@ -23,14 +23,12 @@ import {
   isObject,
   NO,
   makeMap,
-  isPromise
-} from '@vue/shared'
-import { SuspenseBoundary } from './suspense'
-import {
-  CompilerError,
-  CompilerOptions,
+  isPromise,
   generateCodeFrame
-} from '@vue/compiler-dom'
+} from '@vue/shared'
+import { SuspenseBoundary } from './components/Suspense'
+import { CompilerError, CompilerOptions } from '@vue/compiler-core'
+import { currentRenderingInstance } from './componentRenderUtils'
 
 export type Data = { [key: string]: unknown }
 
@@ -42,6 +40,7 @@ export interface FunctionalComponent<P = {}> {
 }
 
 export type Component = ComponentOptions | FunctionalComponent
+export { ComponentOptions }
 
 type LifecycleHook = Function[] | null
 
@@ -89,12 +88,9 @@ export interface ComponentInternalInstance {
   // after initialized (e.g. inline handlers)
   renderCache: (Function | VNode)[] | null
 
+  // assets for fast resolution
   components: Record<string, Component>
   directives: Record<string, Directive>
-
-  asyncDep: Promise<any> | null
-  asyncResult: unknown
-  asyncResolved: boolean
 
   // the rest are only for stateful components
   renderContext: Data
@@ -108,11 +104,18 @@ export interface ComponentInternalInstance {
   refs: Data
   emit: Emit
 
-  // user namespace
-  user: { [key: string]: any }
+  // suspense related
+  asyncDep: Promise<any> | null
+  asyncResult: unknown
+  asyncResolved: boolean
+
+  // storage for any extra properties
+  sink: { [key: string]: any }
 
   // lifecycle
+  isMounted: boolean
   isUnmounted: boolean
+  isDeactivated: boolean
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
   [LifecycleHooks.CREATED]: LifecycleHook
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
@@ -141,7 +144,7 @@ export function createComponentInstance(
     vnode,
     parent,
     appContext,
-    type: vnode.type,
+    type: vnode.type as Component,
     root: null!, // set later so it can point to itself
     next: null,
     subTree: null!, // will be set synchronously right after creation
@@ -173,11 +176,14 @@ export function createComponentInstance(
     asyncResolved: false,
 
     // user namespace for storing whatever the user assigns to `this`
-    user: {},
+    // can also be used as a wildcard storage for ad-hoc injections internally
+    sink: {},
 
     // lifecycle hooks
     // not using enums here because it results in computed properties
+    isMounted: false,
     isUnmounted: false,
+    isDeactivated: false,
     bc: null,
     c: null,
     bm: null,
@@ -214,7 +220,7 @@ export let currentInstance: ComponentInternalInstance | null = null
 export let currentSuspense: SuspenseBoundary | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
-  currentInstance
+  currentInstance || currentRenderingInstance
 
 export const setCurrentInstance = (
   instance: ComponentInternalInstance | null
@@ -246,8 +252,7 @@ export function setupStatefulComponent(
     if (Component.components) {
       const names = Object.keys(Component.components)
       for (let i = 0; i < names.length; i++) {
-        const name = names[i]
-        validateComponentName(name, instance.appContext.config)
+        validateComponentName(names[i], instance.appContext.config)
       }
     }
     if (Component.directives) {
@@ -264,7 +269,7 @@ export function setupStatefulComponent(
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = readonly(instance.props))
+  const propsProxy = (instance.propsProxy = shallowReadonly(instance.props))
   // 3. call setup()
   const { setup } = Component
   if (setup) {
@@ -293,7 +298,6 @@ export function setupStatefulComponent(
             `does not support it yet.`
         )
       }
-      return
     } else {
       handleSetupResult(instance, setupResult, parentSuspense)
     }
@@ -337,7 +341,8 @@ type CompileFunction = (
 
 let compile: CompileFunction | undefined
 
-export function registerRuntimeCompiler(_compile: CompileFunction) {
+// exported method uses any to avoid d.ts relying on the compiler types.
+export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 

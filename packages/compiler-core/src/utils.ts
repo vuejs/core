@@ -27,8 +27,31 @@ import {
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
-import { OPEN_BLOCK, MERGE_PROPS, RENDER_SLOT } from './runtimeHelpers'
-import { isString, isFunction, isObject } from '@vue/shared'
+import {
+  OPEN_BLOCK,
+  MERGE_PROPS,
+  RENDER_SLOT,
+  PORTAL,
+  SUSPENSE,
+  KEEP_ALIVE,
+  BASE_TRANSITION
+} from './runtimeHelpers'
+import { isString, isFunction, isObject, hyphenate } from '@vue/shared'
+
+export const isBuiltInType = (tag: string, expected: string): boolean =>
+  tag === expected || tag === hyphenate(expected)
+
+export function isCoreComponent(tag: string): symbol | void {
+  if (isBuiltInType(tag, 'Portal')) {
+    return PORTAL
+  } else if (isBuiltInType(tag, 'Suspense')) {
+    return SUSPENSE
+  } else if (isBuiltInType(tag, 'KeepAlive')) {
+    return KEEP_ALIVE
+  } else if (isBuiltInType(tag, 'BaseTransition')) {
+    return BASE_TRANSITION
+  }
+}
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -77,7 +100,7 @@ export function getInnerRange(
   offset: number,
   length?: number
 ): SourceLocation {
-  __DEV__ && assert(offset <= loc.source.length)
+  __TEST__ && assert(offset <= loc.source.length)
   const source = loc.source.substr(offset, length)
   const newLoc: SourceLocation = {
     source,
@@ -86,7 +109,7 @@ export function getInnerRange(
   }
 
   if (length != null) {
-    __DEV__ && assert(offset + length <= loc.source.length)
+    __TEST__ && assert(offset + length <= loc.source.length)
     newLoc.end = advancePositionWithClone(
       loc.start,
       loc.source,
@@ -190,18 +213,23 @@ export function createBlockExpression(
   ])
 }
 
-export const isVSlot = (p: ElementNode['props'][0]): p is DirectiveNode =>
-  p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
+}
 
-export const isTemplateNode = (
+export function isTemplateNode(
   node: RootNode | TemplateChildNode
-): node is TemplateNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+): node is TemplateNode {
+  return (
+    node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
+  )
+}
 
-export const isSlotOutlet = (
+export function isSlotOutlet(
   node: RootNode | TemplateChildNode
-): node is SlotOutletNode =>
-  node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+): node is SlotOutletNode {
+  return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
+}
 
 export function injectProp(
   node: ElementCodegenNode | ComponentCodegenNode | SlotOutletCodegenNode,

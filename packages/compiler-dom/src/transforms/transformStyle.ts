@@ -35,7 +35,7 @@ const propertyDelimiterRE = /:(.+)/
 
 function parseInlineCSS(cssText: string): Record<string, string> {
   const res: Record<string, string> = {}
-  cssText.split(listDelimiterRE).forEach(function(item) {
+  cssText.split(listDelimiterRE).forEach(item => {
     if (item) {
       const tmp = item.split(propertyDelimiterRE)
       tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())

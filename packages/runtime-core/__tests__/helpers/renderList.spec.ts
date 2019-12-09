@@ -41,4 +41,10 @@ describe('renderList', () => {
       renderList(iterable(), (item, index) => `node ${index}: ${item}`)
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
+
+  it('should return empty array when source is undefined', () => {
+    expect(
+      renderList(undefined, (item, index) => `node ${index}: ${item}`)
+    ).toEqual([])
+  })
 })

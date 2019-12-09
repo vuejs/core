@@ -16,7 +16,7 @@ import { isMemberExpression, hasScopeRef } from '../utils'
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
-  // v-on without arg is handled directly in ./element.ts due to it affecting
+  // v-on without arg is handled directly in ./transformElements.ts due to it affecting
   // codegen for the entire props object. This transform here is only for v-on
   // *with* args.
   arg: ExpressionNode
@@ -109,7 +109,7 @@ export const transformOn: DirectiveTransform = (
 
   if (isCacheable) {
     // cache handlers so that it's always the same handler being passed down.
-    // this avoids unnecessary re-renders when users use inline hanlders on
+    // this avoids unnecessary re-renders when users use inline handlers on
     // components.
     ret.props[0].value = context.cache(ret.props[0].value)
   }

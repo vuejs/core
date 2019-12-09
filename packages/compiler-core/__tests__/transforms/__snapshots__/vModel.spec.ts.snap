@@ -76,7 +76,7 @@ export default function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"input\\", {
     [_ctx.value]: _ctx.model,
-    [\\"onUpdate:\\"+_ctx.value]: $event => (_ctx.model = $event)
+    [\\"onUpdate:\\" + _ctx.value]: $event => (_ctx.model = $event)
   }, null, 16 /* FULL_PROPS */))
 }"
 `;
@@ -90,7 +90,7 @@ return function render() {
     
     return (_openBlock(), _createBlock(\\"input\\", {
       [value]: model,
-      [\\"onUpdate:\\"+value]: $event => (model = $event)
+      [\\"onUpdate:\\" + value]: $event => (model = $event)
     }, null, 16 /* FULL_PROPS */))
   }
 }"

@@ -6,8 +6,7 @@
   "module": "dist/runtime-core.esm-bundler.js",
   "files": [
     "index.js",
-    "dist",
-    "jsx.d.ts"
+    "dist"
   ],
   "types": "dist/runtime-core.d.ts",
   "sideEffects": false,

@@ -29,5 +29,9 @@ jobs:
           command: yarn test --ci --runInBand
 
       - run:
+          name: Test d.ts
+          command: yarn test-dts
+
+      - run:
           name: Check size
           command: yarn size

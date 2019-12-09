@@ -74,7 +74,7 @@ describe('api: setup context', () => {
     expect(dummy).toBe(1)
   })
 
-  it.only('setup props should resolve the correct types from props object', async () => {
+  it('setup props should resolve the correct types from props object', async () => {
     const count = ref(0)
     let dummy
 
@@ -117,6 +117,8 @@ describe('api: setup context', () => {
     const Child = {
       // explicit empty props declaration
       // puts everything received in attrs
+      // disable implicit fallthrough
+      inheritAttrs: false,
       props: {},
       setup(props: any, { attrs }: any) {
         return () => h('div', attrs)

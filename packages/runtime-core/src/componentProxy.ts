@@ -26,7 +26,6 @@ export type ComponentPublicInstance<
   M extends MethodOptions = {},
   PublicProps = P
 > = {
-  [key: string]: any
   $data: D
   $props: PublicProps
   $attrs: Data
@@ -66,6 +65,10 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
+    // fast path for unscopables when using `with` block
+    if (__RUNTIME_COMPILE__ && (key as any) === Symbol.unscopables) {
+      return
+    }
     const {
       renderContext,
       data,
@@ -73,12 +76,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       propsProxy,
       accessCache,
       type,
-      user
+      sink
     } = target
-    // fast path for unscopables when using `with` block
-    if (__RUNTIME_COMPILE__ && (key as any) === Symbol.unscopables) {
-      return
-    }
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
@@ -107,6 +106,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
       // return the value from propsProxy for ref unwrapping and readonly
       return propsProxy![key]
+    } else if (key === '$') {
+      // reserved backdoor to access the internal instance
+      return target
     } else if (key === '$cache') {
       return target.renderCache || (target.renderCache = [])
     } else if (key === '$el') {
@@ -128,8 +130,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           return instanceWatch.bind(target)
       }
     }
-    if (hasOwn(user, key)) {
-      return user[key]
+    if (hasOwn(sink, key)) {
+      return sink[key]
     } else if (__DEV__ && currentRenderingInstance != null) {
       warn(
         `Property ${JSON.stringify(key)} was accessed during render ` +
@@ -157,7 +159,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
       return false
     } else {
-      target.user[key] = value
+      target.sink[key] = value
     }
     return true
   }

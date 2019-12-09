@@ -5,8 +5,7 @@ import {
   Namespaces,
   NodeTypes
 } from '@vue/compiler-core'
-import { isVoidTag, isHTMLTag, isSVGTag } from './tagConfig'
-import { makeMap } from '@vue/shared'
+import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 
 const isRawTextContainer = /*#__PURE__*/ makeMap(
   'style,iframe,script,noscript',

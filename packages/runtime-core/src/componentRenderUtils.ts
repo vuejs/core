@@ -75,13 +75,29 @@ export function renderComponentRoot(
         result.shapeFlag & ShapeFlags.COMPONENT
       ) {
         result = cloneVNode(result, attrs)
-      } else if (__DEV__ && !accessedAttrs) {
+      } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
         warn(
           `Extraneous non-props attributes (${Object.keys(attrs).join(',')}) ` +
-            `were passed to component but could not be automatically inhertied ` +
+            `were passed to component but could not be automatically inherited ` +
             `because component renders fragment or text root nodes.`
         )
       }
+    }
+
+    // inherit transition data
+    if (vnode.transition != null) {
+      if (
+        __DEV__ &&
+        !(result.shapeFlag & ShapeFlags.COMPONENT) &&
+        !(result.shapeFlag & ShapeFlags.ELEMENT) &&
+        result.type !== Comment
+      ) {
+        warn(
+          `Component inside <Transition> renders non-element root node ` +
+            `that cannot be animated.`
+        )
+      }
+      result.transition = vnode.transition
     }
   } catch (err) {
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
@@ -120,7 +136,9 @@ export function shouldUpdateComponent(
     // this path is only taken by manually written render functions
     // so presence of any children leads to a forced update
     if (prevChildren != null || nextChildren != null) {
-      return true
+      if (nextChildren == null || !(nextChildren as any).$stable) {
+        return true
+      }
     }
     if (prevProps === nextProps) {
       return false
@@ -148,4 +166,14 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
     }
   }
   return false
+}
+
+export function updateHOCHostEl(
+  { vnode, parent }: ComponentInternalInstance,
+  el: object // HostNode
+) {
+  while (parent && parent.subTree === vnode) {
+    ;(vnode = parent.vnode).el = el
+    parent = parent.parent
+  }
 }

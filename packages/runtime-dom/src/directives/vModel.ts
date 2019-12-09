@@ -66,7 +66,10 @@ export const vModelText: ObjectDirective<
       addEventListener(el, 'change', onCompositionEnd)
     }
   },
-  beforeUpdate(el, { value, modifiers: { trim, number } }) {
+  beforeUpdate(el, { value, oldValue, modifiers: { trim, number } }) {
+    if (value === oldValue) {
+      return
+    }
     if (document.activeElement === el) {
       if (trim && el.value.trim() === value) {
         return
@@ -98,7 +101,7 @@ export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else {
-        assign(checked)
+        assign(getCheckboxValue(el, checked))
       }
     })
   },
@@ -107,15 +110,17 @@ export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding,
+  { value, oldValue }: DirectiveBinding,
   vnode: VNode
 ) {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
   ;(el as any)._modelValue = value
-  el.checked = isArray(value)
-    ? looseIndexOf(value, vnode.props!.value) > -1
-    : !!value
+  if (isArray(value)) {
+    el.checked = looseIndexOf(value, vnode.props!.value) > -1
+  } else if (value !== oldValue) {
+    el.checked = looseEqual(value, getCheckboxValue(el, true))
+  }
 }
 
 export const vModelRadio: ObjectDirective<HTMLInputElement> = {
@@ -126,8 +131,10 @@ export const vModelRadio: ObjectDirective<HTMLInputElement> = {
       assign(getValue(el))
     })
   },
-  beforeUpdate(el, { value }, vnode) {
-    el.checked = looseEqual(value, vnode.props!.value)
+  beforeUpdate(el, { value, oldValue }, vnode) {
+    if (value !== oldValue) {
+      el.checked = looseEqual(value, vnode.props!.value)
+    }
   }
 }
 
@@ -219,6 +226,15 @@ function looseIndexOf(arr: any[], val: any): number {
 // retrieve raw value set via :value bindings
 function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
+}
+
+// retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
+function getCheckboxValue(
+  el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
+  checked: boolean
+) {
+  const key = checked ? '_trueValue' : '_falseValue'
+  return key in el ? el[key] : checked
 }
 
 export const vModelDynamic: ObjectDirective<

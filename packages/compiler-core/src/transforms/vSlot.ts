@@ -208,7 +208,7 @@ export function buildSlots(
         // remove node
         children.splice(i, 1)
         i--
-        __DEV__ && assert(dynamicSlots.length > 0)
+        __TEST__ && assert(dynamicSlots.length > 0)
         // attach this slot to previous conditional
         let conditional = dynamicSlots[
           dynamicSlots.length - 1

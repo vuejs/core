@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
-import replace from 'rollup-plugin-replace'
-import alias from 'rollup-plugin-alias'
-import json from 'rollup-plugin-json'
+import replace from '@rollup/plugin-replace'
+import alias from '@rollup/plugin-alias'
+import json from '@rollup/plugin-json'
 import lernaJson from './lerna.json'
 
 if (!process.env.TARGET) {
@@ -60,7 +60,7 @@ const packageConfigs = process.env.PROD_ONLY
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
-    if (format === 'cjs') {
+    if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
     if (format === 'global' || format === 'esm-browser') {
@@ -72,6 +72,8 @@ if (process.env.NODE_ENV === 'production') {
 export default packageConfigs
 
 function createConfig(output, plugins = []) {
+  output.externalLiveBindings = false
+
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
@@ -97,7 +99,7 @@ function createConfig(output, plugins = []) {
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
       },
-      exclude: ['**/__tests__']
+      exclude: ['**/__tests__', 'test-dts']
     }
   })
   // we only need to check TS and generate declarations once for each build.
@@ -105,7 +107,9 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const externals = Object.keys(aliasOptions).filter(p => p !== '@vue/shared')
+  const externals = Object.keys(aliasOptions)
+    .concat(Object.keys(pkg.dependencies || []))
+    .filter(p => p !== '@vue/shared')
 
   return {
     input: resolve(`src/index.ts`),
@@ -147,9 +151,11 @@ function createReplacePlugin(
     __VERSION__: `"${lernaJson.version}"`,
     __DEV__: isBundlerESMBuild
       ? // preserve to be handled by bundlers
-        `process.env.NODE_ENV !== 'production'`
+        `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
+    // this is only used during tests
+    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
     // If the build is expected to run directly in the browser (global / esm-browser builds)
     __BROWSER__: isBrowserBuild,
     // support compile in browser?
@@ -157,9 +163,7 @@ function createReplacePlugin(
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
-    __FEATURE_SUSPENSE__: true,
-    // this is only used during tests
-    __JSDOM__: false
+    __FEATURE_SUSPENSE__: true
   })
 }
 

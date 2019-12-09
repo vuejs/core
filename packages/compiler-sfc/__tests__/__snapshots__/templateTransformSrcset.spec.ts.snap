@@ -1,0 +1,49 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler sfc: transform srcset transform srcset 1`] = `
+"import { createVNode, createBlock, Fragment, openBlock } from \\"vue\\"
+import _imports_0 from './logo.png'
+
+
+const _hoisted_1 = _imports_0
+const _hoisted_2 = _imports_0 + '2x'
+const _hoisted_3 = _imports_0 + '2x'
+const _hoisted_4 = _imports_0 + ', ' + _imports_0 + '2x'
+const _hoisted_5 = _imports_0 + '2x, ' + _imports_0
+const _hoisted_6 = _imports_0 + '2x, ' + _imports_0 + '3x'
+const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
+
+export default function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(Fragment, null, [
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_1
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_2
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_3
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_4
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_5
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_6
+    }),
+    createVNode(\\"img\\", {
+      src: \\"./logo.png\\",
+      srcset: _hoisted_7
+    })
+  ]))
+}"
+`;
