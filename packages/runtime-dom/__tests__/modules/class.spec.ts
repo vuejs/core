@@ -1,6 +1,10 @@
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/directives/class.spec.js
 
-import { h, render, ComponentOptions } from '../../src'
+import { h, render, createComponent } from '../../src'
+
+type ClassItem = {
+  value: string | object | string[]
+}
 
 function assertClass(assertions: Array<Array<any>>) {
   const root = document.createElement('div')
@@ -63,111 +67,65 @@ describe('class', () => {
 
   test('class merge between parent and child', () => {
     const root = document.createElement('div')
-    type ClassItem = {
-      value: string | object | string[]
-    }
+
     const childClass: ClassItem = { value: 'd' }
-
-    const child = () => h('div', { class: ['c', childClass.value] })
-
-    const parentClass: ClassItem = { value: 'b' }
-    const parent = () => h(child, { class: ['a', parentClass.value] })
-
-    render(h(parent), root)
-    expect(root.children[0].className).toBe('c a d b')
-
-    parentClass.value = 'e'
-    render(h(parent), root)
-    expect(root.children[0].className).toBe('c a d e')
-
-    parentClass.value = 'f'
-    render(h(parent), root)
-    expect(root.children[0].className).toBe('c a f e')
-
-    parentClass.value = { foo: true }
-    childClass.value = ['bar', 'baz']
-    expect(root.children[0].className).toBe('c a bar baz foo')
-  })
-
-  test('class merge between parent and child with props', () => {
-    const root = document.createElement('div')
-    type ClassItem = {
-      value: string | object | string[]
-    }
-    const childClass: ClassItem = { value: 'd' }
-
     const child = {
-      setup() {
-        return () => h('div', { class: ['c', childClass.value] })
-      }
+      props: {},
+      render: () => h('div', { class: ['c', childClass.value] })
     }
 
     const parentClass: ClassItem = { value: 'b' }
     const parent = {
-      setup() {
-        return () => h(child, { class: ['a', parentClass.value] })
-      }
+      props: {},
+      render: () => h(child, { class: ['a', parentClass.value] })
     }
-
-    const child2 = {
-      props: [],
-      setup() {
-        return () => h('div', { class: ['c', childClass.value] })
-      }
-    }
-    const parent2 = {
-      setup() {
-        return () => h(child2, { class: ['a', parentClass.value] })
-      }
-    }
-
-    render(h(parent2), root)
-    expect(root.children[0].className).toBe('c d a b')
 
     render(h(parent), root)
     expect(root.children[0].className).toBe('c d a b')
 
     parentClass.value = 'e'
-    render(h(parent), root)
+    // the `foo` here is just for forcing parent to be updated
+    // (otherwise it's skipped since its props never change)
+    render(h(parent, { foo: 1 }), root)
     expect(root.children[0].className).toBe('c d a e')
 
     parentClass.value = 'f'
-    render(h(parent), root)
-    expect(root.children[0].className).toBe('c f a e')
+    render(h(parent, { foo: 2 }), root)
+    expect(root.children[0].className).toBe('c d a f')
 
     parentClass.value = { foo: true }
     childClass.value = ['bar', 'baz']
+    render(h(parent, { foo: 3 }), root)
     expect(root.children[0].className).toBe('c bar baz a foo')
   })
 
   test('class merge between multiple nested components sharing same element', () => {
-    const component1: ComponentOptions = {
+    const component1 = createComponent({
+      props: {},
       render() {
-        // FIXME: how to type this?
-        // @ts-ignore
-        return this.$slots.default()
+        return this.$slots.default()[0]
       }
-    }
+    })
 
-    const component2: ComponentOptions = {
+    const component2 = createComponent({
+      props: {},
       render() {
-        // @ts-ignore
-        return this.$slots.default()
+        return this.$slots.default()[0]
       }
-    }
+    })
 
-    const component3: ComponentOptions = {
+    const component3 = createComponent({
+      props: {},
       render() {
         return h(
           'div',
           {
             class: 'staticClass'
           },
-          // @ts-ignore
           [this.$slots.default()]
         )
       }
-    }
+    })
 
     const root = document.createElement('div')
     const componentClass1 = { value: 'componentClass1' }
@@ -175,9 +133,9 @@ describe('class', () => {
     const componentClass3 = { value: 'componentClass3' }
 
     const wrapper = () =>
-      h(component1, { class: componentClass1.value }, [
-        h(component2, { class: componentClass2.value }, [
-          h(component3, { class: componentClass3.value }, ['some text'])
+      h(component1, { class: componentClass1.value }, () => [
+        h(component2, { class: componentClass2.value }, () => [
+          h(component3, { class: componentClass3.value }, () => ['some text'])
         ])
       ])
 
@@ -219,7 +177,7 @@ describe('class', () => {
 
   // a vdom patch edge case where the user has several un-keyed elements of the
   // same tag next to each other, and toggling them.
-  test('properly remove staticClass for toggling un-keyed children', done => {
+  test('properly remove staticClass for toggling un-keyed children', () => {
     const root = document.createElement('div')
     const ok = { value: true }
     const wrapper = () =>
