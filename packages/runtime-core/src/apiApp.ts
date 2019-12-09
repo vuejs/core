@@ -166,7 +166,7 @@ export function createAppAPI<HostNode, HostElement>(
         rootProps?: Data | null
       ): any {
         if (!isMounted) {
-          if (!isObject(rootProps)) {
+          if (rootProps != null && !isObject(rootProps)) {
             __DEV__ &&
               warn(`root props passed to app.mount() must be an object.`)
             rootProps = null
