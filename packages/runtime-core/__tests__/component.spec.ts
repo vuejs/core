@@ -39,7 +39,7 @@ describe('renderer: component', () => {
       render(h(App), nodeOps.createElement('div'))
       expect(spy).toHaveBeenCalledTimes(1)
 
-      // parent re-render, props didn't change, slots are stasble
+      // parent re-render, props didn't change, slots are stable
       // -> child should not update
       flag1.value++
       await nextTick()
