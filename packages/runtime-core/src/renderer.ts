@@ -840,7 +840,7 @@ export function createRenderer<
         )
         popWarningContext()
       }
-      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.component!.renderProxy)
+      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.component!.proxy)
     }
   }
 

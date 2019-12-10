@@ -310,7 +310,7 @@ describe('api: createApp', () => {
     const handler = (app.config.warnHandler = jest.fn(
       (msg, instance, trace) => {
         expect(msg).toMatch(`Component is missing template or render function`)
-        expect(instance).toBe(ctx.renderProxy)
+        expect(instance).toBe(ctx.proxy)
         expect(trace).toMatch(`Hello`)
       }
     ))

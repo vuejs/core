@@ -2,7 +2,8 @@ import { VNode, VNodeChild, isVNode } from './vnode'
 import { ReactiveEffect, reactive, shallowReadonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  runtimeCompiledRenderProxyHandlers
 } from './componentProxy'
 import { ComponentPropsOptions } from './componentProps'
 import { Slots } from './componentSlots'
@@ -68,7 +69,10 @@ export interface SetupContext {
   emit: Emit
 }
 
-export type RenderFunction = () => VNodeChild
+export type RenderFunction = {
+  (): VNodeChild
+  isRuntimeCompiled?: boolean
+}
 
 export interface ComponentInternalInstance {
   type: FunctionalComponent | ComponentOptions
@@ -82,7 +86,7 @@ export interface ComponentInternalInstance {
   render: RenderFunction | null
   effects: ReactiveEffect[] | null
   provides: Data
-  // cache for renderProxy access type to avoid hasOwnProperty calls
+  // cache for proxy access type to avoid hasOwnProperty calls
   accessCache: Data | null
   // cache for render function values that rely on _ctx but won't need updates
   // after initialized (e.g. inline handlers)
@@ -98,7 +102,10 @@ export interface ComponentInternalInstance {
   props: Data
   attrs: Data
   slots: Slots
-  renderProxy: ComponentPublicInstance | null
+  proxy: ComponentPublicInstance | null
+  // alternative proxy used only for runtime-compiled render functions using
+  // `with` block
+  withProxy: ComponentPublicInstance | null
   propsProxy: Data | null
   setupContext: SetupContext | null
   refs: Data
@@ -150,7 +157,8 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
     render: null,
-    renderProxy: null,
+    proxy: null,
+    withProxy: null,
     propsProxy: null,
     setupContext: null,
     effects: null,
@@ -264,8 +272,8 @@ export function setupStatefulComponent(
   }
   // 0. create render proxy property access cache
   instance.accessCache = {}
-  // 1. create render proxy
-  instance.renderProxy = new Proxy(instance, PublicInstanceProxyHandlers)
+  // 1. create public instance / render proxy
+  instance.proxy = new Proxy(instance, PublicInstanceProxyHandlers)
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
@@ -371,6 +379,7 @@ function finishComponentSetup(
         }
       })
     }
+
     if (__DEV__ && !Component.render) {
       /* istanbul ignore if */
       if (!__RUNTIME_COMPILE__ && Component.template) {
@@ -387,7 +396,18 @@ function finishComponentSetup(
         )
       }
     }
+
     instance.render = (Component.render || NOOP) as RenderFunction
+
+    // for runtime-compiled render functions using `with` blocks, the render
+    // proxy used needs a different `has` handler which is more performant and
+    // also only allows a whitelist of globals to fallthrough.
+    if (__RUNTIME_COMPILE__ && instance.render.isRuntimeCompiled) {
+      instance.withProxy = new Proxy(
+        instance,
+        runtimeCompiledRenderProxyHandlers
+      )
+    }
   }
 
   // support for 2.x options

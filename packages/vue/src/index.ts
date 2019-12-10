@@ -36,7 +36,9 @@ function compileToFunction(
     ...options
   })
 
-  return new Function('Vue', code)(runtimeDom) as RenderFunction
+  const render = new Function('Vue', code)(runtimeDom) as RenderFunction
+  render.isRuntimeCompiled = true
+  return render
 }
 
 registerRuntimeCompiler(compileToFunction)

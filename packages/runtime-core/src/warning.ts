@@ -41,7 +41,7 @@ export function warn(msg: string, ...args: any[]) {
       ErrorCodes.APP_WARN_HANDLER,
       [
         msg + args.join(''),
-        instance && instance.renderProxy,
+        instance && instance.proxy,
         trace
           .map(({ vnode }) => `at <${formatComponentName(vnode)}>`)
           .join('\n'),

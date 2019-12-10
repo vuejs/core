@@ -215,7 +215,7 @@ export function applyOptions(
     instance.renderContext === EMPTY_OBJ
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
-  const ctx = instance.renderProxy!
+  const ctx = instance.proxy!
   const {
     // composition
     mixins,

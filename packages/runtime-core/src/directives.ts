@@ -113,7 +113,7 @@ export function withDirectives<T extends VNode>(
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
-  const instance = internalInstance.renderProxy
+  const instance = internalInstance.proxy
   const props = vnode.props || (vnode.props = {})
   const bindings = vnode.dirs || (vnode.dirs = new Array(directives.length))
   const injected: Record<string, true> = {}

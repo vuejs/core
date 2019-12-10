@@ -220,7 +220,7 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): StopHandle {
-  const ctx = this.renderProxy as Data
+  const ctx = this.proxy as Data
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)
