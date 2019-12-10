@@ -117,58 +117,64 @@ function parseChildren(
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
-    if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
-      // '{{'
-      node = parseInterpolation(context, mode)
-    } else if (mode === TextModes.DATA && s[0] === '<') {
-      // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
-      if (s.length === 1) {
-        emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
-      } else if (s[1] === '!') {
-        // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
-        if (startsWith(s, '<!--')) {
-          node = parseComment(context)
-        } else if (startsWith(s, '<!DOCTYPE')) {
-          // Ignore DOCTYPE by a limitation.
-          node = parseBogusComment(context)
-        } else if (startsWith(s, '<![CDATA[')) {
-          if (ns !== Namespaces.HTML) {
-            node = parseCDATA(context, ancestors)
+    if (mode === TextModes.DATA) {
+      if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
+        // '{{'
+        node = parseInterpolation(context, mode)
+      } else if (s[0] === '<') {
+        // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
+        if (s.length === 1) {
+          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
+        } else if (s[1] === '!') {
+          // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
+          if (startsWith(s, '<!--')) {
+            node = parseComment(context)
+          } else if (startsWith(s, '<!DOCTYPE')) {
+            // Ignore DOCTYPE by a limitation.
+            node = parseBogusComment(context)
+          } else if (startsWith(s, '<![CDATA[')) {
+            if (ns !== Namespaces.HTML) {
+              node = parseCDATA(context, ancestors)
+            } else {
+              emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
+              node = parseBogusComment(context)
+            }
           } else {
-            emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
+            emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
             node = parseBogusComment(context)
           }
-        } else {
-          emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
+        } else if (s[1] === '/') {
+          // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
+          if (s.length === 2) {
+            emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
+          } else if (s[2] === '>') {
+            emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
+            advanceBy(context, 3)
+            continue
+          } else if (/[a-z]/i.test(s[2])) {
+            emitError(context, ErrorCodes.X_INVALID_END_TAG)
+            parseTag(context, TagType.End, parent)
+            continue
+          } else {
+            emitError(
+              context,
+              ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              2
+            )
+            node = parseBogusComment(context)
+          }
+        } else if (/[a-z]/i.test(s[1])) {
+          node = parseElement(context, ancestors)
+        } else if (s[1] === '?') {
+          emitError(
+            context,
+            ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
+            1
+          )
           node = parseBogusComment(context)
-        }
-      } else if (s[1] === '/') {
-        // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
-        if (s.length === 2) {
-          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
-        } else if (s[2] === '>') {
-          emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
-          advanceBy(context, 3)
-          continue
-        } else if (/[a-z]/i.test(s[2])) {
-          emitError(context, ErrorCodes.X_INVALID_END_TAG)
-          parseTag(context, TagType.End, parent)
-          continue
         } else {
-          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 2)
-          node = parseBogusComment(context)
+          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
         }
-      } else if (/[a-z]/i.test(s[1])) {
-        node = parseElement(context, ancestors)
-      } else if (s[1] === '?') {
-        emitError(
-          context,
-          ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-          1
-        )
-        node = parseBogusComment(context)
-      } else {
-        emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
       }
     }
     if (!node) {
