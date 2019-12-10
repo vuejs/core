@@ -1,13 +1,18 @@
 import {
   CompilerOptions,
   CodegenResult,
-  CompilerError
+  CompilerError,
+  NodeTransform
 } from '@vue/compiler-core'
 import { RawSourceMap } from 'source-map'
-import { transformAssetUrl } from './templateTransformAssetUrl'
+import {
+  transformAssetUrl,
+  AssetURLOptions,
+  createAssetUrlTransformWithOptions
+} from './templateTransformAssetUrl'
 import { transformSrcset } from './templateTransformSrcset'
-
-const consolidate = require('consolidate')
+import { isObject } from '@vue/shared'
+import consolidate from 'consolidate'
 
 export interface TemplateCompileResults {
   code: string
@@ -28,6 +33,7 @@ export interface TemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
+  transformAssetUrls?: AssetURLOptions | boolean
 }
 
 function preprocess(
@@ -56,7 +62,8 @@ export function compileTemplate(
   options: TemplateCompileOptions
 ): TemplateCompileResults {
   const { preprocessLang } = options
-  const preprocessor = preprocessLang && consolidate[preprocessLang]
+  const preprocessor =
+    preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
   if (preprocessor) {
     return doCompileTemplate({
       ...options,
@@ -83,18 +90,29 @@ export function compileTemplate(
 }
 
 function doCompileTemplate({
+  filename,
   source,
   compiler,
   compilerOptions = {},
-  filename
+  transformAssetUrls
 }: TemplateCompileOptions): TemplateCompileResults {
   const errors: CompilerError[] = []
+
+  const nodeTransforms: NodeTransform[] = [transformSrcset]
+  if (isObject(transformAssetUrls)) {
+    nodeTransforms.push(createAssetUrlTransformWithOptions(transformAssetUrls))
+  } else if (transformAssetUrls !== false) {
+    nodeTransforms.push(transformAssetUrl)
+  }
+
   const { code, map } = compiler.compile(source, {
     ...compilerOptions,
     filename,
-    mode: 'module',
+    mode: 'module', // implies prefixIdentifiers: true
+    hoistStatic: true,
+    cacheHandlers: true,
     sourceMap: true,
-    nodeTransforms: [transformAssetUrl, transformSrcset],
+    nodeTransforms,
     onError: e => errors.push(e)
   })
   return { code, source, errors, tips: [], map }

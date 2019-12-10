@@ -1,3 +1,5 @@
+// TODO need more thorough tests here
+
 import { compileTemplate } from '../src/compileTemplate'
 import { compile } from '@vue/compiler-dom'
 import { parse, SFCTemplateBlock } from '../src/parse'

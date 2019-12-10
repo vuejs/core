@@ -13,7 +13,7 @@ export interface AssetURLOptions {
   [name: string]: string[]
 }
 
-const assetURLOptions: AssetURLOptions = {
+const defaultOptions: AssetURLOptions = {
   video: ['src', 'poster'],
   source: ['src'],
   img: ['src'],
@@ -21,11 +21,26 @@ const assetURLOptions: AssetURLOptions = {
   use: ['xlink:href', 'href']
 }
 
-export const transformAssetUrl: NodeTransform = (node, context) => {
+export const createAssetUrlTransformWithOptions = (
+  options: AssetURLOptions
+): NodeTransform => {
+  const mergedOptions = {
+    ...defaultOptions,
+    ...options
+  }
+  return (node, context) =>
+    (transformAssetUrl as Function)(node, context, mergedOptions)
+}
+
+export const transformAssetUrl: NodeTransform = (
+  node,
+  context,
+  options: AssetURLOptions = defaultOptions
+) => {
   if (node.type === NodeTypes.ELEMENT) {
-    for (const tag in assetURLOptions) {
+    for (const tag in options) {
       if ((tag === '*' || node.tag === tag) && node.props.length) {
-        const attributes = assetURLOptions[tag]
+        const attributes = options[tag]
         attributes.forEach(item => {
           node.props.forEach((attr: AttributeNode, index) => {
             if (attr.type !== NodeTypes.ATTRIBUTE) return

@@ -37,6 +37,7 @@
     "source-map": "^0.7.3"
   },
   "devDependencies": {
+    "@types/consolidate": "^0.14.0",
     "@types/lru-cache": "^5.1.0",
     "pug": "^2.0.4"
   }
