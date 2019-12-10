@@ -51,7 +51,6 @@ A high level overview of tools used:
 - [Rollup](https://rollupjs.org) for bundling
 - [Jest](https://jestjs.io/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting
-- [Lerna](https://github.com/lerna/lerna) for monorepo management
 
 ## Scripts
 
@@ -134,7 +133,7 @@ $ yarn test fileName -t 'test name'
 
 ## Project Structure
 
-This project uses a [monorepo](https://github.com/lerna/lerna#about) structure and contains the following packages:
+This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) setup which hosts a number of associated packages under the `packages` directory:
 
 - `reactivity`: The reactivity system. It can be used standalone as a framework-agnostic package.
 
@@ -158,11 +157,29 @@ This project uses a [monorepo](https://github.com/lerna/lerna#about) structure a
 
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
 
-Note that when importing these packages, the `@vue/` prefix is needed:
+### Importing Packages
+
+The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
 
 ``` js
 import { h } from '@vue/runtime-core'
 ```
+
+This is made possible via several configurations:
+
+- For TypeScript, `compilerOptions.path` in `tsconfig.json`
+- For Jest, `moduleNameMapping` in `jest.config.js`
+- For plain Node.js, they are linked using [Yarn Workspaces](https://yarnpkg.com/blog/2017/08/02/introducing-workspaces/).
+
+### Package Dependencies
+
+There are some rules to follow when importing across package boundaries:
+
+- Never use direct relative paths when importing items from another package - export it in the source package and import it at the package level.
+
+- Compiler packages should not import items from the runtime, and vice versa. If something needs to be shared between the compiler-side and runtime-side, it should be extracted into `@vue/shared` instead.
+
+- If a package (A) has a non-type import from another package (B), package (B) should be listed as a dependency in the `package.json` of package (A). This is because the packages are externalized in the ESM-bundler/CJS builds and type declaration files, so the dependency packages must be actually installed as a dependency when consumed from package registries.
 
 ## Contributing Tests
 

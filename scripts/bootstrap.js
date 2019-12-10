@@ -3,7 +3,7 @@
 const args = require('minimist')(process.argv.slice(2))
 const fs = require('fs')
 const path = require('path')
-const baseVersion = require('../lerna.json').version
+const version = require('../package.json').version
 
 const packagesDir = path.resolve(__dirname, '../packages')
 const files = fs.readdirSync(packagesDir)
@@ -26,7 +26,7 @@ files.forEach(shortName => {
   if (args.force || !pkgExists) {
     const json = {
       name,
-      version: baseVersion,
+      version,
       description: name,
       main: 'index.js',
       module: `dist/${shortName}.esm-bundler.js`,
