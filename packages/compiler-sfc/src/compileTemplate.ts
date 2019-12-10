@@ -10,8 +10,7 @@ const consolidate = require('consolidate')
 export interface TemplateCompileResults {
   code: string
   source: string
-  tips: (string | CompilerError)[]
-  errors: (string | CompilerError)[]
+  errors: CompilerError[]
   map?: RawSourceMap
 }
 
@@ -86,12 +85,11 @@ function doCompileTemplate({
   compilerOptions = {},
   filename
 }: TemplateCompileOptions): TemplateCompileResults {
-  const tips = []
   const errors: CompilerError[] = []
   let { code, map } = compiler.compile(source, {
     ...compilerOptions,
     mode: 'module',
     onError: e => errors.push(e)
   })
-  return { code, source, tips, errors, map }
+  return { code, source, errors, map }
 }
