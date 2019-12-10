@@ -4,13 +4,16 @@ import {
   CompilerError
 } from '@vue/compiler-core'
 import { RawSourceMap } from 'source-map'
+import { transformAssetUrl } from './templateTransformAssetUrl'
+import { transformSrcset } from './templateTransformSrcset'
 
 const consolidate = require('consolidate')
 
 export interface TemplateCompileResults {
   code: string
   source: string
-  errors: CompilerError[]
+  tips: string[]
+  errors: (string | CompilerError)[]
   map?: RawSourceMap
 }
 
@@ -86,10 +89,13 @@ function doCompileTemplate({
   filename
 }: TemplateCompileOptions): TemplateCompileResults {
   const errors: CompilerError[] = []
-  let { code, map } = compiler.compile(source, {
+  const { code, map } = compiler.compile(source, {
     ...compilerOptions,
+    filename,
     mode: 'module',
+    sourceMap: true,
+    nodeTransforms: [transformAssetUrl, transformSrcset],
     onError: e => errors.push(e)
   })
-  return { code, source, errors, map }
+  return { code, source, errors, tips: [], map }
 }
