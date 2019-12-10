@@ -11,8 +11,8 @@ import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 
 export interface SFCParseOptions {
-  needMap?: boolean
   filename?: string
+  sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
 }
@@ -55,13 +55,13 @@ const sourceToSFC = new LRUCache<string, SFCDescriptor>(SFC_CACHE_MAX_SIZE)
 export function parse(
   source: string,
   {
-    needMap = true,
+    sourceMap = true,
     filename = 'component.vue',
     sourceRoot = '',
     pad = 'line'
   }: SFCParseOptions = {}
 ): SFCDescriptor {
-  const sourceKey = source + needMap + filename + sourceRoot + pad
+  const sourceKey = source + sourceMap + filename + sourceRoot + pad
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
@@ -111,7 +111,7 @@ export function parse(
     }
   })
 
-  if (needMap) {
+  if (sourceMap) {
     if (sfc.script && !sfc.script.src) {
       sfc.script.map = generateSourceMap(
         filename,

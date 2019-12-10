@@ -27,7 +27,7 @@ body
     p Cool Pug example!
 </template>
 `,
-    { filename: 'example.vue', needMap: true }
+    { filename: 'example.vue', sourceMap: true }
   ).template as SFCTemplateBlock
 
   const result = compileTemplate({
@@ -43,7 +43,7 @@ body
 test('warn missing preprocessor', () => {
   const template = parse(`<template lang="unknownLang">\n</template>\n`, {
     filename: 'example.vue',
-    needMap: true
+    sourceMap: true
   }).template as SFCTemplateBlock
 
   const result = compileTemplate({

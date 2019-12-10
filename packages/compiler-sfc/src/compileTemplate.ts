@@ -98,21 +98,25 @@ function doCompileTemplate({
 }: TemplateCompileOptions): TemplateCompileResults {
   const errors: CompilerError[] = []
 
-  const nodeTransforms: NodeTransform[] = [transformSrcset]
+  let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
-    nodeTransforms.push(createAssetUrlTransformWithOptions(transformAssetUrls))
+    nodeTransforms = [
+      createAssetUrlTransformWithOptions(transformAssetUrls),
+      transformSrcset
+    ]
   } else if (transformAssetUrls !== false) {
-    nodeTransforms.push(transformAssetUrl)
+    nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
   const { code, map } = compiler.compile(source, {
-    ...compilerOptions,
-    filename,
-    mode: 'module', // implies prefixIdentifiers: true
+    mode: 'module',
+    prefixIdentifiers: true,
     hoistStatic: true,
     cacheHandlers: true,
+    ...compilerOptions,
+    nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
+    filename,
     sourceMap: true,
-    nodeTransforms,
     onError: e => errors.push(e)
   })
   return { code, source, errors, tips: [], map }
