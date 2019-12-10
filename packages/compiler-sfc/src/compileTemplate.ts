@@ -26,8 +26,6 @@ export interface TemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
-  isProduction?: boolean
-  prettify?: boolean
 }
 
 function preprocess(
@@ -86,8 +84,6 @@ function doCompileTemplate({
   source,
   compiler,
   compilerOptions = {},
-  prettify = true,
-  isProduction = process.env.NODE_ENV === 'production',
   filename
 }: TemplateCompileOptions): TemplateCompileResults {
   const tips = []
@@ -97,14 +93,5 @@ function doCompileTemplate({
     mode: 'module',
     onError: e => errors.push(e)
   })
-  if (!isProduction && prettify) {
-    try {
-      code = require('prettier').format(code, { semi: false, parser: 'babel' })
-    } catch (e) {
-      tips.push(
-        `Failed to prettify component ${filename} template source after compilation.`
-      )
-    }
-  }
   return { code, source, tips, errors, map }
 }
