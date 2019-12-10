@@ -1162,13 +1162,6 @@
     universal-user-agent "^3.0.0"
     url-template "^2.0.8"
 
-"@rollup/plugin-alias@^2.2.0":
-  version "2.2.0"
-  resolved "https://registry.npm.taobao.org/@rollup/plugin-alias/download/@rollup/plugin-alias-2.2.0.tgz#3ac52ece8b39583249884adb90fb316484389fe5"
-  integrity sha1-OsUuzos5WDJJiErbkPsxZIQ4n+U=
-  dependencies:
-    slash "^3.0.0"
-
 "@rollup/plugin-json@^4.0.0":
   version "4.0.0"
   resolved "https://registry.npm.taobao.org/@rollup/plugin-json/download/@rollup/plugin-json-4.0.0.tgz#4462e83c7ad5544bef4a601a6e8450daedc4b69b"

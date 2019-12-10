@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
-import alias from '@rollup/plugin-alias'
 import json from '@rollup/plugin-json'
 import lernaJson from './lerna.json'
 
@@ -17,17 +16,9 @@ const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 
-// build aliases dynamically
-const aliasOptions = { resolve: ['.ts'] }
-fs.readdirSync(packagesDir).forEach(dir => {
-  if (dir === 'vue') {
-    return
-  }
-  if (fs.statSync(path.resolve(packagesDir, dir)).isDirectory()) {
-    aliasOptions[`@vue/${dir}`] = path.resolve(packagesDir, `${dir}/src/index`)
-  }
+const knownExternals = fs.readdirSync(packagesDir).filter(p => {
+  return p !== '@vue/shared'
 })
-const aliasPlugin = alias(aliasOptions)
 
 // ensure TS checks only once for each build
 let hasTSChecked = false
@@ -107,21 +98,19 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const externals = Object.keys(aliasOptions)
-    .concat(Object.keys(pkg.dependencies || []))
-    .filter(p => p !== '@vue/shared')
-
   return {
     input: resolve(`src/index.ts`),
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external: isGlobalBuild || isBrowserESMBuild ? [] : externals,
+    external:
+      isGlobalBuild || isBrowserESMBuild
+        ? []
+        : knownExternals.concat(Object.keys(pkg.dependencies || [])),
     plugins: [
       json({
         namedExports: false
       }),
       tsPlugin,
-      aliasPlugin,
       createReplacePlugin(
         isProductionBuild,
         isBundlerESMBuild,
