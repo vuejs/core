@@ -33,16 +33,16 @@ export function setupPuppeteer() {
     return await page.$eval(selector, (node: HTMLInputElement) => node.value)
   }
 
+  async function html(selector: string) {
+    return await page.$eval(selector, node => node.innerHTML)
+  }
+
   async function classList(selector: string) {
     return await page.$eval(selector, (node: any) => [...node.classList])
   }
 
   async function children(selector: string) {
     return await page.$eval(selector, (node: any) => [...node.children])
-  }
-
-  async function html(selector: string) {
-    return await page.$eval(selector, node => node.innerHTML)
   }
 
   async function isVisible(selector: string) {
