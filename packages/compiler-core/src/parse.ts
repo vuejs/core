@@ -1,10 +1,6 @@
+import { ParserOptions } from './options'
 import { NO, isArray } from '@vue/shared'
-import {
-  ErrorCodes,
-  createCompilerError,
-  defaultOnError,
-  CompilerError
-} from './errors'
+import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
   advancePositionWithMutation,
@@ -12,7 +8,6 @@ import {
   isCoreComponent
 } from './utils'
 import {
-  Namespace,
   Namespaces,
   AttributeNode,
   CommentNode,
@@ -29,26 +24,6 @@ import {
   InterpolationNode
 } from './ast'
 import { extend } from '@vue/shared'
-
-export interface ParserOptions {
-  isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
-  isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
-  isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
-  isCustomElement?: (tag: string) => boolean
-  isBuiltInComponent?: (tag: string) => symbol | void
-  getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
-  getTextMode?: (tag: string, ns: Namespace) => TextModes
-  delimiters?: [string, string] // ['{{', '}}']
-
-  // Map to HTML entities. E.g., `{ "amp;": "&" }`
-  // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences?: Record<string, string>
-  // this number is based on the map above, but it should be pre-computed
-  // to avoid the cost on every parse() call.
-  maxCRNameLength?: number
-
-  onError?: (error: CompilerError) => void
-}
 
 // `isNativeTag` is optional, others are required
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'

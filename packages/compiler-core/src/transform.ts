@@ -1,3 +1,4 @@
+import { TransformOptions } from './options'
 import {
   RootNode,
   NodeTypes,
@@ -18,7 +19,7 @@ import {
   createCacheExpression
 } from './ast'
 import { isString, isArray, NOOP } from '@vue/shared'
-import { CompilerError, defaultOnError } from './errors'
+import { defaultOnError } from './errors'
 import {
   TO_STRING,
   FRAGMENT,
@@ -65,17 +66,7 @@ export type StructuralDirectiveTransform = (
   context: TransformContext
 ) => void | (() => void)
 
-export interface TransformOptions {
-  nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform }
-  isBuiltInComponent?: (tag: string) => symbol | void
-  prefixIdentifiers?: boolean
-  hoistStatic?: boolean
-  cacheHandlers?: boolean
-  onError?: (error: CompilerError) => void
-}
-
-export interface ImportsOption {
+export interface ImportItem {
   exp: string | ExpressionNode
   path: string
 }
@@ -86,7 +77,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
-  imports: Set<ImportsOption>
+  imports: Set<ImportItem>
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {

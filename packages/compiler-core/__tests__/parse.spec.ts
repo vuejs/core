@@ -1,4 +1,5 @@
-import { parse, ParserOptions, TextModes } from '../src/parse'
+import { ParserOptions } from '../src/options'
+import { parse, TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
 import {
   CommentNode,
