@@ -35,5 +35,10 @@
   "dependencies": {
     "@vue/compiler-dom": "3.0.0-alpha.0",
     "@vue/runtime-dom": "3.0.0-alpha.0"
+  },
+  "devDependencies": {
+    "lodash": "^4.17.15",
+    "marked": "^0.7.0",
+    "todomvc-app-css": "^2.3.0"
   }
 }

@@ -1,5 +1,5 @@
-<script src="https://unpkg.com/marked@0.3.6"></script>
-<script src="https://unpkg.com/lodash@4.16.0"></script>
+<script src="../../../../node_modules/marked/marked.min.js"></script>
+<script src="../../../../node_modules/lodash/lodash.min.js"></script>
 <script src="../../dist/vue.global.js"></script>
 
 <div id="editor">
@@ -8,6 +8,8 @@
 </div>
 
 <script>
+const delay = window.location.hash === '#test' ? 16 : 300
+
 const App = {
   data: {
     input: '# hello'
@@ -20,7 +22,7 @@ const App = {
   methods: {
     update: _.debounce(function (e) {
       this.input = e.target.value
-    }, 300)
+    }, delay)
   }
 }
 
