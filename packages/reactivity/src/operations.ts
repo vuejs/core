@@ -13,3 +13,5 @@ export const enum TriggerOpTypes {
   DELETE = 'delete',
   CLEAR = 'clear'
 }
+
+export const ITERATE_KEY = Symbol('iterate')

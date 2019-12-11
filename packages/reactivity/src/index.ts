@@ -22,10 +22,9 @@ export {
   stop,
   pauseTracking,
   resumeTracking,
-  ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,
   DebuggerEvent
 } from './effect'
 export { lock, unlock } from './lock'
-export { TrackOpTypes, TriggerOpTypes } from './operations'
+export { TrackOpTypes, TriggerOpTypes, ITERATE_KEY } from './operations'

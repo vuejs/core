@@ -1,6 +1,6 @@
 import { toRaw, reactive, readonly } from './reactive'
-import { track, trigger, ITERATE_KEY } from './effect'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { track, trigger } from './effect'
+import { TrackOpTypes, TriggerOpTypes, ITERATE_KEY } from './operations'
 import { LOCKED } from './lock'
 import { isObject, capitalize, hasOwn, hasChanged } from '@vue/shared'
 

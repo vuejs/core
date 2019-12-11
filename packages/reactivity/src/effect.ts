@@ -1,4 +1,4 @@
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { TrackOpTypes, TriggerOpTypes, ITERATE_KEY } from './operations'
 import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -41,8 +41,6 @@ export interface DebuggerEventExtraInfo {
 }
 
 export const effectStack: ReactiveEffect[] = []
-
-export const ITERATE_KEY = Symbol('iterate')
 
 export function isEffect(fn: any): fn is ReactiveEffect {
   return fn != null && fn._isEffect === true

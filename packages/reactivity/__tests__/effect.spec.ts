@@ -5,10 +5,10 @@ import {
   toRaw,
   TrackOpTypes,
   TriggerOpTypes,
+  ITERATE_KEY,
   DebuggerEvent,
   markNonReactive
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

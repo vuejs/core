@@ -1,10 +1,10 @@
 import { watch, reactive, computed, nextTick, ref, h } from '../src/index'
 import { render, nodeOps, serializeInner } from '@vue/runtime-test'
 import {
-  ITERATE_KEY,
   DebuggerEvent,
   TrackOpTypes,
-  TriggerOpTypes
+  TriggerOpTypes,
+  ITERATE_KEY
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
