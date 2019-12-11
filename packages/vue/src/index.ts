@@ -5,32 +5,36 @@ import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP } from '@vue/shared'
 
-const idToTemplateCache = Object.create(null)
+const compileCache: Record<string, RenderFunction> = Object.create(null)
 
 function compileToFunction(
   template: string | HTMLElement,
   options?: CompilerOptions
 ): RenderFunction {
-  if (isString(template)) {
-    if (template[0] === '#') {
-      if (template in idToTemplateCache) {
-        template = idToTemplateCache[template]
-      } else {
-        const el = document.querySelector(template)
-        if (__DEV__ && !el) {
-          warn(`Template element not found or is empty: ${template}`)
-        }
-        template = idToTemplateCache[template] = el ? el.innerHTML : ``
-      }
+  if (!isString(template)) {
+    if (template.nodeType) {
+      template = template.innerHTML
+    } else {
+      __DEV__ && warn(`invalid template option: `, template)
+      return NOOP
     }
-  } else if (template.nodeType) {
-    template = template.innerHTML
-  } else {
-    __DEV__ && warn(`invalid template option: `, template)
-    return NOOP
   }
 
-  const { code } = compile(template as string, {
+  const key = template
+  const cached = compileCache[key]
+  if (cached) {
+    return cached
+  }
+
+  if (template[0] === '#') {
+    const el = document.querySelector(template)
+    if (__DEV__ && !el) {
+      warn(`Template element not found or is empty: ${template}`)
+    }
+    template = el ? el.innerHTML : ``
+  }
+
+  const { code } = compile(template, {
     hoistStatic: true,
     cacheHandlers: true,
     ...options
@@ -38,7 +42,7 @@ function compileToFunction(
 
   const render = new Function('Vue', code)(runtimeDom) as RenderFunction
   render.isRuntimeCompiled = true
-  return render
+  return (compileCache[key] = render)
 }
 
 registerRuntimeCompiler(compileToFunction)
