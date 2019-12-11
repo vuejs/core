@@ -65,10 +65,19 @@ export function compileTemplate(
   const preprocessor =
     preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
   if (preprocessor) {
-    return doCompileTemplate({
-      ...options,
-      source: preprocess(options, preprocessor)
-    })
+    try {
+      return doCompileTemplate({
+        ...options,
+        source: preprocess(options, preprocessor)
+      })
+    } catch (e) {
+      return {
+        code: `export default function render() {}`,
+        source: options.source,
+        tips: [],
+        errors: [e]
+      }
+    }
   } else if (preprocessLang) {
     return {
       code: `export default function render() {}`,
