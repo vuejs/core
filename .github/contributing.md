@@ -71,8 +71,8 @@ yarn build runtime --all
 By default, each package will be built in multiple distribution formats as specified in the `buildOptions.formats` field in its `package.json`. These can be overwritten via the `-f` flag. The following formats are supported:
 
 - **`global`**: for direct use via `<script>` in the browser. The global variable exposed is specified via the `buildOptions.name` field in a package's `package.json`.
-- **`esm`**: for use with bundlers.
-- **`esm-browser`**: for in-browser usage via native ES modules import (`<script type="module">`)
+- **`esm-bundler`**: for use with bundlers like `webpack`, `rollup` and `parcel`.
+- **`esm`**: for usage via native ES modules imports (in browser via `<script type="module">`, or via Node.js native ES modules support in the future)
 - **`cjs`**: for use in Node.js via `require()`.
 
 For example, to build `runtime-core` with the global build only:

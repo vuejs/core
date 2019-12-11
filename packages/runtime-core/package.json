@@ -9,6 +9,12 @@
     "dist"
   ],
   "types": "dist/runtime-core.d.ts",
+  "buildOptions": {
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
   "sideEffects": false,
   "repository": {
     "type": "git",

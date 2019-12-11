@@ -14,9 +14,10 @@
   "buildOptions": {
     "name": "VueDOMCompiler",
     "formats": [
+      "esm-bundler",
       "cjs",
       "global",
-      "esm-browser"
+      "esm"
     ]
   },
   "repository": {

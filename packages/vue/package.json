@@ -13,10 +13,10 @@
   "buildOptions": {
     "name": "Vue",
     "formats": [
-      "esm",
+      "esm-bundler",
       "cjs",
       "global",
-      "esm-browser"
+      "esm"
     ]
   },
   "repository": {

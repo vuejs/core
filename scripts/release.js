@@ -79,7 +79,7 @@ async function main() {
 
   // build all packages with types
   if (!skipBuild) {
-    await run('yarn', ['build', '-t'])
+    await run('yarn', ['build', '--release'])
     // test generated dts files
     await run(bin('tsd'))
   }

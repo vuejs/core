@@ -2,6 +2,7 @@
   "name": "@vue/runtime-test",
   "version": "3.0.0-alpha.0",
   "description": "@vue/runtime-test",
+  "private": true,
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
   "files": [
@@ -16,8 +17,6 @@
   "buildOptions": {
     "name": "VueTestRuntime",
     "formats": [
-      "esm",
-      "cjs",
       "global"
     ]
   },

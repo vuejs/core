@@ -14,10 +14,10 @@
   "buildOptions": {
     "name": "VueDOMRuntime",
     "formats": [
-      "esm",
+      "esm-bundler",
       "cjs",
       "global",
-      "esm-browser"
+      "esm"
     ],
     "dts": [
       "jsx.d.ts"

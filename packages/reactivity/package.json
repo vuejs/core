@@ -18,10 +18,10 @@
   "buildOptions": {
     "name": "VueObserver",
     "formats": [
-      "esm",
+      "esm-bundler",
       "cjs",
       "global",
-      "esm-browser"
+      "esm"
     ]
   },
   "keywords": [
