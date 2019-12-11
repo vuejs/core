@@ -28,6 +28,7 @@
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-sfc#readme",
   "dependencies": {
     "@vue/compiler-core": "3.0.0-alpha.0",
+    "@vue/compiler-dom": "3.0.0-alpha.0",
     "consolidate": "^0.15.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",

@@ -29,7 +29,7 @@ export interface TemplateCompiler {
 export interface TemplateCompileOptions {
   source: string
   filename: string
-  compiler: TemplateCompiler
+  compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
@@ -92,7 +92,7 @@ export function compileTemplate(
 function doCompileTemplate({
   filename,
   source,
-  compiler,
+  compiler = require('@vue/compiler-dom'),
   compilerOptions = {},
   transformAssetUrls
 }: TemplateCompileOptions): TemplateCompileResults {

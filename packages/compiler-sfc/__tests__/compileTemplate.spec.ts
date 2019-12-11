@@ -1,15 +1,12 @@
 // TODO need more thorough tests here
 
 import { compileTemplate } from '../src/compileTemplate'
-import { compile } from '@vue/compiler-dom'
 import { parse, SFCTemplateBlock } from '../src/parse'
-
-const compiler = { compile }
 
 test('should work', () => {
   const source = `<div><p>{{ render }}</p></div>`
 
-  const result = compileTemplate({ filename: 'example.vue', source, compiler })
+  const result = compileTemplate({ filename: 'example.vue', source })
 
   expect(result.errors.length).toBe(0)
   expect(result.source).toBe(source)
@@ -33,8 +30,7 @@ body
   const result = compileTemplate({
     filename: 'example.vue',
     source: template.content,
-    preprocessLang: template.lang,
-    compiler
+    preprocessLang: template.lang
   })
 
   expect(result.errors.length).toBe(0)
@@ -48,7 +44,6 @@ test('warn missing preprocessor', () => {
 
   const result = compileTemplate({
     filename: 'example.vue',
-    compiler,
     source: template.content,
     preprocessLang: template.lang
   })
