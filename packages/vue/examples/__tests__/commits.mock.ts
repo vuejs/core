@@ -1,4 +1,4 @@
-window.MOCKS = {
+export default {
   master: [
     {
       sha: 'd1527fbee422c7170e56845e55b49c4fd6de72a7',

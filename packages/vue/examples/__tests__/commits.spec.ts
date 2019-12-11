@@ -1,5 +1,6 @@
 import path from 'path'
 import { setupPuppeteer } from './e2eUtils'
+import mocks from './commits.mock'
 
 describe('e2e: commits', () => {
   const { page, click, count, text, isChecked } = setupPuppeteer()
@@ -7,8 +8,24 @@ describe('e2e: commits', () => {
   async function testCommits(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../${apiType}/commits.html#test`
+      `../${apiType}/commits.html`
     )}`
+
+    // intercept and mock the response to avoid hitting the actual API
+    await page().setRequestInterception(true)
+    page().on('request', req => {
+      const match = req.url().match(/&sha=(.*)$/)
+      if (!match) {
+        req.continue()
+      } else {
+        req.respond({
+          status: 200,
+          contentType: 'application/json',
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify(mocks[match[1] as 'master' | 'sync'])
+        })
+      }
+    })
 
     await page().goto(baseUrl)
     await page().waitFor('li')

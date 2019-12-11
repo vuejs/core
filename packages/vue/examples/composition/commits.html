@@ -1,5 +1,4 @@
 <script src="../../dist/vue.global.js"></script>
-<script src="../mocks/commits.js"></script>
 
 <div id="demo">
   <h1>Latest Vue.js Commits</h1>
@@ -38,17 +37,13 @@ const App = {
     const currentBranch = ref('master')
     const commits = ref(null)
 
-    watch([currentBranch, commits], () => {
-      if (window.location.hash === '#test') {
-        // use mocks in e2e to avoid dependency on network / authentication
-        setTimeout(() => {
-          commits.value = window.MOCKS[currentBranch.value]
-        }, 0)
-      } else {
-        fetch(`${API_URL}${currentBranch.value}`)
-          .then(res => res.json())
-          .then(data => { commits.value = data })
-      }
+    watch(() => {
+      fetch(`${API_URL}${currentBranch.value}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log(data)
+          commits.value = data
+        })
     })
 
     return {

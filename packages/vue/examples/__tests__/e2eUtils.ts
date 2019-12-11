@@ -11,6 +11,12 @@ export function setupPuppeteer() {
   beforeEach(async () => {
     browser = await puppeteer.launch(puppeteerOptions)
     page = await browser.newPage()
+
+    page.on('console', e => {
+      if (e.type() === 'error') {
+        console.error(`Error from Puppeteer-loaded page:`, e)
+      }
+    })
   })
 
   afterEach(async () => {
