@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-test",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "description": "@vue/runtime-test",
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
@@ -15,7 +15,11 @@
   },
   "buildOptions": {
     "name": "VueTestRuntime",
-    "formats": ["esm", "cjs", "global"]
+    "formats": [
+      "esm",
+      "cjs",
+      "global"
+    ]
   },
   "keywords": [
     "vue"
@@ -27,6 +31,6 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-test#readme",
   "dependencies": {
-    "@vue/runtime-core": "3.0.0-alpha.1"
+    "@vue/runtime-core": "3.0.0-alpha.0"
   }
 }

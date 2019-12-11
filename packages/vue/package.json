@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "description": "vue",
   "main": "index.js",
   "module": "dist/vue.esm-bundler.js",
@@ -12,7 +12,12 @@
   "unpkg": "dist/vue.global.js",
   "buildOptions": {
     "name": "Vue",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": [
+      "esm",
+      "cjs",
+      "global",
+      "esm-browser"
+    ]
   },
   "repository": {
     "type": "git",
@@ -28,7 +33,7 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
   "dependencies": {
-    "@vue/compiler-dom": "3.0.0-alpha.1",
-    "@vue/runtime-dom": "3.0.0-alpha.1"
+    "@vue/compiler-dom": "3.0.0-alpha.0",
+    "@vue/runtime-dom": "3.0.0-alpha.0"
   }
 }

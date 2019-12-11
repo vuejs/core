@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "workspaces": [
     "packages/*"
   ],
@@ -52,6 +52,7 @@
     "rollup": "^1.19.4",
     "rollup-plugin-terser": "^5.1.1",
     "rollup-plugin-typescript2": "^0.24.0",
+    "semver": "^6.3.0",
     "ts-jest": "^24.0.2",
     "tsd": "^0.11.0",
     "typescript": "^3.7.0",
