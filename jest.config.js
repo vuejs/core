@@ -13,8 +13,9 @@ module.exports = {
   coverageReporters: ['html', 'lcov', 'text'],
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
+    '!packages/runtime-test/src/utils/**',
     '!packages/template-explorer/**',
-    '!packages/runtime-test/src/utils/**'
+    '!packages/size-check/**'
   ],
   watchPathIgnorePatterns: ['/node_modules/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
