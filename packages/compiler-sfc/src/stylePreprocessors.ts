@@ -7,7 +7,7 @@ export interface StylePreprocessor {
 export interface StylePreprocessorResults {
   code: string
   map?: object
-  errors: Array<Error>
+  errors: Error[]
 }
 
 // .scss/.sass processor

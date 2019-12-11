@@ -8,12 +8,13 @@ import {
   StylePreprocessorResults,
   PreprocessLang
 } from './stylePreprocessors'
+import { RawSourceMap } from 'source-map'
 
 export interface StyleCompileOptions {
   source: string
   filename: string
   id: string
-  map?: object
+  map?: RawSourceMap
   scoped?: boolean
   trim?: boolean
   preprocessLang?: PreprocessLang
@@ -28,9 +29,9 @@ export interface AsyncStyleCompileOptions extends StyleCompileOptions {
 
 export interface StyleCompileResults {
   code: string
-  map: object | void
+  map: RawSourceMap | undefined
   rawResult: LazyResult | Result | undefined
-  errors: string[]
+  errors: Error[]
 }
 
 export function compileStyle(
@@ -89,7 +90,7 @@ export function doCompileStyle(
   let code: string | undefined
   let outMap: ResultMap | undefined
 
-  const errors: any[] = []
+  const errors: Error[] = []
   if (preProcessedSource && preProcessedSource.errors.length) {
     errors.push(...preProcessedSource.errors)
   }
@@ -102,14 +103,14 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && result.map.toJSON(),
+          map: result.map && (result.map.toJSON() as any),
           errors,
           rawResult: result
         }))
         .catch(error => ({
           code: '',
           map: undefined,
-          errors: [...errors, error.message],
+          errors: [...errors, error],
           rawResult: undefined
         }))
     }
@@ -123,7 +124,7 @@ export function doCompileStyle(
 
   return {
     code: code || ``,
-    map: outMap && outMap.toJSON(),
+    map: outMap && (outMap.toJSON() as any),
     errors,
     rawResult: result
   }
