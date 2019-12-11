@@ -24,11 +24,10 @@ import {
   isObject,
   NO,
   makeMap,
-  isPromise,
-  generateCodeFrame
+  isPromise
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
-import { CompilerError, CompilerOptions } from '@vue/compiler-core'
+import { CompilerOptions } from '@vue/compiler-core'
 import { currentRenderingInstance } from './componentRenderUtils'
 
 export type Data = { [key: string]: unknown }
@@ -343,7 +342,7 @@ export function handleSetupResult(
 }
 
 type CompileFunction = (
-  template: string,
+  template: string | object,
   options?: CompilerOptions
 ) => RenderFunction
 
@@ -363,20 +362,7 @@ function finishComponentSetup(
     if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
       // __RUNTIME_COMPILE__ ensures `compile` is provided
       Component.render = compile!(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO,
-        onError(err: CompilerError) {
-          if (__DEV__) {
-            const message = `Template compilation error: ${err.message}`
-            const codeFrame =
-              err.loc &&
-              generateCodeFrame(
-                Component.template!,
-                err.loc.start.offset,
-                err.loc.end.offset
-              )
-            warn(codeFrame ? `${message}\n${codeFrame}` : message)
-          }
-        }
+        isCustomElement: instance.appContext.config.isCustomElement || NO
       })
     }
 
@@ -385,7 +371,7 @@ function finishComponentSetup(
       if (!__RUNTIME_COMPILE__ && Component.template) {
         warn(
           `Component provides template but the build of Vue you are running ` +
-            `does not support on-the-fly template compilation. Either use the ` +
+            `does not support runtime template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
       } else {

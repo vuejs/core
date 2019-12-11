@@ -55,7 +55,7 @@ export interface ComponentOptionsBase<
     ctx: SetupContext
   ) => RawBindings | RenderFunction | void
   name?: string
-  template?: string | object // can be a direct DOM node
+  template?: string
   // Note: we are intentionally using the signature-less `Function` type here
   // since any type with signature will cause the whole inference to fail when
   // the return expression contains reference to `this`.
