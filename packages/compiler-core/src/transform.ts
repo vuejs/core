@@ -18,7 +18,13 @@ import {
   CacheExpression,
   createCacheExpression
 } from './ast'
-import { isString, isArray, NOOP } from '@vue/shared'
+import {
+  isString,
+  isArray,
+  NOOP,
+  PatchFlags,
+  PatchFlagNames
+} from '@vue/shared'
 import { defaultOnError } from './errors'
 import {
   TO_STRING,
@@ -283,7 +289,10 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       createCallExpression(helper(CREATE_BLOCK), [
         helper(FRAGMENT),
         `null`,
-        root.children
+        root.children,
+        `${PatchFlags.UNKEYED_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
+        } */`
       ]),
       context
     )

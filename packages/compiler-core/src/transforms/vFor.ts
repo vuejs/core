@@ -79,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         `null`,
         renderExp,
-        fragmentFlag + (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
+        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`
       ])
     ]) as ForCodegenNode
 

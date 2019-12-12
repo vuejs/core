@@ -1033,6 +1033,7 @@ export function createRenderer<
     }
     // fast path
     if (patchFlag > 0) {
+      optimized = true
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
