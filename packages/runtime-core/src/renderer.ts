@@ -53,6 +53,7 @@ import {
 } from './components/Suspense'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
+import { registerHMR, unregisterHMR } from './hmr'
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
@@ -857,6 +858,11 @@ export function createRenderer<
       parentComponent
     ))
 
+    // HMR
+    if (__BUNDLER__ && __DEV__ && instance.type.__hmrId != null) {
+      registerHMR(instance)
+    }
+
     if (__DEV__) {
       pushWarningContext(initialVNode)
     }
@@ -1549,6 +1555,11 @@ export function createRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
+    // HMR
+    if (__BUNDLER__ && __DEV__ && instance.type.__hmrId != null) {
+      unregisterHMR(instance)
+    }
+
     const { bum, effects, update, subTree, um, da, isDeactivated } = instance
     // beforeUnmount hook
     if (bum !== null) {

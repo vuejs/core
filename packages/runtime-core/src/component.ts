@@ -37,6 +37,7 @@ export interface FunctionalComponent<P = {}> {
   props?: ComponentPropsOptions<P>
   inheritAttrs?: boolean
   displayName?: string
+  __hmrId?: string
 }
 
 export type Component = ComponentOptions | FunctionalComponent

@@ -66,6 +66,10 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
+  // SFC & dev only
+  __scopeId?: string
+  __hmrId?: string
+
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by createComponent() or FunctionalComponent
   call?: never

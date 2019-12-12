@@ -147,6 +147,8 @@ function createReplacePlugin(
     __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
+    // is targeting bundlers?
+    __BUNDLER__: isBundlerESMBuild,
     // support compile in browser?
     __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // support options?
