@@ -18,4 +18,4 @@ export {
   TemplateCompileResults
 } from './compileTemplate'
 export { StyleCompileOptions, StyleCompileResults } from './compileStyle'
-export { CompilerOptions } from '@vue/compiler-core'
+export { CompilerOptions, generateCodeFrame } from '@vue/compiler-core'
