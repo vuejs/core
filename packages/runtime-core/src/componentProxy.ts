@@ -51,7 +51,7 @@ const publicPropertiesMap: Record<
 > = {
   $: i => i,
   $el: i => i.vnode.el,
-  $cache: i => i.renderCache,
+  $cache: i => i.renderCache || (i.renderCache = []),
   $data: i => i.data,
   $props: i => i.propsProxy,
   $attrs: i => i.attrs,
