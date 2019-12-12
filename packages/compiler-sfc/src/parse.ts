@@ -58,7 +58,7 @@ export function parse(
     sourceMap = true,
     filename = 'component.vue',
     sourceRoot = '',
-    pad = 'line'
+    pad = false
   }: SFCParseOptions = {}
 ): SFCDescriptor {
   const sourceKey = source + sourceMap + filename + sourceRoot + pad

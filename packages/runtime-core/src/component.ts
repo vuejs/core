@@ -37,7 +37,10 @@ export interface FunctionalComponent<P = {}> {
   props?: ComponentPropsOptions<P>
   inheritAttrs?: boolean
   displayName?: string
+
+  // internal HMR related flags
   __hmrId?: string
+  __hmrUpdated?: boolean
 }
 
 export type Component = ComponentOptions | FunctionalComponent
@@ -136,6 +139,9 @@ export interface ComponentInternalInstance {
   [LifecycleHooks.ACTIVATED]: LifecycleHook
   [LifecycleHooks.DEACTIVATED]: LifecycleHook
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+
+  // hmr marker (dev only)
+  renderUpdated?: boolean
 }
 
 const emptyAppContext = createAppContext()

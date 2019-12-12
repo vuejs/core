@@ -804,7 +804,7 @@ export function createRenderer<
     } else {
       const instance = (n2.component = n1.component)!
 
-      if (shouldUpdateComponent(n1, n2, optimized)) {
+      if (shouldUpdateComponent(n1, n2, parentComponent, optimized)) {
         if (
           __FEATURE_SUSPENSE__ &&
           instance.asyncDep &&

@@ -185,6 +185,15 @@ export function isVNode(value: any): value is VNode {
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
+  if (
+    __BUNDLER__ &&
+    __DEV__ &&
+    n2.shapeFlag & ShapeFlags.COMPONENT &&
+    (n2.type as Component).__hmrUpdated
+  ) {
+    // HMR only: if the component has been hot-updated, force a reload.
+    return false
+  }
   return n1.type === n2.type && n1.key === n2.key
 }
 

@@ -3,6 +3,7 @@ import {
   ComponentOptions,
   RenderFunction
 } from './component'
+import { queueJob, queuePostFlushCb } from './scheduler'
 
 // Expose the HMR runtime on the global object
 // This makes it entirely tree-shakable without polluting the exports and makes
@@ -20,7 +21,6 @@ if (__BUNDLER__ && __DEV__) {
           : {}
 
   globalObject.__VUE_HMR_RUNTIME__ = {
-    isRecorded: tryWrap(isRecorded),
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
     reload: tryWrap(reload)
@@ -42,42 +42,69 @@ export function unregisterHMR(instance: ComponentInternalInstance) {
   map.get(instance.type.__hmrId!)!.instances.delete(instance)
 }
 
-function isRecorded(id: string): boolean {
-  return map.has(id)
-}
-
-function createRecord(id: string, comp: ComponentOptions) {
+function createRecord(id: string, comp: ComponentOptions): boolean {
   if (map.has(id)) {
-    return
+    return false
   }
   map.set(id, {
     comp,
     instances: new Set()
   })
+  return true
 }
 
 function rerender(id: string, newRender: RenderFunction) {
   map.get(id)!.instances.forEach(instance => {
     instance.render = newRender
     instance.renderCache = []
+    // this flag forces child components with slot content to update
+    instance.renderUpdated = true
     instance.update()
-    // TODO force scoped slots passed to children to have DYNAMIC_SLOTS flag
+    instance.renderUpdated = false
   })
 }
 
 function reload(id: string, newComp: ComponentOptions) {
-  // TODO
-  console.log('reload', id)
+  const record = map.get(id)!
+  // 1. Update existing comp definition to match new one
+  const comp = record.comp
+  Object.assign(comp, newComp)
+  for (const key in comp) {
+    if (!(key in newComp)) {
+      delete (comp as any)[key]
+    }
+  }
+  // 2. Mark component dirty. This forces the renderer to replace the component
+  // on patch.
+  comp.__hmrUpdated = true
+  record.instances.forEach(instance => {
+    if (instance.parent) {
+      // 3. Force the parent instance to re-render. This will cause all updated
+      // components to be unmounted and re-mounted. Queue the update so that we
+      // don't end up forcing the same parent to re-render multiple times.
+      queueJob(instance.parent.update)
+    } else if (typeof window !== 'undefined') {
+      window.location.reload()
+    } else {
+      console.warn(
+        '[HMR] Root or manually mounted instance modified. Full reload required.'
+      )
+    }
+  })
+  // 4. Make sure to unmark the component after the reload.
+  queuePostFlushCb(() => {
+    comp.__hmrUpdated = false
+  })
 }
 
-function tryWrap(fn: (id: string, arg: any) => void): Function {
+function tryWrap(fn: (id: string, arg: any) => any): Function {
   return (id: string, arg: any) => {
     try {
-      fn(id, arg)
+      return fn(id, arg)
     } catch (e) {
       console.error(e)
       console.warn(
-        `Something went wrong during Vue component hot-reload. ` +
+        `[HMR] Something went wrong during Vue component hot-reload. ` +
           `Full reload required.`
       )
     }

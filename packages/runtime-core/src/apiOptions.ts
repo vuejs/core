@@ -69,6 +69,7 @@ export interface ComponentOptionsBase<
   // SFC & dev only
   __scopeId?: string
   __hmrId?: string
+  __hmrUpdated?: boolean
 
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by createComponent() or FunctionalComponent
@@ -150,7 +151,6 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-// TODO type inference for these options
 export interface LegacyOptions<
   Props,
   RawBindings,
