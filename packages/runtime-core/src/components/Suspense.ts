@@ -7,7 +7,7 @@ import { RendererInternals, MoveType } from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { handleError, ErrorCodes } from '../errorHandling'
-import { pushWarningContext, popWarningContext } from '../warning'
+import { pushWarningContext, popWarningContext, warn } from '../warning'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -23,6 +23,10 @@ export const SuspenseImpl = {
   // on a vnode's type and calls the `process` method, passing in renderer
   // internals.
   __isSuspense: true,
+  props: {
+    onResolve: Function,
+    onRecede: Function
+  },
   process(
     n1: VNode | null,
     n2: VNode,
@@ -325,9 +329,13 @@ function createSuspenseBoundary<HostNode, HostElement>(
       }
       suspense.isResolved = true
       // invoke @resolve event
-      const onResolve = vnode.props && vnode.props.onResolve
+      const onResolve = vnode.props && (vnode.props as SuspenseProps).onResolve
       if (isFunction(onResolve)) {
         onResolve()
+      } else if (__DEV__) {
+        warn(
+          `Invalid prop: type check failed for prop "onResolve". Expected Function.`
+        )
       }
     },
 
@@ -366,9 +374,13 @@ function createSuspenseBoundary<HostNode, HostElement>(
       }
 
       // invoke @recede event
-      const onRecede = vnode.props && vnode.props.onRecede
+      const onRecede = vnode.props && (vnode.props as SuspenseProps).onRecede
       if (isFunction(onRecede)) {
         onRecede()
+      } else if (__DEV__) {
+        warn(
+          `Invalid prop: type check failed for prop "onRecede". Expected Function.`
+        )
       }
     },
 
