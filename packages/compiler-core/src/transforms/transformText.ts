@@ -20,7 +20,11 @@ const isText = (
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.
 export const transformText: NodeTransform = (node, context) => {
-  if (node.type === NodeTypes.ROOT || node.type === NodeTypes.ELEMENT) {
+  if (
+    node.type === NodeTypes.ROOT ||
+    node.type === NodeTypes.ELEMENT ||
+    node.type === NodeTypes.FOR
+  ) {
     // perform the transform on node exit so that all expressions have already
     // been processed.
     return () => {

@@ -1,5 +1,21 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: transform text <template v-for> 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createTextVNode: _createTextVNode } = _Vue
+    
+    return (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+      return (_openBlock(), _createBlock(_Fragment, null, [
+        _createTextVNode(\\"foo\\")
+      ], 64 /* STABLE_FRAGMENT */))
+    }), 256 /* UNKEYED_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: transform text consecutive text 1`] = `
 "const _Vue = Vue
 
