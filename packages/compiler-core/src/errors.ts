@@ -19,8 +19,7 @@ export function createCompilerError<T extends number>(
   messages?: { [code: number]: string }
 ): T extends ErrorCodes ? CoreCompilerError : CompilerError {
   const msg = __DEV__ || !__BROWSER__ ? (messages || errorMessages)[code] : code
-  const locInfo = loc ? ` (${loc.start.line}:${loc.start.column})` : ``
-  const error = new SyntaxError(msg + locInfo) as CompilerError
+  const error = new SyntaxError(String(msg)) as CompilerError
   error.code = code
   error.loc = loc
   return error as any
