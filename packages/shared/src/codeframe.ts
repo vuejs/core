@@ -2,8 +2,9 @@ const range: number = 2
 
 export function generateCodeFrame(
   source: string,
-  start: number = 0,
-  end: number = source.length
+  start = 0,
+  end = source.length,
+  lineOffset = 0
 ): string {
   const lines = source.split(/\r?\n/)
   let count = 0
@@ -13,9 +14,8 @@ export function generateCodeFrame(
     if (count >= start) {
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
-        res.push(
-          `${j + 1}${' '.repeat(3 - String(j + 1).length)}|  ${lines[j]}`
-        )
+        const line = j + 1 + lineOffset
+        res.push(`${line}${' '.repeat(3 - String(line).length)}|  ${lines[j]}`)
         const lineLength = lines[j].length
         if (j === i) {
           // push underline
