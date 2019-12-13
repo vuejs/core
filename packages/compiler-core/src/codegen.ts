@@ -10,7 +10,6 @@ import {
   CallExpression,
   ArrayExpression,
   ObjectExpression,
-  SourceLocation,
   Position,
   InterpolationNode,
   CompoundExpressionNode,
@@ -18,7 +17,8 @@ import {
   FunctionExpression,
   SequenceExpression,
   ConditionalExpression,
-  CacheExpression
+  CacheExpression,
+  locStub
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -58,8 +58,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   indentLevel: number
   map?: SourceMapGenerator
   helper(key: symbol): string
-  push(code: string, node?: CodegenNode, openOnly?: boolean): void
-  resetMapping(loc: SourceLocation): void
+  push(code: string, node?: CodegenNode): void
   indent(): void
   deindent(withoutNewLine?: boolean): void
   newline(): void
@@ -96,7 +95,7 @@ function createCodegenContext(
       const name = helperNameMap[key]
       return prefixIdentifiers ? name : `_${name}`
     },
-    push(code, node, openOnly) {
+    push(code, node) {
       context.code += code
       if (!__BROWSER__ && context.map) {
         if (node) {
@@ -110,14 +109,9 @@ function createCodegenContext(
           addMapping(node.loc.start, name)
         }
         advancePositionWithMutation(context, code)
-        if (node && !openOnly) {
+        if (node && node.loc !== locStub) {
           addMapping(node.loc.end)
         }
-      }
-    },
-    resetMapping(loc: SourceLocation) {
-      if (!__BROWSER__ && context.map) {
-        addMapping(loc.start)
       }
     },
     indent() {
@@ -279,7 +273,8 @@ export function generate(
   return {
     ast,
     code: context.code,
-    map: context.map ? context.map.toJSON() : undefined
+    // SourceMapGenerator does have toJSON() method but it's not in the types
+    map: context.map ? (context.map as any).toJSON() : undefined
   }
 }
 
@@ -510,13 +505,13 @@ function genCallExpression(node: CallExpression, context: CodegenContext) {
   const callee = isString(node.callee)
     ? node.callee
     : context.helper(node.callee)
-  context.push(callee + `(`, node, true)
+  context.push(callee + `(`, node)
   genNodeList(node.arguments, context)
   context.push(`)`)
 }
 
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
-  const { push, indent, deindent, newline, resetMapping } = context
+  const { push, indent, deindent, newline } = context
   const { properties } = node
   if (!properties.length) {
     push(`{}`, node)
@@ -529,8 +524,7 @@ function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
   push(multilines ? `{` : `{ `)
   multilines && indent()
   for (let i = 0; i < properties.length; i++) {
-    const { key, value, loc } = properties[i]
-    resetMapping(loc) // reset source mapping for every property.
+    const { key, value } = properties[i]
     // key
     genExpressionAsPropertyKey(key, context)
     push(`: `)
