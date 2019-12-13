@@ -18,11 +18,11 @@ import {
 } from '../src'
 import {
   CREATE_VNODE,
-  COMMENT,
   TO_STRING,
   RESOLVE_DIRECTIVE,
   helperNameMap,
-  RESOLVE_COMPONENT
+  RESOLVE_COMPONENT,
+  CREATE_COMMENT
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
 import { PatchFlags } from '@vue/shared'
@@ -34,6 +34,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     helpers: [],
     components: [],
     directives: [],
+    imports: [],
     hoists: [],
     cached: 0,
     codegenNode: createSimpleExpression(`null`, false),
@@ -149,7 +150,6 @@ describe('compiler: codegen', () => {
         codegenNode: {
           type: NodeTypes.TEXT,
           content: 'hello',
-          isEmpty: false,
           loc: locStub
         }
       })
@@ -178,11 +178,7 @@ describe('compiler: codegen', () => {
         }
       })
     )
-    expect(code).toMatch(
-      `return _${helperNameMap[CREATE_VNODE]}(_${
-        helperNameMap[COMMENT]
-      }, null, "foo")`
-    )
+    expect(code).toMatch(`return _${helperNameMap[CREATE_COMMENT]}("foo")`)
     expect(code).toMatchSnapshot()
   })
 

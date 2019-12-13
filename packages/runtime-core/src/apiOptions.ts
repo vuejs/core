@@ -26,6 +26,8 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
+  onActivated,
+  onDeactivated,
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook
@@ -53,7 +55,7 @@ export interface ComponentOptionsBase<
     ctx: SetupContext
   ) => RawBindings | RenderFunction | void
   name?: string
-  template?: string
+  template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
   // since any type with signature will cause the whole inference to fail when
   // the return expression contains reference to `this`.
@@ -62,6 +64,20 @@ export interface ComponentOptionsBase<
   render?: Function
   components?: Record<string, Component>
   directives?: Record<string, Directive>
+  inheritAttrs?: boolean
+
+  // SFC & dev only
+  __scopeId?: string
+  __hmrId?: string
+  __hmrUpdated?: boolean
+
+  // type-only differentiator to separate OptionWithoutProps from a constructor
+  // type returned by createComponent() or FunctionalComponent
+  call?: never
+  // type-only differentiators for built-in Vnode types
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
 }
 
 export type ComponentOptionsWithoutProps<
@@ -72,7 +88,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {}
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -80,7 +96,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: unknown }
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -91,7 +107,7 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
+  Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -119,10 +135,14 @@ export type ExtractComputedReturns<T extends any> = {
     : ReturnType<T[key]>
 }
 
-type ComponentWatchOptions = Record<
-  string,
-  string | WatchHandler | { handler: WatchHandler } & WatchOptions
->
+type WatchOptionItem =
+  | string
+  | WatchHandler
+  | { handler: WatchHandler } & WatchOptions
+
+type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
+
+type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
 type ComponentInjectOptions =
   | string[]
@@ -131,7 +151,6 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-// TODO type inference for these options
 export interface LegacyOptions<
   Props,
   RawBindings,
@@ -148,7 +167,6 @@ export interface LegacyOptions<
   data?: D | ((this: ComponentPublicInstance<Props>) => D)
   computed?: C
   methods?: M
-  // TODO watch array
   watch?: ComponentWatchOptions
   provide?: Data | Function
   inject?: ComponentInjectOptions
@@ -201,7 +219,7 @@ export function applyOptions(
     instance.renderContext === EMPTY_OBJ
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
-  const ctx = instance.renderProxy!
+  const ctx = instance.proxy!
   const {
     // composition
     mixins,
@@ -222,8 +240,8 @@ export function applyOptions(
     mounted,
     beforeUpdate,
     updated,
-    // TODO activated
-    // TODO deactivated
+    activated,
+    deactivated,
     beforeUnmount,
     unmounted,
     renderTracked,
@@ -318,23 +336,7 @@ export function applyOptions(
   }
   if (watchOptions) {
     for (const key in watchOptions) {
-      const raw = watchOptions[key]
-      const getter = () => ctx[key]
-      if (isString(raw)) {
-        const handler = renderContext[raw]
-        if (isFunction(handler)) {
-          watch(getter, handler as WatchHandler)
-        } else if (__DEV__) {
-          warn(`Invalid watch handler specified by key "${raw}"`, handler)
-        }
-      } else if (isFunction(raw)) {
-        watch(getter, raw.bind(ctx))
-      } else if (isObject(raw)) {
-        // TODO 2.x compat
-        watch(getter, raw.handler.bind(ctx), raw)
-      } else if (__DEV__) {
-        warn(`Invalid watch option: "${key}"`)
-      }
+      createWatcher(watchOptions[key], renderContext, ctx, key)
     }
   }
   if (provideOptions) {
@@ -388,6 +390,12 @@ export function applyOptions(
   }
   if (updated) {
     onUpdated(updated.bind(ctx))
+  }
+  if (activated) {
+    onActivated(activated.bind(ctx))
+  }
+  if (deactivated) {
+    onDeactivated(deactivated.bind(ctx))
   }
   if (errorCaptured) {
     onErrorCaptured(errorCaptured.bind(ctx))
@@ -446,5 +454,32 @@ function applyMixins(
 ) {
   for (let i = 0; i < mixins.length; i++) {
     applyOptions(instance, mixins[i], true)
+  }
+}
+
+function createWatcher(
+  raw: ComponentWatchOptionItem,
+  renderContext: Data,
+  ctx: ComponentPublicInstance,
+  key: string
+) {
+  const getter = () => (ctx as Data)[key]
+  if (isString(raw)) {
+    const handler = renderContext[raw]
+    if (isFunction(handler)) {
+      watch(getter, handler as WatchHandler)
+    } else if (__DEV__) {
+      warn(`Invalid watch handler specified by key "${raw}"`, handler)
+    }
+  } else if (isFunction(raw)) {
+    watch(getter, raw.bind(ctx))
+  } else if (isObject(raw)) {
+    if (isArray(raw)) {
+      raw.forEach(r => createWatcher(r, renderContext, ctx, key))
+    } else {
+      watch(getter, raw.handler.bind(ctx), raw)
+    }
+  } else if (__DEV__) {
+    warn(`Invalid watch option: "${key}"`)
   }
 }

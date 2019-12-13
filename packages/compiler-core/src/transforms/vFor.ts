@@ -16,7 +16,8 @@ import {
   createObjectProperty,
   ForCodegenNode,
   ElementCodegenNode,
-  SlotOutletCodegenNode
+  SlotOutletCodegenNode,
+  SlotOutletNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -78,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         `null`,
         renderExp,
-        fragmentFlag + (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
+        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`
       ])
     ]) as ForCodegenNode
 
@@ -119,7 +120,7 @@ export const transformFor = createStructuralDirectiveTransform(
         : isTemplate &&
           node.children.length === 1 &&
           isSlotOutlet(node.children[0])
-          ? node.children[0]
+          ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
           : null
       const keyProperty = keyProp
         ? createObjectProperty(
@@ -145,7 +146,10 @@ export const transformFor = createStructuralDirectiveTransform(
           createCallExpression(helper(CREATE_BLOCK), [
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : `null`,
-            node.children
+            node.children,
+            `${PatchFlags.STABLE_FRAGMENT} /* ${
+              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+            } */`
           ]),
           context
         )

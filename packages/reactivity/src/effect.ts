@@ -1,6 +1,13 @@
-import { OperationTypes } from './operations'
-import { Dep, targetMap } from './reactive'
-import { EMPTY_OBJ, extend } from '@vue/shared'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
+
+// The main WeakMap that stores {target -> key -> dep} connections.
+// Conceptually, it's easier to think of a dependency as a Dep class
+// which maintains a Set of subscribers, but we simply store them as
+// raw Sets to reduce memory overhead.
+type Dep = Set<ReactiveEffect>
+type KeyToDepMap = Map<any, Dep>
+const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export interface ReactiveEffect<T = any> {
   (): T
@@ -8,11 +15,7 @@ export interface ReactiveEffect<T = any> {
   active: boolean
   raw: () => T
   deps: Array<Dep>
-  computed?: boolean
-  scheduler?: (run: Function) => void
-  onTrack?: (event: DebuggerEvent) => void
-  onTrigger?: (event: DebuggerEvent) => void
-  onStop?: () => void
+  options: ReactiveEffectOptions
 }
 
 export interface ReactiveEffectOptions {
@@ -27,7 +30,7 @@ export interface ReactiveEffectOptions {
 export type DebuggerEvent = {
   effect: ReactiveEffect
   target: object
-  type: OperationTypes
+  type: TrackOpTypes | TriggerOpTypes
   key: any
 } & DebuggerEventExtraInfo
 
@@ -62,8 +65,8 @@ export function effect<T = any>(
 export function stop(effect: ReactiveEffect) {
   if (effect.active) {
     cleanup(effect)
-    if (effect.onStop) {
-      effect.onStop()
+    if (effect.options.onStop) {
+      effect.options.onStop()
     }
     effect.active = false
   }
@@ -79,12 +82,8 @@ function createReactiveEffect<T = any>(
   effect._isEffect = true
   effect.active = true
   effect.raw = fn
-  effect.scheduler = options.scheduler
-  effect.onTrack = options.onTrack
-  effect.onTrigger = options.onTrigger
-  effect.onStop = options.onStop
-  effect.computed = options.computed
   effect.deps = []
+  effect.options = options
   return effect
 }
 
@@ -123,27 +122,24 @@ export function resumeTracking() {
   shouldTrack = true
 }
 
-export function track(target: object, type: OperationTypes, key?: unknown) {
+export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || effectStack.length === 0) {
     return
   }
   const effect = effectStack[effectStack.length - 1]
-  if (type === OperationTypes.ITERATE) {
-    key = ITERATE_KEY
-  }
   let depsMap = targetMap.get(target)
   if (depsMap === void 0) {
     targetMap.set(target, (depsMap = new Map()))
   }
-  let dep = depsMap.get(key!)
+  let dep = depsMap.get(key)
   if (dep === void 0) {
-    depsMap.set(key!, (dep = new Set()))
+    depsMap.set(key, (dep = new Set()))
   }
   if (!dep.has(effect)) {
     dep.add(effect)
     effect.deps.push(dep)
-    if (__DEV__ && effect.onTrack) {
-      effect.onTrack({
+    if (__DEV__ && effect.options.onTrack) {
+      effect.options.onTrack({
         effect,
         target,
         type,
@@ -155,7 +151,7 @@ export function track(target: object, type: OperationTypes, key?: unknown) {
 
 export function trigger(
   target: object,
-  type: OperationTypes,
+  type: TriggerOpTypes,
   key?: unknown,
   extraInfo?: DebuggerEventExtraInfo
 ) {
@@ -166,7 +162,7 @@ export function trigger(
   }
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  if (type === OperationTypes.CLEAR) {
+  if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared, trigger all effects for target
     depsMap.forEach(dep => {
       addRunners(effects, computedRunners, dep)
@@ -177,8 +173,8 @@ export function trigger(
       addRunners(effects, computedRunners, depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE
-    if (type === OperationTypes.ADD || type === OperationTypes.DELETE) {
-      const iterationKey = Array.isArray(target) ? 'length' : ITERATE_KEY
+    if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
+      const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
   }
@@ -198,7 +194,7 @@ function addRunners(
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
-      if (effect.computed) {
+      if (effect.options.computed) {
         computedRunners.add(effect)
       } else {
         effects.add(effect)
@@ -210,21 +206,21 @@ function addRunners(
 function scheduleRun(
   effect: ReactiveEffect,
   target: object,
-  type: OperationTypes,
+  type: TriggerOpTypes,
   key: unknown,
   extraInfo?: DebuggerEventExtraInfo
 ) {
-  if (__DEV__ && effect.onTrigger) {
+  if (__DEV__ && effect.options.onTrigger) {
     const event: DebuggerEvent = {
       effect,
       target,
       key,
       type
     }
-    effect.onTrigger(extraInfo ? extend(event, extraInfo) : event)
+    effect.options.onTrigger(extraInfo ? extend(event, extraInfo) : event)
   }
-  if (effect.scheduler !== void 0) {
-    effect.scheduler(effect)
+  if (effect.options.scheduler !== void 0) {
+    effect.options.scheduler(effect)
   } else {
     effect()
   }

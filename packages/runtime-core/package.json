@@ -1,15 +1,20 @@
 {
   "name": "@vue/runtime-core",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
   "files": [
     "index.js",
-    "dist",
-    "jsx.d.ts"
+    "dist"
   ],
   "types": "dist/runtime-core.d.ts",
+  "buildOptions": {
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
   "sideEffects": false,
   "repository": {
     "type": "git",
@@ -25,6 +30,6 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/reactivity": "3.0.0-alpha.1"
+    "@vue/reactivity": "3.0.0-alpha.0"
   }
 }

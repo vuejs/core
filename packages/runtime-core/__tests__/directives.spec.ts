@@ -18,7 +18,7 @@ describe('directives', () => {
     function assertBindings(binding: DirectiveBinding) {
       expect(binding.value).toBe(count.value)
       expect(binding.arg).toBe('foo')
-      expect(binding.instance).toBe(_instance && _instance.renderProxy)
+      expect(binding.instance).toBe(_instance && _instance.proxy)
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
@@ -151,7 +151,7 @@ describe('directives', () => {
     function assertBindings(binding: DirectiveBinding) {
       expect(binding.value).toBe(count.value)
       expect(binding.arg).toBe('foo')
-      expect(binding.instance).toBe(_instance && _instance.renderProxy)
+      expect(binding.instance).toBe(_instance && _instance.proxy)
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 

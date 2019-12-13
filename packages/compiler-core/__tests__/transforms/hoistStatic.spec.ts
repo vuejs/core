@@ -496,6 +496,10 @@ describe('compiler: hoistStatic transform', () => {
                 }
               },
               {
+                type: NodeTypes.TEXT,
+                content: ` `
+              },
+              {
                 type: NodeTypes.INTERPOLATION,
                 content: {
                   content: `true`,

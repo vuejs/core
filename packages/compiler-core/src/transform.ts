@@ -1,3 +1,4 @@
+import { TransformOptions } from './options'
 import {
   RootNode,
   NodeTypes,
@@ -17,16 +18,21 @@ import {
   CacheExpression,
   createCacheExpression
 } from './ast'
-import { isString, isArray } from '@vue/shared'
-import { CompilerError, defaultOnError } from './errors'
+import {
+  isString,
+  isArray,
+  NOOP,
+  PatchFlags,
+  PatchFlagNames
+} from '@vue/shared'
+import { defaultOnError } from './errors'
 import {
   TO_STRING,
-  COMMENT,
-  CREATE_VNODE,
   FRAGMENT,
   helperNameMap,
   WITH_DIRECTIVES,
-  CREATE_BLOCK
+  CREATE_BLOCK,
+  CREATE_COMMENT
 } from './runtimeHelpers'
 import { isVSlot, createBlockExpression } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
@@ -66,13 +72,9 @@ export type StructuralDirectiveTransform = (
   context: TransformContext
 ) => void | (() => void)
 
-export interface TransformOptions {
-  nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform }
-  prefixIdentifiers?: boolean
-  hoistStatic?: boolean
-  cacheHandlers?: boolean
-  onError?: (error: CompilerError) => void
+export interface ImportItem {
+  exp: string | ExpressionNode
+  path: string
 }
 
 export interface TransformContext extends Required<TransformOptions> {
@@ -81,6 +83,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  imports: Set<ImportItem>
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -111,6 +114,7 @@ function createTransformContext(
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
+    isBuiltInComponent = NOOP,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -120,6 +124,7 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    imports: new Set(),
     cached: 0,
     identifiers: {},
     scopes: {
@@ -133,6 +138,7 @@ function createTransformContext(
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
+    isBuiltInComponent,
     onError,
     parent: null,
     currentNode: root,
@@ -283,7 +289,10 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       createCallExpression(helper(CREATE_BLOCK), [
         helper(FRAGMENT),
         `null`,
-        root.children
+        root.children,
+        `${PatchFlags.STABLE_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+        } */`
       ]),
       context
     )
@@ -294,6 +303,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   root.helpers = [...context.helpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
+  root.imports = [...context.imports]
   root.hoists = context.hoists
   root.cached = context.cached
 }
@@ -346,8 +356,7 @@ export function traverseNode(
     case NodeTypes.COMMENT:
       // inject import for the Comment symbol, which is needed for creating
       // comment nodes with `createVNode`
-      context.helper(CREATE_VNODE)
-      context.helper(COMMENT)
+      context.helper(CREATE_COMMENT)
       break
     case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper

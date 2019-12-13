@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "files": [
@@ -9,7 +9,9 @@
   ],
   "types": "dist/server-renderer.d.ts",
   "buildOptions": {
-    "formats": ["cjs"]
+    "formats": [
+      "cjs"
+    ]
   },
   "repository": {
     "type": "git",

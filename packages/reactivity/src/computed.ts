@@ -2,7 +2,7 @@ import { effect, ReactiveEffect, effectStack } from './effect'
 import { Ref, UnwrapRef } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
-export interface ComputedRef<T> extends WritableComputedRef<T> {
+export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: UnwrapRef<T>
 }
 
@@ -25,17 +25,20 @@ export function computed<T>(
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>
 ) {
-  const isReadonly = isFunction(getterOrOptions)
-  const getter = isReadonly
-    ? (getterOrOptions as ComputedGetter<T>)
-    : (getterOrOptions as WritableComputedOptions<T>).get
-  const setter = isReadonly
-    ? __DEV__
+  let getter: ComputedGetter<T>
+  let setter: ComputedSetter<T>
+
+  if (isFunction(getterOrOptions)) {
+    getter = getterOrOptions
+    setter = __DEV__
       ? () => {
           console.warn('Write operation failed: computed value is readonly')
         }
       : NOOP
-    : (getterOrOptions as WritableComputedOptions<T>).set
+  } else {
+    getter = getterOrOptions.get
+    setter = getterOrOptions.set
+  }
 
   let dirty = true
   let value: T
@@ -66,7 +69,7 @@ export function computed<T>(
     set value(newValue: T) {
       setter(newValue)
     }
-  }
+  } as any
 }
 
 function trackChildRun(childRunner: ReactiveEffect) {

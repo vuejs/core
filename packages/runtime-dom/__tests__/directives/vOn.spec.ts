@@ -44,20 +44,32 @@ describe('runtime-dom: v-on directive', () => {
     const el = document.createElement('div')
     const fn = jest.fn()
     // <div @keyup.ctrl.esc="test"/>
-    const nextValue = withKeys(withModifiers(fn, ['ctrl']), ['esc'])
+    const nextValue = withKeys(withModifiers(fn, ['ctrl']), [
+      'esc',
+      'arrow-left'
+    ])
     patchEvent(el, 'keyup', null, nextValue, null)
+
     triggerEvent(el, 'keyup', e => (e.key = 'a'))
     expect(fn).not.toBeCalled()
+
     triggerEvent(el, 'keyup', e => {
       e.ctrlKey = false
       e.key = 'esc'
     })
     expect(fn).not.toBeCalled()
+
     triggerEvent(el, 'keyup', e => {
       e.ctrlKey = true
       e.key = 'Escape'
     })
-    expect(fn).toBeCalled()
+    expect(fn).toBeCalledTimes(1)
+
+    triggerEvent(el, 'keyup', e => {
+      e.ctrlKey = true
+      e.key = 'ArrowLeft'
+    })
+    expect(fn).toBeCalledTimes(2)
   })
 
   test('it should support "exact" modifier', () => {

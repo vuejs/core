@@ -132,7 +132,7 @@ describe('vnode', () => {
     mounted.el = {}
     const normalized = normalizeVNode(mounted)
     expect(normalized).not.toBe(mounted)
-    expect(normalized).toEqual({ ...mounted, el: null })
+    expect(normalized).toEqual(mounted)
 
     // primitive types
     expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
@@ -158,20 +158,6 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
-
-    // should reset mounted state
-    const node3 = createVNode('div', { foo: 1 }, [node1])
-    node3.el = {}
-    node3.anchor = {}
-    node3.component = {} as any
-    node3.suspense = {} as any
-    expect(cloneVNode(node3)).toEqual({
-      ...node3,
-      el: null,
-      anchor: null,
-      component: null,
-      suspense: null
-    })
   })
 
   describe('mergeProps', () => {
@@ -196,10 +182,10 @@ describe('vnode', () => {
         style: [
           {
             color: 'blue',
-            with: '200px'
+            width: '200px'
           },
           {
-            with: '300px',
+            width: '300px',
             height: '300px',
             fontSize: 30
           }
@@ -208,7 +194,7 @@ describe('vnode', () => {
       expect(mergeProps(props1, props2)).toMatchObject({
         style: {
           color: 'blue',
-          with: '300px',
+          width: '300px',
           height: '300px',
           fontSize: 30
         }

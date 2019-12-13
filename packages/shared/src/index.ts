@@ -1,6 +1,10 @@
+import { makeMap } from './makeMap'
+
+export { makeMap }
 export * from './patchFlags'
-export { isGloballyWhitelisted } from './globalsWhitelist'
-export { makeMap } from './makeMap'
+export * from './globalsWhitelist'
+export * from './codeframe'
+export * from './domTagConfig'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -48,11 +52,19 @@ export const objectToString = Object.prototype.toString
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
+export function toRawType(value: unknown): string {
+  return toTypeString(value).slice(8, -1)
+}
+
 export const isPlainObject = (val: unknown): val is object =>
   toTypeString(val) === '[object Object]'
 
-export const isReservedProp = (key: string): boolean =>
-  key === 'key' || key === 'ref' || key.startsWith(`onVnode`)
+export const isReservedProp = /*#__PURE__*/ makeMap(
+  'key,ref,' +
+    'onVnodeBeforeMount,onVnodeMounted,' +
+    'onVnodeBeforeUpdate,onVnodeUpdated,' +
+    'onVnodeBeforeUnmount,onVnodeUnmounted'
+)
 
 const camelizeRE = /-(\w)/g
 export const camelize = (str: string): string => {

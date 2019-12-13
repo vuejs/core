@@ -10,28 +10,42 @@ import { warn } from './warning'
 import { capitalize } from '@vue/shared'
 import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
 
-function injectHook(
+export { onActivated, onDeactivated } from './components/KeepAlive'
+
+export function injectHook(
   type: LifecycleHooks,
-  hook: Function,
-  target: ComponentInternalInstance | null
+  hook: Function & { __weh?: Function },
+  target: ComponentInternalInstance | null = currentInstance,
+  prepend: boolean = false
 ) {
   if (target) {
-    ;(target[type] || (target[type] = [])).push((...args: unknown[]) => {
-      if (target.isUnmounted) {
-        return
-      }
-      // disable tracking inside all lifecycle hooks
-      // since they can potentially be called inside effects.
-      pauseTracking()
-      // Set currentInstance during hook invocation.
-      // This assumes the hook does not synchronously trigger other hooks, which
-      // can only be false when the user does something really funky.
-      setCurrentInstance(target)
-      const res = callWithAsyncErrorHandling(hook, target, type, args)
-      setCurrentInstance(null)
-      resumeTracking()
-      return res
-    })
+    const hooks = target[type] || (target[type] = [])
+    // cache the error handling wrapper for injected hooks so the same hook
+    // can be properly deduped by the scheduler. "__weh" stands for "with error
+    // handling".
+    const wrappedHook =
+      hook.__weh ||
+      (hook.__weh = (...args: unknown[]) => {
+        if (target.isUnmounted) {
+          return
+        }
+        // disable tracking inside all lifecycle hooks
+        // since they can potentially be called inside effects.
+        pauseTracking()
+        // Set currentInstance during hook invocation.
+        // This assumes the hook does not synchronously trigger other hooks, which
+        // can only be false when the user does something really funky.
+        setCurrentInstance(target)
+        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        setCurrentInstance(null)
+        resumeTracking()
+        return res
+      })
+    if (prepend) {
+      hooks.unshift(wrappedHook)
+    } else {
+      hooks.push(wrappedHook)
+    }
   } else if (__DEV__) {
     const apiName = `on${capitalize(
       ErrorTypeStrings[type].replace(/ hook$/, '')
@@ -48,7 +62,7 @@ function injectHook(
   }
 }
 
-const createHook = <T extends Function = () => any>(
+export const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
 ) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
   injectHook(lifecycle, hook, target)

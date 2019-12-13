@@ -8,7 +8,10 @@ import {
   TO_HANDLERS,
   helperNameMap,
   PORTAL,
-  RESOLVE_DYNAMIC_COMPONENT
+  RESOLVE_DYNAMIC_COMPONENT,
+  SUSPENSE,
+  KEEP_ALIVE,
+  BASE_TRANSITION
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -265,50 +268,117 @@ describe('compiler: element transform', () => {
     ])
   })
 
-  test('should handle <portal> element', () => {
-    const { node } = parseWithElementTransform(
-      `<portal target="#foo"><span /></portal>`
-    )
-    expect(node.callee).toBe(CREATE_VNODE)
-    expect(node.arguments).toMatchObject([
-      PORTAL,
-      createObjectMatcher({
-        target: '#foo'
-      }),
-      [
-        {
-          type: NodeTypes.ELEMENT,
-          tag: 'span',
-          codegenNode: {
-            callee: CREATE_VNODE,
-            arguments: [`"span"`]
+  test('should handle <Portal> with normal children', () => {
+    function assert(tag: string) {
+      const { root, node } = parseWithElementTransform(
+        `<${tag} target="#foo"><span /></${tag}>`
+      )
+      expect(root.components.length).toBe(0)
+      expect(root.helpers).toContain(PORTAL)
+      expect(node.callee).toBe(CREATE_VNODE)
+      expect(node.arguments).toMatchObject([
+        PORTAL,
+        createObjectMatcher({
+          target: '#foo'
+        }),
+        [
+          {
+            type: NodeTypes.ELEMENT,
+            tag: 'span',
+            codegenNode: {
+              callee: CREATE_VNODE,
+              arguments: [`"span"`]
+            }
           }
-        }
-      ]
-    ])
+        ]
+      ])
+    }
+
+    assert(`portal`)
+    assert(`Portal`)
   })
 
-  test('should handle <Portal> element', () => {
-    const { node } = parseWithElementTransform(
-      `<Portal target="#foo"><span /></Portal>`
+  test('should handle <Suspense>', () => {
+    function assert(tag: string, content: string, hasFallback?: boolean) {
+      const { root, node } = parseWithElementTransform(
+        `<${tag}>${content}</${tag}>`
+      )
+      expect(root.components.length).toBe(0)
+      expect(root.helpers).toContain(SUSPENSE)
+      expect(node.callee).toBe(CREATE_VNODE)
+      expect(node.arguments).toMatchObject([
+        SUSPENSE,
+        `null`,
+        hasFallback
+          ? createObjectMatcher({
+              default: {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION
+              },
+              fallback: {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION
+              },
+              _compiled: `[true]`
+            })
+          : createObjectMatcher({
+              default: {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION
+              },
+              _compiled: `[true]`
+            })
+      ])
+    }
+
+    assert(`suspense`, `foo`)
+    assert(`suspense`, `<template #default>foo</template>`)
+    assert(
+      `suspense`,
+      `<template #default>foo</template><template #fallback>fallback</template>`,
+      true
     )
-    expect(node.callee).toBe(CREATE_VNODE)
-    expect(node.arguments).toMatchObject([
-      PORTAL,
-      createObjectMatcher({
-        target: '#foo'
-      }),
-      [
-        {
-          type: NodeTypes.ELEMENT,
-          tag: 'span',
-          codegenNode: {
-            callee: CREATE_VNODE,
-            arguments: [`"span"`]
-          }
-        }
-      ]
-    ])
+  })
+
+  test('should handle <KeepAlive>', () => {
+    function assert(tag: string) {
+      const { root, node } = parseWithElementTransform(
+        `<${tag}><span /></${tag}>`
+      )
+      expect(root.components.length).toBe(0)
+      expect(root.helpers).toContain(KEEP_ALIVE)
+      expect(node.callee).toBe(CREATE_VNODE)
+      expect(node.arguments).toMatchObject([
+        KEEP_ALIVE,
+        `null`,
+        // keep-alive should not compile content to slots
+        [{ type: NodeTypes.ELEMENT, tag: 'span' }]
+      ])
+    }
+
+    assert(`keep-alive`)
+    assert(`KeepAlive`)
+  })
+
+  test('should handle <BaseTransition>', () => {
+    function assert(tag: string) {
+      const { root, node } = parseWithElementTransform(
+        `<${tag}><span /></${tag}>`
+      )
+      expect(root.components.length).toBe(0)
+      expect(root.helpers).toContain(BASE_TRANSITION)
+      expect(node.callee).toBe(CREATE_VNODE)
+      expect(node.arguments).toMatchObject([
+        BASE_TRANSITION,
+        `null`,
+        createObjectMatcher({
+          default: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION
+          },
+          _compiled: `[true]`
+        })
+      ])
+    }
+
+    assert(`base-transition`)
+    assert(`BaseTransition`)
   })
 
   test('error on v-bind with no argument', () => {
@@ -739,7 +809,8 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'foo'
-            }
+            },
+            '$'
           ]
         }
       ])

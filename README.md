@@ -21,15 +21,12 @@ We have achieved most of the architectural goals and new features planned for v3
   - [x] Portals
   - [x] Suspense w/ `async setup()`
 
-However, there are still some 2.x parity features not completed yet:
+## Major TODOs:
 
+- [ ] SFC compiler
 - [ ] Server-side rendering
-- [ ] `<keep-alive>`
-- [ ] `<transition>`
-- [ ] `v-show` with transition
-- [ ] `<component :is>`
 
-The current implementation also requires native ES2015+ in the runtime environment and does not support IE11 (yet).
+Also note that the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet).
 
 ## Contribution
 

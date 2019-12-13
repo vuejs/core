@@ -175,6 +175,75 @@ describe('api: options', () => {
     assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
   })
 
+  test('watch array', async () => {
+    function returnThis(this: any) {
+      return this
+    }
+    const spyA = jest.fn(returnThis)
+    const spyB = jest.fn(returnThis)
+    const spyC = jest.fn(returnThis)
+
+    let ctx: any
+    const Comp = {
+      data() {
+        return {
+          foo: 1,
+          bar: 2,
+          baz: {
+            qux: 3
+          }
+        }
+      },
+      watch: {
+        // string method name
+        foo: ['onFooChange'],
+        // direct function
+        bar: [spyB],
+        baz: [
+          {
+            handler: spyC,
+            deep: true
+          }
+        ]
+      },
+      methods: {
+        onFooChange: spyA
+      },
+      render() {
+        ctx = this
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+      expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
+    }
+
+    assertCall(spyA, 0, [1, undefined])
+    assertCall(spyB, 0, [2, undefined])
+    assertCall(spyC, 0, [{ qux: 3 }, undefined])
+    expect(spyA).toHaveReturnedWith(ctx)
+    expect(spyB).toHaveReturnedWith(ctx)
+    expect(spyC).toHaveReturnedWith(ctx)
+
+    ctx.foo++
+    await nextTick()
+    expect(spyA).toHaveBeenCalledTimes(2)
+    assertCall(spyA, 1, [2, 1])
+
+    ctx.bar++
+    await nextTick()
+    expect(spyB).toHaveBeenCalledTimes(2)
+    assertCall(spyB, 1, [3, 2])
+
+    ctx.baz.qux++
+    await nextTick()
+    expect(spyC).toHaveBeenCalledTimes(2)
+    // new and old objects have same identity
+    assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
+  })
+
   test('provide/inject', () => {
     const Root = {
       data() {

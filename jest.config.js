@@ -1,12 +1,11 @@
-const lernaJson = require('./lerna.json')
-
 module.exports = {
   preset: 'ts-jest',
   globals: {
     __DEV__: true,
-    __VERSION__: lernaJson.version,
+    __TEST__: true,
+    __VERSION__: require('./package.json').version,
     __BROWSER__: false,
-    __JSDOM__: true,
+    __BUNDLER__: false,
     __RUNTIME_COMPILE__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
@@ -15,7 +14,9 @@ module.exports = {
   coverageReporters: ['html', 'lcov', 'text'],
   collectCoverageFrom: [
     'packages/*/src/**/*.ts',
-    '!packages/template-explorer/**'
+    '!packages/runtime-test/src/utils/**',
+    '!packages/template-explorer/**',
+    '!packages/size-check/**'
   ],
   watchPathIgnorePatterns: ['/node_modules/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],

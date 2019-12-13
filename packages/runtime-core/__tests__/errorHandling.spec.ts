@@ -7,11 +7,21 @@ import {
   watch,
   ref,
   nextTick,
-  mockWarn
+  mockWarn,
+  createComponent
 } from '@vue/runtime-test'
+import { setErrorRecovery } from '../src/errorHandling'
 
 describe('error handling', () => {
   mockWarn()
+
+  beforeEach(() => {
+    setErrorRecovery(true)
+  })
+
+  afterEach(() => {
+    setErrorRecovery(false)
+  })
 
   test('propagation', () => {
     const err = new Error('foo')
@@ -208,6 +218,29 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'render function')
   })
 
+  test('in function ref', () => {
+    const err = new Error('foo')
+    const ref = () => {
+      throw err
+    }
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () => h(Child)
+      }
+    }
+
+    const Child = createComponent(() => () => h('div', { ref }))
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'ref function')
+  })
+
   test('in watch (simple usage)', () => {
     const err = new Error('foo')
     const fn = jest.fn()
@@ -360,9 +393,6 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
-    // temporarily simulate non-test env
-    process.env.NODE_ENV = 'dev'
-
     const onError = jest.spyOn(console, 'error')
     onError.mockImplementation(() => {})
     const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
@@ -399,7 +429,6 @@ describe('error handling', () => {
     onError.mockRestore()
     groupCollapsed.mockRestore()
     log.mockRestore()
-    process.env.NODE_ENV = 'test'
   })
 
   // native event handler handling should be tested in respective renderers

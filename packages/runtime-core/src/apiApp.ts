@@ -2,9 +2,9 @@ import { Component, Data, validateComponentName } from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './createRenderer'
+import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
-import { isFunction, NO } from '@vue/shared'
+import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode } from './vnode'
 
@@ -18,10 +18,10 @@ export interface App<HostElement = any> {
   directive(name: string, directive: Directive): this
   mount(
     rootComponent: Component,
-    rootContainer: HostElement,
+    rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
-  provide<T>(key: InjectionKey<T> | string, value: T): void
+  provide<T>(key: InjectionKey<T> | string, value: T): this
 }
 
 export interface AppConfig {
@@ -79,6 +79,7 @@ export function createAppAPI<HostNode, HostElement>(
 ): () => App<HostElement> {
   return function createApp(): App {
     const context = createAppContext()
+    const installedPlugins = new Set()
 
     let isMounted = false
 
@@ -96,9 +97,13 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       use(plugin: Plugin) {
-        if (isFunction(plugin)) {
+        if (installedPlugins.has(plugin)) {
+          __DEV__ && warn(`Plugin has already been applied to target app.`)
+        } else if (isFunction(plugin)) {
+          installedPlugins.add(plugin)
           plugin(app)
-        } else if (isFunction(plugin.install)) {
+        } else if (plugin && isFunction(plugin.install)) {
+          installedPlugins.add(plugin)
           plugin.install(app)
         } else if (__DEV__) {
           warn(
@@ -110,7 +115,19 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
-        context.mixins.push(mixin)
+        if (__DEV__ && !__FEATURE_OPTIONS__) {
+          warn('Mixins are only available in builds supporting Options API')
+        }
+
+        if (!context.mixins.includes(mixin)) {
+          context.mixins.push(mixin)
+        } else if (__DEV__) {
+          warn(
+            'Mixin has already been applied to target app' +
+              (mixin.name ? `: ${mixin.name}` : '')
+          )
+        }
+
         return app
       },
 
@@ -120,10 +137,12 @@ export function createAppAPI<HostNode, HostElement>(
         }
         if (!component) {
           return context.components[name]
-        } else {
-          context.components[name] = component
-          return app
         }
+        if (__DEV__ && context.components[name]) {
+          warn(`Component "${name}" has already been registered in target app.`)
+        }
+        context.components[name] = component
+        return app
       },
 
       directive(name: string, directive?: Directive) {
@@ -133,25 +152,32 @@ export function createAppAPI<HostNode, HostElement>(
 
         if (!directive) {
           return context.directives[name] as any
-        } else {
-          context.directives[name] = directive
-          return app
         }
+        if (__DEV__ && context.directives[name]) {
+          warn(`Directive "${name}" has already been registered in target app.`)
+        }
+        context.directives[name] = directive
+        return app
       },
 
       mount(
         rootComponent: Component,
-        rootContainer: string | HostElement,
-        rootProps?: Data
+        rootContainer: HostElement,
+        rootProps?: Data | null
       ): any {
         if (!isMounted) {
+          if (rootProps != null && !isObject(rootProps)) {
+            __DEV__ &&
+              warn(`root props passed to app.mount() must be an object.`)
+            rootProps = null
+          }
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
           render(vnode, rootContainer)
           isMounted = true
-          return vnode.component!.renderProxy
+          return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
             `App has already been mounted. Create a new app instance instead.`
@@ -169,6 +195,8 @@ export function createAppAPI<HostNode, HostElement>(
         // TypeScript doesn't allow symbols as index type
         // https://github.com/Microsoft/TypeScript/issues/24587
         context.provides[key as string] = value
+
+        return app
       }
     }
 

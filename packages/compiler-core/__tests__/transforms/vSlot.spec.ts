@@ -315,6 +315,10 @@ describe('compiler: transform component slots', () => {
             },
             // test scope
             {
+              type: NodeTypes.TEXT,
+              content: ` `
+            },
+            {
               type: NodeTypes.INTERPOLATION,
               content: {
                 content: `foo`

@@ -1,1 +1,3 @@
-// TODO
+export function renderToString() {
+  // TODO
+}

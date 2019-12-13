@@ -11,6 +11,7 @@ import {
   FRAGMENT
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
+import { ImportItem } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -51,9 +52,7 @@ export const enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
-  TEMPLATE,
-  PORTAL,
-  SUSPENSE
+  TEMPLATE
 }
 
 export interface Node {
@@ -96,6 +95,7 @@ export interface RootNode extends Node {
   components: string[]
   directives: string[]
   hoists: JSChildNode[]
+  imports: ImportItem[]
   cached: number
   codegenNode: TemplateChildNode | JSChildNode | undefined
 }
@@ -105,8 +105,6 @@ export type ElementNode =
   | ComponentNode
   | SlotOutletNode
   | TemplateNode
-  | PortalNode
-  | SuspenseNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -147,20 +145,9 @@ export interface TemplateNode extends BaseElementNode {
   codegenNode: ElementCodegenNode | undefined | CacheExpression
 }
 
-export interface PortalNode extends BaseElementNode {
-  tagType: ElementTypes.PORTAL
-  codegenNode: ElementCodegenNode | undefined | CacheExpression
-}
-
-export interface SuspenseNode extends BaseElementNode {
-  tagType: ElementTypes.SUSPENSE
-  codegenNode: ElementCodegenNode | undefined | CacheExpression
-}
-
 export interface TextNode extends Node {
   type: NodeTypes.TEXT
   content: string
-  isEmpty: boolean
 }
 
 export interface CommentNode extends Node {

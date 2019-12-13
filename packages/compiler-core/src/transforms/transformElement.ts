@@ -26,9 +26,15 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
-  SUSPENSE
+  KEEP_ALIVE
 } from '../runtimeHelpers'
-import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
+import {
+  getInnerRange,
+  isVSlot,
+  toValidAssetId,
+  findProp,
+  isCoreComponent
+} from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
 
@@ -50,9 +56,13 @@ export const transformElement: NodeTransform = (node, context) => {
   }
   // perform the work on exit, after all child expressions have been
   // processed and merged.
-  return () => {
-    const isComponent = node.tagType === ElementTypes.COMPONENT
-    let hasProps = node.props.length > 0
+  return function postTransformElement() {
+    const { tag, tagType, props } = node
+    const builtInComponentSymbol =
+      isCoreComponent(tag) || context.isBuiltInComponent(tag)
+    const isComponent = tagType === ElementTypes.COMPONENT
+
+    let hasProps = props.length > 0
     let patchFlag: number = 0
     let runtimeDirectives: DirectiveNode[] | undefined
     let dynamicPropNames: string[] | undefined
@@ -60,7 +70,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
     // handle dynamic component
     const isProp = findProp(node, 'is')
-    if (node.tag === 'component') {
+    if (tag === 'component') {
       if (isProp) {
         // static <component is="foo" />
         if (isProp.type === NodeTypes.ATTRIBUTE) {
@@ -75,35 +85,36 @@ export const transformElement: NodeTransform = (node, context) => {
         else if (isProp.exp) {
           dynamicComponent = createCallExpression(
             context.helper(RESOLVE_DYNAMIC_COMPONENT),
-            [isProp.exp]
+            // _ctx.$ exposes the owner instance of current render function
+            [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
           )
         }
       }
     }
 
-    if (isComponent && !dynamicComponent) {
+    let nodeType
+    if (dynamicComponent) {
+      nodeType = dynamicComponent
+    } else if (builtInComponentSymbol) {
+      nodeType = context.helper(builtInComponentSymbol)
+    } else if (isComponent) {
+      // user component w/ resolve
       context.helper(RESOLVE_COMPONENT)
-      context.components.add(node.tag)
+      context.components.add(tag)
+      nodeType = toValidAssetId(tag, `component`)
+    } else {
+      // plain element
+      nodeType = `"${node.tag}"`
     }
 
-    const args: CallExpression['arguments'] = [
-      dynamicComponent
-        ? dynamicComponent
-        : isComponent
-          ? toValidAssetId(node.tag, `component`)
-          : node.tagType === ElementTypes.PORTAL
-            ? context.helper(PORTAL)
-            : node.tagType === ElementTypes.SUSPENSE
-              ? context.helper(SUSPENSE)
-              : `"${node.tag}"`
-    ]
+    const args: CallExpression['arguments'] = [nodeType]
     // props
     if (hasProps) {
       const propsBuildResult = buildProps(
         node,
         context,
         // skip reserved "is" prop <component is>
-        node.props.filter(p => p !== isProp)
+        isProp ? node.props.filter(p => p !== isProp) : node.props
       )
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
@@ -120,7 +131,15 @@ export const transformElement: NodeTransform = (node, context) => {
       if (!hasProps) {
         args.push(`null`)
       }
-      if (isComponent) {
+      // Portal & KeepAlive should have normal children instead of slots
+      // Portal is not a real component has dedicated handling in the renderer
+      // KeepAlive should not track its own deps so that it can be used inside
+      // Transition
+      if (
+        isComponent &&
+        builtInComponentSymbol !== PORTAL &&
+        builtInComponentSymbol !== KEEP_ALIVE
+      ) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {
@@ -166,9 +185,7 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(patchFlag + '')
       }
       if (dynamicPropNames && dynamicPropNames.length) {
-        args.push(
-          `[${dynamicPropNames.map(n => JSON.stringify(n)).join(`, `)}]`
-        )
+        args.push(stringifyDynamicPropNames(dynamicPropNames))
       }
     }
 
@@ -191,6 +208,15 @@ export const transformElement: NodeTransform = (node, context) => {
       node.codegenNode = vnode
     }
   }
+}
+
+function stringifyDynamicPropNames(props: string[]): string {
+  let propsNamesString = `[`
+  for (let i = 0, l = props.length; i < l; i++) {
+    propsNamesString += JSON.stringify(props[i])
+    if (i < l - 1) propsNamesString += ', '
+  }
+  return propsNamesString + `]`
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -399,7 +425,7 @@ export function buildProps(
 // - onXXX handlers / style: merge into array
 // - class: merge into single expression with concatenation
 function dedupeProperties(properties: Property[]): Property[] {
-  const knownProps: Record<string, Property> = {}
+  const knownProps: Map<string, Property> = new Map()
   const deduped: Property[] = []
   for (let i = 0; i < properties.length; i++) {
     const prop = properties[i]
@@ -409,7 +435,7 @@ function dedupeProperties(properties: Property[]): Property[] {
       continue
     }
     const name = prop.key.content
-    const existing = knownProps[name]
+    const existing = knownProps.get(name)
     if (existing) {
       if (
         name === 'style' ||
@@ -421,7 +447,7 @@ function dedupeProperties(properties: Property[]): Property[] {
       }
       // unexpected duplicate, should have emitted error during parse
     } else {
-      knownProps[name] = prop
+      knownProps.set(name, prop)
       deduped.push(prop)
     }
   }
@@ -469,13 +495,11 @@ function buildDirectiveArgs(
       }
       dirArgs.push(`void 0`)
     }
+    const trueExpression = createSimpleExpression(`true`, false, loc)
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
-          createObjectProperty(
-            modifier,
-            createSimpleExpression(`true`, false, loc)
-          )
+          createObjectProperty(modifier, trueExpression)
         ),
         loc
       )

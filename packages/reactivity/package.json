@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-alpha.0",
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
@@ -17,7 +17,12 @@
   },
   "buildOptions": {
     "name": "VueObserver",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": [
+      "esm-bundler",
+      "cjs",
+      "global",
+      "esm"
+    ]
   },
   "keywords": [
     "vue"

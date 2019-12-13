@@ -9,7 +9,8 @@ import {
   lock,
   unlock,
   effect,
-  ref
+  ref,
+  shallowReadonly
 } from '../src'
 import { mockWarn } from '@vue/runtime-test'
 
@@ -441,5 +442,33 @@ describe('reactivity/readonly', () => {
     expect(
       `Set operation on key "value" failed: target is readonly.`
     ).toHaveBeenWarned()
+  })
+
+  describe('shallowReadonly', () => {
+    test('should not make non-reactive properties reactive', () => {
+      const props = shallowReadonly({ n: { foo: 1 } })
+      expect(isReactive(props.n)).toBe(false)
+    })
+
+    test('should make root level properties readonly', () => {
+      const props = shallowReadonly({ n: 1 })
+      // @ts-ignore
+      props.n = 2
+      expect(props.n).toBe(1)
+      expect(
+        `Set operation on key "n" failed: target is readonly.`
+      ).toHaveBeenWarned()
+    })
+
+    // to retain 2.x behavior.
+    test('should NOT make nested properties readonly', () => {
+      const props = shallowReadonly({ n: { foo: 1 } })
+      // @ts-ignore
+      props.n.foo = 2
+      expect(props.n.foo).toBe(2)
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`
+      ).not.toHaveBeenWarned()
+    })
   })
 })
