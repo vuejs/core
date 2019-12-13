@@ -112,28 +112,20 @@ export function parse(
   })
 
   if (sourceMap) {
-    if (sfc.script && !sfc.script.src) {
-      sfc.script.map = generateSourceMap(
-        filename,
-        source,
-        sfc.script.content,
-        sourceRoot,
-        pad
-      )
+    const genMap = (block: SFCBlock | null) => {
+      if (block && !block.src) {
+        block.map = generateSourceMap(
+          filename,
+          source,
+          block.content,
+          sourceRoot,
+          pad ? 0 : block.loc.start.line - 1
+        )
+      }
     }
-    if (sfc.styles) {
-      sfc.styles.forEach(style => {
-        if (!style.src) {
-          style.map = generateSourceMap(
-            filename,
-            source,
-            style.content,
-            sourceRoot,
-            pad
-          )
-        }
-      })
-    }
+    genMap(sfc.template)
+    genMap(sfc.script)
+    sfc.styles.forEach(genMap)
   }
   sourceToSFC.set(sourceKey, sfc)
 
@@ -205,27 +197,19 @@ function generateSourceMap(
   source: string,
   generated: string,
   sourceRoot: string,
-  pad?: SFCParseOptions['pad']
+  lineOffset: number
 ): RawSourceMap {
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
-  let offset = 0
-  if (!pad) {
-    offset =
-      source
-        .split(generated)
-        .shift()!
-        .split(splitRE).length - 1
-  }
   map.setSourceContent(filename, source)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       map.addMapping({
         source: filename,
         original: {
-          line: index + 1 + offset,
+          line: index + 1 + lineOffset,
           column: 0
         },
         generated: {
