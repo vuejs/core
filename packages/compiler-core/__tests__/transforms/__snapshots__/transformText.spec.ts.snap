@@ -23,7 +23,7 @@ return function render() {
       _createVNode(\\"div\\"),
       _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
       _createVNode(\\"div\\")
-    ]))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -41,7 +41,7 @@ return function render() {
       _createVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
       _createVNode(\\"div\\")
-    ]))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;
@@ -69,7 +69,7 @@ return function render() {
       _createVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
       _createVNode(\\"div\\")
-    ]))
+    ], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;

@@ -146,7 +146,10 @@ export const transformFor = createStructuralDirectiveTransform(
           createCallExpression(helper(CREATE_BLOCK), [
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : `null`,
-            node.children
+            node.children,
+            `${PatchFlags.STABLE_FRAGMENT} /* ${
+              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+            } */`
           ]),
           context
         )

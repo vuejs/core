@@ -34,6 +34,6 @@ export default function render() {
     createVNode(\\"img\\", { src: _imports_0 }),
     createVNode(\\"img\\", { src: _imports_1 }),
     createVNode(\\"img\\", { src: _imports_1 })
-  ]))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

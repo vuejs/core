@@ -290,8 +290,8 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
         helper(FRAGMENT),
         `null`,
         root.children,
-        `${PatchFlags.UNKEYED_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.UNKEYED_FRAGMENT]
+        `${PatchFlags.STABLE_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
         } */`
       ]),
       context

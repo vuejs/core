@@ -44,6 +44,7 @@ export const PatchFlags = PublicPatchFlags as {
   PROPS: number
   NEED_PATCH: number
   FULL_PROPS: number
+  STABLE_FRAGMENT: number
   KEYED_FRAGMENT: number
   UNKEYED_FRAGMENT: number
   DYNAMIC_SLOTS: number

@@ -44,6 +44,6 @@ export default function render() {
       src: \\"./logo.png\\",
       srcset: _hoisted_7
     })
-  ]))
+  ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

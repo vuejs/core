@@ -654,10 +654,14 @@ export function createRenderer<
     const fragmentEndAnchor = (n2.anchor = n1
       ? n1.anchor
       : hostCreateComment(showID ? `fragment-${devFragmentID}-end` : ''))!
-    if (showID) {
-      devFragmentID++
+    const { patchFlag } = n2
+    if (patchFlag > 0) {
+      optimized = true
     }
     if (n1 == null) {
+      if (showID) {
+        devFragmentID++
+      }
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
@@ -673,16 +677,33 @@ export function createRenderer<
         optimized
       )
     } else {
-      patchChildren(
-        n1,
-        n2,
-        container,
-        fragmentEndAnchor,
-        parentComponent,
-        parentSuspense,
-        isSVG,
-        optimized
-      )
+      if (patchFlag & PatchFlags.STABLE_FRAGMENT && n2.dynamicChildren) {
+        // a stable fragment (template root or <template v-for>) doesn't need to
+        // patch children order, but it may contain dynamicChildren.
+        patchBlockChildren(
+          n1.dynamicChildren!,
+          n2.dynamicChildren,
+          container,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
+      } else {
+        // keyed / unkeyed, or manual fragments.
+        // for keyed & unkeyed, since they are compiler generated from v-for,
+        // each child is guarunteed to be a block so the fragment will never
+        // have dynamicChildren.
+        patchChildren(
+          n1,
+          n2,
+          container,
+          fragmentEndAnchor,
+          parentComponent,
+          parentSuspense,
+          isSVG,
+          optimized
+        )
+      }
     }
   }
 
@@ -1033,7 +1054,6 @@ export function createRenderer<
     }
     // fast path
     if (patchFlag > 0) {
-      optimized = true
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
@@ -1215,7 +1235,7 @@ export function createRenderer<
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = optimized
-        ? (c2[i] as HostVNode)
+        ? (c2[e2] as HostVNode)
         : (c2[e2] = normalizeVNode(c2[e2]))
       if (isSameVNodeType(n1, n2)) {
         patch(
