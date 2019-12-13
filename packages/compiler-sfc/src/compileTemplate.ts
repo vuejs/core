@@ -14,7 +14,11 @@ import { transformSrcset } from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
 import consolidate from 'consolidate'
 
-export interface TemplateCompileResults {
+export interface TemplateCompiler {
+  compile(template: string, options: CompilerOptions): CodegenResult
+}
+
+export interface SFCTemplateCompileResults {
   code: string
   source: string
   tips: string[]
@@ -22,11 +26,7 @@ export interface TemplateCompileResults {
   map?: RawSourceMap
 }
 
-export interface TemplateCompiler {
-  compile(template: string, options: CompilerOptions): CodegenResult
-}
-
-export interface TemplateCompileOptions {
+export interface SFCTemplateCompileOptions {
   source: string
   filename: string
   compiler?: TemplateCompiler
@@ -37,7 +37,7 @@ export interface TemplateCompileOptions {
 }
 
 function preprocess(
-  { source, filename, preprocessOptions }: TemplateCompileOptions,
+  { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
   preprocessor: any
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
@@ -59,8 +59,8 @@ function preprocess(
 }
 
 export function compileTemplate(
-  options: TemplateCompileOptions
-): TemplateCompileResults {
+  options: SFCTemplateCompileOptions
+): SFCTemplateCompileResults {
   const { preprocessLang } = options
   const preprocessor =
     preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
@@ -104,7 +104,7 @@ function doCompileTemplate({
   compiler = require('@vue/compiler-dom'),
   compilerOptions = {},
   transformAssetUrls
-}: TemplateCompileOptions): TemplateCompileResults {
+}: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []

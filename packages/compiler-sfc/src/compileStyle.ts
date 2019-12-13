@@ -10,7 +10,7 @@ import {
 } from './stylePreprocessors'
 import { RawSourceMap } from 'source-map'
 
-export interface StyleCompileOptions {
+export interface SFCStyleCompileOptions {
   source: string
   filename: string
   id: string
@@ -23,11 +23,11 @@ export interface StyleCompileOptions {
   postcssPlugins?: any[]
 }
 
-export interface AsyncStyleCompileOptions extends StyleCompileOptions {
+export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
   isAsync?: boolean
 }
 
-export interface StyleCompileResults {
+export interface SFCStyleCompileResults {
   code: string
   map: RawSourceMap | undefined
   rawResult: LazyResult | Result | undefined
@@ -35,22 +35,25 @@ export interface StyleCompileResults {
 }
 
 export function compileStyle(
-  options: StyleCompileOptions
-): StyleCompileResults {
-  return doCompileStyle({ ...options, isAsync: false }) as StyleCompileResults
+  options: SFCStyleCompileOptions
+): SFCStyleCompileResults {
+  return doCompileStyle({
+    ...options,
+    isAsync: false
+  }) as SFCStyleCompileResults
 }
 
 export function compileStyleAsync(
-  options: StyleCompileOptions
-): Promise<StyleCompileResults> {
+  options: SFCStyleCompileOptions
+): Promise<SFCStyleCompileResults> {
   return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    StyleCompileResults
+    SFCStyleCompileResults
   >
 }
 
 export function doCompileStyle(
-  options: AsyncStyleCompileOptions
-): StyleCompileResults | Promise<StyleCompileResults> {
+  options: SFCAsyncStyleCompileOptions
+): SFCStyleCompileResults | Promise<SFCStyleCompileResults> {
   const {
     filename,
     id,
@@ -131,7 +134,7 @@ export function doCompileStyle(
 }
 
 function preprocess(
-  options: StyleCompileOptions,
+  options: SFCStyleCompileOptions,
   preprocessor: StylePreprocessor
 ): StylePreprocessorResults {
   return preprocessor.render(options.source, options.map, {
