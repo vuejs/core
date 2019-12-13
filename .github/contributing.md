@@ -173,6 +173,30 @@ This is made possible via several configurations:
 
 ### Package Dependencies
 
+```
+
+                                    +---------------------+
+                                    |                     |
+                                    |  @vue/compiler-sfc  |
+                                    |                     |
+                                    +-----+--------+------+
+                                          |        |
+                                          v        v
+                      +---------------------+    +----------------------+
+                      |                     |    |                      |
+        +------------>|  @vue/compiler-dom  +--->|  @vue/compiler-core  |
+        |             |                     |    |                      |
+   +----+----+        +---------------------+    +----------------------+
+   |         |
+   |   vue   |
+   |         |
+   +----+----+        +---------------------+    +----------------------+    +-------------------+
+        |             |                     |    |                      |    |                   |
+        +------------>|  @vue/runtime-dom   +--->|  @vue/runtime-core   +--->|  @vue/reactivity  |
+                      |                     |    |                      |    |                   |
+                      +---------------------+    +----------------------+    +-------------------+
+```
+
 There are some rules to follow when importing across package boundaries:
 
 - Never use direct relative paths when importing items from another package - export it in the source package and import it at the package level.
