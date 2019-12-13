@@ -260,5 +260,9 @@ describe('renderer: fragment', () => {
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'comment' } }
     ])
+
+    // should properly remove nested fragments
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
   })
 })

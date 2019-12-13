@@ -1483,17 +1483,7 @@ export function createRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
-    const {
-      el,
-      props,
-      ref,
-      type,
-      children,
-      dynamicChildren,
-      shapeFlag,
-      anchor,
-      transition
-    } = vnode
+    const { props, ref, children, dynamicChildren, shapeFlag } = vnode
 
     // unset ref
     if (ref !== null && parentComponent !== null) {
@@ -1518,56 +1508,62 @@ export function createRenderer<
       invokeDirectiveHook(props.onVnodeBeforeUnmount, parentComponent, vnode)
     }
 
-    const shouldRemoveChildren = type === Fragment && doRemove
     if (dynamicChildren != null) {
-      unmountChildren(
-        dynamicChildren,
-        parentComponent,
-        parentSuspense,
-        shouldRemoveChildren
-      )
+      // fast path for block nodes: only need to unmount dynamic children.
+      unmountChildren(dynamicChildren, parentComponent, parentSuspense)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      unmountChildren(
-        children as HostVNode[],
-        parentComponent,
-        parentSuspense,
-        shouldRemoveChildren
-      )
+      unmountChildren(children as HostVNode[], parentComponent, parentSuspense)
     }
 
     if (doRemove) {
-      const remove = () => {
-        hostRemove(vnode.el!)
-        if (anchor != null) hostRemove(anchor)
-        if (
-          transition != null &&
-          !transition.persisted &&
-          transition.afterLeave
-        ) {
-          transition.afterLeave()
-        }
-      }
-      if (
-        vnode.shapeFlag & ShapeFlags.ELEMENT &&
-        transition != null &&
-        !transition.persisted
-      ) {
-        const { leave, delayLeave } = transition
-        const performLeave = () => leave(el!, remove)
-        if (delayLeave) {
-          delayLeave(vnode.el!, remove, performLeave)
-        } else {
-          performLeave()
-        }
-      } else {
-        remove()
-      }
+      remove(vnode)
     }
 
     if (props != null && props.onVnodeUnmounted != null) {
       queuePostRenderEffect(() => {
         invokeDirectiveHook(props.onVnodeUnmounted!, parentComponent, vnode)
       }, parentSuspense)
+    }
+  }
+
+  function remove(vnode: HostVNode) {
+    const { type, el, anchor, children, transition } = vnode
+    const performRemove = () => {
+      hostRemove(el!)
+      if (anchor != null) hostRemove(anchor)
+      if (
+        transition != null &&
+        !transition.persisted &&
+        transition.afterLeave
+      ) {
+        transition.afterLeave()
+      }
+    }
+    if (type === Fragment) {
+      performRemove()
+      removeChildren(children as HostVNode[])
+      return
+    }
+    if (
+      vnode.shapeFlag & ShapeFlags.ELEMENT &&
+      transition != null &&
+      !transition.persisted
+    ) {
+      const { leave, delayLeave } = transition
+      const performLeave = () => leave(el!, performRemove)
+      if (delayLeave) {
+        delayLeave(vnode.el!, performRemove, performLeave)
+      } else {
+        performLeave()
+      }
+    } else {
+      performRemove()
+    }
+  }
+
+  function removeChildren(children: HostVNode[]) {
+    for (let i = 0; i < children.length; i++) {
+      remove(children[i])
     }
   }
 
