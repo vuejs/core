@@ -84,13 +84,7 @@ function createCodegenContext(
     line: 1,
     offset: 0,
     indentLevel: 0,
-
-    // lazy require source-map implementation, only in non-browser builds!
-    map:
-      __BROWSER__ || !sourceMap
-        ? undefined
-        : new (loadDep('source-map')).SourceMapGenerator(),
-
+    map: undefined,
     helper(key) {
       const name = helperNameMap[key]
       return prefixIdentifiers ? name : `_${name}`
@@ -148,9 +142,12 @@ function createCodegenContext(
     })
   }
 
-  if (!__BROWSER__ && context.map) {
-    context.map.setSourceContent(filename, context.source)
+  if (!__BROWSER__ && sourceMap) {
+    // lazy require source-map implementation, only in non-browser builds
+    context.map = new (loadDep('source-map')).SourceMapGenerator()
+    context.map!.setSourceContent(filename, context.source)
   }
+
   return context
 }
 
