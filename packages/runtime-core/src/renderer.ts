@@ -691,7 +691,7 @@ export function createRenderer<
       } else {
         // keyed / unkeyed, or manual fragments.
         // for keyed & unkeyed, since they are compiler generated from v-for,
-        // each child is guarunteed to be a block so the fragment will never
+        // each child is guaranteed to be a block so the fragment will never
         // have dynamicChildren.
         patchChildren(
           n1,

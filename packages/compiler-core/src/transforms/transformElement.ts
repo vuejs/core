@@ -49,7 +49,7 @@ export const transformElement: NodeTransform = (node, context) => {
     // handled by transformSlotOutlet
     node.tagType === ElementTypes.SLOT ||
     // <template v-if/v-for> should have already been replaced
-    // <templte v-slot> is handled by buildSlots
+    // <template v-slot> is handled by buildSlots
     (node.tagType === ElementTypes.TEMPLATE && node.props.some(isVSlot))
   ) {
     return

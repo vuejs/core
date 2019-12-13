@@ -191,7 +191,7 @@ function parseChildren(
   }
 
   // Whitespace management for more efficient output
-  // (same as v2 whitespance: 'condense')
+  // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
   if (
     mode !== TextModes.RAWTEXT &&
