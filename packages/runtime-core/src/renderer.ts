@@ -55,6 +55,8 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
 
+const __HMR__ = __BUNDLER__ && __DEV__
+
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
     el: HostElement,
@@ -442,12 +444,18 @@ export function createRenderer<
     optimized: boolean
   ) {
     const el = (n2.el = n1.el) as HostElement
-    const { patchFlag, dynamicChildren } = n2
+    let { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
 
     if (newProps.onVnodeBeforeUpdate != null) {
       invokeDirectiveHook(newProps.onVnodeBeforeUpdate, parentComponent, n2, n1)
+    }
+
+    if (__HMR__ && parentComponent && parentComponent.renderUpdated) {
+      // HMR updated, force full diff
+      patchFlag = 0
+      optimized = false
     }
 
     if (patchFlag > 0) {
@@ -654,10 +662,18 @@ export function createRenderer<
     const fragmentEndAnchor = (n2.anchor = n1
       ? n1.anchor
       : hostCreateComment(showID ? `fragment-${devFragmentID}-end` : ''))!
-    const { patchFlag } = n2
+
+    let { patchFlag } = n2
     if (patchFlag > 0) {
       optimized = true
     }
+
+    if (__HMR__ && parentComponent && parentComponent.renderUpdated) {
+      // HMR updated, force full diff
+      patchFlag = 0
+      optimized = false
+    }
+
     if (n1 == null) {
       if (showID) {
         devFragmentID++
@@ -879,8 +895,7 @@ export function createRenderer<
       parentComponent
     ))
 
-    // HMR
-    if (__BUNDLER__ && __DEV__ && instance.type.__hmrId != null) {
+    if (__HMR__ && instance.type.__hmrId != null) {
       registerHMR(instance)
     }
 
@@ -1572,8 +1587,7 @@ export function createRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
   ) {
-    // HMR
-    if (__BUNDLER__ && __DEV__ && instance.type.__hmrId != null) {
+    if (__HMR__ && instance.type.__hmrId != null) {
       unregisterHMR(instance)
     }
 
