@@ -40,7 +40,8 @@ export interface DebuggerEventExtraInfo {
   oldTarget?: Map<any, any> | Set<any>
 }
 
-export const effectStack: ReactiveEffect[] = []
+const effectStack: ReactiveEffect[] = []
+export let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol('iterate')
 
@@ -95,9 +96,11 @@ function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
     cleanup(effect)
     try {
       effectStack.push(effect)
+      activeEffect = effect
       return fn(...args)
     } finally {
       effectStack.pop()
+      activeEffect = effectStack[effectStack.length - 1]
     }
   }
 }
@@ -123,10 +126,9 @@ export function resumeTracking() {
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  if (!shouldTrack || effectStack.length === 0) {
+  if (!shouldTrack || activeEffect === undefined) {
     return
   }
-  const effect = effectStack[effectStack.length - 1]
   let depsMap = targetMap.get(target)
   if (depsMap === void 0) {
     targetMap.set(target, (depsMap = new Map()))
@@ -135,12 +137,12 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (dep === void 0) {
     depsMap.set(key, (dep = new Set()))
   }
-  if (!dep.has(effect)) {
-    dep.add(effect)
-    effect.deps.push(dep)
-    if (__DEV__ && effect.options.onTrack) {
-      effect.options.onTrack({
-        effect,
+  if (!dep.has(activeEffect)) {
+    dep.add(activeEffect)
+    activeEffect.deps.push(dep)
+    if (__DEV__ && activeEffect.options.onTrack) {
+      activeEffect.options.onTrack({
+        effect: activeEffect,
         target,
         type,
         key
