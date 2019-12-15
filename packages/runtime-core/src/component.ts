@@ -371,6 +371,8 @@ function finishComponentSetup(
       Component.render = compile!(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement || NO
       })
+      // mark the function as runtime compiled
+      ;(Component.render as RenderFunction).isRuntimeCompiled = true
     }
 
     if (__DEV__ && !Component.render) {

@@ -54,7 +54,6 @@ function compileToFunction(
   })
 
   const render = new Function('Vue', code)(runtimeDom) as RenderFunction
-  render.isRuntimeCompiled = true
   return (compileCache[key] = render)
 }
 
