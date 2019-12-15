@@ -135,7 +135,7 @@ function createReplacePlugin(
   isBrowserBuild,
   isRuntimeCompileBuild
 ) {
-  return replace({
+  const replacements = {
     __COMMIT__: `"${process.env.COMMIT}"`,
     __VERSION__: `"${masterVersion}"`,
     __DEV__: isBundlerESMBuild
@@ -155,7 +155,15 @@ function createReplacePlugin(
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
     __FEATURE_SUSPENSE__: true
+  }
+  // allow inline overrides like
+  //__RUNTIME_COMPILE__=true yarn build runtime-core
+  Object.keys(replacements).forEach(key => {
+    if (key in process.env) {
+      replacements[key] = process.env[key]
+    }
   })
+  return replace(replacements)
 }
 
 function createProductionConfig(format) {

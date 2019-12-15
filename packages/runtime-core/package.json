@@ -10,6 +10,7 @@
   ],
   "types": "dist/runtime-core.d.ts",
   "buildOptions": {
+    "name": "VueRuntimeCore",
     "formats": [
       "esm-bundler",
       "cjs"

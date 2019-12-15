@@ -16,7 +16,7 @@
     "url": "git+https://github.com/vuejs/vue.git"
   },
   "buildOptions": {
-    "name": "VueObserver",
+    "name": "VueReactivity",
     "formats": [
       "esm-bundler",
       "cjs",

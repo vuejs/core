@@ -12,7 +12,7 @@
   "unpkg": "dist/runtime-dom.global.js",
   "sideEffects": false,
   "buildOptions": {
-    "name": "VueDOMRuntime",
+    "name": "VueRuntimeDOM",
     "formats": [
       "esm-bundler",
       "cjs",

@@ -10,6 +10,7 @@
   ],
   "types": "dist/compiler-core.d.ts",
   "buildOptions": {
+    "name": "VueCompilerCore",
     "formats": [
       "esm-bundler",
       "cjs"

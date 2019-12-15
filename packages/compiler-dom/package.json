@@ -12,7 +12,7 @@
   "unpkg": "dist/compiler-dom/global.js",
   "sideEffects": false,
   "buildOptions": {
-    "name": "VueDOMCompiler",
+    "name": "VueCompilerDOM",
     "formats": [
       "esm-bundler",
       "cjs",

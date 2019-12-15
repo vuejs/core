@@ -15,7 +15,7 @@
     "url": "git+https://github.com/vuejs/vue.git"
   },
   "buildOptions": {
-    "name": "VueTestRuntime",
+    "name": "VueRuntimeTest",
     "formats": [
       "global"
     ]
