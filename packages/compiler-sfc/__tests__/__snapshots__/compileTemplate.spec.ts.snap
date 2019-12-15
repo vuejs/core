@@ -20,8 +20,8 @@ Object {
 
 exports[`template errors 1`] = `
 Array [
-  [SyntaxError: Invalid JavaScript expression. (2:13)],
-  [SyntaxError: v-bind is missing expression. (1:6)],
-  [SyntaxError: v-model can only be used on <input>, <textarea> and <select> elements. (2:17)],
+  [SyntaxError: Invalid JavaScript expression.],
+  [SyntaxError: v-bind is missing expression.],
+  [SyntaxError: v-model can only be used on <input>, <textarea> and <select> elements.],
 ]
 `;

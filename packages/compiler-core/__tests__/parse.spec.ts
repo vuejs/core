@@ -1514,7 +1514,7 @@ describe('compiler: parse', () => {
   test('invalid html', () => {
     expect(() => {
       parse(`<div>\n<span>\n</div>\n</span>`)
-    }).toThrow('End tag was not found. (3:1)')
+    }).toThrow('End tag was not found.')
 
     const spy = jest.fn()
     const ast = parse(`<div>\n<span>\n</div>\n</span>`, {

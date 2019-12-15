@@ -380,7 +380,7 @@ describe('compiler: expression transform', () => {
     const onError = jest.fn()
     parseWithExpressionTransform(`{{ a( }}`, { onError })
     expect(onError.mock.calls[0][0].message).toMatch(
-      `Invalid JavaScript expression. (1:4)`
+      `Invalid JavaScript expression.`
     )
   })
 })
