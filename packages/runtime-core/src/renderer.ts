@@ -384,13 +384,15 @@ export function createRenderer<
     }
 
     // scopeId
-    if (__BUNDLER__ && scopeId !== null) {
-      hostSetScopeId(el, scopeId)
+    if (__BUNDLER__) {
+      if (scopeId !== null) {
+        hostSetScopeId(el, scopeId)
+      }
       const treeOwnerId = parentComponent && parentComponent.type.__scopeId
       // vnode's own scopeId and the current patched component's scopeId is
       // different - this is a slot content node.
       if (treeOwnerId != null && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '::slot')
+        hostSetScopeId(el, treeOwnerId + '-s')
       }
     }
 

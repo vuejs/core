@@ -5,12 +5,12 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
   const id: string = options
   const keyframes = Object.create(null)
 
-  root.each(function rewriteSelector(node: any) {
+  root.each(function rewriteSelectors(node: any) {
     if (!node.selector) {
       // handle media queries
       if (node.type === 'atrule') {
         if (node.name === 'media' || node.name === 'supports') {
-          node.each(rewriteSelector)
+          node.each(rewriteSelectors)
         } else if (/-?keyframes$/.test(node.name)) {
           // register keyframes
           keyframes[node.params] = node.params = node.params + '-' + id
@@ -18,26 +18,26 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
       }
       return
     }
+
     node.selector = selectorParser((selectors: any) => {
-      selectors.each((selector: any) => {
+      selectors.each(function rewriteSelector(
+        selector: any,
+        _i: number,
+        slotted?: boolean
+      ) {
         let node: any = null
 
         // find the last child node to insert attribute selector
         selector.each((n: any) => {
-          // ">>>" combinator
-          // and /deep/ alias for >>>, since >>> doesn't work in SASS
-          if (
-            n.type === 'combinator' &&
-            (n.value === '>>>' || n.value === '/deep/')
-          ) {
-            n.value = ' '
-            n.spaces.before = n.spaces.after = ''
+          if (n.type === 'pseudo' && n.value === '::v-deep') {
+            n.value = n.spaces.before = n.spaces.after = ''
             return false
           }
 
-          // in newer versions of sass, /deep/ support is also dropped, so add a ::v-deep alias
-          if (n.type === 'pseudo' && n.value === '::v-deep') {
-            n.value = n.spaces.before = n.spaces.after = ''
+          if (n.type === 'pseudo' && n.value === '::v-slotted') {
+            rewriteSelector(n.nodes[0], 0, true)
+            selectors.insertAfter(selector, n.nodes[0])
+            selectors.removeChild(selector)
             return false
           }
 
@@ -55,12 +55,14 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
           selector.first.spaces.before = ''
         }
 
+        const idToAdd = slotted ? id + '-s' : id
         selector.insertAfter(
           node,
           selectorParser.attribute({
-            attribute: id,
-            value: id,
-            raws: {}
+            attribute: idToAdd,
+            value: idToAdd,
+            raws: {},
+            quoteMark: `"`
           })
         )
       })
