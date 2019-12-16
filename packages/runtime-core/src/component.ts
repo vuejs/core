@@ -32,15 +32,17 @@ import { currentRenderingInstance } from './componentRenderUtils'
 
 export type Data = { [key: string]: unknown }
 
-export interface FunctionalComponent<P = {}> {
+export interface SFCInternalOptions {
+  __scopeId?: string
+  __hmrId?: string
+  __hmrUpdated?: boolean
+}
+
+export interface FunctionalComponent<P = {}> extends SFCInternalOptions {
   (props: P, ctx: SetupContext): VNodeChild
   props?: ComponentPropsOptions<P>
   inheritAttrs?: boolean
   displayName?: string
-
-  // internal HMR related flags
-  __hmrId?: string
-  __hmrUpdated?: boolean
 }
 
 export type Component = ComponentOptions | FunctionalComponent

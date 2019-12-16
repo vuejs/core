@@ -3,7 +3,8 @@ import {
   Data,
   Component,
   SetupContext,
-  RenderFunction
+  RenderFunction,
+  SFCInternalOptions
 } from './component'
 import {
   isFunction,
@@ -48,7 +49,7 @@ export interface ComponentOptionsBase<
   D,
   C extends ComputedOptions,
   M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M> {
+> extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
   setup?: (
     this: null,
     props: Props,
@@ -65,11 +66,6 @@ export interface ComponentOptionsBase<
   components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
-
-  // SFC & dev only
-  __scopeId?: string
-  __hmrId?: string
-  __hmrUpdated?: boolean
 
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by createComponent() or FunctionalComponent
