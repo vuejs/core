@@ -5,6 +5,12 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 
+export interface HMRRuntime {
+  createRecord: typeof createRecord
+  rerender: typeof rerender
+  reload: typeof reload
+}
+
 // Expose the HMR runtime on the global object
 // This makes it entirely tree-shakable without polluting the exports and makes
 // it easier to be used in toolings like vue-loader
@@ -24,7 +30,7 @@ if (__BUNDLER__ && __DEV__) {
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
     reload: tryWrap(reload)
-  }
+  } as HMRRuntime
 }
 
 interface HMRRecord {

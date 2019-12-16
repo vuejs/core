@@ -475,6 +475,7 @@ export function createRenderer<
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
+      dynamicChildren = null
     }
 
     if (patchFlag > 0) {
@@ -593,6 +594,9 @@ export function createRenderer<
   ) {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i]
+      if (!oldVNode) {
+        debugger
+      }
       patch(
         oldVNode,
         newChildren[i],
@@ -682,7 +686,7 @@ export function createRenderer<
       ? n1.anchor
       : hostCreateComment(showID ? `fragment-${devFragmentID}-end` : ''))!
 
-    let { patchFlag } = n2
+    let { patchFlag, dynamicChildren } = n2
     if (patchFlag > 0) {
       optimized = true
     }
@@ -691,6 +695,7 @@ export function createRenderer<
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
+      dynamicChildren = null
     }
 
     if (n1 == null) {
@@ -712,12 +717,12 @@ export function createRenderer<
         optimized
       )
     } else {
-      if (patchFlag & PatchFlags.STABLE_FRAGMENT && n2.dynamicChildren) {
+      if (patchFlag & PatchFlags.STABLE_FRAGMENT && dynamicChildren != null) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
         patchBlockChildren(
           n1.dynamicChildren!,
-          n2.dynamicChildren,
+          dynamicChildren,
           container,
           parentComponent,
           parentSuspense,

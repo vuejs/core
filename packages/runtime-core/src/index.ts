@@ -130,3 +130,4 @@ export {
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
+export { HMRRuntime } from './hmr'
