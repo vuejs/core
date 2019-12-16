@@ -21,6 +21,7 @@ import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
+import { currentScopeId } from './helpers/scopeId'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -90,6 +91,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   props: VNodeProps | null
   key: string | number | null
   ref: string | Ref | ((ref: object | null) => void) | null
+  scopeId: string | null // SFC only
   children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
@@ -246,6 +248,7 @@ export function createVNode(
     props,
     key: (props !== null && props.key) || null,
     ref: (props !== null && props.ref) || null,
+    scopeId: currentScopeId,
     children: null,
     component: null,
     suspense: null,
@@ -296,6 +299,7 @@ export function cloneVNode<T, U>(
       : vnode.props,
     key: vnode.key,
     ref: vnode.ref,
+    scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
     shapeFlag: vnode.shapeFlag,

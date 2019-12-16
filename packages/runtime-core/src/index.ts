@@ -82,6 +82,7 @@ export { toString } from './helpers/toString'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
+export { pushScopeId, popScopeId, withScopeId } from './helpers/scopeId'
 export { setBlockTracking, createTextVNode, createCommentVNode } from './vnode'
 // Since @vue/shared is inlined into final builds,
 // when re-exporting from @vue/shared we need to avoid relying on their original

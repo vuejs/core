@@ -63,7 +63,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
     key: string,
     value: any,
     oldValue: any,
-    isSVG: boolean,
+    isSVG?: boolean,
     prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
     parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
@@ -83,6 +83,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   parentNode(node: HostNode): HostElement | null
   nextSibling(node: HostNode): HostNode | null
   querySelector(selector: string): HostElement | null
+  setScopeId(el: HostNode, id: string): void
 }
 
 export type RootRenderFunction<HostNode, HostElement> = (
@@ -189,7 +190,8 @@ export function createRenderer<
     setElementText: hostSetElementText,
     parentNode: hostParentNode,
     nextSibling: hostNextSibling,
-    querySelector: hostQuerySelector
+    querySelector: hostQuerySelector,
+    setScopeId: hostSetScopeId
   } = options
 
   const internals: RendererInternals<HostNode, HostElement> = {
@@ -368,7 +370,9 @@ export function createRenderer<
     const tag = vnode.type as string
     isSVG = isSVG || tag === 'svg'
     const el = (vnode.el = hostCreateElement(tag, isSVG))
-    const { props, shapeFlag, transition } = vnode
+    const { props, shapeFlag, transition, scopeId } = vnode
+
+    // props
     if (props != null) {
       for (const key in props) {
         if (isReservedProp(key)) continue
@@ -378,6 +382,19 @@ export function createRenderer<
         invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
       }
     }
+
+    // scopeId
+    if (__BUNDLER__ && scopeId !== null) {
+      hostSetScopeId(el, scopeId)
+      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId != null && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '::slot')
+      }
+    }
+
+    // children
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {

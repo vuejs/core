@@ -5,7 +5,7 @@ module.exports = {
     __TEST__: true,
     __VERSION__: require('./package.json').version,
     __BROWSER__: false,
-    __BUNDLER__: false,
+    __BUNDLER__: true,
     __RUNTIME_COMPILE__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
