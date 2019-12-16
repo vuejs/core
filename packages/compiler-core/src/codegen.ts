@@ -37,7 +37,10 @@ import {
   RESOLVE_DIRECTIVE,
   SET_BLOCK_TRACKING,
   CREATE_COMMENT,
-  CREATE_TEXT
+  CREATE_TEXT,
+  PUSH_SCOPE_ID,
+  POP_SCOPE_ID,
+  WITH_SCOPE_ID
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -70,7 +73,8 @@ function createCodegenContext(
     mode = 'function',
     prefixIdentifiers = mode === 'module',
     sourceMap = false,
-    filename = `template.vue.html`
+    filename = `template.vue.html`,
+    scopeId = null
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -78,6 +82,7 @@ function createCodegenContext(
     prefixIdentifiers,
     sourceMap,
     filename,
+    scopeId,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -163,10 +168,12 @@ export function generate(
     prefixIdentifiers,
     indent,
     deindent,
-    newline
+    newline,
+    scopeId
   } = context
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
+  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
 
   // preambles
   if (mode === 'function') {
@@ -198,11 +205,21 @@ export function generate(
     push(`return `)
   } else {
     // generate import statements for helpers
+    if (genScopeId) {
+      ast.helpers.push(WITH_SCOPE_ID)
+      if (ast.hoists.length) {
+        ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+      }
+    }
     if (hasHelpers) {
       push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
     }
     if (ast.imports.length) {
       genImports(ast.imports, context)
+      newline()
+    }
+    if (genScopeId) {
+      push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
       newline()
     }
     genHoists(ast.hoists, context)
@@ -211,6 +228,9 @@ export function generate(
   }
 
   // enter render function
+  if (genScopeId) {
+    push(`withId(`)
+  }
   push(`function render() {`)
   indent()
 
@@ -267,6 +287,11 @@ export function generate(
 
   deindent()
   push(`}`)
+
+  if (genScopeId) {
+    push(`)`)
+  }
+
   return {
     ast,
     code: context.code,
@@ -296,12 +321,27 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   if (!hoists.length) {
     return
   }
-  context.newline()
+  const { push, newline, helper, scopeId, mode } = context
+  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
+  newline()
+
+  // push scope Id before initilaizing hoisted vnodes so that these vnodes
+  // get the proper scopeId as well.
+  if (genScopeId) {
+    push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
+    newline()
+  }
+
   hoists.forEach((exp, i) => {
-    context.push(`const _hoisted_${i + 1} = `)
+    push(`const _hoisted_${i + 1} = `)
     genNode(exp, context)
-    context.newline()
+    newline()
   })
+
+  if (genScopeId) {
+    push(`${helper(POP_SCOPE_ID)}()`)
+    newline()
+  }
 }
 
 function genImports(importsOptions: ImportItem[], context: CodegenContext) {
@@ -545,8 +585,15 @@ function genFunctionExpression(
   node: FunctionExpression,
   context: CodegenContext
 ) {
-  const { push, indent, deindent } = context
-  const { params, returns, newline } = node
+  const { push, indent, deindent, scopeId, mode } = context
+  const { params, returns, newline, isSlot } = node
+  // slot functions also need to push scopeId before rendering its content
+  const genScopeId =
+    !__BROWSER__ && isSlot && scopeId != null && mode === 'module'
+
+  if (genScopeId) {
+    push(`withId(`)
+  }
   push(`(`, node)
   if (isArray(params)) {
     genNodeList(params, context)
@@ -567,6 +614,9 @@ function genFunctionExpression(
   if (newline) {
     deindent()
     push(`}`)
+  }
+  if (genScopeId) {
+    push(`)`)
   }
 }
 

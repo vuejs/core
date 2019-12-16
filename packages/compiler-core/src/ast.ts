@@ -272,6 +272,7 @@ export interface FunctionExpression extends Node {
   params: ExpressionNode | ExpressionNode[] | undefined
   returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
   newline: boolean
+  isSlot: boolean
 }
 
 export interface SequenceExpression extends Node {
@@ -581,6 +582,7 @@ export function createFunctionExpression(
   params: FunctionExpression['params'],
   returns: FunctionExpression['returns'],
   newline: boolean = false,
+  isSlot: boolean = false,
   loc: SourceLocation = locStub
 ): FunctionExpression {
   return {
@@ -588,6 +590,7 @@ export function createFunctionExpression(
     params,
     returns,
     newline,
+    isSlot,
     loc
   }
 }

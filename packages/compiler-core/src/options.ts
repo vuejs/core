@@ -62,6 +62,8 @@ export interface CodegenOptions {
   // Filename for source map generation.
   // Default: `template.vue.html`
   filename?: string
+  // SFC scoped styles ID
+  scopeId?: string | null
 }
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions

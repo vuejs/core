@@ -5,7 +5,8 @@ export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
   hoistStatic: false,
-  cacheHandlers: false
+  cacheHandlers: false,
+  scopeId: null
 })
 
 const App = {
@@ -86,7 +87,24 @@ const App = {
               )).checked
             }
           }),
-          h('label', { for: 'cache' }, 'cacheHandlers')
+          h('label', { for: 'cache' }, 'cacheHandlers'),
+
+          // toggle scopeId
+          h('input', {
+            type: 'checkbox',
+            id: 'scope-id',
+            disabled: compilerOptions.mode !== 'module',
+            checked:
+              compilerOptions.mode === 'module' && compilerOptions.scopeId,
+            onChange(e: Event) {
+              compilerOptions.scopeId =
+                compilerOptions.mode === 'module' &&
+                (<HTMLInputElement>e.target).checked
+                  ? 'scope-id'
+                  : null
+            }
+          }),
+          h('label', { for: 'scope-id' }, 'scopeId')
         ])
       ]
     }

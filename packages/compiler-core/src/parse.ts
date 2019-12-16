@@ -25,7 +25,6 @@ import {
 } from './ast'
 import { extend } from '@vue/shared'
 
-// `isNativeTag` is optional, others are required
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>

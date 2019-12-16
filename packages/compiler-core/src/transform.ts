@@ -119,6 +119,16 @@ function createTransformContext(
   }: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
+    // options
+    prefixIdentifiers,
+    hoistStatic,
+    cacheHandlers,
+    nodeTransforms,
+    directiveTransforms,
+    isBuiltInComponent,
+    onError,
+
+    // state
     root,
     helpers: new Set(),
     components: new Set(),
@@ -133,16 +143,11 @@ function createTransformContext(
       vPre: 0,
       vOnce: 0
     },
-    prefixIdentifiers,
-    hoistStatic,
-    cacheHandlers,
-    nodeTransforms,
-    directiveTransforms,
-    isBuiltInComponent,
-    onError,
     parent: null,
     currentNode: root,
     childIndex: 0,
+
+    // methods
     helper(name) {
       context.helpers.add(name)
       return name

@@ -175,7 +175,8 @@ export function buildSlots(
     const slotFunction = createFunctionExpression(
       slotProps,
       slotChildren,
-      false,
+      false /* newline */,
+      true /* isSlot */,
       slotChildren.length ? slotChildren[0].loc : slotLoc
     )
 
@@ -244,7 +245,7 @@ export function buildSlots(
             createFunctionExpression(
               createForLoopParams(parseResult),
               buildDynamicSlot(slotName, slotFunction),
-              true
+              true /* force newline */
             )
           ])
         )
@@ -314,7 +315,8 @@ function buildDefaultSlot(
     createFunctionExpression(
       slotProps,
       children,
-      false,
+      false /* newline */,
+      true /* isSlot */,
       children.length ? children[0].loc : loc
     )
   )
