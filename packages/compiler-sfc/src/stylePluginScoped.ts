@@ -29,16 +29,32 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
 
         // find the last child node to insert attribute selector
         selector.each((n: any) => {
-          if (n.type === 'pseudo' && n.value === '::v-deep') {
-            n.value = n.spaces.before = n.spaces.after = ''
-            return false
-          }
+          if (n.type === 'pseudo') {
+            // deep: inject [id] attribute at the node before the ::v-deep
+            // combinator.
+            // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
+            if (n.value === '::v-deep') {
+              n.value = n.spaces.before = n.spaces.after = ''
+              return false
+            }
 
-          if (n.type === 'pseudo' && n.value === '::v-slotted') {
-            rewriteSelector(n.nodes[0], 0, true)
-            selectors.insertAfter(selector, n.nodes[0])
-            selectors.removeChild(selector)
-            return false
+            // slot: use selector inside `::v-slotted` and inject [id + '-s']
+            // instead.
+            // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
+            if (n.value === '::v-slotted') {
+              rewriteSelector(n.nodes[0], 0, true /* slotted */)
+              selectors.insertAfter(selector, n.nodes[0])
+              selectors.removeChild(selector)
+              return false
+            }
+
+            // global: replace with inner selector and do not inject [id].
+            // ::v-global(.foo) -> .foo
+            if (n.value === '::v-global') {
+              selectors.insertAfter(selector, n.nodes[0])
+              selectors.removeChild(selector)
+              return false
+            }
           }
 
           if (n.type !== 'pseudo' && n.type !== 'combinator') {
