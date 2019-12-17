@@ -1,12 +1,12 @@
 import postcss, { Root } from 'postcss'
-import selectorParser from 'postcss-selector-parser'
+import selectorParser, { Node, Selector } from 'postcss-selector-parser'
 
-export default postcss.plugin('add-id', (options: any) => (root: Root) => {
+export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
   const id: string = options
   const keyframes = Object.create(null)
 
-  root.each(function rewriteSelectors(node: any) {
-    if (!node.selector) {
+  root.each(function rewriteSelectors(node) {
+    if (node.type !== 'rule') {
       // handle media queries
       if (node.type === 'atrule') {
         if (node.name === 'media' || node.name === 'supports') {
@@ -19,22 +19,58 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
       return
     }
 
-    node.selector = selectorParser((selectors: any) => {
-      selectors.each(function rewriteSelector(
-        selector: any,
-        _i: number,
-        slotted?: boolean
-      ) {
-        let node: any = null
+    node.selector = selectorParser(selectors => {
+      function rewriteSelector(selector: Selector, slotted?: boolean) {
+        let node: Node | null = null
 
         // find the last child node to insert attribute selector
-        selector.each((n: any) => {
+        selector.each(n => {
+          // DEPRECATED ">>>" and "/deep/" combinator
+          if (
+            n.type === 'combinator' &&
+            (n.value === '>>>' || n.value === '/deep/')
+          ) {
+            n.value = ' '
+            n.spaces.before = n.spaces.after = ''
+            console.warn(
+              `[@vue/compiler-sfc] the >>> and /deep/ combinators have ` +
+                `been deprecated. Use ::v-deep instead.`
+            )
+            return false
+          }
+
           if (n.type === 'pseudo') {
             // deep: inject [id] attribute at the node before the ::v-deep
             // combinator.
-            // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
             if (n.value === '::v-deep') {
-              n.value = n.spaces.before = n.spaces.after = ''
+              if (n.nodes.length) {
+                // .foo ::v-deep(.bar) -> .foo[xxxxxxx] .bar
+                // replace the current node with ::v-deep's inner selector
+                selector.insertAfter(n, n.nodes[0])
+                // insert a space combinator before if it doesn't already have one
+                const prev = selector.at(selector.index(n) - 1)
+                if (!prev || !isSpaceCombinator(prev)) {
+                  selector.insertAfter(
+                    n,
+                    selectorParser.combinator({
+                      value: ' '
+                    })
+                  )
+                }
+                selector.removeChild(n)
+              } else {
+                // DEPRECATED usage
+                // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
+                console.warn(
+                  `[@vue/compiler-sfc] ::v-deep usage as a combinator has ` +
+                    `been deprecated. Use ::v-deep(<inner-selector>) instead.`
+                )
+                const prev = selector.at(selector.index(n) - 1)
+                if (prev && isSpaceCombinator(prev)) {
+                  selector.removeChild(prev)
+                }
+                selector.removeChild(n)
+              }
               return false
             }
 
@@ -42,9 +78,9 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
             // instead.
             // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
             if (n.value === '::v-slotted') {
-              rewriteSelector(n.nodes[0], 0, true /* slotted */)
-              selectors.insertAfter(selector, n.nodes[0])
-              selectors.removeChild(selector)
+              rewriteSelector(n.nodes[0] as Selector, true /* slotted */)
+              selector.insertAfter(n, n.nodes[0])
+              selector.removeChild(n)
               return false
             }
 
@@ -63,7 +99,7 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
         })
 
         if (node) {
-          node.spaces.after = ''
+          ;(node as Node).spaces.after = ''
         } else {
           // For deep selectors & standalone pseudo selectors,
           // the attribute selectors are prepended rather than appended.
@@ -73,7 +109,9 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
 
         const idToAdd = slotted ? id + '-s' : id
         selector.insertAfter(
-          node,
+          // If node is null it means we need to inject [id] at the start
+          // insertAfter can handle `null` here
+          node as any,
           selectorParser.attribute({
             attribute: idToAdd,
             value: idToAdd,
@@ -81,7 +119,8 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
             quoteMark: `"`
           })
         )
-      })
+      }
+      selectors.each(selector => rewriteSelector(selector as Selector))
     }).processSync(node.selector)
   })
 
@@ -117,3 +156,7 @@ export default postcss.plugin('add-id', (options: any) => (root: Root) => {
     })
   }
 })
+
+function isSpaceCombinator(node: Node) {
+  return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
