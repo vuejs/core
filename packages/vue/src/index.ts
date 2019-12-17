@@ -36,7 +36,6 @@ function compileToFunction(
 
   const { code } = compile(template, {
     hoistStatic: true,
-    cacheHandlers: true,
     onError(err: CompilerError) {
       if (__DEV__) {
         const message = `Template compilation error: ${err.message}`

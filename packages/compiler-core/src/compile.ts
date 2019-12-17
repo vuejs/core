@@ -17,28 +17,33 @@ import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
 
-// we name it `baseCompile` so that higher order compilers like @vue/compiler-dom
-// can export `compile` while re-exporting everything else.
+// we name it `baseCompile` so that higher order compilers like
+// @vue/compiler-dom can export `compile` while re-exporting everything else.
 export function baseCompile(
   template: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
+  const onError = options.onError || defaultOnError
+  const isModuleMode = options.mode === 'module'
   /* istanbul ignore if */
   if (__BROWSER__) {
-    const onError = options.onError || defaultOnError
     if (options.prefixIdentifiers === true) {
       onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
-    } else if (options.mode === 'module') {
+    } else if (isModuleMode) {
       onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
     }
   }
 
-  const ast = isString(template) ? parse(template, options) : template
-
   const prefixIdentifiers =
-    !__BROWSER__ &&
-    (options.prefixIdentifiers === true || options.mode === 'module')
+    !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)
+  if (!prefixIdentifiers && options.cacheHandlers) {
+    onError(createCompilerError(ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED))
+  }
+  if (options.scopeId && !isModuleMode) {
+    onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
+  }
 
+  const ast = isString(template) ? parse(template, options) : template
   transform(ast, {
     ...options,
     prefixIdentifiers,

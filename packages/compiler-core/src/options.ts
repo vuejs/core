@@ -28,17 +28,21 @@ export interface TransformOptions {
   directiveTransforms?: { [name: string]: DirectiveTransform }
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
-  // Default: mode === 'module'
+  // - This is force-enabled in module mode, since modules are by default strict
+  //   and cannot use `with`
+  // - Default: mode === 'module'
   prefixIdentifiers?: boolean
   // Hoist static VNodes and props objects to `_hoisted_x` constants
-  // Default: false
+  // - Default: false
   hoistStatic?: boolean
   // Cache v-on handlers to avoid creating new inline functions on each render,
   // also avoids the need for dynamically patching the handlers by wrapping it.
   // e.g `@click="foo"` by default is compiled to `{ onClick: foo }`. With this
   // option it's compiled to:
   // `{ onClick: _cache[0] || (_cache[0] = e => _ctx.foo(e)) }`
-  // Default: false
+  // - Requires "prefixIdentifiers" to be enabled because it relies on scope
+  //   analysis to determine if a handler is safe to cache.
+  // - Default: false
   cacheHandlers?: boolean
   onError?: (error: CompilerError) => void
 }
@@ -49,18 +53,20 @@ export interface CodegenOptions {
   // - Function mode will generate a single `const { helpers... } = Vue`
   //   statement and return the render function. It is meant to be used with
   //   `new Function(code)()` to generate a render function at runtime.
-  // Default: 'function'
+  // - Default: 'function'
   mode?: 'module' | 'function'
   // Prefix suitable identifiers with _ctx.
   // If this option is false, the generated code will be wrapped in a
   // `with (this) { ... }` block.
-  // Default: false
+  // - This is force-enabled in module mode, since modules are by default strict
+  //   and cannot use `with`
+  // - Default: mode === 'module'
   prefixIdentifiers?: boolean
   // Generate source map?
-  // Default: false
+  // - Default: false
   sourceMap?: boolean
   // Filename for source map generation.
-  // Default: `template.vue.html`
+  // - Default: `template.vue.html`
   filename?: string
   // SFC scoped styles ID
   scopeId?: string | null
