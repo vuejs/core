@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.0",
   "description": "vue",
   "main": "index.js",
-  "module": "dist/vue.esm-bundler.js",
+  "module": "dist/vue.runtime.esm-bundler.js",
   "files": [
     "index.js",
     "dist"
@@ -14,6 +14,7 @@
     "name": "Vue",
     "formats": [
       "esm-bundler",
+      "esm-bundler-runtime",
       "cjs",
       "global",
       "esm"
