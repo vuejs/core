@@ -60,7 +60,7 @@ let _parse: typeof parse
 let _walk: typeof walk
 
 export function loadDep(name: string) {
-  if (typeof process !== 'undefined' && isFunction(require)) {
+  if (!__BROWSER__ && typeof process !== 'undefined' && isFunction(require)) {
     return require(name)
   } else {
     // This is only used when we are building a dev-only build of the compiler
