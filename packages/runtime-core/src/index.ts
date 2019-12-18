@@ -51,6 +51,9 @@ export const PatchFlags = PublicPatchFlags as {
   BAIL: number
 }
 
+// SFC CSS Modules
+export { useCSSModule } from './helpers/useCssModule'
+
 // For custom renderers
 export { createRenderer, RootRenderFunction } from './renderer'
 export { warn } from './warning'

@@ -121,11 +121,18 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
     // public $xxx properties & user-attached properties (sink)
     const publicGetter = publicPropertiesMap[key]
-    if (publicGetter !== undefined) {
+    let cssModule
+    if (publicGetter != null) {
       if (__DEV__ && key === '$attrs') {
         markAttrsAccessed()
       }
       return publicGetter(target)
+    } else if (
+      __BUNDLER__ &&
+      (cssModule = type.__cssModules) != null &&
+      (cssModule = cssModule[key])
+    ) {
+      return cssModule
     } else if (hasOwn(sink, key)) {
       return sink[key]
     } else if (__DEV__ && currentRenderingInstance != null) {

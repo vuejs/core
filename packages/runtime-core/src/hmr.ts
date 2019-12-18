@@ -59,9 +59,11 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
   return true
 }
 
-function rerender(id: string, newRender: RenderFunction) {
+function rerender(id: string, newRender?: RenderFunction) {
   map.get(id)!.instances.forEach(instance => {
-    instance.render = newRender
+    if (newRender) {
+      instance.render = newRender
+    }
     instance.renderCache = []
     // this flag forces child components with slot content to update
     instance.renderUpdated = true

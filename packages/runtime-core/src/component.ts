@@ -34,6 +34,7 @@ export type Data = { [key: string]: unknown }
 
 export interface SFCInternalOptions {
   __scopeId?: string
+  __cssModules?: Data
   __hmrId?: string
   __hmrUpdated?: boolean
 }
