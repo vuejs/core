@@ -12,9 +12,9 @@ export function patchClass(el: Element, value: string | null, isSVG: boolean) {
   } else {
     // if this is an element during a transition, take the temporary transition
     // classes into account.
-    const transtionClasses = (el as ElementWithTransition)._vtc
-    if (transtionClasses) {
-      value = [value, ...transtionClasses].join(' ')
+    const transitionClasses = (el as ElementWithTransition)._vtc
+    if (transitionClasses) {
+      value = [value, ...transitionClasses].join(' ')
     }
     el.className = value
   }
