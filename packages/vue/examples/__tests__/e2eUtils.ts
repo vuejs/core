@@ -70,6 +70,12 @@ export function setupPuppeteer() {
     return await page.$eval(selector, node => node === document.activeElement)
   }
 
+  async function setValue(selector: string, value: string) {
+    const el = (await page.$(selector))!
+    await el.evaluate((node: HTMLInputElement) => (node.value = ''))
+    await el.type(value)
+  }
+
   async function enterValue(selector: string, value: string) {
     const el = (await page.$(selector))!
     await el.evaluate((node: HTMLInputElement) => (node.value = ''))
@@ -96,6 +102,7 @@ export function setupPuppeteer() {
     isVisible,
     isChecked,
     isFocused,
+    setValue,
     enterValue,
     clearValue
   }
