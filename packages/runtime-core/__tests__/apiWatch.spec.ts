@@ -344,6 +344,25 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalled()
   })
 
+  it('ignore lazy', async () => {
+    const count = ref(0)
+    let dummy
+    watch(
+      () => {
+        dummy = count.value
+      },
+      { lazy: true }
+    )
+    expect(dummy).toBeUndefined()
+
+    await nextTick()
+    expect(dummy).toBe(0)
+
+    count.value++
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
   it('onTrack', async () => {
     const events: DebuggerEvent[] = []
     let dummy
