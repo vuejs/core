@@ -119,17 +119,21 @@ function updateVersions(version) {
 function updatePackage(pkgRoot, version) {
   const pkg = readPkg(pkgRoot)
   pkg.version = version
-  if (pkg.dependencies) {
-    Object.keys(pkg.dependencies).forEach(dep => {
-      if (
-        dep.startsWith('@vue') &&
-        packages.includes(dep.replace(/^@vue\//, ''))
-      ) {
-        pkg.dependencies[dep] = version
-      }
-    })
-  }
+  updateDeps(pkg.dependencies)
+  updateDeps(pkg.peerDependencies)
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
+}
+
+function updateDeps(deps, version) {
+  if (!deps) return
+  Object.keys(deps).forEach(dep => {
+    if (
+      dep === 'vue' ||
+      (dep.startsWith('@vue') && packages.includes(dep.replace(/^@vue\//, '')))
+    ) {
+      deps[dep] = version
+    }
+  })
 }
 
 function readPkg(pkgRoot) {
