@@ -65,7 +65,7 @@ type RawChildren =
   | VNodeChildren
   | (() => any)
 
-// fake constructor type returned from `createComponent`
+// fake constructor type returned from `defineComponent`
 interface Constructor<P = any> {
   __isFragment?: never
   __isPortal?: never
@@ -130,7 +130,7 @@ export function h<O>(
   children?: RawChildren | RawSlots
 ): VNode
 
-// fake constructor type returned by `createComponent`
+// fake constructor type returned by `defineComponent`
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,

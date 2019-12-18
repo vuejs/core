@@ -149,7 +149,7 @@ export interface ComponentInternalInstance {
 
 const emptyAppContext = createAppContext()
 
-export function createComponentInstance(
+export function defineComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null
 ) {

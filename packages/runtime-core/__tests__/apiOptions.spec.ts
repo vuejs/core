@@ -8,13 +8,13 @@ import {
   nextTick,
   renderToString,
   ref,
-  createComponent,
+  defineComponent,
   mockWarn
 } from '@vue/runtime-test'
 
 describe('api: options', () => {
   test('data', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -42,7 +42,7 @@ describe('api: options', () => {
   })
 
   test('computed', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -78,7 +78,7 @@ describe('api: options', () => {
   })
 
   test('methods', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -536,7 +536,7 @@ describe('api: options', () => {
   })
 
   test('accessing setup() state from options', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       setup() {
         return {
           count: ref(0)

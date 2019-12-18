@@ -1,6 +1,6 @@
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/directives/class.spec.js
 
-import { h, render, createComponent } from '../../src'
+import { h, render, defineComponent } from '../../src'
 
 type ClassItem = {
   value: string | object | string[]
@@ -100,21 +100,21 @@ describe('class', () => {
   })
 
   test('class merge between multiple nested components sharing same element', () => {
-    const component1 = createComponent({
+    const component1 = defineComponent({
       props: {},
       render() {
         return this.$slots.default()[0]
       }
     })
 
-    const component2 = createComponent({
+    const component2 = defineComponent({
       props: {},
       render() {
         return this.$slots.default()[0]
       }
     })
 
-    const component3 = createComponent({
+    const component3 = defineComponent({
       props: {},
       render() {
         return h(

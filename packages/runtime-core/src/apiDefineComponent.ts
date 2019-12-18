@@ -11,14 +11,14 @@ import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 
-// createComponent is a utility that is primarily used for type inference
+// defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artifical types
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function
 // (uses user defined props interface)
-export function createComponent<Props, RawBindings = object>(
+export function defineComponent<Props, RawBindings = object>(
   setup: (
     props: Readonly<Props>,
     ctx: SetupContext
@@ -38,7 +38,7 @@ export function createComponent<Props, RawBindings = object>(
 // overload 2: object format with no props
 // (uses user defined props interface)
 // return type is for Vetur and TSX support
-export function createComponent<
+export function defineComponent<
   Props,
   RawBindings,
   D,
@@ -60,7 +60,7 @@ export function createComponent<
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
 // return type is for Vetur and TSX support
-export function createComponent<
+export function defineComponent<
   PropNames extends string,
   RawBindings,
   D,
@@ -75,7 +75,7 @@ export function createComponent<
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
-export function createComponent<
+export function defineComponent<
   // the Readonly constraint allows TS to treat the type of { required: true }
   // as constant instead of boolean.
   PropsOptions extends Readonly<ComponentPropsOptions>,
@@ -97,6 +97,6 @@ export function createComponent<
 }
 
 // implementation, close to no-op
-export function createComponent(options: unknown) {
+export function defineComponent(options: unknown) {
   return isFunction(options) ? { setup: options } : options
 }
