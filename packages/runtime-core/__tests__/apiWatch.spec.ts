@@ -1,5 +1,5 @@
 import { watch, reactive, computed, nextTick, ref, h } from '../src/index'
-import { render, nodeOps, serializeInner } from '@vue/runtime-test'
+import { render, nodeOps, serializeInner, mockWarn } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
   DebuggerEvent,
@@ -10,6 +10,8 @@ import {
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
+  mockWarn()
+
   it('basic usage', async () => {
     const state = reactive({ count: 0 })
     let dummy
@@ -344,7 +346,7 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalled()
   })
 
-  it('ignore lazy', async () => {
+  it('ignore lazy option when using simple callback', async () => {
     const count = ref(0)
     let dummy
     watch(
@@ -354,6 +356,7 @@ describe('api: watch', () => {
       { lazy: true }
     )
     expect(dummy).toBeUndefined()
+    expect(`lazy option is only respected`).toHaveBeenWarned()
 
     await nextTick()
     expect(dummy).toBe(0)
