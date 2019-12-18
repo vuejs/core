@@ -197,7 +197,7 @@ function doWatch(
     scheduler: applyCb ? () => scheduler(applyCb) : scheduler
   })
 
-  if (!lazy) {
+  if (!lazy || !cb) {
     if (applyCb) {
       scheduler(applyCb)
     } else {
