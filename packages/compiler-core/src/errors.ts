@@ -145,7 +145,7 @@ export const errorMessages: { [code: number]: string } = {
 
   // Vue-specific parse errors
   [ErrorCodes.X_INVALID_END_TAG]: 'Invalid end tag.',
-  [ErrorCodes.X_MISSING_END_TAG]: 'End tag was not found.',
+  [ErrorCodes.X_MISSING_END_TAG]: 'Element is missing end tag.',
   [ErrorCodes.X_MISSING_INTERPOLATION_END]:
     'Interpolation end sign was not found.',
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:

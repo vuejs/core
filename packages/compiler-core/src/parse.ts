@@ -372,7 +372,7 @@ function parseElement(
   if (startsWithEndTagOpen(context.source, element.tag)) {
     parseTag(context, TagType.End, parent)
   } else {
-    emitError(context, ErrorCodes.X_MISSING_END_TAG)
+    emitError(context, ErrorCodes.X_MISSING_END_TAG, 0, element.loc.start)
     if (context.source.length === 0 && element.tag.toLowerCase() === 'script') {
       const first = children[0]
       if (first && startsWith(first.loc.source, '<!--')) {
@@ -963,9 +963,9 @@ function getNewPosition(
 function emitError(
   context: ParserContext,
   code: ErrorCodes,
-  offset?: number
+  offset?: number,
+  loc: Position = getCursor(context)
 ): void {
-  const loc = getCursor(context)
   if (offset) {
     loc.offset += offset
     loc.column += offset
