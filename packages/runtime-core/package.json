@@ -4,11 +4,11 @@
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
+  "types": "dist/runtime-core.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/runtime-core.d.ts",
   "buildOptions": {
     "name": "VueRuntimeCore",
     "formats": [

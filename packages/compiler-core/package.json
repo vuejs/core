@@ -4,11 +4,11 @@
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
+  "types": "dist/compiler-core.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/compiler-core.d.ts",
   "buildOptions": {
     "name": "VueCompilerCore",
     "formats": [

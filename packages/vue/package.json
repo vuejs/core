@@ -4,12 +4,12 @@
   "description": "vue",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
+  "types": "dist/vue.d.ts",
+  "unpkg": "dist/vue.global.js",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/vue.d.ts",
-  "unpkg": "dist/vue.global.js",
   "buildOptions": {
     "name": "Vue",
     "formats": [

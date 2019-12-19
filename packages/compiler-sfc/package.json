@@ -3,10 +3,10 @@
   "version": "3.0.0-alpha.0",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
+  "types": "dist/compiler-sfc.d.ts",
   "files": [
     "dist"
   ],
-  "types": "dist/compiler-sfc.d.ts",
   "buildOptions": {
     "prod": false,
     "formats": [
