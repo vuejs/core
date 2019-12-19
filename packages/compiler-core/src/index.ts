@@ -36,7 +36,6 @@ import { generateCodeFrame as _genCodeFrame } from '@vue/shared'
 const generateCodeFrame = _genCodeFrame as (
   source: string,
   start?: number,
-  end?: number,
-  lineOffset?: number
+  end?: number
 ) => string
 export { generateCodeFrame }
