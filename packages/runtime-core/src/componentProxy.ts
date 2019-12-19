@@ -94,29 +94,31 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
-    const n = accessCache![key]
-    if (n !== undefined) {
-      switch (n) {
-        case AccessTypes.DATA:
-          return data[key]
-        case AccessTypes.CONTEXT:
-          return renderContext[key]
-        case AccessTypes.PROPS:
-          return propsProxy![key]
+    if (key[0] !== '$') {
+      const n = accessCache![key]
+      if (n !== undefined) {
+        switch (n) {
+          case AccessTypes.DATA:
+            return data[key]
+          case AccessTypes.CONTEXT:
+            return renderContext[key]
+          case AccessTypes.PROPS:
+            return propsProxy![key]
+        }
+      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+        accessCache![key] = AccessTypes.DATA
+        return data[key]
+      } else if (hasOwn(renderContext, key)) {
+        accessCache![key] = AccessTypes.CONTEXT
+        return renderContext[key]
+      } else if (hasOwn(props, key)) {
+        // only cache props access if component has declared (thus stable) props
+        if (type.props != null) {
+          accessCache![key] = AccessTypes.PROPS
+        }
+        // return the value from propsProxy for ref unwrapping and readonly
+        return propsProxy![key]
       }
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
-      accessCache![key] = AccessTypes.DATA
-      return data[key]
-    } else if (hasOwn(renderContext, key)) {
-      accessCache![key] = AccessTypes.CONTEXT
-      return renderContext[key]
-    } else if (hasOwn(props, key)) {
-      // only cache props access if component has declared (thus stable) props
-      if (type.props != null) {
-        accessCache![key] = AccessTypes.PROPS
-      }
-      // return the value from propsProxy for ref unwrapping and readonly
-      return propsProxy![key]
     }
 
     // public $xxx properties & user-attached properties (sink)
