@@ -55,52 +55,73 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-deep', () => {
-    expect(compile(`::v-deep(.foo) { color: red; }`)).toMatch(
-      `[test] .foo { color: red;`
-    )
-    expect(compile(`::v-deep(.foo .bar) { color: red; }`)).toMatch(
-      `[test] .foo .bar { color: red;`
-    )
-    expect(compile(`.baz .qux ::v-deep(.foo .bar) { color: red; }`)).toMatch(
-      `.baz .qux[test] .foo .bar { color: red;`
-    )
+    expect(compile(`::v-deep(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      "[test] .foo { color: red;
+      }"
+    `)
+    expect(compile(`::v-deep(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compile(`.baz .qux ::v-deep(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux[test] .foo .bar { color: red;
+      }"
+    `)
   })
 
   test('::v-slotted', () => {
-    expect(compile(`::v-slotted(.foo) { color: red; }`)).toMatch(
-      `.foo[test-s] { color: red;`
-    )
-    expect(compile(`::v-slotted(.foo .bar) { color: red; }`)).toMatch(
-      `.foo .bar[test-s] { color: red;`
-    )
-    expect(compile(`.baz .qux ::v-slotted(.foo .bar) { color: red; }`)).toMatch(
-      `.baz .qux[test] .foo .bar[test-s] { color: red;`
-    )
+    expect(compile(`::v-slotted(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo[test-s] { color: red;
+      }"
+    `)
+    expect(compile(`::v-slotted(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar[test-s] { color: red;
+      }"
+    `)
+    expect(compile(`.baz .qux ::v-slotted(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux .foo .bar[test-s] { color: red;
+      }"
+    `)
   })
 
   test('::v-global', () => {
-    expect(compile(`::v-global(.foo) { color: red; }`)).toMatch(
-      `.foo { color: red;`
-    )
-    expect(compile(`::v-global(.foo .bar) { color: red; }`)).toMatch(
-      `.foo .bar { color: red;`
-    )
+    expect(compile(`::v-global(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo { color: red;
+      }"
+    `)
+    expect(compile(`::v-global(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar { color: red;
+      }"
+    `)
     // global ignores anything before it
-    expect(compile(`.baz .qux ::v-global(.foo .bar) { color: red; }`)).toMatch(
-      `.foo .bar { color: red;`
-    )
+    expect(compile(`.baz .qux ::v-global(.foo .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar { color: red;
+      }"
+    `)
   })
 
   test('media query', () => {
-    expect(compile(`@media print { .foo { color: red }}`)).toMatch(
-      /@media print {\s+\.foo\[test\] \{ color: red/
-    )
+    expect(compile(`@media print { .foo { color: red }}`))
+      .toMatchInlineSnapshot(`
+      "@media print {
+      .foo[test] { color: red
+      }}"
+    `)
   })
 
   test('supports query', () => {
-    expect(
-      compile(`@supports(display: grid) { .foo { display: grid }}`)
-    ).toMatch(/@supports\(display: grid\) {\s+\.foo\[test\] \{ display: grid/)
+    expect(compile(`@supports(display: grid) { .foo { display: grid }}`))
+      .toMatchInlineSnapshot(`
+      "@supports(display: grid) {
+      .foo[test] { display: grid
+      }}"
+    `)
   })
 
   test('scoped keyframes', () => {
@@ -169,17 +190,23 @@ describe('SFC scoped CSS', () => {
       id: 'test'
     })
 
-    expect(code).toMatch(`.foo[test], .bar[test] { color: red;`)
+    expect(code).toMatchInlineSnapshot(`
+      ".foo[test], .bar[test] { color: red;
+      }"
+    `)
   })
 
   describe('deprecated syntax', () => {
     test('::v-deep as combinator', () => {
-      expect(compile(`::v-deep .foo { color: red; }`)).toMatch(
-        `[test] .foo { color: red;`
-      )
-      expect(compile(`.bar ::v-deep .foo { color: red; }`)).toMatch(
-        `.bar[test] .foo { color: red;`
-      )
+      expect(compile(`::v-deep .foo { color: red; }`)).toMatchInlineSnapshot(`
+        "[test] .foo { color: red;
+        }"
+      `)
+      expect(compile(`.bar ::v-deep .foo { color: red; }`))
+        .toMatchInlineSnapshot(`
+        ".bar[test] .foo { color: red;
+        }"
+      `)
       expect(
         `::v-deep usage as a combinator has been deprecated.`
       ).toHaveBeenWarned()
@@ -187,7 +214,10 @@ describe('SFC scoped CSS', () => {
 
     test('>>> (deprecated syntax)', () => {
       const code = compile(`>>> .foo { color: red; }`)
-      expect(code).toMatch(`[test] .foo { color: red;`)
+      expect(code).toMatchInlineSnapshot(`
+        "[test] .foo { color: red;
+        }"
+      `)
       expect(
         `the >>> and /deep/ combinators have been deprecated.`
       ).toHaveBeenWarned()
@@ -195,7 +225,10 @@ describe('SFC scoped CSS', () => {
 
     test('/deep/ (deprecated syntax)', () => {
       const code = compile(`/deep/ .foo { color: red; }`)
-      expect(code).toMatch(`[test] .foo { color: red;`)
+      expect(code).toMatchInlineSnapshot(`
+        "[test] .foo { color: red;
+        }"
+      `)
       expect(
         `the >>> and /deep/ combinators have been deprecated.`
       ).toHaveBeenWarned()

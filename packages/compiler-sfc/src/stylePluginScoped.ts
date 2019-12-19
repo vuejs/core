@@ -22,7 +22,7 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
     node.selector = selectorParser(selectors => {
       function rewriteSelector(selector: Selector, slotted?: boolean) {
         let node: Node | null = null
-
+        let shouldInject = true
         // find the last child node to insert attribute selector
         selector.each(n => {
           // DEPRECATED ">>>" and "/deep/" combinator
@@ -81,6 +81,9 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
               rewriteSelector(n.nodes[0] as Selector, true /* slotted */)
               selector.insertAfter(n, n.nodes[0])
               selector.removeChild(n)
+              // since slotted attribute already scopes the selector there's no
+              // need for the non-slot attribute.
+              shouldInject = false
               return false
             }
 
@@ -107,18 +110,20 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
           selector.first.spaces.before = ''
         }
 
-        const idToAdd = slotted ? id + '-s' : id
-        selector.insertAfter(
-          // If node is null it means we need to inject [id] at the start
-          // insertAfter can handle `null` here
-          node as any,
-          selectorParser.attribute({
-            attribute: idToAdd,
-            value: idToAdd,
-            raws: {},
-            quoteMark: `"`
-          })
-        )
+        if (shouldInject) {
+          const idToAdd = slotted ? id + '-s' : id
+          selector.insertAfter(
+            // If node is null it means we need to inject [id] at the start
+            // insertAfter can handle `null` here
+            node as any,
+            selectorParser.attribute({
+              attribute: idToAdd,
+              value: idToAdd,
+              raws: {},
+              quoteMark: `"`
+            })
+          )
+        }
       }
       selectors.each(selector => rewriteSelector(selector as Selector))
     }).processSync(node.selector)
