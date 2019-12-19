@@ -91,6 +91,18 @@ describe('SFC scoped CSS', () => {
     )
   })
 
+  test('media query', () => {
+    expect(compile(`@media print { .foo { color: red }}`)).toMatch(
+      /@media print {\s+\.foo\[test\] \{ color: red/
+    )
+  })
+
+  test('supports query', () => {
+    expect(
+      compile(`@supports(display: grid) { .foo { display: grid }}`)
+    ).toMatch(/@supports\(display: grid\) {\s+\.foo\[test\] \{ display: grid/)
+  })
+
   test('scoped keyframes', () => {
     const style = compile(`
 .anim {
