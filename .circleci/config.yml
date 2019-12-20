@@ -1,37 +1,64 @@
 version: 2
+
+defaults: &defaults
+  docker:
+    - image: vuejs/ci
+  working_directory: ~/project/vue
+
 jobs:
-  build:
-    docker:
-      - image: vuejs/ci
-
-    working_directory: ~/repo
-
+  install:
+    <<: *defaults
     steps:
       - checkout
-
       - restore_cache:
           keys:
           - v1-dependencies-{{ checksum "yarn.lock" }}
           - v1-dependencies-
-
       - run:
           name: Install Dependencies
           command: yarn --frozen-lockfile
-
       - save_cache:
           paths:
             - node_modules
             - ~/.cache/yarn
           key: v1-dependencies-{{ checksum "yarn.lock" }}
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - vue
 
-      - run:
-          name: Run Tests
-          command: yarn test --ci --runInBand
+  test:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run: yarn test --ci --runInBand
 
-      - run:
-          name: Test d.ts
-          command: yarn test-dts
+  test-dts:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run: yarn test-dts
 
-      - run:
-          name: Check size
-          command: yarn size
+  check-size:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - run: yarn size
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - install
+      - test:
+          requires:
+            - install
+      - test-dts:
+          requires:
+            - install
+      - check-size:
+          requires:
+            - install
