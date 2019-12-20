@@ -11,9 +11,9 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-const get = createGetter()
-const readonlyGet = createGetter(true)
-const shallowReadonlyGet = createGetter(true, true)
+const get = /*#__PURE__*/ createGetter()
+const readonlyGet = /*#__PURE__*/ createGetter(true)
+const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
@@ -40,9 +40,9 @@ function createGetter(isReadonly = false, shallow = false) {
   }
 }
 
-const set = createSetter()
-const readonlySet = createSetter(true)
-const shallowReadonlySet = createSetter(true, true)
+const set = /*#__PURE__*/ createSetter()
+const readonlySet = /*#__PURE__*/ createSetter(true)
+const shallowReadonlySet = /*#__PURE__*/ createSetter(true, true)
 
 function createSetter(isReadonly = false, shallow = false) {
   return function set(
