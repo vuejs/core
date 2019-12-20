@@ -62,7 +62,12 @@ describe('compiler + runtime integration', () => {
     }
     createApp().mount(App, container)
     expect(
-      `Template compilation error: End tag was not found`
+      `Template compilation error: Element is missing end tag`
+    ).toHaveBeenWarned()
+    expect(
+      `
+1  |  <div v-if>
+   |  ^`.trim()
     ).toHaveBeenWarned()
     expect(`v-if/v-else-if is missing expression`).toHaveBeenWarned()
     expect(

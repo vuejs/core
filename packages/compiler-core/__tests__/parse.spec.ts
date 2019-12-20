@@ -1514,7 +1514,7 @@ describe('compiler: parse', () => {
   test('invalid html', () => {
     expect(() => {
       parse(`<div>\n<span>\n</div>\n</span>`)
-    }).toThrow('End tag was not found.')
+    }).toThrow('Element is missing end tag.')
 
     const spy = jest.fn()
     const ast = parse(`<div>\n<span>\n</div>\n</span>`, {
@@ -1527,8 +1527,8 @@ describe('compiler: parse', () => {
           code: ErrorCodes.X_MISSING_END_TAG,
           loc: {
             start: {
-              offset: 13,
-              line: 3,
+              offset: 6,
+              line: 2,
               column: 1
             }
           }
@@ -1833,7 +1833,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 11, line: 1, column: 12 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1846,7 +1846,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 12, line: 1, column: 13 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -1861,11 +1861,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 29, line: 1, column: 30 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 29, line: 1, column: 30 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1878,11 +1878,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -1897,7 +1897,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1910,7 +1910,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1925,7 +1925,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 12, line: 1, column: 13 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1938,7 +1938,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 13, line: 1, column: 14 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -1951,7 +1951,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -1962,7 +1962,7 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 32, line: 1, column: 33 }
+              loc: { offset: 0, line: 1, column: 1 }
             },
             {
               type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
@@ -1975,7 +1975,7 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 28, line: 1, column: 29 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -1990,11 +1990,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2007,11 +2007,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2024,11 +2024,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 17, line: 1, column: 18 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 17, line: 1, column: 18 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2041,11 +2041,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 18, line: 1, column: 19 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 18, line: 1, column: 19 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2062,11 +2062,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2079,11 +2079,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2096,11 +2096,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2113,11 +2113,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2130,11 +2130,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2147,11 +2147,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2168,11 +2168,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2189,11 +2189,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2210,11 +2210,11 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -2292,7 +2292,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 27, line: 1, column: 28 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         },
@@ -2429,7 +2429,7 @@ foo
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
@@ -2651,7 +2651,7 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 10, line: 1, column: 11 }
             }
           ]
         },
@@ -2660,11 +2660,11 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 0, line: 1, column: 1 }
             }
           ]
         }
