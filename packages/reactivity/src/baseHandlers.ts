@@ -1,4 +1,4 @@
-import { reactive, readonly, toRaw } from './reactive'
+import { reactive, readonly, toRaw, isReactive } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { track, trigger, ITERATE_KEY } from './effect'
 import { LOCKED } from './lock'
@@ -42,28 +42,29 @@ function set(
   value: unknown,
   receiver: object
 ): boolean {
-  value = toRaw(value)
+  const rawValue = toRaw(value)
   const oldValue = (target as any)[key]
-  if (isRef(oldValue) && !isRef(value)) {
-    oldValue.value = value
+  if (isRef(oldValue) && !isRef(rawValue)) {
+    oldValue.value = rawValue
     return true
   }
   const hadKey = hasOwn(target, key)
-  const result = Reflect.set(target, key, value, receiver)
+  const newValue = isReactive(oldValue) && isReactive(value) ? value : rawValue
+  const result = Reflect.set(target, key, newValue, receiver)
   // don't trigger if target is something up in the prototype chain of original
   if (target === toRaw(receiver)) {
     /* istanbul ignore else */
     if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
+      const extraInfo = { oldValue, newValue: rawValue }
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key, extraInfo)
-      } else if (hasChanged(value, oldValue)) {
+      } else if (hasChanged(rawValue, oldValue)) {
         trigger(target, TriggerOpTypes.SET, key, extraInfo)
       }
     } else {
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key)
-      } else if (hasChanged(value, oldValue)) {
+      } else if (hasChanged(rawValue, oldValue)) {
         trigger(target, TriggerOpTypes.SET, key)
       }
     }
