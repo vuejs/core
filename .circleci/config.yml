@@ -7,7 +7,7 @@ defaults: &defaults
 step_restore_cache: &restore_cache
   restore_cache:
     keys:
-    - v1-dependencies-{{ checksum "yarn.lock" }}
+    - v1-dependencies-{{ checksum "yarn.lock" }}-1
     - v1-dependencies-
 
 step_install_deps: &install_deps
@@ -23,7 +23,7 @@ step_save_cache: &save_cache
       - packages/compiler-sfc/node_modules
       - packages/vue/node_modules
       - ~/.cache/yarn
-    key: v1-dependencies-{{ checksum "yarn.lock" }}
+    key: v1-dependencies-{{ checksum "yarn.lock" }}-1
 
 jobs:
   test:
