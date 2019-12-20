@@ -11,7 +11,11 @@ const builtInSymbols = new Set(
     .filter(isSymbol)
 )
 
-function createGetter(isReadonly: boolean, shallow = false) {
+const get = createGetter()
+const readonlyGet = createGetter(true)
+const shallowReadonlyGet = createGetter(true, true)
+
+function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
     const res = Reflect.get(target, key, receiver)
     if (isSymbol(key) && builtInSymbols.has(key)) {
@@ -36,39 +40,60 @@ function createGetter(isReadonly: boolean, shallow = false) {
   }
 }
 
-function set(
-  target: object,
-  key: string | symbol,
-  value: unknown,
-  receiver: object
-): boolean {
-  value = toRaw(value)
-  const oldValue = (target as any)[key]
-  if (isRef(oldValue) && !isRef(value)) {
-    oldValue.value = value
-    return true
-  }
-  const hadKey = hasOwn(target, key)
-  const result = Reflect.set(target, key, value, receiver)
-  // don't trigger if target is something up in the prototype chain of original
-  if (target === toRaw(receiver)) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      const extraInfo = { oldValue, newValue: value }
-      if (!hadKey) {
-        trigger(target, TriggerOpTypes.ADD, key, extraInfo)
-      } else if (hasChanged(value, oldValue)) {
-        trigger(target, TriggerOpTypes.SET, key, extraInfo)
+const set = createSetter()
+const readonlySet = createSetter(true)
+const shallowReadonlySet = createSetter(true, true)
+
+function createSetter(isReadonly = false, shallow = false) {
+  return function set(
+    target: object,
+    key: string | symbol,
+    value: unknown,
+    receiver: object
+  ): boolean {
+    if (isReadonly && LOCKED) {
+      if (__DEV__) {
+        console.warn(
+          `Set operation on key "${String(key)}" failed: target is readonly.`,
+          target
+        )
+      }
+      return true
+    }
+
+    const oldValue = (target as any)[key]
+    if (!shallow) {
+      value = toRaw(value)
+      if (isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value
+        return true
       }
     } else {
-      if (!hadKey) {
-        trigger(target, TriggerOpTypes.ADD, key)
-      } else if (hasChanged(value, oldValue)) {
-        trigger(target, TriggerOpTypes.SET, key)
+      // in shallow mode, objects are set as-is regardless of reactive or not
+    }
+
+    const hadKey = hasOwn(target, key)
+    const result = Reflect.set(target, key, value, receiver)
+    // don't trigger if target is something up in the prototype chain of original
+    if (target === toRaw(receiver)) {
+      /* istanbul ignore else */
+      if (__DEV__) {
+        const extraInfo = { oldValue, newValue: value }
+        if (!hadKey) {
+          trigger(target, TriggerOpTypes.ADD, key, extraInfo)
+        } else if (hasChanged(value, oldValue)) {
+          trigger(target, TriggerOpTypes.SET, key, extraInfo)
+        }
+      } else {
+        if (!hadKey) {
+          trigger(target, TriggerOpTypes.ADD, key)
+        } else if (hasChanged(value, oldValue)) {
+          trigger(target, TriggerOpTypes.SET, key)
+        }
       }
     }
+    return result
   }
-  return result
 }
 
 function deleteProperty(target: object, key: string | symbol): boolean {
@@ -98,7 +123,7 @@ function ownKeys(target: object): (string | number | symbol)[] {
 }
 
 export const mutableHandlers: ProxyHandler<object> = {
-  get: createGetter(false),
+  get,
   set,
   deleteProperty,
   has,
@@ -106,27 +131,10 @@ export const mutableHandlers: ProxyHandler<object> = {
 }
 
 export const readonlyHandlers: ProxyHandler<object> = {
-  get: createGetter(true),
-
-  set(
-    target: object,
-    key: string | symbol,
-    value: unknown,
-    receiver: object
-  ): boolean {
-    if (LOCKED) {
-      if (__DEV__) {
-        console.warn(
-          `Set operation on key "${String(key)}" failed: target is readonly.`,
-          target
-        )
-      }
-      return true
-    } else {
-      return set(target, key, value, receiver)
-    }
-  },
-
+  get: readonlyGet,
+  set: readonlySet,
+  has,
+  ownKeys,
   deleteProperty(target: object, key: string | symbol): boolean {
     if (LOCKED) {
       if (__DEV__) {
@@ -141,10 +149,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
     } else {
       return deleteProperty(target, key)
     }
-  },
-
-  has,
-  ownKeys
+  }
 }
 
 // props handlers are special in the sense that it should not unwrap top-level
@@ -152,5 +157,6 @@ export const readonlyHandlers: ProxyHandler<object> = {
 // retain the reactivity of the normal readonly object.
 export const shallowReadonlyHandlers: ProxyHandler<object> = {
   ...readonlyHandlers,
-  get: createGetter(true, true)
+  get: shallowReadonlyGet,
+  set: shallowReadonlySet
 }

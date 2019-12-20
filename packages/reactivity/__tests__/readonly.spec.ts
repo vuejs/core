@@ -470,5 +470,13 @@ describe('reactivity/readonly', () => {
         `Set operation on key "foo" failed: target is readonly.`
       ).not.toHaveBeenWarned()
     })
+
+    test('should keep reactive properties reactive', () => {
+      const props: any = shallowReadonly({ n: reactive({ foo: 1 }) })
+      unlock()
+      props.n = reactive({ foo: 2 })
+      lock()
+      expect(isReactive(props.n)).toBe(true)
+    })
   })
 })
