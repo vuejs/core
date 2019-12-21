@@ -3,7 +3,7 @@
   "version": "3.0.0-alpha.0",
   "description": "vue",
   "main": "index.js",
-  "module": "dist/vue.runtime.esm-bundler.js",
+  "module": "dist/vue.esm.js",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
   "files": [
