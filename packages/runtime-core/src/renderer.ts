@@ -3,6 +3,7 @@ import {
   Fragment,
   Comment,
   Portal,
+  cloneIfMounted,
   normalizeVNode,
   VNode,
   VNodeChildren,
@@ -438,9 +439,9 @@ export function createRenderer<
     start: number = 0
   ) {
     for (let i = start; i < children.length; i++) {
-      const child = optimized
-        ? (children[i] as HostVNode)
-        : (children[i] = normalizeVNode(children[i]))
+      const child = (children[i] = optimized
+        ? cloneIfMounted(children[i] as HostVNode)
+        : normalizeVNode(children[i]))
       patch(
         null,
         child,
@@ -1198,9 +1199,9 @@ export function createRenderer<
     const commonLength = Math.min(oldLength, newLength)
     let i
     for (i = 0; i < commonLength; i++) {
-      const nextChild = optimized
-        ? (c2[i] as HostVNode)
-        : (c2[i] = normalizeVNode(c2[i]))
+      const nextChild = (c2[i] = optimized
+        ? cloneIfMounted(c2[i] as HostVNode)
+        : normalizeVNode(c2[i]))
       patch(
         c1[i],
         nextChild,
@@ -1251,9 +1252,9 @@ export function createRenderer<
     // (a b) d e
     while (i <= e1 && i <= e2) {
       const n1 = c1[i]
-      const n2 = optimized
-        ? (c2[i] as HostVNode)
-        : (c2[i] = normalizeVNode(c2[i]))
+      const n2 = (c2[i] = optimized
+        ? cloneIfMounted(c2[i] as HostVNode)
+        : normalizeVNode(c2[i]))
       if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
@@ -1276,9 +1277,9 @@ export function createRenderer<
     // d e (b c)
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
-      const n2 = optimized
-        ? (c2[e2] as HostVNode)
-        : (c2[e2] = normalizeVNode(c2[e2]))
+      const n2 = (c2[e2] = optimized
+        ? cloneIfMounted(c2[e2] as HostVNode)
+        : normalizeVNode(c2[e2]))
       if (isSameVNodeType(n1, n2)) {
         patch(
           n1,
@@ -1309,10 +1310,13 @@ export function createRenderer<
         const nextPos = e2 + 1
         const anchor =
           nextPos < l2 ? (c2[nextPos] as HostVNode).el : parentAnchor
+        const n2 = (c2[i] = optimized
+          ? cloneIfMounted(c2[i] as HostVNode)
+          : normalizeVNode(c2[i]))
         while (i <= e2) {
           patch(
             null,
-            optimized ? (c2[i] as HostVNode) : (c2[i] = normalizeVNode(c2[i])),
+            n2,
             container,
             anchor,
             parentComponent,
@@ -1349,9 +1353,9 @@ export function createRenderer<
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<string | number, number> = new Map()
       for (i = s2; i <= e2; i++) {
-        const nextChild = optimized
-          ? (c2[i] as HostVNode)
-          : (c2[i] = normalizeVNode(c2[i]))
+        const nextChild = (c2[i] = optimized
+          ? cloneIfMounted(c2[i] as HostVNode)
+          : normalizeVNode(c2[i]))
         if (nextChild.key != null) {
           if (__DEV__ && keyToNewIndexMap.has(nextChild.key)) {
             warn(
