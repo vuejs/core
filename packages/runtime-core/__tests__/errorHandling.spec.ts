@@ -8,7 +8,7 @@ import {
   ref,
   nextTick,
   mockWarn,
-  createComponent
+  defineComponent
 } from '@vue/runtime-test'
 import { setErrorRecovery } from '../src/errorHandling'
 
@@ -235,7 +235,7 @@ describe('error handling', () => {
       }
     }
 
-    const Child = createComponent(() => () => h('div', { ref }))
+    const Child = defineComponent(() => () => h('div', { ref }))
 
     render(h(Comp), nodeOps.createElement('div'))
     expect(fn).toHaveBeenCalledWith(err, 'ref function')

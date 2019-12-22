@@ -5,7 +5,7 @@ import {
   render,
   nextTick,
   Ref,
-  createComponent
+  defineComponent
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
@@ -83,7 +83,7 @@ describe('api: template refs', () => {
     const root = nodeOps.createElement('div')
     const fn = jest.fn()
 
-    const Comp = createComponent(() => () => h('div', { ref: fn }))
+    const Comp = defineComponent(() => () => h('div', { ref: fn }))
     render(h(Comp), root)
     expect(fn.mock.calls[0][0]).toBe(root.children[0])
   })
@@ -94,7 +94,7 @@ describe('api: template refs', () => {
     const fn2 = jest.fn()
     const fn = ref(fn1)
 
-    const Comp = createComponent(() => () => h('div', { ref: fn.value }))
+    const Comp = defineComponent(() => () => h('div', { ref: fn.value }))
 
     render(h(Comp), root)
     expect(fn1.mock.calls).toHaveLength(1)
@@ -113,7 +113,7 @@ describe('api: template refs', () => {
     const fn = jest.fn()
     const toggle = ref(true)
 
-    const Comp = createComponent(() => () =>
+    const Comp = defineComponent(() => () =>
       toggle.value ? h('div', { ref: fn }) : null
     )
     render(h(Comp), root)

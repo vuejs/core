@@ -6,7 +6,7 @@ export * from './apiWatch'
 export * from './apiLifecycle'
 export * from './apiInject'
 export { nextTick } from './scheduler'
-export { createComponent } from './apiCreateComponent'
+export { defineComponent } from './apiDefineComponent'
 
 // Advanced API ----------------------------------------------------------------
 

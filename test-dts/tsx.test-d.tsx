@@ -1,4 +1,4 @@
-// TSX w/ createComponent is tested in createComponent.test-d.tsx
+// TSX w/ defineComponent is tested in defineComponent.test-d.tsx
 
 import { expectError, expectType } from 'tsd'
 import { KeepAlive, Suspense, Fragment, Portal } from '@vue/runtime-dom'

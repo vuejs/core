@@ -1,5 +1,5 @@
 import { expectError, expectType } from 'tsd'
-import { describe, createComponent, PropType, ref } from './index'
+import { describe, defineComponent, PropType, ref } from './index'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -12,7 +12,7 @@ describe('with object props', () => {
     ddd: string[]
   }
 
-  const MyComponent = createComponent({
+  const MyComponent = defineComponent({
     props: {
       a: Number,
       // required should make property non-void
@@ -126,7 +126,7 @@ describe('with object props', () => {
 })
 
 describe('type inference w/ optional props declaration', () => {
-  const MyComponent = createComponent({
+  const MyComponent = defineComponent({
     setup(_props: { msg: string }) {
       return {
         a: 1
@@ -149,14 +149,14 @@ describe('type inference w/ optional props declaration', () => {
 })
 
 describe('type inference w/ direct setup function', () => {
-  const MyComponent = createComponent((_props: { msg: string }) => {})
+  const MyComponent = defineComponent((_props: { msg: string }) => {})
   expectType<JSX.Element>(<MyComponent msg="foo" />)
   expectError(<MyComponent />)
   expectError(<MyComponent msg={1} />)
 })
 
 describe('type inference w/ array props declaration', () => {
-  createComponent({
+  defineComponent({
     props: ['a', 'b'],
     setup(props) {
       // props should be readonly
@@ -179,7 +179,7 @@ describe('type inference w/ array props declaration', () => {
 })
 
 describe('type inference w/ options API', () => {
-  createComponent({
+  defineComponent({
     props: { a: Number },
     setup() {
       return {

@@ -11,7 +11,7 @@ import {
 } from './vnode'
 import {
   ComponentInternalInstance,
-  createComponentInstance,
+  defineComponentInstance,
   setupStatefulComponent,
   Component,
   Data
@@ -917,7 +917,7 @@ export function createRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
   ) {
-    const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
+    const instance: ComponentInternalInstance = (initialVNode.component = defineComponentInstance(
       initialVNode,
       parentComponent
     ))

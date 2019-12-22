@@ -7,7 +7,7 @@ import {
   serializeInner,
   nextTick,
   watch,
-  createComponent,
+  defineComponent,
   triggerEvent,
   TestElement
 } from '@vue/runtime-test'
@@ -16,7 +16,7 @@ import {
 
 describe('api: setup context', () => {
   it('should expose return values to template render context', () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       setup() {
         return {
           // ref should auto-unwrap
@@ -53,7 +53,7 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       setup(props: { count: number }) {
         watch(() => {
           dummy = props.count
@@ -82,7 +82,7 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         count: Number
       },
@@ -177,7 +177,7 @@ describe('api: setup context', () => {
         })
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         count: {
           type: Number,

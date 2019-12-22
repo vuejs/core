@@ -1,6 +1,6 @@
 import {
   withDirectives,
-  createComponent,
+  defineComponent,
   h,
   nextTick,
   VNode
@@ -19,7 +19,7 @@ beforeEach(() => {
 
 describe('runtime-dom: v-show directive', () => {
   test('should check show value is truthy', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },
@@ -35,7 +35,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   test('should check show value is falsy', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: false }
       },
@@ -51,7 +51,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   it('should update show value changed', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },
@@ -100,7 +100,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   test('should respect display value in style attribute', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },

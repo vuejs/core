@@ -3,7 +3,7 @@ import {
   serializeInner,
   render,
   h,
-  createComponent,
+  defineComponent,
   Portal,
   Text,
   Fragment,
@@ -19,7 +19,7 @@ describe('renderer: portal', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
-    const Comp = createComponent(() => () =>
+    const Comp = defineComponent(() => () =>
       h(Fragment, [
         h(Portal, { target }, h('div', 'teleported')),
         h('div', 'root')
@@ -37,7 +37,7 @@ describe('renderer: portal', () => {
     const target = ref(targetA)
     const root = nodeOps.createElement('div')
 
-    const Comp = createComponent(() => () =>
+    const Comp = defineComponent(() => () =>
       h(Fragment, [
         h(Portal, { target: target.value }, h('div', 'teleported')),
         h('div', 'root')
@@ -64,7 +64,7 @@ describe('renderer: portal', () => {
       h('div', 'teleported')
     ])
 
-    const Comp = createComponent(() => () =>
+    const Comp = defineComponent(() => () =>
       h(Portal, { target }, children.value)
     )
     render(h(Comp), root)

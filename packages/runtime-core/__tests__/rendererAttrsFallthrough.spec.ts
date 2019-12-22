@@ -6,7 +6,7 @@ import {
   mergeProps,
   ref,
   onUpdated,
-  createComponent
+  defineComponent
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/runtime-test'
 
@@ -102,7 +102,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         foo: Number
       },
@@ -179,7 +179,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const GrandChild = createComponent({
+    const GrandChild = defineComponent({
       props: {
         foo: Number
       },
@@ -232,7 +232,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       inheritAttrs: false,
       render() {
@@ -255,7 +255,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       inheritAttrs: false,
       render() {
@@ -287,7 +287,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div')]
@@ -308,7 +308,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div', this.$attrs)]
