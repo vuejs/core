@@ -13,7 +13,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { AppContext, createAppContext, AppConfig } from './apiApp'
+import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './apiOptions'
 import {
