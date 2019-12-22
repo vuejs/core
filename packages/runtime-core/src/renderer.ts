@@ -1573,10 +1573,14 @@ export function createRenderer<
   }
 
   function remove(vnode: HostVNode) {
-    const { type, el, anchor, children, transition } = vnode
+    const { type, el, anchor, transition } = vnode
+    if (type === Fragment) {
+      removeFragment(el!, anchor!)
+      return
+    }
+
     const performRemove = () => {
       hostRemove(el!)
-      if (anchor != null) hostRemove(anchor)
       if (
         transition != null &&
         !transition.persisted &&
@@ -1585,11 +1589,7 @@ export function createRenderer<
         transition.afterLeave()
       }
     }
-    if (type === Fragment) {
-      performRemove()
-      removeChildren(children as HostVNode[])
-      return
-    }
+
     if (
       vnode.shapeFlag & ShapeFlags.ELEMENT &&
       transition != null &&
@@ -1607,10 +1607,16 @@ export function createRenderer<
     }
   }
 
-  function removeChildren(children: HostVNode[]) {
-    for (let i = 0; i < children.length; i++) {
-      remove(children[i])
+  function removeFragment(cur: HostNode, end: HostNode) {
+    // For fragments, directly remove all contained DOM nodes.
+    // (fragment child nodes cannot have transition)
+    let next
+    while (cur !== end) {
+      next = hostNextSibling(cur)!
+      hostRemove(cur)
+      cur = next
     }
+    hostRemove(end)
   }
 
   function unmountComponent(
