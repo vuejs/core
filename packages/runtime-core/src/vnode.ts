@@ -15,7 +15,7 @@ import {
 import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
-import { AppContext } from './apiApp'
+import { AppContext } from './apiCreateApp'
 import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'

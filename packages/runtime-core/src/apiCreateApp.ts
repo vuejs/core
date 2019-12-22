@@ -6,7 +6,7 @@ import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
-import { createVNode } from './vnode'
+import { createVNode, cloneVNode } from './vnode'
 
 export interface App<HostElement = any> {
   config: AppConfig
@@ -47,6 +47,7 @@ export interface AppContext {
   components: Record<string, Component>
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
+  reload?: () => void // HMR only
 }
 
 type PluginInstallFunction = (app: App) => any
@@ -175,6 +176,14 @@ export function createAppAPI<HostNode, HostElement>(
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
+
+          // HMR root reload
+          if (__BUNDLER__ && __DEV__) {
+            context.reload = () => {
+              render(cloneVNode(vnode), rootContainer)
+            }
+          }
+
           render(vnode, rootContainer)
           isMounted = true
           return vnode.component!.proxy

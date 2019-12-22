@@ -1727,12 +1727,12 @@ export function createRenderer<
     }
   }
 
-  const render: RootRenderFunction<
-    HostNode,
-    HostElement & {
-      _vnode: HostVNode | null
-    }
-  > = (vnode, container) => {
+  type HostRootElement = HostElement & { _vnode: HostVNode | null }
+
+  const render: RootRenderFunction<HostNode, HostElement> = (
+    vnode,
+    container: HostRootElement
+  ) => {
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)

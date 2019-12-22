@@ -60,7 +60,9 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
 }
 
 function rerender(id: string, newRender?: RenderFunction) {
-  map.get(id)!.instances.forEach(instance => {
+  // Array.from creates a snapshot which avoids the set being mutated during
+  // updates
+  Array.from(map.get(id)!.instances).forEach(instance => {
     if (newRender) {
       instance.render = newRender
     }
@@ -85,13 +87,19 @@ function reload(id: string, newComp: ComponentOptions) {
   // 2. Mark component dirty. This forces the renderer to replace the component
   // on patch.
   comp.__hmrUpdated = true
-  record.instances.forEach(instance => {
+  // Array.from creates a snapshot which avoids the set being mutated during
+  // updates
+  Array.from(record.instances).forEach(instance => {
     if (instance.parent) {
       // 3. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       queueJob(instance.parent.update)
+    } else if (instance.appContext.reload) {
+      // root instance mounted via createApp() has a reload method
+      instance.appContext.reload()
     } else if (typeof window !== 'undefined') {
+      // root instance inside tree created via raw render(). Force reload.
       window.location.reload()
     } else {
       console.warn(
