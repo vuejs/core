@@ -1310,13 +1310,12 @@ export function createRenderer<
         const nextPos = e2 + 1
         const anchor =
           nextPos < l2 ? (c2[nextPos] as HostVNode).el : parentAnchor
-        const n2 = (c2[i] = optimized
-          ? cloneIfMounted(c2[i] as HostVNode)
-          : normalizeVNode(c2[i]))
         while (i <= e2) {
           patch(
             null,
-            n2,
+            (c2[i] = optimized
+              ? cloneIfMounted(c2[i] as HostVNode)
+              : normalizeVNode(c2[i])),
             container,
             anchor,
             parentComponent,

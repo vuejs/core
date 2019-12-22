@@ -355,7 +355,7 @@ export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return child.el == null ? child : cloneVNode(child)
+  return child.el === null ? child : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
