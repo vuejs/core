@@ -68,6 +68,11 @@ if (process.env.NODE_ENV === 'production') {
 export default packageConfigs
 
 function createConfig(format, output, plugins = []) {
+  if (!output) {
+    console.log(require('chalk').yellow(`invalid format: "${format}"`))
+    process.exit(1)
+  }
+
   output.externalLiveBindings = false
 
   const isProductionBuild =
