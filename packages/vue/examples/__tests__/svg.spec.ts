@@ -64,10 +64,7 @@ describe('e2e: svg', () => {
     const statsValue = await page().evaluate(() => {
       return globalStats.map(stat => +stat.value)
     })
-    expect(statsValue.length).toBe(expected.length)
-    for (let i = 0; i < expected.length; i++) {
-      expect(statsValue[i]).toBe(expected[i])
-    }
+    expect(statsValue).toEqual(expected)
   }
 
   function nthRange(n: number) {
