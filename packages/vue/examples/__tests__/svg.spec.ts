@@ -39,7 +39,7 @@ describe('e2e: svg', () => {
   }
 
   // assert the position of each label is correct
-  async function assertLabel(total: number) {
+  async function assertLabels(total: number) {
     const positions = await page().evaluate(
       total => {
         return globalStats.map((stat, i) => {
@@ -86,8 +86,13 @@ describe('e2e: svg', () => {
     expect(await count('button')).toBe(7)
     expect(await count('input[type="range"]')).toBe(6)
     await assertPolygon(6)
-    await assertLabel(6)
+    await assertLabels(6)
     await assertStats([100, 100, 100, 100, 100, 100])
+
+    await setValue(nthRange(1), '10')
+    await assertPolygon(6)
+    await assertLabels(6)
+    await assertStats([10, 100, 100, 100, 100, 100])
 
     await click('button.remove')
     expect(await count('text')).toBe(5)
@@ -95,7 +100,7 @@ describe('e2e: svg', () => {
     expect(await count('button')).toBe(6)
     expect(await count('input[type="range"]')).toBe(5)
     await assertPolygon(5)
-    await assertLabel(5)
+    await assertLabels(5)
     await assertStats([100, 100, 100, 100, 100])
 
     await typeValue('input[name="newlabel"]', 'foo')
@@ -105,23 +110,33 @@ describe('e2e: svg', () => {
     expect(await count('button')).toBe(7)
     expect(await count('input[type="range"]')).toBe(6)
     await assertPolygon(6)
-    await assertLabel(6)
+    await assertLabels(6)
     await assertStats([100, 100, 100, 100, 100, 100])
 
     await setValue(nthRange(1), '10')
     await assertPolygon(6)
-    await assertLabel(6)
+    await assertLabels(6)
     await assertStats([10, 100, 100, 100, 100, 100])
 
     await setValue(nthRange(2), '20')
     await assertPolygon(6)
-    await assertLabel(6)
+    await assertLabels(6)
     await assertStats([10, 20, 100, 100, 100, 100])
 
     await setValue(nthRange(6), '60')
     await assertPolygon(6)
-    await assertLabel(6)
+    await assertLabels(6)
     await assertStats([10, 20, 100, 100, 100, 60])
+
+    await click('button.remove')
+    await assertPolygon(5)
+    await assertLabels(5)
+    await assertStats([20, 100, 100, 100, 60])
+
+    await setValue(nthRange(1), '10')
+    await assertPolygon(5)
+    await assertLabels(5)
+    await assertStats([10, 100, 100, 100, 60])
   }
 
   test('classic', async () => {
