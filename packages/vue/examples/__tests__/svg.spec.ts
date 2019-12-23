@@ -52,10 +52,9 @@ describe('e2e: svg', () => {
     for (let i = 0; i < total; i++) {
       const textPosition = await page().$eval(
         `text:nth-child(${i + 3})`,
-        node => [node.attributes[0].value, node.attributes[1].value]
+        node => [+node.attributes[0].value, +node.attributes[1].value]
       )
-      expect(+textPosition[0]).toBe(positions[i][0])
-      expect(+textPosition[1]).toBe(positions[i][1])
+      expect(textPosition).toEqual(positions[i])
     }
   }
 
