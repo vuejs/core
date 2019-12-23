@@ -23,7 +23,7 @@ body
 </template>
 `,
     { filename: 'example.vue', sourceMap: true }
-  ).template as SFCTemplateBlock
+  ).descriptor.template as SFCTemplateBlock
 
   const result = compileTemplate({
     filename: 'example.vue',
@@ -35,10 +35,10 @@ body
 })
 
 test('warn missing preprocessor', () => {
-  const template = parse(`<template lang="unknownLang">\n</template>\n`, {
+  const template = parse(`<template lang="unknownLang">hi</template>\n`, {
     filename: 'example.vue',
     sourceMap: true
-  }).template as SFCTemplateBlock
+  }).descriptor.template as SFCTemplateBlock
 
   const result = compileTemplate({
     filename: 'example.vue',
@@ -70,10 +70,10 @@ test('source map', () => {
     `
 <template>
   <div><p>{{ render }}</p></div>
-</template>  
+</template>
 `,
     { filename: 'example.vue', sourceMap: true }
-  ).template as SFCTemplateBlock
+  ).descriptor.template as SFCTemplateBlock
 
   const result = compileTemplate({
     filename: 'example.vue',
@@ -86,7 +86,7 @@ test('source map', () => {
 test('template errors', () => {
   const result = compileTemplate({
     filename: 'example.vue',
-    source: `<div :foo 
+    source: `<div :foo
       :bar="a[" v-model="baz"/>`
   })
   expect(result.errors).toMatchSnapshot()
@@ -100,7 +100,7 @@ test('preprocessor errors', () => {
 </template>
 `,
     { filename: 'example.vue', sourceMap: true }
-  ).template as SFCTemplateBlock
+  ).descriptor.template as SFCTemplateBlock
 
   const result = compileTemplate({
     filename: 'example.vue',

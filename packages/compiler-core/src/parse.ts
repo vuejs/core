@@ -66,7 +66,10 @@ interface ParserContext {
   inPre: boolean
 }
 
-export function parse(content: string, options: ParserOptions = {}): RootNode {
+export function baseParse(
+  content: string,
+  options: ParserOptions = {}
+): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
 

@@ -1,20 +1,20 @@
 import {
-  parse as baseParse,
-  TextModes,
   NodeTypes,
-  TextNode,
   ElementNode,
-  SourceLocation
+  SourceLocation,
+  CompilerError
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
+import { TemplateCompiler } from './compileTemplate'
 
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  compiler?: TemplateCompiler
 }
 
 export interface SFCBlock {
@@ -50,24 +50,32 @@ export interface SFCDescriptor {
   customBlocks: SFCBlock[]
 }
 
+export interface SFCParseResult {
+  descriptor: SFCDescriptor
+  errors: CompilerError[]
+}
+
 const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC = new LRUCache<string, SFCDescriptor>(SFC_CACHE_MAX_SIZE)
+const sourceToSFC = new LRUCache<string, SFCParseResult>(SFC_CACHE_MAX_SIZE)
+
 export function parse(
   source: string,
   {
     sourceMap = true,
     filename = 'component.vue',
     sourceRoot = '',
-    pad = false
+    pad = false,
+    compiler = require('@vue/compiler-dom')
   }: SFCParseOptions = {}
-): SFCDescriptor {
-  const sourceKey = source + sourceMap + filename + sourceRoot + pad
+): SFCParseResult {
+  const sourceKey =
+    source + sourceMap + filename + sourceRoot + pad + compiler.parse
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
   }
 
-  const sfc: SFCDescriptor = {
+  const descriptor: SFCDescriptor = {
     filename,
     template: null,
     script: null,
@@ -75,9 +83,15 @@ export function parse(
     customBlocks: []
   }
 
-  const ast = baseParse(source, {
+  const errors: CompilerError[] = []
+  const ast = compiler.parse(source, {
+    // there are no components at SFC parsing level
     isNativeTag: () => true,
-    getTextMode: () => TextModes.RAWTEXT
+    // preserve all whitespaces
+    isPreTag: () => true,
+    onError: e => {
+      errors.push(e)
+    }
   })
 
   ast.children.forEach(node => {
@@ -89,24 +103,28 @@ export function parse(
     }
     switch (node.tag) {
       case 'template':
-        if (!sfc.template) {
-          sfc.template = createBlock(node, source, pad) as SFCTemplateBlock
+        if (!descriptor.template) {
+          descriptor.template = createBlock(
+            node,
+            source,
+            pad
+          ) as SFCTemplateBlock
         } else {
           warnDuplicateBlock(source, filename, node)
         }
         break
       case 'script':
-        if (!sfc.script) {
-          sfc.script = createBlock(node, source, pad) as SFCScriptBlock
+        if (!descriptor.script) {
+          descriptor.script = createBlock(node, source, pad) as SFCScriptBlock
         } else {
           warnDuplicateBlock(source, filename, node)
         }
         break
       case 'style':
-        sfc.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
+        descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
         break
       default:
-        sfc.customBlocks.push(createBlock(node, source, pad))
+        descriptor.customBlocks.push(createBlock(node, source, pad))
         break
     }
   })
@@ -123,13 +141,17 @@ export function parse(
         )
       }
     }
-    genMap(sfc.template)
-    genMap(sfc.script)
-    sfc.styles.forEach(genMap)
+    genMap(descriptor.template)
+    genMap(descriptor.script)
+    descriptor.styles.forEach(genMap)
   }
-  sourceToSFC.set(sourceKey, sfc)
 
-  return sfc
+  const result = {
+    descriptor,
+    errors
+  }
+  sourceToSFC.set(sourceKey, result)
+  return result
 }
 
 function warnDuplicateBlock(
@@ -156,12 +178,19 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  const text = node.children[0] as TextNode
+  const start = node.children[0].loc.start
+  const end = node.children[node.children.length - 1].loc.end
+  const content = source.slice(start.offset, end.offset)
+  const loc = {
+    source: content,
+    start,
+    end
+  }
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content: text.content,
-    loc: text.loc,
+    content,
+    loc,
     attrs
   }
   if (node.tag !== 'template' && pad) {

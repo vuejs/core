@@ -2,7 +2,9 @@ import {
   CompilerOptions,
   CodegenResult,
   CompilerError,
-  NodeTransform
+  NodeTransform,
+  ParserOptions,
+  RootNode
 } from '@vue/compiler-core'
 import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -16,6 +18,7 @@ import consolidate from 'consolidate'
 
 export interface TemplateCompiler {
   compile(template: string, options: CompilerOptions): CodegenResult
+  parse(template: string, options: ParserOptions): RootNode
 }
 
 export interface SFCTemplateCompileResults {

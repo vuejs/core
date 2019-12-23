@@ -1,5 +1,5 @@
 import { CompilerOptions } from './options'
-import { parse } from './parse'
+import { baseParse } from './parse'
 import { transform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
@@ -43,7 +43,7 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
-  const ast = isString(template) ? parse(template, options) : template
+  const ast = isString(template) ? baseParse(template, options) : template
   transform(ast, {
     ...options,
     prefixIdentifiers,

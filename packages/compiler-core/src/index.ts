@@ -7,7 +7,7 @@ export {
   TransformOptions,
   CodegenOptions
 } from './options'
-export { parse, TextModes } from './parse'
+export { baseParse, TextModes } from './parse'
 export {
   transform,
   createStructuralDirectiveTransform,

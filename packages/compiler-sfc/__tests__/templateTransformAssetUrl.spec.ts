@@ -1,10 +1,10 @@
-import { generate, parse, transform } from '@vue/compiler-core'
+import { generate, baseParse, transform } from '@vue/compiler-core'
 import { transformAssetUrl } from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 
 function compileWithAssetUrls(template: string) {
-  const ast = parse(template)
+  const ast = baseParse(template)
   transform(ast, {
     nodeTransforms: [transformAssetUrl, transformElement],
     directiveTransforms: {

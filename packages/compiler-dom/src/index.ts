@@ -1,8 +1,10 @@
 import {
   baseCompile,
+  baseParse,
   CompilerOptions,
   CodegenResult,
-  isBuiltInType
+  isBuiltInType,
+  ParserOptions
 } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
@@ -15,13 +17,15 @@ import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 
+const parserOptions = __BROWSER__ ? parserOptionsMinimal : parserOptionsStandard
+
 export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
   return baseCompile(template, {
+    ...parserOptions,
     ...options,
-    ...(__BROWSER__ ? parserOptionsMinimal : parserOptionsStandard),
     nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
     directiveTransforms: {
       cloak: transformCloak,
@@ -39,6 +43,13 @@ export function compile(
         return TRANSITION_GROUP
       }
     }
+  })
+}
+
+export function parse(template: string, options: ParserOptions = {}) {
+  return baseParse(template, {
+    ...parserOptions,
+    ...options
   })
 }
 

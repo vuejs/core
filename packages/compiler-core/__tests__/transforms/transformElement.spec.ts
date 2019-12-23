@@ -1,4 +1,9 @@
-import { CompilerOptions, parse, transform, ErrorCodes } from '../../src'
+import {
+  CompilerOptions,
+  baseParse as parse,
+  transform,
+  ErrorCodes
+} from '../../src'
 import {
   RESOLVE_COMPONENT,
   CREATE_VNODE,

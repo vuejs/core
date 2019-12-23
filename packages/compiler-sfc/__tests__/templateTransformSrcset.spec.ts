@@ -1,10 +1,10 @@
-import { generate, parse, transform } from '@vue/compiler-core'
+import { generate, baseParse, transform } from '@vue/compiler-core'
 import { transformSrcset } from '../src/templateTransformSrcset'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 
 function compileWithSrcset(template: string) {
-  const ast = parse(template)
+  const ast = baseParse(template)
   transform(ast, {
     nodeTransforms: [transformSrcset, transformElement],
     directiveTransforms: {

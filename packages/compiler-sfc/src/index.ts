@@ -18,4 +18,8 @@ export {
   SFCTemplateCompileResults
 } from './compileTemplate'
 export { SFCStyleCompileOptions, SFCStyleCompileResults } from './compileStyle'
-export { CompilerOptions, generateCodeFrame } from '@vue/compiler-core'
+export {
+  CompilerOptions,
+  CompilerError,
+  generateCodeFrame
+} from '@vue/compiler-core'
