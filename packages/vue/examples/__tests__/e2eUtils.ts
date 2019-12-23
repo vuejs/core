@@ -71,6 +71,17 @@ export function setupPuppeteer() {
   }
 
   async function setValue(selector: string, value: string) {
+    await page.$eval(
+      selector,
+      (node: HTMLInputElement, value) => {
+        node.value = value
+        node.dispatchEvent(new Event('input'))
+      },
+      value
+    )
+  }
+
+  async function typeValue(selector: string, value: string) {
     const el = (await page.$(selector))!
     await el.evaluate((node: HTMLInputElement) => (node.value = ''))
     await el.type(value)
@@ -103,6 +114,7 @@ export function setupPuppeteer() {
     isChecked,
     isFocused,
     setValue,
+    typeValue,
     enterValue,
     clearValue
   }

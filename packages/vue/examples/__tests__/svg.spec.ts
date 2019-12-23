@@ -16,21 +16,62 @@ declare function valueToPoint(
 }
 
 describe('e2e: svg', () => {
-  const { page, click, count, setValue } = setupPuppeteer()
+  const { page, click, count, setValue, typeValue } = setupPuppeteer()
 
-  async function assertStats(total: number) {
-    await page().evaluate(
+  // assert the shape of the polygon is correct
+  async function assertPolygon(total: number) {
+    expect(
+      await page().evaluate(
+        total => {
+          const points = globalStats
+            .map((stat, i) => {
+              const point = valueToPoint(stat.value, i, total)
+              return point.x + ',' + point.y
+            })
+            .join(' ')
+          return (
+            document.querySelector('polygon')!.attributes[0].value === points
+          )
+        },
+        [total]
+      )
+    ).toBe(true)
+  }
+
+  // assert the position of each label is correct
+  async function assertLabel(total: number) {
+    const positions = await page().evaluate(
       total => {
-        const points = globalStats
-          .map((stat, i) => {
-            const point = valueToPoint(stat.value, i, total)
-            return point.x + ',' + point.y
-          })
-          .join(' ')
-        return document.querySelector('polygon')!.attributes[0].value === points
+        return globalStats.map((stat, i) => {
+          const point = valueToPoint(+stat.value + 10, i, total)
+          return [point.x, point.y]
+        })
       },
       [total]
     )
+    for (let i = 0; i < total; i++) {
+      const textPosition = await page().$eval(
+        `text:nth-child(${i + 3})`,
+        node => [node.attributes[0].value, node.attributes[1].value]
+      )
+      expect(+textPosition[0]).toBe(positions[i][0])
+      expect(+textPosition[1]).toBe(positions[i][1])
+    }
+  }
+
+  // assert each value of stats is correct
+  async function assertStats(expected: number[]) {
+    const statsValue = await page().evaluate(() => {
+      return globalStats.map(stat => +stat.value)
+    })
+    expect(statsValue.length).toBe(expected.length)
+    for (let i = 0; i < expected.length; i++) {
+      expect(statsValue[i]).toBe(expected[i])
+    }
+  }
+
+  function nthRange(n: number) {
+    return `#demo div:nth-child(${n + 1}) input[type="range"]`
   }
 
   async function testSvg(apiType: 'classic' | 'composition') {
@@ -48,22 +89,43 @@ describe('e2e: svg', () => {
     expect(await count('label')).toBe(6)
     expect(await count('button')).toBe(7)
     expect(await count('input[type="range"]')).toBe(6)
-    await assertStats(6)
+    await assertPolygon(6)
+    await assertLabel(6)
+    await assertStats([100, 100, 100, 100, 100, 100])
 
     await click('button.remove')
     expect(await count('text')).toBe(5)
     expect(await count('label')).toBe(5)
     expect(await count('button')).toBe(6)
     expect(await count('input[type="range"]')).toBe(5)
-    await assertStats(5)
+    await assertPolygon(5)
+    await assertLabel(5)
+    await assertStats([100, 100, 100, 100, 100])
 
-    await setValue('input[name="newlabel"]', 'foo')
+    await typeValue('input[name="newlabel"]', 'foo')
     await click('#add > button')
     expect(await count('text')).toBe(6)
     expect(await count('label')).toBe(6)
     expect(await count('button')).toBe(7)
     expect(await count('input[type="range"]')).toBe(6)
-    await assertStats(6)
+    await assertPolygon(6)
+    await assertLabel(6)
+    await assertStats([100, 100, 100, 100, 100, 100])
+
+    await setValue(nthRange(1), '10')
+    await assertPolygon(6)
+    await assertLabel(6)
+    await assertStats([10, 100, 100, 100, 100, 100])
+
+    await setValue(nthRange(2), '20')
+    await assertPolygon(6)
+    await assertLabel(6)
+    await assertStats([10, 20, 100, 100, 100, 100])
+
+    await setValue(nthRange(6), '60')
+    await assertPolygon(6)
+    await assertLabel(6)
+    await assertStats([10, 20, 100, 100, 100, 60])
   }
 
   test('classic', async () => {
