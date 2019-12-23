@@ -12,6 +12,7 @@ We have achieved most of the architectural goals and new features planned for v3
   - [x] Built-in identifier prefixing (aka "stripWith")
   - [x] Built-in pretty-printing
   - [x] Lean ~10kb brotli-compressed browser build after dropping source map and identifier prefixing
+  - [x] SFC compiler (replacement of `@vue/component-compiler-utils`)
 
 - Runtime
   - [x] Significantly faster
@@ -23,7 +24,6 @@ We have achieved most of the architectural goals and new features planned for v3
 
 ## Major TODOs:
 
-- [ ] SFC compiler
 - [ ] Server-side rendering
 
 Also note that the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet).

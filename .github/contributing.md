@@ -68,12 +68,30 @@ yarn build runtime-core
 yarn build runtime --all
 ```
 
+#### Build Formats
+
 By default, each package will be built in multiple distribution formats as specified in the `buildOptions.formats` field in its `package.json`. These can be overwritten via the `-f` flag. The following formats are supported:
 
-- **`global`**: for direct use via `<script>` in the browser. The global variable exposed is specified via the `buildOptions.name` field in a package's `package.json`.
-- **`esm-bundler`**: for use with bundlers like `webpack`, `rollup` and `parcel`.
-- **`esm`**: for usage via native ES modules imports (in browser via `<script type="module">`, or via Node.js native ES modules support in the future)
-- **`cjs`**: for use in Node.js via `require()`.
+- **`global`**:
+  - for direct use via `<script>` in the browser. The global variable exposed is specified via the `buildOptions.name` field in a package's `package.json`.
+  - Note: global builds are not [UMD](https://github.com/umdjs/umd) builds. Instead they are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
+
+- **`esm-bundler`**:
+  - for use with bundlers like `webpack`, `rollup` and `parcel`.
+  - imports dependencies (e.g. `@vue/runtime-core`, `@vue/runtime-compiler`)
+    - imported depdencies are also `esm-bundler` builds and will in turn import their dependencies (e.g. `@vue/runtime-core` imports `@vue/reactivity`)
+    - this means you **can** install/import these deps without ending up with different instances of these dependencies
+  - Leaves prod/dev branches with `process.env.NODE_ENV` guards (to be replaced by bundler)
+  - Does not ship a minified build (to be done together with the rest of the code after bundling)
+
+- **`esm`**:
+  - for usage via native ES modules imports (in browser via `<script type="module">`, or via Node.js native ES modules support in the future)
+  - inlines all dependencies - i.e. it's a single ES module with no imports from other files
+    - this means you **must** import everything from `vue` and `vue` only to ensure you are getting the same instance of code.
+  - hard-coded prod/dev branches, and the prod build is pre-minified (you will have to use different paths/aliases for dev/prod)
+
+- **`cjs`**:
+  - for use in Node.js server-side rendering via `require()`.
 
 For example, to build `runtime-core` with the global build only:
 
