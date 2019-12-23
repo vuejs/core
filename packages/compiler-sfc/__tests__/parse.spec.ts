@@ -78,8 +78,8 @@ h1 { color: red }
     <template v-if="ok">ok</template>
     <div><div></div></div>
     `
-    const sfc = parse(`<template>${content}</template>`).descriptor
-    expect(sfc.template!.content).toBe(content)
+    const { descriptor } = parse(`<template>${content}</template>`)
+    expect(descriptor.template!.content).toBe(content)
   })
 
   test('error tolerance', () => {
@@ -100,6 +100,12 @@ h1 { color: red }
       }
     })
     expect(errors.length).toBe(1)
+  })
+
+  test('treat custom blocks as raw text', () => {
+    const { errors, descriptor } = parse(`<foo> <-& </foo>`)
+    expect(errors.length).toBe(0)
+    expect(descriptor.customBlocks[0].content).toBe(` <-& `)
   })
 
   describe('warnings', () => {

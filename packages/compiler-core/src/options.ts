@@ -10,7 +10,11 @@ export interface ParserOptions {
   isCustomElement?: (tag: string) => boolean
   isBuiltInComponent?: (tag: string) => symbol | void
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
-  getTextMode?: (tag: string, ns: Namespace) => TextModes
+  getTextMode?: (
+    tag: string,
+    ns: Namespace,
+    parent: ElementNode | undefined
+  ) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
 
   // Map to HTML entities. E.g., `{ "amp;": "&" }`

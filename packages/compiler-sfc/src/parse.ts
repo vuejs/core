@@ -2,7 +2,8 @@ import {
   NodeTypes,
   ElementNode,
   SourceLocation,
-  CompilerError
+  CompilerError,
+  TextModes
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import LRUCache from 'lru-cache'
@@ -89,6 +90,15 @@ export function parse(
     isNativeTag: () => true,
     // preserve all whitespaces
     isPreTag: () => true,
+    getTextMode: (tag, _ns, parent) => {
+      // all top level elements except <template> are parsed as raw text
+      // containers
+      if (!parent && tag !== 'template') {
+        return TextModes.RAWTEXT
+      } else {
+        return TextModes.DATA
+      }
+    },
     onError: e => {
       errors.push(e)
     }
