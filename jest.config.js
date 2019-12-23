@@ -24,5 +24,10 @@ module.exports = {
     '^@vue/(.*?)$': '<rootDir>/packages/$1/src'
   },
   rootDir: __dirname,
-  testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)']
+  testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)'],
+  testPathIgnorePatterns: process.env.SKIP_E2E
+    ? // ignore example tests on netlify builds since they don't contribute
+      // to coverage and can cause netlify builds to fail
+      ['/node_modules/', '/examples/__tests__']
+    : ['/node_modules/']
 }
