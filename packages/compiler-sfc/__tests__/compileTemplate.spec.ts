@@ -9,7 +9,7 @@ test('should work', () => {
   expect(result.errors.length).toBe(0)
   expect(result.source).toBe(source)
   // should expose render fn
-  expect(result.code).toMatch(`export default function render()`)
+  expect(result.code).toMatch(`export function render()`)
 })
 
 test('preprocess pug', () => {

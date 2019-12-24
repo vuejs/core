@@ -224,12 +224,12 @@ export function generate(
     }
     genHoists(ast.hoists, context)
     newline()
-    push(`export default `)
+    push(`export `)
   }
 
   // enter render function
   if (genScopeId) {
-    push(`withId(`)
+    push(`const render = withId(`)
   }
   push(`function render() {`)
   indent()

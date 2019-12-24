@@ -9,7 +9,7 @@ const _hoisted_1 = createVNode(\\"div\\", null, \\"hello\\")
 const _hoisted_2 = createVNode(\\"div\\", null, \\"world\\")
 popScopeId()
 
-export default withId(function render() {
+export const render = withId(function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"div\\", null, [
     _hoisted_1,
@@ -22,7 +22,7 @@ exports[`scopeId compiler support should wrap default slot 1`] = `
 "import { createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
 const withId = withScopeId(\\"test\\")
 
-export default withId(function render() {
+export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
   
@@ -39,7 +39,7 @@ exports[`scopeId compiler support should wrap dynamic slots 1`] = `
 "import { createVNode, resolveComponent, renderList, createSlots, createBlock, openBlock, withScopeId } from \\"vue\\"
 const withId = withScopeId(\\"test\\")
 
-export default withId(function render() {
+export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
   
@@ -68,7 +68,7 @@ exports[`scopeId compiler support should wrap named slots 1`] = `
 "import { toString, createTextVNode, createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
 const withId = withScopeId(\\"test\\")
 
-export default withId(function render() {
+export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
   
@@ -88,7 +88,7 @@ exports[`scopeId compiler support should wrap render function 1`] = `
 "import { createVNode, createBlock, openBlock, withScopeId } from \\"vue\\"
 const withId = withScopeId(\\"test\\")
 
-export default withId(function render() {
+export const render = withId(function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"div\\"))
 })"

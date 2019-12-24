@@ -13,7 +13,7 @@ const _hoisted_5 = _imports_0 + '2x, ' + _imports_0
 const _hoisted_6 = _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(Fragment, null, [
     createVNode(\\"img\\", {

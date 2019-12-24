@@ -3,7 +3,7 @@
 exports[`compiler: transform v-model compound expression (with prefixIdentifiers) 1`] = `
 "import { createVNode, createBlock, openBlock } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model[_ctx.index],
@@ -30,7 +30,7 @@ return function render() {
 exports[`compiler: transform v-model simple exprssion (with prefixIdentifiers) 1`] = `
 "import { createVNode, createBlock, openBlock } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"input\\", {
     modelValue: _ctx.model,
@@ -72,7 +72,7 @@ return function render() {
 exports[`compiler: transform v-model with dynamic argument (with prefixIdentifiers) 1`] = `
 "import { createVNode, createBlock, openBlock } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"input\\", {
     [_ctx.value]: _ctx.model,

@@ -19,7 +19,7 @@ describe('scopeId compiler support', () => {
     })
     expect(ast.helpers).toContain(WITH_SCOPE_ID)
     expect(code).toMatch(`const withId = withScopeId("test")`)
-    expect(code).toMatch(`export default withId(function render() {`)
+    expect(code).toMatch(`export const render = withId(function render() {`)
     expect(code).toMatchSnapshot()
   })
 

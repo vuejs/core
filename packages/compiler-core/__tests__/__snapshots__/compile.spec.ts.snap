@@ -50,7 +50,7 @@ return function render() {
 exports[`compiler: integration tests module mode 1`] = `
 "import { toString, openBlock, createVNode, createBlock, createCommentVNode, Fragment, renderList, createTextVNode } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"div\\", {
     id: \\"foo\\",
