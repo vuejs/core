@@ -1,5 +1,5 @@
 import { expectError, expectType } from 'tsd'
-import { describe, defineComponent, PropType, ref } from './index'
+import { describe, defineComponent, PropType, ref, createApp } from './index'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -239,4 +239,23 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.d)
     }
   })
+})
+
+describe('compatibility w/ createApp', () => {
+  const comp = defineComponent({})
+  createApp().mount(comp, '#hello')
+
+  const comp2 = defineComponent({
+    props: { foo: String }
+  })
+  createApp().mount(comp2, '#hello')
+
+  const comp3 = defineComponent({
+    setup() {
+      return {
+        a: 1
+      }
+    }
+  })
+  createApp().mount(comp3, '#hello')
 })

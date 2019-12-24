@@ -17,7 +17,10 @@ export interface App<HostElement = any> {
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(
-    rootComponent: Component,
+    rootComponent:
+      | Component
+      // for compatibility with defineComponent() return types
+      | { new (): ComponentPublicInstance<any, any, any, any, any> },
     rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
