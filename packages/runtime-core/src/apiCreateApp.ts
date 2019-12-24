@@ -10,7 +10,7 @@ import { createVNode, cloneVNode } from './vnode'
 
 export interface App<HostElement = any> {
   config: AppConfig
-  use(plugin: Plugin, options?: any): this
+  use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
@@ -50,7 +50,7 @@ export interface AppContext {
   reload?: () => void // HMR only
 }
 
-type PluginInstallFunction = (app: App) => any
+type PluginInstallFunction = (app: App, ...options: any[]) => any
 
 export type Plugin =
   | PluginInstallFunction
@@ -97,15 +97,15 @@ export function createAppAPI<HostNode, HostElement>(
         }
       },
 
-      use(plugin: Plugin) {
+      use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (isFunction(plugin)) {
           installedPlugins.add(plugin)
-          plugin(app)
+          plugin(app, ...options)
         } else if (plugin && isFunction(plugin.install)) {
           installedPlugins.add(plugin)
-          plugin.install(app)
+          plugin.install(app, ...options)
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
