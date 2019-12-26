@@ -1,4 +1,4 @@
-import { createVNode } from '@vue/runtime-test'
+import { createBlock, createVNode, openBlock } from '@vue/runtime-test'
 import {
   ShapeFlags,
   Comment,
@@ -223,6 +223,36 @@ describe('vnode', () => {
         bar: ['cc'],
         baz: { ccc: true }
       })
+    })
+  })
+
+  describe('dynamic children', () => {
+    test('single call openBlock', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode('div', null, 'text', 1 /* TEXT */))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    test('many times call openBlock', () => {
+      const hoist = createVNode('div')
+      let vnode1, vnode2, vnode3
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode('div', null, 'text', 1 /* TEXT */)),
+        (vnode2 = (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          (vnode3 = createVNode('div', null, 'text', 1 /* TEXT */))
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])
+      expect(vnode2.dynamicChildren).toStrictEqual([vnode3])
     })
   })
 })
