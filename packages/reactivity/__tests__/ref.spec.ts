@@ -42,27 +42,29 @@ describe('reactivity/ref', () => {
         d: [a]
       }
     })
+ 
     let dummy1: number
     let dummy2: number
     let dummy3: number
+
     effect(() => {
       dummy1 = obj.a
       dummy2 = obj.b.c
       dummy3 = obj.b.d[0]
     })
 
-    const checkDummiesEqualTo = (val: any) =>
+    const assertDummiesEqualTo = (val: any) =>
       [dummy1, dummy2, dummy3].forEach(dummy => expect(dummy).toBe(val))
 
-    checkDummiesEqualTo(1)
+    assertDummiesEqualTo(1)
     a.value++
-    checkDummiesEqualTo(2)
+    assertDummiesEqualTo(2)
     obj.a++
-    checkDummiesEqualTo(3)
+    assertDummiesEqualTo(3)
     obj.b.c++
-    checkDummiesEqualTo(4)
+    assertDummiesEqualTo(4)
     obj.b.d[0]++
-    checkDummiesEqualTo(5)
+    assertDummiesEqualTo(5)
   })
 
   it('should unwrap nested ref in types', () => {
