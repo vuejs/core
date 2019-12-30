@@ -45,9 +45,9 @@ export interface WatchOptions {
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
-type StopHandle = () => void
+export type StopHandle = () => void
 
-type WatcherSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
+export type WatcherSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 type MapSources<T> = {
   [K in keyof T]: T[K] extends WatcherSource<infer V> ? V : never
@@ -55,7 +55,7 @@ type MapSources<T> = {
 
 export type CleanupRegistrator = (invalidate: () => void) => void
 
-type SimpleEffect = (onCleanup: CleanupRegistrator) => void
+export type SimpleEffect = (onCleanup: CleanupRegistrator) => void
 
 const invoke = (fn: Function) => fn()
 
