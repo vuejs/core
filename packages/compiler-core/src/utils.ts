@@ -149,7 +149,7 @@ export function advancePositionWithMutation(
   pos.column =
     lastNewLinePos === -1
       ? pos.column + numberOfCharacters
-      : Math.max(1, numberOfCharacters - lastNewLinePos)
+      : numberOfCharacters - lastNewLinePos
 
   return pos
 }
