@@ -115,7 +115,6 @@ async function main() {
   step('\nPublishing packages...')
   const releaseTag = semver.prerelease(targetVersion)[0] || 'latest'
   for (const pkg of packages) {
-    step(`Publishing ${pkg}...`)
     await publishPackage(pkg, targetVersion, releaseTag, runIfNotDry)
   }
 
@@ -183,6 +182,8 @@ async function publishPackage(pkgName, version, releaseTag, runIfNotDry) {
   if (pkg.private) {
     return
   }
+
+  step(`Publishing ${pkg}...`)
   try {
     await runIfNotDry(
       'yarn',
