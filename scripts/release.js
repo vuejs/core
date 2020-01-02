@@ -171,7 +171,7 @@ function updateDeps(pkg, depType, version) {
 }
 
 async function publishPackage(pkgName, version, releaseTag, runIfNotDry) {
-  if (skippedPackages.includes[pkgName]) {
+  if (skippedPackages.includes(pkgName)) {
     return
   }
   const pkgRoot = getPkgRoot(pkgName)
