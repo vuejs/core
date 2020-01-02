@@ -4,7 +4,8 @@ import {
   CompilerOptions,
   CodegenResult,
   isBuiltInType,
-  ParserOptions
+  ParserOptions,
+  RootNode
 } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
@@ -46,7 +47,7 @@ export function compile(
   })
 }
 
-export function parse(template: string, options: ParserOptions = {}) {
+export function parse(template: string, options: ParserOptions = {}): RootNode {
   return baseParse(template, {
     ...parserOptions,
     ...options
