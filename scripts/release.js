@@ -99,6 +99,9 @@ async function main() {
     console.log(`(skipped)`)
   }
 
+  // generate changelog
+  await run(`yarn`, ['changelog'])
+
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
     step('\nCommitting changes...')
