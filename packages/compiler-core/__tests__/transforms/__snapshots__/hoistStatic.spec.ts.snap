@@ -216,7 +216,7 @@ export function render() {
   return (openBlock(), createBlock(\\"div\\", null, [
     createVNode(\\"div\\", null, [
       createVNode(\\"div\\", {
-        onClick: _cache[1] || (_cache[1] = $event => (_ctx.foo($event)))
+        onClick: _cache[1] || (_cache[1] = $event => {_ctx.foo($event)})
       })
     ])
   ]))

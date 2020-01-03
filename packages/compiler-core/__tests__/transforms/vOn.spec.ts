@@ -135,7 +135,7 @@ describe('compiler: transform v-on', () => {
       key: { content: `onClick` },
       value: {
         type: NodeTypes.COMPOUND_EXPRESSION,
-        children: [`$event => (`, { content: `i++` }, `)`]
+        children: [`$event => {`, { content: `i++` }, `}`]
       }
     })
   })
@@ -151,13 +151,13 @@ describe('compiler: transform v-on', () => {
       value: {
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [
-          `$event => (`,
+          `$event => {`,
           { content: `_ctx.foo` },
           `(`,
           // should NOT prefix $event
           { content: `$event` },
           `)`,
-          `)`
+          `}`
         ]
       }
     })
@@ -284,7 +284,7 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$event => (`, { content: `_ctx.foo($event)` }, `)`]
+          children: [`$event => {`, { content: `_ctx.foo($event)` }, `}`]
         }
       })
     })
@@ -322,7 +322,7 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$event => (`, { content: `_ctx.foo` }, `++`, `)`]
+          children: [`$event => {`, { content: `_ctx.foo` }, `++`, `}`]
         }
       })
     })
