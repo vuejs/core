@@ -4,7 +4,6 @@ import {
   h,
   render,
   nextTick,
-  Ref,
   createComponent
 } from '@vue/runtime-test'
 
@@ -142,7 +141,7 @@ describe('api: template refs', () => {
       foo: ref(null),
       bar: ref(null)
     }
-    const refKey: Ref<keyof typeof refs> = ref('foo')
+    const refKey = ref<keyof typeof refs>('foo')
 
     const Comp = {
       setup() {

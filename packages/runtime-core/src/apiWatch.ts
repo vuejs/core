@@ -72,7 +72,10 @@ export function watch<T>(
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
-export function watch<T extends Readonly<WatcherSource<unknown>[]>>(
+export function watch<
+  T extends Readonly<WatcherSource<TArgs>>,
+  TArgs extends Array<any> = any[]
+>(
   sources: T,
   cb: WatchHandler<MapSources<T>>,
   options?: WatchOptions
