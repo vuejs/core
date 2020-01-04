@@ -82,22 +82,27 @@ function toProxyRef<T extends object, K extends keyof T>(
   } as any
 }
 
-type UnwrapArray<T> = { [P in keyof T]: UnwrapRef<T[P]> }
+// Super simple tuple checker
+type Tupple<T extends Array<any>> = T[0] extends T[1]
+  ? T[1] extends T[2] ? never : true
+  : true
 
-type UnwrapProp<T> = T extends ComputedRef<infer V>
-  ? UnwrapRef<V>
-  : T extends Ref<infer V>
-    ? UnwrapRef<V>
-    : T extends Function | CollectionTypes
-      ? T
-      : T extends object
-        ? UnwrapObject<T>
-        : T extends Array<infer V> ? Array<UnwrapRef<V>> & UnwrapArray<T> : T
+export type UnwrapRef<T> = T extends ComputedRef<infer V>
+  ? UnwrapRefSimple<V>
+  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
 
-type UnwrapObject<T> = { [K in keyof T]: UnwrapProp<T[K]> }
+type UnwrapRefSimple<T> = T extends Function | CollectionTypes
+  ? T
+  : T extends Array<infer V>
+    ? Tupple<T> extends never ? UnwrappedArray<V> : UnwrapTupple<T>
+    : T extends object ? UnwrappedObject<T> : T
 
-export type UnwrapRef<T> = T extends object
-  ? UnwrapObject<T>
-  : T extends Function | CollectionTypes
-    ? T
-    : T extends Array<infer V> ? Array<UnwrapRef<V>> & UnwrapArray<T> : T
+export type UnwrapTupple<T> = { [P in keyof T]: UnwrapRef<T[P]> } & {
+  length: number
+  [Symbol.iterator]: any
+  [Symbol.unscopables]: any
+}
+
+interface UnwrappedArray<T> extends Array<UnwrapRef<T>> {}
+
+type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> }
