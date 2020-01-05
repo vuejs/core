@@ -2,11 +2,13 @@ import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 
 const queue: Function[] = []
+const lowQueue: Function[] = []
 const postFlushCbs: Function[] = []
 const p = Promise.resolve()
 
 let isFlushing = false
 let isFlushPending = false
+let queueCongestion = 0
 
 const RECURSION_LIMIT = 100
 type CountMap = Map<Function, number>
@@ -56,18 +58,30 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 
-function flushJobs(seen?: CountMap) {
-  isFlushPending = false
-  isFlushing = true
-  let job
-  if (__DEV__) {
-    seen = seen || new Map()
-  }
-  while ((job = queue.shift())) {
+function flushCbs(queue, timeout) {
+  let ts = 0
+  while ((job = queue.shift()) && (ts = performance.now()) < timeout) {
     if (__DEV__) {
       checkRecursiveUpdates(seen!, job)
     }
     callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
+  }
+}
+
+function flushJobs(seen?: CountMap) {
+  isFlushPending = false
+  isFlushing = true
+  queueCongestion++
+  let job
+  if (__DEV__) {
+    seen = seen || new Map()
+  }
+  const timeout = performance.now() + 10 * Math.ceil(queueCongestion * (1.0 / 22.0))
+  flushCbs(queue, timeout)
+  flushCbs(lowQueue, timeout)
+  if (queue.length > 0) {
+    lowQueue.push(...queue)
+    queue.length = 0
   }
   flushPostFlushCbs(seen)
   isFlushing = false
