@@ -15,20 +15,6 @@ return function render() {
 }"
 `;
 
-exports[`compiler: transform component slots explicit default slot 1`] = `
-"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
-
-return function render() {
-  const _ctx = this
-  const _component_Comp = resolveComponent(\\"Comp\\")
-  
-  return (openBlock(), createBlock(_component_Comp, null, {
-    default: ({ foo }) => [toString(foo), toString(_ctx.bar)],
-    _compiled: true
-  }))
-}"
-`;
-
 exports[`compiler: transform component slots implicit default slot 1`] = `
 "const { createVNode, resolveComponent, createBlock, openBlock } = Vue
 
@@ -146,6 +132,27 @@ return function render() {
 }"
 `;
 
+exports[`compiler: transform component slots named slots w/ implicit default slot 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, resolveComponent: _resolveComponent, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    
+    const _component_Comp = _resolveComponent(\\"Comp\\")
+    
+    return (_openBlock(), _createBlock(_component_Comp, null, {
+      one: () => [\\"foo\\"],
+      default: () => [
+        \\"bar\\",
+        _createVNode(\\"span\\")
+      ],
+      _compiled: true
+    }))
+  }
+}"
+`;
+
 exports[`compiler: transform component slots nested slots scoping 1`] = `
 "const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
 
@@ -165,6 +172,20 @@ return function render() {
       toString(_ctx.bar),
       toString(_ctx.baz)
     ],
+    _compiled: true
+  }))
+}"
+`;
+
+exports[`compiler: transform component slots on-component default slot 1`] = `
+"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
+
+return function render() {
+  const _ctx = this
+  const _component_Comp = resolveComponent(\\"Comp\\")
+  
+  return (openBlock(), createBlock(_component_Comp, null, {
+    default: ({ foo }) => [toString(foo), toString(_ctx.bar)],
     _compiled: true
   }))
 }"
