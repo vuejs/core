@@ -37,6 +37,7 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-dom#readme",
   "dependencies": {
-    "@vue/runtime-core": "3.0.0-alpha.1"
+    "@vue/runtime-core": "3.0.0-alpha.1",
+    "csstype": "^2.6.8"
   }
 }
