@@ -127,13 +127,17 @@ export function resolveProps(
       if (key === 'key' || key === 'ref') continue
       // prop option names are camelized during normalization, so to support
       // kebab -> camel conversion here we need to camelize the key.
-      const camelKey = camelize(key)
-      if (hasDeclaredProps && !hasOwn(options, camelKey)) {
-        // Any non-declared props are put into a separate `attrs` object
-        // for spreading. Make sure to preserve original key casing
-        ;(attrs || (attrs = {}))[key] = rawProps[key]
+      if (hasDeclaredProps) {
+        const camelKey = camelize(key)
+        if (hasOwn(options, camelKey)) {
+          setProp(camelKey, rawProps[key])
+        } else {
+          // Any non-declared props are put into a separate `attrs` object
+          // for spreading. Make sure to preserve original key casing
+          ;(attrs || (attrs = {}))[key] = rawProps[key]
+        }
       } else {
-        setProp(camelKey, rawProps[key])
+        setProp(key, rawProps[key])
       }
     }
   }
