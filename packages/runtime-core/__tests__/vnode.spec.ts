@@ -120,6 +120,12 @@ describe('vnode', () => {
     expect(normalizeVNode(null)).toMatchObject({ type: Comment })
     expect(normalizeVNode(undefined)).toMatchObject({ type: Comment })
 
+    // boolean -> Comment
+    // this is for usage like `someBoolean && h('div')` and behavior consistency
+    // with 2.x (#574)
+    expect(normalizeVNode(true)).toMatchObject({ type: Comment })
+    expect(normalizeVNode(false)).toMatchObject({ type: Comment })
+
     // array -> Fragment
     expect(normalizeVNode(['foo'])).toMatchObject({ type: Fragment })
 
@@ -137,7 +143,6 @@ describe('vnode', () => {
     // primitive types
     expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
     expect(normalizeVNode(1)).toMatchObject({ type: Text, children: `1` })
-    expect(normalizeVNode(true)).toMatchObject({ type: Text, children: `true` })
   })
 
   test('type shapeFlag inference', () => {
