@@ -170,18 +170,21 @@ export function trigger(
       addRunners(effects, computedRunners, dep)
     })
   } else {
-    // schedule runs for SET | ADD | DELETE
-    if (key !== void 0) {
-      addRunners(effects, computedRunners, depsMap.get(key))
-    }
-    // also run for iteration key on ADD | DELETE
+    // run for iteration key on ADD | DELETE
+    // it must be run first so that user have a chance to stop ADD | DELETE effects
     if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
       const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
+    // schedule runs for SET | ADD | DELETE
+    if (key !== void 0) {
+      addRunners(effects, computedRunners, depsMap.get(key))
+    }
   }
   const run = (effect: ReactiveEffect) => {
-    scheduleRun(effect, target, type, key, extraInfo)
+    if (effect.active) {
+      scheduleRun(effect, target, type, key, extraInfo)
+    }
   }
   // Important: computed effects must be run first so that computed getters
   // can be invalidated before any normal effects that depend on them are run.

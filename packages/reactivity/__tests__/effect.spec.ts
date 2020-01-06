@@ -191,6 +191,22 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe('Hello')
   })
 
+  it('should run iteration effect first', () => {
+    let dummy, runner: any
+    const list = reactive(['Hello'])
+    effect(() => {
+      if (runner) {
+        stop(runner)
+      }
+      list.length
+    })
+    runner = effect(() => (dummy = list[0]))
+
+    expect(dummy).toBe('Hello')
+    list.pop()
+    expect(dummy).toBe('Hello')
+  })
+
   it('should observe enumeration', () => {
     let dummy = 0
     const numbers = reactive<Record<string, number>>({ num1: 3 })

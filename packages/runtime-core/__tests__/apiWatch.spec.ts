@@ -140,6 +140,28 @@ describe('api: watch', () => {
     expect(dummy).toBe(0)
   })
 
+  it('skip watcher when it stopped (basic)', async () => {
+    const state = reactive({ count: 0 })
+    let dummy
+    const stop = watch(() => {
+      dummy = state.count
+    })
+    stop()
+    await nextTick()
+    expect(dummy).toBeUndefined()
+  })
+
+  it('skip watcher when it stopped (with source)', async () => {
+    const count = ref(0)
+    let dummy
+    const stop = watch(count, count => {
+      dummy = count
+    })
+    stop()
+    await nextTick()
+    expect(dummy).toBeUndefined()
+  })
+
   it('cleanup registration (basic)', async () => {
     const state = reactive({ count: 0 })
     const cleanup = jest.fn()

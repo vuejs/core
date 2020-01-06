@@ -121,7 +121,7 @@ function doWatch(
   } else {
     // no cb -> simple effect
     getter = () => {
-      if (instance && instance.isUnmounted) {
+      if ((instance && instance.isUnmounted) || !runner.active) {
         return
       }
       if (cleanup) {
@@ -151,7 +151,7 @@ function doWatch(
   let oldValue = isArray(source) ? [] : undefined
   const applyCb = cb
     ? () => {
-        if (instance && instance.isUnmounted) {
+        if ((instance && instance.isUnmounted) || !runner.active) {
           return
         }
         const newValue = runner()
