@@ -23,6 +23,7 @@ export interface Ref<T = any> {
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
+export function isRef<T>(r: Ref<T> | T): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return r ? r._isRef === true : false
 }
