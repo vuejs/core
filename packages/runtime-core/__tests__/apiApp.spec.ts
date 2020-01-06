@@ -244,11 +244,18 @@ describe('api: createApp', () => {
     const PluginB: Plugin = {
       install: (app, arg1, arg2) => app.provide('bar', arg1 + arg2)
     }
-    const PluginC: any = undefined
+    class PluginC {
+      someProperty = {}
+      static install() {
+        app.provide('baz', 2)
+      }
+    }
+    const PluginD: any = undefined
 
     const app = createApp()
     app.use(PluginA)
     app.use(PluginB, 1, 1)
+    app.use(PluginC)
 
     const Root = {
       setup() {
@@ -266,7 +273,7 @@ describe('api: createApp', () => {
       `Plugin has already been applied to target app`
     ).toHaveBeenWarnedTimes(1)
 
-    app.use(PluginC)
+    app.use(PluginD)
     expect(
       `A plugin must either be a function or an object with an "install" ` +
         `function.`
