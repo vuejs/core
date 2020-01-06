@@ -76,7 +76,9 @@ export function processExpression(
   context: TransformContext,
   // some expressions like v-slot props & v-for aliases should be parsed as
   // function params
-  asParams: boolean = false
+  asParams = false,
+  // v-on handler values may contain multiple statements
+  asRawStatements = false
 ): ExpressionNode {
   if (!context.prefixIdentifiers || !node.content.trim()) {
     return node
@@ -100,9 +102,14 @@ export function processExpression(
   }
 
   let ast: any
-  // if the expression is supposed to be used in a function params position
-  // we need to parse it differently.
-  const source = `(${rawExp})${asParams ? `=>{}` : ``}`
+  // exp needs to be parsed differently:
+  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+  //    exp, but make sure to pad with spaces for consistent ranges
+  // 2. Expressions: wrap with parens (for e.g. object expressions)
+  // 3. Function arguments (v-for, v-slot): place in a function argument position
+  const source = asRawStatements
+    ? ` ${rawExp} `
+    : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parseJS(source, { ranges: true })
   } catch (e) {
