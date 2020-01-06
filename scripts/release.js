@@ -113,9 +113,8 @@ async function main() {
 
   // publish packages
   step('\nPublishing packages...')
-  const releaseTag = semver.prerelease(targetVersion)[0] || 'latest'
   for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion, releaseTag, runIfNotDry)
+    await publishPackage(pkg, targetVersion, runIfNotDry)
   }
 
   // push to GitHub
@@ -172,7 +171,7 @@ function updateDeps(pkg, depType, version) {
   })
 }
 
-async function publishPackage(pkgName, version, releaseTag, runIfNotDry) {
+async function publishPackage(pkgName, version, runIfNotDry) {
   if (skippedPackages.includes(pkgName)) {
     return
   }
@@ -182,6 +181,14 @@ async function publishPackage(pkgName, version, releaseTag, runIfNotDry) {
   if (pkg.private) {
     return
   }
+
+  // for now (alpha/beta phase), every package except "vue" can be published as
+  // `latest`, whereas "vue" will be published under the "next" tag.
+  const releaseTag =
+    pkgName === 'vue' ? 'next' : semver.prerelease(version)[0] || 'latest'
+
+  // TODO use inferred release channel after offcial 3.0 release
+  // const releaseTag = semver.prerelease(version)[0] || 'latest'
 
   step(`Publishing ${pkg}...`)
   try {
