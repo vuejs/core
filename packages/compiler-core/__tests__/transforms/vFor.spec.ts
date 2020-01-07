@@ -1,4 +1,4 @@
-import { parse } from '../../src/parse'
+import { baseParse as parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformFor } from '../../src/transforms/vFor'
@@ -25,7 +25,7 @@ import {
   RENDER_SLOT,
   WITH_DIRECTIVES
 } from '../../src/runtimeHelpers'
-import { PatchFlags } from '@vue/runtime-dom'
+import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 
 function parseWithForTransform(
@@ -704,7 +704,8 @@ describe('compiler: v-for', () => {
           [
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` }
-          ]
+          ],
+          genFlagText(PatchFlags.STABLE_FRAGMENT)
         ]
       })
       expect(generate(root).code).toMatchSnapshot()
@@ -784,7 +785,8 @@ describe('compiler: v-for', () => {
           [
             { type: NodeTypes.TEXT, content: `hello` },
             { type: NodeTypes.ELEMENT, tag: `span` }
-          ]
+          ],
+          genFlagText(PatchFlags.STABLE_FRAGMENT)
         ]
       })
       expect(generate(root).code).toMatchSnapshot()

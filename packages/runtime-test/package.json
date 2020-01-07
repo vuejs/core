@@ -2,20 +2,23 @@
   "name": "@vue/runtime-test",
   "version": "3.0.0-alpha.1",
   "description": "@vue/runtime-test",
+  "private": true,
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
+  "types": "dist/runtime-test.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/runtime-test.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"
   },
   "buildOptions": {
-    "name": "VueTestRuntime",
-    "formats": ["esm", "cjs", "global"]
+    "name": "VueRuntimeTest",
+    "formats": [
+      "global"
+    ]
   },
   "keywords": [
     "vue"

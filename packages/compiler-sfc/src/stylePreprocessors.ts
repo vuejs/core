@@ -7,19 +7,20 @@ export interface StylePreprocessor {
 export interface StylePreprocessorResults {
   code: string
   map?: object
-  errors: Array<Error>
+  errors: Error[]
 }
 
 // .scss/.sass processor
 const scss: StylePreprocessor = {
   render(source, map, options) {
     const nodeSass = require('sass')
-    const finalOptions = Object.assign({}, options, {
+    const finalOptions = {
+      ...options,
       data: source,
       file: options.filename,
       outFile: options.filename,
       sourceMap: !!map
-    })
+    }
 
     try {
       const result = nodeSass.renderSync(finalOptions)
@@ -41,11 +42,10 @@ const scss: StylePreprocessor = {
 
 const sass: StylePreprocessor = {
   render(source, map, options) {
-    return scss.render(
-      source,
-      map,
-      Object.assign({}, options, { indentedSyntax: true })
-    )
+    return scss.render(source, map, {
+      ...options,
+      indentedSyntax: true
+    })
   }
 }
 
@@ -58,7 +58,7 @@ const less: StylePreprocessor = {
     let error: Error | null = null
     nodeLess.render(
       source,
-      Object.assign({}, options, { syncImport: true }),
+      { ...options, syncImport: true },
       (err: Error | null, output: any) => {
         error = err
         result = output
@@ -104,7 +104,9 @@ const styl: StylePreprocessor = {
   }
 }
 
-export const processors: Record<string, StylePreprocessor> = {
+export type PreprocessLang = 'less' | 'sass' | 'scss' | 'styl' | 'stylus'
+
+export const processors: Record<PreprocessLang, StylePreprocessor> = {
   less,
   sass,
   scss,

@@ -4,10 +4,47 @@ import { mockWarn } from '@vue/runtime-test'
 describe('compiler + runtime integration', () => {
   mockWarn()
 
-  it('should support on-the-fly template compilation', () => {
+  it('should support runtime template compilation', () => {
     const container = document.createElement('div')
     const App = {
       template: `{{ count }}`,
+      data() {
+        return {
+          count: 0
+        }
+      }
+    }
+    createApp().mount(App, container)
+    expect(container.innerHTML).toBe(`0`)
+  })
+
+  it('should support runtime template via CSS ID selector', () => {
+    const container = document.createElement('div')
+    const template = document.createElement('div')
+    template.id = 'template'
+    template.innerHTML = '{{ count }}'
+    document.body.appendChild(template)
+
+    const App = {
+      template: `#template`,
+      data() {
+        return {
+          count: 0
+        }
+      }
+    }
+    createApp().mount(App, container)
+    expect(container.innerHTML).toBe(`0`)
+  })
+
+  it('should support runtime template via direct DOM node', () => {
+    const container = document.createElement('div')
+    const template = document.createElement('div')
+    template.id = 'template'
+    template.innerHTML = '{{ count }}'
+
+    const App = {
+      template,
       data() {
         return {
           count: 0
@@ -25,7 +62,12 @@ describe('compiler + runtime integration', () => {
     }
     createApp().mount(App, container)
     expect(
-      `Template compilation error: End tag was not found`
+      `Template compilation error: Element is missing end tag`
+    ).toHaveBeenWarned()
+    expect(
+      `
+1  |  <div v-if>
+   |  ^`.trim()
     ).toHaveBeenWarned()
     expect(`v-if/v-else-if is missing expression`).toHaveBeenWarned()
     expect(

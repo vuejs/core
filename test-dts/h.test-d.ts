@@ -1,6 +1,13 @@
-import { describe } from './util'
 import { expectError } from 'tsd'
-import { h, createComponent, ref, Fragment, Portal, Suspense } from './index'
+import {
+  describe,
+  h,
+  defineComponent,
+  ref,
+  Fragment,
+  Portal,
+  Suspense
+} from './index'
 
 describe('h inference w/ element', () => {
   // key
@@ -64,8 +71,8 @@ describe('h inference w/ plain object component', () => {
   expectError(h(Foo, { foo: 1 }))
 })
 
-describe('h inference w/ createComponent', () => {
-  const Foo = createComponent({
+describe('h inference w/ defineComponent', () => {
+  const Foo = defineComponent({
     props: {
       foo: String,
       bar: {
@@ -86,8 +93,8 @@ describe('h inference w/ createComponent', () => {
   expectError(h(Foo, { bar: 1, foo: 1 }))
 })
 
-describe('h inference w/ createComponent + optional props', () => {
-  const Foo = createComponent({
+describe('h inference w/ defineComponent + optional props', () => {
+  const Foo = defineComponent({
     setup(_props: { foo?: string; bar: number }) {}
   })
 
@@ -102,8 +109,8 @@ describe('h inference w/ createComponent + optional props', () => {
   expectError(h(Foo, { bar: 1, foo: 1 }))
 })
 
-describe('h inference w/ createComponent + direct function', () => {
-  const Foo = createComponent((_props: { foo?: string; bar: number }) => {})
+describe('h inference w/ defineComponent + direct function', () => {
+  const Foo = defineComponent((_props: { foo?: string; bar: number }) => {})
 
   h(Foo, { bar: 1 })
   h(Foo, { bar: 1, foo: 'ok' })

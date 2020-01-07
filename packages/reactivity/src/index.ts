@@ -4,7 +4,7 @@ export {
   isReactive,
   readonly,
   isReadonly,
-  readonlyProps,
+  shallowReadonly,
   toRaw,
   markReadonly,
   markNonReactive
@@ -28,4 +28,4 @@ export {
   DebuggerEvent
 } from './effect'
 export { lock, unlock } from './lock'
-export { OperationTypes } from './operations'
+export { TrackOpTypes, TriggerOpTypes } from './operations'

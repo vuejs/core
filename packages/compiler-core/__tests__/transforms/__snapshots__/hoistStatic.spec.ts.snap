@@ -210,7 +210,7 @@ return function render() {
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers 1`] = `
 "import { createVNode, createBlock, openBlock } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   const _cache = _ctx.$cache
   return (openBlock(), createBlock(\\"div\\", null, [
@@ -235,7 +235,7 @@ return function render() {
         return (_openBlock(), _createBlock(\\"p\\", null, [
           _createVNode(\\"span\\", null, _toString(o + 'foo'), 1 /* TEXT */)
         ]))
-      }), 128 /* UNKEYED_FRAGMENT */))
+      }), 256 /* UNKEYED_FRAGMENT */))
     ]))
   }
 }"
@@ -270,7 +270,7 @@ return function render() {
         return (_openBlock(), _createBlock(\\"p\\", null, [
           _createVNode(\\"span\\", null, _toString(o), 1 /* TEXT */)
         ]))
-      }), 128 /* UNKEYED_FRAGMENT */))
+      }), 256 /* UNKEYED_FRAGMENT */))
     ]))
   }
 }"
@@ -362,7 +362,7 @@ return function render() {
         return (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
           _hoisted_2
         ]))
-      }), 128 /* UNKEYED_FRAGMENT */))
+      }), 256 /* UNKEYED_FRAGMENT */))
     ]))
   }
 }"

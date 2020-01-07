@@ -1,3 +1,4 @@
+import { TransformOptions } from './options'
 import {
   RootNode,
   NodeTypes,
@@ -17,8 +18,14 @@ import {
   CacheExpression,
   createCacheExpression
 } from './ast'
-import { isString, isArray } from '@vue/shared'
-import { CompilerError, defaultOnError } from './errors'
+import {
+  isString,
+  isArray,
+  NOOP,
+  PatchFlags,
+  PatchFlagNames
+} from '@vue/shared'
+import { defaultOnError } from './errors'
 import {
   TO_STRING,
   FRAGMENT,
@@ -65,13 +72,9 @@ export type StructuralDirectiveTransform = (
   context: TransformContext
 ) => void | (() => void)
 
-export interface TransformOptions {
-  nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform }
-  prefixIdentifiers?: boolean
-  hoistStatic?: boolean
-  cacheHandlers?: boolean
-  onError?: (error: CompilerError) => void
+export interface ImportItem {
+  exp: string | ExpressionNode
+  path: string
 }
 
 export interface TransformContext extends Required<TransformOptions> {
@@ -80,6 +83,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  imports: Set<ImportItem>
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -110,15 +114,27 @@ function createTransformContext(
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
+    isBuiltInComponent = NOOP,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
   const context: TransformContext = {
+    // options
+    prefixIdentifiers,
+    hoistStatic,
+    cacheHandlers,
+    nodeTransforms,
+    directiveTransforms,
+    isBuiltInComponent,
+    onError,
+
+    // state
     root,
     helpers: new Set(),
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    imports: new Set(),
     cached: 0,
     identifiers: {},
     scopes: {
@@ -127,15 +143,11 @@ function createTransformContext(
       vPre: 0,
       vOnce: 0
     },
-    prefixIdentifiers,
-    hoistStatic,
-    cacheHandlers,
-    nodeTransforms,
-    directiveTransforms,
-    onError,
     parent: null,
     currentNode: root,
     childIndex: 0,
+
+    // methods
     helper(name) {
       context.helpers.add(name)
       return name
@@ -282,7 +294,10 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
       createCallExpression(helper(CREATE_BLOCK), [
         helper(FRAGMENT),
         `null`,
-        root.children
+        root.children,
+        `${PatchFlags.STABLE_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+        } */`
       ]),
       context
     )
@@ -293,6 +308,7 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   root.helpers = [...context.helpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
+  root.imports = [...context.imports]
   root.hoists = context.hoists
   root.cached = context.cached
 }

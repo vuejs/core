@@ -242,12 +242,13 @@ describe('api: createApp', () => {
   test('use', () => {
     const PluginA: Plugin = app => app.provide('foo', 1)
     const PluginB: Plugin = {
-      install: app => app.provide('bar', 2)
+      install: (app, arg1, arg2) => app.provide('bar', arg1 + arg2)
     }
+    const PluginC: any = undefined
 
     const app = createApp()
     app.use(PluginA)
-    app.use(PluginB)
+    app.use(PluginB, 1, 1)
 
     const Root = {
       setup() {
@@ -263,6 +264,12 @@ describe('api: createApp', () => {
     app.use(PluginA)
     expect(
       `Plugin has already been applied to target app`
+    ).toHaveBeenWarnedTimes(1)
+
+    app.use(PluginC)
+    expect(
+      `A plugin must either be a function or an object with an "install" ` +
+        `function.`
     ).toHaveBeenWarnedTimes(1)
   })
 
@@ -303,7 +310,7 @@ describe('api: createApp', () => {
     const handler = (app.config.warnHandler = jest.fn(
       (msg, instance, trace) => {
         expect(msg).toMatch(`Component is missing template or render function`)
-        expect(instance).toBe(ctx.renderProxy)
+        expect(instance).toBe(ctx.proxy)
         expect(trace).toMatch(`Hello`)
       }
     ))

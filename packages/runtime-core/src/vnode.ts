@@ -15,10 +15,13 @@ import {
 import { RawSlots } from './componentSlots'
 import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
-import { AppContext } from './apiApp'
+import { AppContext } from './apiCreateApp'
 import { SuspenseBoundary } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { SuspenseImpl } from './components/Suspense'
+import { TransitionHooks } from './components/BaseTransition'
+import { warn } from './warning'
+import { currentScopeId } from './helpers/scopeId'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -48,6 +51,14 @@ export interface VNodeProps {
   [key: string]: any
   key?: string | number
   ref?: string | Ref | ((ref: object | null) => void)
+
+  // vnode hooks
+  onVnodeBeforeMount?: (vnode: VNode) => void
+  onVnodeMounted?: (vnode: VNode) => void
+  onVnodeBeforeUpdate?: (vnode: VNode, oldVNode: VNode) => void
+  onVnodeUpdated?: (vnode: VNode, oldVNode: VNode) => void
+  onVnodeBeforeUnmount?: (vnode: VNode) => void
+  onVnodeUnmounted?: (vnode: VNode) => void
 }
 
 type VNodeChildAtom<HostNode, HostElement> =
@@ -79,11 +90,13 @@ export interface VNode<HostNode = any, HostElement = any> {
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
-  ref: string | Function | null
+  ref: string | Ref | ((ref: object | null) => void) | null
+  scopeId: string | null // SFC only
   children: NormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
   dirs: DirectiveBinding[] | null
+  transition: TransitionHooks | null
 
   // DOM
   el: HostNode | null
@@ -173,13 +186,31 @@ export function isVNode(value: any): value is VNode {
   return value ? value._isVNode === true : false
 }
 
+export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
+  if (
+    __BUNDLER__ &&
+    __DEV__ &&
+    n2.shapeFlag & ShapeFlags.COMPONENT &&
+    (n2.type as Component).__hmrUpdated
+  ) {
+    // HMR only: if the component has been hot-updated, force a reload.
+    return false
+  }
+  return n1.type === n2.type && n1.key === n2.key
+}
+
 export function createVNode(
   type: VNodeTypes,
-  props: { [key: string]: any } | null = null,
+  props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null
 ): VNode {
+  if (__DEV__ && !type) {
+    warn(`Invalid vnode type when creating vnode: ${type}.`)
+    type = Comment
+  }
+
   // class & style normalization.
   if (props !== null) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
@@ -217,10 +248,12 @@ export function createVNode(
     props,
     key: (props !== null && props.key) || null,
     ref: (props !== null && props.ref) || null,
+    scopeId: currentScopeId,
     children: null,
     component: null,
     suspense: null,
     dirs: null,
+    transition: null,
     el: null,
     anchor: null,
     target: null,
@@ -252,7 +285,7 @@ export function createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data
+  extraProps?: Data & VNodeProps
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
@@ -266,6 +299,7 @@ export function cloneVNode<T, U>(
       : vnode.props,
     key: vnode.key,
     ref: vnode.ref,
+    scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
     shapeFlag: vnode.shapeFlag,
@@ -274,6 +308,7 @@ export function cloneVNode<T, U>(
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
     dirs: vnode.dirs,
+    transition: vnode.transition,
 
     // These should technically only be non-null on mounted VNodes. However,
     // they *should* be copied for kept-alive vnodes. So we just always copy
@@ -302,7 +337,7 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
-  if (child == null) {
+  if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {
@@ -313,9 +348,14 @@ export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
     // always produce all-vnode children arrays
     return child.el === null ? child : cloneVNode(child)
   } else {
-    // primitive types
-    return createVNode(Text, null, child + '')
+    // strings and numbers
+    return createVNode(Text, null, String(child))
   }
+}
+
+// optimized normalization for template-compiled render fns
+export function cloneIfMounted(child: VNode): VNode {
+  return child.el === null ? child : cloneVNode(child)
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
@@ -330,7 +370,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = { default: children }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
-    children = isString(children) ? children : children + ''
+    children = String(children)
     type = ShapeFlags.TEXT_CHILDREN
   }
   vnode.children = children as NormalizedChildren
@@ -376,7 +416,7 @@ export function normalizeClass(value: unknown): string {
 
 const handlersRE = /^on|^vnode/
 
-export function mergeProps(...args: Data[]) {
+export function mergeProps(...args: (Data & VNodeProps)[]) {
   const ret: Data = {}
   extend(ret, args[0])
   for (let i = 1; i < args.length; i++) {

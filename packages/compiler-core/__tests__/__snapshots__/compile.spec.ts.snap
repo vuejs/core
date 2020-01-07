@@ -19,7 +19,7 @@ return function render() {
         return (_openBlock(), _createBlock(\\"div\\", null, [
           _createVNode(\\"span\\", null, _toString(value + index), 1 /* TEXT */)
         ]))
-      }), 128 /* UNKEYED_FRAGMENT */))
+      }), 256 /* UNKEYED_FRAGMENT */))
     ], 2 /* CLASS */))
   }
 }"
@@ -42,7 +42,7 @@ return function render() {
       return (openBlock(), createBlock(\\"div\\", null, [
         createVNode(\\"span\\", null, toString(value + index), 1 /* TEXT */)
       ]))
-    }), 128 /* UNKEYED_FRAGMENT */))
+    }), 256 /* UNKEYED_FRAGMENT */))
   ], 2 /* CLASS */))
 }"
 `;
@@ -50,7 +50,7 @@ return function render() {
 exports[`compiler: integration tests module mode 1`] = `
 "import { toString, openBlock, createVNode, createBlock, createCommentVNode, Fragment, renderList, createTextVNode } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return (openBlock(), createBlock(\\"div\\", {
     id: \\"foo\\",
@@ -64,7 +64,7 @@ export default function render() {
       return (openBlock(), createBlock(\\"div\\", null, [
         createVNode(\\"span\\", null, toString(value + index), 1 /* TEXT */)
       ]))
-    }), 128 /* UNKEYED_FRAGMENT */))
+    }), 256 /* UNKEYED_FRAGMENT */))
   ], 2 /* CLASS */))
 }"
 `;

@@ -1,5 +1,5 @@
 import {
-  parse,
+  baseParse as parse,
   transform,
   ElementNode,
   ObjectExpression,
@@ -140,6 +140,22 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should handle multiple inline statement', () => {
+    const { node } = parseWithVOn(`<div @click="foo();bar()"/>`)
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        // should wrap with `{` for multiple statements
+        // in this case the return value is discarded and the behavior is
+        // consistent with 2.x
+        children: [`$event => {`, { content: `foo();bar()` }, `}`]
+      }
+    })
+  })
+
   test('inline statement w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="foo($event)"/>`, {
       prefixIdentifiers: true
@@ -158,6 +174,31 @@ describe('compiler: transform v-on', () => {
           { content: `$event` },
           `)`,
           `)`
+        ]
+      }
+    })
+  })
+
+  test('multiple inline statements w/ prefixIdentifiers: true', () => {
+    const { node } = parseWithVOn(`<div @click="foo($event);bar()"/>`, {
+      prefixIdentifiers: true
+    })
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: { content: `onClick` },
+      value: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `$event => {`,
+          { content: `_ctx.foo` },
+          `(`,
+          // should NOT prefix $event
+          { content: `$event` },
+          `);`,
+          { content: `_ctx.bar` },
+          `()`,
+          `}`
         ]
       }
     })

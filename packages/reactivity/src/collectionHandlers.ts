@@ -1,6 +1,6 @@
 import { toRaw, reactive, readonly } from './reactive'
-import { track, trigger } from './effect'
-import { OperationTypes } from './operations'
+import { track, trigger, ITERATE_KEY } from './effect'
+import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject, capitalize, hasOwn, hasChanged } from '@vue/shared'
 
@@ -27,20 +27,20 @@ function get(
 ) {
   target = toRaw(target)
   key = toRaw(key)
-  track(target, OperationTypes.GET, key)
+  track(target, TrackOpTypes.GET, key)
   return wrap(getProto(target).get.call(target, key))
 }
 
 function has(this: CollectionTypes, key: unknown): boolean {
   const target = toRaw(this)
   key = toRaw(key)
-  track(target, OperationTypes.HAS, key)
+  track(target, TrackOpTypes.HAS, key)
   return getProto(target).has.call(target, key)
 }
 
 function size(target: IterableCollections) {
   target = toRaw(target)
-  track(target, OperationTypes.ITERATE)
+  track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
   return Reflect.get(getProto(target), 'size', target)
 }
 
@@ -53,9 +53,9 @@ function add(this: SetTypes, value: unknown) {
   if (!hadKey) {
     /* istanbul ignore else */
     if (__DEV__) {
-      trigger(target, OperationTypes.ADD, value, { newValue: value })
+      trigger(target, TriggerOpTypes.ADD, value, { newValue: value })
     } else {
-      trigger(target, OperationTypes.ADD, value)
+      trigger(target, TriggerOpTypes.ADD, value)
     }
   }
   return result
@@ -72,15 +72,15 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   if (__DEV__) {
     const extraInfo = { oldValue, newValue: value }
     if (!hadKey) {
-      trigger(target, OperationTypes.ADD, key, extraInfo)
+      trigger(target, TriggerOpTypes.ADD, key, extraInfo)
     } else if (hasChanged(value, oldValue)) {
-      trigger(target, OperationTypes.SET, key, extraInfo)
+      trigger(target, TriggerOpTypes.SET, key, extraInfo)
     }
   } else {
     if (!hadKey) {
-      trigger(target, OperationTypes.ADD, key)
+      trigger(target, TriggerOpTypes.ADD, key)
     } else if (hasChanged(value, oldValue)) {
-      trigger(target, OperationTypes.SET, key)
+      trigger(target, TriggerOpTypes.SET, key)
     }
   }
   return result
@@ -96,9 +96,9 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   if (hadKey) {
     /* istanbul ignore else */
     if (__DEV__) {
-      trigger(target, OperationTypes.DELETE, key, { oldValue })
+      trigger(target, TriggerOpTypes.DELETE, key, { oldValue })
     } else {
-      trigger(target, OperationTypes.DELETE, key)
+      trigger(target, TriggerOpTypes.DELETE, key)
     }
   }
   return result
@@ -117,9 +117,9 @@ function clear(this: IterableCollections) {
   if (hadItems) {
     /* istanbul ignore else */
     if (__DEV__) {
-      trigger(target, OperationTypes.CLEAR, void 0, { oldTarget })
+      trigger(target, TriggerOpTypes.CLEAR, void 0, { oldTarget })
     } else {
-      trigger(target, OperationTypes.CLEAR)
+      trigger(target, TriggerOpTypes.CLEAR)
     }
   }
   return result
@@ -134,7 +134,7 @@ function createForEach(isReadonly: boolean) {
     const observed = this
     const target = toRaw(observed)
     const wrap = isReadonly ? toReadonly : toReactive
-    track(target, OperationTypes.ITERATE)
+    track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
     // important: create sure the callback is
     // 1. invoked with the reactive map as `this` and 3rd arg
     // 2. the value received should be a corresponding reactive/readonly.
@@ -153,7 +153,7 @@ function createIterableMethod(method: string | symbol, isReadonly: boolean) {
       (method === Symbol.iterator && target instanceof Map)
     const innerIterator = getProto(target)[method].apply(target, args)
     const wrap = isReadonly ? toReadonly : toReactive
-    track(target, OperationTypes.ITERATE)
+    track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
     return {
@@ -177,7 +177,7 @@ function createIterableMethod(method: string | symbol, isReadonly: boolean) {
 
 function createReadonlyMethod(
   method: Function,
-  type: OperationTypes
+  type: TriggerOpTypes
 ): Function {
   return function(this: CollectionTypes, ...args: unknown[]) {
     if (LOCKED) {
@@ -188,7 +188,7 @@ function createReadonlyMethod(
           toRaw(this)
         )
       }
-      return type === OperationTypes.DELETE ? false : this
+      return type === TriggerOpTypes.DELETE ? false : this
     } else {
       return method.apply(this, args)
     }
@@ -218,10 +218,10 @@ const readonlyInstrumentations: Record<string, Function> = {
     return size(this)
   },
   has,
-  add: createReadonlyMethod(add, OperationTypes.ADD),
-  set: createReadonlyMethod(set, OperationTypes.SET),
-  delete: createReadonlyMethod(deleteEntry, OperationTypes.DELETE),
-  clear: createReadonlyMethod(clear, OperationTypes.CLEAR),
+  add: createReadonlyMethod(add, TriggerOpTypes.ADD),
+  set: createReadonlyMethod(set, TriggerOpTypes.SET),
+  delete: createReadonlyMethod(deleteEntry, TriggerOpTypes.DELETE),
+  clear: createReadonlyMethod(clear, TriggerOpTypes.CLEAR),
   forEach: createForEach(true)
 }
 

@@ -4,17 +4,24 @@
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",
+  "types": "dist/runtime-dom.d.ts",
+  "unpkg": "dist/runtime-dom.global.js",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/runtime-dom.d.ts",
-  "unpkg": "dist/runtime-dom.global.js",
   "sideEffects": false,
   "buildOptions": {
-    "name": "VueDOMRuntime",
-    "formats": ["esm", "cjs", "global", "esm-browser"],
-    "dts": ["jsx.d.ts"]
+    "name": "VueRuntimeDOM",
+    "formats": [
+      "esm-bundler",
+      "cjs",
+      "global",
+      "esm"
+    ],
+    "dts": [
+      "jsx.d.ts"
+    ]
   },
   "repository": {
     "type": "git",
@@ -30,6 +37,7 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-dom#readme",
   "dependencies": {
-    "@vue/runtime-core": "3.0.0-alpha.1"
+    "@vue/runtime-core": "3.0.0-alpha.1",
+    "csstype": "^2.6.8"
   }
 }

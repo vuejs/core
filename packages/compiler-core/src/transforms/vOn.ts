@@ -59,11 +59,12 @@ export const transformOn: DirectiveTransform = (
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+    const hasMultipleStatements = exp.content.includes(`;`)
 
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
       context.addIdentifiers(`$event`)
-      exp = processExpression(exp, context)
+      exp = processExpression(exp, context, false, hasMultipleStatements)
       context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
@@ -85,9 +86,9 @@ export const transformOn: DirectiveTransform = (
     if (isInlineStatement || (isCacheable && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `$event => (`,
+        `$event => ${hasMultipleStatements ? `{` : `(`}`,
         ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        `)`
+        hasMultipleStatements ? `}` : `)`
       ])
     }
   }

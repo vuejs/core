@@ -14,7 +14,7 @@ return function render() {
 
 exports[`compiler: codegen CacheExpression 1`] = `
 "
-export default function render() {
+export function render() {
   const _ctx = this
   const _cache = _ctx.$cache
   return _cache[1] || (_cache[1] = foo)
@@ -23,7 +23,7 @@ export default function render() {
 
 exports[`compiler: codegen CacheExpression w/ isVNode: true 1`] = `
 "
-export default function render() {
+export function render() {
   const _ctx = this
   const _cache = _ctx.$cache
   return _cache[1] || (
@@ -167,7 +167,7 @@ return function render() {
 exports[`compiler: codegen module mode preamble 1`] = `
 "import { createVNode, resolveDirective } from \\"vue\\"
 
-export default function render() {
+export function render() {
   const _ctx = this
   return null
 }"

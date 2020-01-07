@@ -117,9 +117,9 @@ export function buildSlots(
 
   // 1. Check for default slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>
-  const explicitDefaultSlot = findDir(node, 'slot', true)
-  if (explicitDefaultSlot) {
-    const { arg, exp, loc } = explicitDefaultSlot
+  const onComponentDefaultSlot = findDir(node, 'slot', true)
+  if (onComponentDefaultSlot) {
+    const { arg, exp, loc } = onComponentDefaultSlot
     if (arg) {
       context.onError(
         createCompilerError(ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT, loc)
@@ -131,8 +131,10 @@ export function buildSlots(
   // 2. Iterate through children and check for template slots
   //    <template v-slot:foo="{ prop }">
   let hasTemplateSlots = false
-  let extraneousChild: TemplateChildNode | undefined = undefined
+  let hasNamedDefaultSlot = false
+  const implicitDefaultChildren: TemplateChildNode[] = []
   const seenSlotNames = new Set<string>()
+
   for (let i = 0; i < children.length; i++) {
     const slotElement = children[i]
     let slotDir
@@ -142,13 +144,13 @@ export function buildSlots(
       !(slotDir = findDir(slotElement, 'slot', true))
     ) {
       // not a <template v-slot>, skip.
-      if (slotElement.type !== NodeTypes.COMMENT && !extraneousChild) {
-        extraneousChild = slotElement
+      if (slotElement.type !== NodeTypes.COMMENT) {
+        implicitDefaultChildren.push(slotElement)
       }
       continue
     }
 
-    if (explicitDefaultSlot) {
+    if (onComponentDefaultSlot) {
       // already has on-component default slot - this is incorrect usage.
       context.onError(
         createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc)
@@ -175,7 +177,8 @@ export function buildSlots(
     const slotFunction = createFunctionExpression(
       slotProps,
       slotChildren,
-      false,
+      false /* newline */,
+      true /* isSlot */,
       slotChildren.length ? slotChildren[0].loc : slotLoc
     )
 
@@ -244,7 +247,7 @@ export function buildSlots(
             createFunctionExpression(
               createForLoopParams(parseResult),
               buildDynamicSlot(slotName, slotFunction),
-              true
+              true /* force newline */
             )
           ])
         )
@@ -266,23 +269,33 @@ export function buildSlots(
           continue
         }
         seenSlotNames.add(staticSlotName)
+        if (staticSlotName === 'default') {
+          hasNamedDefaultSlot = true
+        }
       }
       slotsProperties.push(createObjectProperty(slotName, slotFunction))
     }
   }
 
-  if (hasTemplateSlots && extraneousChild) {
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
-        extraneousChild.loc
-      )
-    )
-  }
-
-  if (!explicitDefaultSlot && !hasTemplateSlots) {
-    // implicit default slot.
-    slotsProperties.push(buildDefaultSlot(undefined, children, loc))
+  if (!onComponentDefaultSlot) {
+    if (!hasTemplateSlots) {
+      // implicit default slot (on component)
+      slotsProperties.push(buildDefaultSlot(undefined, children, loc))
+    } else if (implicitDefaultChildren.length) {
+      // implicit default slot (mixed with named slots)
+      if (hasNamedDefaultSlot) {
+        context.onError(
+          createCompilerError(
+            ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
+            implicitDefaultChildren[0].loc
+          )
+        )
+      } else {
+        slotsProperties.push(
+          buildDefaultSlot(undefined, implicitDefaultChildren, loc)
+        )
+      }
+    }
   }
 
   let slots: ObjectExpression | CallExpression = createObjectExpression(
@@ -314,7 +327,8 @@ function buildDefaultSlot(
     createFunctionExpression(
       slotProps,
       children,
-      false,
+      false /* newline */,
+      true /* isSlot */,
       children.length ? children[0].loc : loc
     )
   )

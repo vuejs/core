@@ -12,5 +12,14 @@ export {
   SFCScriptBlock,
   SFCStyleBlock
 } from './parse'
-
-export { StyleCompileOptions, StyleCompileResults } from './compileStyle'
+export {
+  TemplateCompiler,
+  SFCTemplateCompileOptions,
+  SFCTemplateCompileResults
+} from './compileTemplate'
+export { SFCStyleCompileOptions, SFCStyleCompileResults } from './compileStyle'
+export {
+  CompilerOptions,
+  CompilerError,
+  generateCodeFrame
+} from '@vue/compiler-core'

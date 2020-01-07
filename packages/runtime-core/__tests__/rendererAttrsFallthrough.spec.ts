@@ -6,7 +6,7 @@ import {
   mergeProps,
   ref,
   onUpdated,
-  createComponent
+  defineComponent
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/runtime-test'
 
@@ -32,7 +32,8 @@ describe('attribute fallthrough', () => {
             id: 'test',
             class: 'c' + count.value,
             style: { color: count.value ? 'red' : 'green' },
-            onClick: inc
+            onClick: inc,
+            'data-id': 1
           })
       }
     }
@@ -66,6 +67,7 @@ describe('attribute fallthrough', () => {
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
+    expect(node.dataset.id).toBe('1')
     node.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
 
@@ -102,7 +104,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         foo: Number
       },
@@ -179,7 +181,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const GrandChild = createComponent({
+    const GrandChild = defineComponent({
       props: {
         foo: Number
       },
@@ -232,7 +234,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       inheritAttrs: false,
       render() {
@@ -255,7 +257,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       inheritAttrs: false,
       render() {
@@ -287,7 +289,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div')]
@@ -308,7 +310,7 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div', this.$attrs)]

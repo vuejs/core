@@ -3,16 +3,22 @@
   "version": "3.0.0-alpha.1",
   "description": "vue",
   "main": "index.js",
-  "module": "dist/vue.esm-bundler.js",
+  "module": "dist/vue.runtime.esm-bundler.js",
+  "types": "dist/vue.d.ts",
+  "unpkg": "dist/vue.global.js",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/vue.d.ts",
-  "unpkg": "dist/vue.global.js",
   "buildOptions": {
     "name": "Vue",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "formats": [
+      "esm-bundler",
+      "esm-bundler-runtime",
+      "cjs",
+      "global",
+      "esm"
+    ]
   },
   "repository": {
     "type": "git",
@@ -30,5 +36,10 @@
   "dependencies": {
     "@vue/compiler-dom": "3.0.0-alpha.1",
     "@vue/runtime-dom": "3.0.0-alpha.1"
+  },
+  "devDependencies": {
+    "lodash": "^4.17.15",
+    "marked": "^0.7.0",
+    "todomvc-app-css": "^2.3.0"
   }
 }

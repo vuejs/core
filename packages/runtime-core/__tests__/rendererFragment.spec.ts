@@ -10,7 +10,8 @@ import {
   resetOps,
   dumpOps,
   NodeOpTypes,
-  serializeInner
+  serializeInner,
+  createTextVNode
 } from '@vue/runtime-test'
 
 describe('renderer: fragment', () => {
@@ -110,7 +111,10 @@ describe('renderer: fragment', () => {
       createVNode(
         Fragment,
         null,
-        [h('div', 'one'), 'two'],
+        [
+          createVNode('div', null, 'one', PatchFlags.TEXT),
+          createTextVNode('two')
+        ],
         PatchFlags.UNKEYED_FRAGMENT
       ),
       root
@@ -121,7 +125,11 @@ describe('renderer: fragment', () => {
       createVNode(
         Fragment,
         null,
-        [h('div', 'foo'), 'bar', 'baz'],
+        [
+          createVNode('div', null, 'foo', PatchFlags.TEXT),
+          createTextVNode('bar'),
+          createTextVNode('baz')
+        ],
         PatchFlags.KEYED_FRAGMENT
       ),
       root
@@ -252,5 +260,9 @@ describe('renderer: fragment', () => {
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'comment' } }
     ])
+
+    // should properly remove nested fragments
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
   })
 })

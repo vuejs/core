@@ -31,6 +31,8 @@ export function renderList(
         ret[i] = renderItem(source[key], key, i)
       }
     }
+  } else {
+    ret = []
   }
-  return ret!
+  return ret
 }

@@ -13,7 +13,7 @@ import {
   onErrorCaptured
 } from '@vue/runtime-test'
 
-describe('renderer: suspense', () => {
+describe('Suspense', () => {
   const deps: Promise<any>[] = []
 
   beforeEach(() => {

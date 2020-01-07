@@ -4,13 +4,15 @@
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
+  "types": "dist/compiler-core.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/compiler-core.d.ts",
   "buildOptions": {
+    "name": "VueCompilerCore",
     "formats": [
+      "esm-bundler",
       "cjs"
     ]
   },
@@ -30,6 +32,6 @@
   "dependencies": {
     "acorn": "^7.1.0",
     "estree-walker": "^0.8.1",
-    "source-map": "^0.7.3"
+    "source-map": "^0.6.1"
   }
 }

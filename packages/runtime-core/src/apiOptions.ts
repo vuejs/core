@@ -3,7 +3,8 @@ import {
   Data,
   Component,
   SetupContext,
-  RenderFunction
+  RenderFunction,
+  SFCInternalOptions
 } from './component'
 import {
   isFunction,
@@ -15,7 +16,7 @@ import {
   NOOP
 } from '@vue/shared'
 import { computed } from './apiReactivity'
-import { watch, WatchOptions, WatchHandler } from './apiWatch'
+import { watch, WatchOptions, WatchCallback } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -48,14 +49,14 @@ export interface ComponentOptionsBase<
   D,
   C extends ComputedOptions,
   M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M> {
+> extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
   setup?: (
     this: null,
     props: Props,
     ctx: SetupContext
   ) => RawBindings | RenderFunction | void
   name?: string
-  template?: string
+  template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
   // since any type with signature will cause the whole inference to fail when
   // the return expression contains reference to `this`.
@@ -66,8 +67,8 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
-  // type-only differentiator to separate OptionWihtoutProps from a constructor
-  // type returned by createComponent() or FunctionalComponent
+  // type-only differentiator to separate OptionWithoutProps from a constructor
+  // type returned by defineComponent() or FunctionalComponent
   call?: never
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
@@ -132,8 +133,8 @@ export type ExtractComputedReturns<T extends any> = {
 
 type WatchOptionItem =
   | string
-  | WatchHandler
-  | { handler: WatchHandler } & WatchOptions
+  | WatchCallback
+  | { handler: WatchCallback } & WatchOptions
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -146,7 +147,6 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-// TODO type inference for these options
 export interface LegacyOptions<
   Props,
   RawBindings,
@@ -215,7 +215,7 @@ export function applyOptions(
     instance.renderContext === EMPTY_OBJ
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
-  const ctx = instance.renderProxy!
+  const ctx = instance.proxy!
   const {
     // composition
     mixins,
@@ -463,7 +463,7 @@ function createWatcher(
   if (isString(raw)) {
     const handler = renderContext[raw]
     if (isFunction(handler)) {
-      watch(getter, handler as WatchHandler)
+      watch(getter, handler as WatchCallback)
     } else if (__DEV__) {
       warn(`Invalid watch handler specified by key "${raw}"`, handler)
     }

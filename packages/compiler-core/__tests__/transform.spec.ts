@@ -1,4 +1,4 @@
-import { parse } from '../src/parse'
+import { baseParse } from '../src/parse'
 import { transform, NodeTransform } from '../src/transform'
 import {
   ElementNode,
@@ -21,16 +21,18 @@ import { transformFor } from '../src/transforms/vFor'
 import { transformElement } from '../src/transforms/transformElement'
 import { transformSlotOutlet } from '../src/transforms/transformSlotOutlet'
 import { transformText } from '../src/transforms/transformText'
+import { genFlagText } from './testUtils'
+import { PatchFlags } from '@vue/shared'
 
 describe('compiler: transform', () => {
   test('context state', () => {
-    const ast = parse(`<div>hello {{ world }}</div>`)
+    const ast = baseParse(`<div>hello {{ world }}</div>`)
 
     // manually store call arguments because context is mutable and shared
     // across calls
     const calls: any[] = []
     const plugin: NodeTransform = (node, context) => {
-      calls.push([node, Object.assign({}, context)])
+      calls.push([node, { ...context }])
     }
 
     transform(ast, {
@@ -70,7 +72,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.replaceNode', () => {
-    const ast = parse(`<div/><span/>`)
+    const ast = baseParse(`<div/><span/>`)
     const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         // change the node to <p>
@@ -104,7 +106,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode', () => {
-    const ast = parse(`<span/><div>hello</div><span/>`)
+    const ast = baseParse(`<span/><div>hello</div><span/>`)
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
@@ -130,7 +132,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode (prev sibling)', () => {
-    const ast = parse(`<span/><div/><span/>`)
+    const ast = baseParse(`<span/><div/><span/>`)
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
@@ -157,7 +159,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode (next sibling)', () => {
-    const ast = parse(`<span/><div/><span/>`)
+    const ast = baseParse(`<span/><div/><span/>`)
     const c1 = ast.children[0]
     const d1 = ast.children[1]
 
@@ -184,7 +186,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.hoist', () => {
-    const ast = parse(`<div :id="foo"/><div :id="bar"/>`)
+    const ast = baseParse(`<div :id="foo"/><div :id="bar"/>`)
     const hoisted: ExpressionNode[] = []
     const mock: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT) {
@@ -202,7 +204,7 @@ describe('compiler: transform', () => {
   })
 
   test('onError option', () => {
-    const ast = parse(`<div/>`)
+    const ast = baseParse(`<div/>`)
     const loc = ast.children[0].loc
     const plugin: NodeTransform = (node, context) => {
       context.onError(
@@ -223,20 +225,20 @@ describe('compiler: transform', () => {
   })
 
   test('should inject toString helper for interpolations', () => {
-    const ast = parse(`{{ foo }}`)
+    const ast = baseParse(`{{ foo }}`)
     transform(ast, {})
     expect(ast.helpers).toContain(TO_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
-    const ast = parse(`<!--foo-->`)
+    const ast = baseParse(`<!--foo-->`)
     transform(ast, {})
     expect(ast.helpers).toContain(CREATE_COMMENT)
   })
 
   describe('root codegenNode', () => {
     function transformWithCodegen(template: string) {
-      const ast = parse(template)
+      const ast = baseParse(template)
       transform(ast, {
         nodeTransforms: [
           transformIf,
@@ -352,7 +354,8 @@ describe('compiler: transform', () => {
           [
             { type: NodeTypes.ELEMENT, tag: `div` },
             { type: NodeTypes.ELEMENT, tag: `div` }
-          ]
+          ],
+          genFlagText(PatchFlags.STABLE_FRAGMENT)
         ])
       )
     })

@@ -4,12 +4,18 @@
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
+  "types": "dist/runtime-core.d.ts",
   "files": [
     "index.js",
-    "dist",
-    "jsx.d.ts"
+    "dist"
   ],
-  "types": "dist/runtime-core.d.ts",
+  "buildOptions": {
+    "name": "VueRuntimeCore",
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
   "sideEffects": false,
   "repository": {
     "type": "git",

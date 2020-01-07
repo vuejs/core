@@ -17,8 +17,10 @@ import { SuspenseBoundary } from './Suspense'
 import {
   RendererInternals,
   queuePostRenderEffect,
-  invokeHooks
+  invokeHooks,
+  MoveType
 } from '../renderer'
+import { setTransitionHooks } from './BaseTransition'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -39,6 +41,9 @@ export interface KeepAliveSink {
   deactivate: (vnode: VNode) => void
 }
 
+export const isKeepAlive = (vnode: VNode): boolean =>
+  (vnode.type as any).__isKeepAlive
+
 const KeepAliveImpl = {
   name: `KeepAlive`,
 
@@ -46,6 +51,12 @@ const KeepAliveImpl = {
   // check directly on KeepAlive in the renderer, because importing it directly
   // would prevent it from being tree-shaken.
   __isKeepAlive: true,
+
+  props: {
+    include: [String, RegExp, Array],
+    exclude: [String, RegExp, Array],
+    max: [String, Number]
+  },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
     const cache: Cache = new Map()
@@ -56,7 +67,7 @@ const KeepAliveImpl = {
 
     // KeepAlive communicates with the instantiated renderer via the "sink"
     // where the renderer passes in platform-specific functions, and the
-    // KeepAlivei instance expses activcate/decativate implementations.
+    // KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
     const sink = instance.sink as KeepAliveSink
@@ -71,7 +82,7 @@ const KeepAliveImpl = {
     const storageContainer = createElement('div')
 
     sink.activate = (vnode, container, anchor) => {
-      move(vnode, container, anchor)
+      move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
         component.isDeactivated = false
@@ -82,7 +93,7 @@ const KeepAliveImpl = {
     }
 
     sink.deactivate = (vnode: VNode) => {
-      move(vnode, storageContainer, null)
+      move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
         if (component.da !== null) {
@@ -179,6 +190,10 @@ const KeepAliveImpl = {
         vnode.el = cached.el
         vnode.anchor = cached.anchor
         vnode.component = cached.component
+        if (vnode.transition) {
+          // recursively update transition hooks on subTree
+          setTransitionHooks(vnode, vnode.transition!)
+        }
         // avoid vnode being mounted as fresh
         vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
         // make this key the freshest
@@ -200,15 +215,8 @@ const KeepAliveImpl = {
   }
 }
 
-if (__DEV__) {
-  ;(KeepAliveImpl as any).props = {
-    include: [String, RegExp, Array],
-    exclude: [String, RegExp, Array],
-    max: [String, Number]
-  }
-}
-
 // export the public type for h/tsx inference
+// also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
   new (): {
     $props: KeepAliveProps

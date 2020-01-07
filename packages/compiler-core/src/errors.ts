@@ -19,8 +19,7 @@ export function createCompilerError<T extends number>(
   messages?: { [code: number]: string }
 ): T extends ErrorCodes ? CoreCompilerError : CompilerError {
   const msg = __DEV__ || !__BROWSER__ ? (messages || errorMessages)[code] : code
-  const locInfo = loc ? ` (${loc.start.line}:${loc.start.column})` : ``
-  const error = new SyntaxError(msg + locInfo) as CompilerError
+  const error = new SyntaxError(String(msg)) as CompilerError
   error.code = code
   error.loc = loc
   return error as any
@@ -77,7 +76,7 @@ export const enum ErrorCodes {
   X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
   X_V_SLOT_MIXED_SLOT_USAGE,
   X_V_SLOT_DUPLICATE_SLOT_NAMES,
-  X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
+  X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
   X_V_SLOT_MISPLACED,
   X_V_MODEL_NO_EXPRESSION,
   X_V_MODEL_MALFORMED_EXPRESSION,
@@ -87,6 +86,8 @@ export const enum ErrorCodes {
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
   X_MODULE_MODE_NOT_SUPPORTED,
+  X_CACHE_HANDLER_NOT_SUPPORTED,
+  X_SCOPE_ID_NOT_SUPPORTED,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
@@ -144,7 +145,7 @@ export const errorMessages: { [code: number]: string } = {
 
   // Vue-specific parse errors
   [ErrorCodes.X_INVALID_END_TAG]: 'Invalid end tag.',
-  [ErrorCodes.X_MISSING_END_TAG]: 'End tag was not found.',
+  [ErrorCodes.X_MISSING_END_TAG]: 'Element is missing end tag.',
   [ErrorCodes.X_MISSING_INTERPOLATION_END]:
     'Interpolation end sign was not found.',
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
@@ -167,9 +168,9 @@ export const errorMessages: { [code: number]: string } = {
     `The default slot should also use <template> syntax when there are other ` +
     `named slots to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
-  [ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN]:
-    `Extraneous children found when component has explicit slots. ` +
-    `These children will be ignored.`,
+  [ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN]:
+    `Extraneous children found when component already has explicitly named ` +
+    `default slot. These children will be ignored.`,
   [ErrorCodes.X_V_SLOT_MISPLACED]: `v-slot can only be used on components or <template> tags.`,
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
@@ -178,5 +179,7 @@ export const errorMessages: { [code: number]: string } = {
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
-  [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`
+  [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
+  [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
+  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`
 }

@@ -3,7 +3,7 @@ import { ShapeFlags } from '../shapeFlags'
 import { isFunction, isArray } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals } from '../renderer'
+import { RendererInternals, MoveType } from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { handleError, ErrorCodes } from '../errorHandling'
@@ -213,13 +213,12 @@ export interface SuspenseBoundary<
   effects: Function[]
   resolve(): void
   recede(): void
-  move(container: HostElement, anchor: HostNode | null): void
+  move(container: HostElement, anchor: HostNode | null, type: MoveType): void
   next(): HostNode | null
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: (
       instance: ComponentInternalInstance,
-      parentComponent: ComponentInternalInstance | null,
       parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
       initialVNode: VNode<HostNode, HostElement>,
       container: HostElement,
@@ -300,7 +299,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         unmount(fallbackTree as VNode, parentComponent, suspense, true)
       }
       // move content from off-dom container to actual container
-      move(subTree as VNode, container, anchor)
+      move(subTree as VNode, container, anchor, MoveType.ENTER)
       const el = (vnode.el = (subTree as VNode).el!)
       // suspense as the root node of a component...
       if (parentComponent && parentComponent.subTree === vnode) {
@@ -347,7 +346,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
 
       // move content tree back to the off-dom container
       const anchor = next(subTree)
-      move(subTree as VNode, hiddenContainer, null)
+      move(subTree as VNode, hiddenContainer, null, MoveType.LEAVE)
       // remount the fallback tree
       patch(
         null,
@@ -373,11 +372,12 @@ function createSuspenseBoundary<HostNode, HostElement>(
       }
     },
 
-    move(container, anchor) {
+    move(container, anchor, type) {
       move(
         suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
         container,
-        anchor
+        anchor,
+        type
       )
       suspense.container = container
     },
@@ -419,7 +419,6 @@ function createSuspenseBoundary<HostNode, HostElement>(
           handleSetupResult(instance, asyncSetupResult, suspense)
           setupRenderEffect(
             instance,
-            parentComponent,
             suspense,
             vnode,
             // component may have been moved before resolve

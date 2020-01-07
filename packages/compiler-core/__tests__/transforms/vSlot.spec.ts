@@ -1,6 +1,6 @@
 import {
   CompilerOptions,
-  parse,
+  baseParse as parse,
   transform,
   generate,
   ElementNode,
@@ -95,7 +95,7 @@ describe('compiler: transform component slots', () => {
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
-  test('explicit default slot', () => {
+  test('on-component default slot', () => {
     const { root, slots } = parseWithSlots(
       `<Comp v-slot="{ foo }">{{ foo }}{{ bar }}</Comp>`,
       { prefixIdentifiers: true }
@@ -187,6 +187,43 @@ describe('compiler: transform component slots', () => {
       })
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  test('named slots w/ implicit default slot', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp>
+        <template #one>foo</template>bar<span/>
+      </Comp>`
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        one: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo`
+            }
+          ]
+        },
+        default: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: undefined,
+          returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: `bar`
+            },
+            {
+              type: NodeTypes.ELEMENT,
+              tag: `span`
+            }
+          ]
+        }
+      })
+    )
+    expect(generate(root).code).toMatchSnapshot()
   })
 
   test('dynamically named slots', () => {
@@ -608,13 +645,13 @@ describe('compiler: transform component slots', () => {
   })
 
   describe('errors', () => {
-    test('error on extraneous children w/ named slots', () => {
+    test('error on extraneous children w/ named default slot', () => {
       const onError = jest.fn()
       const source = `<Comp><template #default>foo</template>bar</Comp>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
       expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_V_SLOT_EXTRANEOUS_NON_SLOT_CHILDREN,
+        code: ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
         loc: {
           source: `bar`,
           start: {

@@ -2,7 +2,7 @@ import {
   createApp,
   h,
   nextTick,
-  createComponent,
+  defineComponent,
   vModelDynamic,
   withDirectives,
   VNode
@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe('vModel', () => {
   it('should work with text input', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -60,7 +60,7 @@ describe('vModel', () => {
   })
 
   it('should work with textarea', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -91,7 +91,7 @@ describe('vModel', () => {
   })
 
   it('should support modifiers', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { number: null, trim: null, lazy: null }
       },
@@ -160,7 +160,7 @@ describe('vModel', () => {
   })
 
   it('should work with checkbox', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -201,7 +201,7 @@ describe('vModel', () => {
   })
 
   it('should work with checkbox and true-value/false-value', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -244,7 +244,7 @@ describe('vModel', () => {
   })
 
   it('should work with checkbox and true-value/false-value with object values', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -287,7 +287,7 @@ describe('vModel', () => {
   })
 
   it(`should support array as a checkbox model`, async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: [] }
       },
@@ -357,7 +357,7 @@ describe('vModel', () => {
   })
 
   it('should work with radio', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -417,7 +417,7 @@ describe('vModel', () => {
   })
 
   it('should work with single select', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -473,7 +473,7 @@ describe('vModel', () => {
   })
 
   it('should work with multiple select', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: [] }
       },

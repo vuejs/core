@@ -1,0 +1,95 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`scopeId compiler support should push scopeId for hoisted nodes 1`] = `
+"import { createVNode, createBlock, openBlock, withScopeId, pushScopeId, popScopeId } from \\"vue\\"
+const withId = withScopeId(\\"test\\")
+
+pushScopeId(\\"test\\")
+const _hoisted_1 = createVNode(\\"div\\", null, \\"hello\\")
+const _hoisted_2 = createVNode(\\"div\\", null, \\"world\\")
+popScopeId()
+
+export const render = withId(function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(\\"div\\", null, [
+    _hoisted_1,
+    _hoisted_2
+  ]))
+})"
+`;
+
+exports[`scopeId compiler support should wrap default slot 1`] = `
+"import { createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
+const withId = withScopeId(\\"test\\")
+
+export const render = withId(function render() {
+  const _ctx = this
+  const _component_Child = resolveComponent(\\"Child\\")
+  
+  return (openBlock(), createBlock(_component_Child, null, {
+    default: withId(() => [
+      createVNode(\\"div\\")
+    ]),
+    _compiled: true
+  }))
+})"
+`;
+
+exports[`scopeId compiler support should wrap dynamic slots 1`] = `
+"import { createVNode, resolveComponent, renderList, createSlots, createBlock, openBlock, withScopeId } from \\"vue\\"
+const withId = withScopeId(\\"test\\")
+
+export const render = withId(function render() {
+  const _ctx = this
+  const _component_Child = resolveComponent(\\"Child\\")
+  
+  return (openBlock(), createBlock(_component_Child, null, createSlots({ _compiled: true }, [
+    (_ctx.ok)
+      ? {
+          name: \\"foo\\",
+          fn: withId(() => [
+            createVNode(\\"div\\")
+          ])
+        }
+      : undefined,
+    renderList(_ctx.list, (i) => {
+      return {
+        name: i,
+        fn: withId(() => [
+          createVNode(\\"div\\")
+        ])
+      }
+    })
+  ]), 512 /* DYNAMIC_SLOTS */))
+})"
+`;
+
+exports[`scopeId compiler support should wrap named slots 1`] = `
+"import { toString, createTextVNode, createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
+const withId = withScopeId(\\"test\\")
+
+export const render = withId(function render() {
+  const _ctx = this
+  const _component_Child = resolveComponent(\\"Child\\")
+  
+  return (openBlock(), createBlock(_component_Child, null, {
+    foo: withId(({ msg }) => [
+      createTextVNode(toString(msg), 1 /* TEXT */)
+    ]),
+    bar: withId(() => [
+      createVNode(\\"div\\")
+    ]),
+    _compiled: true
+  }))
+})"
+`;
+
+exports[`scopeId compiler support should wrap render function 1`] = `
+"import { createVNode, createBlock, openBlock, withScopeId } from \\"vue\\"
+const withId = withScopeId(\\"test\\")
+
+export const render = withId(function render() {
+  const _ctx = this
+  return (openBlock(), createBlock(\\"div\\"))
+})"
+`;

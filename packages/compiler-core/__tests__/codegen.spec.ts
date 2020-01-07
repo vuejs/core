@@ -34,6 +34,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     helpers: [],
     components: [],
     directives: [],
+    imports: [],
     hoists: [],
     cached: 0,
     codegenNode: createSimpleExpression(`null`, false),

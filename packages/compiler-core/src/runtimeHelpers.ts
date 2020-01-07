@@ -2,6 +2,7 @@ export const FRAGMENT = Symbol(__DEV__ ? `Fragment` : ``)
 export const PORTAL = Symbol(__DEV__ ? `Portal` : ``)
 export const SUSPENSE = Symbol(__DEV__ ? `Suspense` : ``)
 export const KEEP_ALIVE = Symbol(__DEV__ ? `KeepAlive` : ``)
+export const BASE_TRANSITION = Symbol(__DEV__ ? `BaseTransition` : ``)
 export const OPEN_BLOCK = Symbol(__DEV__ ? `openBlock` : ``)
 export const CREATE_BLOCK = Symbol(__DEV__ ? `createBlock` : ``)
 export const CREATE_VNODE = Symbol(__DEV__ ? `createVNode` : ``)
@@ -21,6 +22,9 @@ export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
 export const SET_BLOCK_TRACKING = Symbol(__DEV__ ? `setBlockTracking` : ``)
+export const PUSH_SCOPE_ID = Symbol(__DEV__ ? `pushScopeId` : ``)
+export const POP_SCOPE_ID = Symbol(__DEV__ ? `popScopeId` : ``)
+export const WITH_SCOPE_ID = Symbol(__DEV__ ? `withScopeId` : ``)
 
 // Name mapping for runtime helpers that need to be imported from 'vue' in
 // generated code. Make sure these are correctly exported in the runtime!
@@ -30,6 +34,7 @@ export const helperNameMap: any = {
   [PORTAL]: `Portal`,
   [SUSPENSE]: `Suspense`,
   [KEEP_ALIVE]: `KeepAlive`,
+  [BASE_TRANSITION]: `BaseTransition`,
   [OPEN_BLOCK]: `openBlock`,
   [CREATE_BLOCK]: `createBlock`,
   [CREATE_VNODE]: `createVNode`,
@@ -46,7 +51,10 @@ export const helperNameMap: any = {
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,
-  [SET_BLOCK_TRACKING]: `setBlockTracking`
+  [SET_BLOCK_TRACKING]: `setBlockTracking`,
+  [PUSH_SCOPE_ID]: `pushScopeId`,
+  [POP_SCOPE_ID]: `popScopeId`,
+  [WITH_SCOPE_ID]: `withScopeId`
 }
 
 export function registerRuntimeHelpers(helpers: any) {

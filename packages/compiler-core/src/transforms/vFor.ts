@@ -79,7 +79,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         `null`,
         renderExp,
-        fragmentFlag + (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``)
+        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`
       ])
     ]) as ForCodegenNode
 
@@ -146,7 +146,10 @@ export const transformFor = createStructuralDirectiveTransform(
           createCallExpression(helper(CREATE_BLOCK), [
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : `null`,
-            node.children
+            node.children,
+            `${PatchFlags.STABLE_FRAGMENT} /* ${
+              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+            } */`
           ]),
           context
         )

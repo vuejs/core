@@ -26,10 +26,15 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
-  SUSPENSE,
   KEEP_ALIVE
 } from '../runtimeHelpers'
-import { getInnerRange, isVSlot, toValidAssetId, findProp } from '../utils'
+import {
+  getInnerRange,
+  isVSlot,
+  toValidAssetId,
+  findProp,
+  isCoreComponent
+} from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
 
@@ -44,7 +49,7 @@ export const transformElement: NodeTransform = (node, context) => {
     // handled by transformSlotOutlet
     node.tagType === ElementTypes.SLOT ||
     // <template v-if/v-for> should have already been replaced
-    // <templte v-slot> is handled by buildSlots
+    // <template v-slot> is handled by buildSlots
     (node.tagType === ElementTypes.TEMPLATE && node.props.some(isVSlot))
   ) {
     return
@@ -53,9 +58,8 @@ export const transformElement: NodeTransform = (node, context) => {
   // processed and merged.
   return function postTransformElement() {
     const { tag, tagType, props } = node
-    const isPortal = tag === 'portal' || tag === 'Portal'
-    const isSuspense = tag === 'suspense' || tag === 'Suspense'
-    const isKeepAlive = tag === 'keep-alive' || tag === 'KeepAlive'
+    const builtInComponentSymbol =
+      isCoreComponent(tag) || context.isBuiltInComponent(tag)
     const isComponent = tagType === ElementTypes.COMPONENT
 
     let hasProps = props.length > 0
@@ -81,7 +85,8 @@ export const transformElement: NodeTransform = (node, context) => {
         else if (isProp.exp) {
           dynamicComponent = createCallExpression(
             context.helper(RESOLVE_DYNAMIC_COMPONENT),
-            [isProp.exp]
+            // _ctx.$ exposes the owner instance of current render function
+            [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
           )
         }
       }
@@ -90,12 +95,8 @@ export const transformElement: NodeTransform = (node, context) => {
     let nodeType
     if (dynamicComponent) {
       nodeType = dynamicComponent
-    } else if (isPortal) {
-      nodeType = context.helper(PORTAL)
-    } else if (isSuspense) {
-      nodeType = context.helper(SUSPENSE)
-    } else if (isKeepAlive) {
-      nodeType = context.helper(KEEP_ALIVE)
+    } else if (builtInComponentSymbol) {
+      nodeType = context.helper(builtInComponentSymbol)
     } else if (isComponent) {
       // user component w/ resolve
       context.helper(RESOLVE_COMPONENT)
@@ -130,8 +131,15 @@ export const transformElement: NodeTransform = (node, context) => {
       if (!hasProps) {
         args.push(`null`)
       }
-      // Portal should have normal children instead of slots
-      if (isComponent && !isPortal) {
+      // Portal & KeepAlive should have normal children instead of slots
+      // Portal is not a real component has dedicated handling in the renderer
+      // KeepAlive should not track its own deps so that it can be used inside
+      // Transition
+      if (
+        isComponent &&
+        builtInComponentSymbol !== PORTAL &&
+        builtInComponentSymbol !== KEEP_ALIVE
+      ) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {
@@ -487,13 +495,11 @@ function buildDirectiveArgs(
       }
       dirArgs.push(`void 0`)
     }
+    const trueExpression = createSimpleExpression(`true`, false, loc)
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
-          createObjectProperty(
-            modifier,
-            createSimpleExpression(`true`, false, loc)
-          )
+          createObjectProperty(modifier, trueExpression)
         ),
         loc
       )

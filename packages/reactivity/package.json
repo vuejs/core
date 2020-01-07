@@ -4,20 +4,25 @@
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
+  "types": "dist/reactivity.d.ts",
+  "unpkg": "dist/reactivity.global.js",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/reactivity.d.ts",
-  "unpkg": "dist/reactivity.global.js",
   "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/vue.git"
   },
   "buildOptions": {
-    "name": "VueObserver",
-    "formats": ["esm", "cjs", "global", "esm-browser"]
+    "name": "VueReactivity",
+    "formats": [
+      "esm-bundler",
+      "cjs",
+      "global",
+      "esm"
+    ]
   },
   "keywords": [
     "vue"

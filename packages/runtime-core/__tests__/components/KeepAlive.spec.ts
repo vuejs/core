@@ -11,7 +11,7 @@ import {
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
-describe('keep-alive', () => {
+describe('KeepAlive', () => {
   let one: ComponentOptions
   let two: ComponentOptions
   let views: Record<string, ComponentOptions>

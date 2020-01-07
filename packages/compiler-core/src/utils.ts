@@ -27,8 +27,31 @@ import {
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
-import { OPEN_BLOCK, MERGE_PROPS, RENDER_SLOT } from './runtimeHelpers'
-import { isString, isFunction, isObject } from '@vue/shared'
+import {
+  OPEN_BLOCK,
+  MERGE_PROPS,
+  RENDER_SLOT,
+  PORTAL,
+  SUSPENSE,
+  KEEP_ALIVE,
+  BASE_TRANSITION
+} from './runtimeHelpers'
+import { isString, isFunction, isObject, hyphenate } from '@vue/shared'
+
+export const isBuiltInType = (tag: string, expected: string): boolean =>
+  tag === expected || tag === hyphenate(expected)
+
+export function isCoreComponent(tag: string): symbol | void {
+  if (isBuiltInType(tag, 'Portal')) {
+    return PORTAL
+  } else if (isBuiltInType(tag, 'Suspense')) {
+    return SUSPENSE
+  } else if (isBuiltInType(tag, 'KeepAlive')) {
+    return KEEP_ALIVE
+  } else if (isBuiltInType(tag, 'BaseTransition')) {
+    return BASE_TRANSITION
+  }
+}
 
 // cache node requires
 // lazy require dependencies so that they don't end up in rollup's dep graph
@@ -37,7 +60,7 @@ let _parse: typeof parse
 let _walk: typeof walk
 
 export function loadDep(name: string) {
-  if (typeof process !== 'undefined' && isFunction(require)) {
+  if (!__BROWSER__ && typeof process !== 'undefined' && isFunction(require)) {
     return require(name)
   } else {
     // This is only used when we are building a dev-only build of the compiler
@@ -126,7 +149,7 @@ export function advancePositionWithMutation(
   pos.column =
     lastNewLinePos === -1
       ? pos.column + numberOfCharacters
-      : Math.max(1, numberOfCharacters - lastNewLinePos)
+      : numberOfCharacters - lastNewLinePos
 
   return pos
 }

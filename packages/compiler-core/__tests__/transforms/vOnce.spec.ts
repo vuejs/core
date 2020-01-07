@@ -1,5 +1,5 @@
 import {
-  parse,
+  baseParse as parse,
   transform,
   NodeTypes,
   generate,

@@ -5,50 +5,55 @@ import scopedPlugin from './stylePluginScoped'
 import {
   processors,
   StylePreprocessor,
-  StylePreprocessorResults
+  StylePreprocessorResults,
+  PreprocessLang
 } from './stylePreprocessors'
+import { RawSourceMap } from 'source-map'
 
-export interface StyleCompileOptions {
+export interface SFCStyleCompileOptions {
   source: string
   filename: string
   id: string
-  map?: object
+  map?: RawSourceMap
   scoped?: boolean
   trim?: boolean
-  preprocessLang?: string
+  preprocessLang?: PreprocessLang
   preprocessOptions?: any
   postcssOptions?: any
   postcssPlugins?: any[]
 }
 
-export interface AsyncStyleCompileOptions extends StyleCompileOptions {
+export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
   isAsync?: boolean
 }
 
-export interface StyleCompileResults {
+export interface SFCStyleCompileResults {
   code: string
-  map: object | void
+  map: RawSourceMap | undefined
   rawResult: LazyResult | Result | undefined
-  errors: string[]
+  errors: Error[]
 }
 
 export function compileStyle(
-  options: StyleCompileOptions
-): StyleCompileResults {
-  return doCompileStyle({ ...options, isAsync: false }) as StyleCompileResults
+  options: SFCStyleCompileOptions
+): SFCStyleCompileResults {
+  return doCompileStyle({
+    ...options,
+    isAsync: false
+  }) as SFCStyleCompileResults
 }
 
 export function compileStyleAsync(
-  options: StyleCompileOptions
-): Promise<StyleCompileResults> {
+  options: SFCStyleCompileOptions
+): Promise<SFCStyleCompileResults> {
   return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    StyleCompileResults
+    SFCStyleCompileResults
   >
 }
 
 export function doCompileStyle(
-  options: AsyncStyleCompileOptions
-): StyleCompileResults | Promise<StyleCompileResults> {
+  options: SFCAsyncStyleCompileOptions
+): SFCStyleCompileResults | Promise<SFCStyleCompileResults> {
   const {
     filename,
     id,
@@ -88,7 +93,7 @@ export function doCompileStyle(
   let code: string | undefined
   let outMap: ResultMap | undefined
 
-  const errors: any[] = []
+  const errors: Error[] = []
   if (preProcessedSource && preProcessedSource.errors.length) {
     errors.push(...preProcessedSource.errors)
   }
@@ -101,14 +106,14 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && result.map.toJSON(),
+          map: result.map && (result.map.toJSON() as any),
           errors,
           rawResult: result
         }))
         .catch(error => ({
           code: '',
           map: undefined,
-          errors: [...errors, error.message],
+          errors: [...errors, error],
           rawResult: undefined
         }))
     }
@@ -122,24 +127,18 @@ export function doCompileStyle(
 
   return {
     code: code || ``,
-    map: outMap && outMap.toJSON(),
+    map: outMap && (outMap.toJSON() as any),
     errors,
     rawResult: result
   }
 }
 
 function preprocess(
-  options: StyleCompileOptions,
+  options: SFCStyleCompileOptions,
   preprocessor: StylePreprocessor
 ): StylePreprocessorResults {
-  return preprocessor.render(
-    options.source,
-    options.map,
-    Object.assign(
-      {
-        filename: options.filename
-      },
-      options.preprocessOptions
-    )
-  )
+  return preprocessor.render(options.source, options.map, {
+    filename: options.filename,
+    ...options.preprocessOptions
+  })
 }

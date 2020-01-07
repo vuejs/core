@@ -29,12 +29,23 @@ import {
 } from './errorHandling'
 import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
+import { warn } from './warning'
 
-export type WatchHandler<T = any> = (
+export type WatchEffect = (onCleanup: CleanupRegistrator) => void
+
+export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
+
+export type WatchCallback<T = any> = (
   value: T,
   oldValue: T,
   onCleanup: CleanupRegistrator
 ) => any
+
+type MapSources<T> = {
+  [K in keyof T]: T[K] extends WatchSource<infer V> ? V : never
+}
+
+export type CleanupRegistrator = (invalidate: () => void) => void
 
 export interface WatchOptions {
   lazy?: boolean
@@ -44,27 +55,17 @@ export interface WatchOptions {
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
-type StopHandle = () => void
-
-type WatcherSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
-
-type MapSources<T> = {
-  [K in keyof T]: T[K] extends WatcherSource<infer V> ? V : never
-}
-
-export type CleanupRegistrator = (invalidate: () => void) => void
-
-type SimpleEffect = (onCleanup: CleanupRegistrator) => void
+export type StopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
 // overload #1: simple effect
-export function watch(effect: SimpleEffect, options?: WatchOptions): StopHandle
+export function watch(effect: WatchEffect, options?: WatchOptions): StopHandle
 
 // overload #2: single source + cb
 export function watch<T>(
-  source: WatcherSource<T>,
-  cb: WatchHandler<T>,
+  source: WatchSource<T>,
+  cb: WatchCallback<T>,
   options?: WatchOptions
 ): StopHandle
 
@@ -72,16 +73,16 @@ export function watch<T>(
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
-export function watch<T extends Readonly<WatcherSource<unknown>[]>>(
+export function watch<T extends Readonly<WatchSource<unknown>[]>>(
   sources: T,
-  cb: WatchHandler<MapSources<T>>,
+  cb: WatchCallback<MapSources<T>>,
   options?: WatchOptions
 ): StopHandle
 
 // implementation
 export function watch<T = any>(
-  effectOrSource: WatcherSource<T> | WatcherSource<T>[] | SimpleEffect,
-  cbOrOptions?: WatchHandler<T> | WatchOptions,
+  effectOrSource: WatchSource<T> | WatchSource<T>[] | WatchEffect,
+  cbOrOptions?: WatchCallback<T> | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
   if (isFunction(cbOrOptions)) {
@@ -95,8 +96,8 @@ export function watch<T = any>(
 }
 
 function doWatch(
-  source: WatcherSource | WatcherSource[] | SimpleEffect,
-  cb: WatchHandler | null,
+  source: WatchSource | WatchSource[] | WatchEffect,
+  cb: WatchCallback | null,
   { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
   const instance = currentInstance
@@ -197,14 +198,20 @@ function doWatch(
     scheduler: applyCb ? () => scheduler(applyCb) : scheduler
   })
 
-  if (!lazy) {
+  if (lazy && cb) {
+    oldValue = runner()
+  } else {
+    if (__DEV__ && lazy && !cb) {
+      warn(
+        `watch() lazy option is only respected when using the ` +
+          `watch(getter, callback) signature.`
+      )
+    }
     if (applyCb) {
       scheduler(applyCb)
     } else {
       scheduler(runner)
     }
-  } else {
-    oldValue = runner()
   }
 
   recordEffect(runner)
@@ -220,7 +227,7 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): StopHandle {
-  const ctx = this.renderProxy as Data
+  const ctx = this.proxy as Data
   const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
   const stop = watch(getter, cb.bind(ctx), options)
   onBeforeUnmount(stop, this)
