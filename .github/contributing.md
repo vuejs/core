@@ -81,7 +81,7 @@ By default, each package will be built in multiple distribution formats as speci
   - Does not ship a minified build (to be done together with the rest of the code after bundling)
   - For use with bundlers like `webpack`, `rollup` and `parcel`.
   - Imports dependencies (e.g. `@vue/runtime-core`, `@vue/runtime-compiler`)
-    - Imported depdencies are also `esm-bundler` builds and will in turn import their dependencies (e.g. `@vue/runtime-core` imports `@vue/reactivity`)
+    - Imported dependencies are also `esm-bundler` builds and will in turn import their dependencies (e.g. `@vue/runtime-core` imports `@vue/reactivity`)
     - This means you **can** install/import these deps without ending up with different instances of these dependencies
 
 - **`esm`**:
