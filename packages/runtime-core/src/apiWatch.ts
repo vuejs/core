@@ -214,9 +214,12 @@ function doWatch(
     }
   }
 
-  recordEffect(runner)
+  const removeRecord = recordEffect(runner)
   return () => {
     stop(runner)
+    if (removeRecord) {
+      removeRecord()
+    }
   }
 }
 
