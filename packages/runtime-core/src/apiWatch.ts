@@ -214,11 +214,15 @@ function doWatch(
     }
   }
 
-  const removeRecord = recordEffect(runner)
+  recordEffect(runner)
   return () => {
     stop(runner)
-    if (removeRecord) {
-      removeRecord()
+    if (instance) {
+      const effects = instance.effects!
+      const index = effects.indexOf(runner)
+      if (index > -1) {
+        effects.splice(index, 1)
+      }
     }
   }
 }
