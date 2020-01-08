@@ -33,16 +33,14 @@ import {
 
 import { currentInstance } from './component'
 
-type RemoveRecord = () => void
-
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
-export function recordEffect(effect: ReactiveEffect): RemoveRecord | void {
+export function recordEffect(effect: ReactiveEffect): (() => void) | void {
   if (currentInstance) {
     const effects = currentInstance.effects || (currentInstance.effects = [])
     effects.push(effect)
     return () => {
-      const index = effects.findIndex(_effect => _effect === effect)
+      const index = effects.indexOf(effect)
       if (index !== -1) {
         effects.splice(index, 1)
       }
