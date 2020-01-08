@@ -56,7 +56,7 @@ export interface AppContext {
 type PluginInstallFunction = (app: App, ...options: any[]) => any
 
 export type Plugin =
-  | PluginInstallFunction
+  | PluginInstallFunction & { install?: PluginInstallFunction }
   | {
       install: PluginInstallFunction
     }
@@ -103,11 +103,7 @@ export function createAppAPI<HostNode, HostElement>(
       use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
-        } else if (
-          plugin &&
-          'install' in plugin &&
-          isFunction(plugin.install)
-        ) {
+        } else if (plugin && isFunction(plugin.install)) {
           installedPlugins.add(plugin)
           plugin.install(app, ...options)
         } else if (isFunction(plugin)) {
