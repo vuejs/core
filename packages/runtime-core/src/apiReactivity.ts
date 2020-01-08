@@ -35,7 +35,7 @@ import { currentInstance } from './component'
 
 // record effects created during a component's setup() so that they can be
 // stopped when the component unmounts
-export function recordEffect(effect: ReactiveEffect): (() => void) | void {
+export function recordEffect(effect: ReactiveEffect) {
   if (currentInstance) {
     ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
   }
