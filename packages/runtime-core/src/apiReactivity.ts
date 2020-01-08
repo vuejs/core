@@ -37,14 +37,7 @@ import { currentInstance } from './component'
 // stopped when the component unmounts
 export function recordEffect(effect: ReactiveEffect): (() => void) | void {
   if (currentInstance) {
-    const effects = currentInstance.effects || (currentInstance.effects = [])
-    effects.push(effect)
-    return () => {
-      const index = effects.indexOf(effect)
-      if (index !== -1) {
-        effects.splice(index, 1)
-      }
-    }
+    ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
   }
 }
 
