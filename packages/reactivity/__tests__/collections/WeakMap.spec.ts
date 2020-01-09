@@ -1,4 +1,4 @@
-import { reactive, effect, toRaw, isReactive } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   describe('WeakMap', () => {
@@ -23,6 +23,22 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe('value')
       map.set(key, 'value2')
       expect(dummy).toBe('value2')
+      map.delete(key)
+      expect(dummy).toBe(undefined)
+    })
+
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const key = {}
+      const value = reactive({})
+      const map = reactive(new WeakMap())
+      effect(() => {
+        dummy = map.get(key)
+      })
+
+      expect(dummy).toBe(undefined)
+      map.set(key, value)
+      expect(dummy).toBe(value)
       map.delete(key)
       expect(dummy).toBe(undefined)
     })

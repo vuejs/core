@@ -1,4 +1,4 @@
-import { reactive, effect, isReactive, toRaw } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   describe('Set', () => {
@@ -19,6 +19,19 @@ describe('reactivity/collections', () => {
       set.add('value')
       expect(dummy).toBe(true)
       set.delete('value')
+      expect(dummy).toBe(false)
+    })
+
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const value = reactive({})
+      const set = reactive(new Set())
+      effect(() => (dummy = set.has(value)))
+
+      expect(dummy).toBe(false)
+      set.add(value)
+      expect(dummy).toBe(true)
+      set.delete(value)
       expect(dummy).toBe(false)
     })
 
