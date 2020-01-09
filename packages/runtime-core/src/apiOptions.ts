@@ -63,7 +63,10 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
+  components?: Record<
+    string,
+    Component | { new (): ComponentPublicInstance<any, any, any, any, any> }
+  >
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
