@@ -51,7 +51,7 @@ export interface ComponentOptionsBase<
   M extends MethodOptions
 > extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
   setup?: (
-    this: null,
+    this: void,
     props: Props,
     ctx: SetupContext
   ) => RawBindings | RenderFunction | void
@@ -82,7 +82,7 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M> & {
   props?: undefined
 } & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
