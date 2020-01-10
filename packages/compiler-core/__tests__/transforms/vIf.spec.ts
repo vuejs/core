@@ -4,26 +4,26 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
+  CallExpression,
+  CommentNode,
+  ConditionalExpression,
+  ElementNode,
   IfNode,
   NodeTypes,
-  ElementNode,
-  TextNode,
-  CommentNode,
-  SimpleExpressionNode,
   SequenceExpression,
-  ConditionalExpression,
-  CallExpression
+  SimpleExpressionNode,
+  TextNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
 import {
-  OPEN_BLOCK,
   CREATE_BLOCK,
+  CREATE_COMMENT,
   FRAGMENT,
   MERGE_PROPS,
-  WITH_DIRECTIVES,
+  OPEN_BLOCK,
   RENDER_SLOT,
-  CREATE_COMMENT
+  WITH_DIRECTIVES
 } from '../../src/runtimeHelpers'
 import { createObjectMatcher } from '../testUtils'
 
@@ -528,6 +528,15 @@ describe('compiler: v-if', () => {
       expect(realBranch.arguments[1]).toMatchObject(
         createObjectMatcher({ key: `[0]` })
       )
+    })
+
+    // #604
+    test('parent is element with fragment root', () => {
+      const { root } = parseWithIfTransform(
+        `<span></span><div><div v-if="ok"/></div>`,
+        { onError: jest.fn() }
+      )
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test.todo('with comments')

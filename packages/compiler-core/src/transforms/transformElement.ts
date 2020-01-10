@@ -1,39 +1,42 @@
 import { NodeTransform, TransformContext } from '../transform'
 import {
-  NodeTypes,
-  ElementTypes,
-  CallExpression,
-  ObjectExpression,
-  ElementNode,
-  DirectiveNode,
-  ExpressionNode,
   ArrayExpression,
-  createCallExpression,
+  CallExpression,
   createArrayExpression,
-  createObjectProperty,
-  createSimpleExpression,
+  createCallExpression,
   createObjectExpression,
+  createObjectProperty,
+  createSequenceExpression,
+  createSimpleExpression,
+  DirectiveNode,
+  ElementNode,
+  ElementTypes,
+  ExpressionNode,
+  NodeTypes,
+  ObjectExpression,
   Property
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
+import { isSymbol, PatchFlagNames, PatchFlags } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
+  CREATE_BLOCK,
   CREATE_VNODE,
-  WITH_DIRECTIVES,
-  RESOLVE_DIRECTIVE,
-  RESOLVE_COMPONENT,
-  RESOLVE_DYNAMIC_COMPONENT,
+  KEEP_ALIVE,
   MERGE_PROPS,
-  TO_HANDLERS,
+  OPEN_BLOCK,
   PORTAL,
-  KEEP_ALIVE
+  RESOLVE_COMPONENT,
+  RESOLVE_DIRECTIVE,
+  RESOLVE_DYNAMIC_COMPONENT,
+  TO_HANDLERS,
+  WITH_DIRECTIVES
 } from '../runtimeHelpers'
 import {
-  getInnerRange,
-  isVSlot,
-  toValidAssetId,
   findProp,
-  isCoreComponent
+  getInnerRange,
+  isCoreComponent,
+  isVSlot,
+  toValidAssetId
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
@@ -190,8 +193,20 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     const { loc } = node
-    const vnode = createCallExpression(context.helper(CREATE_VNODE), args, loc)
-
+    let vnode: ElementNode['codegenNode'] = createCallExpression(
+      context.helper(CREATE_VNODE),
+      args,
+      loc
+    )
+    if (
+      context.root.children[0] !== node &&
+      node.children.find(c => c.type === NodeTypes.IF)
+    ) {
+      vnode = createSequenceExpression([
+        createCallExpression(context.helper(OPEN_BLOCK)),
+        createCallExpression(context.helper(CREATE_BLOCK), args, loc)
+      ])
+    }
     if (runtimeDirectives && runtimeDirectives.length) {
       node.codegenNode = createCallExpression(
         context.helper(WITH_DIRECTIVES),

@@ -14,6 +14,25 @@ return function render() {
 }"
 `;
 
+exports[`compiler: v-if codegen parent is element with fragment root 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment } = _Vue
+    
+    return (_openBlock(), _createBlock(_Fragment, null, [
+      _createVNode(\\"span\\"),
+      (_openBlock(), _createBlock(\\"div\\", null, [
+        (_openBlock(), ok
+          ? _createBlock(\\"div\\", { key: 0 })
+          : _createCommentVNode(\\"v-if\\", true))
+      ]))
+    ], 64 /* STABLE_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-if codegen template v-if 1`] = `
 "const _Vue = Vue
 

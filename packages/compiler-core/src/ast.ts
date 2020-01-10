@@ -1,14 +1,14 @@
 import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
-  CREATE_VNODE,
-  WITH_DIRECTIVES,
-  RENDER_SLOT,
-  CREATE_SLOTS,
-  RENDER_LIST,
-  OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  CREATE_SLOTS,
+  CREATE_VNODE,
+  FRAGMENT,
+  OPEN_BLOCK,
+  RENDER_LIST,
+  RENDER_SLOT,
+  WITH_DIRECTIVES
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem } from './transform'
@@ -115,6 +115,7 @@ export interface BaseElementNode extends Node {
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
   codegenNode:
+    | SequenceExpression
     | CallExpression
     | SimpleExpressionNode
     | CacheExpression
@@ -124,6 +125,7 @@ export interface BaseElementNode extends Node {
 export interface PlainElementNode extends BaseElementNode {
   tagType: ElementTypes.ELEMENT
   codegenNode:
+    | SequenceExpression
     | ElementCodegenNode
     | undefined
     | SimpleExpressionNode // when hoisted
@@ -132,7 +134,11 @@ export interface PlainElementNode extends BaseElementNode {
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
-  codegenNode: ComponentCodegenNode | undefined | CacheExpression // when cached by v-once
+  codegenNode:
+    | SequenceExpression
+    | ComponentCodegenNode
+    | undefined
+    | CacheExpression // when cached by v-once
 }
 
 export interface SlotOutletNode extends BaseElementNode {
