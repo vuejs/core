@@ -41,11 +41,15 @@ interface HMRRecord {
 const map: Map<string, HMRRecord> = new Map()
 
 export function registerHMR(instance: ComponentInternalInstance) {
-  map.get(instance.type.__hmrId!)!.instances.add(instance)
+  if (map.has(instance.type.__hmrId!)) {
+    map.get(instance.type.__hmrId!)!.instances.add(instance)
+  }
 }
 
 export function unregisterHMR(instance: ComponentInternalInstance) {
-  map.get(instance.type.__hmrId!)!.instances.delete(instance)
+  if (map.has(instance.type.__hmrId!)) {
+    map.get(instance.type.__hmrId!)!.instances.delete(instance)
+  }
 }
 
 function createRecord(id: string, comp: ComponentOptions): boolean {
