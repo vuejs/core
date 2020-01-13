@@ -184,8 +184,7 @@ async function publishPackage(pkgName, version, runIfNotDry) {
 
   // for now (alpha/beta phase), every package except "vue" can be published as
   // `latest`, whereas "vue" will be published under the "next" tag.
-  const releaseTag =
-    pkgName === 'vue' ? 'next' : semver.prerelease(version)[0] || 'latest'
+  const releaseTag = pkgName === 'vue' ? 'next' : 'latest'
 
   // TODO use inferred release channel after official 3.0 release
   // const releaseTag = semver.prerelease(version)[0] || 'latest'
