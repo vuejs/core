@@ -1,4 +1,4 @@
-import { effect, isReactive, reactive, toRaw } from '../../src'
+import { reactive, effect, isReactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   describe('Set', () => {

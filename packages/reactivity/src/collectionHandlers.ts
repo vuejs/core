@@ -1,8 +1,8 @@
-import { reactive, readonly, toRaw } from './reactive'
-import { ITERATE_KEY, track, trigger } from './effect'
+import { toRaw, reactive, readonly } from './reactive'
+import { track, trigger, ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { LOCKED } from './lock'
-import { capitalize, hasChanged, hasOwn, isObject } from '@vue/shared'
+import { isObject, capitalize, hasOwn, hasChanged } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -63,6 +63,7 @@ function add(this: SetTypes, value: unknown) {
 
 function set(this: MapTypes, key: unknown, value: unknown) {
   value = toRaw(value)
+  key = toRaw(key)
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, key)
