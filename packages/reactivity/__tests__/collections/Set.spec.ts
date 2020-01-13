@@ -22,6 +22,19 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(false)
     })
 
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const value = reactive({})
+      const set = reactive(new Set())
+      effect(() => (dummy = set.has(value)))
+
+      expect(dummy).toBe(false)
+      set.add(value)
+      expect(dummy).toBe(true)
+      set.delete(value)
+      expect(dummy).toBe(false)
+    })
+
     it('should observe for of iteration', () => {
       let dummy
       const set = reactive(new Set() as Set<number>)
