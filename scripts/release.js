@@ -187,7 +187,7 @@ async function publishPackage(pkgName, version, runIfNotDry) {
   const releaseTag =
     pkgName === 'vue' ? 'next' : semver.prerelease(version)[0] || 'latest'
 
-  // TODO use inferred release channel after offcial 3.0 release
+  // TODO use inferred release channel after official 3.0 release
   // const releaseTag = semver.prerelease(version)[0] || 'latest'
 
   step(`Publishing ${pkg}...`)
