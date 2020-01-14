@@ -595,20 +595,22 @@ export function createRenderer<
   ) {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i]
+      const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
-      // - In the case of a Fragment, we need to provide the actual parent
-      // of the Fragment itself so it can move its children.
-      // - In the case of a Comment, this is likely a v-if toggle, which also
-      // needs the correct parent container.
-      // - In the case of a component, it could contain anything.
-      // In other cases, the parent container is not actually used so we just
-      // pass the block element here to avoid a DOM parentNode call.
       const container =
+        // - In the case of a Fragment, we need to provide the actual parent
+        // of the Fragment itself so it can move its children.
         oldVNode.type === Fragment ||
+        // - In the case of Comment nodes, this is likely a v-if toggle, which
+        // also needs the correct parent container.
         oldVNode.type === Comment ||
+        newVNode.type === Comment ||
+        // - In the case of a component, it could contain anything.
         oldVNode.shapeFlag & ShapeFlags.COMPONENT
           ? hostParentNode(oldVNode.el!)!
-          : fallbackContainer
+          : // In other cases, the parent container is not actually used so we
+            // just pass the block element here to avoid a DOM parentNode call.
+            fallbackContainer
       patch(
         oldVNode,
         newChildren[i],

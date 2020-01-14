@@ -217,6 +217,13 @@ function doWatch(
   recordEffect(runner)
   return () => {
     stop(runner)
+    if (instance) {
+      const effects = instance.effects!
+      const index = effects.indexOf(runner)
+      if (index > -1) {
+        effects.splice(index, 1)
+      }
+    }
   }
 }
 

@@ -432,3 +432,11 @@ describe('compatibility w/ createApp', () => {
   })
   createApp().mount(comp3, '#hello')
 })
+
+describe('defineComponent', () => {
+  test('should accept components defined with defineComponent')
+  const comp = defineComponent({})
+  defineComponent({
+    components: { comp }
+  })
+})
