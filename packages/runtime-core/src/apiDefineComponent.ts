@@ -49,7 +49,7 @@ export function defineComponent<
   Mixin extends LegacyComponent = LegacyComponent
 >(
   options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin>
-): typeof options &
+): ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
     ComponentPublicInstance<
       Props,
@@ -81,7 +81,7 @@ export function defineComponent<
     M,
     Mixin
   >
-): typeof options &
+): ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
     // array props technically doesn't place any contraints on props in TSX
     ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, Mixin>
@@ -107,7 +107,7 @@ export function defineComponent<
     M,
     Mixin
   >
-): typeof options &
+): ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
     ComponentPublicInstance<
       ExtractPropTypes<PropsOptions>,
