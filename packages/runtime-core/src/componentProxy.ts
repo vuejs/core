@@ -4,9 +4,15 @@ import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
 import {
   ExtractComputedReturns,
+  LegacyComponent,
   ComponentOptionsBase,
+  IComponentOptionsWithoutProps,
+  IComponentOptionsWithArrayProps,
+  IComponentOptionsWithObjectProps,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  OptionTypesType,
+  OptionTypesKeys
 } from './apiOptions'
 import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
 import { warn } from './warning'
@@ -16,6 +22,46 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 
+type UnionToIntersection<U> = (U extends any
+  ? (k: U) => void
+  : never) extends ((k: infer I) => void)
+  ? I
+  : never
+
+type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
+  infer P,
+  infer B,
+  infer D,
+  infer C,
+  infer M,
+  infer Mixin
+>
+  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}> &
+      IntersectionMixin<Mixin>
+  : never
+
+// MixinMapToOptionTypes is used to resolve circularly references
+type MixinMapToOptionTypes<T> = {
+  withoutProps: MixinToOptionTypes<T>
+  objectProps: MixinToOptionTypes<T>
+  arrayProps: MixinToOptionTypes<T>
+}[T extends IComponentOptionsWithArrayProps
+  ? 'arrayProps'
+  : T extends IComponentOptionsWithObjectProps
+    ? 'objectProps'
+    : T extends IComponentOptionsWithoutProps ? 'withoutProps' : never]
+
+type ExtractMixin<T> = T extends LegacyComponent
+  ? MixinMapToOptionTypes<T>
+  : never
+
+type IntersectionMixin<T> = UnionToIntersection<ExtractMixin<T>>
+
+type UnwrapMixinsType<
+  T,
+  Type extends OptionTypesKeys
+> = T extends OptionTypesType ? T[Type] : never
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -24,10 +70,17 @@ export type ComponentPublicInstance<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  PublicProps = P
+  Mixin extends LegacyComponent = LegacyComponent,
+  PublicProps = P,
+  PublicMixin = IntersectionMixin<Mixin>,
+  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & P & PublicProps,
+  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & B,
+  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & D,
+  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> & C,
+  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> & M
 > = {
-  $data: D
-  $props: PublicProps
+  $data: PublicD
+  $props: PublicP
   $attrs: Data
   $refs: Data
   $slots: Slots
@@ -35,15 +88,21 @@ export type ComponentPublicInstance<
   $parent: ComponentInternalInstance | null
   $emit: Emit
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M>
+  $options: ComponentOptionsBase<P, B, D, C, M, Mixin>
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
-} & P &
-  UnwrapRef<B> &
-  D &
-  ExtractComputedReturns<C> &
-  M
+} & PublicP &
+  UnwrapRef<PublicB> &
+  PublicD &
+  ExtractComputedReturns<PublicC> &
+  PublicM
+
+export type ComponentPublicInstanceConstructor<
+  T extends ComponentPublicInstance
+> = {
+  new (): T
+}
 
 const publicPropertiesMap: Record<
   string,

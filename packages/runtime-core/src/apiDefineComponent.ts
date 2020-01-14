@@ -1,12 +1,16 @@
 import {
   ComputedOptions,
   MethodOptions,
+  LegacyComponent,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps
 } from './apiOptions'
 import { SetupContext, RenderFunction } from './component'
-import { ComponentPublicInstance } from './componentProxy'
+import {
+  ComponentPublicInstance,
+  ComponentPublicInstanceConstructor
+} from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
@@ -23,39 +27,40 @@ export function defineComponent<Props, RawBindings = object>(
     props: Readonly<Props>,
     ctx: SetupContext
   ) => RawBindings | RenderFunction
-): {
-  new (): ComponentPublicInstance<
+): ComponentPublicInstanceConstructor<
+  ComponentPublicInstance<
     Props,
     RawBindings,
     {},
     {},
     {},
+    LegacyComponent,
     // public props
     VNodeProps & Props
   >
-}
+>
 
-// overload 2: object format with no props
-// (uses user defined props interface)
-// return type is for Vetur and TSX support
 export function defineComponent<
   Props,
   RawBindings,
   D,
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  Mixin extends LegacyComponent = LegacyComponent
 >(
-  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
-): {
-  new (): ComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    VNodeProps & Props
+  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin>
+): typeof options &
+  ComponentPublicInstanceConstructor<
+    ComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      VNodeProps & Props
+    >
   >
-}
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -65,13 +70,22 @@ export function defineComponent<
   RawBindings,
   D,
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  Mixin extends LegacyComponent = LegacyComponent
 >(
-  options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
-): {
-  // array props technically doesn't place any contraints on props in TSX
-  new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M>
-}
+  options: ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin
+  >
+): typeof options &
+  ComponentPublicInstanceConstructor<
+    // array props technically doesn't place any contraints on props in TSX
+    ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, Mixin>
+  >
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
@@ -82,19 +96,29 @@ export function defineComponent<
   RawBindings,
   D,
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  Mixin extends LegacyComponent = LegacyComponent
 >(
-  options: ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M>
-): {
-  new (): ComponentPublicInstance<
-    ExtractPropTypes<PropsOptions>,
+  options: ComponentOptionsWithObjectProps<
+    PropsOptions,
     RawBindings,
     D,
     C,
     M,
-    VNodeProps & ExtractPropTypes<PropsOptions, false>
+    Mixin
   >
-}
+): typeof options &
+  ComponentPublicInstanceConstructor<
+    ComponentPublicInstance<
+      ExtractPropTypes<PropsOptions>,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      VNodeProps & ExtractPropTypes<PropsOptions, false>
+    >
+  >
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {

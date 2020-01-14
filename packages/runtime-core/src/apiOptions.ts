@@ -48,8 +48,11 @@ export interface ComponentOptionsBase<
   RawBindings,
   D,
   C extends ComputedOptions,
-  M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
+  M extends MethodOptions,
+  Mixin
+>
+  extends LegacyOptions<Props, RawBindings, D, C, M, Mixin>,
+    SFCInternalOptions {
   setup?: (
     this: null,
     props: Props,
@@ -81,10 +84,13 @@ export type ComponentOptionsWithoutProps<
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+  M extends MethodOptions = {},
+  Mixin = LegacyComponent
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
+} & ThisType<
+    ComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Readonly<Props>>
+  >
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -92,10 +98,11 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  Mixin = LegacyComponent,
   Props = Readonly<{ [key in PropNames]?: any }>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin> & {
   props: PropNames[]
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
 
 export type ComponentOptionsWithObjectProps<
   PropsOptions = ComponentObjectPropsOptions,
@@ -103,18 +110,32 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  Mixin = LegacyComponent,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin> & {
   props: PropsOptions
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
   | ComponentOptionsWithObjectProps
   | ComponentOptionsWithArrayProps
 
+// IComponentOptionsXXX is used to resolve circularly references
+export interface IComponentOptionsWithoutProps
+  extends ComponentOptionsWithoutProps {}
+export interface IComponentOptionsWithObjectProps
+  extends ComponentOptionsWithObjectProps {}
+export interface IComponentOptionsWithArrayProps
+  extends ComponentOptionsWithArrayProps {}
+
 // TODO legacy component definition also supports constructors with .options
-type LegacyComponent = ComponentOptions
+export type LegacyComponent =
+  | IComponentOptionsWithoutProps
+  | IComponentOptionsWithObjectProps
+  | IComponentOptionsWithArrayProps
+
+export type MixinsOptions = LegacyComponent[]
 
 export type ComputedOptions = Record<
   string,
@@ -152,7 +173,8 @@ export interface LegacyOptions<
   RawBindings,
   D,
   C extends ComputedOptions,
-  M extends MethodOptions
+  M extends MethodOptions,
+  Mixin
 > {
   el?: any
 
@@ -168,8 +190,8 @@ export interface LegacyOptions<
   inject?: ComponentInjectOptions
 
   // composition
-  mixins?: LegacyComponent[]
-  extends?: LegacyComponent
+  mixins?: Mixin[]
+  extends?: Mixin
 
   // lifecycle
   beforeCreate?(): void
@@ -185,6 +207,22 @@ export interface LegacyOptions<
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
+}
+
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M'
+
+export type OptionTypesType<
+  P = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+> = {
+  P: P
+  B: B
+  D: D
+  C: C
+  M: M
 }
 
 const enum OptionTypes {
