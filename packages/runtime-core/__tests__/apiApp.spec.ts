@@ -46,6 +46,26 @@ describe('api: createApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
+  test('unmount', () => {
+    const Comp = {
+      props: {
+        count: {
+          default: 0
+        }
+      },
+      setup(props: { count: number }) {
+        return () => props.count
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp()
+    app.mount(Comp, root)
+
+    app.unmount(root)
+    expect(serializeInner(root)).toBe(``)
+  })
+
   test('provide', () => {
     const app = createApp()
     app.provide('foo', 1)

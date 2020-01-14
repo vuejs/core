@@ -24,6 +24,7 @@ export interface App<HostElement = any> {
     rootContainer: HostElement | string,
     rootProps?: Data
   ): ComponentPublicInstance
+  unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 }
 
@@ -195,6 +196,10 @@ export function createAppAPI<HostNode, HostElement>(
             `App has already been mounted. Create a new app instance instead.`
           )
         }
+      },
+
+      unmount(rootContainer: HostElement) {
+        render(null, rootContainer)
       },
 
       provide(key, value) {
