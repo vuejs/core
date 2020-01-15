@@ -158,10 +158,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   },
 
   set(target: ComponentInternalInstance, key: string, value: any): boolean {
-    const { data, renderContext } = target
-    if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    const { data, renderContext, accessCache } = target
+    const n = accessCache![key]
+    if (data !== EMPTY_OBJ && (n === AccessTypes.DATA || hasOwn(data, key))) {
       data[key] = value
-    } else if (hasOwn(renderContext, key)) {
+    } else if (n === AccessTypes.CONTEXT || hasOwn(renderContext, key)) {
       renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
       __DEV__ &&
