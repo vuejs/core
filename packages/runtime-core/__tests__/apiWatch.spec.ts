@@ -119,9 +119,9 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([[1, false], []])
 
     state.count++
-    status.value = false
+    status.value = true
     await nextTick()
-    expect(dummy).toMatchObject([[2, false], [1, false]])
+    expect(dummy).toMatchObject([[2, true], [1, false]])
   })
 
   it('stopping the watcher', async () => {
