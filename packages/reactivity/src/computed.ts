@@ -76,11 +76,11 @@ function trackChildRun(childRunner: ReactiveEffect) {
   if (activeEffect === undefined) {
     return
   }
-  for (let i = 0; i < childRunner.deps.length; i++) {
-    const dep = childRunner.deps[i]
-    if (!dep.has(activeEffect)) {
-      dep.add(activeEffect)
-      activeEffect.deps.push(dep)
+  for (let i = 0; i < childRunner.effects.length; i++) {
+    const effect = childRunner.effects[i]
+    if (!effect.has(activeEffect)) {
+      effect.add(activeEffect)
+      activeEffect.effects.push(effect)
     }
   }
 }

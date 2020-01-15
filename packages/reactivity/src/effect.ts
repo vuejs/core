@@ -1,20 +1,20 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
-// The main WeakMap that stores {target -> key -> dep} connections.
-// Conceptually, it's easier to think of a dependency as a Dep class
+// The main WeakMap that stores {target -> key -> effect} connections.
+// Conceptually, it's easier to think of a dependency (effect) as a Dep class
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
-type Dep = Set<ReactiveEffect>
-type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<any, KeyToDepMap>()
+type Effect = Set<ReactiveEffect>
+type KeyToEffectMap = Map<any, Effect>
+const targetMap = new WeakMap<any, KeyToEffectMap>()
 
 export interface ReactiveEffect<T = any> {
   (): T
   _isEffect: true
   active: boolean
   raw: () => T
-  deps: Array<Dep>
+  effects: Array<Effect>
   options: ReactiveEffectOptions
 }
 
@@ -83,7 +83,7 @@ function createReactiveEffect<T = any>(
   effect._isEffect = true
   effect.active = true
   effect.raw = fn
-  effect.deps = []
+  effect.effects = []
   effect.options = options
   return effect
 }
@@ -106,12 +106,12 @@ function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
 }
 
 function cleanup(effect: ReactiveEffect) {
-  const { deps } = effect
-  if (deps.length) {
-    for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect)
+  const { effects } = effect
+  if (effects.length) {
+    for (let i = 0; i < effects.length; i++) {
+      effects[i].delete(effect)
     }
-    deps.length = 0
+    effects.length = 0
   }
 }
 
@@ -129,17 +129,17 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return
   }
-  let depsMap = targetMap.get(target)
-  if (depsMap === void 0) {
-    targetMap.set(target, (depsMap = new Map()))
+  let effectsMap = targetMap.get(target)
+  if (effectsMap === void 0) {
+    targetMap.set(target, (effectsMap = new Map()))
   }
-  let dep = depsMap.get(key)
-  if (dep === void 0) {
-    depsMap.set(key, (dep = new Set()))
+  let effects = effectsMap.get(key)
+  if (effects === void 0) {
+    effectsMap.set(key, (effects = new Set()))
   }
-  if (!dep.has(activeEffect)) {
-    dep.add(activeEffect)
-    activeEffect.deps.push(dep)
+  if (!effects.has(activeEffect)) {
+    effects.add(activeEffect)
+    activeEffect.effects.push(effects)
     if (__DEV__ && activeEffect.options.onTrack) {
       activeEffect.options.onTrack({
         effect: activeEffect,
@@ -157,8 +157,8 @@ export function trigger(
   key?: unknown,
   extraInfo?: DebuggerEventExtraInfo
 ) {
-  const depsMap = targetMap.get(target)
-  if (depsMap === void 0) {
+  const effectsMap = targetMap.get(target)
+  if (effectsMap === void 0) {
     // never been tracked
     return
   }
@@ -166,18 +166,18 @@ export function trigger(
   const computedRunners = new Set<ReactiveEffect>()
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared, trigger all effects for target
-    depsMap.forEach(dep => {
-      addRunners(effects, computedRunners, dep)
+    effectsMap.forEach(effect => {
+      addRunners(effects, computedRunners, effect)
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      addRunners(effects, computedRunners, depsMap.get(key))
+      addRunners(effects, computedRunners, effectsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE
     if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
       const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
-      addRunners(effects, computedRunners, depsMap.get(iterationKey))
+      addRunners(effects, computedRunners, effectsMap.get(iterationKey))
     }
   }
   const run = (effect: ReactiveEffect) => {
