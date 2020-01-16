@@ -29,7 +29,7 @@ export const createApp = (): App<Element> => {
     })
   }
 
-  const mount = app.mount
+  const { mount, unmount } = app
   app.mount = (component, container, props): any => {
     if (isString(container)) {
       container = document.querySelector(container)!
@@ -50,6 +50,18 @@ export const createApp = (): App<Element> => {
     // clear content before mounting
     container.innerHTML = ''
     return mount(component, container, props)
+  }
+
+  app.unmount = container => {
+    if (isString(container)) {
+      container = document.querySelector(container)!
+      if (!container) {
+        __DEV__ &&
+          warn(`Failed to unmount app: mount target selector returned null.`)
+        return
+      }
+    }
+    unmount(container)
   }
 
   return app
