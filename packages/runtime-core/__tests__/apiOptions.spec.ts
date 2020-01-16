@@ -334,9 +334,6 @@ describe('api: options', () => {
     }
 
     const Mid = {
-      props: {
-        count: Number
-      },
       beforeCreate() {
         calls.push('mid beforeCreate')
       },
@@ -367,9 +364,6 @@ describe('api: options', () => {
     }
 
     const Child = {
-      props: {
-        count: Number
-      },
       beforeCreate() {
         calls.push('child beforeCreate')
       },
