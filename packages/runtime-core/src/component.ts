@@ -28,7 +28,10 @@ import {
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
-import { currentRenderingInstance } from './componentRenderUtils'
+import {
+  currentRenderingInstance,
+  markAttrsAccessed
+} from './componentRenderUtils'
 
 export type Data = { [key: string]: unknown }
 
@@ -428,7 +431,12 @@ export const SetupProxySymbol = Symbol()
 const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
 ;['attrs', 'slots'].forEach((type: string) => {
   SetupProxyHandlers[type] = {
-    get: (instance, key) => instance[type][key],
+    get: (instance, key) => {
+      if (__DEV__) {
+        markAttrsAccessed()
+      }
+      return instance[type][key]
+    },
     has: (instance, key) => key === SetupProxySymbol || key in instance[type],
     ownKeys: instance => Reflect.ownKeys(instance[type]),
     // this is necessary for ownKeys to work properly

@@ -326,4 +326,28 @@ describe('attribute fallthrough', () => {
       `<!----><div></div><div class="parent"></div><!---->`
     )
   })
+
+  it('should not warn when context.attrs is used during render', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      setup(_props, { attrs }) {
+        return () => [h('div'), h('div', attrs)]
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(root.innerHTML).toBe(
+      `<!----><div></div><div class="parent"></div><!---->`
+    )
+  })
 })
