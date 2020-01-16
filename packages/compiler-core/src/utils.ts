@@ -253,7 +253,14 @@ export function injectProp(
     }
     propsWithInjection = props
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    props.properties.unshift(prop)
+    let isRepeated = false
+    if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
+      const propKeyName = prop.key.content
+      isRepeated = props.properties.some(p => p.key.type === NodeTypes.SIMPLE_EXPRESSION && p.key.content === propKeyName)
+    }
+    if (!isRepeated) {
+      props.properties.unshift(prop)
+    }
     propsWithInjection = props
   } else {
     // single v-bind with expression, return a merged replacement
