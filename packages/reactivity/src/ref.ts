@@ -85,6 +85,11 @@ function toProxyRef<T extends object, K extends keyof T>(
 
 type UnwrapArray<T> = { [P in keyof T]: UnwrapRef<T[P]> }
 
+// corner case when use narrows type
+// Ex. type RelativePath = string & { __brand: unknown }
+// RelativePath extends object -> true
+type BaseTypes = string | number | boolean
+
 // Recursively unwraps nested value bindings.
 export type UnwrapRef<T> = {
   cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
@@ -97,6 +102,6 @@ export type UnwrapRef<T> = {
     ? 'ref'
     : T extends Array<any>
       ? 'array'
-      : T extends Function | CollectionTypes
+      : T extends Function | CollectionTypes | BaseTypes
         ? 'ref' // bail out on types that shouldn't be unwrapped
         : T extends object ? 'object' : 'ref']

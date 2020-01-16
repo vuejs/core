@@ -12,6 +12,8 @@ describe('with object props', () => {
     ddd: string[]
   }
 
+  type GT = string & { __brand: unknown }
+
   const MyComponent = defineComponent({
     props: {
       a: Number,
@@ -57,6 +59,9 @@ describe('with object props', () => {
         c: ref(1),
         d: {
           e: ref('hi')
+        },
+        f: {
+          g: ref('hello' as GT)
         }
       }
     },
@@ -88,6 +93,7 @@ describe('with object props', () => {
       // assert setup context unwrapping
       expectType<number>(this.c)
       expectType<string>(this.d.e)
+      expectType<GT>(this.f.g)
 
       // setup context properties should be mutable
       this.c = 2
