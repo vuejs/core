@@ -120,9 +120,9 @@ export function h<P>(
 export function h(type: ComponentOptions, children?: RawChildren): VNode
 export function h(
   type: ComponentOptionsWithoutProps,
-  // props should be undefined, because
+  // props should be null, because
   // ComponentOptionsWithArrayProps/ComponentOptionsWithObjectProps extends ComponentOptionsWithoutProps
-  props?: undefined,
+  props?: null,
   children?: RawChildren | RawSlots
 ): VNode
 export function h<S extends string>(

@@ -94,7 +94,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {},
   Mixin = LegacyComponent
 > = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M, Mixin> & {
-  props?: undefined
+  props?: null
 } & ThisType<
     CreateComponentPublicInstance<
       {},
