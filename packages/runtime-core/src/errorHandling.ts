@@ -49,7 +49,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.FUNCTION_REF]: 'ref function',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue'
+    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue-next'
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
