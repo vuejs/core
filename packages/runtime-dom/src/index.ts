@@ -51,6 +51,7 @@ export const createApp = (): App<Element> => {
     container.innerHTML = ''
     return mount(component, container, props)
   }
+
   app.unmount = container => {
     if (isString(container)) {
       container = document.querySelector(container)!
