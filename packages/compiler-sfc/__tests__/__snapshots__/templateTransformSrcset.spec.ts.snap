@@ -12,6 +12,9 @@ const _hoisted_4 = _imports_0 + ', ' + _imports_0 + '2x'
 const _hoisted_5 = _imports_0 + '2x, ' + _imports_0
 const _hoisted_6 = _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
+const _hoisted_8 = \\"/logo.png\\" + ', ' + \\"/logo.png\\" + '2x'
+const _hoisted_9 = \\"https://example.com/logo.png\\" + ', ' + \\"https://example.com/logo.png\\" + '2x'
+const _hoisted_10 = \\"/logo.png\\" + ', ' + _imports_0 + '2x'
 
 export function render() {
   const _ctx = this
@@ -43,6 +46,18 @@ export function render() {
     createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_7
+    }),
+    createVNode(\\"img\\", {
+      src: \\"/logo.png\\",
+      srcset: _hoisted_8
+    }),
+    createVNode(\\"img\\", {
+      src: \\"https://example.com/logo.png\\",
+      srcset: _hoisted_9
+    }),
+    createVNode(\\"img\\", {
+      src: \\"/logo.png\\",
+      srcset: _hoisted_10
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"

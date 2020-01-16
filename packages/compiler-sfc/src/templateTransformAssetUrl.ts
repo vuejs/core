@@ -7,7 +7,7 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { parseUrl } from './templateUtils'
+import { isRelativeUrl, parseUrl } from './templateUtils'
 
 export interface AssetURLOptions {
   [name: string]: string[]
@@ -46,13 +46,23 @@ export const transformAssetUrl: NodeTransform = (
             if (attr.type !== NodeTypes.ATTRIBUTE) return
             if (attr.name !== item) return
             if (!attr.value) return
-            const url = parseUrl(attr.value.content)
-            const exp = getImportsExpressionExp(
-              url.path,
-              url.hash,
-              attr.loc,
-              context
-            )
+            let exp: ExpressionNode
+            if (isRelativeUrl(attr.value.content)) {
+              const url = parseUrl(attr.value.content)
+              exp = getImportsExpressionExp(
+                url.path,
+                url.hash,
+                attr.loc,
+                context
+              )
+            } else {
+              exp = createSimpleExpression(
+                `"${attr.value.content}"`,
+                false,
+                attr.loc,
+                true
+              )
+            }
             node.props[index] = {
               type: NodeTypes.DIRECTIVE,
               name: 'bind',
