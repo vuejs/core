@@ -95,7 +95,7 @@ type NormalizedPropsOptions = [Record<string, NormalizedProp>, string[]]
 export function resolveProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
-  _options: ComponentPropsOptions | void
+  _options: ComponentPropsOptions | void | null
 ) {
   const hasDeclaredProps = _options != null
   if (!rawProps && !hasDeclaredProps) {
@@ -214,7 +214,7 @@ const normalizationMap = new WeakMap<
 >()
 
 function normalizePropsOptions(
-  raw: ComponentPropsOptions | void
+  raw: ComponentPropsOptions | void | null
 ): NormalizedPropsOptions {
   if (!raw) {
     return [] as any
