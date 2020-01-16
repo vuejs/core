@@ -261,9 +261,10 @@ describe('compatibility w/ createApp', () => {
 })
 
 describe('defineComponent', () => {
-  test('should accept components defined with defineComponent')
-  const comp = defineComponent({})
-  defineComponent({
-    components: { comp }
+  test('should accept components defined with defineComponent', () => {
+    const comp = defineComponent({})
+    defineComponent({
+      components: { comp }
+    })
   })
 })
