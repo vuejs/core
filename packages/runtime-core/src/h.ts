@@ -10,7 +10,7 @@ import {
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent } from './component'
+import { FunctionalComponent, SetupContext, RenderFunction } from './component'
 import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
@@ -136,6 +136,13 @@ export function h<O>(
   props?:
     | (RawProps & ExtractPropTypes<O>)
     | ({} extends ExtractPropTypes<O> ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+export function h<P>(
+  type: {
+    setup: (props: Readonly<P>, ctx: SetupContext) => {} | RenderFunction
+  },
+  props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
