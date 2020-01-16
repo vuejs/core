@@ -601,10 +601,9 @@ export function createRenderer<
         // - In the case of a Fragment, we need to provide the actual parent
         // of the Fragment itself so it can move its children.
         oldVNode.type === Fragment ||
-        // - In the case of Comment nodes, this is likely a v-if toggle, which
-        // also needs the correct parent container.
-        oldVNode.type === Comment ||
-        newVNode.type === Comment ||
+        // - In the case of different nodes, there is going to be a replacement
+        // which also requires the correct parent container
+        !isSameVNodeType(oldVNode, newVNode) ||
         // - In the case of a component, it could contain anything.
         oldVNode.shapeFlag & ShapeFlags.COMPONENT
           ? hostParentNode(oldVNode.el!)!
@@ -613,7 +612,7 @@ export function createRenderer<
             fallbackContainer
       patch(
         oldVNode,
-        newChildren[i],
+        newVNode,
         container,
         null,
         parentComponent,
