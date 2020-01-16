@@ -156,7 +156,7 @@ describe('type inference w/ direct setup function', () => {
 })
 
 describe('type inference w/ array props declaration', () => {
-  defineComponent({
+  const MyComponent = defineComponent({
     props: ['a', 'b'],
     setup(props) {
       // props should be readonly
@@ -176,6 +176,8 @@ describe('type inference w/ array props declaration', () => {
       expectType<number>(this.c)
     }
   })
+  expectType<JSX.Element>(<MyComponent a={[1, 2]} b="b" />)
+  expectError(<MyComponent other="other" />)
 })
 
 describe('type inference w/ options API', () => {
@@ -410,8 +412,8 @@ describe('with extends', () => {
   expectError(<MyComponent />)
 
   // wrong prop types
-  expectError(<MyComponent aP1="ap" aP2={'wrong type'} z={'z'} />)
-  expectError(<MyComponent aP1={1} aP2={'1'} />)
+  expectError(<MyComponent aP2={'wrong type'} z={'z'} />)
+  expectError(<MyComponent aP1={3} />)
 })
 
 describe('compatibility w/ createApp', () => {

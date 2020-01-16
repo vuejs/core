@@ -8,7 +8,7 @@ import {
 } from './apiOptions'
 import { SetupContext, RenderFunction } from './component'
 import {
-  ComponentPublicInstance,
+  CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
 } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
@@ -28,7 +28,7 @@ export function defineComponent<Props, RawBindings = object>(
     ctx: SetupContext
   ) => RawBindings | RenderFunction
 ): ComponentPublicInstanceConstructor<
-  ComponentPublicInstance<
+  CreateComponentPublicInstance<
     Props,
     RawBindings,
     {},
@@ -46,12 +46,12 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends LegacyComponent = LegacyComponent
+  Mixin = LegacyComponent
 >(
   options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin>
 ): ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
-    ComponentPublicInstance<
+    CreateComponentPublicInstance<
       Props,
       RawBindings,
       D,
@@ -71,7 +71,7 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends LegacyComponent = LegacyComponent
+  Mixin = LegacyComponent
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -83,8 +83,16 @@ export function defineComponent<
   >
 ): ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
-    // array props technically doesn't place any contraints on props in TSX
-    ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, Mixin>
+    // array props technically doesn't place any contraints on props in TSX before,
+    // but now we can export array props in TSX
+    CreateComponentPublicInstance<
+      Readonly<{ [key in PropNames]?: any }>,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin
+    >
   >
 
 // overload 4: object format with object props declaration
@@ -97,7 +105,7 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends LegacyComponent = LegacyComponent
+  Mixin = LegacyComponent
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -109,7 +117,7 @@ export function defineComponent<
   >
 ): ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M, Mixin> &
   ComponentPublicInstanceConstructor<
-    ComponentPublicInstance<
+    CreateComponentPublicInstance<
       ExtractPropTypes<PropsOptions>,
       RawBindings,
       D,

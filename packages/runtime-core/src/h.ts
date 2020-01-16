@@ -118,8 +118,17 @@ export function h<P>(
 // stateful component
 export function h(type: ComponentOptions, children?: RawChildren): VNode
 export function h(
-  type: ComponentOptionsWithoutProps | ComponentOptionsWithArrayProps,
-  props?: RawProps | null,
+  type: ComponentOptionsWithoutProps,
+  // props should be undefined, because
+  // ComponentOptionsWithArrayProps/ComponentOptionsWithObjectProps extends ComponentOptionsWithoutProps
+  props?: undefined,
+  children?: RawChildren | RawSlots
+): VNode
+export function h<S extends string>(
+  type: ComponentOptionsWithArrayProps<S>,
+  props?:
+    | (RawProps & Readonly<{ [key in S]?: any }>)
+    | ({} extends Readonly<{ [key in S]?: any }> ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 export function h<O>(

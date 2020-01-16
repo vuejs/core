@@ -40,7 +40,10 @@ import {
 } from '@vue/reactivity'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
-import { ComponentPublicInstance } from './componentProxy'
+import {
+  CreateComponentPublicInstance,
+  ComponentPublicInstance
+} from './componentProxy'
 import { warn } from './warning'
 
 export interface ComponentOptionsBase<
@@ -49,7 +52,7 @@ export interface ComponentOptionsBase<
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
-  Mixin
+  Mixin extends LegacyComponent
 >
   extends LegacyOptions<Props, RawBindings, D, C, M, Mixin>,
     SFCInternalOptions {
@@ -68,7 +71,8 @@ export interface ComponentOptionsBase<
   render?: Function
   components?: Record<
     string,
-    Component | { new (): ComponentPublicInstance<any, any, any, any, any> }
+    | Component
+    | { new (): CreateComponentPublicInstance<any, any, any, any, any> }
   >
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
@@ -92,7 +96,15 @@ export type ComponentOptionsWithoutProps<
 > = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M, Mixin> & {
   props?: undefined
 } & ThisType<
-    ComponentPublicInstance<{}, RawBindings, D, C, M, Mixin, Readonly<Props>>
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Readonly<Props>
+    >
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -105,7 +117,7 @@ export type ComponentOptionsWithArrayProps<
   Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin> & {
   props: PropNames[]
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
+} & ThisType<CreateComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
 
 export type ComponentOptionsWithObjectProps<
   PropsOptions = ComponentObjectPropsOptions,
@@ -117,7 +129,7 @@ export type ComponentOptionsWithObjectProps<
   Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin> & {
   props: PropsOptions
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
+} & ThisType<CreateComponentPublicInstance<Props, RawBindings, D, C, M, Mixin>>
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
@@ -177,7 +189,7 @@ export interface LegacyOptions<
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
-  Mixin
+  Mixin extends LegacyComponent
 > {
   el?: any
 
@@ -185,7 +197,7 @@ export interface LegacyOptions<
   // Limitation: we cannot expose RawBindings on the `this` context for data
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
-  data?: D | ((this: ComponentPublicInstance<Props>) => D)
+  data?: D | ((this: CreateComponentPublicInstance<Props>) => D)
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions

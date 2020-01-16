@@ -28,6 +28,10 @@ type UnionToIntersection<U> = (U extends any
   ? I
   : never
 
+type IsLegacyComponent<T> = T extends LegacyComponent
+  ? LegacyComponent extends T ? true : false
+  : false
+
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer P,
   infer B,
@@ -40,27 +44,61 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
       IntersectionMixin<Mixin>
   : never
 
+const enum OptionsPropsTypes {
+  WITHOUT = 'OptionsWithoutPropsType',
+  ARRAY = 'OptionsWithArrayPropsType',
+  OBJECT = 'OptionsWithObjectPropsType'
+}
+
 // MixinMapToOptionTypes is used to resolve circularly references
 type MixinMapToOptionTypes<T> = {
-  withoutProps: MixinToOptionTypes<T>
-  objectProps: MixinToOptionTypes<T>
-  arrayProps: MixinToOptionTypes<T>
+  [OptionsPropsTypes.ARRAY]: MixinToOptionTypes<T>
+  [OptionsPropsTypes.OBJECT]: MixinToOptionTypes<T>
+  [OptionsPropsTypes.WITHOUT]: MixinToOptionTypes<T>
 }[T extends IComponentOptionsWithArrayProps
-  ? 'arrayProps'
+  ? OptionsPropsTypes.ARRAY
   : T extends IComponentOptionsWithObjectProps
-    ? 'objectProps'
-    : T extends IComponentOptionsWithoutProps ? 'withoutProps' : never]
+    ? OptionsPropsTypes.OBJECT
+    : T extends IComponentOptionsWithoutProps
+      ? OptionsPropsTypes.WITHOUT
+      : never]
 
 type ExtractMixin<T> = T extends LegacyComponent
   ? MixinMapToOptionTypes<T>
   : never
 
-type IntersectionMixin<T> = UnionToIntersection<ExtractMixin<T>>
+type IntersectionMixin<T> = IsLegacyComponent<T> extends true
+  ? OptionTypesType<{}, {}, {}, {}, {}>
+  : UnionToIntersection<ExtractMixin<T>>
 
 type UnwrapMixinsType<
   T,
   Type extends OptionTypesKeys
 > = T extends OptionTypesType ? T[Type] : never
+
+export type CreateComponentPublicInstance<
+  P = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin = LegacyComponent,
+  PublicProps = P,
+  PublicMixin = IntersectionMixin<Mixin>,
+  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & P,
+  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & B,
+  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & D,
+  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> & C,
+  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> & M
+> = ComponentPublicInstance<
+  PublicP,
+  PublicB,
+  PublicD,
+  PublicC,
+  PublicM,
+  PublicProps,
+  ComponentOptionsBase<P, B, D, C, M, Mixin>
+>
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -70,17 +108,11 @@ export type ComponentPublicInstance<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends LegacyComponent = LegacyComponent,
   PublicProps = P,
-  PublicMixin = IntersectionMixin<Mixin>,
-  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & P & PublicProps,
-  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & B,
-  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & D,
-  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> & C,
-  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> & M
+  Options = ComponentOptionsBase<any, any, any, any, any, any>
 > = {
-  $data: PublicD
-  $props: PublicP
+  $data: D
+  $props: P & PublicProps
   $attrs: Data
   $refs: Data
   $slots: Slots
@@ -88,15 +120,15 @@ export type ComponentPublicInstance<
   $parent: ComponentInternalInstance | null
   $emit: Emit
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M, Mixin>
+  $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
-} & PublicP &
-  UnwrapRef<PublicB> &
-  PublicD &
-  ExtractComputedReturns<PublicC> &
-  PublicM
+} & P &
+  UnwrapRef<B> &
+  D &
+  ExtractComputedReturns<C> &
+  M
 
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance
