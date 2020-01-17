@@ -105,3 +105,17 @@ return function render() {
   }
 }"
 `;
+
+exports[`compiler: v-if codegen v-if with key 1`] = `
+"const _Vue = Vue
+
+return function render() {
+  with (this) {
+    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+    
+    return (_openBlock(), ok
+      ? _createBlock(\\"div\\", { key: \\"some-key\\" })
+      : _createCommentVNode(\\"v-if\\", true))
+  }
+}"
+`;
