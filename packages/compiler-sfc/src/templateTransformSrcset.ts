@@ -36,6 +36,9 @@ export const transformSrcset: NodeTransform = (node, context) => {
             return { url, descriptor }
           })
 
+          // When srcset does not contain any relative URLs, skip transforming
+          if (!imageCandidates.some(({ url }) => isRelativeUrl(url))) return
+
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (isRelativeUrl(url)) {

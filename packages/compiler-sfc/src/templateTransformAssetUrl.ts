@@ -46,23 +46,14 @@ export const transformAssetUrl: NodeTransform = (
             if (attr.type !== NodeTypes.ATTRIBUTE) return
             if (attr.name !== item) return
             if (!attr.value) return
-            let exp: ExpressionNode
-            if (isRelativeUrl(attr.value.content)) {
-              const url = parseUrl(attr.value.content)
-              exp = getImportsExpressionExp(
-                url.path,
-                url.hash,
-                attr.loc,
-                context
-              )
-            } else {
-              exp = createSimpleExpression(
-                `"${attr.value.content}"`,
-                false,
-                attr.loc,
-                true
-              )
-            }
+            if (!isRelativeUrl(attr.value.content)) return
+            const url = parseUrl(attr.value.content)
+            const exp = getImportsExpressionExp(
+              url.path,
+              url.hash,
+              attr.loc,
+              context
+            )
             node.props[index] = {
               type: NodeTypes.DIRECTIVE,
               name: 'bind',
