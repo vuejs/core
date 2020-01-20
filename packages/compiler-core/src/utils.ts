@@ -253,7 +253,18 @@ export function injectProp(
     }
     propsWithInjection = props
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    props.properties.unshift(prop)
+    let alreadyExists = false
+    // check existing key to avoid overriding user provided keys
+    if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
+      const propKeyName = prop.key.content
+      alreadyExists = props.properties.some(p => (
+        p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+        p.key.content === propKeyName
+      ))
+    }
+    if (!alreadyExists) {
+      props.properties.unshift(prop)
+    }
     propsWithInjection = props
   } else {
     // single v-bind with expression, return a merged replacement

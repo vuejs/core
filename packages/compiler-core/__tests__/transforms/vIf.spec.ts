@@ -530,6 +530,20 @@ describe('compiler: v-if', () => {
       )
     })
 
+    test('v-if with key', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithIfTransform(`<div v-if="ok" key="some-key"/>`)
+      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
+        .consequent as CallExpression
+      expect(branch1.arguments).toMatchObject([
+        `"div"`,
+        createObjectMatcher({ key: 'some-key' })
+      ])
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test.todo('with comments')
   })
 })
