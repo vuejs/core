@@ -7,7 +7,7 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { parseUrl } from './templateUtils'
+import { isRelativeUrl, parseUrl } from './templateUtils'
 
 export interface AssetURLOptions {
   [name: string]: string[]
@@ -46,6 +46,7 @@ export const transformAssetUrl: NodeTransform = (
             if (attr.type !== NodeTypes.ATTRIBUTE) return
             if (attr.name !== item) return
             if (!attr.value) return
+            if (!isRelativeUrl(attr.value.content)) return
             const url = parseUrl(attr.value.content)
             const exp = getImportsExpressionExp(
               url.path,

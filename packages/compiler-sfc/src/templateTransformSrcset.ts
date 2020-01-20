@@ -5,7 +5,7 @@ import {
   NodeTypes,
   SimpleExpressionNode
 } from '@vue/compiler-core'
-import { parseUrl } from './templateUtils'
+import { isRelativeUrl, parseUrl } from './templateUtils'
 
 const srcsetTags = ['img', 'source']
 
@@ -36,31 +36,44 @@ export const transformSrcset: NodeTransform = (node, context) => {
             return { url, descriptor }
           })
 
+          // When srcset does not contain any relative URLs, skip transforming
+          if (!imageCandidates.some(({ url }) => isRelativeUrl(url))) return
+
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
-            const { path } = parseUrl(url)
-            let exp: SimpleExpressionNode
-            if (path) {
-              const importsArray = Array.from(context.imports)
-              const existingImportsIndex = importsArray.findIndex(
-                i => i.path === path
-              )
-              if (existingImportsIndex > -1) {
-                exp = createSimpleExpression(
-                  `_imports_${existingImportsIndex}`,
-                  false,
-                  attr.loc,
-                  true
+            if (isRelativeUrl(url)) {
+              const { path } = parseUrl(url)
+              let exp: SimpleExpressionNode
+              if (path) {
+                const importsArray = Array.from(context.imports)
+                const existingImportsIndex = importsArray.findIndex(
+                  i => i.path === path
                 )
-              } else {
-                exp = createSimpleExpression(
-                  `_imports_${importsArray.length}`,
-                  false,
-                  attr.loc,
-                  true
-                )
-                context.imports.add({ exp, path })
+                if (existingImportsIndex > -1) {
+                  exp = createSimpleExpression(
+                    `_imports_${existingImportsIndex}`,
+                    false,
+                    attr.loc,
+                    true
+                  )
+                } else {
+                  exp = createSimpleExpression(
+                    `_imports_${importsArray.length}`,
+                    false,
+                    attr.loc,
+                    true
+                  )
+                  context.imports.add({ exp, path })
+                }
+                compoundExpression.children.push(exp)
               }
+            } else {
+              const exp = createSimpleExpression(
+                `"${url}"`,
+                false,
+                attr.loc,
+                true
+              )
               compoundExpression.children.push(exp)
             }
             const isNotLast = imageCandidates.length - 1 > index

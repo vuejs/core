@@ -50,7 +50,7 @@ test('warn missing preprocessor', () => {
 })
 
 test('transform asset url options', () => {
-  const input = { source: `<foo bar="baz"/>`, filename: 'example.vue' }
+  const input = { source: `<foo bar="~baz"/>`, filename: 'example.vue' }
   // Object option
   const { code: code1 } = compileTemplate({
     ...input,
