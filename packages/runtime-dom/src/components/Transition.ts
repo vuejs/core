@@ -200,12 +200,12 @@ export interface ElementWithTransition extends HTMLElement {
 }
 
 export function addTransitionClass(el: ElementWithTransition, cls: string) {
-  cls.split(' ').forEach(c => c && el.classList.add(c))
+  cls.split(/\s+/).forEach(c => c && el.classList.add(c))
   ;(el._vtc || (el._vtc = new Set())).add(cls)
 }
 
 export function removeTransitionClass(el: ElementWithTransition, cls: string) {
-  cls.split(' ').forEach(c => c && el.classList.remove(c))
+  cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
   if (el._vtc) {
     el._vtc.delete(cls)
     if (!el._vtc!.size) {
