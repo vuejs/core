@@ -98,10 +98,8 @@ export type UnwrapRef<T> = {
   object: { [K in keyof T]: UnwrapRef<T[K]> }
 }[T extends ComputedRef<any>
   ? 'cRef'
-  : T extends Ref
-    ? 'ref'
-    : T extends Array<any>
-      ? 'array'
-      : T extends Function | CollectionTypes | BaseTypes
-        ? 'ref' // bail out on types that shouldn't be unwrapped
-        : T extends object ? 'object' : 'ref']
+  : T extends Array<any>
+    ? 'array'
+    : T extends Ref | Function | CollectionTypes | BaseTypes
+      ? 'ref' // bail out on types that shouldn't be unwrapped
+      : T extends object ? 'object' : 'ref']
