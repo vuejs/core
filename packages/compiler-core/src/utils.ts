@@ -253,12 +253,16 @@ export function injectProp(
     }
     propsWithInjection = props
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    let isRepeated = false
+    let alreadyExists = false
+    // check existing key to avoid overriding user provided keys
     if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
       const propKeyName = prop.key.content
-      isRepeated = props.properties.some(p => p.key.type === NodeTypes.SIMPLE_EXPRESSION && p.key.content === propKeyName)
+      alreadyExists = props.properties.some(p => (
+        p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+        p.key.content === propKeyName
+      ))
     }
-    if (!isRepeated) {
+    if (!alreadyExists) {
       props.properties.unshift(prop)
     }
     propsWithInjection = props
