@@ -28,7 +28,8 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  PatchFlags
+  PatchFlags,
+  isSVGTag
 } from '@vue/shared'
 import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import {
@@ -221,6 +222,7 @@ export function createRenderer<
     }
 
     const { type, shapeFlag } = n2
+    isSVG = isSVG || isSVGTag(type as string)
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
