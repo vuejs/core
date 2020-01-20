@@ -13,7 +13,8 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createObjectExpression,
-  Property
+  Property,
+  createSequenceExpression
 } from '../ast'
 import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -26,7 +27,9 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
-  KEEP_ALIVE
+  KEEP_ALIVE,
+  OPEN_BLOCK,
+  CREATE_BLOCK
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -67,6 +70,9 @@ export const transformElement: NodeTransform = (node, context) => {
     let runtimeDirectives: DirectiveNode[] | undefined
     let dynamicPropNames: string[] | undefined
     let dynamicComponent: string | CallExpression | undefined
+    // technically this is web specific but we are keeping it in core to avoid
+    // extra complexity
+    let isSVG = false
 
     // handle dynamic component
     const isProp = findProp(node, 'is')
@@ -105,6 +111,7 @@ export const transformElement: NodeTransform = (node, context) => {
     } else {
       // plain element
       nodeType = `"${node.tag}"`
+      isSVG = node.tag === 'svg'
     }
 
     const args: CallExpression['arguments'] = [nodeType]
@@ -190,8 +197,14 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     const { loc } = node
-    const vnode = createCallExpression(context.helper(CREATE_VNODE), args, loc)
-
+    const vnode = isSVG
+      ? // <svg> must be forced into blocks so that block updates inside retain
+        // isSVG flag at runtime. (#639, #643)
+        createSequenceExpression([
+          createCallExpression(context.helper(OPEN_BLOCK)),
+          createCallExpression(context.helper(CREATE_BLOCK), args, loc)
+        ])
+      : createCallExpression(context.helper(CREATE_VNODE), args, loc)
     if (runtimeDirectives && runtimeDirectives.length) {
       node.codegenNode = createCallExpression(
         context.helper(WITH_DIRECTIVES),

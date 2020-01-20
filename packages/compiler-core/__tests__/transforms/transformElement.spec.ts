@@ -16,7 +16,9 @@ import {
   RESOLVE_DYNAMIC_COMPONENT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  OPEN_BLOCK,
+  CREATE_BLOCK
 } from '../../src/runtimeHelpers'
 import {
   CallExpression,
@@ -819,6 +821,27 @@ describe('compiler: element transform', () => {
           ]
         }
       ])
+    })
+  })
+
+  test('<svg> should be forced into blocks', () => {
+    const ast = parse(`<div><svg/></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement]
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.JS_SEQUENCE_EXPRESSION,
+      expressions: [
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: OPEN_BLOCK
+        },
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: CREATE_BLOCK,
+          arguments: [`"svg"`]
+        }
+      ]
     })
   })
 })

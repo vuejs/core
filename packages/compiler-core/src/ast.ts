@@ -118,6 +118,7 @@ export interface BaseElementNode extends Node {
     | CallExpression
     | SimpleExpressionNode
     | CacheExpression
+    | SequenceExpression
     | undefined
 }
 
@@ -125,14 +126,18 @@ export interface PlainElementNode extends BaseElementNode {
   tagType: ElementTypes.ELEMENT
   codegenNode:
     | ElementCodegenNode
-    | undefined
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
+    | SequenceExpression // when turned into a block
+    | undefined
 }
 
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
-  codegenNode: ComponentCodegenNode | undefined | CacheExpression // when cached by v-once
+  codegenNode:
+    | ComponentCodegenNode
+    | CacheExpression // when cached by v-once
+    | undefined
 }
 
 export interface SlotOutletNode extends BaseElementNode {
