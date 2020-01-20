@@ -287,22 +287,22 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@microsoft/api-extractor-model@7.7.3":
-  version "7.7.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.7.3.tgz#1386e2e02336f626bef107cf11c232db08246b4a"
-  integrity sha512-XAlvMiL+hxQv//pPUhRXDDmvAZJ7pJdj5kUuPtCqFqDg0Qs0qXFAjcRCK7JJFmMA8K10pgtoSbDba+UnL7eEHQ==
+"@microsoft/api-extractor-model@7.7.4":
+  version "7.7.4"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.7.4.tgz#45a1bd38499db5ae56dcecf1f68d4cf3c50a63ac"
+  integrity sha512-/UGBXzEwOAYAS9Xg9I9RF3f+Fp1dowddMlisUlBASGJT38/ZhlMb8Zp0Y0ThJcY+VA6Wya0cMK3c/Lo2u+f2EQ==
   dependencies:
-    "@microsoft/node-core-library" "3.18.3"
+    "@microsoft/node-core-library" "3.19.0"
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.7.4"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.7.4.tgz#2de856885a256ab3fb114711385e4d795b4c040b"
-  integrity sha512-UJjTk6LfwJ6mm60BdNlxm11GgYO2AlhorAa8Bw/JB6s0XrUbuANMPMdvJqH9uZsaKBwTbmEAZ+agRJDx/XVjMw==
+  version "7.7.5"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.7.5.tgz#eeae706cb5a9b0e0ae1c3f2547520650de26b826"
+  integrity sha512-/tZkNOFRS27c/ZCsiTbVdTvD10b7UMCX2hlzqQGN5wMWyoblpQy0cZBuRrQBuRllkgXoXeiMpeTf8NcSSl+IjQ==
   dependencies:
-    "@microsoft/api-extractor-model" "7.7.3"
-    "@microsoft/node-core-library" "3.18.3"
-    "@microsoft/ts-command-line" "4.3.8"
+    "@microsoft/api-extractor-model" "7.7.4"
+    "@microsoft/node-core-library" "3.19.0"
+    "@microsoft/ts-command-line" "4.3.9"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
     lodash "~4.17.15"
@@ -310,12 +310,12 @@
     source-map "~0.6.1"
     typescript "~3.7.2"
 
-"@microsoft/node-core-library@3.18.3":
-  version "3.18.3"
-  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.18.3.tgz#4fb74fefb31162f3c4edfb5c1a5150eb0aada636"
-  integrity sha512-IFfjP2rlurFaNAMmlzfh+VxmEy6JVdnOCyAHi3Mbdhcqv/u25AJ3EAzTWqMZCsfCENzCxY5Jcl7bk2SpqTWaaQ==
+"@microsoft/node-core-library@3.19.0":
+  version "3.19.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.19.0.tgz#b868a38cdb1113f83ee96ad0e9fc24cb3d4c7883"
+  integrity sha512-ZcqNHT4ztzT3tw9jCn76TUNCXwJpgOd1UK2RB8Gll0U+chTam3bcsXHkNnR6edDfySKx1rIHRgHAHzkqdJwmlg==
   dependencies:
-    "@types/node" "8.10.54"
+    "@types/node" "10.17.13"
     colors "~1.2.1"
     fs-extra "~7.0.1"
     jju "~1.4.0"
@@ -323,10 +323,10 @@
     timsort "~0.3.0"
     z-schema "~3.18.3"
 
-"@microsoft/ts-command-line@4.3.8":
-  version "4.3.8"
-  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.8.tgz#2701a7a5729c5ae65057276e61696411438bce2d"
-  integrity sha512-FdkjFBfPavojFgWYQj+58NcTUvVfy5sEeOxVTRxGcBM46U70xTsoaeltZu3XQ8qvukq+rL45t1bC71JM9SZ1vA==
+"@microsoft/ts-command-line@4.3.9":
+  version "4.3.9"
+  resolved "https://registry.yarnpkg.com/@microsoft/ts-command-line/-/ts-command-line-4.3.9.tgz#7d6eaccd98c77c3abf1ab93f6cc1abde397836bc"
+  integrity sha512-G7xXA8uz2bMmaAhbqU8oWl0Y68X7qEWbuAuTkhVHDCgr4wjrUTbyvJ3DXcnANGhVVx2BWGHWUsj/GzMgU4apQQ==
   dependencies:
     "@types/argparse" "1.0.33"
     argparse "~1.0.9"
@@ -517,10 +517,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.11.tgz#be879b52031cfb5d295b047f5462d8ef1a716446"
   integrity sha512-Otxmr2rrZLKRYIybtdG/sgeO+tHY20GxeDjcGmUnmmlCWyEnv2a2x1ZXBo3BTec4OiTXMQCiazB8NMBf0iRlFw==
 
-"@types/node@8.10.54":
-  version "8.10.54"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.54.tgz#1c88eb253ac1210f1a5876953fb70f7cc4928402"
-  integrity sha512-kaYyLYf6ICn6/isAyD4K1MyWWd5Q3JgH6bnMN089LUx88+s4W8GvK9Q6JMBVu5vsFFp7pMdSxdKmlBXwH/VFRg==
+"@types/node@10.17.13":
+  version "10.17.13"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.13.tgz#ccebcdb990bd6139cd16e84c39dc2fb1023ca90c"
+  integrity sha512-pMCcqU2zT4TjqYFrWtYHKal7Sl30Ims6ulZ4UFXxI4xbtQqK/qqKwkDoBFCfooRqqmRu9vY3xaJRwxSh673aYg==
 
 "@types/puppeteer@^2.0.0":
   version "2.0.0"
