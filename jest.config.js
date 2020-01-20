@@ -1,5 +1,6 @@
 module.exports = {
   preset: 'ts-jest',
+  setupFilesAfterEnv: ['./jest.setup.js'],
   globals: {
     __DEV__: true,
     __TEST__: true,
