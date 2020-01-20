@@ -341,6 +341,7 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
+    isSVG = isSVG || (n2.type as string) === 'svg'
     if (n1 == null) {
       mountElement(
         n2,
@@ -368,9 +369,7 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const tag = vnode.type as string
-    isSVG = isSVG || tag === 'svg'
-    const el = (vnode.el = hostCreateElement(tag, isSVG))
+    const el = (vnode.el = hostCreateElement(vnode.type as string, isSVG))
     const { props, shapeFlag, transition, scopeId } = vnode
 
     // props
