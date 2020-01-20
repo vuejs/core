@@ -74,7 +74,7 @@ export function callWithAsyncErrorHandling(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[]
-) {
+): any[] {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res != null && !res._isVue && isPromise(res)) {
@@ -85,9 +85,11 @@ export function callWithAsyncErrorHandling(
     return res
   }
 
+  const values = []
   for (let i = 0; i < fn.length; i++) {
-    callWithAsyncErrorHandling(fn[i], instance, type, args)
+    values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
   }
+  return values
 }
 
 export function handleError(

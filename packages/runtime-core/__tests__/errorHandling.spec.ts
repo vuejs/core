@@ -362,7 +362,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher cleanup function')
   })
 
-  test('in component event handler', () => {
+  test('in component event handler via emit', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -389,6 +389,78 @@ describe('error handling', () => {
     }
 
     render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
+  })
+
+  test('in component event handler via emit (async)', async () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () =>
+          h(Child, {
+            async onFoo() {
+              throw err
+            }
+          })
+      }
+    }
+
+    let res: any
+    const Child = {
+      setup(props: any, { emit }: any) {
+        res = emit('foo')
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    try {
+      await Promise.all(res)
+    } catch (e) {
+      expect(e).toBe(err)
+    }
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
+  })
+
+  test('in component event handler via emit (async + array)', async () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () =>
+          h(Child, {
+            onFoo: [() => Promise.reject(err), () => Promise.resolve(1)]
+          })
+      }
+    }
+
+    let res: any
+    const Child = {
+      setup(props: any, { emit }: any) {
+        res = emit('foo')
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    try {
+      await Promise.all(res)
+    } catch (e) {
+      expect(e).toBe(err)
+    }
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 

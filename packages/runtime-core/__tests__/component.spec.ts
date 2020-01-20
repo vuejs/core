@@ -1,4 +1,11 @@
-import { h, ref, render, nodeOps, nextTick } from '@vue/runtime-test'
+import {
+  h,
+  ref,
+  render,
+  nodeOps,
+  nextTick,
+  defineComponent
+} from '@vue/runtime-test'
 
 describe('renderer: component', () => {
   test.todo('should work')
@@ -51,5 +58,36 @@ describe('renderer: component', () => {
       await nextTick()
       expect(spy).toHaveBeenCalledTimes(2)
     })
+  })
+
+  test('emit', async () => {
+    let noMatchEmitResult: any
+    let singleEmitResult: any
+    let multiEmitResult: any
+
+    const Child = defineComponent({
+      setup(_, { emit }) {
+        noMatchEmitResult = emit('foo')
+        singleEmitResult = emit('bar')
+        multiEmitResult = emit('baz')
+        return () => h('div')
+      }
+    })
+
+    const App = {
+      setup() {
+        return () =>
+          h(Child, {
+            onBar: () => 1,
+            onBaz: [() => Promise.resolve(2), () => Promise.resolve(3)]
+          })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+
+    expect(noMatchEmitResult).toMatchObject([])
+    expect(singleEmitResult).toMatchObject([1])
+    expect(await Promise.all(multiEmitResult)).toMatchObject([2, 3])
   })
 })

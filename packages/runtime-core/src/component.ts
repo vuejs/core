@@ -24,7 +24,8 @@ import {
   isObject,
   NO,
   makeMap,
-  isPromise
+  isPromise,
+  isArray
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -70,7 +71,7 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export type Emit = (event: string, ...args: unknown[]) => void
+export type Emit = (event: string, ...args: unknown[]) => any[]
 
 export interface SetupContext {
   attrs: Data
@@ -218,16 +219,19 @@ export function defineComponentInstance(
     rtc: null,
     ec: null,
 
-    emit: (event, ...args) => {
+    emit: (event, ...args): any[] => {
       const props = instance.vnode.props || EMPTY_OBJ
       const handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (handler) {
-        callWithAsyncErrorHandling(
+        const res = callWithAsyncErrorHandling(
           handler,
           instance,
           ErrorCodes.COMPONENT_EVENT_HANDLER,
           args
         )
+        return isArray(res) ? res : [res]
+      } else {
+        return []
       }
     }
   }
