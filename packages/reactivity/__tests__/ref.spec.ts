@@ -93,12 +93,21 @@ describe('reactivity/ref', () => {
     expect(array1[1]).toBe(2)
 
     const array2 = ref([1, new Map<string, any>(), ref('1')]).value
-    // @ts-ignore
-    array2[0]++
+
+    for (let i = 0; i < array2.length; i++) {
+      if (typeof array2[i] === 'string') {
+        array2[i] += 'foo'
+      } else if (typeof array2[i] === 'number') {
+        // @ts-ignore
+        array2[i]++
+      } else {
+        // @ts-ignore
+        array2[i].set('foo', 1)
+      }
+    }
     expect(array2[0]).toBe(2)
     // @ts-ignore
-    expect(array2[1].get('foo')).toBe(undefined)
-    array2[2] += 'foo'
+    expect(array2[1].get('foo')).toBe(1)
     expect(array2[2]).toBe('1foo')
   })
 
