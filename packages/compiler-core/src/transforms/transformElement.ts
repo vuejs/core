@@ -70,9 +70,7 @@ export const transformElement: NodeTransform = (node, context) => {
     let runtimeDirectives: DirectiveNode[] | undefined
     let dynamicPropNames: string[] | undefined
     let dynamicComponent: string | CallExpression | undefined
-    // technically this is web specific but we are keeping it in core to avoid
-    // extra complexity
-    let isSVG = false
+    let shouldUseBlock = false
 
     // handle dynamic component
     const isProp = findProp(node, 'is')
@@ -110,8 +108,12 @@ export const transformElement: NodeTransform = (node, context) => {
       nodeType = toValidAssetId(tag, `component`)
     } else {
       // plain element
-      nodeType = `"${node.tag}"`
-      isSVG = node.tag === 'svg'
+      nodeType = `"${tag}"`
+      // <svg> and <foreignObject> must be forced into blocks so that block
+      // updates inside get proper isSVG flag at runtime. (#639, #643)
+      // This is technically web-specific, but splitting the logic out of core
+      // leads to too much unnecessary complexity.
+      shouldUseBlock = tag === 'svg' || tag === 'foreignObject'
     }
 
     const args: CallExpression['arguments'] = [nodeType]
@@ -197,10 +199,8 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     const { loc } = node
-    const vnode = isSVG
-      ? // <svg> must be forced into blocks so that block updates inside retain
-        // isSVG flag at runtime. (#639, #643)
-        createSequenceExpression([
+    const vnode = shouldUseBlock
+      ? createSequenceExpression([
           createCallExpression(context.helper(OPEN_BLOCK)),
           createCallExpression(context.helper(CREATE_BLOCK), args, loc)
         ])

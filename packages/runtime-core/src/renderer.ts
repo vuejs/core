@@ -370,7 +370,7 @@ export function createRenderer<
     optimized: boolean
   ) {
     const el = (vnode.el = hostCreateElement(vnode.type as string, isSVG))
-    const { props, shapeFlag, transition, scopeId } = vnode
+    const { type, props, shapeFlag, transition, scopeId } = vnode
 
     // props
     if (props != null) {
@@ -406,7 +406,7 @@ export function createRenderer<
         null,
         parentComponent,
         parentSuspense,
-        isSVG,
+        isSVG && type !== 'foreignObject',
         optimized || vnode.dynamicChildren !== null
       )
     }
@@ -562,6 +562,7 @@ export function createRenderer<
       )
     }
 
+    const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
     if (dynamicChildren != null) {
       patchBlockChildren(
         n1.dynamicChildren!,
@@ -569,11 +570,19 @@ export function createRenderer<
         el,
         parentComponent,
         parentSuspense,
-        isSVG
+        areChildrenSVG
       )
     } else if (!optimized) {
       // full diff
-      patchChildren(n1, n2, el, null, parentComponent, parentSuspense, isSVG)
+      patchChildren(
+        n1,
+        n2,
+        el,
+        null,
+        parentComponent,
+        parentSuspense,
+        areChildrenSVG
+      )
     }
 
     if (newProps.onVnodeUpdated != null) {
