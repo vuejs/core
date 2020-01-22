@@ -1,0 +1,32 @@
+{
+  "name": "@vue/compiler-ssr",
+  "version": "3.0.0-alpha.2",
+  "description": "@vue/compiler-ssr",
+  "main": "dist/compiler-ssr.cjs.js",
+  "types": "dist/compiler-ssr.d.ts",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "prod": false,
+    "formats": [
+      "cjs"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-ssr#readme",
+  "dependencies": {
+    "@vue/compiler-core": "3.0.0-alpha.2"
+  }
+}
