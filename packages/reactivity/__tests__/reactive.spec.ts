@@ -1,6 +1,6 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {

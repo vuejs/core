@@ -1,5 +1,4 @@
 import {
-  mockWarn,
   createApp,
   nodeOps,
   resolveComponent,
@@ -9,6 +8,7 @@ import {
   resolveDynamicComponent,
   getCurrentInstance
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('resolveAssets', () => {
   test('should work', () => {

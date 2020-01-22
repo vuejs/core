@@ -8,7 +8,7 @@ import {
   onUpdated,
   defineComponent
 } from '@vue/runtime-dom'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
   mockWarn()

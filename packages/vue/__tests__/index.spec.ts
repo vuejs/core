@@ -1,5 +1,5 @@
 import { createApp } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('compiler + runtime integration', () => {
   mockWarn()

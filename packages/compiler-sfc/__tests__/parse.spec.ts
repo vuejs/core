@@ -1,5 +1,5 @@
 import { parse } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 import { baseParse, baseCompile } from '@vue/compiler-core'
 
 describe('compiler:sfc', () => {

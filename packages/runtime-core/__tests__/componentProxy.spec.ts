@@ -1,9 +1,5 @@
-import {
-  createApp,
-  getCurrentInstance,
-  nodeOps,
-  mockWarn
-} from '@vue/runtime-test'
+import { createApp, getCurrentInstance, nodeOps } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 import { ComponentInternalInstance } from '../src/component'
 
 describe('component: proxy', () => {

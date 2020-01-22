@@ -1,5 +1,5 @@
 import { compileStyle } from '../src/compileStyle'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 function compile(source: string): string {
   const res = compileStyle({

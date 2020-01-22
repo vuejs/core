@@ -8,9 +8,9 @@ import {
   nextTick,
   renderToString,
   ref,
-  defineComponent,
-  mockWarn
+  defineComponent
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('api: options', () => {
   test('data', async () => {

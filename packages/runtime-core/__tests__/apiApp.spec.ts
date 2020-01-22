@@ -3,7 +3,6 @@ import {
   h,
   nodeOps,
   serializeInner,
-  mockWarn,
   provide,
   inject,
   resolveComponent,
@@ -13,6 +12,7 @@ import {
   ref,
   getCurrentInstance
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('api: createApp', () => {
   mockWarn()
