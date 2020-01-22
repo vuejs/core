@@ -274,6 +274,7 @@ export function createVNode(
     shouldTrack > 0 &&
     currentBlock !== null &&
     (patchFlag > 0 ||
+      shapeFlag & ShapeFlags.SUSPENSE ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
   ) {

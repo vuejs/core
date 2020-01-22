@@ -232,7 +232,7 @@ describe('vnode', () => {
   })
 
   describe('dynamic children', () => {
-    test('single call openBlock', () => {
+    test('with patchFlags', () => {
       const hoist = createVNode('div')
       let vnode1
       const vnode = (openBlock(),
@@ -258,6 +258,39 @@ describe('vnode', () => {
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])
       expect(vnode2.dynamicChildren).toStrictEqual([vnode3])
+    })
+
+    test('with stateful component', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode({}, null, 'text'))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    test('with functional component', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode(() => {}, null, 'text'))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    test('with suspense', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode(() => {}, null, 'text'))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
   })
 })
