@@ -32,7 +32,7 @@ const truncate = v => {
 
 const formatDate = v => v.replace(/T|Z/g, ' ')
 
-const App = {
+createApp({
   setup() {
     const currentBranch = ref('master')
     const commits = ref(null)
@@ -54,9 +54,7 @@ const App = {
       formatDate
     }
   }
-}
-
-createApp().mount(App, '#demo')
+}).mount('#demo')
 </script>
 
 <style>

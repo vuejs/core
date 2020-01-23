@@ -1,6 +1,6 @@
 import {
-  createApp,
   h,
+  render,
   nextTick,
   defineComponent,
   vModelDynamic,
@@ -20,10 +20,9 @@ const setValue = function(this: any, value: any) {
   this.value = value
 }
 
-let app: any, root: any
+let root: any
 
 beforeEach(() => {
-  app = createApp()
   root = document.createElement('div') as any
 })
 
@@ -44,9 +43,9 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
-    const input = root.querySelector('input')
+    const input = root.querySelector('input')!
     const data = root._vnode.component.data
 
     input.value = 'foo'
@@ -75,7 +74,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('textarea')
     const data = root._vnode.component.data
@@ -136,7 +135,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
@@ -176,7 +175,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
@@ -219,7 +218,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
@@ -262,7 +261,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
@@ -314,7 +313,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const foo = root.querySelector('.foo')
     const bar = root.querySelector('.bar')
@@ -384,7 +383,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const foo = root.querySelector('.foo')
     const bar = root.querySelector('.bar')
@@ -437,7 +436,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('select')
     const foo = root.querySelector('option[value=foo]')
@@ -494,7 +493,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('select')
     const foo = root.querySelector('option[value=foo]')

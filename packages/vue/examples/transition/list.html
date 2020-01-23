@@ -24,7 +24,7 @@ const Item = {
   template: `<div>{{ msg }} <button @click="$emit('rm')">x</button></div>`
 }
 
-const App = {
+Vue.createApp({
   components: {
     Item
   },
@@ -51,9 +51,7 @@ const App = {
       }
     }
   }
-}
-
-Vue.createApp().mount(App, '#app')
+}).mount('#app')
 </script>
 
 <style>

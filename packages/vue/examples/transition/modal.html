@@ -56,13 +56,12 @@ const Modal = {
 </div>
 
 <script>
-const App = {
+Vue.createApp({
   components: { Modal },
-  data: {
+  data: () => ({
     showModal: false
-  }
-}
-Vue.createApp().mount(App, '#app')
+  })
+}).mount('#app')
 </script>
 
 <style>

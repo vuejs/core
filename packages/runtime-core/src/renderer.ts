@@ -46,7 +46,7 @@ import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
-import { App, createAppAPI } from './apiCreateApp'
+import { createAppAPI, CreateAppFunction } from './apiCreateApp'
 import {
   SuspenseBoundary,
   queueEffectWithSuspense,
@@ -174,7 +174,7 @@ export function createRenderer<
   options: RendererOptions<HostNode, HostElement>
 ): {
   render: RootRenderFunction<HostNode, HostElement>
-  createApp: () => App<HostElement>
+  createApp: CreateAppFunction<HostElement>
 } {
   type HostVNode = VNode<HostNode, HostElement>
   type HostVNodeChildren = VNodeChildren<HostNode, HostElement>

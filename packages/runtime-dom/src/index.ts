@@ -1,8 +1,8 @@
 import {
   createRenderer,
   warn,
-  App,
-  RootRenderFunction
+  RootRenderFunction,
+  CreateAppFunction
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -17,8 +17,8 @@ const { render: baseRender, createApp: baseCreateApp } = createRenderer({
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = baseRender as RootRenderFunction<Node, Element>
 
-export const createApp = (): App<Element> => {
-  const app = baseCreateApp()
+export const createApp: CreateAppFunction<Element> = (...args) => {
+  const app = baseCreateApp(...args)
 
   if (__DEV__) {
     // Inject `isNativeTag`
@@ -29,8 +29,8 @@ export const createApp = (): App<Element> => {
     })
   }
 
-  const { mount, unmount } = app
-  app.mount = (component, container, props): any => {
+  const { mount } = app
+  app.mount = (container): any => {
     if (isString(container)) {
       container = document.querySelector(container)!
       if (!container) {
@@ -39,6 +39,7 @@ export const createApp = (): App<Element> => {
         return
       }
     }
+    const component = app.rootComponent
     if (
       __RUNTIME_COMPILE__ &&
       !isFunction(component) &&
@@ -49,19 +50,7 @@ export const createApp = (): App<Element> => {
     }
     // clear content before mounting
     container.innerHTML = ''
-    return mount(component, container, props)
-  }
-
-  app.unmount = container => {
-    if (isString(container)) {
-      container = document.querySelector(container)!
-      if (!container) {
-        __DEV__ &&
-          warn(`Failed to unmount app: mount target selector returned null.`)
-        return
-      }
-    }
-    unmount(container)
+    return mount(container)
   }
 
   return app

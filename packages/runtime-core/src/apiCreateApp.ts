@@ -16,16 +16,11 @@ export interface App<HostElement = any> {
   component(name: string, component: Component): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
-  mount(
-    rootComponent:
-      | Component
-      // for compatibility with defineComponent() return types
-      | { new (): ComponentPublicInstance<any, any, any, any, any> },
-    rootContainer: HostElement | string,
-    rootProps?: Data
-  ): ComponentPublicInstance
+  mount(rootContainer: HostElement | string): ComponentPublicInstance
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
+  rootComponent: Component
+  rootContainer: HostElement | null
 }
 
 export interface AppConfig {
@@ -79,16 +74,30 @@ export function createAppContext(): AppContext {
   }
 }
 
+export type CreateAppFunction<HostElement> = (
+  rootComponent:
+    | Component
+    // for compatibility with defineComponent() return types
+    | { new (): ComponentPublicInstance<any, any, any, any, any> },
+  rootProps?: Data | null
+) => App<HostElement>
+
 export function createAppAPI<HostNode, HostElement>(
   render: RootRenderFunction<HostNode, HostElement>
-): () => App<HostElement> {
-  return function createApp(): App {
+): CreateAppFunction<HostElement> {
+  return function createApp(
+    rootComponent: Component,
+    rootProps?: Data | null
+  ): App {
     const context = createAppContext()
     const installedPlugins = new Set()
 
     let isMounted = false
 
     const app: App = {
+      rootComponent,
+      rootContainer: null,
+
       get config() {
         return context.config
       },
@@ -165,11 +174,7 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      mount(
-        rootComponent: Component,
-        rootContainer: HostElement,
-        rootProps?: Data | null
-      ): any {
+      mount(rootContainer: HostElement): any {
         if (!isMounted) {
           if (rootProps != null && !isObject(rootProps)) {
             __DEV__ &&
@@ -190,6 +195,7 @@ export function createAppAPI<HostNode, HostElement>(
 
           render(vnode, rootContainer)
           isMounted = true
+          app.rootContainer = rootContainer
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
@@ -198,8 +204,12 @@ export function createAppAPI<HostNode, HostElement>(
         }
       },
 
-      unmount(rootContainer: HostElement) {
-        render(null, rootContainer)
+      unmount() {
+        if (isMounted) {
+          render(null, app.rootContainer!)
+        } else if (__DEV__) {
+          warn(`Cannot unmount an app that is not mounted.`)
+        }
       },
 
       provide(key, value) {

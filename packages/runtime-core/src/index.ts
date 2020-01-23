@@ -99,7 +99,13 @@ export { registerRuntimeCompiler } from './component'
 
 // Types -----------------------------------------------------------------------
 
-export { App, AppConfig, AppContext, Plugin } from './apiCreateApp'
+export {
+  App,
+  AppConfig,
+  AppContext,
+  Plugin,
+  CreateAppFunction
+} from './apiCreateApp'
 export { VNode, VNodeTypes, VNodeProps } from './vnode'
 export {
   Component,
