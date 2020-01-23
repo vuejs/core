@@ -287,21 +287,21 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@microsoft/api-extractor-model@7.7.5":
-  version "7.7.5"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.7.5.tgz#ddf6eb87d723361204d77d3570a2e7cb7743ec62"
-  integrity sha512-zMk+iqG7AVPYwAn2S/KgtRLnFLd66+XJx1ld86RT36z3zHcrr1Xg/PbHGfaXr4m+4nT/MASGRJV6/xf7wnaa0A==
+"@microsoft/api-extractor-model@7.7.6":
+  version "7.7.6"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.7.6.tgz#3575bab3170b2774ccf17c5f7723d81d50ac60e2"
+  integrity sha512-tcVC1OD7aEJkAOnGMrIk5heRTBhqWv7pOu9fCksEUo+kyvK0Q26xOFFSS1Rz6MwFvkzBsCxC+C6AyhDTxUUJeQ==
   dependencies:
-    "@microsoft/node-core-library" "3.19.1"
+    "@microsoft/node-core-library" "3.19.2"
     "@microsoft/tsdoc" "0.12.14"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.7.6"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.7.6.tgz#2ace76c268d7124d1a2cfb83a8fd5edc143d9f6d"
-  integrity sha512-VeqOS7HnlPG6TRK70O3oC10y9mKZK0gWjEl1W+1FoaRSOTXerqByG0eLKwszd1WqyvdFQmMokDLgbG8YcN4nQg==
+  version "7.7.7"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.7.7.tgz#eb2d71ac0819265a5c1289ade1a5652e60658dea"
+  integrity sha512-D3aheH8C76R7tWDDRdvtzhi0U8PBs+bQDR6rzyad6cprxn9GWbN0e6FmpLLKaUEmVipk4qOLyX+9ojQ10WSIgw==
   dependencies:
-    "@microsoft/api-extractor-model" "7.7.5"
-    "@microsoft/node-core-library" "3.19.1"
+    "@microsoft/api-extractor-model" "7.7.6"
+    "@microsoft/node-core-library" "3.19.2"
     "@microsoft/ts-command-line" "4.3.10"
     "@microsoft/tsdoc" "0.12.14"
     colors "~1.2.1"
@@ -310,10 +310,10 @@
     source-map "~0.6.1"
     typescript "~3.7.2"
 
-"@microsoft/node-core-library@3.19.1":
-  version "3.19.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.19.1.tgz#cc881d9a3ccb21857ecc71bfc2df92e52fe82907"
-  integrity sha512-CTlTX3goPe2HUWg+n5w/cYUFI+qTx2gv4XVycjpPRi5KqwrowZ+wfSWkaM7AQ8RaMZ7d4AXVXeRm+2k6eW261g==
+"@microsoft/node-core-library@3.19.2":
+  version "3.19.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/node-core-library/-/node-core-library-3.19.2.tgz#57a564969ce93c7b352d157f70057e605f04ba0e"
+  integrity sha512-jySSnueZqXNvIsnt/3hsi7tjwhKFVFFDg8Cbx8z50UI9oPWy5xYBE88SXmxfIXO6OOmxPMWzvGoo78WlMfNsyQ==
   dependencies:
     "@types/node" "10.17.13"
     colors "~1.2.1"
