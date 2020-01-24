@@ -5,8 +5,8 @@ import {
   ComponentPublicInstance,
   runtimeCompiledRenderProxyHandlers
 } from './componentProxy'
-import { ComponentPropsOptions } from './componentProps'
-import { Slots } from './componentSlots'
+import { ComponentPropsOptions, resolveProps } from './componentProps'
+import { Slots, resolveSlots } from './componentSlots'
 import { warn } from './warning'
 import {
   ErrorCodes,
@@ -34,6 +34,7 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
+import { ShapeFlags } from '.'
 
 export type Data = { [key: string]: unknown }
 
@@ -268,10 +269,26 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
-export function setupStatefulComponent(
+export function setupComponent(
   instance: ComponentInternalInstance,
   parentSuspense: SuspenseBoundary | null
 ) {
+  const propsOptions = instance.type.props
+  const { props, children, shapeFlag } = instance.vnode
+  resolveProps(instance, props, propsOptions)
+  resolveSlots(instance, children)
+
+  // setup stateful logic
+  if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    return setupStatefulComponent(instance, parentSuspense)
+  }
+}
+
+function setupStatefulComponent(
+  instance: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null
+) {
+  let setupResult
   const Component = instance.type as ComponentOptions
 
   if (__DEV__) {
@@ -307,7 +324,7 @@ export function setupStatefulComponent(
 
     currentInstance = instance
     currentSuspense = parentSuspense
-    const setupResult = callWithErrorHandling(
+    setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
@@ -333,6 +350,8 @@ export function setupStatefulComponent(
   } else {
     finishComponentSetup(instance, parentSuspense)
   }
+
+  return setupResult
 }
 
 export function handleSetupResult(
@@ -398,7 +417,7 @@ function finishComponentSetup(
             `does not support runtime template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
-      } else {
+      } else if (!__SSR__ || !Component.ssrRender) {
         warn(
           `Component is missing${
             __RUNTIME_COMPILE__ ? ` template or` : ``

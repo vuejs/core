@@ -79,6 +79,7 @@ function createConfig(format, output, plugins = []) {
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
   const isGlobalBuild = format === 'global'
   const isRawESMBuild = format === 'esm'
+  const isNodeBuild = format === 'cjs'
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isRuntimeCompileBuild = /vue\./.test(output.file)
 
@@ -111,14 +112,16 @@ function createConfig(format, output, plugins = []) {
   const entryFile =
     format === 'esm-bundler-runtime' ? `src/runtime.ts` : `src/index.ts`
 
+  const external =
+    isGlobalBuild || isRawESMBuild
+      ? []
+      : knownExternals.concat(Object.keys(pkg.dependencies || []))
+
   return {
     input: resolve(entryFile),
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external:
-      isGlobalBuild || isRawESMBuild
-        ? []
-        : knownExternals.concat(Object.keys(pkg.dependencies || [])),
+    external,
     plugins: [
       json({
         namedExports: false
@@ -127,9 +130,11 @@ function createConfig(format, output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBundlerESMBuild,
+        // isBrowserBuild?
         (isGlobalBuild || isRawESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
-        isRuntimeCompileBuild
+        isRuntimeCompileBuild,
+        isNodeBuild
       ),
       ...plugins
     ],
@@ -146,7 +151,8 @@ function createReplacePlugin(
   isProduction,
   isBundlerESMBuild,
   isBrowserBuild,
-  isRuntimeCompileBuild
+  isRuntimeCompileBuild,
+  isNodeBuild
 ) {
   const replacements = {
     __COMMIT__: `"${process.env.COMMIT}"`,
@@ -164,6 +170,8 @@ function createReplacePlugin(
     __BUNDLER__: isBundlerESMBuild,
     // support compile in browser?
     __RUNTIME_COMPILE__: isRuntimeCompileBuild,
+    // is targeting Node (SSR)?
+    __SSR__: isNodeBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,

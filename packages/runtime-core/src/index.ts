@@ -97,6 +97,9 @@ export const camelize = _camelize as (s: string) => string
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
 
+// For server-renderer
+export { createComponentInstance, setupComponent } from './component'
+
 // Types -----------------------------------------------------------------------
 
 export {

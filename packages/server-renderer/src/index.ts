@@ -2,8 +2,11 @@ import {
   App,
   Component,
   ComponentInternalInstance,
-  SuspenseBoundary
-} from '@vue/runtime-dom'
+  createComponentInstance,
+  setupComponent,
+  VNode,
+  createVNode
+} from 'vue'
 import { isString } from '@vue/shared'
 
 type SSRBuffer = SSRBufferItem[]
@@ -30,9 +33,7 @@ function createSSRBuffer() {
 export async function renderToString(app: App): Promise<string> {
   const resolvedBuffer = (await renderComponent(
     app._component,
-    app._props,
-    null,
-    null
+    app._props
   )) as ResolvedSSRBuffer
   return unrollBuffer(resolvedBuffer)
 }
@@ -52,19 +53,17 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 
 export async function renderComponent(
   comp: Component,
-  props: Record<string, any> | null,
-  parentComponent: ComponentInternalInstance | null,
-  parentSuspense: SuspenseBoundary | null
+  props: Record<string, any> | null = null,
+  children: VNode['children'] = null,
+  parentComponent: ComponentInternalInstance | null = null
 ): Promise<SSRBuffer> {
   // 1. create component buffer
   const { buffer, push } = createSSRBuffer()
 
-  // 2. TODO create actual instance
-  const instance = {
-    proxy: {
-      msg: 'hello'
-    }
-  }
+  // 2. create actual instance
+  const vnode = createVNode(comp, props, children)
+  const instance = createComponentInstance(vnode, parentComponent)
+  await setupComponent(instance, null)
 
   if (typeof comp === 'function') {
     // TODO FunctionalComponent

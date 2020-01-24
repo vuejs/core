@@ -27,6 +27,6 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/server-renderer#readme",
   "peerDependencies": {
-    "@vue/runtime-dom": "3.0.0-alpha.3"
+    "vue": "3.0.0-alpha.3"
   }
 }

@@ -7,6 +7,7 @@ module.exports = {
     __BROWSER__: false,
     __BUNDLER__: true,
     __RUNTIME_COMPILE__: true,
+    __SSR__: false,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
   },

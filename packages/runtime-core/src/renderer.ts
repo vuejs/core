@@ -13,9 +13,9 @@ import {
 import {
   ComponentInternalInstance,
   createComponentInstance,
-  setupStatefulComponent,
   Component,
-  Data
+  Data,
+  setupComponent
 } from './component'
 import {
   renderComponentRoot,
@@ -940,8 +940,6 @@ export function createRenderer<
       pushWarningContext(initialVNode)
     }
 
-    const Comp = initialVNode.type as Component
-
     // inject renderer internals for keepAlive
     if (isKeepAlive(initialVNode)) {
       const sink = instance.sink as KeepAliveSink
@@ -950,14 +948,7 @@ export function createRenderer<
     }
 
     // resolve props and slots for setup context
-    const propsOptions = Comp.props
-    resolveProps(instance, initialVNode.props, propsOptions)
-    resolveSlots(instance, initialVNode.children)
-
-    // setup stateful logic
-    if (initialVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      setupStatefulComponent(instance, parentSuspense)
-    }
+    setupComponent(instance, parentSuspense)
 
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
