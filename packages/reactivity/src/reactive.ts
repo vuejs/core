@@ -1,4 +1,4 @@
-import { isObject, toRawType } from '@vue/shared'
+import { isObject, toRawType, EMPTY_OBJ } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -117,9 +117,15 @@ function createReactiveObject(
   if (!canObserve(target)) {
     return target
   }
-  const handlers = collectionTypes.has(target.constructor)
-    ? collectionHandlers
-    : baseHandlers
+  const handlers = __SSR__
+    ? // disable reactivity in SSR.
+      // NOTE: a potential caveat here is isReactive check may return different
+      // values on nested values on client/server. This should be very rare but
+      // we should keep an eye on this.
+      EMPTY_OBJ
+    : collectionTypes.has(target.constructor)
+      ? collectionHandlers
+      : baseHandlers
   observed = new Proxy(target, handlers)
   toProxy.set(target, observed)
   toRaw.set(observed, target)

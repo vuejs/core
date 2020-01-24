@@ -218,7 +218,7 @@ export function applyOptions(
 ) {
   const renderContext =
     instance.renderContext === EMPTY_OBJ
-      ? (instance.renderContext = reactive({}))
+      ? (instance.renderContext = __SSR__ ? {} : reactive({}))
       : instance.renderContext
   const ctx = instance.proxy!
   const {
@@ -285,7 +285,7 @@ export function applyOptions(
           checkDuplicateProperties!(OptionTypes.DATA, key)
         }
       }
-      instance.data = reactive(data)
+      instance.data = __SSR__ ? data : reactive(data)
     } else {
       // existing data: this is a mixin or extends.
       extend(instance.data, data)

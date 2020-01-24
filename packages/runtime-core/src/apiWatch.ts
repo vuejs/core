@@ -13,7 +13,8 @@ import {
   isArray,
   isFunction,
   isString,
-  hasChanged
+  hasChanged,
+  NOOP
 } from '@vue/shared'
 import { recordEffect } from './apiReactivity'
 import {
@@ -85,7 +86,10 @@ export function watch<T = any>(
   cbOrOptions?: WatchCallback<T> | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
-  if (isFunction(cbOrOptions)) {
+  if (__SSR__ && !(options && options.flush === 'sync')) {
+    // during SSR, non-sync watchers never fire.
+    return NOOP
+  } else if (isFunction(cbOrOptions)) {
     // effect callback as 2nd argument - this is a source watcher
     return doWatch(effectOrSource, cbOrOptions, options)
   } else {
