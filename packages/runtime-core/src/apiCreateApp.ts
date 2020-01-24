@@ -19,8 +19,11 @@ export interface App<HostElement = any> {
   mount(rootContainer: HostElement | string): ComponentPublicInstance
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
-  rootComponent: Component
-  rootContainer: HostElement | null
+
+  // internal. We need to expose these for the server-renderer
+  _component: Component
+  _props: Data | null
+  _container: HostElement | null
 }
 
 export interface AppConfig {
@@ -85,18 +88,21 @@ export type CreateAppFunction<HostElement> = (
 export function createAppAPI<HostNode, HostElement>(
   render: RootRenderFunction<HostNode, HostElement>
 ): CreateAppFunction<HostElement> {
-  return function createApp(
-    rootComponent: Component,
-    rootProps?: Data | null
-  ): App {
+  return function createApp(rootComponent: Component, rootProps = null) {
+    if (rootProps != null && !isObject(rootProps)) {
+      __DEV__ && warn(`root props passed to app.mount() must be an object.`)
+      rootProps = null
+    }
+
     const context = createAppContext()
     const installedPlugins = new Set()
 
     let isMounted = false
 
     const app: App = {
-      rootComponent,
-      rootContainer: null,
+      _component: rootComponent,
+      _props: rootProps,
+      _container: null,
 
       get config() {
         return context.config
@@ -176,11 +182,6 @@ export function createAppAPI<HostNode, HostElement>(
 
       mount(rootContainer: HostElement): any {
         if (!isMounted) {
-          if (rootProps != null && !isObject(rootProps)) {
-            __DEV__ &&
-              warn(`root props passed to app.mount() must be an object.`)
-            rootProps = null
-          }
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
@@ -195,7 +196,7 @@ export function createAppAPI<HostNode, HostElement>(
 
           render(vnode, rootContainer)
           isMounted = true
-          app.rootContainer = rootContainer
+          app._container = rootContainer
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
@@ -206,7 +207,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       unmount() {
         if (isMounted) {
-          render(null, app.rootContainer!)
+          render(null, app._container!)
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }

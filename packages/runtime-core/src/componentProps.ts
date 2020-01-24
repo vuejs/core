@@ -85,7 +85,7 @@ type NormalizedProp =
 type NormalizedPropsOptions = [Record<string, NormalizedProp>, string[]]
 
 // resolve raw VNode data.
-// - filter out reserved keys (key, ref, slots)
+// - filter out reserved keys (key, ref)
 // - extract class and style into $attrs (to be merged onto child
 //   component root)
 // - for the rest:

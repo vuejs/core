@@ -63,6 +63,8 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
+  // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
+  ssrRender?: Function
   components?: Record<
     string,
     Component | { new (): ComponentPublicInstance<any, any, any, any, any> }

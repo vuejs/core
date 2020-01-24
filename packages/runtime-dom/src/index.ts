@@ -39,7 +39,7 @@ export const createApp: CreateAppFunction<Element> = (...args) => {
         return
       }
     }
-    const component = app.rootComponent
+    const component = app._component
     if (
       __RUNTIME_COMPILE__ &&
       !isFunction(component) &&
