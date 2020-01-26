@@ -219,6 +219,7 @@ describe('reactivity/effect', () => {
     expect(hasDummy).toBe(true)
     obj[key] = 'newValue'
     expect(dummy).toBe('newValue')
+    expect(hasDummy).toBe(true)
     delete obj[key]
     expect(dummy).toBe(undefined)
     expect(hasDummy).toBe(false)
