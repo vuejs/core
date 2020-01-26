@@ -9,6 +9,8 @@ import {
 } from 'vue'
 import { isString, isPromise, isArray } from '@vue/shared'
 
+export * from './helpers'
+
 type SSRBuffer = SSRBufferItem[]
 type SSRBufferItem = string | ResolvedSSRBuffer | Promise<SSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]

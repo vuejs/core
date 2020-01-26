@@ -27,7 +27,7 @@ import {
 } from '@vue/shared'
 import { defaultOnError } from './errors'
 import {
-  TO_STRING,
+  TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
   WITH_DIRECTIVES,
@@ -365,7 +365,7 @@ export function traverseNode(
       break
     case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper
-      context.helper(TO_STRING)
+      context.helper(TO_DISPLAY_STRING)
       break
 
     // for container types, further traverse downwards

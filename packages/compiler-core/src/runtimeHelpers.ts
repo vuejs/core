@@ -17,7 +17,7 @@ export const WITH_DIRECTIVES = Symbol(__DEV__ ? `withDirectives` : ``)
 export const RENDER_LIST = Symbol(__DEV__ ? `renderList` : ``)
 export const RENDER_SLOT = Symbol(__DEV__ ? `renderSlot` : ``)
 export const CREATE_SLOTS = Symbol(__DEV__ ? `createSlots` : ``)
-export const TO_STRING = Symbol(__DEV__ ? `toString` : ``)
+export const TO_DISPLAY_STRING = Symbol(__DEV__ ? `toDisplayString` : ``)
 export const MERGE_PROPS = Symbol(__DEV__ ? `mergeProps` : ``)
 export const TO_HANDLERS = Symbol(__DEV__ ? `toHandlers` : ``)
 export const CAMELIZE = Symbol(__DEV__ ? `camelize` : ``)
@@ -47,7 +47,7 @@ export const helperNameMap: any = {
   [RENDER_LIST]: `renderList`,
   [RENDER_SLOT]: `renderSlot`,
   [CREATE_SLOTS]: `createSlots`,
-  [TO_STRING]: `toString`,
+  [TO_DISPLAY_STRING]: `toDisplayString`,
   [MERGE_PROPS]: `mergeProps`,
   [TO_HANDLERS]: `toHandlers`,
   [CAMELIZE]: `camelize`,

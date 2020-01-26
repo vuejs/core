@@ -31,7 +31,7 @@ import {
 import { isString, isArray, isSymbol } from '@vue/shared'
 import {
   helperNameMap,
-  TO_STRING,
+  TO_DISPLAY_STRING,
   CREATE_VNODE,
   RESOLVE_COMPONENT,
   RESOLVE_DIRECTIVE,
@@ -491,7 +491,7 @@ function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
   const { push, helper } = context
-  push(`${helper(TO_STRING)}(`)
+  push(`${helper(TO_DISPLAY_STRING)}(`)
   genNode(node.content, context)
   push(`)`)
 }

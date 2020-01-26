@@ -81,7 +81,6 @@ export {
   resolveDynamicComponent
 } from './helpers/resolveAssets'
 export { renderList } from './helpers/renderList'
-export { toString } from './helpers/toString'
 export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
@@ -90,7 +89,12 @@ export { setBlockTracking, createTextVNode, createCommentVNode } from './vnode'
 // Since @vue/shared is inlined into final builds,
 // when re-exporting from @vue/shared we need to avoid relying on their original
 // types so that the bundled d.ts does not attempt to import from it.
-import { capitalize as _capitalize, camelize as _camelize } from '@vue/shared'
+import {
+  toDisplayString as _toDisplayString,
+  capitalize as _capitalize,
+  camelize as _camelize
+} from '@vue/shared'
+export const toDisplayString = _toDisplayString as (s: unknown) => string
 export const capitalize = _capitalize as (s: string) => string
 export const camelize = _camelize as (s: string) => string
 

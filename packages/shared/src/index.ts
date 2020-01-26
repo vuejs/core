@@ -98,3 +98,12 @@ export const capitalize = cacheStringFunction(
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
+
+// for converting {{ interpolation }} values to displayed strings.
+export function toDisplayString(val: unknown): string {
+  return val == null
+    ? ''
+    : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
+      ? JSON.stringify(val, null, 2)
+      : String(val)
+}

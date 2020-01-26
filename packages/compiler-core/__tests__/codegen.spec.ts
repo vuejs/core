@@ -18,7 +18,7 @@ import {
 } from '../src'
 import {
   CREATE_VNODE,
-  TO_STRING,
+  TO_DISPLAY_STRING,
   RESOLVE_DIRECTIVE,
   helperNameMap,
   RESOLVE_COMPONENT,
@@ -164,7 +164,7 @@ describe('compiler: codegen', () => {
         codegenNode: createInterpolation(`hello`, locStub)
       })
     )
-    expect(code).toMatch(`return _${helperNameMap[TO_STRING]}(hello)`)
+    expect(code).toMatch(`return _${helperNameMap[TO_DISPLAY_STRING]}(hello)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -197,7 +197,9 @@ describe('compiler: codegen', () => {
         ])
       })
     )
-    expect(code).toMatch(`return _ctx.foo + _${helperNameMap[TO_STRING]}(bar)`)
+    expect(code).toMatch(
+      `return _ctx.foo + _${helperNameMap[TO_DISPLAY_STRING]}(bar)`
+    )
     expect(code).toMatchSnapshot()
   })
 

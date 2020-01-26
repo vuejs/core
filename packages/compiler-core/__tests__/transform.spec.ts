@@ -8,7 +8,7 @@ import {
 } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {
-  TO_STRING,
+  TO_DISPLAY_STRING,
   OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
@@ -227,7 +227,7 @@ describe('compiler: transform', () => {
   test('should inject toString helper for interpolations', () => {
     const ast = baseParse(`{{ foo }}`)
     transform(ast, {})
-    expect(ast.helpers).toContain(TO_STRING)
+    expect(ast.helpers).toContain(TO_DISPLAY_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
