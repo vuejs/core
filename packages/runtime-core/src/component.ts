@@ -337,7 +337,9 @@ function setupStatefulComponent(
     if (isPromise(setupResult)) {
       if (__SSR__) {
         // return the promise so server-renderer can wait on it
-        return setupResult
+        return setupResult.then(resolvedResult => {
+          handleSetupResult(instance, resolvedResult, parentSuspense)
+        })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.

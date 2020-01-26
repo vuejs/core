@@ -7,17 +7,21 @@ import {
   VNode,
   createVNode
 } from 'vue'
-import { isString } from '@vue/shared'
+import { isString, isPromise, isArray } from '@vue/shared'
 
 type SSRBuffer = SSRBufferItem[]
-type SSRBufferItem = string | Promise<SSRBuffer>
+type SSRBufferItem = string | ResolvedSSRBuffer | Promise<SSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
 
-function createSSRBuffer() {
+function createBuffer() {
   let appendable = false
+  let hasAsync = false
   const buffer: SSRBuffer = []
   return {
     buffer,
+    hasAsync() {
+      return hasAsync
+    },
     push(item: SSRBufferItem) {
       const isStringItem = isString(item)
       if (appendable && isStringItem) {
@@ -26,16 +30,12 @@ function createSSRBuffer() {
         buffer.push(item)
       }
       appendable = isStringItem
+      if (!isStringItem && !isArray(item)) {
+        // promise
+        hasAsync = true
+      }
     }
   }
-}
-
-export async function renderToString(app: App): Promise<string> {
-  const resolvedBuffer = (await renderComponent(
-    app._component,
-    app._props
-  )) as ResolvedSSRBuffer
-  return unrollBuffer(resolvedBuffer)
 }
 
 function unrollBuffer(buffer: ResolvedSSRBuffer): string {
@@ -51,20 +51,35 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
   return ret
 }
 
-export async function renderComponent(
+export async function renderToString(app: App): Promise<string> {
+  const resolvedBuffer = (await renderComponent(
+    app._component,
+    app._props
+  )) as ResolvedSSRBuffer
+  return unrollBuffer(resolvedBuffer)
+}
+
+export function renderComponent(
   comp: Component,
   props: Record<string, any> | null = null,
   children: VNode['children'] = null,
   parentComponent: ComponentInternalInstance | null = null
-): Promise<SSRBuffer> {
-  // 1. create component buffer
-  const { buffer, push } = createSSRBuffer()
-
-  // 2. create actual instance
+): ResolvedSSRBuffer | Promise<SSRBuffer> {
   const vnode = createVNode(comp, props, children)
   const instance = createComponentInstance(vnode, parentComponent)
-  await setupComponent(instance, null)
+  const res = setupComponent(instance, null)
+  if (isPromise(res)) {
+    return res.then(() => innerRenderComponent(comp, instance))
+  } else {
+    return innerRenderComponent(comp, instance)
+  }
+}
 
+function innerRenderComponent(
+  comp: Component,
+  instance: ComponentInternalInstance
+): ResolvedSSRBuffer | Promise<SSRBuffer> {
+  const { buffer, push, hasAsync } = createBuffer()
   if (typeof comp === 'function') {
     // TODO FunctionalComponent
   } else {
@@ -77,7 +92,11 @@ export async function renderComponent(
       // TODO warn component missing render function
     }
   }
-  // TS can't figure this out due to recursive occurance of Promise in type
-  // @ts-ignore
-  return Promise.all(buffer)
+  // If the current component's buffer contains any Promise from async children,
+  // then it must return a Promise too. Otherwise this is a component that
+  // contains only sync children so we can avoid the async book-keeping overhead.
+  return hasAsync()
+    ? // TS can't figure out the typing due to recursive appearance of Promise
+      Promise.all(buffer as any)
+    : (buffer as ResolvedSSRBuffer)
 }
