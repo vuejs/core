@@ -1,4 +1,4 @@
-const doc = document
+const doc = (typeof document !== 'undefined' ? document : null) as Document
 const svgNS = 'http://www.w3.org/2000/svg'
 
 export const nodeOps = {
