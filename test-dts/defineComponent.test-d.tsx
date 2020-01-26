@@ -249,12 +249,12 @@ describe('type inference w/ options API', () => {
 
 describe('compatibility w/ createApp', () => {
   const comp = defineComponent({})
-  createApp().mount(comp, '#hello')
+  createApp(comp).mount('#hello')
 
   const comp2 = defineComponent({
     props: { foo: String }
   })
-  createApp().mount(comp2, '#hello')
+  createApp(comp2).mount('#hello')
 
   const comp3 = defineComponent({
     setup() {
@@ -263,7 +263,7 @@ describe('compatibility w/ createApp', () => {
       }
     }
   })
-  createApp().mount(comp3, '#hello')
+  createApp(comp3).mount('#hello')
 })
 
 describe('defineComponent', () => {
