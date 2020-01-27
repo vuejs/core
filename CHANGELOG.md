@@ -1,3 +1,64 @@
+# [3.0.0-alpha.4](https://github.com/vuejs/vue-next/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2020-01-27)
+
+
+### Bug Fixes
+
+* **reactivity:** Array methods relying on identity should work with raw values ([aefb7d2](https://github.com/vuejs/vue-next/commit/aefb7d282ed716923ca1a288a63a83a94af87ebc))
+* **runtime-core:** instance should not expose non-declared props ([2884831](https://github.com/vuejs/vue-next/commit/2884831065e16ccf5bd3ae1ee95116803ee3b18c))
+* **runtime-dom:** should not access document in non-browser env ([48152bc](https://github.com/vuejs/vue-next/commit/48152bc88ea817ae23e2987dce99d64b426366c1)), closes [#657](https://github.com/vuejs/vue-next/issues/657)
+* **v-model/emit:** update:camelCase events should trigger kebab case equivalent ([2837ce8](https://github.com/vuejs/vue-next/commit/2837ce842856d51dfbb55e3fa4a36a352446fb54)), closes [#656](https://github.com/vuejs/vue-next/issues/656)
+
+
+### Code Refactoring
+
+* adjust `createApp` related API signatures ([c07751f](https://github.com/vuejs/vue-next/commit/c07751fd3605f301dc0f02fd2a48acc7ba7a0397))
+* remove implicit reactive() call on renderContext ([6b10f0c](https://github.com/vuejs/vue-next/commit/6b10f0cd1da942c1d96746672b5f595df7d125b5))
+
+
+### Performance Improvements
+
+* **ssr:** avoid unnecessary async overhead ([297282a](https://github.com/vuejs/vue-next/commit/297282a81259289bfed207d0c9393337aea70117))
+
+
+### BREAKING CHANGES
+
+* object returned from `setup()` are no longer implicitly
+passed to `reactive()`.
+
+  The renderContext is the object returned by `setup()` (or a new object
+  if no setup() is present). Before this change, it was implicitly passed
+  to `reactive()` for ref unwrapping. But this has the side effect of
+  unnecessary deep reactive conversion on properties that should not be
+  made reactive (e.g. computed return values and injected non-reactive
+  objects), and can lead to performance issues.
+
+  This change removes the `reactive()` call and instead performs a
+  shallow ref unwrapping at the render proxy level. The breaking part is
+  when the user returns an object with a plain property from `setup()`,
+  e.g. `return { count: 0 }`, this property will no longer trigger
+  updates when mutated by a in-template event handler. Instead, explicit
+  refs are required.
+
+  This also means that any objects not explicitly made reactive in
+  `setup()` will remain non-reactive. This can be desirable when
+  exposing heavy external stateful objects on `this`.
+* `createApp` API has been adjusted.
+
+  - `createApp()` now accepts the root component, and optionally a props
+  object to pass to the root component.
+  - `app.mount()` now accepts a single argument (the root container)
+  - `app.unmount()` no longer requires arguments.
+
+  New behavior looks like the following:
+
+  ``` js
+  const app = createApp(RootComponent)
+  app.mount('#app')
+  app.unmount()
+  ```
+
+
+
 # [3.0.0-alpha.3](https://github.com/vuejs/vue-next/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2020-01-22)
 
 
