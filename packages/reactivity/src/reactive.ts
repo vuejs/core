@@ -1,4 +1,4 @@
-import { isObject, toRawType, EMPTY_OBJ } from '@vue/shared'
+import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -77,7 +77,8 @@ export function readonly<T extends object>(
 
 // @internal
 // Return a reactive-copy of the original object, where only the root level
-// properties are readonly, and does not recursively convert returned properties.
+// properties are readonly, and does NOT unwrap refs nor recursively convert
+// returned properties.
 // This is used for creating the props proxy object for stateful components.
 export function shallowReadonly<T extends object>(
   target: T
@@ -117,15 +118,9 @@ function createReactiveObject(
   if (!canObserve(target)) {
     return target
   }
-  const handlers = __SSR__
-    ? // disable reactivity in SSR.
-      // NOTE: a potential caveat here is isReactive check may return different
-      // values on nested values on client/server. This should be very rare but
-      // we should keep an eye on this.
-      EMPTY_OBJ
-    : collectionTypes.has(target.constructor)
-      ? collectionHandlers
-      : baseHandlers
+  const handlers = collectionTypes.has(target.constructor)
+    ? collectionHandlers
+    : baseHandlers
   observed = new Proxy(target, handlers)
   toProxy.set(target, observed)
   toRaw.set(observed, target)

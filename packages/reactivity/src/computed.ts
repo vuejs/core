@@ -56,10 +56,6 @@ export function computed<T>(
     // expose effect so computed can be stopped
     effect: runner,
     get value() {
-      if (__SSR__) {
-        return getter()
-      }
-
       if (dirty) {
         value = runner()
         dirty = false

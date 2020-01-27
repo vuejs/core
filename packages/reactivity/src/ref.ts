@@ -36,14 +36,6 @@ export function ref(value?: unknown) {
     return value
   }
   value = convert(value)
-
-  if (__SSR__) {
-    return {
-      _isRef: true,
-      value
-    }
-  }
-
   const r = {
     _isRef: true,
     get value() {
@@ -66,7 +58,7 @@ export function ref(value?: unknown) {
 export function toRefs<T extends object>(
   object: T
 ): { [K in keyof T]: Ref<T[K]> } {
-  if (__DEV__ && !__SSR__ && !isReactive(object)) {
+  if (__DEV__ && !isReactive(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = {}
