@@ -1,0 +1,1 @@
+test('ssr: escape HTML', () => {})

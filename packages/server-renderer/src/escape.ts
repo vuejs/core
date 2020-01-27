@@ -1,5 +1,3 @@
-import { toDisplayString } from '@vue/shared'
-
 const escapeRE = /["'&<>]/
 
 export function escape(string: unknown) {
@@ -44,8 +42,4 @@ export function escape(string: unknown) {
   }
 
   return lastIndex !== index ? html + str.substring(lastIndex, index) : html
-}
-
-export function interpolate(value: unknown) {
-  return escape(toDisplayString(value))
 }

@@ -103,6 +103,7 @@ export { registerRuntimeCompiler } from './component'
 
 // For server-renderer
 export { createComponentInstance, setupComponent } from './component'
+export { renderComponentRoot } from './componentRenderUtils'
 
 // Types -----------------------------------------------------------------------
 
