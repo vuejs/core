@@ -9,11 +9,10 @@ import {
   renderComponentRoot
 } from 'vue'
 import { isString, isPromise, isArray, isFunction } from '@vue/shared'
-import { renderVNode } from './renderVnode'
 
-export type SSRBuffer = SSRBufferItem[]
-export type SSRBufferItem = string | ResolvedSSRBuffer | Promise<SSRBuffer>
-export type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
+type SSRBuffer = SSRBufferItem[]
+type SSRBufferItem = string | ResolvedSSRBuffer | Promise<SSRBuffer>
+type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
 
 function createBuffer() {
   let appendable = false
@@ -106,4 +105,12 @@ function innerRenderComponent(
     ? // TS can't figure out the typing due to recursive appearance of Promise
       Promise.all(buffer as any)
     : (buffer as ResolvedSSRBuffer)
+}
+
+export function renderVNode(push: (item: SSRBufferItem) => void, vnode: VNode) {
+  // TODO
+}
+
+export function renderSlot() {
+  // TODO
 }

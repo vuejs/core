@@ -1,4 +1,4 @@
-describe('ssr: render raw vnodes', () => {
+describe('ssr: render props', () => {
   test('class', () => {})
 
   test('styles', () => {
