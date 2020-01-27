@@ -15,7 +15,7 @@ const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
 
-const skippedPackages = ['server-renderer']
+const skippedPackages = ['server-renderer', 'compiler-ssr']
 
 const versionIncrements = [
   'patch',
