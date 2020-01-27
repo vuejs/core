@@ -8,7 +8,7 @@ import {
   ComputedOptions,
   MethodOptions
 } from './apiOptions'
-import { UnwrapRef, ReactiveEffect, isRef, toRaw } from '@vue/reactivity'
+import { UnwrapRef, ReactiveEffect, isRef, isReactive } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
 import {
@@ -169,12 +169,18 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
     } else if (hasOwn(renderContext, key)) {
-      const oldValue = renderContext[key]
-      value = toRaw(value)
-      if (isRef(oldValue) && !isRef(value)) {
-        oldValue.value = value
-      } else {
+      // context is already reactive (user returned reactive object from setup())
+      // just set directly
+      if (isReactive(renderContext)) {
         renderContext[key] = value
+      } else {
+        // handle potential ref set
+        const oldValue = renderContext[key]
+        if (isRef(oldValue) && !isRef(value)) {
+          oldValue.value = value
+        } else {
+          renderContext[key] = value
+        }
       }
     } else if (key[0] === '$' && key.slice(1) in target) {
       __DEV__ &&
