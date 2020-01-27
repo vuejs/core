@@ -76,6 +76,20 @@ describe('component: proxy', () => {
     expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
   })
 
+  test('should not expose non-declared props', () => {
+    let instanceProxy: any
+    const Comp = {
+      setup() {
+        return () => null
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+    render(h(Comp, { count: 1 }), nodeOps.createElement('div'))
+    expect('count' in instanceProxy).toBe(false)
+  })
+
   test('public properties', () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any

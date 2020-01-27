@@ -69,7 +69,8 @@ const publicPropertiesMap: Record<
 const enum AccessTypes {
   DATA,
   CONTEXT,
-  PROPS
+  PROPS,
+  OTHER
 }
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
@@ -104,6 +105,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             return renderContext[key]
           case AccessTypes.PROPS:
             return propsProxy![key]
+          // default: just fallthrough
         }
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
         accessCache![key] = AccessTypes.DATA
@@ -111,13 +113,16 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return renderContext[key]
-      } else if (hasOwn(props, key)) {
-        // only cache props access if component has declared (thus stable) props
-        if (type.props != null) {
+      } else if (type.props != null) {
+        // only cache other properties when instance has declared (this stable)
+        // props
+        if (hasOwn(props, key)) {
           accessCache![key] = AccessTypes.PROPS
+          // return the value from propsProxy for ref unwrapping and readonly
+          return propsProxy![key]
+        } else {
+          accessCache![key] = AccessTypes.OTHER
         }
-        // return the value from propsProxy for ref unwrapping and readonly
-        return propsProxy![key]
       }
     }
 
