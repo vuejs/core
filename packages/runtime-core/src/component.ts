@@ -1,5 +1,5 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
-import { ReactiveEffect, reactive, shallowReadonly } from '@vue/reactivity'
+import { ReactiveEffect, shallowReadonly } from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
   ComponentPublicInstance,
@@ -375,7 +375,7 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
-    instance.renderContext = __SSR__ ? setupResult : reactive(setupResult)
+    instance.renderContext = setupResult
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
       `setup() should return an object. Received: ${
@@ -453,7 +453,7 @@ function finishComponentSetup(
   }
 
   if (instance.renderContext === EMPTY_OBJ) {
-    instance.renderContext = __SSR__ ? {} : reactive({})
+    instance.renderContext = {}
   }
 }
 

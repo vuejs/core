@@ -8,7 +8,7 @@ import {
   ComputedOptions,
   MethodOptions
 } from './apiOptions'
-import { UnwrapRef, ReactiveEffect } from '@vue/reactivity'
+import { UnwrapRef, ReactiveEffect, isRef, toRaw } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
 import {
@@ -73,6 +73,8 @@ const enum AccessTypes {
   OTHER
 }
 
+const unwrapRef = (val: unknown) => (isRef(val) ? val.value : val)
+
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
     // fast path for unscopables when using `with` block
@@ -102,7 +104,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.DATA:
             return data[key]
           case AccessTypes.CONTEXT:
-            return renderContext[key]
+            return unwrapRef(renderContext[key])
           case AccessTypes.PROPS:
             return propsProxy![key]
           // default: just fallthrough
@@ -112,7 +114,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         return data[key]
       } else if (hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
-        return renderContext[key]
+        return unwrapRef(renderContext[key])
       } else if (type.props != null) {
         // only cache other properties when instance has declared (this stable)
         // props
@@ -167,7 +169,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
     } else if (hasOwn(renderContext, key)) {
-      renderContext[key] = value
+      const oldValue = renderContext[key]
+      value = toRaw(value)
+      if (isRef(oldValue) && !isRef(value)) {
+        oldValue.value = value
+      } else {
+        renderContext[key] = value
+      }
     } else if (key[0] === '$' && key.slice(1) in target) {
       __DEV__ &&
         warn(

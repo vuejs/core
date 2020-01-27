@@ -216,10 +216,6 @@ export function applyOptions(
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
-  const renderContext =
-    instance.renderContext === EMPTY_OBJ
-      ? (instance.renderContext = __SSR__ ? {} : reactive({}))
-      : instance.renderContext
   const ctx = instance.proxy!
   const {
     // composition
@@ -249,6 +245,11 @@ export function applyOptions(
     renderTriggered,
     errorCaptured
   } = options
+
+  const renderContext =
+    instance.renderContext === EMPTY_OBJ
+      ? (instance.renderContext = {})
+      : instance.renderContext
 
   const globalMixins = instance.appContext.mixins
   // call it only during dev
@@ -285,12 +286,13 @@ export function applyOptions(
           checkDuplicateProperties!(OptionTypes.DATA, key)
         }
       }
-      instance.data = __SSR__ ? data : reactive(data)
+      instance.data = reactive(data)
     } else {
       // existing data: this is a mixin or extends.
       extend(instance.data, data)
     }
   }
+
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
@@ -335,11 +337,13 @@ export function applyOptions(
       }
     }
   }
+
   if (watchOptions) {
     for (const key in watchOptions) {
       createWatcher(watchOptions[key], renderContext, ctx, key)
     }
   }
+
   if (provideOptions) {
     const provides = isFunction(provideOptions)
       ? provideOptions.call(ctx)
@@ -348,6 +352,7 @@ export function applyOptions(
       provide(key, provides[key])
     }
   }
+
   if (injectOptions) {
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
