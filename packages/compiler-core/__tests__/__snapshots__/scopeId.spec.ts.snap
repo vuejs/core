@@ -65,7 +65,7 @@ export const render = withId(function render() {
 `;
 
 exports[`scopeId compiler support should wrap named slots 1`] = `
-"import { toString, createTextVNode, createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
+"import { toDisplayString, createTextVNode, createVNode, resolveComponent, createBlock, openBlock, withScopeId } from \\"vue\\"
 const withId = withScopeId(\\"test\\")
 
 export const render = withId(function render() {
@@ -74,7 +74,7 @@ export const render = withId(function render() {
   
   return (openBlock(), createBlock(_component_Child, null, {
     foo: withId(({ msg }) => [
-      createTextVNode(toString(msg), 1 /* TEXT */)
+      createTextVNode(toDisplayString(msg), 1 /* TEXT */)
     ]),
     bar: withId(() => [
       createVNode(\\"div\\")

@@ -1,15 +1,15 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: transform component slots dynamically named slots 1`] = `
-"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    [_ctx.one]: ({ foo }) => [toString(foo), toString(_ctx.bar)],
-    [_ctx.two]: ({ bar }) => [toString(_ctx.foo), toString(bar)],
+    [_ctx.one]: ({ foo }) => [toDisplayString(foo), toDisplayString(_ctx.bar)],
+    [_ctx.two]: ({ bar }) => [toDisplayString(_ctx.foo), toDisplayString(bar)],
     _compiled: true
   }, 512 /* DYNAMIC_SLOTS */))
 }"
@@ -32,7 +32,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots named slot with v-for w/ prefixIdentifiers: true 1`] = `
-"const { toString, resolveComponent, renderList, createSlots, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, renderList, createSlots, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
@@ -42,7 +42,7 @@ return function render() {
     renderList(_ctx.list, (name) => {
       return {
         name: name,
-        fn: () => [toString(name)]
+        fn: () => [toDisplayString(name)]
       }
     })
   ]), 512 /* DYNAMIC_SLOTS */))
@@ -50,7 +50,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots named slot with v-if + prefixIdentifiers: true 1`] = `
-"const { toString, resolveComponent, createSlots, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, createSlots, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
@@ -60,7 +60,7 @@ return function render() {
     (_ctx.ok)
       ? {
           name: \\"one\\",
-          fn: (props) => [toString(props)]
+          fn: (props) => [toDisplayString(props)]
         }
       : undefined
   ]), 512 /* DYNAMIC_SLOTS */))
@@ -118,15 +118,15 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots named slots 1`] = `
-"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    one: ({ foo }) => [toString(foo), toString(_ctx.bar)],
-    two: ({ bar }) => [toString(_ctx.foo), toString(bar)],
+    one: ({ foo }) => [toDisplayString(foo), toDisplayString(_ctx.bar)],
+    two: ({ bar }) => [toDisplayString(_ctx.foo), toDisplayString(bar)],
     _compiled: true
   }))
 }"
@@ -154,7 +154,7 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots nested slots scoping 1`] = `
-"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
@@ -164,13 +164,13 @@ return function render() {
   return (openBlock(), createBlock(_component_Comp, null, {
     default: ({ foo }) => [
       createVNode(_component_Inner, null, {
-        default: ({ bar }) => [toString(foo), toString(bar), toString(_ctx.baz)],
+        default: ({ bar }) => [toDisplayString(foo), toDisplayString(bar), toDisplayString(_ctx.baz)],
         _compiled: true
       }, 512 /* DYNAMIC_SLOTS */),
       \\" \\",
-      toString(foo),
-      toString(_ctx.bar),
-      toString(_ctx.baz)
+      toDisplayString(foo),
+      toDisplayString(_ctx.bar),
+      toDisplayString(_ctx.baz)
     ],
     _compiled: true
   }))
@@ -178,14 +178,14 @@ return function render() {
 `;
 
 exports[`compiler: transform component slots on-component default slot 1`] = `
-"const { toString, resolveComponent, createVNode, createBlock, openBlock } = Vue
+"const { toDisplayString, resolveComponent, createVNode, createBlock, openBlock } = Vue
 
 return function render() {
   const _ctx = this
   const _component_Comp = resolveComponent(\\"Comp\\")
   
   return (openBlock(), createBlock(_component_Comp, null, {
-    default: ({ foo }) => [toString(foo), toString(_ctx.bar)],
+    default: ({ foo }) => [toDisplayString(foo), toDisplayString(_ctx.bar)],
     _compiled: true
   }))
 }"

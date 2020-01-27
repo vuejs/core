@@ -21,9 +21,9 @@ exports[`compiler: transform text consecutive text 1`] = `
 
 return function render() {
   with (this) {
-    const { toString: _toString } = _Vue
+    const { toDisplayString: _toDisplayString } = _Vue
     
-    return _toString(foo) + \\" bar \\" + _toString(baz)
+    return _toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz)
   }
 }"
 `;
@@ -33,11 +33,11 @@ exports[`compiler: transform text consecutive text between elements 1`] = `
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
-      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
       _createVNode(\\"div\\")
     ], 64 /* STABLE_FRAGMENT */))
   }
@@ -49,11 +49,11 @@ exports[`compiler: transform text consecutive text mixed with elements 1`] = `
 
 return function render() {
   with (this) {
-    const { createVNode: _createVNode, toString: _toString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
     
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
-      _createTextVNode(_toString(foo) + \\" bar \\" + _toString(baz), 1 /* TEXT */),
+      _createTextVNode(_toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz), 1 /* TEXT */),
       _createVNode(\\"div\\"),
       _createTextVNode(\\"hello\\"),
       _createVNode(\\"div\\")
@@ -67,9 +67,9 @@ exports[`compiler: transform text no consecutive text 1`] = `
 
 return function render() {
   with (this) {
-    const { toString: _toString } = _Vue
+    const { toDisplayString: _toDisplayString } = _Vue
     
-    return _toString(foo)
+    return _toDisplayString(foo)
   }
 }"
 `;
@@ -91,10 +91,10 @@ return function render() {
 `;
 
 exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
-"const { toString } = Vue
+"const { toDisplayString } = Vue
 
 return function render() {
   const _ctx = this
-  return toString(_ctx.foo) + \\" bar \\" + toString(_ctx.baz + _ctx.qux)
+  return toDisplayString(_ctx.foo) + \\" bar \\" + toDisplayString(_ctx.baz + _ctx.qux)
 }"
 `;

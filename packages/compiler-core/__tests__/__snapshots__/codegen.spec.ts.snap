@@ -99,7 +99,7 @@ exports[`compiler: codegen compound expression 1`] = `
 "
 return function render() {
   with (this) {
-    return _ctx.foo + _toString(bar)
+    return _ctx.foo + _toDisplayString(bar)
   }
 }"
 `;
@@ -159,7 +159,7 @@ exports[`compiler: codegen interpolation 1`] = `
 "
 return function render() {
   with (this) {
-    return _toString(hello)
+    return _toDisplayString(hello)
   }
 }"
 `;
