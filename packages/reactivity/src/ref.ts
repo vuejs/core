@@ -28,19 +28,19 @@ export function isRef(r: any): r is Ref {
   return r ? r._isRef === true : false
 }
 
-export function ref<T extends Ref>(raw: T): T
-export function ref<T>(raw: T): Ref<T>
+export function ref<T extends Ref>(value: T): T
+export function ref<T>(value: T): Ref<T>
 export function ref<T = any>(): Ref<T>
-export function ref(raw?: unknown) {
-  if (isRef(raw)) {
-    return raw
+export function ref(value?: unknown) {
+  if (isRef(value)) {
+    return value
   }
-  raw = convert(raw)
+  value = convert(value)
 
   if (__SSR__) {
     return {
       _isRef: true,
-      value: raw
+      value
     }
   }
 
@@ -48,10 +48,10 @@ export function ref(raw?: unknown) {
     _isRef: true,
     get value() {
       track(r, TrackOpTypes.GET, 'value')
-      return raw
+      return value
     },
     set value(newVal) {
-      raw = convert(newVal)
+      value = convert(newVal)
       trigger(
         r,
         TriggerOpTypes.SET,
