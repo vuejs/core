@@ -3,12 +3,27 @@ import {
   Component,
   ComponentInternalInstance,
   VNode,
+  VNodeChildren,
   createComponentInstance,
   setupComponent,
   createVNode,
-  renderComponentRoot
+  renderComponentRoot,
+  Text,
+  Comment,
+  Fragment,
+  Portal,
+  ShapeFlags,
+  normalizeVNode
 } from 'vue'
-import { isString, isPromise, isArray, isFunction } from '@vue/shared'
+import {
+  isString,
+  isPromise,
+  isArray,
+  isFunction,
+  isVoidTag
+} from '@vue/shared'
+import { renderProps } from './renderProps'
+import { escape } from './escape'
 
 // Each component has a buffer array.
 // A buffer array can contain one of the following:
@@ -19,6 +34,7 @@ import { isString, isPromise, isArray, isFunction } from '@vue/shared'
 type SSRBuffer = SSRBufferItem[]
 type SSRBufferItem = string | ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
+type PushFn = (item: SSRBufferItem) => void
 
 function createBuffer() {
   let appendable = false
@@ -59,39 +75,38 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 }
 
 export async function renderToString(app: App): Promise<string> {
-  const resolvedBuffer = await renderComponent(app._component, app._props)
+  const resolvedBuffer = await renderComponent(
+    createVNode(app._component, app._props)
+  )
   return unrollBuffer(resolvedBuffer)
 }
 
 export function renderComponent(
-  comp: Component,
-  props: Record<string, any> | null = null,
-  children: VNode['children'] = null,
+  vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
-  const vnode = createVNode(comp, props, children)
   const instance = createComponentInstance(vnode, parentComponent)
   const res = setupComponent(instance, null)
   if (isPromise(res)) {
-    return res.then(() => innerRenderComponent(comp, instance))
+    return res.then(() => innerRenderComponent(instance))
   } else {
-    return innerRenderComponent(comp, instance)
+    return innerRenderComponent(instance)
   }
 }
 
 function innerRenderComponent(
-  comp: Component,
   instance: ComponentInternalInstance
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
+  const comp = instance.type as Component
   const { buffer, push, hasAsync } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(push, renderComponentRoot(instance))
+    renderVNode(push, renderComponentRoot(instance), instance)
   } else {
     if (comp.ssrRender) {
       // optimized
       comp.ssrRender(push, instance.proxy)
     } else if (comp.render) {
-      renderVNode(push, renderComponentRoot(instance))
+      renderVNode(push, renderComponentRoot(instance), instance)
     } else {
       // TODO on the fly template compilation support
       throw new Error(
@@ -107,8 +122,103 @@ function innerRenderComponent(
   return hasAsync() ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
 }
 
-export function renderVNode(push: (item: SSRBufferItem) => void, vnode: VNode) {
-  // TODO
+export function renderVNode(
+  push: PushFn,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null = null
+) {
+  const { type, shapeFlag, children } = vnode
+  switch (type) {
+    case Text:
+      push(children as string)
+      break
+    case Comment:
+      push(children ? `<!--${children}-->` : `<!---->`)
+      break
+    case Fragment:
+      push(`<!---->`)
+      renderVNodeChildren(push, children as VNodeChildren, parentComponent)
+      push(`<!---->`)
+      break
+    case Portal:
+      // TODO
+      break
+    default:
+      if (shapeFlag & ShapeFlags.ELEMENT) {
+        renderElement(push, vnode, parentComponent)
+      } else if (shapeFlag & ShapeFlags.COMPONENT) {
+        push(renderComponent(vnode, parentComponent))
+      } else if (shapeFlag & ShapeFlags.SUSPENSE) {
+        // TODO
+      } else {
+        console.warn(
+          '[@vue/server-renderer] Invalid VNode type:',
+          type,
+          `(${typeof type})`
+        )
+      }
+  }
+}
+
+function renderVNodeChildren(
+  push: PushFn,
+  children: VNodeChildren,
+  parentComponent: ComponentInternalInstance | null = null
+) {
+  for (let i = 0; i < children.length; i++) {
+    renderVNode(push, normalizeVNode(children[i]), parentComponent)
+  }
+}
+
+function renderElement(
+  push: PushFn,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null = null
+) {
+  const tag = vnode.type as string
+  const { props, children, shapeFlag, scopeId } = vnode
+  let openTag = `<${tag}`
+
+  // TODO directives
+
+  if (props !== null) {
+    openTag += renderProps(props, tag.indexOf(`-`) > 0)
+  }
+
+  if (scopeId !== null) {
+    openTag += ` ${scopeId}`
+    const treeOwnerId = parentComponent && parentComponent.type.__scopeId
+    // vnode's own scopeId and the current rendering component's scopeId is
+    // different - this is a slot content node.
+    if (treeOwnerId != null && treeOwnerId !== scopeId) {
+      openTag += ` ${scopeId}-s`
+    }
+  }
+
+  push(openTag + `>`)
+  if (!isVoidTag(tag)) {
+    let hasChildrenOverride = false
+    if (props !== null) {
+      if (props.innerHTML) {
+        hasChildrenOverride = true
+        push(props.innerHTML)
+      } else if (props.textContent) {
+        hasChildrenOverride = true
+        push(escape(props.textContent))
+      } else if (tag === 'textarea' && props.value) {
+        hasChildrenOverride = true
+        push(escape(props.value))
+      }
+    }
+    if (!hasChildrenOverride) {
+      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        push(escape(children as string))
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        renderVNodeChildren(push, children as VNodeChildren, parentComponent)
+      }
+    }
+    push(`</${tag}>`)
+  }
 }
 
 export function renderSlot() {

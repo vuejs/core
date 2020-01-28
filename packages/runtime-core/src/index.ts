@@ -102,8 +102,11 @@ export const camelize = _camelize as (s: string) => string
 export { registerRuntimeCompiler } from './component'
 
 // For server-renderer
+// TODO move these into a conditional object to avoid exporting them in client
+// builds
 export { createComponentInstance, setupComponent } from './component'
 export { renderComponentRoot } from './componentRenderUtils'
+export { normalizeVNode } from './vnode'
 
 // Types -----------------------------------------------------------------------
 
@@ -114,7 +117,7 @@ export {
   Plugin,
   CreateAppFunction
 } from './apiCreateApp'
-export { VNode, VNodeTypes, VNodeProps } from './vnode'
+export { VNode, VNodeTypes, VNodeProps, VNodeChildren } from './vnode'
 export {
   Component,
   FunctionalComponent,

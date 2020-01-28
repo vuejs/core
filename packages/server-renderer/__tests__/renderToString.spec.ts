@@ -1,17 +1,31 @@
 // import { renderToString, renderComponent } from '../src'
 
 describe('ssr: renderToString', () => {
-  test('basic', () => {})
+  describe('elements', () => {
+    test('text children', () => {})
 
-  test('nested components', () => {})
+    test('array children', () => {})
 
-  test('nested components with optimized slots', () => {})
+    test('void elements', () => {})
 
-  test('mixing optimized / vnode components', () => {})
+    test('innerHTML', () => {})
 
-  test('nested components with vnode slots', () => {})
+    test('textContent', () => {})
 
-  test('async components', () => {})
+    test('textarea value', () => {})
+  })
 
-  test('parallel async components', () => {})
+  describe('components', () => {
+    test('nested components', () => {})
+
+    test('nested components with optimized slots', () => {})
+
+    test('mixing optimized / vnode components', () => {})
+
+    test('nested components with vnode slots', () => {})
+
+    test('async components', () => {})
+
+    test('parallel async components', () => {})
+  })
 })

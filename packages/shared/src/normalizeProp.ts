@@ -2,7 +2,7 @@ import { isArray, isString, isObject } from './'
 
 export function normalizeStyle(
   value: unknown
-): Record<string, string | number> | void {
+): Record<string, string | number> | undefined {
   if (isArray(value)) {
     const res: Record<string, string | number> = {}
     for (let i = 0; i < value.length; i++) {

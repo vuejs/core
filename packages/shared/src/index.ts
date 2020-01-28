@@ -4,9 +4,10 @@ export { makeMap }
 export * from './patchFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
-export * from './domTagConfig'
 export * from './mockWarn'
 export * from './normalizeProp'
+export * from './domTagConfig'
+export * from './domAttrConfig'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})

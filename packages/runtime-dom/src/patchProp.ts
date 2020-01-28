@@ -62,7 +62,7 @@ export function patchProp(
         } else if (key === 'false-value') {
           ;(el as any)._falseValue = nextValue
         }
-        patchAttr(el, key, nextValue)
+        patchAttr(el, key, nextValue, isSVG)
       }
       break
   }

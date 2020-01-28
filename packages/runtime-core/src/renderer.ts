@@ -288,7 +288,7 @@ export function createRenderer<
             internals
           )
         } else if (__DEV__) {
-          warn('Invalid HostVNode type:', n2.type, `(${typeof n2.type})`)
+          warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
     }
   }
