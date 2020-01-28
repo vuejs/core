@@ -27,6 +27,7 @@ const targets = args._
 const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
+const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildTypes = args.t || args.types || isRelease
 const buildAllMatching = args.all || args.a
@@ -80,7 +81,8 @@ async function build(target) {
         formats ? `FORMATS:${formats}` : ``,
         buildTypes ? `TYPES:true` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        lean ? `LEAN:true` : ``
+        lean ? `LEAN:true` : ``,
+        sourceMap ? `SOURCE_MAP:true` : ``
       ]
         .filter(Boolean)
         .join(',')

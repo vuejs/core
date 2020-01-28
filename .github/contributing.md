@@ -106,9 +106,13 @@ Multiple formats can be specified as a comma-separated list:
 yarn build runtime-core -f esm,cjs
 ```
 
+#### Build with Source Maps
+
+Use the `--sourcemap` or `-s` flag to build with source maps. Note this will make the build much slower.
+
 #### Build with Type Declarations
 
-The `--types` flag will generate type declarations during the build and in addition:
+The `--types` or `-t` flag will generate type declarations during the build and in addition:
 
 - Roll the declarations into a single `.dts` file for each package;
 - Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
@@ -128,6 +132,8 @@ $ yarn dev
 - The `dev` script also supports fuzzy match for the target package, but will only match the first package matched.
 
 - The `dev` script supports specifying build format via the `-f` flag just like the `build` script.
+
+- The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
 ### `yarn test`
 

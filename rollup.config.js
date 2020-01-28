@@ -73,6 +73,7 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
+  output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
   const isProductionBuild =
@@ -98,6 +99,7 @@ function createConfig(format, output, plugins = []) {
     cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
     tsconfigOverride: {
       compilerOptions: {
+        sourceMap: output.sourcemap,
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
       },
