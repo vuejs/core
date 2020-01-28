@@ -10,8 +10,14 @@ import {
 } from 'vue'
 import { isString, isPromise, isArray, isFunction } from '@vue/shared'
 
+// Each component has a buffer array.
+// A buffer array can contain one of the following:
+// - plain string
+// - A resolved buffer (recursive arrays of strings that can be unrolled
+//   synchronously)
+// - An async buffer (a Promise that resolves to a resolved buffer)
 type SSRBuffer = SSRBufferItem[]
-type SSRBufferItem = string | ResolvedSSRBuffer | Promise<SSRBuffer>
+type SSRBufferItem = string | ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
 
 function createBuffer() {
@@ -53,10 +59,7 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 }
 
 export async function renderToString(app: App): Promise<string> {
-  const resolvedBuffer = (await renderComponent(
-    app._component,
-    app._props
-  )) as ResolvedSSRBuffer
+  const resolvedBuffer = await renderComponent(app._component, app._props)
   return unrollBuffer(resolvedBuffer)
 }
 
@@ -65,7 +68,7 @@ export function renderComponent(
   props: Record<string, any> | null = null,
   children: VNode['children'] = null,
   parentComponent: ComponentInternalInstance | null = null
-): ResolvedSSRBuffer | Promise<SSRBuffer> {
+): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const vnode = createVNode(comp, props, children)
   const instance = createComponentInstance(vnode, parentComponent)
   const res = setupComponent(instance, null)
@@ -79,7 +82,7 @@ export function renderComponent(
 function innerRenderComponent(
   comp: Component,
   instance: ComponentInternalInstance
-): ResolvedSSRBuffer | Promise<SSRBuffer> {
+): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const { buffer, push, hasAsync } = createBuffer()
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance))
@@ -101,10 +104,7 @@ function innerRenderComponent(
   // If the current component's buffer contains any Promise from async children,
   // then it must return a Promise too. Otherwise this is a component that
   // contains only sync children so we can avoid the async book-keeping overhead.
-  return hasAsync()
-    ? // TS can't figure out the typing due to recursive appearance of Promise
-      Promise.all(buffer as any)
-    : (buffer as ResolvedSSRBuffer)
+  return hasAsync() ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
 }
 
 export function renderVNode(push: (item: SSRBufferItem) => void, vnode: VNode) {
