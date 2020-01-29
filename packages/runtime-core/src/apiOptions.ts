@@ -64,7 +64,12 @@ export interface ComponentOptionsBase<
   // type.
   render?: Function
   // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
-  ssrRender?: Function
+  // not user facing, so the typing is lax and for test only.
+  ssrRender?: (
+    ctx: any,
+    push: (item: any) => void,
+    parentInstance: ComponentInternalInstance
+  ) => void
   components?: Record<
     string,
     Component | { new (): ComponentPublicInstance<any, any, any, any, any> }

@@ -125,7 +125,7 @@ function renderComponentSubTree(
   } else {
     if (comp.ssrRender) {
       // optimized
-      comp.ssrRender(push, instance.proxy)
+      comp.ssrRender(instance.proxy, push, instance)
     } else if (comp.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
     } else {
@@ -260,8 +260,8 @@ export function renderSlot(
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!---->`)
-  if (slotFn.length > 2) {
-    // only ssr-optimized slot fns accept 3 arguments
+  if (slotFn.length > 1) {
+    // only ssr-optimized slot fns accept more than 1 arguments
     slotFn(slotProps, push, parentComponent)
   } else {
     // normal slot

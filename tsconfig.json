@@ -20,7 +20,8 @@
     "types": ["jest", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
-      "@vue/*": ["packages/*/src"]
+      "@vue/*": ["packages/*/src"],
+      "vue": ["packages/vue/src"]
     }
   },
   "include": [
