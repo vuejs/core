@@ -57,7 +57,6 @@ export const enum ErrorCodes {
   UNEXPECTED_NULL_CHARACTER,
   UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
   UNEXPECTED_SOLIDUS_IN_TAG,
-  UNKNOWN_NAMED_CHARACTER_REFERENCE,
 
   // Vue-specific parse errors
   X_INVALID_END_TAG,
@@ -141,7 +140,6 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
-  [ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE]: 'Unknown entity name.',
 
   // Vue-specific parse errors
   [ErrorCodes.X_INVALID_END_TAG]: 'Invalid end tag.',

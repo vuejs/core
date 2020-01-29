@@ -2594,17 +2594,6 @@ foo
           ]
         }
       ],
-      UNKNOWN_NAMED_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&unknown;</template>',
-          errors: [
-            {
-              type: ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
       X_INVALID_END_TAG: [
         {
           code: '<template></div></template>',
