@@ -101,12 +101,20 @@ export const camelize = _camelize as (s: string) => string
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
 
-// For server-renderer
-// TODO move these into a conditional object to avoid exporting them in client
-// builds
-export { createComponentInstance, setupComponent } from './component'
-export { renderComponentRoot } from './componentRenderUtils'
-export { normalizeVNode } from './vnode'
+// SSR -------------------------------------------------------------------------
+import { createComponentInstance, setupComponent } from './component'
+import { renderComponentRoot } from './componentRenderUtils'
+import { normalizeVNode } from './vnode'
+
+// SSR utils are only exposed in SSR builds.
+const _ssrUtils = {
+  createComponentInstance,
+  setupComponent,
+  renderComponentRoot,
+  normalizeVNode
+}
+
+export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // Types -----------------------------------------------------------------------
 

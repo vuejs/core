@@ -4,16 +4,13 @@ import {
   ComponentInternalInstance,
   VNode,
   VNodeChildren,
-  createComponentInstance,
-  setupComponent,
   createVNode,
-  renderComponentRoot,
   Text,
   Comment,
   Fragment,
   Portal,
   ShapeFlags,
-  normalizeVNode
+  ssrUtils
 } from 'vue'
 import {
   isString,
@@ -24,6 +21,13 @@ import {
 } from '@vue/shared'
 import { renderProps } from './renderProps'
 import { escape } from './escape'
+
+const {
+  createComponentInstance,
+  setupComponent,
+  renderComponentRoot,
+  normalizeVNode
+} = ssrUtils
 
 // Each component has a buffer array.
 // A buffer array can contain one of the following:
