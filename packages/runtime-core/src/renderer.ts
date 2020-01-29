@@ -6,7 +6,7 @@ import {
   cloneIfMounted,
   normalizeVNode,
   VNode,
-  VNodeChildren,
+  VNodeArrayChildren,
   createVNode,
   isSameVNodeType
 } from './vnode'
@@ -177,7 +177,7 @@ export function createRenderer<
   createApp: CreateAppFunction<HostElement>
 } {
   type HostVNode = VNode<HostNode, HostElement>
-  type HostVNodeChildren = VNodeChildren<HostNode, HostElement>
+  type HostVNodeChildren = VNodeArrayChildren<HostNode, HostElement>
   type HostSuspenseBoundary = SuspenseBoundary<HostNode, HostElement>
 
   const {

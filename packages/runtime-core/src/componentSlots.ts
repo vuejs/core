@@ -1,5 +1,10 @@
 import { ComponentInternalInstance, currentInstance } from './component'
-import { VNode, NormalizedChildren, normalizeVNode, VNodeChild } from './vnode'
+import {
+  VNode,
+  VNodeNormalizedChildren,
+  normalizeVNode,
+  VNodeChild
+} from './vnode'
 import { isArray, isFunction, EMPTY_OBJ } from '@vue/shared'
 import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
@@ -41,7 +46,7 @@ const normalizeSlot = (key: string, rawSlot: Function): Slot => (
 
 export function resolveSlots(
   instance: ComponentInternalInstance,
-  children: NormalizedChildren
+  children: VNodeNormalizedChildren
 ) {
   let slots: InternalSlots | void
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {

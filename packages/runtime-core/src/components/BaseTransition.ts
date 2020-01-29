@@ -9,7 +9,7 @@ import {
   Comment,
   isSameVNodeType,
   VNode,
-  VNodeChildren
+  VNodeArrayChildren
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
@@ -370,7 +370,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
 function getKeepAliveChild(vnode: VNode): VNode | undefined {
   return isKeepAlive(vnode)
     ? vnode.children
-      ? ((vnode.children as VNodeChildren)[0] as VNode)
+      ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
       : undefined
     : vnode
 }

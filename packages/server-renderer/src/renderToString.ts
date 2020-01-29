@@ -3,21 +3,24 @@ import {
   Component,
   ComponentInternalInstance,
   VNode,
-  VNodeChildren,
+  VNodeArrayChildren,
+  VNodeNormalizedChildren,
   createVNode,
   Text,
   Comment,
   Fragment,
   Portal,
   ShapeFlags,
-  ssrUtils
+  ssrUtils,
+  Slot
 } from 'vue'
 import {
   isString,
   isPromise,
   isArray,
   isFunction,
-  isVoidTag
+  isVoidTag,
+  EMPTY_OBJ
 } from '@vue/shared'
 import { renderProps } from './renderProps'
 import { escape } from './escape'
@@ -39,6 +42,7 @@ type SSRBuffer = SSRBufferItem[]
 type SSRBufferItem = string | ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
 type PushFn = (item: SSRBufferItem) => void
+type Props = Record<string, unknown>
 
 function createBuffer() {
   let appendable = false
@@ -79,26 +83,36 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 }
 
 export async function renderToString(app: App): Promise<string> {
-  const resolvedBuffer = await renderComponent(
-    createVNode(app._component, app._props)
-  )
+  const resolvedBuffer = await renderComponent(app._component, app._props, null)
   return unrollBuffer(resolvedBuffer)
 }
 
 export function renderComponent(
+  comp: Component,
+  props: Props | null,
+  children: VNodeNormalizedChildren | null,
+  parentComponent: ComponentInternalInstance | null = null
+): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
+  return renderComponentVNode(
+    createVNode(comp, props, children),
+    parentComponent
+  )
+}
+
+function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent)
   const res = setupComponent(instance, null)
   if (isPromise(res)) {
-    return res.then(() => innerRenderComponent(instance))
+    return res.then(() => renderComponentSubTree(instance))
   } else {
-    return innerRenderComponent(instance)
+    return renderComponentSubTree(instance)
   }
 }
 
-function innerRenderComponent(
+function renderComponentSubTree(
   instance: ComponentInternalInstance
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const comp = instance.type as Component
@@ -141,7 +155,7 @@ export function renderVNode(
       break
     case Fragment:
       push(`<!---->`)
-      renderVNodeChildren(push, children as VNodeChildren, parentComponent)
+      renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
       push(`<!---->`)
       break
     case Portal:
@@ -151,7 +165,7 @@ export function renderVNode(
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElement(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponent(vnode, parentComponent))
+        push(renderComponentVNode(vnode, parentComponent))
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         // TODO
       } else {
@@ -166,7 +180,7 @@ export function renderVNode(
 
 function renderVNodeChildren(
   push: PushFn,
-  children: VNodeChildren,
+  children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance | null = null
 ) {
   for (let i = 0; i < children.length; i++) {
@@ -218,13 +232,37 @@ function renderElement(
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         push(escape(children as string))
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        renderVNodeChildren(push, children as VNodeChildren, parentComponent)
+        renderVNodeChildren(
+          push,
+          children as VNodeArrayChildren,
+          parentComponent
+        )
       }
     }
     push(`</${tag}>`)
   }
 }
 
-export function renderSlot() {
-  // TODO
+type OptimizedSlotFn = (
+  props: Props,
+  push: PushFn,
+  parentComponent: ComponentInternalInstance | null
+) => void
+
+export function renderSlot(
+  slotFn: Slot | OptimizedSlotFn,
+  slotProps: Props,
+  push: PushFn,
+  parentComponent: ComponentInternalInstance | null = null
+) {
+  // template-compiled slots are always rendered as fragments
+  push(`<!---->`)
+  if (slotFn.length > 2) {
+    // only ssr-optimized slot fns accept 3 arguments
+    slotFn(slotProps, push, parentComponent)
+  } else {
+    // normal slot
+    renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)
+  }
+  push(`<!---->`)
 }

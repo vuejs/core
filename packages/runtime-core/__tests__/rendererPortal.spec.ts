@@ -12,7 +12,7 @@ import {
   TestElement,
   TestNode
 } from '@vue/runtime-test'
-import { VNodeChildren } from '../src/vnode'
+import { VNodeArrayChildren } from '../src/vnode'
 
 describe('renderer: portal', () => {
   test('should work', () => {
@@ -60,7 +60,7 @@ describe('renderer: portal', () => {
   test('should update children', async () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
-    const children = ref<VNodeChildren<TestNode, TestElement>>([
+    const children = ref<VNodeArrayChildren<TestNode, TestElement>>([
       h('div', 'teleported')
     ])
 

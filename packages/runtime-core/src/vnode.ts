@@ -71,19 +71,19 @@ type VNodeChildAtom<HostNode, HostElement> =
   | null
   | void
 
-export interface VNodeChildren<HostNode = any, HostElement = any>
+export interface VNodeArrayChildren<HostNode = any, HostElement = any>
   extends Array<
-      | VNodeChildren<HostNode, HostElement>
+      | VNodeArrayChildren<HostNode, HostElement>
       | VNodeChildAtom<HostNode, HostElement>
     > {}
 
 export type VNodeChild<HostNode = any, HostElement = any> =
   | VNodeChildAtom<HostNode, HostElement>
-  | VNodeChildren<HostNode, HostElement>
+  | VNodeArrayChildren<HostNode, HostElement>
 
-export type NormalizedChildren<HostNode = any, HostElement = any> =
+export type VNodeNormalizedChildren<HostNode = any, HostElement = any> =
   | string
-  | VNodeChildren<HostNode, HostElement>
+  | VNodeArrayChildren<HostNode, HostElement>
   | RawSlots
   | null
 
@@ -94,7 +94,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   key: string | number | null
   ref: string | Ref | ((ref: object | null) => void) | null
   scopeId: string | null // SFC only
-  children: NormalizedChildren<HostNode, HostElement>
+  children: VNodeNormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary<HostNode, HostElement> | null
   dirs: DirectiveBinding[] | null
@@ -376,7 +376,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = String(children)
     type = ShapeFlags.TEXT_CHILDREN
   }
-  vnode.children = children as NormalizedChildren
+  vnode.children = children as VNodeNormalizedChildren
   vnode.shapeFlag |= type
 }
 

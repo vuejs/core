@@ -125,7 +125,13 @@ export {
   Plugin,
   CreateAppFunction
 } from './apiCreateApp'
-export { VNode, VNodeTypes, VNodeProps, VNodeChildren } from './vnode'
+export {
+  VNode,
+  VNodeTypes,
+  VNodeProps,
+  VNodeArrayChildren,
+  VNodeNormalizedChildren
+} from './vnode'
 export {
   Component,
   FunctionalComponent,
