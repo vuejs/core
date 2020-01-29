@@ -2,7 +2,8 @@ import {
   ComponentInternalInstance,
   LifecycleHooks,
   currentInstance,
-  setCurrentInstance
+  setCurrentInstance,
+  isInSSRComponentSetup
 } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
@@ -66,7 +67,7 @@ export const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
 ) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
   // post-create lifecycle registrations are noops during SSR
-  !__SSR__ && injectHook(lifecycle, hook, target)
+  !isInSSRComponentSetup && injectHook(lifecycle, hook, target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)

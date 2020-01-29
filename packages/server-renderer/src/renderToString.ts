@@ -19,8 +19,7 @@ import {
   isPromise,
   isArray,
   isFunction,
-  isVoidTag,
-  EMPTY_OBJ
+  isVoidTag
 } from '@vue/shared'
 import { renderProps } from './renderProps'
 import { escape } from './escape'
@@ -104,7 +103,11 @@ function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent)
-  const res = setupComponent(instance, null)
+  const res = setupComponent(
+    instance,
+    null /* parentSuspense */,
+    true /* isSSR */
+  )
   if (isPromise(res)) {
     return res.then(() => renderComponentSubTree(instance))
   } else {

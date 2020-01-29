@@ -173,7 +173,7 @@ function createReplacePlugin(
     // support compile in browser?
     __RUNTIME_COMPILE__: isRuntimeCompileBuild,
     // is targeting Node (SSR)?
-    __SSR__: isNodeBuild,
+    __NODE_JS__: isNodeBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,

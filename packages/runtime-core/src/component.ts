@@ -269,19 +269,26 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+export let isInSSRComponentSetup = false
+
 export function setupComponent(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR = false
 ) {
+  isInSSRComponentSetup = isSSR
   const propsOptions = instance.type.props
   const { props, children, shapeFlag } = instance.vnode
   resolveProps(instance, props, propsOptions)
   resolveSlots(instance, children)
 
   // setup stateful logic
+  let setupResult
   if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    return setupStatefulComponent(instance, parentSuspense)
+    setupResult = setupStatefulComponent(instance, parentSuspense)
   }
+  isInSSRComponentSetup = false
+  return setupResult
 }
 
 function setupStatefulComponent(
@@ -314,7 +321,7 @@ function setupStatefulComponent(
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = __SSR__
+  const propsProxy = (instance.propsProxy = isInSSRComponentSetup
     ? instance.props
     : shallowReadonly(instance.props))
   // 3. call setup()
@@ -335,7 +342,7 @@ function setupStatefulComponent(
     currentSuspense = null
 
     if (isPromise(setupResult)) {
-      if (__SSR__) {
+      if (isInSSRComponentSetup) {
         // return the promise so server-renderer can wait on it
         return setupResult.then(resolvedResult => {
           handleSetupResult(instance, resolvedResult, parentSuspense)
@@ -413,7 +420,7 @@ function finishComponentSetup(
       ;(Component.render as RenderFunction).isRuntimeCompiled = true
     }
 
-    if (__DEV__ && !Component.render) {
+    if (__DEV__ && !Component.render && !Component.ssrRender) {
       /* istanbul ignore if */
       if (!__RUNTIME_COMPILE__ && Component.template) {
         warn(
@@ -421,7 +428,7 @@ function finishComponentSetup(
             `does not support runtime template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
-      } else if (!__SSR__ || !Component.ssrRender) {
+      } else {
         warn(
           `Component is missing${
             __RUNTIME_COMPILE__ ? ` template or` : ``

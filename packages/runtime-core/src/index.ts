@@ -106,7 +106,7 @@ import { createComponentInstance, setupComponent } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { normalizeVNode } from './vnode'
 
-// SSR utils are only exposed in SSR builds.
+// SSR utils are only exposed in cjs builds.
 const _ssrUtils = {
   createComponentInstance,
   setupComponent,
@@ -114,7 +114,7 @@ const _ssrUtils = {
   normalizeVNode
 }
 
-export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
+export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // Types -----------------------------------------------------------------------
 
