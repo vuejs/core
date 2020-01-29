@@ -8,16 +8,23 @@ import {
   isNoUnitNumericStyleProp,
   isOn,
   isSSRSafeAttrName,
-  isBooleanAttr
+  isBooleanAttr,
+  makeMap
 } from '@vue/shared'
+
+const shouldIgnoreProp = makeMap(`key,ref,innerHTML,textContent`)
 
 export function renderProps(
   props: Record<string, unknown>,
-  isCustomElement: boolean = false
+  tag?: string
 ): string {
   let ret = ''
   for (const key in props) {
-    if (key === 'key' || key === 'ref' || isOn(key)) {
+    if (
+      shouldIgnoreProp(key) ||
+      isOn(key) ||
+      (tag === 'textarea' && key === 'value')
+    ) {
       continue
     }
     const value = props[key]
@@ -26,9 +33,10 @@ export function renderProps(
     } else if (key === 'style') {
       ret += ` style="${renderStyle(value)}"`
     } else if (value != null) {
-      const attrKey = isCustomElement
-        ? key
-        : propsToAttrMap[key] || key.toLowerCase()
+      const attrKey =
+        tag && tag.indexOf('-') > 0
+          ? key // preserve raw name on custom elements
+          : propsToAttrMap[key] || key.toLowerCase()
       if (isBooleanAttr(attrKey)) {
         if (value !== false) {
           ret += ` ${attrKey}`

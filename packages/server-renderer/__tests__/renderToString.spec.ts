@@ -1,5 +1,5 @@
-import { createApp, h } from 'vue'
-import { renderToString, renderComponent, renderSlot } from '../src'
+import { createApp, h, createCommentVNode } from 'vue'
+import { renderToString, renderComponent, renderSlot, escapeHtml } from '../src'
 
 describe('ssr: renderToString', () => {
   describe('components', () => {
@@ -251,21 +251,82 @@ describe('ssr: renderToString', () => {
     })
   })
 
-  describe('scopeId', () => {
-    // TODO
+  describe('vnode element', () => {
+    test('props', async () => {
+      expect(
+        await renderToString(
+          h('div', { id: 'foo&', class: ['bar', 'baz'] }, 'hello')
+        )
+      ).toBe(`<div id="foo&amp;" class="bar baz">hello</div>`)
+    })
+
+    test('text children', async () => {
+      expect(await renderToString(h('div', 'hello'))).toBe(`<div>hello</div>`)
+    })
+
+    test('array children', async () => {
+      expect(
+        await renderToString(
+          h('div', [
+            'foo',
+            h('span', 'bar'),
+            [h('span', 'baz')],
+            createCommentVNode('qux')
+          ])
+        )
+      ).toBe(
+        `<div>foo<span>bar</span><!----><span>baz</span><!----><!--qux--></div>`
+      )
+    })
+
+    test('void elements', async () => {
+      expect(await renderToString(h('input'))).toBe(`<input>`)
+    })
+
+    test('innerHTML', async () => {
+      expect(
+        await renderToString(
+          h(
+            'div',
+            {
+              innerHTML: `<span>hello</span>`
+            },
+            'ignored'
+          )
+        )
+      ).toBe(`<div><span>hello</span></div>`)
+    })
+
+    test('textContent', async () => {
+      expect(
+        await renderToString(
+          h(
+            'div',
+            {
+              textContent: `<span>hello</span>`
+            },
+            'ignored'
+          )
+        )
+      ).toBe(`<div>${escapeHtml(`<span>hello</span>`)}</div>`)
+    })
+
+    test('textarea value', async () => {
+      expect(
+        await renderToString(
+          h(
+            'textarea',
+            {
+              value: `<span>hello</span>`
+            },
+            'ignored'
+          )
+        )
+      ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
+    })
   })
 
-  describe('vnode', () => {
-    test('text children', () => {})
-
-    test('array children', () => {})
-
-    test('void elements', () => {})
-
-    test('innerHTML', () => {})
-
-    test('textContent', () => {})
-
-    test('textarea value', () => {})
+  describe('scopeId', () => {
+    // TODO
   })
 })

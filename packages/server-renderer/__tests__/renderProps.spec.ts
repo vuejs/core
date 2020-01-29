@@ -55,6 +55,17 @@ describe('ssr: renderProps', () => {
       })
     ).toBe(` readonly for="foobar"`)
   })
+
+  test('preserve name on custom element', () => {
+    expect(
+      renderProps(
+        {
+          fooBar: 'ok'
+        },
+        'my-el'
+      )
+    ).toBe(` fooBar="ok"`)
+  })
 })
 
 describe('ssr: renderClass', () => {

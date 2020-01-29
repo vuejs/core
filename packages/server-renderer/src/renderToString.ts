@@ -12,7 +12,8 @@ import {
   Portal,
   ShapeFlags,
   ssrUtils,
-  Slot
+  Slot,
+  createApp
 } from 'vue'
 import {
   isString,
@@ -25,6 +26,7 @@ import { renderProps } from './renderProps'
 import { escapeHtml } from './ssrUtils'
 
 const {
+  isVNode,
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
@@ -81,7 +83,15 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
   return ret
 }
 
-export async function renderToString(app: App): Promise<string> {
+export async function renderToString(input: App | VNode): Promise<string> {
+  if (isVNode(input)) {
+    return renderAppToString(createApp({ render: () => input }))
+  } else {
+    return renderAppToString(input)
+  }
+}
+
+async function renderAppToString(app: App): Promise<string> {
   const resolvedBuffer = await renderComponent(app._component, app._props, null)
   return unrollBuffer(resolvedBuffer)
 }
@@ -143,7 +153,7 @@ function renderComponentSubTree(
   return hasAsync() ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
 }
 
-export function renderVNode(
+function renderVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
@@ -203,7 +213,7 @@ function renderElement(
   // TODO directives
 
   if (props !== null) {
-    openTag += renderProps(props, tag.indexOf(`-`) > 0)
+    openTag += renderProps(props, tag)
   }
 
   if (scopeId !== null) {
