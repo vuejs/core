@@ -22,7 +22,7 @@ import {
   isVoidTag
 } from '@vue/shared'
 import { renderProps } from './renderProps'
-import { escape } from './escape'
+import { escapeHtml } from './ssrUtils'
 
 const {
   createComponentInstance,
@@ -105,7 +105,7 @@ function renderComponentVNode(
   const instance = createComponentInstance(vnode, parentComponent)
   const res = setupComponent(
     instance,
-    null /* parentSuspense */,
+    null /* parentSuspense (no need to track for SSR) */,
     true /* isSSR */
   )
   if (isPromise(res)) {
@@ -225,15 +225,15 @@ function renderElement(
         push(props.innerHTML)
       } else if (props.textContent) {
         hasChildrenOverride = true
-        push(escape(props.textContent))
+        push(escapeHtml(props.textContent))
       } else if (tag === 'textarea' && props.value) {
         hasChildrenOverride = true
-        push(escape(props.value))
+        push(escapeHtml(props.value))
       }
     }
     if (!hasChildrenOverride) {
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        push(escape(children as string))
+        push(escapeHtml(children as string))
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         renderVNodeChildren(
           push,

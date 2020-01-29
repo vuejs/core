@@ -15,8 +15,8 @@ export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(specialBooleanAttrs)
 // The full list is needed during SSR to produce the correct initial markup.
 export const isBooleanAttr = /*#__PURE__*/ makeMap(
   specialBooleanAttrs +
-    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,ismap,` +
-    `loop,nomodule,open,required,reversed,scoped,seamless,` +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
+    `loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`
 )
 

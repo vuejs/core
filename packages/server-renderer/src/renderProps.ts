@@ -1,4 +1,4 @@
-import { escape } from './escape'
+import { escapeHtml } from './ssrUtils'
 import {
   normalizeClass,
   normalizeStyle,
@@ -9,7 +9,7 @@ import {
   isOn,
   isSSRSafeAttrName,
   isBooleanAttr
-} from '@vue/shared/src'
+} from '@vue/shared'
 
 export function renderProps(
   props: Record<string, unknown>,
@@ -34,7 +34,7 @@ export function renderProps(
           ret += ` ${attrKey}`
         }
       } else if (isSSRSafeAttrName(attrKey)) {
-        ret += ` ${attrKey}="${escape(value)}"`
+        ret += ` ${attrKey}="${escapeHtml(value)}"`
       }
     }
   }
@@ -42,12 +42,15 @@ export function renderProps(
 }
 
 export function renderClass(raw: unknown): string {
-  return escape(normalizeClass(raw))
+  return escapeHtml(normalizeClass(raw))
 }
 
 export function renderStyle(raw: unknown): string {
   if (!raw) {
     return ''
+  }
+  if (isString(raw)) {
+    return escapeHtml(raw)
   }
   const styles = normalizeStyle(raw)
   let ret = ''
@@ -62,5 +65,5 @@ export function renderStyle(raw: unknown): string {
       ret += `${normalizedKey}:${value};`
     }
   }
-  return escape(ret)
+  return escapeHtml(ret)
 }

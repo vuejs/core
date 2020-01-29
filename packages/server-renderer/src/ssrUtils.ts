@@ -1,6 +1,8 @@
+import { toDisplayString } from '@vue/shared'
+
 const escapeRE = /["'&<>]/
 
-export function escape(string: unknown) {
+export function escapeHtml(string: unknown) {
   const str = '' + string
   const match = escapeRE.exec(str)
 
@@ -42,4 +44,8 @@ export function escape(string: unknown) {
   }
 
   return lastIndex !== index ? html + str.substring(lastIndex, index) : html
+}
+
+export function interpolate(value: unknown) {
+  return escapeHtml(toDisplayString(value))
 }

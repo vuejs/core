@@ -223,7 +223,7 @@ export function createVNode(
     if (klass != null && !isString(klass)) {
       props.class = normalizeClass(klass)
     }
-    if (style != null) {
+    if (isObject(style)) {
       // reactive state objects need to be cloned since they are likely to be
       // mutated
       if (isReactive(style) && !isArray(style)) {
