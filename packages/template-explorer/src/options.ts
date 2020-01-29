@@ -112,5 +112,5 @@ const App = {
 }
 
 export function initOptions() {
-  createApp().mount(App, document.getElementById('header')!)
+  createApp(App).mount(document.getElementById('header')!)
 }
