@@ -1,18 +1,23 @@
 import { makeMap } from './makeMap'
 
-// TODO validate this list!
-// on the client, most of these probably has corresponding prop
-// or, like allowFullscreen on iframe, although case is different, the attr
-// affects the property properly...
-// Basically, we can skip this check on the client
-// but they are still needed during SSR to produce correct initial markup
-export const isBooleanAttr = makeMap(
-  'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,' +
-    'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
-    'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,' +
-    'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,' +
-    'required,reversed,scoped,seamless,selected,sortable,translate,' +
-    'truespeed,typemustmatch,visible'
+// On the client we only need to offer special cases for boolean attributes that
+// have different names from their corresponding dom properties:
+// - itemscope -> N/A
+// - allowfullscreen -> allowFullscreen
+// - formnovalidate -> formNoValidate
+// - ismap -> isMap
+// - nomodule -> noModule
+// - novalidate -> noValidate
+// - readonly -> readOnly
+const specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`
+export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(specialBooleanAttrs)
+
+// The full list is needed during SSR to produce the correct initial markup.
+export const isBooleanAttr = /*#__PURE__*/ makeMap(
+  specialBooleanAttrs +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,ismap,` +
+    `loop,nomodule,open,required,reversed,scoped,seamless,` +
+    `checked,muted,multiple,selected`
 )
 
 const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
@@ -37,7 +42,7 @@ export const propsToAttrMap: Record<string, string | undefined> = {
 }
 
 // CSS properties that accept plain numbers
-export const isNoUnitNumericStyleProp = makeMap(
+export const isNoUnitNumericStyleProp = /*#__PURE__*/ makeMap(
   `animation-iteration-count,border-image-outset,border-image-slice,` +
     `border-image-width,box-flex,box-flex-group,box-ordinal-group,column-count,` +
     `columns,flex,flex-grow,flex-positive,flex-shrink,flex-negative,flex-order,` +

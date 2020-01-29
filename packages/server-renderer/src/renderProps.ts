@@ -30,7 +30,9 @@ export function renderProps(
         ? key
         : propsToAttrMap[key] || key.toLowerCase()
       if (isBooleanAttr(attrKey)) {
-        ret += ` ${attrKey}=""`
+        if (value !== false) {
+          ret += ` ${attrKey}`
+        }
       } else if (isSSRSafeAttrName(attrKey)) {
         ret += ` ${attrKey}="${escape(value)}"`
       }

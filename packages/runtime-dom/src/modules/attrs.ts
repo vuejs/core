@@ -1,4 +1,6 @@
-// TODO explain why we are no longer checking boolean/enumerated here
+import { isSpecialBooleanAttr } from '@vue/shared'
+
+const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 export function patchAttr(
   el: Element,
@@ -7,12 +9,19 @@ export function patchAttr(
   isSVG: boolean
 ) {
   if (isSVG && key.indexOf('xlink:') === 0) {
-    // TODO handle xlink
-  } else if (value == null) {
-    el.removeAttribute(key)
+    if (value == null) {
+      el.removeAttributeNS(xlinkNS, key)
+    } else {
+      el.setAttributeNS(xlinkNS, key, value)
+    }
   } else {
-    // TODO in dev mode, warn against incorrect values for boolean or
-    // enumerated attributes
-    el.setAttribute(key, value)
+    // note we are only checking boolean attributes that don't have a
+    // correspoding dom prop of the same name here.
+    const isBoolean = isSpecialBooleanAttr(key)
+    if (value == null || (isBoolean && value === false)) {
+      el.removeAttribute(key)
+    } else {
+      el.setAttribute(key, isBoolean ? '' : value)
+    }
   }
 }
