@@ -22,7 +22,8 @@ module.exports = {
   watchPathIgnorePatterns: ['/node_modules/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   moduleNameMapper: {
-    '^@vue/(.*?)$': '<rootDir>/packages/$1/src'
+    '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
+    vue: '<rootDir>/packages/vue/src'
   },
   rootDir: __dirname,
   testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)'],
