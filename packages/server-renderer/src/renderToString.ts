@@ -12,8 +12,7 @@ import {
   Portal,
   ShapeFlags,
   ssrUtils,
-  Slot,
-  createApp
+  Slot
 } from 'vue'
 import {
   isString,
@@ -84,22 +83,16 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 }
 
 export async function renderToString(input: App | VNode): Promise<string> {
-  if (isVNode(input)) {
-    return renderAppToString(createApp({ render: () => input }))
-  } else {
-    return renderAppToString(input)
-  }
-}
-
-async function renderAppToString(app: App): Promise<string> {
-  const resolvedBuffer = await renderComponent(app._component, app._props, null)
+  const resolvedBuffer = await (isVNode(input)
+    ? renderComponent({ render: () => input })
+    : renderComponent(input._component, input._props))
   return unrollBuffer(resolvedBuffer)
 }
 
 export function renderComponent(
   comp: Component,
-  props: Props | null,
-  children: VNodeNormalizedChildren | null,
+  props: Props | null = null,
+  children: VNodeNormalizedChildren | null = null,
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   return renderComponentVNode(
