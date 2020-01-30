@@ -13,7 +13,8 @@ import {
   ShapeFlags,
   ssrUtils,
   Slot,
-  createApp
+  createApp,
+  DirectiveBinding
 } from 'vue'
 import {
   isString,
@@ -24,6 +25,7 @@ import {
 } from '@vue/shared'
 import { renderProps } from './renderProps'
 import { escapeHtml } from './ssrUtils'
+import { vShow } from './directives/vShow'
 
 const {
   isVNode,
@@ -207,13 +209,25 @@ function renderElement(
   parentComponent: ComponentInternalInstance | null = null
 ) {
   const tag = vnode.type as string
-  const { props, children, shapeFlag, scopeId } = vnode
+  const { props, children, shapeFlag, scopeId, dirs } = vnode
   let openTag = `<${tag}`
 
-  // TODO directives
+  if (dirs) {
+    for (let i = 0; i < dirs.length; i++) {
+      const updated = dirs[i].dir.updated
+      if (updated !== vShow && updated) {
+        updated(null, dirs[i], vnode, null)
+      }
+    }
+  }
 
-  if (props !== null) {
-    openTag += renderProps(props, tag)
+  const binding = getVShowBinding(vnode, parentComponent)
+  if (binding) {
+    vShow(null, binding, vnode, null)
+  }
+
+  if (vnode.props !== null) {
+    openTag += renderProps(vnode.props, tag)
   }
 
   if (scopeId !== null) {
@@ -253,6 +267,26 @@ function renderElement(
       }
     }
     push(`</${tag}>`)
+  }
+}
+
+function findVShowBinding(vnode: VNode) {
+  if (vnode.dirs) {
+    return vnode.dirs.find(d => d.dir.updated === vShow)
+  }
+}
+
+function getVShowBinding(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null
+): DirectiveBinding | undefined {
+  let dir
+  dir = findVShowBinding(vnode)
+  if (dir) {
+    return dir
+  }
+  if (parentComponent) {
+    return findVShowBinding(parentComponent.vnode)
   }
 }
 

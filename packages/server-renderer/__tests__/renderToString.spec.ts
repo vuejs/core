@@ -1,5 +1,12 @@
-import { createApp, h, createCommentVNode, withScopeId } from 'vue'
+import {
+  createApp,
+  h,
+  createCommentVNode,
+  withScopeId,
+  withDirectives
+} from 'vue'
 import { renderToString, renderComponent, renderSlot, escapeHtml } from '../src'
+import { vShow } from '../src/directives/vShow'
 
 describe('ssr: renderToString', () => {
   describe('components', () => {
@@ -362,6 +369,80 @@ describe('ssr: renderToString', () => {
       expect(await renderToString(h(Parent))).toBe(
         `<div data-v-child><span data-v-test data-v-child-s>slot</span></div>`
       )
+    })
+  })
+
+  describe('directive', () => {
+    test('v-show directive render', async () => {
+      const Root = {
+        render: () => withDirectives(h('div'), [[vShow, false]])
+      }
+      expect(await renderToString(h(Root))).toBe(
+        `<div style="display:none;"></div>`
+      )
+    })
+
+    test('v-show directive merge with style', async () => {
+      const Root = {
+        render: () =>
+          withDirectives(h('div', { style: { color: 'red' } }), [
+            [vShow, false]
+          ])
+      }
+      expect(await renderToString(h(Root))).toBe(
+        `<div style="color:red;display:none;"></div>`
+      )
+    })
+
+    test('v-show directive not passed to child', async () => {
+      const Child = h('span')
+      const Root = {
+        render: () => withDirectives(h('div', [Child]), [[vShow, false]])
+      }
+      expect(await renderToString(h(Root))).toBe(
+        `<div style="display:none;"><span></span></div>`
+      )
+    })
+
+    test('v-show directive not passed to slot', async () => {
+      const Child = {
+        render: () => h('div')
+      }
+      const Root = {
+        render: () =>
+          withDirectives(
+            h(Child, {
+              default: () => [],
+              _compiled: true
+            }),
+            [[vShow, false]]
+          )
+      }
+      expect(await renderToString(h(Root))).toBe(
+        `<div style="display:none;"></div>`
+      )
+    })
+
+    test('v-show directive merging on components', async () => {
+      const Child = {
+        render: () => h('div')
+      }
+      const Root = {
+        render: () => withDirectives(h(Child), [[vShow, false]])
+      }
+      expect(await renderToString(h(Root))).toBe(
+        `<div style="display:none;"></div>`
+      )
+    })
+
+    test('customer directive', async () => {
+      const fn = jest.fn()
+      const vnode = h('div')
+      const Root = {
+        render: () => withDirectives(vnode, [[fn]])
+      }
+      await renderToString(h(Root))
+      expect(fn).toBeCalledWith(null, vnode.dirs![0], vnode, null)
     })
   })
 })
