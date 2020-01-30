@@ -1,4 +1,4 @@
-import { createApp, h, createCommentVNode } from 'vue'
+import { createApp, h, createCommentVNode, withScopeId } from 'vue'
 import { renderToString, renderComponent, renderSlot, escapeHtml } from '../src'
 
 describe('ssr: renderToString', () => {
@@ -327,6 +327,41 @@ describe('ssr: renderToString', () => {
   })
 
   describe('scopeId', () => {
-    // TODO
+    // note: here we are only testing scopeId handling for vdom serialization.
+    // compiled srr render functions will include scopeId directly in strings.
+    const withId = withScopeId('data-v-test')
+    const withChildId = withScopeId('data-v-child')
+
+    test('basic', async () => {
+      expect(
+        await renderToString(
+          withId(() => {
+            return h('div')
+          })()
+        )
+      ).toBe(`<div data-v-test></div>`)
+    })
+
+    test('with slots', async () => {
+      const Child = {
+        __scopeId: 'data-v-child',
+        render: withChildId(function(this: any) {
+          return h('div', this.$slots.default())
+        })
+      }
+
+      const Parent = {
+        __scopeId: 'data-v-test',
+        render: withId(() => {
+          return h(Child, null, {
+            default: withId(() => h('span', 'slot'))
+          })
+        })
+      }
+
+      expect(await renderToString(h(Parent))).toBe(
+        `<div data-v-child><span data-v-test data-v-child-s>slot</span></div>`
+      )
+    })
   })
 })

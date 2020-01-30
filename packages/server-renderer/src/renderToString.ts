@@ -222,7 +222,7 @@ function renderElement(
     // vnode's own scopeId and the current rendering component's scopeId is
     // different - this is a slot content node.
     if (treeOwnerId != null && treeOwnerId !== scopeId) {
-      openTag += ` ${scopeId}-s`
+      openTag += ` ${treeOwnerId}-s`
     }
   }
 
