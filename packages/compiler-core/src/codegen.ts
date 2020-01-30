@@ -71,7 +71,7 @@ function createCodegenContext(
   ast: RootNode,
   {
     mode = 'function',
-    prefixIdentifiers = mode === 'module',
+    prefixIdentifiers = mode === 'module' || mode === 'cjs',
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null
@@ -176,18 +176,21 @@ export function generate(
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
 
   // preambles
-  if (mode === 'function') {
+  if (mode === 'function' || mode === 'cjs') {
+    const VueBinding = mode === 'function' ? `Vue` : `require("vue")`
     // Generate const declaration for helpers
     // In prefix mode, we place the const declaration at top so it's done
     // only once; But if we not prefixing, we place the declaration inside the
     // with block so it doesn't incur the `in` check cost for every helper access.
     if (hasHelpers) {
       if (prefixIdentifiers) {
-        push(`const { ${ast.helpers.map(helper).join(', ')} } = Vue\n`)
+        push(
+          `const { ${ast.helpers.map(helper).join(', ')} } = ${VueBinding}\n`
+        )
       } else {
         // "with" mode.
         // save Vue in a separate variable to avoid collision
-        push(`const _Vue = Vue\n`)
+        push(`const _Vue = ${VueBinding}\n`)
         // in "with" mode, helpers are declared inside the with block to avoid
         // has check cost, but hoists are lifted out of the function - we need
         // to provide the helper here.
@@ -196,7 +199,7 @@ export function generate(
             .filter(helper => ast.helpers.includes(helper))
             .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
             .join(', ')
-          push(`const { ${staticHelpers} } = Vue\n`)
+          push(`const { ${staticHelpers} } = _Vue\n`)
         }
       }
     }
