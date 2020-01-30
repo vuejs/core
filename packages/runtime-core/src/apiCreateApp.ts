@@ -24,6 +24,7 @@ export interface App<HostElement = any> {
   _component: Component
   _props: Data | null
   _container: HostElement | null
+  _context: AppContext
 }
 
 export interface AppConfig {
@@ -103,6 +104,7 @@ export function createAppAPI<HostNode, HostElement>(
       _component: rootComponent,
       _props: rootProps,
       _container: null,
+      _context: context,
 
       get config() {
         return context.config
