@@ -91,11 +91,9 @@ export { setBlockTracking, createTextVNode, createCommentVNode } from './vnode'
 // types so that the bundled d.ts does not attempt to import from it.
 import {
   toDisplayString as _toDisplayString,
-  capitalize as _capitalize,
   camelize as _camelize
 } from '@vue/shared'
 export const toDisplayString = _toDisplayString as (s: unknown) => string
-export const capitalize = _capitalize as (s: string) => string
 export const camelize = _camelize as (s: string) => string
 
 // For integration with runtime compiler
