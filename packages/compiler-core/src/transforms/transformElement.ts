@@ -73,26 +73,24 @@ export const transformElement: NodeTransform = (node, context) => {
     let shouldUseBlock = false
 
     // handle dynamic component
-    const isProp = findProp(node, 'is')
-    if (tag === 'component') {
-      if (isProp) {
-        // static <component is="foo" />
-        if (isProp.type === NodeTypes.ATTRIBUTE) {
-          const tag = isProp.value && isProp.value.content
-          if (tag) {
-            context.helper(RESOLVE_COMPONENT)
-            context.components.add(tag)
-            dynamicComponent = toValidAssetId(tag, `component`)
-          }
+    const isProp = tag === 'component' && findProp(node, 'is')
+    if (isProp) {
+      // static <component is="foo" />
+      if (isProp.type === NodeTypes.ATTRIBUTE) {
+        const tag = isProp.value && isProp.value.content
+        if (tag) {
+          context.helper(RESOLVE_COMPONENT)
+          context.components.add(tag)
+          dynamicComponent = toValidAssetId(tag, `component`)
         }
-        // dynamic <component :is="asdf" />
-        else if (isProp.exp) {
-          dynamicComponent = createCallExpression(
-            context.helper(RESOLVE_DYNAMIC_COMPONENT),
-            // _ctx.$ exposes the owner instance of current render function
-            [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
-          )
-        }
+      }
+      // dynamic <component :is="asdf" />
+      else if (isProp.exp) {
+        dynamicComponent = createCallExpression(
+          context.helper(RESOLVE_DYNAMIC_COMPONENT),
+          // _ctx.$ exposes the owner instance of current render function
+          [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
+        )
       }
     }
 
