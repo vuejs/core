@@ -2,7 +2,7 @@
 
 exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" })
 
@@ -19,7 +19,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist nested static tree 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"p\\", null, [
   _createVNode(\\"span\\"),
@@ -39,7 +39,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist nested static tree with comments 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = Vue
+const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"div\\", null, [
   _createCommentVNode(\\"comment\\")
@@ -58,7 +58,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"span\\")
 const _hoisted_2 = _createVNode(\\"div\\")
@@ -77,7 +77,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\")
 
@@ -94,7 +94,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with directives 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
@@ -115,7 +115,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with dynamic text children 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
@@ -132,7 +132,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
@@ -153,7 +153,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist class with static object value 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { class: { foo: true } }
 
@@ -170,7 +170,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static interpolation 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"span\\", null, [
   \\"foo \\",
@@ -192,7 +192,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static prop value 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toDisplayString(1))
 
@@ -348,7 +348,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform should hoist v-for children if static 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 const _hoisted_2 = _createVNode(\\"span\\")
@@ -370,7 +370,7 @@ return function render() {
 
 exports[`compiler: hoistStatic transform should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = Vue
+const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
 const _hoisted_1 = {
   key: 0,
