@@ -108,21 +108,17 @@ export const transformIf = createStructuralDirectiveTransform(
           // attach this branch's codegen node to the v-if root.
           let parentCondition = sibling.codegenNode
             .expressions[1] as ConditionalExpression
-          while (true) {
-            if (
-              parentCondition.alternate.type ===
-              NodeTypes.JS_CONDITIONAL_EXPRESSION
-            ) {
-              parentCondition = parentCondition.alternate
-            } else {
-              parentCondition.alternate = createCodegenNodeForBranch(
-                branch,
-                sibling.branches.length - 1,
-                context
-              )
-              break
-            }
+          while (
+            parentCondition.alternate.type ===
+            NodeTypes.JS_CONDITIONAL_EXPRESSION
+          ) {
+            parentCondition = parentCondition.alternate
           }
+          parentCondition.alternate = createCodegenNodeForBranch(
+            branch,
+            sibling.branches.length - 1,
+            context
+          )
         } else {
           context.onError(
             createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
