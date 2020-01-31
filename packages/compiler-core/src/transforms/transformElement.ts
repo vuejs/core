@@ -33,7 +33,6 @@ import {
 } from '../runtimeHelpers'
 import {
   getInnerRange,
-  isVSlot,
   toValidAssetId,
   findProp,
   isCoreComponent
@@ -48,12 +47,11 @@ const directiveImportMap = new WeakMap<DirectiveNode, symbol>()
 // generate a JavaScript AST for this element's codegen
 export const transformElement: NodeTransform = (node, context) => {
   if (
-    node.type !== NodeTypes.ELEMENT ||
-    // handled by transformSlotOutlet
-    node.tagType === ElementTypes.SLOT ||
-    // <template v-if/v-for> should have already been replaced
-    // <template v-slot> is handled by buildSlots
-    (node.tagType === ElementTypes.TEMPLATE && node.props.some(isVSlot))
+    !(
+      node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.ELEMENT ||
+        node.tagType === ElementTypes.COMPONENT)
+    )
   ) {
     return
   }

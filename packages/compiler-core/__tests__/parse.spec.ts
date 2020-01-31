@@ -526,7 +526,6 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-
         isSelfClosing: false,
         children: [],
         loc: {
@@ -580,6 +579,24 @@ describe('compiler: parse', () => {
           end: { offset: 5, line: 1, column: 6 },
           source: '<img>'
         }
+      })
+    })
+
+    test('template element with directives', () => {
+      const ast = baseParse('<template v-if="ok"></template>')
+      const element = ast.children[0]
+      expect(element).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.TEMPLATE
+      })
+    })
+
+    test('template element without directives', () => {
+      const ast = baseParse('<template></template>')
+      const element = ast.children[0]
+      expect(element).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.ELEMENT
       })
     })
 

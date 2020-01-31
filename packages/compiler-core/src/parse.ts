@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray } from '@vue/shared'
+import { NO, isArray, makeMap } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -397,6 +397,10 @@ const enum TagType {
   End
 }
 
+const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
+  `if,else,else-if,for,slot`
+)
+
 /**
  * Parse a tag (E.g. `<div id=a>`) with that type (start tag or end tag).
  */
@@ -467,7 +471,14 @@ function parseTag(
 
     if (tag === 'slot') {
       tagType = ElementTypes.SLOT
-    } else if (tag === 'template') {
+    } else if (
+      tag === 'template' &&
+      props.some(p => {
+        return (
+          p.type === NodeTypes.DIRECTIVE && isSpecialTemplateDirective(p.name)
+        )
+      })
+    ) {
       tagType = ElementTypes.TEMPLATE
     }
   }
