@@ -4,7 +4,6 @@ import {
   ComponentInternalInstance,
   VNode,
   VNodeArrayChildren,
-  VNodeNormalizedChildren,
   createVNode,
   Text,
   Comment,
@@ -12,7 +11,8 @@ import {
   Portal,
   ShapeFlags,
   ssrUtils,
-  Slot
+  Slot,
+  Slots
 } from 'vue'
 import {
   isString,
@@ -99,7 +99,7 @@ export async function renderToString(input: App | VNode): Promise<string> {
 export function renderComponent(
   comp: Component,
   props: Props | null = null,
-  children: VNodeNormalizedChildren | null = null,
+  children: Slots | SSRSlots | null = null,
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   return renderComponentVNode(
@@ -256,14 +256,16 @@ function renderElement(
   }
 }
 
-type OptimizedSlotFn = (
+export type SSRSlots = Record<string, SSRSlot>
+
+export type SSRSlot = (
   props: Props,
   push: PushFn,
   parentComponent: ComponentInternalInstance | null
 ) => void
 
 export function renderSlot(
-  slotFn: Slot | OptimizedSlotFn,
+  slotFn: Slot | SSRSlot,
   slotProps: Props,
   push: PushFn,
   parentComponent: ComponentInternalInstance | null = null

@@ -45,7 +45,12 @@ export const enum NodeTypes {
   JS_FUNCTION_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_CONDITIONAL_EXPRESSION,
-  JS_CACHE_EXPRESSION
+  JS_CACHE_EXPRESSION,
+
+  // ssr codegen
+  JS_BLOCK_STATEMENT,
+  JS_TEMPLATE_LITERAL,
+  JS_IF_STATEMENT
 }
 
 export const enum ElementTypes {
@@ -97,7 +102,7 @@ export interface RootNode extends Node {
   hoists: JSChildNode[]
   imports: ImportItem[]
   cached: number
-  codegenNode: TemplateChildNode | JSChildNode | undefined
+  codegenNode: TemplateChildNode | JSChildNode | BlockStatement | undefined
 }
 
 export type ElementNode =
@@ -130,6 +135,7 @@ export interface PlainElementNode extends BaseElementNode {
     | CacheExpression // when cached by v-once
     | SequenceExpression // when turned into a block
     | undefined
+  ssrCodegenNode?: TemplateLiteral
 }
 
 export interface ComponentNode extends BaseElementNode {
@@ -147,7 +153,7 @@ export interface SlotOutletNode extends BaseElementNode {
 
 export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
-  codegenNode: ElementCodegenNode | undefined | CacheExpression
+  // TemplateNode is a container type that always gets compiled away
 }
 
 export interface TextNode extends Node {
@@ -232,9 +238,12 @@ export interface TextCallNode extends Node {
   codegenNode: CallExpression
 }
 
+// JS Node Types ---------------------------------------------------------------
+
 // We also include a number of JavaScript AST nodes for code generation.
 // The AST is an intentionally minimal subset just to meet the exact needs of
 // Vue render function generation.
+
 export type JSChildNode =
   | CallExpression
   | ObjectExpression
@@ -252,6 +261,7 @@ export interface CallExpression extends Node {
     | string
     | symbol
     | JSChildNode
+    | SSRCodegenNode
     | TemplateChildNode
     | TemplateChildNode[])[]
 }
@@ -275,8 +285,10 @@ export interface ArrayExpression extends Node {
 export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
   params: ExpressionNode | ExpressionNode[] | undefined
-  returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
+  returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
+  body?: BlockStatement
   newline: boolean
+  // so that codegen knows it needs to generate ScopeId wrapper
   isSlot: boolean
 }
 
@@ -297,6 +309,27 @@ export interface CacheExpression extends Node {
   index: number
   value: JSChildNode
   isVNode: boolean
+}
+
+// SSR-specific Node Types -----------------------------------------------------
+
+export type SSRCodegenNode = BlockStatement | TemplateLiteral | IfStatement
+
+export interface BlockStatement extends Node {
+  type: NodeTypes.JS_BLOCK_STATEMENT
+  body: (JSChildNode | IfStatement)[]
+}
+
+export interface TemplateLiteral extends Node {
+  type: NodeTypes.JS_TEMPLATE_LITERAL
+  elements: (string | JSChildNode)[]
+}
+
+export interface IfStatement extends Node {
+  type: NodeTypes.JS_IF_STATEMENT
+  test: ExpressionNode
+  consequent: BlockStatement
+  alternate: IfStatement | BlockStatement
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -634,6 +667,16 @@ export function createCacheExpression(
     index,
     value,
     isVNode,
+    loc: locStub
+  }
+}
+
+export function createTemplateLiteral(
+  elements: TemplateLiteral['elements']
+): TemplateLiteral {
+  return {
+    type: NodeTypes.JS_TEMPLATE_LITERAL,
+    elements,
     loc: locStub
   }
 }

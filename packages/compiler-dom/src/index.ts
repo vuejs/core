@@ -18,7 +18,9 @@ import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 
-const parserOptions = __BROWSER__ ? parserOptionsMinimal : parserOptionsStandard
+export const parserOptions = __BROWSER__
+  ? parserOptionsMinimal
+  : parserOptionsStandard
 
 export function compile(
   template: string,

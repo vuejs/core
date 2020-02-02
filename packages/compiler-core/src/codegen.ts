@@ -18,7 +18,9 @@ import {
   SequenceExpression,
   ConditionalExpression,
   CacheExpression,
-  locStub
+  locStub,
+  SSRCodegenNode,
+  TemplateLiteral
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -44,7 +46,7 @@ import {
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
-type CodegenNode = TemplateChildNode | JSChildNode
+type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
 export interface CodegenResult {
   code: string
@@ -74,7 +76,8 @@ function createCodegenContext(
     prefixIdentifiers = mode === 'module' || mode === 'cjs',
     sourceMap = false,
     filename = `template.vue.html`,
-    scopeId = null
+    scopeId = null,
+    ssr = false
   }: CodegenOptions
 ): CodegenContext {
   const context: CodegenContext = {
@@ -83,6 +86,7 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
+    ssr,
     source: ast.loc.source,
     code: ``,
     column: 1,
@@ -169,7 +173,8 @@ export function generate(
     indent,
     deindent,
     newline,
-    scopeId
+    scopeId,
+    ssr
   } = context
   const hasHelpers = ast.helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
@@ -231,10 +236,14 @@ export function generate(
   }
 
   // enter render function
-  if (genScopeId) {
+  if (genScopeId && !ssr) {
     push(`const render = withId(`)
   }
-  push(`function render() {`)
+  if (!ssr) {
+    push(`function render() {`)
+  } else {
+    push(`function ssrRender(_ctx, _push, _parent) {`)
+  }
   indent()
 
   if (useWithBlock) {
@@ -255,7 +264,7 @@ export function generate(
       }
       newline()
     }
-  } else {
+  } else if (!ssr) {
     push(`const _ctx = this`)
     if (ast.cached > 0) {
       newline()
@@ -276,7 +285,9 @@ export function generate(
   }
 
   // generate the VNode tree expression
-  push(`return `)
+  if (!ssr) {
+    push(`return `)
+  }
   if (ast.codegenNode) {
     genNode(ast.codegenNode, context)
   } else {
@@ -291,7 +302,7 @@ export function generate(
   deindent()
   push(`}`)
 
-  if (genScopeId) {
+  if (genScopeId && !ssr) {
     push(`)`)
   }
 
@@ -325,7 +336,7 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
     return
   }
   const { push, newline, helper, scopeId, mode } = context
-  const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
+  const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
   // push scope Id before initilaizing hoisted vnodes so that these vnodes
@@ -469,6 +480,18 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_CACHE_EXPRESSION:
       genCacheExpression(node, context)
       break
+
+    // SSR only types
+    case NodeTypes.JS_BLOCK_STATEMENT:
+      !__BROWSER__ && genNodeList(node.body, context, true)
+      break
+    case NodeTypes.JS_TEMPLATE_LITERAL:
+      !__BROWSER__ && genTemplateLiteral(node, context)
+      break
+    case NodeTypes.JS_IF_STATEMENT:
+      // TODO
+      break
+
     /* istanbul ignore next */
     default:
       if (__DEV__) {
@@ -589,10 +612,10 @@ function genFunctionExpression(
   context: CodegenContext
 ) {
   const { push, indent, deindent, scopeId, mode } = context
-  const { params, returns, newline, isSlot } = node
+  const { params, returns, body, newline, isSlot } = node
   // slot functions also need to push scopeId before rendering its content
   const genScopeId =
-    !__BROWSER__ && isSlot && scopeId != null && mode === 'module'
+    !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
 
   if (genScopeId) {
     push(`withId(`)
@@ -604,17 +627,23 @@ function genFunctionExpression(
     genNode(params, context)
   }
   push(`) => `)
-  if (newline) {
+  if (newline || body) {
     push(`{`)
     indent()
-    push(`return `)
   }
-  if (isArray(returns)) {
-    genNodeListAsArray(returns, context)
-  } else {
-    genNode(returns, context)
+  if (returns) {
+    if (newline) {
+      push(`return `)
+    }
+    if (isArray(returns)) {
+      genNodeListAsArray(returns, context)
+    } else {
+      genNode(returns, context)
+    }
+  } else if (body) {
+    genNode(body, context)
   }
-  if (newline) {
+  if (newline || body) {
     deindent()
     push(`}`)
   }
@@ -685,4 +714,20 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
     deindent()
   }
   push(`)`)
+}
+
+function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
+  const { push } = context
+  push('`')
+  for (let i = 0; i < node.elements.length; i++) {
+    const e = node.elements[i]
+    if (isString(e)) {
+      push(e.replace(/`/g, '\\`'))
+    } else {
+      push('${')
+      genNode(e, context)
+      push('}')
+    }
+  }
+  push('`')
 }

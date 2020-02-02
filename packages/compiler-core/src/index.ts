@@ -31,6 +31,11 @@ export { registerRuntimeHelpers } from './runtimeHelpers'
 export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
 
+// exported for compiler-ssr
+export { transformExpression } from './transforms/transformExpression'
+export { trackVForSlotScopes, trackSlotScopes } from './transforms/vSlot'
+export { buildProps } from './transforms/transformElement'
+
 // utility, but need to rewrite typing to avoid dts relying on @vue/shared
 import { generateCodeFrame as _genCodeFrame } from '@vue/shared'
 const generateCodeFrame = _genCodeFrame as (

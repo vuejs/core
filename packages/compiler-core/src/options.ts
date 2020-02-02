@@ -29,7 +29,7 @@ export interface ParserOptions {
 
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform }
+  directiveTransforms?: { [name: string]: DirectiveTransform | undefined }
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
   // - This is force-enabled in module mode, since modules are by default strict
@@ -76,6 +76,8 @@ export interface CodegenOptions {
   filename?: string
   // SFC scoped styles ID
   scopeId?: string | null
+  // generate SSR specific code?
+  ssr?: boolean
 }
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions

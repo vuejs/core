@@ -146,10 +146,11 @@ describe('ssr: renderToString', () => {
                   { msg: 'hello' },
                   {
                     // optimized slot using string push
-                    default: ({ msg }: any, push: any) => {
+                    default: ({ msg }: any, push: any, p: any) => {
                       push(`<span>${msg}</span>`)
                     },
-                    _compiled: true // important to avoid slots being normalized
+                    // important to avoid slots being normalized
+                    _compiled: true as any
                   },
                   parent
                 )
