@@ -27,6 +27,33 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })
 
+  it('triggers when initial value is null', async () => {
+    const state = ref(null)
+    const spy = jest.fn()
+    watch(() => state.value, spy)
+    await nextTick()
+    expect(spy).toHaveBeenCalled()
+  })
+
+  it('triggers when initial value is undefined', async () => {
+    const state = ref()
+    const spy = jest.fn()
+    watch(() => state.value, spy)
+    await nextTick()
+    expect(spy).toHaveBeenCalled()
+    state.value = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
+    // testing if undefined can trigger the watcher
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+    // it shouldn't trigger if the same value is set
+    state.value = undefined
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
   it('watching single source: getter', async () => {
     const state = reactive({ count: 0 })
     let dummy

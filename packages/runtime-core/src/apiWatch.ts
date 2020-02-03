@@ -61,6 +61,9 @@ export type StopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
+// initial value for watchers to trigger on undefined initial values
+const INITIAL_WATCHER_VALUE = {}
+
 // overload #1: simple effect
 export function watch(effect: WatchEffect, options?: WatchOptions): StopHandle
 
@@ -153,7 +156,7 @@ function doWatch(
     }
   }
 
-  let oldValue = isArray(source) ? [] : undefined
+  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
   const applyCb = cb
     ? () => {
         if (instance && instance.isUnmounted) {
@@ -167,7 +170,8 @@ function doWatch(
           }
           callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
             newValue,
-            oldValue,
+            // pass undefined as the old value when it's changed for the first time
+            oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
             registerCleanup
           ])
           oldValue = newValue
