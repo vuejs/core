@@ -379,12 +379,12 @@
     "@rollup/pluginutils" "^3.0.4"
 
 "@rollup/plugin-replace@^2.2.1":
-  version "2.3.0"
-  resolved "https://registry.yarnpkg.com/@rollup/plugin-replace/-/plugin-replace-2.3.0.tgz#86d88746383e40dd81cffb5216449cc51a734eb9"
-  integrity sha512-rzWAMqXAHC1w3eKpK6LxRqiF4f3qVFaa1sGii6Bp3rluKcwHNOpPt+hWRCmAH6SDEPtbPiLFf0pfNQyHs6Btlg==
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/@rollup/plugin-replace/-/plugin-replace-2.3.1.tgz#16fb0563628f9e6c6ef9e05d48d3608916d466f5"
+  integrity sha512-qDcXj2VOa5+j0iudjb+LiwZHvBRRgWbHPhRmo1qde2KItTjuxDVQO21rp9/jOlzKR5YO0EsgRQoyox7fnL7y/A==
   dependencies:
-    magic-string "^0.25.2"
-    rollup-pluginutils "^2.6.0"
+    "@rollup/pluginutils" "^3.0.4"
+    magic-string "^0.25.5"
 
 "@rollup/pluginutils@^3.0.4":
   version "3.0.8"
@@ -3846,10 +3846,10 @@ lru-cache@^5.1.1:
   dependencies:
     yallist "^3.0.2"
 
-magic-string@^0.25.2:
-  version "0.25.3"
-  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.25.3.tgz#34b8d2a2c7fec9d9bdf9929a3fd81d271ef35be9"
-  integrity sha512-6QK0OpF/phMz0Q2AxILkX2mFhi7m+WMwTRg0LQKq/WBB0cDP4rYH3Wp4/d3OTXlrPLVJT/RFqj8tFeAR4nk8AA==
+magic-string@^0.25.5:
+  version "0.25.6"
+  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.25.6.tgz#5586387d1242f919c6d223579cc938bf1420795e"
+  integrity sha512-3a5LOMSGoCTH5rbqobC2HuDNRtE2glHZ8J7pK+QZYppyWA36yuNpsX994rIY2nCuyP7CZYy7lQq/X2jygiZ89g==
   dependencies:
     sourcemap-codec "^1.4.4"
 
@@ -5210,7 +5210,7 @@ rollup-pluginutils@2.8.1:
   dependencies:
     estree-walker "^0.6.1"
 
-rollup-pluginutils@^2.6.0, rollup-pluginutils@^2.8.2:
+rollup-pluginutils@^2.8.2:
   version "2.8.2"
   resolved "https://registry.yarnpkg.com/rollup-pluginutils/-/rollup-pluginutils-2.8.2.tgz#72f2af0748b592364dbd3389e600e5a9444a351e"
   integrity sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==
