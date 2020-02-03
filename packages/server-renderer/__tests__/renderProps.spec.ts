@@ -1,4 +1,4 @@
-import { renderProps, renderClass, renderStyle } from '../src'
+import { renderProps, renderClass, renderStyle } from '../src/renderProps'
 
 describe('ssr: renderProps', () => {
   test('ignore reserved props', () => {

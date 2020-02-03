@@ -103,6 +103,7 @@ export interface RootNode extends Node {
   imports: ImportItem[]
   cached: number
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
+  ssrHelpers?: symbol[]
 }
 
 export type ElementNode =

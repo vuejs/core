@@ -14,8 +14,9 @@ import {
   CallExpression
 } from '@vue/compiler-dom'
 import { isString, escapeHtml, NO } from '@vue/shared'
-import { INTERPOLATE } from './runtimeHelpers'
+import { SSR_INTERPOLATE } from './runtimeHelpers'
 import { processIf } from './transforms/ssrVIf'
+import { processFor } from './transforms/ssrVFor'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -37,17 +38,26 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   }
 
   ast.codegenNode = createBlockStatement(context.body)
+  ast.ssrHelpers = [...context.helpers]
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 
-export function createSSRTransformContext(options: CompilerOptions) {
+function createSSRTransformContext(
+  options: CompilerOptions,
+  helpers: Set<symbol> = new Set()
+) {
   const body: BlockStatement['body'] = []
   let currentString: TemplateLiteral | null = null
 
   return {
     options,
     body,
+    helpers,
+    helper<T extends symbol>(name: T): T {
+      helpers.add(name)
+      return name
+    },
     pushStringPart(part: TemplateLiteral['elements'][0]) {
       if (!currentString) {
         const currentCall = createCallExpression(`_push`)
@@ -69,6 +79,13 @@ export function createSSRTransformContext(options: CompilerOptions) {
       body.push(statement)
     }
   }
+}
+
+export function createChildContext(
+  parent: SSRTransformContext
+): SSRTransformContext {
+  // ensure child inherits parent helpers
+  return createSSRTransformContext(parent.options, parent.helpers)
 }
 
 export function processChildren(
@@ -100,11 +117,13 @@ export function processChildren(
     } else if (child.type === NodeTypes.TEXT) {
       context.pushStringPart(escapeHtml(child.content))
     } else if (child.type === NodeTypes.INTERPOLATION) {
-      context.pushStringPart(createCallExpression(INTERPOLATE, [child.content]))
+      context.pushStringPart(
+        createCallExpression(context.helper(SSR_INTERPOLATE), [child.content])
+      )
     } else if (child.type === NodeTypes.IF) {
       processIf(child, context)
     } else if (child.type === NodeTypes.FOR) {
-      // TODO
+      processFor(child, context)
     }
   }
 }

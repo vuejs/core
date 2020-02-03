@@ -33,6 +33,7 @@ export { transformOn } from './transforms/vOn'
 
 // exported for compiler-ssr
 export { processIfBranches } from './transforms/vIf'
+export { processForNode } from './transforms/vFor'
 export {
   transformExpression,
   processExpression

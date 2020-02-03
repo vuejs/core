@@ -71,7 +71,8 @@ export const transformIf = createStructuralDirectiveTransform(
   }
 )
 
-export const processIfBranches = (
+// target-agnostic transform used for both Client and SSR
+export function processIfBranches(
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext,
@@ -79,8 +80,8 @@ export const processIfBranches = (
     node: IfNode,
     branch: IfBranchNode,
     isRoot: boolean
-  ) => (() => void) | void
-) => {
+  ) => (() => void) | undefined
+) {
   if (
     dir.name !== 'else' &&
     (!dir.exp || !(dir.exp as SimpleExpressionNode).content.trim())

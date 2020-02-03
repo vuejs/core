@@ -6,7 +6,12 @@ import {
   resolveComponent,
   ComponentOptions
 } from 'vue'
-import { renderToString, renderComponent, renderSlot, escapeHtml } from '../src'
+import { escapeHtml } from '@vue/shared'
+import {
+  renderToString,
+  renderComponent,
+  renderSlot
+} from '../src/renderToString'
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {

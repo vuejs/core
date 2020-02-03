@@ -22,20 +22,23 @@ export function compile(
   template: string,
   options: SSRCompilerOptions = {}
 ): CodegenResult {
-  // apply DOM-specific parsing options
   options = {
+    mode: 'cjs',
+    ...options,
+    // apply DOM-specific parsing options
     ...parserOptions,
-    ...options
+    ssr: true,
+    // always prefix since compiler-ssr doesn't have size concern
+    prefixIdentifiers: true,
+    // disalbe optimizations that are unnecessary for ssr
+    cacheHandlers: false,
+    hoistStatic: false
   }
 
   const ast = baseParse(template, options)
 
   transform(ast, {
     ...options,
-    prefixIdentifiers: true,
-    // disalbe optimizations that are unnecessary for ssr
-    cacheHandlers: false,
-    hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
       ssrTransformFor,
@@ -57,10 +60,5 @@ export function compile(
   // by replacing ast.codegenNode.
   ssrCodegenTransform(ast, options)
 
-  return generate(ast, {
-    mode: 'cjs',
-    ...options,
-    ssr: true,
-    prefixIdentifiers: true
-  })
+  return generate(ast, options)
 }

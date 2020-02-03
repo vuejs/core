@@ -1,3 +1,4 @@
+import { compile } from '../src'
 import { getCompiledString } from './utils'
 
 describe('ssr: text', () => {
@@ -20,18 +21,25 @@ describe('ssr: text', () => {
   })
 
   test('interpolation', () => {
-    expect(getCompiledString(`foo {{ bar }} baz`)).toMatchInlineSnapshot(
-      `"\`foo \${interpolate(_ctx.bar)} baz\`"`
-    )
+    expect(compile(`foo {{ bar }} baz`).code).toMatchInlineSnapshot(`
+      "const { _interpolate } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        _push(\`foo \${_interpolate(_ctx.bar)} baz\`)
+      }"
+    `)
   })
 
   test('nested elements with interpolation', () => {
     expect(
-      getCompiledString(
-        `<div><span>{{ foo }} bar</span><span>baz {{ qux }}</span></div>`
-      )
-    ).toMatchInlineSnapshot(
-      `"\`<div><span>\${interpolate(_ctx.foo)} bar</span><span>baz \${interpolate(_ctx.qux)}</span></div>\`"`
-    )
+      compile(`<div><span>{{ foo }} bar</span><span>baz {{ qux }}</span></div>`)
+        .code
+    ).toMatchInlineSnapshot(`
+      "const { _interpolate } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<div><span>\${_interpolate(_ctx.foo)} bar</span><span>baz \${_interpolate(_ctx.qux)}</span></div>\`)
+      }"
+    `)
   })
 })

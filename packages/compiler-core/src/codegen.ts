@@ -74,7 +74,7 @@ function createCodegenContext(
   ast: RootNode,
   {
     mode = 'function',
-    prefixIdentifiers = mode === 'module' || mode === 'cjs',
+    prefixIdentifiers = mode === 'module',
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
@@ -169,7 +169,6 @@ export function generate(
   const {
     mode,
     push,
-    helper,
     prefixIdentifiers,
     indent,
     deindent,
@@ -182,58 +181,10 @@ export function generate(
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
 
   // preambles
-  if (mode === 'function' || mode === 'cjs') {
-    const VueBinding = mode === 'function' ? `Vue` : `require("vue")`
-    // Generate const declaration for helpers
-    // In prefix mode, we place the const declaration at top so it's done
-    // only once; But if we not prefixing, we place the declaration inside the
-    // with block so it doesn't incur the `in` check cost for every helper access.
-    if (hasHelpers) {
-      if (prefixIdentifiers) {
-        push(
-          `const { ${ast.helpers.map(helper).join(', ')} } = ${VueBinding}\n`
-        )
-      } else {
-        // "with" mode.
-        // save Vue in a separate variable to avoid collision
-        push(`const _Vue = ${VueBinding}\n`)
-        // in "with" mode, helpers are declared inside the with block to avoid
-        // has check cost, but hoists are lifted out of the function - we need
-        // to provide the helper here.
-        if (ast.hoists.length) {
-          const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
-            .filter(helper => ast.helpers.includes(helper))
-            .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
-            .join(', ')
-          push(`const { ${staticHelpers} } = _Vue\n`)
-        }
-      }
-    }
-    genHoists(ast.hoists, context)
-    newline()
-    push(`return `)
+  if (mode === 'module') {
+    genModulePreamble(ast, context, genScopeId)
   } else {
-    // generate import statements for helpers
-    if (genScopeId) {
-      ast.helpers.push(WITH_SCOPE_ID)
-      if (ast.hoists.length) {
-        ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
-      }
-    }
-    if (hasHelpers) {
-      push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
-    }
-    if (ast.imports.length) {
-      genImports(ast.imports, context)
-      newline()
-    }
-    if (genScopeId) {
-      push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
-      newline()
-    }
-    genHoists(ast.hoists, context)
-    newline()
-    push(`export `)
+    genFunctionPreamble(ast, context)
   }
 
   // enter render function
@@ -313,6 +264,82 @@ export function generate(
     // SourceMapGenerator does have toJSON() method but it's not in the types
     map: context.map ? (context.map as any).toJSON() : undefined
   }
+}
+
+function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
+  const { mode, helper, prefixIdentifiers, push, newline } = context
+  const VueBinding = mode === 'function' ? `Vue` : `require("vue")`
+  // Generate const declaration for helpers
+  // In prefix mode, we place the const declaration at top so it's done
+  // only once; But if we not prefixing, we place the declaration inside the
+  // with block so it doesn't incur the `in` check cost for every helper access.
+  if (ast.helpers.length > 0) {
+    if (prefixIdentifiers) {
+      push(`const { ${ast.helpers.map(helper).join(', ')} } = ${VueBinding}\n`)
+    } else {
+      // "with" mode.
+      // save Vue in a separate variable to avoid collision
+      push(`const _Vue = ${VueBinding}\n`)
+      // in "with" mode, helpers are declared inside the with block to avoid
+      // has check cost, but hoists are lifted out of the function - we need
+      // to provide the helper here.
+      if (ast.hoists.length) {
+        const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
+          .filter(helper => ast.helpers.includes(helper))
+          .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
+          .join(', ')
+        push(`const { ${staticHelpers} } = _Vue\n`)
+      }
+    }
+  }
+  // generate variables for ssr helpers
+  if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
+    // ssr guaruntees prefixIdentifier: true
+    push(
+      `const { ${ast.ssrHelpers
+        .map(helper)
+        .join(', ')} } = require("@vue/server-renderer")\n`
+    )
+  }
+  genHoists(ast.hoists, context)
+  newline()
+  push(`return `)
+}
+
+function genModulePreamble(
+  ast: RootNode,
+  context: CodegenContext,
+  genScopeId: boolean
+) {
+  const { push, helper, newline, scopeId } = context
+  // generate import statements for helpers
+  if (genScopeId) {
+    ast.helpers.push(WITH_SCOPE_ID)
+    if (ast.hoists.length) {
+      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+    }
+  }
+  if (ast.helpers.length) {
+    push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
+  }
+  if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
+    push(
+      `import { ${ast.ssrHelpers
+        .map(helper)
+        .join(', ')} } from "@vue/server-renderer"\n`
+    )
+  }
+  if (ast.imports.length) {
+    genImports(ast.imports, context)
+    newline()
+  }
+  if (genScopeId) {
+    push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    newline()
+  }
+  genHoists(ast.hoists, context)
+  newline()
+  push(`export `)
 }
 
 function genAssets(

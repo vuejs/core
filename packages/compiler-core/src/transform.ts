@@ -115,6 +115,7 @@ function createTransformContext(
     nodeTransforms = [],
     directiveTransforms = {},
     isBuiltInComponent = NOOP,
+    ssr = false,
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -126,6 +127,7 @@ function createTransformContext(
     nodeTransforms,
     directiveTransforms,
     isBuiltInComponent,
+    ssr,
     onError,
 
     // state
@@ -256,10 +258,19 @@ export function transform(root: RootNode, options: TransformOptions) {
   if (options.hoistStatic) {
     hoistStatic(root, context)
   }
-  finalizeRoot(root, context)
+  if (!options.ssr) {
+    createRootCodegen(root, context)
+  }
+  // finalize meta information
+  root.helpers = [...context.helpers]
+  root.components = [...context.components]
+  root.directives = [...context.directives]
+  root.imports = [...context.imports]
+  root.hoists = context.hoists
+  root.cached = context.cached
 }
 
-function finalizeRoot(root: RootNode, context: TransformContext) {
+function createRootCodegen(root: RootNode, context: TransformContext) {
   const { helper } = context
   const { children } = root
   const child = children[0]
@@ -304,13 +315,6 @@ function finalizeRoot(root: RootNode, context: TransformContext) {
   } else {
     // no children = noop. codegen will return null.
   }
-  // finalize meta information
-  root.helpers = [...context.helpers]
-  root.components = [...context.components]
-  root.directives = [...context.directives]
-  root.imports = [...context.imports]
-  root.hoists = context.hoists
-  root.cached = context.cached
 }
 
 export function traverseChildren(
@@ -359,13 +363,17 @@ export function traverseNode(
 
   switch (node.type) {
     case NodeTypes.COMMENT:
-      // inject import for the Comment symbol, which is needed for creating
-      // comment nodes with `createVNode`
-      context.helper(CREATE_COMMENT)
+      if (!context.ssr) {
+        // inject import for the Comment symbol, which is needed for creating
+        // comment nodes with `createVNode`
+        context.helper(CREATE_COMMENT)
+      }
       break
     case NodeTypes.INTERPOLATION:
       // no need to traverse, but we need to inject toString helper
-      context.helper(TO_DISPLAY_STRING)
+      if (!context.ssr) {
+        context.helper(TO_DISPLAY_STRING)
+      }
       break
 
     // for container types, further traverse downwards

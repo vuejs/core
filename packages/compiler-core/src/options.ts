@@ -23,7 +23,6 @@ export interface ParserOptions {
   // this number is based on the map above, but it should be pre-computed
   // to avoid the cost on every parse() call.
   maxCRNameLength?: number
-
   onError?: (error: CompilerError) => void
 }
 
@@ -32,6 +31,8 @@ export interface TransformOptions {
   directiveTransforms?: { [name: string]: DirectiveTransform | undefined }
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
+  // If this option is false, the generated code will be wrapped in a
+  // `with (this) { ... }` block.
   // - This is force-enabled in module mode, since modules are by default strict
   //   and cannot use `with`
   // - Default: mode === 'module'
@@ -48,6 +49,7 @@ export interface TransformOptions {
   //   analysis to determine if a handler is safe to cache.
   // - Default: false
   cacheHandlers?: boolean
+  ssr?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -61,13 +63,6 @@ export interface CodegenOptions {
   //   `require('vue')`.
   // - Default: 'function'
   mode?: 'module' | 'function' | 'cjs'
-  // Prefix suitable identifiers with _ctx.
-  // If this option is false, the generated code will be wrapped in a
-  // `with (this) { ... }` block.
-  // - This is force-enabled in module mode, since modules are by default strict
-  //   and cannot use `with`
-  // - Default: mode === 'module'
-  prefixIdentifiers?: boolean
   // Generate source map?
   // - Default: false
   sourceMap?: boolean
@@ -76,7 +71,9 @@ export interface CodegenOptions {
   filename?: string
   // SFC scoped styles ID
   scopeId?: string | null
-  // generate SSR specific code?
+  // we need to know about this to generate proper preambles
+  prefixIdentifiers?: boolean
+  // generate ssr-specific code?
   ssr?: boolean
 }
 

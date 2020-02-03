@@ -34,13 +34,13 @@ describe('ssr: element', () => {
 
   test('v-text', () => {
     expect(getCompiledString(`<div v-text="foo"/>`)).toMatchInlineSnapshot(
-      `"\`<div>\${interpolate(_ctx.foo)}</div>\`"`
+      `"\`<div>\${_interpolate(_ctx.foo)}</div>\`"`
     )
   })
 
   test('<textarea> with dynamic value', () => {
     expect(getCompiledString(`<textarea :value="foo"/>`)).toMatchInlineSnapshot(
-      `"\`<textarea>\${interpolate(_ctx.foo)}</textarea>\`"`
+      `"\`<textarea>\${_interpolate(_ctx.foo)}</textarea>\`"`
     )
   })
 
