@@ -8,9 +8,12 @@ import {
   NodeTypes,
   TemplateChildNode,
   ElementTypes,
-  createBlockStatement
+  createBlockStatement,
+  CompilerOptions,
+  isText
 } from '@vue/compiler-dom'
-import { isString, escapeHtml } from '@vue/shared'
+import { isString, escapeHtml, NO } from '@vue/shared'
+import { INTERPOLATE } from './runtimeHelpers'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -18,10 +21,11 @@ import { isString, escapeHtml } from '@vue/shared'
 // transform pass to convert the template AST into a fresh JS AST before
 // passing it to codegen.
 
-export function ssrCodegenTransform(ast: RootNode) {
-  const context = createSSRTransformContext()
+export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
+  const context = createSSRTransformContext(options)
 
-  const isFragment = ast.children.length > 1
+  const isFragment =
+    ast.children.length > 1 && !ast.children.every(c => isText(c))
   if (isFragment) {
     context.pushStringPart(`<!---->`)
   }
@@ -35,12 +39,13 @@ export function ssrCodegenTransform(ast: RootNode) {
 
 type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 
-function createSSRTransformContext() {
+function createSSRTransformContext(options: CompilerOptions) {
   const body: BlockStatement['body'] = []
   let currentCall: CallExpression | null = null
   let currentString: TemplateLiteral | null = null
 
   return {
+    options,
     body,
     pushStringPart(part: TemplateLiteral['elements'][0]) {
       if (!currentCall) {
@@ -66,6 +71,7 @@ function processChildren(
   children: TemplateChildNode[],
   context: SSRTransformContext
 ) {
+  const isVoidTag = context.options.isVoidTag || NO
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.type === NodeTypes.ELEMENT) {
@@ -77,8 +83,11 @@ function processChildren(
         if (child.children.length) {
           processChildren(child.children, context)
         }
-        // push closing tag
-        context.pushStringPart(`</${child.tag}>`)
+
+        if (!isVoidTag(child.tag)) {
+          // push closing tag
+          context.pushStringPart(`</${child.tag}>`)
+        }
       } else if (child.tagType === ElementTypes.COMPONENT) {
         // TODO
       } else if (child.tagType === ElementTypes.SLOT) {
@@ -86,6 +95,8 @@ function processChildren(
       }
     } else if (child.type === NodeTypes.TEXT) {
       context.pushStringPart(escapeHtml(child.content))
+    } else if (child.type === NodeTypes.INTERPOLATION) {
+      context.pushStringPart(createCallExpression(INTERPOLATE, [child.content]))
     } else if (child.type === NodeTypes.IF) {
       // TODO
     } else if (child.type === NodeTypes.FOR) {

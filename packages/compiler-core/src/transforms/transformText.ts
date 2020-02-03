@@ -1,21 +1,14 @@
 import { NodeTransform } from '../transform'
 import {
   NodeTypes,
-  TemplateChildNode,
-  TextNode,
-  InterpolationNode,
   CompoundExpressionNode,
   createCallExpression,
   CallExpression,
   ElementTypes
 } from '../ast'
+import { isText } from '../utils'
 import { CREATE_TEXT } from '../runtimeHelpers'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
-
-const isText = (
-  node: TemplateChildNode
-): node is TextNode | InterpolationNode =>
-  node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 
 // Merge adjacent text nodes and expressions into a single expression
 // e.g. <div>abc {{ d }} {{ e }}</div> should have a single expression node as child.

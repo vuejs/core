@@ -22,10 +22,13 @@ export function compile(
   template: string,
   options: SSRCompilerOptions = {}
 ): CodegenResult {
-  const ast = baseParse(template, {
+  // apply DOM-specific parsing options
+  options = {
     ...parserOptions,
     ...options
-  })
+  }
+
+  const ast = baseParse(template, options)
 
   transform(ast, {
     ...options,
@@ -52,7 +55,7 @@ export function compile(
 
   // traverse the template AST and convert into SSR codegen AST
   // by replacing ast.codegenNode.
-  ssrCodegenTransform(ast)
+  ssrCodegenTransform(ast, options)
 
   return generate(ast, {
     mode: 'cjs',

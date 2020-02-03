@@ -22,7 +22,9 @@ import {
   SlotOutletCodegenNode,
   ComponentCodegenNode,
   ExpressionNode,
-  IfBranchNode
+  IfBranchNode,
+  TextNode,
+  InterpolationNode
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
@@ -213,6 +215,12 @@ export function createBlockExpression(
   ])
 }
 
+export function isText(
+  node: TemplateChildNode
+): node is TextNode | InterpolationNode {
+  return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
+}
+
 export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
   return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
 }
@@ -257,10 +265,11 @@ export function injectProp(
     // check existing key to avoid overriding user provided keys
     if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
       const propKeyName = prop.key.content
-      alreadyExists = props.properties.some(p => (
-        p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-        p.key.content === propKeyName
-      ))
+      alreadyExists = props.properties.some(
+        p =>
+          p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+          p.key.content === propKeyName
+      )
     }
     if (!alreadyExists) {
       props.properties.unshift(prop)
