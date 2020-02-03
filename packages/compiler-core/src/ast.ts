@@ -329,7 +329,7 @@ export interface IfStatement extends Node {
   type: NodeTypes.JS_IF_STATEMENT
   test: ExpressionNode
   consequent: BlockStatement
-  alternate: IfStatement | BlockStatement
+  alternate: IfStatement | BlockStatement | undefined
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -671,12 +671,36 @@ export function createCacheExpression(
   }
 }
 
+export function createBlockStatement(
+  body: BlockStatement['body']
+): BlockStatement {
+  return {
+    type: NodeTypes.JS_BLOCK_STATEMENT,
+    body,
+    loc: locStub
+  }
+}
+
 export function createTemplateLiteral(
   elements: TemplateLiteral['elements']
 ): TemplateLiteral {
   return {
     type: NodeTypes.JS_TEMPLATE_LITERAL,
     elements,
+    loc: locStub
+  }
+}
+
+export function createIfStatement(
+  test: IfStatement['test'],
+  consequent: IfStatement['consequent'],
+  alternate?: IfStatement['alternate']
+): IfStatement {
+  return {
+    type: NodeTypes.JS_IF_STATEMENT,
+    test,
+    consequent,
+    alternate,
     loc: locStub
   }
 }

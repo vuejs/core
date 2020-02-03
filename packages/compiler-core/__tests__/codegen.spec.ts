@@ -14,7 +14,10 @@ import {
   createConditionalExpression,
   IfCodegenNode,
   ForCodegenNode,
-  createCacheExpression
+  createCacheExpression,
+  createTemplateLiteral,
+  createBlockStatement,
+  createIfStatement
 } from '../src'
 import {
   CREATE_VNODE,
@@ -406,5 +409,134 @@ describe('compiler: codegen', () => {
     `.trim()
     )
     expect(code).toMatchSnapshot()
+  })
+
+  test('TemplateLiteral', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createCallExpression(`_push`, [
+          createTemplateLiteral([
+            `foo`,
+            createCallExpression(`_renderAttr`, ['id', 'foo']),
+            `bar`
+          ])
+        ])
+      }),
+      { ssr: true, mode: 'module' }
+    )
+    expect(code).toMatchInlineSnapshot(`
+      "
+      export function ssrRender(_ctx, _push, _parent) {
+        _push(\`foo\${_renderAttr(id, foo)}bar\`)
+      }"
+    `)
+  })
+
+  describe('IfStatement', () => {
+    test('if', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`ok`)])
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            ok()
+          }
+        }"
+      `)
+    })
+
+    test('if/else', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createBlockStatement([createCallExpression('bar')])
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else {
+            bar()
+          }
+        }"
+      `)
+    })
+
+    test('if/else-if', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createIfStatement(
+                createSimpleExpression('bar', false),
+                createBlockStatement([createCallExpression(`bar`)])
+              )
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else if (bar) {
+            bar()
+          }
+        }"
+      `)
+    })
+
+    test('if/else-if/else', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createIfStatement(
+                createSimpleExpression('bar', false),
+                createBlockStatement([createCallExpression(`bar`)]),
+                createBlockStatement([createCallExpression('baz')])
+              )
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else if (bar) {
+            bar()
+          } else {
+            baz()
+          }
+        }"
+      `)
+    })
   })
 })

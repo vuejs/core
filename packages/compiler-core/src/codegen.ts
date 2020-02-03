@@ -20,7 +20,8 @@ import {
   CacheExpression,
   locStub,
   SSRCodegenNode,
-  TemplateLiteral
+  TemplateLiteral,
+  IfStatement
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -489,7 +490,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       !__BROWSER__ && genTemplateLiteral(node, context)
       break
     case NodeTypes.JS_IF_STATEMENT:
-      // TODO
+      !__BROWSER__ && genIfStatement(node, context)
       break
 
     /* istanbul ignore next */
@@ -730,4 +731,28 @@ function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
     }
   }
   push('`')
+}
+
+function genIfStatement(node: IfStatement, context: CodegenContext) {
+  const { push, indent, deindent } = context
+  const { test, consequent, alternate } = node
+  push(`if (`)
+  genNode(test, context)
+  push(`) {`)
+  indent()
+  genNode(consequent, context)
+  deindent()
+  push(`}`)
+  if (alternate) {
+    push(` else `)
+    if (alternate.type === NodeTypes.JS_IF_STATEMENT) {
+      genIfStatement(alternate, context)
+    } else {
+      push(`{`)
+      indent()
+      genNode(alternate, context)
+      deindent()
+      push(`}`)
+    }
+  }
 }
