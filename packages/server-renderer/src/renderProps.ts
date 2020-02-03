@@ -1,4 +1,4 @@
-import { escapeHtml } from './ssrUtils'
+import { escapeHtml } from '@vue/shared'
 import {
   normalizeClass,
   normalizeStyle,

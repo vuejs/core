@@ -22,7 +22,7 @@ import {
   isVoidTag
 } from '@vue/shared'
 import { renderProps } from './renderProps'
-import { escapeHtml } from './ssrUtils'
+import { escapeHtml } from '@vue/shared'
 
 const {
   isVNode,

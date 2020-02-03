@@ -5,7 +5,7 @@ import {
   TemplateLiteral,
   createTemplateLiteral
 } from '@vue/compiler-dom'
-import { escapeHtml } from '@vue/server-renderer'
+import { escapeHtml } from '@vue/shared'
 
 /*
 ## Simple Element

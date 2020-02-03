@@ -10,7 +10,7 @@ import {
   ElementTypes,
   createBlockStatement
 } from '@vue/compiler-dom'
-import { isString } from '@vue/shared'
+import { isString, escapeHtml } from '@vue/shared'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -85,7 +85,7 @@ function processChildren(
         // TODO
       }
     } else if (child.type === NodeTypes.TEXT) {
-      // TODO
+      context.pushStringPart(escapeHtml(child.content))
     } else if (child.type === NodeTypes.IF) {
       // TODO
     } else if (child.type === NodeTypes.FOR) {
