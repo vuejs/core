@@ -439,4 +439,13 @@ describe('api: watch', () => {
       oldValue: 2
     })
   })
+
+  // #683
+  it('watching undefined', async () => {
+    let dummy = null
+    const r = ref(undefined)
+    watch(r, v => (dummy = v))
+    await nextTick()
+    expect(dummy).toBe(undefined)
+  })
 })

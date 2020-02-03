@@ -153,7 +153,8 @@ function doWatch(
     }
   }
 
-  let oldValue = isArray(source) ? [] : undefined
+  const watchDefaultSymbol = (Symbol('watchDefault') as unknown) as undefined // Unique symbol for default, see #683
+  let oldValue = isArray(source) ? [] : watchDefaultSymbol
   const applyCb = cb
     ? () => {
         if (instance && instance.isUnmounted) {
@@ -161,6 +162,9 @@ function doWatch(
         }
         const newValue = runner()
         if (deep || hasChanged(newValue, oldValue)) {
+          if (oldValue === watchDefaultSymbol) {
+            oldValue = undefined
+          }
           // cleanup before running cb again
           if (cleanup) {
             cleanup()
