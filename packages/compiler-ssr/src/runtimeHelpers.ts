@@ -5,7 +5,8 @@ export const SSR_RENDER_COMPONENT = Symbol(`renderComponent`)
 export const SSR_RENDER_SLOT = Symbol(`renderSlot`)
 export const SSR_RENDER_CLASS = Symbol(`renderClass`)
 export const SSR_RENDER_STYLE = Symbol(`renderStyle`)
-export const SSR_RENDER_PROPS = Symbol(`renderProps`)
+export const SSR_RENDER_ATTRS = Symbol(`renderAttrs`)
+export const SSR_RENDER_ATTR = Symbol(`renderAttr`)
 export const SSR_RENDER_LIST = Symbol(`renderList`)
 
 // Note: these are helpers imported from @vue/server-renderer
@@ -16,6 +17,7 @@ registerRuntimeHelpers({
   [SSR_RENDER_SLOT]: `_renderSlot`,
   [SSR_RENDER_CLASS]: `_renderClass`,
   [SSR_RENDER_STYLE]: `_renderStyle`,
-  [SSR_RENDER_PROPS]: `_renderProps`,
+  [SSR_RENDER_ATTRS]: `renderAttrs`,
+  [SSR_RENDER_ATTR]: `renderAttr`,
   [SSR_RENDER_LIST]: `_renderList`
 })

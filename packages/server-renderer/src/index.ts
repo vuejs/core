@@ -1,7 +1,7 @@
 // public
 export { renderToString } from './renderToString'
 
-// internal
+// internal runtime helpers
 export {
   renderComponent as _renderComponent,
   renderSlot as _renderSlot
@@ -9,12 +9,7 @@ export {
 export {
   renderClass as _renderClass,
   renderStyle as _renderStyle,
-  renderProps as _renderProps
-} from './renderProps'
-
-// utils
-import { escapeHtml, toDisplayString } from '@vue/shared'
-
-export function _interpolate(value: unknown): string {
-  return escapeHtml(toDisplayString(value))
-}
+  renderAttrs as _renderAttrs
+} from './helpers/renderAttrs'
+export { interpolate as _interpolate } from './helpers/interpolate'
+export { renderList as _renderList } from './helpers/renderList'

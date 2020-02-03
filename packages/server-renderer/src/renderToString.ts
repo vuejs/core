@@ -19,10 +19,10 @@ import {
   isPromise,
   isArray,
   isFunction,
-  isVoidTag
+  isVoidTag,
+  escapeHtml
 } from '@vue/shared'
-import { renderProps } from './renderProps'
-import { escapeHtml } from '@vue/shared'
+import { renderAttrs } from './helpers/renderAttrs'
 
 const {
   isVNode,
@@ -213,7 +213,7 @@ function renderElement(
   // TODO directives
 
   if (props !== null) {
-    openTag += renderProps(props, tag)
+    openTag += renderAttrs(props, tag)
   }
 
   if (scopeId !== null) {

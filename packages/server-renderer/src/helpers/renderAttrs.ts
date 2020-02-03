@@ -14,7 +14,7 @@ import {
 
 const shouldIgnoreProp = makeMap(`key,ref,innerHTML,textContent`)
 
-export function renderProps(
+export function renderAttrs(
   props: Record<string, unknown>,
   tag?: string
 ): string {
@@ -32,21 +32,28 @@ export function renderProps(
       ret += ` class="${renderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${renderStyle(value)}"`
-    } else if (value != null) {
-      const attrKey =
-        tag && tag.indexOf('-') > 0
-          ? key // preserve raw name on custom elements
-          : propsToAttrMap[key] || key.toLowerCase()
-      if (isBooleanAttr(attrKey)) {
-        if (value !== false) {
-          ret += ` ${attrKey}`
-        }
-      } else if (isSSRSafeAttrName(attrKey)) {
-        ret += ` ${attrKey}="${escapeHtml(value)}"`
-      }
+    } else {
+      ret += renderAttr(key, value, tag)
     }
   }
   return ret
+}
+
+export function renderAttr(key: string, value: unknown, tag?: string): string {
+  if (value == null) {
+    return ``
+  }
+  const attrKey =
+    tag && tag.indexOf('-') > 0
+      ? key // preserve raw name on custom elements
+      : propsToAttrMap[key] || key.toLowerCase()
+  if (isBooleanAttr(attrKey)) {
+    return value === false ? `` : ` ${attrKey}`
+  } else if (isSSRSafeAttrName(attrKey)) {
+    return ` ${attrKey}="${escapeHtml(value)}"`
+  } else {
+    return ``
+  }
 }
 
 export function renderClass(raw: unknown): string {
