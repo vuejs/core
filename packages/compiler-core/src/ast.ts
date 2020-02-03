@@ -229,6 +229,7 @@ export interface ForNode extends Node {
   valueAlias: ExpressionNode | undefined
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
+  parseResult: ForParseResult
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
 }
@@ -619,7 +620,7 @@ export function createCallExpression<T extends CallExpression['callee']>(
 
 export function createFunctionExpression(
   params: FunctionExpression['params'],
-  returns: FunctionExpression['returns'],
+  returns: FunctionExpression['returns'] = undefined,
   newline: boolean = false,
   isSlot: boolean = false,
   loc: SourceLocation = locStub

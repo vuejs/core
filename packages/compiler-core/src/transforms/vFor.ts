@@ -45,7 +45,7 @@ export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper } = context
-    return processForNode(node, dir, context, (forNode, parseResult) => {
+    return processForNode(node, dir, context, forNode => {
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
       const renderExp = createCallExpression(helper(RENDER_LIST), [
@@ -122,7 +122,7 @@ export const transformFor = createStructuralDirectiveTransform(
 
         renderExp.arguments.push(
           createFunctionExpression(
-            createForLoopParams(parseResult),
+            createForLoopParams(forNode.parseResult),
             childBlock,
             true /* force newline */
           )
@@ -137,10 +137,7 @@ export function processForNode(
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext,
-  processCodegen?: (
-    forNode: ForNode,
-    parseResult: ForParseResult
-  ) => (() => void) | undefined
+  processCodegen?: (forNode: ForNode) => (() => void) | undefined
 ) {
   if (!dir.exp) {
     context.onError(
@@ -173,6 +170,7 @@ export function processForNode(
     valueAlias: value,
     keyAlias: key,
     objectIndexAlias: index,
+    parseResult,
     children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
   }
 
@@ -188,7 +186,7 @@ export function processForNode(
     index && addIdentifiers(index)
   }
 
-  const onExit = processCodegen && processCodegen(forNode, parseResult)
+  const onExit = processCodegen && processCodegen(forNode)
 
   return () => {
     scopes.vFor--

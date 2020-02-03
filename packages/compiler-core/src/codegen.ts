@@ -439,8 +439,12 @@ function genNodeList(
       genNode(node, context)
     }
     if (i < nodes.length - 1) {
-      comma && push(',')
-      multilines && newline()
+      if (multilines) {
+        comma && push(',')
+        newline()
+      } else {
+        comma && push(', ')
+      }
     }
   }
 }
