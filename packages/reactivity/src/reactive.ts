@@ -76,7 +76,6 @@ export function readonly<T extends object>(
   )
 }
 
-// @internal
 // Return a reactive-copy of the original object, where only the root level
 // properties are readonly, and does NOT unwrap refs nor recursively convert
 // returned properties.
