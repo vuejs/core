@@ -425,7 +425,8 @@ function genNodeListAsArray(
 function genNodeList(
   nodes: (string | symbol | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
-  multilines: boolean = false
+  multilines: boolean = false,
+  comma: boolean = true
 ) {
   const { push, newline } = context
   for (let i = 0; i < nodes.length; i++) {
@@ -438,12 +439,8 @@ function genNodeList(
       genNode(node, context)
     }
     if (i < nodes.length - 1) {
-      if (multilines) {
-        push(',')
-        newline()
-      } else {
-        push(', ')
-      }
+      comma && push(',')
+      multilines && newline()
     }
   }
 }
@@ -511,7 +508,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
 
     // SSR only types
     case NodeTypes.JS_BLOCK_STATEMENT:
-      !__BROWSER__ && genNodeList(node.body, context, true)
+      !__BROWSER__ && genNodeList(node.body, context, true, false)
       break
     case NodeTypes.JS_TEMPLATE_LITERAL:
       !__BROWSER__ && genTemplateLiteral(node, context)
