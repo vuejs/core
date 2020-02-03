@@ -1,4 +1,4 @@
-import { registerRuntimeHelpers } from '@vue/compiler-core'
+import { registerRuntimeHelpers } from '@vue/compiler-dom'
 
 export const INTERPOLATE = Symbol(`interpolate`)
 
