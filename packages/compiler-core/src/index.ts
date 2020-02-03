@@ -32,7 +32,11 @@ export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
 
 // exported for compiler-ssr
-export { transformExpression } from './transforms/transformExpression'
+export { processIfBranches } from './transforms/vIf'
+export {
+  transformExpression,
+  processExpression
+} from './transforms/transformExpression'
 export { trackVForSlotScopes, trackSlotScopes } from './transforms/vSlot'
 export { buildProps } from './transforms/transformElement'
 

@@ -12,7 +12,8 @@ import {
   SimpleExpressionNode,
   SequenceExpression,
   ConditionalExpression,
-  CallExpression
+  CallExpression,
+  IfCodegenNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -43,7 +44,7 @@ function parseWithIfTransform(
   }
   return {
     root: ast,
-    node: ast.children[returnIndex] as IfNode
+    node: ast.children[returnIndex] as IfNode & { codegenNode: IfCodegenNode }
   }
 }
 

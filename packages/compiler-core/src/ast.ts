@@ -102,7 +102,7 @@ export interface RootNode extends Node {
   hoists: JSChildNode[]
   imports: ImportItem[]
   cached: number
-  codegenNode: TemplateChildNode | JSChildNode | BlockStatement | undefined
+  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
 }
 
 export type ElementNode =
@@ -213,7 +213,7 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  codegenNode: IfCodegenNode
+  codegenNode?: IfCodegenNode
 }
 
 export interface IfBranchNode extends Node {
@@ -229,7 +229,7 @@ export interface ForNode extends Node {
   keyAlias: ExpressionNode | undefined
   objectIndexAlias: ExpressionNode | undefined
   children: TemplateChildNode[]
-  codegenNode: ForCodegenNode
+  codegenNode?: ForCodegenNode
 }
 
 export interface TextCallNode extends Node {

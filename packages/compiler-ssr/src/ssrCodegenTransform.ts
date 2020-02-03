@@ -1,7 +1,6 @@
 import {
   RootNode,
   BlockStatement,
-  CallExpression,
   TemplateLiteral,
   createCallExpression,
   createTemplateLiteral,
@@ -10,10 +9,13 @@ import {
   ElementTypes,
   createBlockStatement,
   CompilerOptions,
-  isText
+  isText,
+  IfStatement,
+  CallExpression
 } from '@vue/compiler-dom'
 import { isString, escapeHtml, NO } from '@vue/shared'
 import { INTERPOLATE } from './runtimeHelpers'
+import { processIf } from './transforms/ssrVIf'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -37,22 +39,19 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   ast.codegenNode = createBlockStatement(context.body)
 }
 
-type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
+export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 
-function createSSRTransformContext(options: CompilerOptions) {
+export function createSSRTransformContext(options: CompilerOptions) {
   const body: BlockStatement['body'] = []
-  let currentCall: CallExpression | null = null
   let currentString: TemplateLiteral | null = null
 
   return {
     options,
     body,
     pushStringPart(part: TemplateLiteral['elements'][0]) {
-      if (!currentCall) {
-        currentCall = createCallExpression(`_push`)
-        body.push(currentCall)
-      }
       if (!currentString) {
+        const currentCall = createCallExpression(`_push`)
+        body.push(currentCall)
         currentString = createTemplateLiteral([])
         currentCall.arguments.push(currentString)
       }
@@ -63,11 +62,16 @@ function createSSRTransformContext(options: CompilerOptions) {
       } else {
         bufferedElements.push(part)
       }
+    },
+    pushStatement(statement: IfStatement | CallExpression) {
+      // close current string
+      currentString = null
+      body.push(statement)
     }
   }
 }
 
-function processChildren(
+export function processChildren(
   children: TemplateChildNode[],
   context: SSRTransformContext
 ) {
@@ -98,7 +102,7 @@ function processChildren(
     } else if (child.type === NodeTypes.INTERPOLATION) {
       context.pushStringPart(createCallExpression(INTERPOLATE, [child.content]))
     } else if (child.type === NodeTypes.IF) {
-      // TODO
+      processIf(child, context)
     } else if (child.type === NodeTypes.FOR) {
       // TODO
     }

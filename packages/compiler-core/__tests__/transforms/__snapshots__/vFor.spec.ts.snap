@@ -155,7 +155,7 @@ exports[`compiler: v-for codegen v-if + v-for 1`] = `
 
 return function render() {
   with (this) {
-    const { openBlock: _openBlock, renderList: _renderList, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
     
     return (_openBlock(), ok
       ? _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {

@@ -1,6 +1,6 @@
 import { getCompiledString } from './utils'
 
-describe('text', () => {
+describe('ssr: text', () => {
   test('static text', () => {
     expect(getCompiledString(`foo`)).toMatchInlineSnapshot(`"\`foo\`"`)
   })

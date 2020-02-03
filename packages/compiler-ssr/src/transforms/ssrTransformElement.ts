@@ -8,33 +8,6 @@ import {
 } from '@vue/compiler-dom'
 import { escapeHtml } from '@vue/shared'
 
-/*
-## Simple Element
-
-``` html
-<div></div>
-```
-``` js
-return function render(_ctx, _push, _parent) {
-  _push(`<div></div>`)
-}
-```
-
-## Consecutive Elements
-
-``` html
-<div>
-  <span></span>
-</div>
-<div></div>
-```
-``` js
-return function render(_ctx, _push, _parent) {
-  _push(`<div><span></span></div><div></div>`)
-}
-```
-*/
-
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&

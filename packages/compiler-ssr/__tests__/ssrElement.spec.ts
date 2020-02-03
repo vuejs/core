@@ -1,6 +1,6 @@
 import { getCompiledString } from './utils'
 
-describe('element', () => {
+describe('ssr: element', () => {
   test('basic elements', () => {
     expect(getCompiledString(`<div></div>`)).toMatchInlineSnapshot(
       `"\`<div></div>\`"`
