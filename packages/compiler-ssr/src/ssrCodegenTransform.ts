@@ -5,10 +5,10 @@ import {
   TemplateLiteral,
   createCallExpression,
   createTemplateLiteral,
-  locStub,
   NodeTypes,
   TemplateChildNode,
-  ElementTypes
+  ElementTypes,
+  createBlockStatement
 } from '@vue/compiler-dom'
 import { isString } from '@vue/shared'
 
@@ -30,11 +30,7 @@ export function ssrCodegenTransform(ast: RootNode) {
     context.pushStringPart(`<!---->`)
   }
 
-  ast.codegenNode = {
-    type: NodeTypes.JS_BLOCK_STATEMENT,
-    loc: locStub,
-    body: context.body
-  }
+  ast.codegenNode = createBlockStatement(context.body)
 }
 
 type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
