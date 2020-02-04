@@ -1,10 +1,12 @@
 import {
   renderAttrs,
   renderClass,
-  renderStyle
+  renderStyle,
+  renderAttr
 } from '../src/helpers/renderAttrs'
+import { escapeHtml } from '@vue/shared'
 
-describe('ssr: renderProps', () => {
+describe('ssr: renderAttrs', () => {
   test('ignore reserved props', () => {
     expect(
       renderAttrs({
@@ -69,6 +71,23 @@ describe('ssr: renderProps', () => {
         'my-el'
       )
     ).toBe(` fooBar="ok"`)
+  })
+})
+
+describe('ssr: renderAttr', () => {
+  test('basic', () => {
+    expect(renderAttr('foo', 'bar')).toBe(` foo="bar"`)
+  })
+
+  test('null and undefined', () => {
+    expect(renderAttr('foo', null)).toBe(``)
+    expect(renderAttr('foo', undefined)).toBe(``)
+  })
+
+  test('escape', () => {
+    expect(renderAttr('foo', '<script>')).toBe(
+      ` foo="${escapeHtml(`<script>`)}"`
+    )
   })
 })
 
