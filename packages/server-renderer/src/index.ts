@@ -9,7 +9,8 @@ export {
 export {
   renderClass as _renderClass,
   renderStyle as _renderStyle,
-  renderAttrs as _renderAttrs
+  renderAttrs as _renderAttrs,
+  renderAttr as _renderAttr
 } from './helpers/renderAttrs'
 export { interpolate as _interpolate } from './helpers/interpolate'
 export { renderList as _renderList } from './helpers/renderList'
