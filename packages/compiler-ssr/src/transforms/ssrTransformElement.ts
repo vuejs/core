@@ -35,6 +35,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       )
 
       if (hasDynamicVBind) {
+        // TODO
       }
 
       for (let i = 0; i < node.props.length; i++) {
@@ -64,7 +65,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             if (directiveTransform) {
               const { props } = directiveTransform(prop, node, context)
               for (let j = 0; j < props.length; j++) {
-                const { key, value } = props[i]
+                const { key, value } = props[j]
                 openTag.push(
                   createCallExpression(context.helper(SSR_RENDER_ATTR), [
                     key,
