@@ -5,7 +5,8 @@ import {
   createCallExpression,
   createFunctionExpression,
   createForLoopParams,
-  createBlockStatement
+  createBlockStatement,
+  NodeTypes
 } from '@vue/compiler-dom'
 import {
   SSRTransformContext,
@@ -23,16 +24,28 @@ export const ssrTransformFor = createStructuralDirectiveTransform(
 // This is called during the 2nd transform pass to construct the SSR-sepcific
 // codegen nodes.
 export function processFor(node: ForNode, context: SSRTransformContext) {
+  const childContext = createChildContext(context)
+  const needFragmentWrapper =
+    node.children.length !== 1 || node.children[0].type !== NodeTypes.ELEMENT
+  if (needFragmentWrapper) {
+    childContext.pushStringPart(`<!---->`)
+  }
+  processChildren(node.children, childContext)
+  if (needFragmentWrapper) {
+    childContext.pushStringPart(`<!---->`)
+  }
   const renderLoop = createFunctionExpression(
     createForLoopParams(node.parseResult)
   )
-  const childContext = createChildContext(context)
-  processChildren(node.children, childContext)
   renderLoop.body = createBlockStatement(childContext.body)
+
+  // v-for always renders a fragment
+  context.pushStringPart(`<!---->`)
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_LIST), [
       node.source,
       renderLoop
     ])
   )
+  context.pushStringPart(`<!---->`)
 }

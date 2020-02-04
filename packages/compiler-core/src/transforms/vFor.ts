@@ -20,7 +20,8 @@ import {
   SlotOutletNode,
   ElementNode,
   DirectiveNode,
-  ForNode
+  ForNode,
+  PlainElementNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -70,6 +71,9 @@ export const transformFor = createStructuralDirectiveTransform(
         // finish the codegen now that all children have been traversed
         let childBlock
         const isTemplate = isTemplateNode(node)
+        const { children } = forNode
+        const needFragmentWrapper =
+          children.length > 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
           ? node
           : isTemplate &&
@@ -94,8 +98,8 @@ export const transformFor = createStructuralDirectiveTransform(
             // the props for renderSlot is passed as the 3rd argument.
             injectProp(childBlock, keyProperty, context)
           }
-        } else if (isTemplate) {
-          // <template v-for="...">
+        } else if (needFragmentWrapper) {
+          // <template v-for="..."> with text or multi-elements
           // should generate a fragment block for each loop
           childBlock = createBlockExpression(
             createCallExpression(helper(CREATE_BLOCK), [
@@ -111,7 +115,8 @@ export const transformFor = createStructuralDirectiveTransform(
         } else {
           // Normal element v-for. Directly use the child's codegenNode
           // arguments, but replace createVNode() with createBlock()
-          let codegenNode = node.codegenNode as ElementCodegenNode
+          let codegenNode = (children[0] as PlainElementNode)
+            .codegenNode as ElementCodegenNode
           if (codegenNode.callee === WITH_DIRECTIVES) {
             codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
           } else {

@@ -59,15 +59,15 @@ function processIfBranch(
   context: SSRTransformContext
 ): BlockStatement {
   const { children } = branch
-  const firstChild = children[0]
-  // TODO optimize away nested fragments when the only child is a ForNode
   const needFragmentWrapper =
-    children.length !== 1 || firstChild.type !== NodeTypes.ELEMENT
+    (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
+    // optimize away nested fragments when the only child is a ForNode
+    !(children.length === 1 && children[0].type === NodeTypes.FOR)
   const childContext = createChildContext(context)
   if (needFragmentWrapper) {
     childContext.pushStringPart(`<!---->`)
   }
-  processChildren(branch.children, childContext)
+  processChildren(children, childContext)
   if (needFragmentWrapper) {
     childContext.pushStringPart(`<!---->`)
   }
