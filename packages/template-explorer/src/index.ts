@@ -1,6 +1,7 @@
 import * as m from 'monaco-editor'
-import { compile, CompilerError } from '@vue/compiler-dom'
-import { compilerOptions, initOptions } from './options'
+import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
+import { compile as ssrCompile } from '@vue/compiler-ssr'
+import { compilerOptions, initOptions, ssrMode } from './options'
 import { watch } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
 
@@ -12,14 +13,21 @@ declare global {
   }
 }
 
+interface PersistedState {
+  src: string
+  ssr: boolean
+  options: CompilerOptions
+}
+
 window.init = () => {
   const monaco = window.monaco
-  const persistedState = JSON.parse(
+  const persistedState: PersistedState = JSON.parse(
     decodeURIComponent(window.location.hash.slice(1)) ||
       localStorage.getItem('state') ||
       `{}`
   )
 
+  ssrMode.value = persistedState.ssr
   Object.assign(compilerOptions, persistedState.options)
 
   let lastSuccessfulCode: string = `/* See console for error */`
@@ -28,7 +36,8 @@ window.init = () => {
     console.clear()
     try {
       const errors: CompilerError[] = []
-      const { code, ast, map } = compile(source, {
+      const compileFn = ssrMode.value ? ssrCompile : compile
+      const { code, ast, map } = compileFn(source, {
         filename: 'template.vue',
         ...compilerOptions,
         sourceMap: true,
@@ -69,8 +78,9 @@ window.init = () => {
     // every time we re-compile, persist current state
     const state = JSON.stringify({
       src,
+      ssr: ssrMode.value,
       options: compilerOptions
-    })
+    } as PersistedState)
     localStorage.setItem('state', state)
     window.location.hash = encodeURIComponent(state)
     const res = compileCode(src)

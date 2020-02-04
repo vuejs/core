@@ -1,5 +1,7 @@
-import { h, reactive, createApp } from '@vue/runtime-dom'
+import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
+
+export const ssrMode = ref(false)
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
@@ -12,8 +14,11 @@ export const compilerOptions: CompilerOptions = reactive({
 const App = {
   setup() {
     return () => {
+      const isSSR = ssrMode.value
+      const isModule = compilerOptions.mode === 'module'
       const usePrefix =
         compilerOptions.prefixIdentifiers || compilerOptions.mode === 'module'
+
       return [
         h('h1', `Vue 3 Template Explorer`),
         h(
@@ -24,6 +29,7 @@ const App = {
           },
           `@${__COMMIT__}`
         ),
+
         h('div', { id: 'options' }, [
           // mode selection
           h('span', { class: 'options-group' }, [
@@ -32,7 +38,7 @@ const App = {
               type: 'radio',
               id: 'mode-module',
               name: 'mode',
-              checked: compilerOptions.mode === 'module',
+              checked: isModule,
               onChange() {
                 compilerOptions.mode = 'module'
               }
@@ -42,7 +48,7 @@ const App = {
               type: 'radio',
               id: 'mode-function',
               name: 'mode',
-              checked: compilerOptions.mode === 'function',
+              checked: !isModule,
               onChange() {
                 compilerOptions.mode = 'function'
               }
@@ -50,16 +56,27 @@ const App = {
             h('label', { for: 'mode-function' }, 'function')
           ]),
 
+          // SSR
+          h('input', {
+            type: 'checkbox',
+            id: 'ssr',
+            name: 'ssr',
+            checked: ssrMode.value,
+            onChange(e: Event) {
+              ssrMode.value = (e.target as HTMLInputElement).checked
+            }
+          }),
+          h('label', { for: 'ssr' }, 'SSR'),
+
           // toggle prefixIdentifiers
           h('input', {
             type: 'checkbox',
             id: 'prefix',
-            disabled: compilerOptions.mode === 'module',
-            checked: usePrefix,
+            disabled: isModule || isSSR,
+            checked: usePrefix || isSSR,
             onChange(e: Event) {
               compilerOptions.prefixIdentifiers =
-                (<HTMLInputElement>e.target).checked ||
-                compilerOptions.mode === 'module'
+                (e.target as HTMLInputElement).checked || isModule
             }
           }),
           h('label', { for: 'prefix' }, 'prefixIdentifiers'),
@@ -68,9 +85,10 @@ const App = {
           h('input', {
             type: 'checkbox',
             id: 'hoist',
-            checked: compilerOptions.hoistStatic,
+            checked: compilerOptions.hoistStatic && !isSSR,
+            disabled: isSSR,
             onChange(e: Event) {
-              compilerOptions.hoistStatic = (<HTMLInputElement>e.target).checked
+              compilerOptions.hoistStatic = (e.target as HTMLInputElement).checked
             }
           }),
           h('label', { for: 'hoist' }, 'hoistStatic'),
@@ -79,12 +97,10 @@ const App = {
           h('input', {
             type: 'checkbox',
             id: 'cache',
-            checked: usePrefix && compilerOptions.cacheHandlers,
-            disabled: !usePrefix,
+            checked: usePrefix && compilerOptions.cacheHandlers && !isSSR,
+            disabled: !usePrefix || isSSR,
             onChange(e: Event) {
-              compilerOptions.cacheHandlers = (<HTMLInputElement>(
-                e.target
-              )).checked
+              compilerOptions.cacheHandlers = (e.target as HTMLInputElement).checked
             }
           }),
           h('label', { for: 'cache' }, 'cacheHandlers'),
@@ -93,13 +109,11 @@ const App = {
           h('input', {
             type: 'checkbox',
             id: 'scope-id',
-            disabled: compilerOptions.mode !== 'module',
-            checked:
-              compilerOptions.mode === 'module' && compilerOptions.scopeId,
+            disabled: !isModule,
+            checked: isModule && compilerOptions.scopeId,
             onChange(e: Event) {
               compilerOptions.scopeId =
-                compilerOptions.mode === 'module' &&
-                (<HTMLInputElement>e.target).checked
+                isModule && (e.target as HTMLInputElement).checked
                   ? 'scope-id'
                   : null
             }
