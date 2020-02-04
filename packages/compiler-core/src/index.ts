@@ -31,6 +31,7 @@ export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
 // expose transforms so higher-order compilers can import and extend them
 export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
+export { transformBind } from './transforms/vBind'
 
 // exported for compiler-ssr
 export { processIfBranches } from './transforms/vIf'

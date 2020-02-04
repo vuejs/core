@@ -10,12 +10,6 @@ describe('ssr: element', () => {
     )
   })
 
-  test('static attrs', () => {
-    expect(
-      getCompiledString(`<div id="foo" class="bar"></div>`)
-    ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\" class=\\"bar\\"></div>\`"`)
-  })
-
   test('nested elements', () => {
     expect(
       getCompiledString(`<div><span></span><span></span></div>`)
@@ -26,27 +20,71 @@ describe('ssr: element', () => {
     expect(getCompiledString(`<input>`)).toMatchInlineSnapshot(`"\`<input>\`"`)
   })
 
-  test('v-html', () => {
-    expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(
-      `"\`<div>\${_ctx.foo}</div>\`"`
-    )
+  describe('children override', () => {
+    test('v-html', () => {
+      expect(getCompiledString(`<div v-html="foo"/>`)).toMatchInlineSnapshot(
+        `"\`<div>\${_ctx.foo}</div>\`"`
+      )
+    })
+
+    test('v-text', () => {
+      expect(getCompiledString(`<div v-text="foo"/>`)).toMatchInlineSnapshot(
+        `"\`<div>\${_interpolate(_ctx.foo)}</div>\`"`
+      )
+    })
+
+    test('<textarea> with dynamic value', () => {
+      expect(
+        getCompiledString(`<textarea :value="foo"/>`)
+      ).toMatchInlineSnapshot(
+        `"\`<textarea>\${_interpolate(_ctx.foo)}</textarea>\`"`
+      )
+    })
+
+    test('<textarea> with static value', () => {
+      expect(
+        getCompiledString(`<textarea value="fo&gt;o"/>`)
+      ).toMatchInlineSnapshot(`"\`<textarea>fo&gt;o</textarea>\`"`)
+    })
   })
 
-  test('v-text', () => {
-    expect(getCompiledString(`<div v-text="foo"/>`)).toMatchInlineSnapshot(
-      `"\`<div>\${_interpolate(_ctx.foo)}</div>\`"`
-    )
-  })
+  describe('attrs', () => {
+    test('static attrs', () => {
+      expect(
+        getCompiledString(`<div id="foo" class="bar"></div>`)
+      ).toMatchInlineSnapshot(`"\`<div id=\\"foo\\" class=\\"bar\\"></div>\`"`)
+    })
 
-  test('<textarea> with dynamic value', () => {
-    expect(getCompiledString(`<textarea :value="foo"/>`)).toMatchInlineSnapshot(
-      `"\`<textarea>\${_interpolate(_ctx.foo)}</textarea>\`"`
-    )
-  })
+    test('v-bind:class', () => {
+      expect(
+        getCompiledString(`<div id="foo" :class="bar"></div>`)
+      ).toMatchInlineSnapshot(
+        `"\`<div id=\\"foo\\"\${_renderClass(_ctx.bar)}></div>\`"`
+      )
+    })
 
-  test('<textarea> with static value', () => {
-    expect(
-      getCompiledString(`<textarea value="fo&gt;o"/>`)
-    ).toMatchInlineSnapshot(`"\`<textarea>fo&gt;o</textarea>\`"`)
+    test('v-bind:style', () => {
+      expect(
+        getCompiledString(`<div id="foo" :style="bar"></div>`)
+      ).toMatchInlineSnapshot(
+        `"\`<div id=\\"foo\\"\${_renderStyle(_ctx.bar)}></div>\`"`
+      )
+    })
+
+    test('v-bind:key (boolean)', () => {
+      expect(
+        getCompiledString(`<input type="checkbox" :checked="checked">`)
+      ).toMatchInlineSnapshot(
+        `"\`<input type=\\"checkbox\\"\${(_ctx.checked)? \\" checked\\": \\"\\"}>\`"`
+      )
+    })
+
+    test('v-bind:key (non-boolean)', () => {
+      expect(
+        getCompiledString(`<div :id="id" class="bar"></div>`)
+      ).toMatchInlineSnapshot(
+        `"\`<div\${_renderAttr(\\"id\\", _ctx.id)} class=\\"bar\\"></div>\`"`
+      )
+    })
   })
 })

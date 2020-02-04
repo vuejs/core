@@ -8,7 +8,8 @@ import {
   transformExpression,
   trackVForSlotScopes,
   trackSlotScopes,
-  noopDirectiveTransform
+  noopDirectiveTransform,
+  transformBind
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -16,9 +17,8 @@ import { ssrTransformComponent } from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrTransformIf } from './transforms/ssrVIf'
 import { ssrTransformFor } from './transforms/ssrVFor'
-import { ssrVBind } from './transforms/ssrVBind'
-import { ssrVModel } from './transforms/ssrVModel'
-import { ssrVShow } from './transforms/ssrVShow'
+import { ssrTransformModel } from './transforms/ssrVModel'
+import { ssrTransformShow } from './transforms/ssrVShow'
 
 export function compile(
   template: string,
@@ -54,9 +54,9 @@ export function compile(
     ssrDirectiveTransforms: {
       on: noopDirectiveTransform,
       cloak: noopDirectiveTransform,
-      bind: ssrVBind,
-      model: ssrVModel,
-      show: ssrVShow,
+      bind: transformBind, // reusing core v-bind
+      model: ssrTransformModel,
+      show: ssrTransformShow,
       ...(options.ssrDirectiveTransforms || {}) // user transforms
     }
   })

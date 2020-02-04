@@ -301,9 +301,10 @@ export interface SequenceExpression extends Node {
 
 export interface ConditionalExpression extends Node {
   type: NodeTypes.JS_CONDITIONAL_EXPRESSION
-  test: ExpressionNode
+  test: JSChildNode
   consequent: JSChildNode
   alternate: JSChildNode
+  newline: boolean
 }
 
 export interface CacheExpression extends Node {
@@ -648,13 +649,15 @@ export function createSequenceExpression(
 export function createConditionalExpression(
   test: ConditionalExpression['test'],
   consequent: ConditionalExpression['consequent'],
-  alternate: ConditionalExpression['alternate']
+  alternate: ConditionalExpression['alternate'],
+  newline = true
 ): ConditionalExpression {
   return {
     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
     test,
     consequent,
     alternate,
+    newline,
     loc: locStub
   }
 }

@@ -33,13 +33,18 @@ export function renderAttrs(
     } else if (key === 'style') {
       ret += ` style="${renderStyle(value)}"`
     } else {
-      ret += renderAttr(key, value, tag)
+      ret += renderDynamicAttr(key, value, tag)
     }
   }
   return ret
 }
 
-export function renderAttr(key: string, value: unknown, tag?: string): string {
+// render an attr with dynamic (unknown) key.
+export function renderDynamicAttr(
+  key: string,
+  value: unknown,
+  tag?: string
+): string {
   if (value == null) {
     return ``
   }
@@ -54,6 +59,15 @@ export function renderAttr(key: string, value: unknown, tag?: string): string {
   } else {
     return ``
   }
+}
+
+// Render a v-bind attr with static key. The key is pre-processed at compile
+// time and we only need to check and escape value.
+export function renderAttr(key: string, value: unknown): string {
+  if (value == null) {
+    return ``
+  }
+  return ` ${key}="${escapeHtml(value)}"`
 }
 
 export function renderClass(raw: unknown): string {

@@ -45,7 +45,11 @@ describe('ssr: v-for', () => {
         _renderList(_ctx.list, (row, i) => {
           _push(\`<div><!---->\`)
           _renderList(row, (j) => {
-            _push(\`<div>\${_interpolate(i)},\${_interpolate(j)}</div>\`)
+            _push(\`<div>\${
+              _interpolate(i)
+            },\${
+              _interpolate(j)
+            }</div>\`)
           })
           _push(\`<!----></div>\`)
         })
@@ -97,7 +101,11 @@ describe('ssr: v-for', () => {
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
         _renderList(_ctx.list, (i) => {
-          _push(\`<!----><span>\${_interpolate(i)}</span><span>\${_interpolate(i + 1)}</span><!---->\`)
+          _push(\`<!----><span>\${
+            _interpolate(i)
+          }</span><span>\${
+            _interpolate(i + 1)
+          }</span><!---->\`)
         })
         _push(\`<!---->\`)
       }"

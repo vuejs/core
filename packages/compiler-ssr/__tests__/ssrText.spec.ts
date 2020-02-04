@@ -38,7 +38,11 @@ describe('ssr: text', () => {
       "const { _interpolate } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div><span>\${_interpolate(_ctx.foo)} bar</span><span>baz \${_interpolate(_ctx.qux)}</span></div>\`)
+        _push(\`<div><span>\${
+          _interpolate(_ctx.foo)
+        } bar</span><span>baz \${
+          _interpolate(_ctx.qux)
+        }</span></div>\`)
       }"
     `)
   })

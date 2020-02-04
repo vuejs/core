@@ -5,11 +5,18 @@ import {
   TemplateLiteral,
   createTemplateLiteral,
   createInterpolation,
-  createCallExpression
+  createCallExpression,
+  createConditionalExpression,
+  createSimpleExpression
 } from '@vue/compiler-dom'
-import { escapeHtml } from '@vue/shared'
+import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
-import { SSR_RENDER_ATTR } from '../runtimeHelpers'
+import {
+  SSR_RENDER_ATTR,
+  SSR_RENDER_CLASS,
+  SSR_RENDER_STYLE,
+  SSR_RENDER_DYNAMIC_ATTR
+} from '../runtimeHelpers'
 
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
@@ -66,12 +73,58 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               const { props } = directiveTransform(prop, node, context)
               for (let j = 0; j < props.length; j++) {
                 const { key, value } = props[j]
-                openTag.push(
-                  createCallExpression(context.helper(SSR_RENDER_ATTR), [
-                    key,
-                    value
-                  ])
-                )
+                if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+                  const attrName = key.content
+                  // static key attr
+                  if (attrName === 'class') {
+                    openTag.push(
+                      createCallExpression(context.helper(SSR_RENDER_CLASS), [
+                        value
+                      ])
+                    )
+                  } else if (attrName === 'style') {
+                    openTag.push(
+                      createCallExpression(context.helper(SSR_RENDER_STYLE), [
+                        value
+                      ])
+                    )
+                  } else if (isBooleanAttr(attrName)) {
+                    openTag.push(
+                      createConditionalExpression(
+                        value,
+                        createSimpleExpression(' ' + attrName, true),
+                        createSimpleExpression('', true),
+                        false /* no newline */
+                      )
+                    )
+                  } else {
+                    if (isSSRSafeAttrName(attrName)) {
+                      openTag.push(
+                        createCallExpression(context.helper(SSR_RENDER_ATTR), [
+                          key,
+                          value
+                        ])
+                      )
+                    } else {
+                      context.onError(
+                        createSSRCompilerError(
+                          SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME,
+                          key.loc
+                        )
+                      )
+                    }
+                  }
+                } else {
+                  // dynamic key attr
+                  // this branch is only encountered for custom directive
+                  // transforms that returns properties with dynamic keys
+                  openTag.push(
+                    createCallExpression(
+                      context.helper(SSR_RENDER_DYNAMIC_ATTR),
+                      [key, value]
+                    )
+                  )
+                }
               }
             } else {
               // no corresponding ssr directive transform found.

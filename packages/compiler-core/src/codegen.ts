@@ -685,7 +685,7 @@ function genConditionalExpression(
   node: ConditionalExpression,
   context: CodegenContext
 ) {
-  const { test, consequent, alternate } = node
+  const { test, consequent, alternate, newline: needNewline } = node
   const { push, indent, deindent, newline } = context
   if (test.type === NodeTypes.SIMPLE_EXPRESSION) {
     const needsParens = !isSimpleIdentifier(test.content)
@@ -694,15 +694,15 @@ function genConditionalExpression(
     needsParens && push(`)`)
   } else {
     push(`(`)
-    genCompoundExpression(test, context)
+    genNode(test, context)
     push(`)`)
   }
-  indent()
+  needNewline && indent()
   context.indentLevel++
   push(`? `)
   genNode(consequent, context)
   context.indentLevel--
-  newline()
+  needNewline && newline()
   push(`: `)
   const isNested = alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
   if (!isNested) {
@@ -712,7 +712,7 @@ function genConditionalExpression(
   if (!isNested) {
     context.indentLevel--
   }
-  deindent(true /* without newline */)
+  needNewline && deindent(true /* without newline */)
 }
 
 function genSequenceExpression(
@@ -748,15 +748,17 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
 function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
   const { push, indent, deindent } = context
   push('`')
-  for (let i = 0; i < node.elements.length; i++) {
+  const l = node.elements.length
+  const multilines = l > 3
+  for (let i = 0; i < l; i++) {
     const e = node.elements[i]
     if (isString(e)) {
       push(e.replace(/`/g, '\\`'))
     } else {
       push('${')
-      indent()
+      if (multilines) indent()
       genNode(e, context)
-      deindent()
+      if (multilines) deindent()
       push('}')
     }
   }

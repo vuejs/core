@@ -7,6 +7,7 @@ export const SSR_RENDER_CLASS = Symbol(`renderClass`)
 export const SSR_RENDER_STYLE = Symbol(`renderStyle`)
 export const SSR_RENDER_ATTRS = Symbol(`renderAttrs`)
 export const SSR_RENDER_ATTR = Symbol(`renderAttr`)
+export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`renderDynamicAttr`)
 export const SSR_RENDER_LIST = Symbol(`renderList`)
 
 // Note: these are helpers imported from @vue/server-renderer
@@ -19,5 +20,6 @@ registerRuntimeHelpers({
   [SSR_RENDER_STYLE]: `_renderStyle`,
   [SSR_RENDER_ATTRS]: `_renderAttrs`,
   [SSR_RENDER_ATTR]: `_renderAttr`,
+  [SSR_RENDER_DYNAMIC_ATTR]: `_renderDynamicAttr`,
   [SSR_RENDER_LIST]: `_renderList`
 })
