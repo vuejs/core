@@ -12,7 +12,7 @@ const builtInSymbols = new Set(
 )
 
 const get = /*#__PURE__*/ createGetter()
-const shallowGet = /*#__PURE__*/ createGetter(false, true)
+const shallowReactiveGet = /*#__PURE__*/ createGetter(false, true)
 const readonlyGet = /*#__PURE__*/ createGetter(true)
 const shallowReadonlyGet = /*#__PURE__*/ createGetter(true, true)
 
@@ -55,7 +55,7 @@ function createGetter(isReadonly = false, shallow = false) {
 }
 
 const set = /*#__PURE__*/ createSetter()
-const shallowSet = /*#__PURE__*/ createSetter(false, true)
+const shallowReactiveSet = /*#__PURE__*/ createSetter(false, true)
 const readonlySet = /*#__PURE__*/ createSetter(true)
 const shallowReadonlySet = /*#__PURE__*/ createSetter(true, true)
 
@@ -167,13 +167,10 @@ export const readonlyHandlers: ProxyHandler<object> = {
   }
 }
 
-// Props handlers are special in the sense that it should not unwrap top-level
-// refs (in order to allow refs to be explicitly passed down), but should
-// retain the reactivity of the normal reactive object.
-export const shallowHandlers: ProxyHandler<object> = {
+export const shallowReactiveHandlers: ProxyHandler<object> = {
   ...mutableHandlers,
-  get: shallowGet,
-  set: shallowSet
+  get: shallowReactiveGet,
+  set: shallowReactiveSet
 }
 
 // Props handlers are special in the sense that it should not unwrap top-level

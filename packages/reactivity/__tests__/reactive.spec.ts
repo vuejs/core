@@ -4,7 +4,7 @@ import {
   isReactive,
   toRaw,
   markNonReactive,
-  shallow
+  shallowReactive
 } from '../src/reactive'
 import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
@@ -219,14 +219,14 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  describe('shallow', () => {
+  describe('shallowReactive', () => {
     test('should not make non-reactive properties reactive', () => {
-      const props = shallow({ n: { foo: 1 } })
+      const props = shallowReactive({ n: { foo: 1 } })
       expect(isReactive(props.n)).toBe(false)
     })
 
     test('should keep reactive properties reactive', () => {
-      const props: any = shallow({ n: reactive({ foo: 1 }) })
+      const props: any = shallowReactive({ n: reactive({ foo: 1 }) })
       props.n = reactive({ foo: 2 })
       expect(isReactive(props.n)).toBe(true)
     })

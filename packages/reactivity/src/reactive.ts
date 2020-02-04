@@ -3,7 +3,7 @@ import {
   mutableHandlers,
   readonlyHandlers,
   shallowReadonlyHandlers,
-  shallowHandlers
+  shallowReactiveHandlers
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
@@ -95,12 +95,12 @@ export function shallowReadonly<T extends object>(
 // Return a reactive-copy of the original object, where only the root level
 // properties are reactive, and does NOT unwrap refs nor recursively convert
 // returned properties.
-export function shallow<T extends object>(target: T): T {
+export function shallowReactive<T extends object>(target: T): T {
   return createReactiveObject(
     target,
     rawToReactive,
     reactiveToRaw,
-    shallowHandlers,
+    shallowReactiveHandlers,
     mutableCollectionHandlers
   )
 }
