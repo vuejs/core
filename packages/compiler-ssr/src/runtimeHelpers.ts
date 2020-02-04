@@ -17,7 +17,7 @@ registerRuntimeHelpers({
   [SSR_RENDER_SLOT]: `_renderSlot`,
   [SSR_RENDER_CLASS]: `_renderClass`,
   [SSR_RENDER_STYLE]: `_renderStyle`,
-  [SSR_RENDER_ATTRS]: `renderAttrs`,
-  [SSR_RENDER_ATTR]: `renderAttr`,
+  [SSR_RENDER_ATTRS]: `_renderAttrs`,
+  [SSR_RENDER_ATTR]: `_renderAttr`,
   [SSR_RENDER_LIST]: `_renderList`
 })
