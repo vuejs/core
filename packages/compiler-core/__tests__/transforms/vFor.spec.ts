@@ -13,7 +13,8 @@ import {
   ElementNode,
   InterpolationNode,
   CallExpression,
-  SequenceExpression
+  SequenceExpression,
+  ForCodegenNode
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -48,7 +49,7 @@ function parseWithForTransform(
   })
   return {
     root: ast,
-    node: ast.children[0] as ForNode
+    node: ast.children[0] as ForNode & { codegenNode: ForCodegenNode }
   }
 }
 

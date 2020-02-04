@@ -235,6 +235,7 @@ describe('compiler: codegen', () => {
           keyAlias: undefined,
           objectIndexAlias: undefined,
           children: [],
+          parseResult: {} as any,
           codegenNode: createSequenceExpression([
             createSimpleExpression('foo', false),
             createSimpleExpression('bar', false)
