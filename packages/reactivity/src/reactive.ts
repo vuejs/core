@@ -2,7 +2,8 @@ import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
-  shallowReadonlyHandlers
+  shallowReadonlyHandlers,
+  shallowReactiveHandlers
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
@@ -75,7 +76,6 @@ export function readonly<T extends object>(
   )
 }
 
-// @internal
 // Return a reactive-copy of the original object, where only the root level
 // properties are readonly, and does NOT unwrap refs nor recursively convert
 // returned properties.
@@ -89,6 +89,19 @@ export function shallowReadonly<T extends object>(
     readonlyToRaw,
     shallowReadonlyHandlers,
     readonlyCollectionHandlers
+  )
+}
+
+// Return a reactive-copy of the original object, where only the root level
+// properties are reactive, and does NOT unwrap refs nor recursively convert
+// returned properties.
+export function shallowReactive<T extends object>(target: T): T {
+  return createReactiveObject(
+    target,
+    rawToReactive,
+    reactiveToRaw,
+    shallowReactiveHandlers,
+    mutableCollectionHandlers
   )
 }
 

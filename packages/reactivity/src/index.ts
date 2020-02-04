@@ -2,6 +2,7 @@ export { ref, isRef, toRefs, Ref, UnwrapRef } from './ref'
 export {
   reactive,
   isReactive,
+  shallowReactive,
   readonly,
   isReadonly,
   shallowReadonly,
