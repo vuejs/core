@@ -73,6 +73,13 @@ h1 { color: red }
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
   })
 
+  test('handle empty nodes with src attribute', () => {
+    const { descriptor } = parse(`<script src="com"/>`)
+    expect(descriptor.script).toBeTruthy()
+    expect(descriptor.script!.content).toBeFalsy()
+    expect(descriptor.script!.attrs['src']).toBe('com')
+  })
+
   test('nested templates', () => {
     const content = `
     <template v-if="ok">ok</template>
