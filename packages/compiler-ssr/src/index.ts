@@ -9,7 +9,8 @@ import {
   trackVForSlotScopes,
   trackSlotScopes,
   noopDirectiveTransform,
-  transformBind
+  transformBind,
+  transformStyle
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -49,15 +50,20 @@ export function compile(
       ssrTransformElement,
       ssrTransformComponent,
       trackSlotScopes,
+      transformStyle,
       ...(options.nodeTransforms || []) // user transforms
     ],
-    ssrDirectiveTransforms: {
-      on: noopDirectiveTransform,
-      cloak: noopDirectiveTransform,
-      bind: transformBind, // reusing core v-bind
+    directiveTransforms: {
+      // reusing core v-bind
+      bind: transformBind,
+      // model and show has dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
-      ...(options.ssrDirectiveTransforms || {}) // user transforms
+      // the following are ignored during SSR
+      on: noopDirectiveTransform,
+      cloak: noopDirectiveTransform,
+      once: noopDirectiveTransform,
+      ...(options.directiveTransforms || {}) // user transforms
     }
   })
 

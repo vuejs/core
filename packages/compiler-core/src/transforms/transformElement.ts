@@ -233,7 +233,8 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props
+  props: ElementNode['props'] = node.props,
+  ssr = false
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
@@ -320,9 +321,15 @@ export function buildProps(
         continue
       }
 
-      // special case for v-bind and v-on with no argument
       const isBind = name === 'bind'
       const isOn = name === 'on'
+
+      // skip v-on in SSR compilation
+      if (ssr && isOn) {
+        continue
+      }
+
+      // special case for v-bind and v-on with no argument
       if (!arg && (isBind || isOn)) {
         hasDynamicKeys = true
         if (exp) {
@@ -360,7 +367,7 @@ export function buildProps(
       if (directiveTransform) {
         // has built-in directive transform.
         const { props, needRuntime } = directiveTransform(prop, node, context)
-        props.forEach(analyzePatchFlag)
+        !ssr && props.forEach(analyzePatchFlag)
         properties.push(...props)
         if (needRuntime) {
           runtimeDirectives.push(prop)
@@ -446,12 +453,7 @@ function dedupeProperties(properties: Property[]): Property[] {
     const name = prop.key.content
     const existing = knownProps.get(name)
     if (existing) {
-      if (
-        name === 'style' ||
-        name === 'class' ||
-        name.startsWith('on') ||
-        name.startsWith('vnode')
-      ) {
+      if (name === 'style' || name === 'class' || name.startsWith('on')) {
         mergeAsArray(existing, prop)
       }
       // unexpected duplicate, should have emitted error during parse

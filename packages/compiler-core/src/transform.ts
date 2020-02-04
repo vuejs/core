@@ -114,7 +114,6 @@ function createTransformContext(
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
-    ssrDirectiveTransforms = {},
     isBuiltInComponent = NOOP,
     ssr = false,
     onError = defaultOnError
@@ -127,7 +126,6 @@ function createTransformContext(
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
-    ssrDirectiveTransforms,
     isBuiltInComponent,
     ssr,
     onError,
