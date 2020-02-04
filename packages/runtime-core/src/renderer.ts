@@ -970,6 +970,7 @@ export function createRenderer<
     setupRenderEffect(
       instance,
       parentSuspense,
+      parentComponent,
       initialVNode,
       container,
       anchor,
@@ -984,6 +985,7 @@ export function createRenderer<
   function setupRenderEffect(
     instance: ComponentInternalInstance,
     parentSuspense: HostSuspenseBoundary | null,
+    parentComponent: ComponentInternalInstance | null,
     initialVNode: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
@@ -993,15 +995,28 @@ export function createRenderer<
     instance.update = effect(function componentEffect() {
       if (!instance.isMounted) {
         const subTree = (instance.subTree = renderComponentRoot(instance))
+        const { props } = instance.vnode
         // beforeMount hook
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
+        }
+        if (props && props.onVnodeBeforeMount != null) {
+          invokeDirectiveHook(
+            props.onVnodeBeforeMount,
+            parentComponent,
+            subTree
+          )
         }
         patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
         initialVNode.el = subTree.el
         // mounted hook
         if (instance.m !== null) {
           queuePostRenderEffect(instance.m, parentSuspense)
+        }
+        if (props && props.onVnodeMounted != null) {
+          queuePostRenderEffect(() => {
+            invokeDirectiveHook(props.onVnodeMounted!, parentComponent, subTree)
+          }, parentSuspense)
         }
         // activated hook for keep-alive roots.
         if (
@@ -1016,6 +1031,7 @@ export function createRenderer<
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: HostVNode)
         const { next } = instance
+        const { props } = instance.vnode
 
         if (__DEV__) {
           pushWarningContext(next || instance.vnode)
@@ -1030,6 +1046,14 @@ export function createRenderer<
         // beforeUpdate hook
         if (instance.bu !== null) {
           invokeHooks(instance.bu)
+        }
+        if (props && props.onVnodeBeforeUpdate != null) {
+          invokeDirectiveHook(
+            props.onVnodeBeforeUpdate,
+            parentComponent,
+            nextTree,
+            prevTree
+          )
         }
         // reset refs
         // only needed if previous patch had refs
@@ -1057,6 +1081,16 @@ export function createRenderer<
         // updated hook
         if (instance.u !== null) {
           queuePostRenderEffect(instance.u, parentSuspense)
+        }
+        if (props && props.onVnodeUpdated != null) {
+          queuePostRenderEffect(() => {
+            invokeDirectiveHook(
+              props.onVnodeUpdated!,
+              parentComponent,
+              nextTree,
+              prevTree
+            )
+          }, parentSuspense)
         }
 
         if (__DEV__) {
@@ -1539,7 +1573,12 @@ export function createRenderer<
       if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
         ;(parentComponent!.sink as KeepAliveSink).deactivate(vnode)
       } else {
-        unmountComponent(vnode.component!, parentSuspense, doRemove)
+        unmountComponent(
+          vnode.component!,
+          parentSuspense,
+          parentComponent,
+          doRemove
+        )
       }
       return
     }
@@ -1621,16 +1660,30 @@ export function createRenderer<
   function unmountComponent(
     instance: ComponentInternalInstance,
     parentSuspense: HostSuspenseBoundary | null,
+    parentComponent: ComponentInternalInstance | null,
     doRemove?: boolean
   ) {
     if (__HMR__ && instance.type.__hmrId != null) {
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const {
+      bum,
+      effects,
+      update,
+      subTree,
+      um,
+      da,
+      isDeactivated,
+      vnode
+    } = instance
+    const { props } = vnode
     // beforeUnmount hook
     if (bum !== null) {
       invokeHooks(bum)
+    }
+    if (props && props.onVnodeBeforeUnmount != null) {
+      invokeDirectiveHook(props.onVnodeBeforeUnmount, parentComponent, subTree)
     }
     if (effects !== null) {
       for (let i = 0; i < effects.length; i++) {
@@ -1646,6 +1699,11 @@ export function createRenderer<
     // unmounted hook
     if (um !== null) {
       queuePostRenderEffect(um, parentSuspense)
+    }
+    if (props && props.onVnodeUnmounted != null) {
+      queuePostRenderEffect(() => {
+        invokeDirectiveHook(props.onVnodeUnmounted!, parentComponent, subTree)
+      }, parentSuspense)
     }
     // deactivated hook
     if (
