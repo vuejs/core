@@ -25,7 +25,6 @@ export function compile(
   options: CompilerOptions = {}
 ): CodegenResult {
   options = {
-    mode: 'cjs',
     ...options,
     // apply DOM-specific parsing options
     ...parserOptions,

@@ -60,10 +60,8 @@ export interface CodegenOptions {
   // - Function mode will generate a single `const { helpers... } = Vue`
   //   statement and return the render function. It is meant to be used with
   //   `new Function(code)()` to generate a render function at runtime.
-  // - CommonJS mode is like function mode except it retrives helpers from
-  //   `require('vue')`.
   // - Default: 'function'
-  mode?: 'module' | 'function' | 'cjs'
+  mode?: 'module' | 'function'
   // Generate source map?
   // - Default: false
   sourceMap?: boolean

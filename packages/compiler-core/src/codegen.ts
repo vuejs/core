@@ -267,8 +267,8 @@ export function generate(
 }
 
 function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
-  const { mode, helper, prefixIdentifiers, push, newline } = context
-  const VueBinding = mode === 'function' ? `Vue` : `require("vue")`
+  const { ssr, helper, prefixIdentifiers, push, newline } = context
+  const VueBinding = ssr ? `require("vue")` : `Vue`
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
@@ -746,7 +746,7 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
 }
 
 function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
-  const { push } = context
+  const { push, indent, deindent } = context
   push('`')
   for (let i = 0; i < node.elements.length; i++) {
     const e = node.elements[i]
@@ -754,7 +754,9 @@ function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
       push(e.replace(/`/g, '\\`'))
     } else {
       push('${')
+      indent()
       genNode(e, context)
+      deindent()
       push('}')
     }
   }
