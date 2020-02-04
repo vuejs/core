@@ -26,6 +26,7 @@ export {
 export * from './ast'
 export * from './utils'
 export { registerRuntimeHelpers } from './runtimeHelpers'
+export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
 
 // expose transforms so higher-order compilers can import and extend them
 export { transformModel } from './transforms/vModel'

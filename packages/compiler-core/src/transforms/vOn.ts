@@ -99,8 +99,7 @@ export const transformOn: DirectiveTransform = (
         eventName,
         exp || createSimpleExpression(`() => {}`, false, loc)
       )
-    ],
-    needRuntime: false
+    ]
   }
 
   // apply extended compiler augmentor

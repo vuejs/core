@@ -101,5 +101,5 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 }
 
 function createTransformProps(props: Property[] = []) {
-  return { props, needRuntime: false }
+  return { props }
 }

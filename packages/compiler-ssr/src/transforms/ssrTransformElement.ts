@@ -4,9 +4,12 @@ import {
   ElementTypes,
   TemplateLiteral,
   createTemplateLiteral,
-  createInterpolation
+  createInterpolation,
+  createCallExpression
 } from '@vue/compiler-dom'
 import { escapeHtml } from '@vue/shared'
+import { createSSRCompilerError, SSRErrorCodes } from '../errors'
+import { SSR_RENDER_ATTR } from '../runtimeHelpers'
 
 export const ssrTransformElement: NodeTransform = (node, context) => {
   if (
@@ -19,10 +22,25 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       const openTag: TemplateLiteral['elements'] = [`<${node.tag}`]
       let rawChildren
 
+      // v-bind="obj" or v-bind:[key] can potentially overwrite other static
+      // attrs and can affect final rendering result, so when they are present
+      // we need to bail out to full `renderAttrs`
+      const hasDynamicVBind = node.props.some(
+        p =>
+          p.type === NodeTypes.DIRECTIVE &&
+          p.name === 'bind' &&
+          (!p.arg || // v-bind="obj"
+          p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
+            !p.arg.isStatic) // v-bind:[foo]
+      )
+
+      if (hasDynamicVBind) {
+      }
+
       for (let i = 0; i < node.props.length; i++) {
         const prop = node.props[i]
+        // special cases with children override
         if (prop.type === NodeTypes.DIRECTIVE) {
-          // special cases with children override
           if (prop.name === 'html' && prop.exp) {
             node.children = []
             rawChildren = prop.exp
@@ -40,13 +58,28 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           ) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
             // TODO handle <textrea> with dynamic v-bind
-          } else {
-            const directiveTransform = context.directiveTransforms[prop.name]
+          } else if (!hasDynamicVBind) {
+            // Directive transforms.
+            const directiveTransform = context.ssrDirectiveTransforms[prop.name]
             if (directiveTransform) {
-              // TODO directive transforms
+              const { props } = directiveTransform(prop, node, context)
+              for (let j = 0; j < props.length; j++) {
+                const { key, value } = props[i]
+                openTag.push(
+                  createCallExpression(context.helper(SSR_RENDER_ATTR), [
+                    key,
+                    value
+                  ])
+                )
+              }
             } else {
               // no corresponding ssr directive transform found.
-              // TODO emit error
+              context.onError(
+                createSSRCompilerError(
+                  SSRErrorCodes.X_SSR_CUSTOM_DIRECTIVE_NO_TRANSFORM,
+                  prop.loc
+                )
+              )
             }
           }
         } else {
@@ -54,7 +87,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (node.tag === 'textarea' && prop.name === 'value' && prop.value) {
             node.children = []
             rawChildren = escapeHtml(prop.value.content)
-          } else {
+          } else if (!hasDynamicVBind) {
             // static prop
             openTag.push(
               ` ${prop.name}` +

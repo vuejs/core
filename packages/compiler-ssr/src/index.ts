@@ -7,20 +7,22 @@ import {
   CompilerOptions,
   transformExpression,
   trackVForSlotScopes,
-  trackSlotScopes
+  trackSlotScopes,
+  noopDirectiveTransform
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
-import { ssrTransformIf } from './transforms/ssrVIf'
-import { ssrTransformFor } from './transforms/ssrVFor'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
 import { ssrTransformComponent } from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
-
-export interface SSRCompilerOptions extends CompilerOptions {}
+import { ssrTransformIf } from './transforms/ssrVIf'
+import { ssrTransformFor } from './transforms/ssrVFor'
+import { ssrVBind } from './transforms/ssrVBind'
+import { ssrVModel } from './transforms/ssrVModel'
+import { ssrVShow } from './transforms/ssrVShow'
 
 export function compile(
   template: string,
-  options: SSRCompilerOptions = {}
+  options: CompilerOptions = {}
 ): CodegenResult {
   options = {
     mode: 'cjs',
@@ -50,9 +52,13 @@ export function compile(
       trackSlotScopes,
       ...(options.nodeTransforms || []) // user transforms
     ],
-    directiveTransforms: {
-      // TODO server-side directive transforms
-      ...(options.directiveTransforms || {}) // user transforms
+    ssrDirectiveTransforms: {
+      on: noopDirectiveTransform,
+      cloak: noopDirectiveTransform,
+      bind: ssrVBind,
+      model: ssrVModel,
+      show: ssrVShow,
+      ...(options.ssrDirectiveTransforms || {}) // user transforms
     }
   })
 

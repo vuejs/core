@@ -28,7 +28,8 @@ export const enum DOMErrorCodes {
   X_V_MODEL_ON_INVALID_ELEMENT,
   X_V_MODEL_ARG_ON_ELEMENT,
   X_V_MODEL_ON_FILE_INPUT_ELEMENT,
-  X_V_SHOW_NO_EXPRESSION
+  X_V_SHOW_NO_EXPRESSION,
+  __EXTEND_POINT__
 }
 
 export const DOMErrorMessages: { [code: number]: string } = {

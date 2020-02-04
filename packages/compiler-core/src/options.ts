@@ -28,7 +28,8 @@ export interface ParserOptions {
 
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform | undefined }
+  directiveTransforms?: Record<string, DirectiveTransform | undefined>
+  ssrDirectiveTransforms?: Record<string, DirectiveTransform | undefined>
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
   // If this option is false, the generated code will be wrapped in a

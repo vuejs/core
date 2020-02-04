@@ -5,12 +5,12 @@ import {
   CodegenResult,
   isBuiltInType,
   ParserOptions,
-  RootNode
+  RootNode,
+  noopDirectiveTransform
 } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
 import { transformStyle } from './transforms/transformStyle'
-import { transformCloak } from './transforms/vCloak'
 import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
 import { transformModel } from './transforms/vModel'
@@ -31,7 +31,7 @@ export function compile(
     ...options,
     nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
     directiveTransforms: {
-      cloak: transformCloak,
+      cloak: noopDirectiveTransform,
       html: transformVHtml,
       text: transformVText,
       model: transformModel, // override compiler-core
@@ -56,4 +56,5 @@ export function parse(template: string, options: ParserOptions = {}): RootNode {
   })
 }
 
+export { DOMErrorCodes } from './errors'
 export * from '@vue/compiler-core'

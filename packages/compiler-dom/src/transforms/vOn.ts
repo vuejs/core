@@ -102,8 +102,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     return {
-      props: [createObjectProperty(key, handlerExp)],
-      needRuntime: false
+      props: [createObjectProperty(key, handlerExp)]
     }
   })
 }
