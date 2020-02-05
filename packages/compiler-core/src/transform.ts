@@ -80,6 +80,7 @@ export interface ImportItem {
 export interface TransformContext extends Required<TransformOptions> {
   root: RootNode
   helpers: Set<symbol>
+  ssrHelpers: Set<symbol>
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
@@ -96,7 +97,7 @@ export interface TransformContext extends Required<TransformOptions> {
   parent: ParentNode | null
   childIndex: number
   currentNode: RootNode | TemplateChildNode | null
-  helper<T extends symbol>(name: T): T
+  helper<T extends symbol>(name: T, isSsr?: boolean): T
   helperString(name: symbol): string
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
@@ -134,6 +135,7 @@ function createTransformContext(
     // state
     root,
     helpers: new Set(),
+    ssrHelpers: new Set(),
     components: new Set(),
     directives: new Set(),
     hoists: [],
@@ -152,8 +154,12 @@ function createTransformContext(
     childIndex: 0,
 
     // methods
-    helper(name) {
-      context.helpers.add(name)
+    helper(name, isSsr = false) {
+      if (isSsr) {
+        context.ssrHelpers.add(name)
+      } else {
+        context.helpers.add(name)
+      }
       return name
     },
     helperString(name) {
@@ -265,6 +271,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   }
   // finalize meta information
   root.helpers = [...context.helpers]
+  root.ssrHelpers = [...context.ssrHelpers]
   root.components = [...context.components]
   root.directives = [...context.directives]
   root.imports = [...context.imports]

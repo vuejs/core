@@ -58,7 +58,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         const { props } = buildProps(node, context, node.props, true /* ssr */)
         if (props) {
           const propsExp = createCallExpression(
-            context.helper(SSR_RENDER_ATTRS),
+            context.helper(SSR_RENDER_ATTRS, true),
             [props]
           )
           if (node.tag === 'textarea') {
@@ -74,7 +74,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             const existingText = node.children[0] as TextNode | undefined
             node.children = []
             rawChildren = createCallExpression(
-              context.helper(SSR_INTERPOLATE),
+              context.helper(SSR_INTERPOLATE, true),
               [
                 createConditionalExpression(
                   createSimpleExpression(`"value" in ${tempId}`, false),
@@ -137,7 +137,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   if (attrName === 'class') {
                     openTag.push(
                       (dynamicClassBinding = createCallExpression(
-                        context.helper(SSR_RENDER_CLASS),
+                        context.helper(SSR_RENDER_CLASS, true),
                         [value]
                       ))
                     )
@@ -148,7 +148,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     } else {
                       openTag.push(
                         (dynamicStyleBinding = createCallExpression(
-                          context.helper(SSR_RENDER_STYLE),
+                          context.helper(SSR_RENDER_STYLE, true),
                           [value]
                         ))
                       )
@@ -165,10 +165,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   } else {
                     if (isSSRSafeAttrName(attrName)) {
                       openTag.push(
-                        createCallExpression(context.helper(SSR_RENDER_ATTR), [
-                          key,
-                          value
-                        ])
+                        createCallExpression(
+                          context.helper(SSR_RENDER_ATTR, true),
+                          [key, value]
+                        )
                       )
                     } else {
                       context.onError(
@@ -185,7 +185,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   // transforms that returns properties with dynamic keys
                   openTag.push(
                     createCallExpression(
-                      context.helper(SSR_RENDER_DYNAMIC_ATTR),
+                      context.helper(SSR_RENDER_DYNAMIC_ATTR, true),
                       [key, value]
                     )
                   )

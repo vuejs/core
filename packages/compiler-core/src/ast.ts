@@ -104,7 +104,7 @@ export interface RootNode extends Node {
   imports: ImportItem[]
   cached: number
   temps: number
-  ssrHelpers?: symbol[]
+  ssrHelpers: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
 }
 

@@ -51,7 +51,7 @@ describe('ssr: element', () => {
     test('<textarea> with dynamic v-bind', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
-        "const { _renderAttrs, _interpolate } = require(\\"vue\\")
+        "const { _renderAttrs, _interpolate } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
           let _temp0

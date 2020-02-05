@@ -38,7 +38,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   }
 
   ast.codegenNode = createBlockStatement(context.body)
-  ast.ssrHelpers = [...context.helpers]
+  ast.ssrHelpers = [...context.helpers, ...ast.ssrHelpers]
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
