@@ -21,7 +21,8 @@ import {
   locStub,
   SSRCodegenNode,
   TemplateLiteral,
-  IfStatement
+  IfStatement,
+  AssignmentExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -232,7 +233,14 @@ export function generate(
   if (ast.directives.length) {
     genAssets(ast.directives, 'directive', context)
   }
-  if (ast.components.length || ast.directives.length) {
+  if (ast.temps > 0) {
+    push(`let `)
+    for (let i = 0; i < ast.temps; i++) {
+      push(`${i > 0 ? `, ` : ``}_temp${i}`)
+    }
+    newline()
+  }
+  if (ast.components.length || ast.directives.length || ast.temps) {
     newline()
   }
 
@@ -520,6 +528,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_IF_STATEMENT:
       !__BROWSER__ && genIfStatement(node, context)
       break
+    case NodeTypes.JS_ASSIGNMENT_EXPRESSION:
+      !__BROWSER__ && genAssignmentExpression(node, context)
+      break
 
     /* istanbul ignore next */
     default:
@@ -789,4 +800,13 @@ function genIfStatement(node: IfStatement, context: CodegenContext) {
       push(`}`)
     }
   }
+}
+
+function genAssignmentExpression(
+  node: AssignmentExpression,
+  context: CodegenContext
+) {
+  genNode(node.left, context)
+  context.push(` = `)
+  genNode(node.right, context)
 }

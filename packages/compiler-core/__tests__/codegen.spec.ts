@@ -17,7 +17,8 @@ import {
   createCacheExpression,
   createTemplateLiteral,
   createBlockStatement,
-  createIfStatement
+  createIfStatement,
+  createAssignmentExpression
 } from '../src'
 import {
   CREATE_VNODE,
@@ -40,6 +41,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     imports: [],
     hoists: [],
     cached: 0,
+    temps: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
@@ -138,6 +140,15 @@ describe('compiler: codegen', () => {
     const { code } = generate(root)
     expect(code).toMatch(`const _hoisted_1 = hello`)
     expect(code).toMatch(`const _hoisted_2 = { id: "foo" }`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('temps', () => {
+    const root = createRoot({
+      temps: 3
+    })
+    const { code } = generate(root)
+    expect(code).toMatch(`let _temp0, _temp1, _temp2`)
     expect(code).toMatchSnapshot()
   })
 
@@ -539,5 +550,24 @@ describe('compiler: codegen', () => {
         }"
       `)
     })
+  })
+
+  test('AssignmentExpression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createAssignmentExpression(
+          createSimpleExpression(`foo`, false),
+          createSimpleExpression(`bar`, false)
+        )
+      })
+    )
+    expect(code).toMatchInlineSnapshot(`
+      "
+      return function render() {
+        with (this) {
+          return (foo = bar)
+        }
+      }"
+    `)
   })
 })

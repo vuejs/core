@@ -83,6 +83,7 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
+  temps: number
   imports: Set<ImportItem>
   cached: number
   identifiers: { [name: string]: number | undefined }
@@ -136,6 +137,7 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
+    temps: 0,
     imports: new Set(),
     cached: 0,
     identifiers: {},
@@ -267,6 +269,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.directives = [...context.directives]
   root.imports = [...context.imports]
   root.hoists = context.hoists
+  root.temps = context.temps
   root.cached = context.cached
 }
 

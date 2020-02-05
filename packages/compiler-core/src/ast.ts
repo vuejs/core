@@ -50,7 +50,8 @@ export const enum NodeTypes {
   // ssr codegen
   JS_BLOCK_STATEMENT,
   JS_TEMPLATE_LITERAL,
-  JS_IF_STATEMENT
+  JS_IF_STATEMENT,
+  JS_ASSIGNMENT_EXPRESSION
 }
 
 export const enum ElementTypes {
@@ -102,8 +103,9 @@ export interface RootNode extends Node {
   hoists: JSChildNode[]
   imports: ImportItem[]
   cached: number
-  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
+  temps: number
   ssrHelpers?: symbol[]
+  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement | undefined
 }
 
 export type ElementNode =
@@ -255,6 +257,7 @@ export type JSChildNode =
   | ConditionalExpression
   | SequenceExpression
   | CacheExpression
+  | AssignmentExpression
 
 export interface CallExpression extends Node {
   type: NodeTypes.JS_CALL_EXPRESSION
@@ -333,6 +336,12 @@ export interface IfStatement extends Node {
   test: ExpressionNode
   consequent: BlockStatement
   alternate: IfStatement | BlockStatement | undefined
+}
+
+export interface AssignmentExpression extends Node {
+  type: NodeTypes.JS_ASSIGNMENT_EXPRESSION
+  left: SimpleExpressionNode
+  right: JSChildNode
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -706,6 +715,18 @@ export function createIfStatement(
     test,
     consequent,
     alternate,
+    loc: locStub
+  }
+}
+
+export function createAssignmentExpression(
+  left: AssignmentExpression['left'],
+  right: AssignmentExpression['right']
+): AssignmentExpression {
+  return {
+    type: NodeTypes.JS_ASSIGNMENT_EXPRESSION,
+    left,
+    right,
     loc: locStub
   }
 }

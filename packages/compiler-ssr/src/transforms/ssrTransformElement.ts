@@ -17,7 +17,9 @@ import {
   createArrayExpression,
   ExpressionNode,
   JSChildNode,
-  ArrayExpression
+  ArrayExpression,
+  createAssignmentExpression,
+  TextNode
 } from '@vue/compiler-dom'
 import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
@@ -26,7 +28,8 @@ import {
   SSR_RENDER_CLASS,
   SSR_RENDER_STYLE,
   SSR_RENDER_DYNAMIC_ATTR,
-  SSR_RENDER_ATTRS
+  SSR_RENDER_ATTRS,
+  SSR_INTERPOLATE
 } from '../runtimeHelpers'
 
 export const ssrTransformElement: NodeTransform = (node, context) => {
@@ -54,9 +57,38 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       if (hasDynamicVBind) {
         const { props } = buildProps(node, context, node.props, true /* ssr */)
         if (props) {
-          openTag.push(
-            createCallExpression(context.helper(SSR_RENDER_ATTRS), [props])
+          const propsExp = createCallExpression(
+            context.helper(SSR_RENDER_ATTRS),
+            [props]
           )
+          if (node.tag === 'textarea') {
+            // <textarea> with dynamic v-bind. We don't know if the final props
+            // will contain .value, so we will have to do something special:
+            // assign the merged props to a temp variable, and check whether
+            // it contains value (if yes, render is as children).
+            const tempId = `_temp${context.temps++}`
+            propsExp.arguments[0] = createAssignmentExpression(
+              createSimpleExpression(tempId, false),
+              props
+            )
+            const existingText = node.children[0] as TextNode | undefined
+            node.children = []
+            rawChildren = createCallExpression(
+              context.helper(SSR_INTERPOLATE),
+              [
+                createConditionalExpression(
+                  createSimpleExpression(`"value" in ${tempId}`, false),
+                  createSimpleExpression(`${tempId}.value`, false),
+                  createSimpleExpression(
+                    existingText ? existingText.content : ``,
+                    true
+                  ),
+                  false
+                )
+              ]
+            )
+          }
+          openTag.push(propsExp)
         }
       }
 
@@ -83,8 +115,6 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           } else if (isTextareaWithValue(node, prop) && prop.exp) {
             if (!hasDynamicVBind) {
               node.children = [createInterpolation(prop.exp, prop.loc)]
-            } else {
-              // TODO handle <textrea> with dynamic v-bind
             }
           } else {
             // Directive transforms.

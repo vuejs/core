@@ -189,3 +189,13 @@ return function render() {
   }
 }"
 `;
+
+exports[`compiler: codegen temps 1`] = `
+"
+return function render() {
+  with (this) {
+    let _temp0, _temp1, _temp2
+    return null
+  }
+}"
+`;

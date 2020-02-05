@@ -1,4 +1,5 @@
 import { getCompiledString } from './utils'
+import { compile } from '../src'
 
 describe('ssr: element', () => {
   test('basic elements', () => {
@@ -48,7 +49,20 @@ describe('ssr: element', () => {
     })
 
     test('<textarea> with dynamic v-bind', () => {
-      // TODO
+      expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
+        .toMatchInlineSnapshot(`
+        "const { _renderAttrs, _interpolate } = require(\\"vue\\")
+
+        return function ssrRender(_ctx, _push, _parent) {
+          let _temp0
+          
+          _push(\`<textarea\${
+            _renderAttrs(_temp0 = _ctx.obj)
+          }>\${
+            _interpolate((\\"value\\" in _temp0) ? _temp0.value : \\"fallback\\")
+          }</textarea>\`)
+        }"
+      `)
     })
   })
 
@@ -95,7 +109,7 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<input type="checkbox" :checked="checked">`)
       ).toMatchInlineSnapshot(
-        `"\`<input type=\\"checkbox\\"\${(_ctx.checked)? \\" checked\\": \\"\\"}>\`"`
+        `"\`<input type=\\"checkbox\\"\${(_ctx.checked) ? \\" checked\\" : \\"\\"}>\`"`
       )
     })
 

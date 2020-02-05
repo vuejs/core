@@ -82,6 +82,7 @@ export function baseParse(
     hoists: [],
     imports: [],
     cached: 0,
+    temps: 0,
     codegenNode: undefined,
     loc: getSelection(context, start)
   }
