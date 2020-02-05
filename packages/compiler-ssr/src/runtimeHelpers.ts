@@ -9,6 +9,8 @@ export const SSR_RENDER_ATTRS = Symbol(`renderAttrs`)
 export const SSR_RENDER_ATTR = Symbol(`renderAttr`)
 export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`renderDynamicAttr`)
 export const SSR_RENDER_LIST = Symbol(`renderList`)
+export const SSR_LOOSE_EQUAL = Symbol(`looseEqual`)
+export const SSR_LOOSE_CONTAIN = Symbol(`looseContain`)
 
 export const ssrHelpers = {
   [SSR_INTERPOLATE]: `_interpolate`,
@@ -19,7 +21,9 @@ export const ssrHelpers = {
   [SSR_RENDER_ATTRS]: `_renderAttrs`,
   [SSR_RENDER_ATTR]: `_renderAttr`,
   [SSR_RENDER_DYNAMIC_ATTR]: `_renderDynamicAttr`,
-  [SSR_RENDER_LIST]: `_renderList`
+  [SSR_RENDER_LIST]: `_renderList`,
+  [SSR_LOOSE_EQUAL]: `_looseEqual`,
+  [SSR_LOOSE_CONTAIN]: `_looseContain`
 }
 
 // Note: these are helpers imported from @vue/server-renderer

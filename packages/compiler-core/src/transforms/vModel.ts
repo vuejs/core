@@ -56,11 +56,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     // "onUpdate:modelValue": $event => (foo = $event)
     createObjectProperty(
       eventName,
-      createCompoundExpression([
-        `$event => (`,
-        ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        ` = $event)`
-      ])
+      createCompoundExpression([`$event => (`, exp, ` = $event)`])
     )
   ]
 
@@ -82,12 +78,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     const modifiersKey = arg
       ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
         ? `${arg.content}Modifiers`
-        : createCompoundExpression([
-            ...(arg.type === NodeTypes.SIMPLE_EXPRESSION
-              ? [arg]
-              : arg.children),
-            ' + "Modifiers"'
-          ])
+        : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`
     props.push(
       createObjectProperty(

@@ -57,5 +57,5 @@ export function parse(template: string, options: ParserOptions = {}): RootNode {
 }
 
 export { transformStyle } from './transforms/transformStyle'
-export { DOMErrorCodes } from './errors'
+export { createDOMCompilerError, DOMErrorCodes } from './errors'
 export * from '@vue/compiler-core'

@@ -1,16 +1,18 @@
 import {
   DirectiveTransform,
-  createCompilerError,
   DOMErrorCodes,
   createObjectProperty,
   createSimpleExpression,
   createConditionalExpression,
-  createObjectExpression
+  createObjectExpression,
+  createDOMCompilerError
 } from '@vue/compiler-dom'
 
 export const ssrTransformShow: DirectiveTransform = (dir, node, context) => {
   if (!dir.exp) {
-    context.onError(createCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION))
+    context.onError(
+      createDOMCompilerError(DOMErrorCodes.X_V_SHOW_NO_EXPRESSION)
+    )
   }
   return {
     props: [

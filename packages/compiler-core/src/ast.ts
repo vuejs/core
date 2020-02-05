@@ -204,6 +204,7 @@ export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
   children: (
     | SimpleExpressionNode
+    | CompoundExpressionNode
     | InterpolationNode
     | TextNode
     | string

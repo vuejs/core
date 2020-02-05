@@ -47,6 +47,8 @@ function compileToFunction(
             err.loc.end.offset
           )
         warn(codeFrame ? `${message}\n${codeFrame}` : message)
+      } else {
+        throw err
       }
     },
     ...options
