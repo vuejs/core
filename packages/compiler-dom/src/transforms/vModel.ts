@@ -3,7 +3,8 @@ import {
   DirectiveTransform,
   ElementTypes,
   findProp,
-  NodeTypes
+  NodeTypes,
+  hasDynamicKeyVBind
 } from '@vue/compiler-core'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'
 import {
@@ -75,6 +76,10 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
               break
           }
         }
+      } else if (hasDynamicKeyVBind(node)) {
+        // element has bindings with dynamic keys, which can possibly contain
+        // "type".
+        directiveToUse = V_MODEL_DYNAMIC
       } else {
         // text type
         __DEV__ && checkDuplicatedValue()

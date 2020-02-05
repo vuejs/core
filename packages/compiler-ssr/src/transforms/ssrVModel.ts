@@ -96,7 +96,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      // TODO
+      // NOOP
+      // select relies on client-side directive to set initial selected state.
     } else {
       context.onError(
         createDOMCompilerError(

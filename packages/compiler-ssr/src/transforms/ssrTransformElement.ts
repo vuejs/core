@@ -19,7 +19,8 @@ import {
   JSChildNode,
   ArrayExpression,
   createAssignmentExpression,
-  TextNode
+  TextNode,
+  hasDynamicKeyVBind
 } from '@vue/compiler-dom'
 import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
@@ -46,14 +47,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       // v-bind="obj" or v-bind:[key] can potentially overwrite other static
       // attrs and can affect final rendering result, so when they are present
       // we need to bail out to full `renderAttrs`
-      const hasDynamicVBind = node.props.some(
-        p =>
-          p.type === NodeTypes.DIRECTIVE &&
-          p.name === 'bind' &&
-          (!p.arg || // v-bind="obj"
-          p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
-            !p.arg.isStatic) // v-bind:[foo]
-      )
+      const hasDynamicVBind = hasDynamicKeyVBind(node)
       if (hasDynamicVBind) {
         const { props } = buildProps(node, context, node.props, true /* ssr */)
         if (props) {
