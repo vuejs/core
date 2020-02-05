@@ -3,7 +3,7 @@ import { compile } from '../src'
 describe('ssr: v-show', () => {
   test('basic', () => {
     expect(compile(`<div v-show="foo"/>`).code).toMatchInlineSnapshot(`
-      "const { _renderStyle } = require(\\"vue\\")
+      "const { _renderStyle } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<div\${_renderStyle((_ctx.foo) ? null : { display: \\"none\\" })}></div>\`)
@@ -14,7 +14,7 @@ describe('ssr: v-show', () => {
   test('with static style', () => {
     expect(compile(`<div style="color:red" v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderStyle } = require(\\"vue\\")
+      "const { _renderStyle } = require(\\"@vue/server-renderer\\")
 
       const _hoisted_1 = {\\"color\\":\\"red\\"}
 
@@ -30,7 +30,7 @@ describe('ssr: v-show', () => {
   test('with dynamic style', () => {
     expect(compile(`<div :style="{ color: 'red' }" v-show="foo"/>`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderStyle } = require(\\"vue\\")
+      "const { _renderStyle } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<div\${_renderStyle([
@@ -46,7 +46,7 @@ describe('ssr: v-show', () => {
       compile(`<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`)
         .code
     ).toMatchInlineSnapshot(`
-      "const { _renderStyle } = require(\\"vue\\")
+      "const { _renderStyle } = require(\\"@vue/server-renderer\\")
 
       const _hoisted_1 = {\\"color\\":\\"red\\"}
 
@@ -66,7 +66,8 @@ describe('ssr: v-show', () => {
         `<div v-bind="baz" style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { mergeProps, _renderAttrs } = require(\\"vue\\")
+      "const { mergeProps } = require(\\"vue\\")
+      const { _renderAttrs } = require(\\"@vue/server-renderer\\")
 
       const _hoisted_1 = {\\"color\\":\\"red\\"}
 

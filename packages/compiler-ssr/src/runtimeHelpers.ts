@@ -10,9 +10,7 @@ export const SSR_RENDER_ATTR = Symbol(`renderAttr`)
 export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`renderDynamicAttr`)
 export const SSR_RENDER_LIST = Symbol(`renderList`)
 
-// Note: these are helpers imported from @vue/server-renderer
-// make sure the names match!
-registerRuntimeHelpers({
+export const ssrHelpers = {
   [SSR_INTERPOLATE]: `_interpolate`,
   [SSR_RENDER_COMPONENT]: `_renderComponent`,
   [SSR_RENDER_SLOT]: `_renderSlot`,
@@ -22,4 +20,8 @@ registerRuntimeHelpers({
   [SSR_RENDER_ATTR]: `_renderAttr`,
   [SSR_RENDER_DYNAMIC_ATTR]: `_renderDynamicAttr`,
   [SSR_RENDER_LIST]: `_renderList`
-})
+}
+
+// Note: these are helpers imported from @vue/server-renderer
+// make sure the names match!
+registerRuntimeHelpers(ssrHelpers)

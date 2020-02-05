@@ -14,7 +14,7 @@ import {
   CallExpression
 } from '@vue/compiler-dom'
 import { isString, escapeHtml, NO } from '@vue/shared'
-import { SSR_INTERPOLATE } from './runtimeHelpers'
+import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { processIf } from './transforms/ssrVIf'
 import { processFor } from './transforms/ssrVFor'
 
@@ -38,7 +38,14 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   }
 
   ast.codegenNode = createBlockStatement(context.body)
-  ast.ssrHelpers = [...context.helpers]
+
+  // Finalize helpers.
+  // We need to separate helpers imported from 'vue' vs. '@vue/server-renderer'
+  ast.ssrHelpers = [
+    ...ast.helpers.filter(h => h in ssrHelpers),
+    ...context.helpers
+  ]
+  ast.helpers = ast.helpers.filter(h => !(h in ssrHelpers))
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
