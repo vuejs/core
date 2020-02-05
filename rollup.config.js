@@ -177,7 +177,13 @@ function createReplacePlugin(
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
-    __FEATURE_SUSPENSE__: true
+    __FEATURE_SUSPENSE__: true,
+    ...(isProduction && isBrowserBuild
+      ? {
+          'context.onError(': `/*#__PURE__*/ context.onError(`,
+          'emitError(': `/*#__PURE__*/ emitError(`
+        }
+      : {})
   }
   // allow inline overrides like
   //__RUNTIME_COMPILE__=true yarn build runtime-core
