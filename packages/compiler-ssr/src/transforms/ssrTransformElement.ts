@@ -16,7 +16,8 @@ import {
   CallExpression,
   createArrayExpression,
   ExpressionNode,
-  JSChildNode
+  JSChildNode,
+  ArrayExpression
 } from '@vue/compiler-dom'
 import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
@@ -210,8 +211,12 @@ function isTextareaWithValue(
 }
 
 function mergeCall(call: CallExpression, arg: string | JSChildNode) {
-  const existing = call.arguments[0] as ExpressionNode
-  call.arguments[0] = createArrayExpression([existing, arg])
+  const existing = call.arguments[0] as ExpressionNode | ArrayExpression
+  if (existing.type === NodeTypes.JS_ARRAY_EXPRESSION) {
+    existing.elements.push(arg)
+  } else {
+    call.arguments[0] = createArrayExpression([existing, arg])
+  }
 }
 
 function removeStaticBinding(

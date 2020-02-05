@@ -699,10 +699,12 @@ function genConditionalExpression(
   }
   needNewline && indent()
   context.indentLevel++
+  needNewline || push(` `)
   push(`? `)
   genNode(consequent, context)
   context.indentLevel--
   needNewline && newline()
+  needNewline || push(` `)
   push(`: `)
   const isNested = alternate.type === NodeTypes.JS_CONDITIONAL_EXPRESSION
   if (!isNested) {
