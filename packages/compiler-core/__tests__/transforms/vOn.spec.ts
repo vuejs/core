@@ -168,11 +168,16 @@ describe('compiler: transform v-on', () => {
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [
           `$event => (`,
-          { content: `_ctx.foo` },
-          `(`,
-          // should NOT prefix $event
-          { content: `$event` },
-          `)`,
+          {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              { content: `_ctx.foo` },
+              `(`,
+              // should NOT prefix $event
+              { content: `$event` },
+              `)`
+            ]
+          },
           `)`
         ]
       }
@@ -191,13 +196,17 @@ describe('compiler: transform v-on', () => {
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [
           `$event => {`,
-          { content: `_ctx.foo` },
-          `(`,
-          // should NOT prefix $event
-          { content: `$event` },
-          `);`,
-          { content: `_ctx.bar` },
-          `()`,
+          {
+            children: [
+              { content: `_ctx.foo` },
+              `(`,
+              // should NOT prefix $event
+              { content: `$event` },
+              `);`,
+              { content: `_ctx.bar` },
+              `()`
+            ]
+          },
           `}`
         ]
       }
@@ -363,7 +372,11 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$event => (`, { content: `_ctx.foo` }, `++`, `)`]
+          children: [
+            `$event => (`,
+            { children: [{ content: `_ctx.foo` }, `++`] },
+            `)`
+          ]
         }
       })
     })

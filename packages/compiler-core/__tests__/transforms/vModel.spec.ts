@@ -191,15 +191,19 @@ describe('compiler: transform v-model', () => {
         children: [
           '$event => (',
           {
-            content: '_ctx.model',
-            isStatic: false
+            children: [
+              {
+                content: '_ctx.model',
+                isStatic: false
+              },
+              '[',
+              {
+                content: '_ctx.index',
+                isStatic: false
+              },
+              ']'
+            ]
           },
-          '[',
-          {
-            content: '_ctx.index',
-            isStatic: false
-          },
-          ']',
           ' = $event)'
         ]
       }

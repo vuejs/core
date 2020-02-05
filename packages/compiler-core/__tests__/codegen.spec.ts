@@ -207,12 +207,14 @@ describe('compiler: codegen', () => {
             type: NodeTypes.INTERPOLATION,
             loc: locStub,
             content: createSimpleExpression(`bar`, false, locStub)
-          }
+          },
+          // nested compound
+          createCompoundExpression([` + `, `nested`])
         ])
       })
     )
     expect(code).toMatch(
-      `return _ctx.foo + _${helperNameMap[TO_DISPLAY_STRING]}(bar)`
+      `return _ctx.foo + _${helperNameMap[TO_DISPLAY_STRING]}(bar) + nested`
     )
     expect(code).toMatchSnapshot()
   })
