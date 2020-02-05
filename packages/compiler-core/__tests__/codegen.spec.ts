@@ -565,7 +565,7 @@ describe('compiler: codegen', () => {
       "
       return function render() {
         with (this) {
-          return (foo = bar)
+          return foo = bar
         }
       }"
     `)
