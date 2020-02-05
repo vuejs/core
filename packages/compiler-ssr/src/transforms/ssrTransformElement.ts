@@ -20,7 +20,8 @@ import {
   ArrayExpression,
   createAssignmentExpression,
   TextNode,
-  hasDynamicKeyVBind
+  hasDynamicKeyVBind,
+  MERGE_PROPS
 } from '@vue/compiler-dom'
 import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
@@ -30,7 +31,8 @@ import {
   SSR_RENDER_STYLE,
   SSR_RENDER_DYNAMIC_ATTR,
   SSR_RENDER_ATTRS,
-  SSR_INTERPOLATE
+  SSR_INTERPOLATE,
+  SSR_GET_DYNAMIC_MODEL_PROPS
 } from '../runtimeHelpers'
 
 export const ssrTransformElement: NodeTransform = (node, context) => {
@@ -55,6 +57,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             context.helper(SSR_RENDER_ATTRS),
             [props]
           )
+
           if (node.tag === 'textarea') {
             // <textarea> with dynamic v-bind. We don't know if the final props
             // will contain .value, so we will have to do something special:
@@ -81,7 +84,31 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 )
               ]
             )
+          } else if (node.tag === 'input') {
+            // <input v-bind="obj" v-model>
+            // we need to determine the props to render for the dynamic v-model
+            // and merge it with the v-bind expression.
+            const vModel = findVModel(node)
+            if (vModel) {
+              // 1. save the props (san v-model) in a temp variable
+              const tempId = `_temp${context.temps++}`
+              const tempExp = createSimpleExpression(tempId, false)
+              propsExp.arguments = [
+                createAssignmentExpression(tempExp, props),
+                createCallExpression(context.helper(MERGE_PROPS), [
+                  tempExp,
+                  createCallExpression(
+                    context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
+                    [
+                      tempExp, // existing props
+                      vModel.exp! // model
+                    ]
+                  )
+                ])
+              ]
+            }
           }
+
           openTag.push(propsExp)
         }
       }
@@ -122,7 +149,14 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 )
               )
             } else if (!hasDynamicVBind) {
-              const { props } = directiveTransform(prop, node, context)
+              const { props, ssrTagParts } = directiveTransform(
+                prop,
+                node,
+                context
+              )
+              if (ssrTagParts) {
+                openTag.push(...ssrTagParts)
+              }
               for (let j = 0; j < props.length; j++) {
                 const { key, value } = props[j]
                 if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
@@ -253,4 +287,10 @@ function removeStaticBinding(
   if (i > -1) {
     tag.splice(i, 1)
   }
+}
+
+function findVModel(node: PlainElementNode): DirectiveNode | undefined {
+  return node.props.find(
+    p => p.type === NodeTypes.DIRECTIVE && p.name === 'model' && p.exp
+  ) as DirectiveNode | undefined
 }

@@ -34,6 +34,7 @@ export { transformOn } from './transforms/vOn'
 export { transformBind } from './transforms/vBind'
 
 // exported for compiler-ssr
+export { MERGE_PROPS } from './runtimeHelpers'
 export { processIfBranches } from './transforms/vIf'
 export { processForNode, createForLoopParams } from './transforms/vFor'
 export {

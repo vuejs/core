@@ -11,6 +11,8 @@ export const SSR_RENDER_DYNAMIC_ATTR = Symbol(`renderDynamicAttr`)
 export const SSR_RENDER_LIST = Symbol(`renderList`)
 export const SSR_LOOSE_EQUAL = Symbol(`looseEqual`)
 export const SSR_LOOSE_CONTAIN = Symbol(`looseContain`)
+export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`renderDynamicModel`)
+export const SSR_GET_DYNAMIC_MODEL_PROPS = Symbol(`getDynamicModelProps`)
 
 export const ssrHelpers = {
   [SSR_INTERPOLATE]: `_interpolate`,
@@ -23,7 +25,9 @@ export const ssrHelpers = {
   [SSR_RENDER_DYNAMIC_ATTR]: `_renderDynamicAttr`,
   [SSR_RENDER_LIST]: `_renderList`,
   [SSR_LOOSE_EQUAL]: `_looseEqual`,
-  [SSR_LOOSE_CONTAIN]: `_looseContain`
+  [SSR_LOOSE_CONTAIN]: `_looseContain`,
+  [SSR_RENDER_DYNAMIC_MODEL]: `_renderDynamicModel`,
+  [SSR_GET_DYNAMIC_MODEL_PROPS]: `_getDynamicModelProps`
 }
 
 // Note: these are helpers imported from @vue/server-renderer

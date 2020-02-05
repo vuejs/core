@@ -55,7 +55,7 @@ describe('ssr: element', () => {
 
         return function ssrRender(_ctx, _push, _parent) {
           let _temp0
-          
+
           _push(\`<textarea\${
             _renderAttrs(_temp0 = _ctx.obj)
           }>\${

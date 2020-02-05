@@ -238,7 +238,7 @@ export function generate(
     for (let i = 0; i < ast.temps; i++) {
       push(`${i > 0 ? `, ` : ``}_temp${i}`)
     }
-    newline()
+    push(`\n`)
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
     newline()

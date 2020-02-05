@@ -6,16 +6,21 @@ import {
   NodeTypes,
   createDOMCompilerError,
   DOMErrorCodes,
-  Property,
   createObjectProperty,
   createSimpleExpression,
   createCallExpression,
   PlainElementNode,
   ExpressionNode,
   createConditionalExpression,
-  createInterpolation
+  createInterpolation,
+  hasDynamicKeyVBind
 } from '@vue/compiler-dom'
-import { SSR_LOOSE_EQUAL, SSR_LOOSE_CONTAIN } from '../runtimeHelpers'
+import {
+  SSR_LOOSE_EQUAL,
+  SSR_LOOSE_CONTAIN,
+  SSR_RENDER_DYNAMIC_MODEL
+} from '../runtimeHelpers'
+import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!
@@ -33,7 +38,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   if (node.tagType === ElementTypes.ELEMENT) {
-    let props: Property[] = []
+    const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
       // default value binding for text type inputs
       createObjectProperty(createSimpleExpression(`value`, true), model)
@@ -41,26 +46,32 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     if (node.tag === 'input') {
       const type = findProp(node, 'type')
       if (type) {
+        const value = findValueBinding(node)
         if (type.type === NodeTypes.DIRECTIVE) {
           // dynamic type
-          // TODO
+          res.ssrTagParts = [
+            createCallExpression(context.helper(SSR_RENDER_DYNAMIC_MODEL), [
+              type.exp!,
+              model,
+              value
+            ])
+          ]
         } else if (type.value) {
           // static type
           switch (type.value.content) {
             case 'radio':
-              props = [
+              res.props = [
                 createObjectProperty(
                   createSimpleExpression(`checked`, true),
                   createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                     model,
-                    findValueBinding(node)
+                    value
                   ])
                 )
               ]
               break
             case 'checkbox':
-              const value = findValueBinding(node)
-              props = [
+              res.props = [
                 createObjectProperty(
                   createSimpleExpression(`checked`, true),
                   createConditionalExpression(
@@ -84,13 +95,18 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
               break
             default:
               checkDuplicatedValue()
-              props = defaultProps
+              res.props = defaultProps
               break
           }
         }
+      } else if (hasDynamicKeyVBind(node)) {
+        // dynamic type due to dynamic v-bind
+        // NOOP, handled in ssrTransformElement due to need to rewrite
+        // the entire props expression
       } else {
+        // text type
         checkDuplicatedValue()
-        props = defaultProps
+        res.props = defaultProps
       }
     } else if (node.tag === 'textarea') {
       checkDuplicatedValue()
@@ -107,7 +123,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       )
     }
 
-    return { props }
+    return res
   } else {
     // component v-model
     return transformModel(dir, node, context)

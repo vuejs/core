@@ -65,4 +65,73 @@ describe('ssr: v-model', () => {
       }"
     `)
   })
+
+  test('<input :type="x">', () => {
+    expect(compile(`<input :type="x" v-model="foo">`).code)
+      .toMatchInlineSnapshot(`
+      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<input\${
+          _renderAttr(\\"type\\", _ctx.x)
+        }\${
+          _renderDynamicModel(_ctx.x, _ctx.foo, null)
+        }>\`)
+      }"
+    `)
+
+    expect(compile(`<input :type="x" v-model="foo" value="bar">`).code)
+      .toMatchInlineSnapshot(`
+      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<input\${
+          _renderAttr(\\"type\\", _ctx.x)
+        }\${
+          _renderDynamicModel(_ctx.x, _ctx.foo, \\"bar\\")
+        } value=\\"bar\\">\`)
+      }"
+    `)
+
+    expect(compile(`<input :type="x" v-model="foo" :value="bar">`).code)
+      .toMatchInlineSnapshot(`
+      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<input\${
+          _renderAttr(\\"type\\", _ctx.x)
+        }\${
+          _renderDynamicModel(_ctx.x, _ctx.foo, _ctx.bar)
+        }\${
+          _renderAttr(\\"value\\", _ctx.bar)
+        }>\`)
+      }"
+    `)
+  })
+
+  test('<input v-bind="obj">', () => {
+    expect(compile(`<input v-bind="obj" v-model="foo">`).code)
+      .toMatchInlineSnapshot(`
+      "const { mergeProps } = require(\\"vue\\")
+      const { _renderAttrs, _getDynamicModelProps } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        let _temp0
+
+        _push(\`<input\${_renderAttrs(_temp0 = _ctx.obj, mergeProps(_temp0, _getDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+      }"
+    `)
+
+    expect(compile(`<input id="x" v-bind="obj" v-model="foo" class="y">`).code)
+      .toMatchInlineSnapshot(`
+      "const { mergeProps } = require(\\"vue\\")
+      const { _renderAttrs, _getDynamicModelProps } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent) {
+        let _temp0
+
+        _push(\`<input\${_renderAttrs(_temp0 = mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), mergeProps(_temp0, _getDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+      }"
+    `)
+  })
 })

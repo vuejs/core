@@ -16,7 +16,8 @@ import {
   ComponentCodegenNode,
   createCallExpression,
   CacheExpression,
-  createCacheExpression
+  createCacheExpression,
+  TemplateLiteral
 } from './ast'
 import {
   isString,
@@ -62,6 +63,7 @@ export type DirectiveTransform = (
 export interface DirectiveTransformResult {
   props: Property[]
   needRuntime?: boolean | symbol
+  ssrTagParts?: TemplateLiteral['elements']
 }
 
 // A structural directive transform is a technically a NodeTransform;
