@@ -130,6 +130,13 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(propsBuildResult.props)
       }
     }
+
+    if (node.tagType === ElementTypes.PORTAL && !findProp(node, 'target')) {
+      context.onError(
+        createCompilerError(ErrorCodes.X_PORTAL_NO_TARGET, node.loc)
+      )
+    }
+
     // children
     const hasChildren = node.children.length > 0
     if (hasChildren) {
