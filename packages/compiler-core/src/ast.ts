@@ -147,11 +147,13 @@ export interface ComponentNode extends BaseElementNode {
     | ComponentCodegenNode
     | CacheExpression // when cached by v-once
     | undefined
+  ssrCodegenNode?: CallExpression
 }
 
 export interface SlotOutletNode extends BaseElementNode {
   tagType: ElementTypes.SLOT
   codegenNode: SlotOutletCodegenNode | undefined | CacheExpression // when cached by v-once
+  ssrCodegenNode?: CallExpression
 }
 
 export interface TemplateNode extends BaseElementNode {

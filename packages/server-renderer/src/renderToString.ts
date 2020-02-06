@@ -11,7 +11,6 @@ import {
   Portal,
   ShapeFlags,
   ssrUtils,
-  Slot,
   Slots
 } from 'vue'
 import {
@@ -23,6 +22,7 @@ import {
   escapeHtml
 } from '@vue/shared'
 import { renderAttrs } from './helpers/renderAttrs'
+import { SSRSlots } from './helpers/renderSlot'
 
 const {
   isVNode,
@@ -41,8 +41,8 @@ const {
 type SSRBuffer = SSRBufferItem[]
 type SSRBufferItem = string | ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
-type PushFn = (item: SSRBufferItem) => void
-type Props = Record<string, unknown>
+export type PushFn = (item: SSRBufferItem) => void
+export type Props = Record<string, unknown>
 
 function createBuffer() {
   let appendable = false
@@ -191,7 +191,7 @@ function renderVNode(
   }
 }
 
-function renderVNodeChildren(
+export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance | null = null
@@ -254,30 +254,4 @@ function renderElement(
     }
     push(`</${tag}>`)
   }
-}
-
-export type SSRSlots = Record<string, SSRSlot>
-
-export type SSRSlot = (
-  props: Props,
-  push: PushFn,
-  parentComponent: ComponentInternalInstance | null
-) => void
-
-export function renderSlot(
-  slotFn: Slot | SSRSlot,
-  slotProps: Props,
-  push: PushFn,
-  parentComponent: ComponentInternalInstance | null = null
-) {
-  // template-compiled slots are always rendered as fragments
-  push(`<!---->`)
-  if (slotFn.length > 1) {
-    // only ssr-optimized slot fns accept more than 1 arguments
-    slotFn(slotProps, push, parentComponent)
-  } else {
-    // normal slot
-    renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)
-  }
-  push(`<!---->`)
 }

@@ -1,6 +1,6 @@
 import {
   createStructuralDirectiveTransform,
-  processIfBranches,
+  processIf,
   IfNode,
   createIfStatement,
   createBlockStatement,
@@ -18,12 +18,12 @@ import {
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
-  processIfBranches
+  processIf
 )
 
 // This is called during the 2nd transform pass to construct the SSR-sepcific
 // codegen nodes.
-export function processIf(node: IfNode, context: SSRTransformContext) {
+export function ssrProcessIf(node: IfNode, context: SSRTransformContext) {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
     rootBranch.condition!,

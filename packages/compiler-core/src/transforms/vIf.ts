@@ -41,7 +41,7 @@ import { injectProp } from '../utils'
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
-    return processIfBranches(node, dir, context, (ifNode, branch, isRoot) => {
+    return processIf(node, dir, context, (ifNode, branch, isRoot) => {
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
@@ -72,7 +72,7 @@ export const transformIf = createStructuralDirectiveTransform(
 )
 
 // target-agnostic transform used for both Client and SSR
-export function processIfBranches(
+export function processIf(
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext,

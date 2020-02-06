@@ -2,10 +2,8 @@
 export { renderToString } from './renderToString'
 
 // internal runtime helpers
-export {
-  renderComponent as _renderComponent,
-  renderSlot as _renderSlot
-} from './renderToString'
+export { renderComponent as _renderComponent } from './renderToString'
+export { renderSlot as _renderSlot } from './helpers/renderSlot'
 export {
   renderClass as _renderClass,
   renderStyle as _renderStyle,

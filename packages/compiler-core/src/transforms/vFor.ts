@@ -46,7 +46,7 @@ export const transformFor = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper } = context
-    return processForNode(node, dir, context, forNode => {
+    return processFor(node, dir, context, forNode => {
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
       const renderExp = createCallExpression(helper(RENDER_LIST), [
@@ -138,7 +138,7 @@ export const transformFor = createStructuralDirectiveTransform(
 )
 
 // target-agnostic transform used for both Client and SSR
-export function processForNode(
+export function processFor(
   node: ElementNode,
   dir: DirectiveNode,
   context: TransformContext,

@@ -15,8 +15,9 @@ import {
 } from '@vue/compiler-dom'
 import { isString, escapeHtml, NO } from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
-import { processIf } from './transforms/ssrVIf'
-import { processFor } from './transforms/ssrVFor'
+import { ssrProcessIf } from './transforms/ssrVIf'
+import { ssrProcessFor } from './transforms/ssrVFor'
+import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -119,7 +120,7 @@ export function processChildren(
       } else if (child.tagType === ElementTypes.COMPONENT) {
         // TODO
       } else if (child.tagType === ElementTypes.SLOT) {
-        // TODO
+        ssrProcessSlotOutlet(child, context)
       }
     } else if (child.type === NodeTypes.TEXT) {
       context.pushStringPart(escapeHtml(child.content))
@@ -128,9 +129,9 @@ export function processChildren(
         createCallExpression(context.helper(SSR_INTERPOLATE), [child.content])
       )
     } else if (child.type === NodeTypes.IF) {
-      processIf(child, context)
+      ssrProcessIf(child, context)
     } else if (child.type === NodeTypes.FOR) {
-      processFor(child, context)
+      ssrProcessFor(child, context)
     }
   }
 }

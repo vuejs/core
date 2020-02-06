@@ -7,11 +7,8 @@ import {
   ComponentOptions
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
-import {
-  renderToString,
-  renderComponent,
-  renderSlot
-} from '../src/renderToString'
+import { renderToString, renderComponent } from '../src/renderToString'
+import { renderSlot } from '../src/helpers/renderSlot'
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -135,7 +132,16 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(ctx.$slots.default, { msg: 'from slot' }, push, parent)
+          renderSlot(
+            ctx.$slots,
+            'default',
+            { msg: 'from slot' },
+            () => {
+              push(`fallback`)
+            },
+            push,
+            parent
+          )
           push(`</div>`)
         }
       }
@@ -169,6 +175,19 @@ describe('ssr: renderToString', () => {
           `<!----><span>from slot</span><!---->` +
           `</div></div>`
       )
+
+      // test fallback
+      expect(
+        await renderToString(
+          createApp({
+            ssrRender(_ctx, push, parent) {
+              push(`<div>parent`)
+              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(`</div>`)
+            }
+          })
+        )
+      ).toBe(`<div>parent<div class="child"><!---->fallback<!----></div></div>`)
     })
 
     test('nested components with vnode slots', async () => {
@@ -176,7 +195,14 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(ctx.$slots.default, { msg: 'from slot' }, push, parent)
+          renderSlot(
+            ctx.$slots,
+            'default',
+            { msg: 'from slot' },
+            null,
+            push,
+            parent
+          )
           push(`</div>`)
         }
       }
