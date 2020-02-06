@@ -101,7 +101,10 @@ export { registerRuntimeCompiler } from './component'
 
 // SSR -------------------------------------------------------------------------
 import { createComponentInstance, setupComponent } from './component'
-import { renderComponentRoot } from './componentRenderUtils'
+import {
+  renderComponentRoot,
+  setCurrentRenderingInstance
+} from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
 
 // SSR utils are only exposed in cjs builds.
@@ -109,6 +112,7 @@ const _ssrUtils = {
   createComponentInstance,
   setupComponent,
   renderComponentRoot,
+  setCurrentRenderingInstance,
   isVNode,
   normalizeVNode
 }

@@ -353,17 +353,21 @@ function genModulePreamble(
 function genAssets(
   assets: string[],
   type: 'component' | 'directive',
-  context: CodegenContext
+  { helper, push, newline }: CodegenContext
 ) {
-  const resolver = context.helper(
+  const resolver = helper(
     type === 'component' ? RESOLVE_COMPONENT : RESOLVE_DIRECTIVE
   )
   for (let i = 0; i < assets.length; i++) {
     const id = assets[i]
-    context.push(
+    push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)})`
     )
-    context.newline()
+    if (i < assets.length - 1) {
+      newline()
+    } else {
+      push(`\n`)
+    }
   }
 }
 

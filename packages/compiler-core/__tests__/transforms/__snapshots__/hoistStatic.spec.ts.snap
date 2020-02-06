@@ -103,7 +103,7 @@ return function render() {
     const { createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _directive_foo = _resolveDirective(\\"foo\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _withDirectives(_createVNode(\\"div\\", _hoisted_1, null, 32 /* NEED_PATCH */), [
         [_directive_foo]
@@ -141,7 +141,7 @@ return function render() {
     const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", _hoisted_1, [
         _createVNode(_component_Comp)
@@ -249,7 +249,7 @@ return function render() {
     const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(_component_Comp, null, {
       default: ({ foo }) => [_toDisplayString(_ctx.foo)],
       _compiled: true
@@ -284,7 +284,7 @@ return function render() {
     const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(_component_Comp)
     ]))

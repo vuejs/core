@@ -25,7 +25,7 @@ return function render() {
     const { vModelDynamic: _vModelDynamic, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _directive_bind = _resolveDirective(\\"bind\\")
-    
+
     return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
       modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
@@ -146,7 +146,7 @@ return function render() {
     const { vModelDynamic: _vModelDynamic, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
     
     const _directive_bind = _resolveDirective(\\"bind\\")
-    
+
     return (_openBlock(), _withDirectives(_createBlock(\\"input\\", {
       modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)

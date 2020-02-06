@@ -34,7 +34,7 @@ export { transformOn } from './transforms/vOn'
 export { transformBind } from './transforms/vBind'
 
 // exported for compiler-ssr
-export { MERGE_PROPS } from './runtimeHelpers'
+export * from './runtimeHelpers'
 export { processIf } from './transforms/vIf'
 export { processFor, createForLoopParams } from './transforms/vFor'
 export {
@@ -42,7 +42,7 @@ export {
   processExpression
 } from './transforms/transformExpression'
 export { trackVForSlotScopes, trackSlotScopes } from './transforms/vSlot'
-export { buildProps } from './transforms/transformElement'
+export { resolveComponentType, buildProps } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 
 // utility, but need to rewrite typing to avoid dts relying on @vue/shared

@@ -44,10 +44,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const eventName = arg
     ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
       ? `onUpdate:${arg.content}`
-      : createCompoundExpression([
-          '"onUpdate:" + ',
-          ...(arg.type === NodeTypes.SIMPLE_EXPRESSION ? [arg] : arg.children)
-        ])
+      : createCompoundExpression(['"onUpdate:" + ', arg])
     : `onUpdate:modelValue`
 
   const props = [

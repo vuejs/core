@@ -25,7 +25,7 @@ const withId = withScopeId(\\"test\\")
 export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
-  
+
   return (openBlock(), createBlock(_component_Child, null, {
     default: withId(() => [
       createVNode(\\"div\\")
@@ -42,7 +42,7 @@ const withId = withScopeId(\\"test\\")
 export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
-  
+
   return (openBlock(), createBlock(_component_Child, null, createSlots({ _compiled: true }, [
     (_ctx.ok)
       ? {
@@ -71,7 +71,7 @@ const withId = withScopeId(\\"test\\")
 export const render = withId(function render() {
   const _ctx = this
   const _component_Child = resolveComponent(\\"Child\\")
-  
+
   return (openBlock(), createBlock(_component_Child, null, {
     foo: withId(({ msg }) => [
       createTextVNode(toDisplayString(msg), 1 /* TEXT */)

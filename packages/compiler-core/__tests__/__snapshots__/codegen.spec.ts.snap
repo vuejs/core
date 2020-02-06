@@ -79,8 +79,8 @@ return function render() {
     const _component_Foo = _resolveComponent(\\"Foo\\")
     const _component_bar_baz = _resolveComponent(\\"bar-baz\\")
     const _component_barbaz = _resolveComponent(\\"barbaz\\")
-    const _directive_my_dir = _resolveDirective(\\"my_dir\\")
-    
+const _directive_my_dir = _resolveDirective(\\"my_dir\\")
+
     return null
   }
 }"

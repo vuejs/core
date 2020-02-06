@@ -14,7 +14,8 @@ import {
   createSimpleExpression,
   createObjectExpression,
   Property,
-  createSequenceExpression
+  createSequenceExpression,
+  ComponentNode
 } from '../ast'
 import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -35,7 +36,8 @@ import {
   getInnerRange,
   toValidAssetId,
   findProp,
-  isCoreComponent
+  isCoreComponent,
+  isBindKey
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
@@ -58,69 +60,30 @@ export const transformElement: NodeTransform = (node, context) => {
   // perform the work on exit, after all child expressions have been
   // processed and merged.
   return function postTransformElement() {
-    const { tag, tagType, props } = node
-    const builtInComponentSymbol =
-      isCoreComponent(tag) || context.isBuiltInComponent(tag)
-    const isComponent = tagType === ElementTypes.COMPONENT
+    const { tag, props } = node
+    const isComponent = node.tagType === ElementTypes.COMPONENT
+
+    // <svg> and <foreignObject> must be forced into blocks so that block
+    // updates inside get proper isSVG flag at runtime. (#639, #643)
+    // This is technically web-specific, but splitting the logic out of core
+    // leads to too much unnecessary complexity.
+    const shouldUseBlock =
+      !isComponent && (tag === 'svg' || tag === 'foreignObject')
+
+    const nodeType = isComponent
+      ? resolveComponentType(node as ComponentNode, context)
+      : `"${tag}"`
+
+    const args: CallExpression['arguments'] = [nodeType]
 
     let hasProps = props.length > 0
     let patchFlag: number = 0
     let runtimeDirectives: DirectiveNode[] | undefined
     let dynamicPropNames: string[] | undefined
-    let dynamicComponent: string | CallExpression | undefined
-    let shouldUseBlock = false
 
-    // handle dynamic component
-    const isProp = tag === 'component' && findProp(node, 'is')
-    if (isProp) {
-      // static <component is="foo" />
-      if (isProp.type === NodeTypes.ATTRIBUTE) {
-        const tag = isProp.value && isProp.value.content
-        if (tag) {
-          context.helper(RESOLVE_COMPONENT)
-          context.components.add(tag)
-          dynamicComponent = toValidAssetId(tag, `component`)
-        }
-      }
-      // dynamic <component :is="asdf" />
-      else if (isProp.exp) {
-        dynamicComponent = createCallExpression(
-          context.helper(RESOLVE_DYNAMIC_COMPONENT),
-          // _ctx.$ exposes the owner instance of current render function
-          [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
-        )
-      }
-    }
-
-    let nodeType
-    if (dynamicComponent) {
-      nodeType = dynamicComponent
-    } else if (builtInComponentSymbol) {
-      nodeType = context.helper(builtInComponentSymbol)
-    } else if (isComponent) {
-      // user component w/ resolve
-      context.helper(RESOLVE_COMPONENT)
-      context.components.add(tag)
-      nodeType = toValidAssetId(tag, `component`)
-    } else {
-      // plain element
-      nodeType = `"${tag}"`
-      // <svg> and <foreignObject> must be forced into blocks so that block
-      // updates inside get proper isSVG flag at runtime. (#639, #643)
-      // This is technically web-specific, but splitting the logic out of core
-      // leads to too much unnecessary complexity.
-      shouldUseBlock = tag === 'svg' || tag === 'foreignObject'
-    }
-
-    const args: CallExpression['arguments'] = [nodeType]
     // props
     if (hasProps) {
-      const propsBuildResult = buildProps(
-        node,
-        context,
-        // skip reserved "is" prop <component is>
-        isProp ? node.props.filter(p => p !== isProp) : node.props
-      )
+      const propsBuildResult = buildProps(node, context)
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
       runtimeDirectives = propsBuildResult.directives
@@ -130,6 +93,7 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(propsBuildResult.props)
       }
     }
+
     // children
     const hasChildren = node.children.length > 0
     if (hasChildren) {
@@ -140,11 +104,7 @@ export const transformElement: NodeTransform = (node, context) => {
       // Portal is not a real component has dedicated handling in the renderer
       // KeepAlive should not track its own deps so that it can be used inside
       // Transition
-      if (
-        isComponent &&
-        builtInComponentSymbol !== PORTAL &&
-        builtInComponentSymbol !== KEEP_ALIVE
-      ) {
+      if (isComponent && nodeType !== PORTAL && nodeType !== KEEP_ALIVE) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {
@@ -171,6 +131,7 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(node.children)
       }
     }
+
     // patchFlag & dynamicPropNames
     if (patchFlag !== 0) {
       if (!hasChildren) {
@@ -219,13 +180,45 @@ export const transformElement: NodeTransform = (node, context) => {
   }
 }
 
-function stringifyDynamicPropNames(props: string[]): string {
-  let propsNamesString = `[`
-  for (let i = 0, l = props.length; i < l; i++) {
-    propsNamesString += JSON.stringify(props[i])
-    if (i < l - 1) propsNamesString += ', '
+export function resolveComponentType(
+  node: ComponentNode,
+  context: TransformContext
+) {
+  const { tag } = node
+
+  // 1. dynamic component
+  const isProp = node.tag === 'component' && findProp(node, 'is')
+  if (isProp) {
+    // static <component is="foo" />
+    if (isProp.type === NodeTypes.ATTRIBUTE) {
+      const isType = isProp.value && isProp.value.content
+      if (isType) {
+        context.helper(RESOLVE_COMPONENT)
+        context.components.add(isType)
+        return toValidAssetId(isType, `component`)
+      }
+    }
+    // dynamic <component :is="asdf" />
+    else if (isProp.exp) {
+      return createCallExpression(
+        context.helper(RESOLVE_DYNAMIC_COMPONENT),
+        // _ctx.$ exposes the owner instance of current render function
+        [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
+      )
+    }
   }
-  return propsNamesString + `]`
+
+  // 2. built-in components (Portal, Transition, KeepAlive, Suspense...)
+  const builtIn = isCoreComponent(tag) || context.isBuiltInComponent(tag)
+  if (builtIn) {
+    context.helper(builtIn)
+    return builtIn
+  }
+
+  // 3. user component (resolve)
+  context.helper(RESOLVE_COMPONENT)
+  context.components.add(tag)
+  return toValidAssetId(tag, `component`)
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -241,7 +234,7 @@ export function buildProps(
   patchFlag: number
   dynamicPropNames: string[]
 } {
-  const elementLoc = node.loc
+  const { tag, loc: elementLoc } = node
   const isComponent = node.tagType === ElementTypes.COMPONENT
   let properties: ObjectExpression['properties'] = []
   const mergeArgs: PropsExpression[] = []
@@ -288,6 +281,10 @@ export function buildProps(
       if (name === 'ref') {
         hasRef = true
       }
+      // skip :is on <component>
+      if (name === 'is' && tag === 'component') {
+        continue
+      }
       properties.push(
         createObjectProperty(
           createSimpleExpression(
@@ -305,6 +302,8 @@ export function buildProps(
     } else {
       // directives
       const { name, arg, exp, loc } = prop
+      const isBind = name === 'bind'
+      const isOn = name === 'on'
 
       // skip v-slot - it is handled by its dedicated transform.
       if (name === 'slot') {
@@ -315,17 +314,16 @@ export function buildProps(
         }
         continue
       }
-
       // skip v-once - it is handled by its dedicated transform.
       if (name === 'once') {
         continue
       }
-
-      const isBind = name === 'bind'
-      const isOn = name === 'on'
-
+      // skip :is on <component>
+      if (isBind && tag === 'component' && isBindKey(arg, 'is')) {
+        continue
+      }
       // skip v-on in SSR compilation
-      if (ssr && isOn) {
+      if (isOn && ssr) {
         continue
       }
 
@@ -517,4 +515,13 @@ function buildDirectiveArgs(
     )
   }
   return createArrayExpression(dirArgs, dir.loc)
+}
+
+function stringifyDynamicPropNames(props: string[]): string {
+  let propsNamesString = `[`
+  for (let i = 0, l = props.length; i < l; i++) {
+    propsNamesString += JSON.stringify(props[i])
+    if (i < l - 1) propsNamesString += ', '
+  }
+  return propsNamesString + `]`
 }

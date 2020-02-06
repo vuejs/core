@@ -140,7 +140,7 @@ return function render() {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective } = _Vue
     
     const _directive_foo = _resolveDirective(\\"foo\\")
-    
+
     return (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _withDirectives(_createBlock(\\"div\\", null, null, 32 /* NEED_PATCH */), [
         [_directive_foo]

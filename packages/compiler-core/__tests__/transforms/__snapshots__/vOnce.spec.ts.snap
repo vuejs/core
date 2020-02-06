@@ -27,7 +27,7 @@ return function render() {
     const _cache = $cache
     
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _cache[1] || (
         _setBlockTracking(-1),

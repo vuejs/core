@@ -27,6 +27,7 @@ import { SSRSlots } from './helpers/renderSlot'
 const {
   isVNode,
   createComponentInstance,
+  setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
   normalizeVNode
@@ -135,7 +136,10 @@ function renderComponentSubTree(
   } else {
     if (comp.ssrRender) {
       // optimized
+      // set current rendering instance for asset resoolution
+      setCurrentRenderingInstance(instance)
       comp.ssrRender(instance.proxy, push, instance)
+      setCurrentRenderingInstance(null)
     } else if (comp.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
     } else {

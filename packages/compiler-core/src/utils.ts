@@ -192,17 +192,19 @@ export function findProp(
       if (p.name === name && p.value) {
         return p
       }
-    } else if (
-      p.name === 'bind' &&
-      p.arg &&
-      p.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-      p.arg.isStatic &&
-      p.arg.content === name &&
-      p.exp
-    ) {
+    } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {
       return p
     }
   }
+}
+
+export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
+  return !!(
+    arg &&
+    arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+    arg.isStatic &&
+    arg.content === name
+  )
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {

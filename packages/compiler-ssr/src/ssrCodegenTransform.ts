@@ -18,6 +18,7 @@ import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
+import { ssrProcessComponent } from './transforms/ssrTransformComponent'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -118,7 +119,7 @@ export function processChildren(
           context.pushStringPart(`</${child.tag}>`)
         }
       } else if (child.tagType === ElementTypes.COMPONENT) {
-        // TODO
+        ssrProcessComponent(child, context)
       } else if (child.tagType === ElementTypes.SLOT) {
         ssrProcessSlotOutlet(child, context)
       }

@@ -19,6 +19,13 @@ import { warn } from './warning'
 // resolveComponent, resolveDirective) during render
 export let currentRenderingInstance: ComponentInternalInstance | null = null
 
+// exposed for server-renderer only
+export function setCurrentRenderingInstance(
+  instance: ComponentInternalInstance | null
+) {
+  currentRenderingInstance = instance
+}
+
 // dev only flag to track whether $attrs was used during render.
 // If $attrs was used during render then the warning for failed attrs
 // fallthrough can be suppressed.

@@ -465,7 +465,8 @@ function parseTag(
     } else if (
       isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
-      /^[A-Z]/.test(tag)
+      /^[A-Z]/.test(tag) ||
+      tag === 'component'
     ) {
       tagType = ElementTypes.COMPONENT
     }

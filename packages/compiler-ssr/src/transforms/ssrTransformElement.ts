@@ -21,7 +21,8 @@ import {
   createAssignmentExpression,
   TextNode,
   hasDynamicKeyVBind,
-  MERGE_PROPS
+  MERGE_PROPS,
+  isBindKey
 } from '@vue/compiler-dom'
 import { escapeHtml, isBooleanAttr, isSSRSafeAttrName } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
@@ -261,10 +262,7 @@ function isTextareaWithValue(
   return !!(
     node.tag === 'textarea' &&
     prop.name === 'bind' &&
-    prop.arg &&
-    prop.arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-    prop.arg.isStatic &&
-    prop.arg.content === 'value'
+    isBindKey(prop.arg, 'value')
   )
 }
 
