@@ -17,13 +17,13 @@ export const ssrTransformShow: DirectiveTransform = (dir, node, context) => {
   return {
     props: [
       createObjectProperty(
-        createSimpleExpression(`style`, true),
+        `style`,
         createConditionalExpression(
           dir.exp!,
           createSimpleExpression(`null`, false),
           createObjectExpression([
             createObjectProperty(
-              createSimpleExpression(`display`, true),
+              `display`,
               createSimpleExpression(`none`, true)
             )
           ]),

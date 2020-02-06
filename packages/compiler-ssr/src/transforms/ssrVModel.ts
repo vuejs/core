@@ -41,7 +41,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
       // default value binding for text type inputs
-      createObjectProperty(createSimpleExpression(`value`, true), model)
+      createObjectProperty(`value`, model)
     ]
     if (node.tag === 'input') {
       const type = findProp(node, 'type')
@@ -62,7 +62,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
             case 'radio':
               res.props = [
                 createObjectProperty(
-                  createSimpleExpression(`checked`, true),
+                  `checked`,
                   createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                     model,
                     value
@@ -73,7 +73,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
             case 'checkbox':
               res.props = [
                 createObjectProperty(
-                  createSimpleExpression(`checked`, true),
+                  `checked`,
                   createConditionalExpression(
                     createCallExpression(`Array.isArray`, [model]),
                     createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
