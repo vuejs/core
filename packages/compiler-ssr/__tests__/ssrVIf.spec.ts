@@ -122,12 +122,12 @@ describe('ssr: v-if', () => {
     expect(
       compile(`<template v-if="foo"><div v-for="i in list"/></template>`).code
     ).toMatchInlineSnapshot(`
-      "const { _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         if (_ctx.foo) {
           _push(\`<!---->\`)
-          _renderList(_ctx.list, (i) => {
+          _ssrRenderList(_ctx.list, (i) => {
             _push(\`<div></div>\`)
           })
           _push(\`<!---->\`)

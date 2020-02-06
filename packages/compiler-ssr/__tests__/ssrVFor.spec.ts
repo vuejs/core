@@ -3,11 +3,11 @@ import { compile } from '../src'
 describe('ssr: v-for', () => {
   test('basic', () => {
     expect(compile(`<div v-for="i in list" />`).code).toMatchInlineSnapshot(`
-      "const { _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (i) => {
+        _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
         _push(\`<!---->\`)
@@ -18,11 +18,11 @@ describe('ssr: v-for', () => {
   test('nested content', () => {
     expect(compile(`<div v-for="i in list">foo<span>bar</span></div>`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (i) => {
+        _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div>foo<span>bar</span></div>\`)
         })
         _push(\`<!---->\`)
@@ -38,17 +38,17 @@ describe('ssr: v-for', () => {
           `</div>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { _interpolate, _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate, _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (row, i) => {
+        _ssrRenderList(_ctx.list, (row, i) => {
           _push(\`<div><!---->\`)
-          _renderList(row, (j) => {
+          _ssrRenderList(row, (j) => {
             _push(\`<div>\${
-              _interpolate(i)
+              _ssrInterpolate(i)
             },\${
-              _interpolate(j)
+              _ssrInterpolate(j)
             }</div>\`)
           })
           _push(\`<!----></div>\`)
@@ -61,12 +61,12 @@ describe('ssr: v-for', () => {
   test('template v-for (text)', () => {
     expect(compile(`<template v-for="i in list">{{ i }}</template>`).code)
       .toMatchInlineSnapshot(`
-      "const { _interpolate, _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate, _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (i) => {
-          _push(\`<!---->\${_interpolate(i)}<!---->\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<!---->\${_ssrInterpolate(i)}<!---->\`)
         })
         _push(\`<!---->\`)
       }"
@@ -78,12 +78,12 @@ describe('ssr: v-for', () => {
       compile(`<template v-for="i in list"><span>{{ i }}</span></template>`)
         .code
     ).toMatchInlineSnapshot(`
-      "const { _interpolate, _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate, _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (i) => {
-          _push(\`<span>\${_interpolate(i)}</span>\`)
+        _ssrRenderList(_ctx.list, (i) => {
+          _push(\`<span>\${_ssrInterpolate(i)}</span>\`)
         })
         _push(\`<!---->\`)
       }"
@@ -96,15 +96,15 @@ describe('ssr: v-for', () => {
         `<template v-for="i in list"><span>{{ i }}</span><span>{{ i + 1 }}</span></template>`
       ).code
     ).toMatchInlineSnapshot(`
-      "const { _interpolate, _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate, _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, (i) => {
+        _ssrRenderList(_ctx.list, (i) => {
           _push(\`<!----><span>\${
-            _interpolate(i)
+            _ssrInterpolate(i)
           }</span><span>\${
-            _interpolate(i + 1)
+            _ssrInterpolate(i + 1)
           }</span><!---->\`)
         })
         _push(\`<!---->\`)
@@ -120,12 +120,12 @@ describe('ssr: v-for', () => {
     expect(code).not.toMatch(`_ctx.foo`)
     expect(code).not.toMatch(`_ctx.index`)
     expect(code).toMatchInlineSnapshot(`
-      "const { _interpolate, _renderList } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate, _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<!---->\`)
-        _renderList(_ctx.list, ({ foo }, index) => {
-          _push(\`<div>\${_interpolate(foo + _ctx.bar + index)}</div>\`)
+        _ssrRenderList(_ctx.list, ({ foo }, index) => {
+          _push(\`<div>\${_ssrInterpolate(foo + _ctx.bar + index)}</div>\`)
         })
         _push(\`<!---->\`)
       }"

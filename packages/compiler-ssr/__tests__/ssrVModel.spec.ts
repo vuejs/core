@@ -3,19 +3,19 @@ import { compile } from '../src'
 describe('ssr: v-model', () => {
   test('<input> (text types)', () => {
     expect(compile(`<input v-model="bar">`).code).toMatchInlineSnapshot(`
-      "const { _renderAttr } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<input\${_renderAttr(\\"value\\", _ctx.bar)}>\`)
+        _push(\`<input\${_ssrRenderAttr(\\"value\\", _ctx.bar)}>\`)
       }"
     `)
 
     expect(compile(`<input type="email" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderAttr } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<input type=\\"email\\"\${_renderAttr(\\"value\\", _ctx.bar)}>\`)
+        _push(\`<input type=\\"email\\"\${_ssrRenderAttr(\\"value\\", _ctx.bar)}>\`)
       }"
     `)
   })
@@ -23,10 +23,10 @@ describe('ssr: v-model', () => {
   test('<input type="radio">', () => {
     expect(compile(`<input type="radio" value="foo" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _looseEqual } = require(\\"@vue/server-renderer\\")
+      "const { _ssrLooseEqual } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<input type=\\"radio\\" value=\\"foo\\"\${(_looseEqual(_ctx.bar, \\"foo\\")) ? \\" checked\\" : \\"\\"}>\`)
+        _push(\`<input type=\\"radio\\" value=\\"foo\\"\${(_ssrLooseEqual(_ctx.bar, \\"foo\\")) ? \\" checked\\" : \\"\\"}>\`)
       }"
     `)
   })
@@ -34,22 +34,22 @@ describe('ssr: v-model', () => {
   test('<input type="checkbox"', () => {
     expect(compile(`<input type="checkbox" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _looseContain } = require(\\"@vue/server-renderer\\")
+      "const { _ssrLooseContain } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"checkbox\\"\${((Array.isArray(_ctx.bar))
-          ? _looseContain(_ctx.bar, null)
+          ? _ssrLooseContain(_ctx.bar, null)
           : _ctx.bar) ? \\" checked\\" : \\"\\"}>\`)
       }"
     `)
 
     expect(compile(`<input type="checkbox" value="foo" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _looseContain } = require(\\"@vue/server-renderer\\")
+      "const { _ssrLooseContain } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"checkbox\\" value=\\"foo\\"\${((Array.isArray(_ctx.bar))
-          ? _looseContain(_ctx.bar, \\"foo\\")
+          ? _ssrLooseContain(_ctx.bar, \\"foo\\")
           : _ctx.bar) ? \\" checked\\" : \\"\\"}>\`)
       }"
     `)
@@ -58,10 +58,10 @@ describe('ssr: v-model', () => {
   test('<textarea>', () => {
     expect(compile(`<textarea v-model="foo">bar</textarea>`).code)
       .toMatchInlineSnapshot(`
-      "const { _interpolate } = require(\\"@vue/server-renderer\\")
+      "const { _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<textarea>\${_interpolate(_ctx.foo)}</textarea>\`)
+        _push(\`<textarea>\${_ssrInterpolate(_ctx.foo)}</textarea>\`)
       }"
     `)
   })
@@ -69,41 +69,41 @@ describe('ssr: v-model', () => {
   test('<input :type="x">', () => {
     expect(compile(`<input :type="x" v-model="foo">`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
-          _renderAttr(\\"type\\", _ctx.x)
+          _ssrRenderAttr(\\"type\\", _ctx.x)
         }\${
-          _renderDynamicModel(_ctx.x, _ctx.foo, null)
+          _ssrRenderDynamicModel(_ctx.x, _ctx.foo, null)
         }>\`)
       }"
     `)
 
     expect(compile(`<input :type="x" v-model="foo" value="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
-          _renderAttr(\\"type\\", _ctx.x)
+          _ssrRenderAttr(\\"type\\", _ctx.x)
         }\${
-          _renderDynamicModel(_ctx.x, _ctx.foo, \\"bar\\")
+          _ssrRenderDynamicModel(_ctx.x, _ctx.foo, \\"bar\\")
         } value=\\"bar\\">\`)
       }"
     `)
 
     expect(compile(`<input :type="x" v-model="foo" :value="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _renderAttr, _renderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
-          _renderAttr(\\"type\\", _ctx.x)
+          _ssrRenderAttr(\\"type\\", _ctx.x)
         }\${
-          _renderDynamicModel(_ctx.x, _ctx.foo, _ctx.bar)
+          _ssrRenderDynamicModel(_ctx.x, _ctx.foo, _ctx.bar)
         }\${
-          _renderAttr(\\"value\\", _ctx.bar)
+          _ssrRenderAttr(\\"value\\", _ctx.bar)
         }>\`)
       }"
     `)
@@ -113,24 +113,24 @@ describe('ssr: v-model', () => {
     expect(compile(`<input v-bind="obj" v-model="foo">`).code)
       .toMatchInlineSnapshot(`
       "const { mergeProps } = require(\\"vue\\")
-      const { _renderAttrs, _getDynamicModelProps } = require(\\"@vue/server-renderer\\")
+      const { _ssrRenderAttrs, _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_renderAttrs(_temp0 = _ctx.obj, mergeProps(_temp0, _getDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs(_temp0 = _ctx.obj, mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
       }"
     `)
 
     expect(compile(`<input id="x" v-bind="obj" v-model="foo" class="y">`).code)
       .toMatchInlineSnapshot(`
       "const { mergeProps } = require(\\"vue\\")
-      const { _renderAttrs, _getDynamicModelProps } = require(\\"@vue/server-renderer\\")
+      const { _ssrRenderAttrs, _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_renderAttrs(_temp0 = mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), mergeProps(_temp0, _getDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs(_temp0 = mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
       }"
     `)
   })
