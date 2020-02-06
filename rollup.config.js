@@ -181,7 +181,9 @@ function createReplacePlugin(
     ...(isProduction && isBrowserBuild
       ? {
           'context.onError(': `/*#__PURE__*/ context.onError(`,
-          'emitError(': `/*#__PURE__*/ emitError(`
+          'emitError(': `/*#__PURE__*/ emitError(`,
+          'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
+          'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
         }
       : {})
   }
@@ -212,7 +214,11 @@ function createMinifiedConfig(format) {
     },
     [
       terser({
-        module: /^esm/.test(format)
+        module: /^esm/.test(format),
+        compress: {
+          ecma: 2015,
+          pure_getters: true
+        }
       })
     ]
   )
