@@ -64,12 +64,6 @@ function processIfBranch(
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
   const childContext = createChildContext(context)
-  if (needFragmentWrapper) {
-    childContext.pushStringPart(`<!---->`)
-  }
-  processChildren(children, childContext)
-  if (needFragmentWrapper) {
-    childContext.pushStringPart(`<!---->`)
-  }
+  processChildren(children, childContext, needFragmentWrapper)
   return createBlockStatement(childContext.body)
 }

@@ -182,7 +182,8 @@ export const transformElement: NodeTransform = (node, context) => {
 
 export function resolveComponentType(
   node: ComponentNode,
-  context: TransformContext
+  context: TransformContext,
+  ssr = false
 ) {
   const { tag } = node
 
@@ -211,7 +212,9 @@ export function resolveComponentType(
   // 2. built-in components (Portal, Transition, KeepAlive, Suspense...)
   const builtIn = isCoreComponent(tag) || context.isBuiltInComponent(tag)
   if (builtIn) {
-    context.helper(builtIn)
+    // built-ins are simply fallthroughs / have special handling during ssr
+    // no we don't need to import their runtime equivalents
+    if (!ssr) context.helper(builtIn)
     return builtIn
   }
 

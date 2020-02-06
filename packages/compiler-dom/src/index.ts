@@ -22,6 +22,14 @@ export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
   : parserOptionsStandard
 
+export const isBuiltInDOMComponent = (tag: string): symbol | undefined => {
+  if (isBuiltInType(tag, `Transition`)) {
+    return TRANSITION
+  } else if (isBuiltInType(tag, `TransitionGroup`)) {
+    return TRANSITION_GROUP
+  }
+}
+
 export function compile(
   template: string,
   options: CompilerOptions = {}
@@ -39,13 +47,7 @@ export function compile(
       show: transformShow,
       ...(options.directiveTransforms || {})
     },
-    isBuiltInComponent: tag => {
-      if (isBuiltInType(tag, `Transition`)) {
-        return TRANSITION
-      } else if (isBuiltInType(tag, `TransitionGroup`)) {
-        return TRANSITION_GROUP
-      }
-    }
+    isBuiltInComponent: isBuiltInDOMComponent
   })
 }
 
@@ -56,6 +58,7 @@ export function parse(template: string, options: ParserOptions = {}): RootNode {
   })
 }
 
+export * from './runtimeHelpers'
 export { transformStyle } from './transforms/transformStyle'
 export { createDOMCompilerError, DOMErrorCodes } from './errors'
 export * from '@vue/compiler-core'

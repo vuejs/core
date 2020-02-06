@@ -71,6 +71,9 @@ export interface CodegenOptions {
   scopeId?: string | null
   // we need to know about this to generate proper preambles
   prefixIdentifiers?: boolean
+  // for specifying where to import helpers
+  runtimeModuleName?: string
+  runtimeGlobalName?: string
   // generate ssr-specific code?
   ssr?: boolean
 }

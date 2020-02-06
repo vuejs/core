@@ -79,6 +79,8 @@ function createCodegenContext(
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
+    runtimeGlobalName = `Vue`,
+    runtimeModuleName = `vue`,
     ssr = false
   }: CodegenOptions
 ): CodegenContext {
@@ -88,6 +90,8 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
+    runtimeGlobalName,
+    runtimeModuleName,
     ssr,
     source: ast.loc.source,
     code: ``,
@@ -275,8 +279,18 @@ export function generate(
 }
 
 function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
-  const { ssr, helper, prefixIdentifiers, push, newline } = context
-  const VueBinding = ssr ? `require("vue")` : `Vue`
+  const {
+    ssr,
+    helper,
+    prefixIdentifiers,
+    push,
+    newline,
+    runtimeModuleName,
+    runtimeGlobalName
+  } = context
+  const VueBinding = ssr
+    ? `require(${JSON.stringify(runtimeModuleName)})`
+    : runtimeGlobalName
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
@@ -319,7 +333,7 @@ function genModulePreamble(
   context: CodegenContext,
   genScopeId: boolean
 ) {
-  const { push, helper, newline, scopeId } = context
+  const { push, helper, newline, scopeId, runtimeModuleName } = context
   // generate import statements for helpers
   if (genScopeId) {
     ast.helpers.push(WITH_SCOPE_ID)
@@ -328,7 +342,11 @@ function genModulePreamble(
     }
   }
   if (ast.helpers.length) {
-    push(`import { ${ast.helpers.map(helper).join(', ')} } from "vue"\n`)
+    push(
+      `import { ${ast.helpers.map(helper).join(', ')} } from ${JSON.stringify(
+        runtimeModuleName
+      )}\n`
+    )
   }
   if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
     push(

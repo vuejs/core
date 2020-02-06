@@ -28,17 +28,9 @@ import { ssrProcessComponent } from './transforms/ssrTransformComponent'
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(options)
-
   const isFragment =
     ast.children.length > 1 && !ast.children.every(c => isText(c))
-  if (isFragment) {
-    context.pushStringPart(`<!---->`)
-  }
-  processChildren(ast.children, context)
-  if (isFragment) {
-    context.pushStringPart(`<!---->`)
-  }
-
+  processChildren(ast.children, context, isFragment)
   ast.codegenNode = createBlockStatement(context.body)
 
   // Finalize helpers.
@@ -99,8 +91,12 @@ export function createChildContext(
 
 export function processChildren(
   children: TemplateChildNode[],
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  asFragment = false
 ) {
+  if (asFragment) {
+    context.pushStringPart(`<!---->`)
+  }
   const isVoidTag = context.options.isVoidTag || NO
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -134,5 +130,8 @@ export function processChildren(
     } else if (child.type === NodeTypes.FOR) {
       ssrProcessFor(child, context)
     }
+  }
+  if (asFragment) {
+    context.pushStringPart(`<!---->`)
   }
 }

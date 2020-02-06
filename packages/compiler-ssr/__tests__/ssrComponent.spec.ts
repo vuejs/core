@@ -161,5 +161,47 @@ describe('ssr: components', () => {
         }"
       `)
     })
+
+    test('built-in fallthroughs', () => {
+      // no fragment
+      expect(compile(`<transition><div/></transition>`).code)
+        .toMatchInlineSnapshot(`
+        "
+        return function ssrRender(_ctx, _push, _parent) {
+          _push(\`<div></div>\`)
+        }"
+      `)
+
+      // wrap with fragment
+      expect(compile(`<transition-group><div/></transition-group>`).code)
+        .toMatchInlineSnapshot(`
+        "
+        return function ssrRender(_ctx, _push, _parent) {
+          _push(\`<!----><div></div><!---->\`)
+        }"
+      `)
+
+      // no fragment
+      expect(compile(`<keep-alive><foo/></keep-alive>`).code)
+        .toMatchInlineSnapshot(`
+        "const { resolveComponent } = require(\\"vue\\")
+        const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+
+        return function ssrRender(_ctx, _push, _parent) {
+          const _component_foo = resolveComponent(\\"foo\\")
+
+          _ssrRenderComponent(_component_foo, null, null, _parent)
+        }"
+      `)
+
+      // wrap with fragment
+      expect(compile(`<suspense><div/></suspense>`).code)
+        .toMatchInlineSnapshot(`
+        "
+        return function ssrRender(_ctx, _push, _parent) {
+          _push(\`<!----><div></div><!---->\`)
+        }"
+      `)
+    })
   })
 })

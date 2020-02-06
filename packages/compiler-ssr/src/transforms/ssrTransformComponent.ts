@@ -6,14 +6,15 @@ import {
   resolveComponentType,
   buildProps,
   ComponentNode,
-  PORTAL,
-  SUSPENSE,
   SlotFnBuilder,
   createFunctionExpression,
   createBlockStatement,
   buildSlots,
   FunctionExpression,
-  TemplateChildNode
+  TemplateChildNode,
+  PORTAL,
+  SUSPENSE,
+  TRANSITION_GROUP
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
@@ -34,6 +35,8 @@ interface WIPSlotEntry {
   children: TemplateChildNode[]
 }
 
+const componentTypeMap = new WeakMap<ComponentNode, symbol>()
+
 export const ssrTransformComponent: NodeTransform = (node, context) => {
   if (
     node.type !== NodeTypes.ELEMENT ||
@@ -43,18 +46,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   }
 
   return function ssrPostTransformComponent() {
-    const component = resolveComponentType(node, context)
-
+    const component = resolveComponentType(node, context, true /* ssr */)
     if (isSymbol(component)) {
-      // built-in compoonent
-      if (component === PORTAL) {
-        // TODO
-      } else if (component === SUSPENSE) {
-        // TODO fallthrough
-        // TODO option to use fallback content and resolve on client
-      } else {
-        // TODO fallthrough for KeepAlive & Transition
-      }
+      componentTypeMap.set(node, component)
+      return // built-in component: fallthrough
     }
 
     // note we are not passing ssr: true here because for components, v-on
@@ -98,13 +93,28 @@ export function ssrProcessComponent(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
-  // finish up slot function expressions from the 1st pass.
-  const wipEntries = wipMap.get(node) || []
-  for (let i = 0; i < wipEntries.length; i++) {
-    const { fn, children } = wipEntries[i]
-    const childContext = createChildContext(context)
-    processChildren(children, childContext)
-    fn.body = createBlockStatement(childContext.body)
+  if (!node.ssrCodegenNode) {
+    // this is a built-in component that fell-through.
+    // just render its children.
+    const component = componentTypeMap.get(node)!
+
+    if (component === PORTAL) {
+      // TODO
+      return
+    }
+
+    const needFragmentWrapper =
+      component === SUSPENSE || component === TRANSITION_GROUP
+    processChildren(node.children, context, needFragmentWrapper)
+  } else {
+    // finish up slot function expressions from the 1st pass.
+    const wipEntries = wipMap.get(node) || []
+    for (let i = 0; i < wipEntries.length; i++) {
+      const { fn, children } = wipEntries[i]
+      const childContext = createChildContext(context)
+      processChildren(children, childContext)
+      fn.body = createBlockStatement(childContext.body)
+    }
+    context.pushStatement(node.ssrCodegenNode)
   }
-  context.pushStatement(node.ssrCodegenNode!)
 }

@@ -10,7 +10,8 @@ import {
   trackSlotScopes,
   noopDirectiveTransform,
   transformBind,
-  transformStyle
+  transformStyle,
+  isBuiltInDOMComponent
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -64,7 +65,8 @@ export function compile(
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
       ...(options.directiveTransforms || {}) // user transforms
-    }
+    },
+    isBuiltInComponent: isBuiltInDOMComponent
   })
 
   // traverse the template AST and convert into SSR codegen AST
