@@ -136,7 +136,7 @@ function renderComponentSubTree(
   } else {
     if (comp.ssrRender) {
       // optimized
-      // set current rendering instance for asset resoolution
+      // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
       comp.ssrRender(instance.proxy, push, instance)
       setCurrentRenderingInstance(null)
