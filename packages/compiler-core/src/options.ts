@@ -49,6 +49,8 @@ export interface TransformOptions {
   //   analysis to determine if a handler is safe to cache.
   // - Default: false
   cacheHandlers?: boolean
+  // SFC scoped styles ID
+  scopeId?: string | null
   ssr?: boolean
   onError?: (error: CompilerError) => void
 }

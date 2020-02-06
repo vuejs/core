@@ -44,7 +44,8 @@ import {
   CREATE_TEXT,
   PUSH_SCOPE_ID,
   POP_SCOPE_ID,
-  WITH_SCOPE_ID
+  WITH_SCOPE_ID,
+  CREATE_BLOCK
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -333,14 +334,28 @@ function genModulePreamble(
   context: CodegenContext,
   genScopeId: boolean
 ) {
-  const { push, helper, newline, scopeId, runtimeModuleName } = context
-  // generate import statements for helpers
-  if (genScopeId) {
-    ast.helpers.push(WITH_SCOPE_ID)
-    if (ast.hoists.length) {
-      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+  const { push, helper, newline, scopeId, runtimeModuleName, ssr } = context
+
+  if (!__BROWSER__) {
+    // in ssr mode, `withId` helper is only needed if the template contains
+    // de-optimized component slots (which uses the createVNode helper)
+    if (
+      ssr &&
+      !(
+        ast.helpers.includes(CREATE_VNODE) || ast.helpers.includes(CREATE_BLOCK)
+      )
+    ) {
+      genScopeId = false
+    }
+    if (genScopeId) {
+      ast.helpers.push(WITH_SCOPE_ID)
+      if (ast.hoists.length) {
+        ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+      }
     }
   }
+
+  // generate import statements for helpers
   if (ast.helpers.length) {
     push(
       `import { ${ast.helpers.map(helper).join(', ')} } from ${JSON.stringify(
@@ -348,21 +363,25 @@ function genModulePreamble(
       )}\n`
     )
   }
-  if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
-    push(
-      `import { ${ast.ssrHelpers
-        .map(helper)
-        .join(', ')} } from "@vue/server-renderer"\n`
-    )
+
+  if (!__BROWSER__) {
+    if (ast.ssrHelpers && ast.ssrHelpers.length) {
+      push(
+        `import { ${ast.ssrHelpers
+          .map(helper)
+          .join(', ')} } from "@vue/server-renderer"\n`
+      )
+    }
+    if (ast.imports.length) {
+      genImports(ast.imports, context)
+      newline()
+    }
+    if (genScopeId) {
+      push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+      newline()
+    }
   }
-  if (ast.imports.length) {
-    genImports(ast.imports, context)
-    newline()
-  }
-  if (genScopeId) {
-    push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
-    newline()
-  }
+
   genHoists(ast.hoists, context)
   newline()
   push(`export `)

@@ -118,6 +118,7 @@ function createTransformContext(
     nodeTransforms = [],
     directiveTransforms = {},
     isBuiltInComponent = NOOP,
+    scopeId = null,
     ssr = false,
     onError = defaultOnError
   }: TransformOptions
@@ -130,6 +131,7 @@ function createTransformContext(
     nodeTransforms,
     directiveTransforms,
     isBuiltInComponent,
+    scopeId,
     ssr,
     onError,
 

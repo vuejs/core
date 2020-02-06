@@ -246,6 +246,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         removeStaticBinding(openTag, 'class')
       }
 
+      if (context.scopeId) {
+        openTag.push(` ${context.scopeId}`)
+      }
+
       openTag.push(`>`)
       if (rawChildren) {
         openTag.push(rawChildren)
