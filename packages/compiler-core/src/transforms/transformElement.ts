@@ -100,6 +100,17 @@ export const transformElement: NodeTransform = (node, context) => {
       if (!hasProps) {
         args.push(`null`)
       }
+
+      if (__DEV__ && nodeType === KEEP_ALIVE && node.children.length > 1) {
+        context.onError(
+          createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
+            start: node.children[0].loc.start,
+            end: node.children[node.children.length - 1].loc.end,
+            source: ''
+          })
+        )
+      }
+
       // Portal & KeepAlive should have normal children instead of slots
       // Portal is not a real component has dedicated handling in the renderer
       // KeepAlive should not track its own deps so that it can be used inside

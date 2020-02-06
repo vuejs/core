@@ -81,6 +81,7 @@ export const enum ErrorCodes {
   X_V_MODEL_MALFORMED_EXPRESSION,
   X_V_MODEL_ON_SCOPE_VARIABLE,
   X_INVALID_EXPRESSION,
+  X_KEEP_ALIVE_INVALID_CHILDREN,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -174,6 +175,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Invalid JavaScript expression.`,
+  [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,

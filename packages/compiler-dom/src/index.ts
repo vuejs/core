@@ -17,6 +17,7 @@ import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
+import { warnTransitionChildren } from './transforms/warnTransitionChildren'
 
 export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
@@ -37,7 +38,11 @@ export function compile(
   return baseCompile(template, {
     ...parserOptions,
     ...options,
-    nodeTransforms: [transformStyle, ...(options.nodeTransforms || [])],
+    nodeTransforms: [
+      transformStyle,
+      ...(__DEV__ ? [warnTransitionChildren] : []),
+      ...(options.nodeTransforms || [])
+    ],
     directiveTransforms: {
       cloak: noopDirectiveTransform,
       html: transformVHtml,
