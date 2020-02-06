@@ -292,7 +292,7 @@ export interface ArrayExpression extends Node {
 
 export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
-  params: ExpressionNode | ExpressionNode[] | undefined
+  params: ExpressionNode | string | (ExpressionNode | string)[] | undefined
   returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
   body?: BlockStatement
   newline: boolean

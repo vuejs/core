@@ -14,7 +14,7 @@ import {
 
 const shouldIgnoreProp = makeMap(`key,ref,innerHTML,textContent`)
 
-export function renderAttrs(
+export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string
 ): string {
@@ -29,18 +29,18 @@ export function renderAttrs(
     }
     const value = props[key]
     if (key === 'class') {
-      ret += ` class="${renderClass(value)}"`
+      ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
-      ret += ` style="${renderStyle(value)}"`
+      ret += ` style="${ssrRenderStyle(value)}"`
     } else {
-      ret += renderDynamicAttr(key, value, tag)
+      ret += ssrRenderDynamicAttr(key, value, tag)
     }
   }
   return ret
 }
 
 // render an attr with dynamic (unknown) key.
-export function renderDynamicAttr(
+export function ssrRenderDynamicAttr(
   key: string,
   value: unknown,
   tag?: string
@@ -63,7 +63,7 @@ export function renderDynamicAttr(
 
 // Render a v-bind attr with static key. The key is pre-processed at compile
 // time and we only need to check and escape value.
-export function renderAttr(key: string, value: unknown): string {
+export function ssrRenderAttr(key: string, value: unknown): string {
   if (!isRenderableValue(value)) {
     return ``
   }
@@ -78,11 +78,11 @@ function isRenderableValue(value: unknown): boolean {
   return type === 'string' || type === 'number' || type === 'boolean'
 }
 
-export function renderClass(raw: unknown): string {
+export function ssrRenderClass(raw: unknown): string {
   return escapeHtml(normalizeClass(raw))
 }
 
-export function renderStyle(raw: unknown): string {
+export function ssrRenderStyle(raw: unknown): string {
   if (!raw) {
     return ''
   }

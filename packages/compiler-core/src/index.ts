@@ -41,7 +41,12 @@ export {
   transformExpression,
   processExpression
 } from './transforms/transformExpression'
-export { trackVForSlotScopes, trackSlotScopes } from './transforms/vSlot'
+export {
+  buildSlots,
+  SlotFnBuilder,
+  trackVForSlotScopes,
+  trackSlotScopes
+} from './transforms/vSlot'
 export { resolveComponentType, buildProps } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 

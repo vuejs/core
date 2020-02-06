@@ -2,22 +2,22 @@
 export { renderToString } from './renderToString'
 
 // internal runtime helpers
-export { renderComponent as _renderComponent } from './renderToString'
-export { renderSlot as _renderSlot } from './helpers/renderSlot'
+export { renderComponent as _ssrRenderComponent } from './renderToString'
+export { ssrRenderSlot as _ssrRenderSlot } from './helpers/ssrRenderSlot'
 export {
-  renderClass as _renderClass,
-  renderStyle as _renderStyle,
-  renderAttrs as _renderAttrs,
-  renderAttr as _renderAttr,
-  renderDynamicAttr as _renderDynamicAttr
-} from './helpers/renderAttrs'
-export { interpolate as _interpolate } from './helpers/interpolate'
-export { renderList as _renderList } from './helpers/renderList'
+  ssrRenderClass as _ssrRenderClass,
+  ssrRenderStyle as _ssrRenderStyle,
+  ssrRenderAttrs as _ssrRenderAttrs,
+  ssrRenderAttr as _ssrRenderAttr,
+  ssrRenderDynamicAttr as _ssrRenderDynamicAttr
+} from './helpers/ssrRenderAttrs'
+export { ssrInterpolate as _ssrInterpolate } from './helpers/ssrInterpolate'
+export { ssrRenderList as _ssrRenderList } from './helpers/ssrRenderList'
 
 // v-model helpers
 export {
-  looseEqual as _looseEqual,
-  looseContain as _looseContain,
-  renderDynamicModel as _renderDynamicModel,
-  getDynamicModelProps as _getDynamicModelProps
-} from './helpers/vModelHelpers'
+  ssrLooseEqual as _ssrLooseEqual,
+  ssrLooseContain as _ssrLooseContain,
+  ssrRenderDynamicModel as _ssrRenderDynamicModel,
+  ssrGetDynamicModelProps as _ssrGetDynamicModelProps
+} from './helpers/ssrVModelHelpers'

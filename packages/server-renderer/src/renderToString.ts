@@ -21,8 +21,8 @@ import {
   isVoidTag,
   escapeHtml
 } from '@vue/shared'
-import { renderAttrs } from './helpers/renderAttrs'
-import { SSRSlots } from './helpers/renderSlot'
+import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
+import { SSRSlots } from './helpers/ssrRenderSlot'
 
 const {
   isVNode,
@@ -217,7 +217,7 @@ function renderElement(
   // TODO directives
 
   if (props !== null) {
-    openTag += renderAttrs(props, tag)
+    openTag += ssrRenderAttrs(props, tag)
   }
 
   if (scopeId !== null) {

@@ -8,7 +8,7 @@ import {
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
-import { renderSlot } from '../src/helpers/renderSlot'
+import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -132,7 +132,7 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(
+          ssrRenderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },
@@ -195,7 +195,7 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(
+          ssrRenderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },

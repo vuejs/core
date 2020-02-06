@@ -1,15 +1,15 @@
 import {
-  renderAttrs,
-  renderClass,
-  renderStyle,
-  renderAttr
-} from '../src/helpers/renderAttrs'
+  ssrRenderAttrs,
+  ssrRenderClass,
+  ssrRenderStyle,
+  ssrRenderAttr
+} from '../src/helpers/ssrRenderAttrs'
 import { escapeHtml } from '@vue/shared'
 
 describe('ssr: renderAttrs', () => {
   test('ignore reserved props', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         key: 1,
         ref: () => {},
         onClick: () => {}
@@ -19,7 +19,7 @@ describe('ssr: renderAttrs', () => {
 
   test('normal attrs', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         id: 'foo',
         title: 'bar'
       })
@@ -28,7 +28,7 @@ describe('ssr: renderAttrs', () => {
 
   test('escape attrs', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         id: '"><script'
       })
     ).toBe(` id="&quot;&gt;&lt;script"`)
@@ -36,7 +36,7 @@ describe('ssr: renderAttrs', () => {
 
   test('boolean attrs', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         checked: true,
         multiple: false
       })
@@ -45,7 +45,7 @@ describe('ssr: renderAttrs', () => {
 
   test('ignore falsy values', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         foo: false,
         title: null,
         baz: undefined
@@ -55,7 +55,7 @@ describe('ssr: renderAttrs', () => {
 
   test('ingore non-renderable values', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         foo: {},
         bar: [],
         baz: () => {}
@@ -65,7 +65,7 @@ describe('ssr: renderAttrs', () => {
 
   test('props to attrs', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         readOnly: true, // simple lower case conversion
         htmlFor: 'foobar' // special cases
       })
@@ -74,7 +74,7 @@ describe('ssr: renderAttrs', () => {
 
   test('preserve name on custom element', () => {
     expect(
-      renderAttrs(
+      ssrRenderAttrs(
         {
           fooBar: 'ok'
         },
@@ -86,16 +86,16 @@ describe('ssr: renderAttrs', () => {
 
 describe('ssr: renderAttr', () => {
   test('basic', () => {
-    expect(renderAttr('foo', 'bar')).toBe(` foo="bar"`)
+    expect(ssrRenderAttr('foo', 'bar')).toBe(` foo="bar"`)
   })
 
   test('null and undefined', () => {
-    expect(renderAttr('foo', null)).toBe(``)
-    expect(renderAttr('foo', undefined)).toBe(``)
+    expect(ssrRenderAttr('foo', null)).toBe(``)
+    expect(ssrRenderAttr('foo', undefined)).toBe(``)
   })
 
   test('escape', () => {
-    expect(renderAttr('foo', '<script>')).toBe(
+    expect(ssrRenderAttr('foo', '<script>')).toBe(
       ` foo="${escapeHtml(`<script>`)}"`
     )
   })
@@ -104,28 +104,28 @@ describe('ssr: renderAttr', () => {
 describe('ssr: renderClass', () => {
   test('via renderProps', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         class: ['foo', 'bar']
       })
     ).toBe(` class="foo bar"`)
   })
 
   test('standalone', () => {
-    expect(renderClass(`foo`)).toBe(`foo`)
-    expect(renderClass([`foo`, `bar`])).toBe(`foo bar`)
-    expect(renderClass({ foo: true, bar: false })).toBe(`foo`)
-    expect(renderClass([{ foo: true, bar: false }, `baz`])).toBe(`foo baz`)
+    expect(ssrRenderClass(`foo`)).toBe(`foo`)
+    expect(ssrRenderClass([`foo`, `bar`])).toBe(`foo bar`)
+    expect(ssrRenderClass({ foo: true, bar: false })).toBe(`foo`)
+    expect(ssrRenderClass([{ foo: true, bar: false }, `baz`])).toBe(`foo baz`)
   })
 
   test('escape class values', () => {
-    expect(renderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+    expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
   })
 })
 
 describe('ssr: renderStyle', () => {
   test('via renderProps', () => {
     expect(
-      renderAttrs({
+      ssrRenderAttrs({
         style: {
           color: 'red'
         }
@@ -134,14 +134,14 @@ describe('ssr: renderStyle', () => {
   })
 
   test('standalone', () => {
-    expect(renderStyle(`color:red`)).toBe(`color:red`)
+    expect(ssrRenderStyle(`color:red`)).toBe(`color:red`)
     expect(
-      renderStyle({
+      ssrRenderStyle({
         color: `red`
       })
     ).toBe(`color:red;`)
     expect(
-      renderStyle([
+      ssrRenderStyle([
         { color: `red` },
         { fontSize: `15px` } // case conversion
       ])
@@ -150,7 +150,7 @@ describe('ssr: renderStyle', () => {
 
   test('number handling', () => {
     expect(
-      renderStyle({
+      ssrRenderStyle({
         fontSize: 15, // should be ignored since font-size requires unit
         opacity: 0.5
       })
@@ -158,9 +158,9 @@ describe('ssr: renderStyle', () => {
   })
 
   test('escape inline CSS', () => {
-    expect(renderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+    expect(ssrRenderStyle(`"><script`)).toBe(`&quot;&gt;&lt;script`)
     expect(
-      renderStyle({
+      ssrRenderStyle({
         color: `"><script`
       })
     ).toBe(`color:&quot;&gt;&lt;script;`)

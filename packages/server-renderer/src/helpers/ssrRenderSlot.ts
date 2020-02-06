@@ -9,7 +9,7 @@ export type SSRSlot = (
   parentComponent: ComponentInternalInstance | null
 ) => void
 
-export function renderSlot(
+export function ssrRenderSlot(
   slots: Slots | SSRSlots,
   slotName: string,
   slotProps: Props,
