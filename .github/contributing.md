@@ -174,11 +174,20 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 - `compiler-dom`: Compiler with additional plugins specifically targeting the browser.
 
+- `compiler-ssr`: Compiler that produces render functions optimized for server-side rendering.
+
 - `template-explorer`: A development tool for debugging compiler output. You can run `yarn dev template-explorer` and open its `index.html` to get a repl of template compilation based on current source code.
 
   A [live version](https://vue-next-template-explorer.netlify.com) of the template explorer is also available, which can be used for providing reproductions for compiler bugs. You can also pick the deployment for a specific commit from the [deploy logs](https://app.netlify.com/sites/vue-next-template-explorer/deploys).
 
-- `shared`: **Private.** Platform-agnostic internal utilities shared across multiple packages. This package is private and not published.
+- `shared`: **Private.** Utilities shared across multiple packages (especially by both runtime and compiler packages). This package is private and not published. Instead, it is **inlined** into the package that imports it during build.
+
+  - **Note:** if re-exporting a function from `@vue/shared` as a public API, it is necessary to re-define its type before exporting so that the final `d.ts` doesn't attempt to import `@vue/shared`, e.g.:
+
+    ``` ts
+    import { foo } from '@vue/shared'
+    export const publicFoo = foo as { /* re-define type */ }
+    ```
 
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
 
