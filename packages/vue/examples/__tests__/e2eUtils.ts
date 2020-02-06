@@ -1,5 +1,7 @@
 import puppeteer from 'puppeteer'
 
+export const E2E_TIMEOUT = 30 * 1000
+
 const puppeteerOptions = process.env.CI
   ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
   : {}

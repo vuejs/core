@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 import mocks from './commits.mock'
 
 describe('e2e: commits', () => {
@@ -46,11 +46,19 @@ describe('e2e: commits', () => {
     expect(await count('li .message')).toBe(3)
   }
 
-  test('classic', async () => {
-    await testCommits('classic')
-  })
+  test(
+    'classic',
+    async () => {
+      await testCommits('classic')
+    },
+    E2E_TIMEOUT
+  )
 
-  test('composition', async () => {
-    await testCommits('composition')
-  })
+  test(
+    'composition',
+    async () => {
+      await testCommits('composition')
+    },
+    E2E_TIMEOUT
+  )
 })
