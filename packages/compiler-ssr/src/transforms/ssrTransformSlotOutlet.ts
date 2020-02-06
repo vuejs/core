@@ -4,14 +4,12 @@ import {
   processSlotOutlet,
   createCallExpression,
   SlotOutletNode,
-  createFunctionExpression,
-  createBlockStatement
+  createFunctionExpression
 } from '@vue/compiler-dom'
 import { SSR_RENDER_SLOT } from '../runtimeHelpers'
 import {
   SSRTransformContext,
-  createChildContext,
-  processChildren
+  processChildrenAsStatement
 } from '../ssrCodegenTransform'
 
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
@@ -38,10 +36,8 @@ export function ssrProcessSlotOutlet(
   const renderCall = node.ssrCodegenNode!
   // has fallback content
   if (node.children.length) {
-    const childContext = createChildContext(context)
-    processChildren(node.children, childContext)
     const fallbackRenderFn = createFunctionExpression([])
-    fallbackRenderFn.body = createBlockStatement(childContext.body)
+    fallbackRenderFn.body = processChildrenAsStatement(node.children, context)
     // _renderSlot(slots, name, props, fallback, ...)
     renderCall.arguments[3] = fallbackRenderFn
   }

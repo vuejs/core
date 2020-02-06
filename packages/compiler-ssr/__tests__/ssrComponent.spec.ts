@@ -56,8 +56,12 @@ describe('ssr: components', () => {
           const _component_foo = resolveComponent(\\"foo\\")
 
           _ssrRenderComponent(_component_foo, null, {
-            default: (_, _push, _parent) => {
-              _push(\`hello<div></div>\`)
+            default: (_, _push, _parent, _scopeId) => {
+              if (_scopeId) {
+                _push(\`hello<div \${_scopeId}></div>\`)
+              } else {
+                _push(\`hello<div></div>\`)
+              }
             },
             _compiled: true
           }, _parent)
@@ -75,7 +79,7 @@ describe('ssr: components', () => {
           const _component_foo = resolveComponent(\\"foo\\")
 
           _ssrRenderComponent(_component_foo, null, {
-            default: ({ msg }, _push, _parent) => {
+            default: ({ msg }, _push, _parent, _scopeId) => {
               _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
             },
             _compiled: true
@@ -98,10 +102,10 @@ describe('ssr: components', () => {
           const _component_foo = resolveComponent(\\"foo\\")
 
           _ssrRenderComponent(_component_foo, null, {
-            default: (_, _push, _parent) => {
+            default: (_, _push, _parent, _scopeId) => {
               _push(\`foo\`)
             },
-            named: (_, _push, _parent) => {
+            named: (_, _push, _parent, _scopeId) => {
               _push(\`bar\`)
             },
             _compiled: true
@@ -126,7 +130,7 @@ describe('ssr: components', () => {
             (_ctx.ok)
               ? {
                   name: \\"named\\",
-                  fn: (_, _push, _parent) => {
+                  fn: (_, _push, _parent, _scopeId) => {
                     _push(\`foo\`)
                   }
                 }
@@ -152,7 +156,7 @@ describe('ssr: components', () => {
             renderList(_ctx.names, (key) => {
               return {
                 name: key,
-                fn: ({ msg }, _push, _parent) => {
+                fn: ({ msg }, _push, _parent, _scopeId) => {
                   _push(\`\${_ssrInterpolate(msg + key + _ctx.bar)}\`)
                 }
               }

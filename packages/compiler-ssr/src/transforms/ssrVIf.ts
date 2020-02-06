@@ -11,8 +11,7 @@ import {
 } from '@vue/compiler-dom'
 import {
   SSRTransformContext,
-  createChildContext,
-  processChildren
+  processChildrenAsStatement
 } from '../ssrCodegenTransform'
 
 // Plugin for the first transform pass, which simply constructs the AST node
@@ -63,7 +62,5 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  const childContext = createChildContext(context)
-  processChildren(children, childContext, needFragmentWrapper)
-  return createBlockStatement(childContext.body)
+  return processChildrenAsStatement(children, context, needFragmentWrapper)
 }

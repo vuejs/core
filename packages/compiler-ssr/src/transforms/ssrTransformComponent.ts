@@ -14,13 +14,16 @@ import {
   TemplateChildNode,
   PORTAL,
   SUSPENSE,
-  TRANSITION_GROUP
+  TRANSITION_GROUP,
+  createIfStatement,
+  createSimpleExpression,
+  isText
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
   SSRTransformContext,
-  createChildContext,
-  processChildren
+  processChildren,
+  processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { isSymbol } from '@vue/shared'
 
@@ -62,10 +65,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
     const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
       // An SSR slot function has the signature of
-      //   (props, _push, _parent) => void
+      //   (props, _push, _parent, _scopeId) => void
       // See server-renderer/src/helpers/renderSlot.ts
       const fn = createFunctionExpression(
-        [props || `_`, `_push`, `_parent`],
+        [props || `_`, `_push`, `_parent`, `_scopeId`],
         undefined, // no return, assign body later
         true, // newline
         false, // isSlot: pass false since we don't need client scopeId codegen
@@ -111,9 +114,24 @@ export function ssrProcessComponent(
     const wipEntries = wipMap.get(node) || []
     for (let i = 0; i < wipEntries.length; i++) {
       const { fn, children } = wipEntries[i]
-      const childContext = createChildContext(context)
-      processChildren(children, childContext)
-      fn.body = createBlockStatement(childContext.body)
+      const hasNonTextChild = children.some(c => !isText(c))
+      if (hasNonTextChild) {
+        // SSR slots need to handled potential presence of scopeId of the child
+        // component. To avoid the cost of concatenation when it's unnecessary,
+        // we split the code into two paths, one with slot scopeId and one without.
+        fn.body = createBlockStatement([
+          createIfStatement(
+            createSimpleExpression(`_scopeId`, false),
+            // branch with scopeId concatenation
+            processChildrenAsStatement(children, context, false, true),
+            // branch without scopeId concatenation
+            processChildrenAsStatement(children, context, false, false)
+          )
+        ])
+      } else {
+        // only text, no need for scopeId branching.
+        fn.body = processChildrenAsStatement(children, context)
+      }
     }
     context.pushStatement(node.ssrCodegenNode)
   }

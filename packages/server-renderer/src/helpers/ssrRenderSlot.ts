@@ -6,7 +6,8 @@ export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
   props: Props,
   push: PushFn,
-  parentComponent: ComponentInternalInstance | null
+  parentComponent: ComponentInternalInstance | null,
+  scopeId: string | null
 ) => void
 
 export function ssrRenderSlot(
@@ -23,7 +24,8 @@ export function ssrRenderSlot(
   if (slotFn) {
     if (slotFn.length > 1) {
       // only ssr-optimized slot fns accept more than 1 arguments
-      slotFn(slotProps, push, parentComponent)
+      const scopeId = parentComponent && parentComponent.type.__scopeId
+      slotFn(slotProps, push, parentComponent, scopeId ? scopeId + `-s` : null)
     } else {
       // normal slot
       renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)
