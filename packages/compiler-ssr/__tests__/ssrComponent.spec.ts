@@ -9,10 +9,10 @@ describe('ssr: components', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = resolveComponent(\\"foo\\")
 
-        _ssrRenderComponent(_component_foo, {
+        _push(_ssrRenderComponent(_component_foo, {
           id: \\"a\\",
           prop: _ctx.b
-        }, null, _parent)
+        }, null, _parent))
       }"
     `)
   })
@@ -26,7 +26,7 @@ describe('ssr: components', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = resolveComponent(\\"foo\\")
 
-        _ssrRenderComponent(_component_foo, { prop: \\"b\\" }, null, _parent)
+        _push(_ssrRenderComponent(_component_foo, { prop: \\"b\\" }, null, _parent))
       }"
     `)
 
@@ -38,10 +38,10 @@ describe('ssr: components', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_compoonent = resolveComponent(\\"compoonent\\")
 
-        _ssrRenderComponent(_component_compoonent, {
+        _push(_ssrRenderComponent(_component_compoonent, {
           is: _ctx.foo,
           prop: \\"b\\"
-        }, null, _parent)
+        }, null, _parent))
       }"
     `)
   })
@@ -55,7 +55,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, null, {
             default: (_, _push, _parent, _scopeId) => {
               if (_scopeId) {
                 _push(\`hello<div \${_scopeId}></div>\`)
@@ -64,7 +64,7 @@ describe('ssr: components', () => {
               }
             },
             _compiled: true
-          }, _parent)
+          }, _parent))
         }"
       `)
     })
@@ -78,12 +78,12 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, null, {
             default: ({ msg }, _push, _parent, _scopeId) => {
               _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
             },
             _compiled: true
-          }, _parent)
+          }, _parent))
         }"
       `)
     })
@@ -101,7 +101,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, null, {
             default: (_, _push, _parent, _scopeId) => {
               _push(\`foo\`)
             },
@@ -109,7 +109,7 @@ describe('ssr: components', () => {
               _push(\`bar\`)
             },
             _compiled: true
-          }, _parent)
+          }, _parent))
         }"
       `)
     })
@@ -126,7 +126,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, createSlots({ _compiled: true }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -135,7 +135,7 @@ describe('ssr: components', () => {
                   }
                 }
               : undefined
-          ]), _parent)
+          ]), _parent))
         }"
       `)
     })
@@ -152,7 +152,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, createSlots({ _compiled: true }, [
             renderList(_ctx.names, (key) => {
               return {
                 name: key,
@@ -161,7 +161,7 @@ describe('ssr: components', () => {
                 }
               }
             })
-          ]), _parent)
+          ]), _parent))
         }"
       `)
     })
@@ -194,7 +194,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = resolveComponent(\\"foo\\")
 
-          _ssrRenderComponent(_component_foo, null, null, _parent)
+          _push(_ssrRenderComponent(_component_foo, null, null, _parent))
         }"
       `)
 

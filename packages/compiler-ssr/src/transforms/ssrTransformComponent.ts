@@ -133,6 +133,6 @@ export function ssrProcessComponent(
         fn.body = processChildrenAsStatement(children, context)
       }
     }
-    context.pushStatement(node.ssrCodegenNode)
+    context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
   }
 }

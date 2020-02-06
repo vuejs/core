@@ -29,12 +29,12 @@ describe('ssr: scopeId', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = resolveComponent(\\"foo\\")
 
-        _ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
             _push(\`foo\`)
           },
           _compiled: true
-        }, _parent)
+        }, _parent))
       }"
     `)
   })
@@ -51,7 +51,7 @@ describe('ssr: scopeId', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = resolveComponent(\\"foo\\")
 
-        _ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
             if (_scopeId) {
               _push(\`<span data-v-xxxxxxx \${_scopeId}>hello</span>\`)
@@ -60,7 +60,7 @@ describe('ssr: scopeId', () => {
             }
           },
           _compiled: true
-        }, _parent)
+        }, _parent))
       }"
     `)
   })
@@ -78,11 +78,11 @@ describe('ssr: scopeId', () => {
         const _component_bar = resolveComponent(\\"bar\\")
         const _component_foo = resolveComponent(\\"foo\\")
 
-        _ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
             if (_scopeId) {
               _push(\`<span data-v-xxxxxxx \${_scopeId}>hello</span>\`)
-              _ssrRenderComponent(_component_bar, null, {
+              _push(_ssrRenderComponent(_component_bar, null, {
                 default: (_, _push, _parent, _scopeId) => {
                   if (_scopeId) {
                     _push(\`<span data-v-xxxxxxx \${_scopeId}></span>\`)
@@ -91,10 +91,10 @@ describe('ssr: scopeId', () => {
                   }
                 },
                 _compiled: true
-              }, _parent)
+              }, _parent))
             } else {
               _push(\`<span data-v-xxxxxxx>hello</span>\`)
-              _ssrRenderComponent(_component_bar, null, {
+              _push(_ssrRenderComponent(_component_bar, null, {
                 default: (_, _push, _parent, _scopeId) => {
                   if (_scopeId) {
                     _push(\`<span data-v-xxxxxxx \${_scopeId}></span>\`)
@@ -103,11 +103,11 @@ describe('ssr: scopeId', () => {
                   }
                 },
                 _compiled: true
-              }, _parent)
+              }, _parent))
             }
           },
           _compiled: true
-        }, _parent)
+        }, _parent))
       }"
     `)
   })
