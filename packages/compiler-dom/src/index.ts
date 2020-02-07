@@ -6,8 +6,8 @@ import {
   ParserOptions,
   RootNode,
   noopDirectiveTransform,
-  TransformPreset,
-  getBaseTransformPreset
+  NodeTransform,
+  DirectiveTransform
 } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
@@ -23,43 +23,30 @@ export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
   : parserOptionsStandard
 
-export function getDOMTransformPreset(
-  prefixIdentifiers?: boolean
-): TransformPreset {
-  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
-    prefixIdentifiers
-  )
-  return [
-    [
-      ...nodeTransforms,
-      transformStyle,
-      ...(__DEV__ ? [warnTransitionChildren] : [])
-    ],
-    {
-      ...directiveTransforms,
-      cloak: noopDirectiveTransform,
-      html: transformVHtml,
-      text: transformVText,
-      model: transformModel, // override compiler-core
-      on: transformOn, // override compiler-core
-      show: transformShow
-    }
-  ]
+export const DOMNodeTransforms: NodeTransform[] = [
+  transformStyle,
+  ...(__DEV__ ? [warnTransitionChildren] : [])
+]
+
+export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
+  cloak: noopDirectiveTransform,
+  html: transformVHtml,
+  text: transformVText,
+  model: transformModel, // override compiler-core
+  on: transformOn, // override compiler-core
+  show: transformShow
 }
 
 export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
-  const [nodeTransforms, directiveTransforms] = getDOMTransformPreset(
-    options.prefixIdentifiers
-  )
   return baseCompile(template, {
     ...parserOptions,
     ...options,
-    nodeTransforms: [...nodeTransforms, ...(options.nodeTransforms || [])],
+    nodeTransforms: [...DOMNodeTransforms, ...(options.nodeTransforms || [])],
     directiveTransforms: {
-      ...directiveTransforms,
+      ...DOMDirectiveTransforms,
       ...(options.directiveTransforms || {})
     }
   })

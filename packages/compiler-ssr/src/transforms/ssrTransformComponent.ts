@@ -16,7 +16,9 @@ import {
   TRANSITION_GROUP,
   createIfStatement,
   createSimpleExpression,
-  getDOMTransformPreset,
+  getBaseTransformPreset,
+  DOMNodeTransforms,
+  DOMDirectiveTransforms,
   createReturnStatement,
   ReturnStatement,
   Namespaces,
@@ -165,9 +167,14 @@ export function ssrProcessComponent(
 
 export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
 
-const [vnodeNodeTransforms, vnodeDirectiveTransforms] = getDOMTransformPreset(
+const [baseNodeTransforms, baseDirectiveTransforms] = getBaseTransformPreset(
   true
 )
+const vnodeNodeTransforms = [...baseNodeTransforms, ...DOMNodeTransforms]
+const vnodeDirectiveTransforms = {
+  ...baseDirectiveTransforms,
+  ...DOMDirectiveTransforms
+}
 
 function createVNodeSlotBranch(
   props: ExpressionNode | undefined,
