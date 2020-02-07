@@ -34,7 +34,7 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
-import { ShapeFlags } from '.'
+import { ShapeFlags } from './shapeFlags'
 
 export type Data = { [key: string]: unknown }
 
