@@ -37,6 +37,7 @@ window.init = () => {
     try {
       const errors: CompilerError[] = []
       const compileFn = ssrMode.value ? ssrCompile : compile
+      const start = performance.now()
       const { code, ast, map } = compileFn(source, {
         filename: 'template.vue',
         ...compilerOptions,
@@ -45,6 +46,7 @@ window.init = () => {
           errors.push(err)
         }
       })
+      console.log(`Compiled in ${(performance.now() - start).toFixed(2)}ms.`)
       monaco.editor.setModelMarkers(
         editor.getModel()!,
         `@vue/compiler-dom`,
