@@ -31,7 +31,13 @@ describe('ssr: scopeId', () => {
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
-            _push(\`foo\`)
+            if (_push) {
+              _push(\`foo\`)
+            } else {
+              return [
+                createTextVNode(\\"foo\\")
+              ]
+            }
           },
           _compiled: true
         }, _parent))
@@ -53,10 +59,12 @@ describe('ssr: scopeId', () => {
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
-            if (_scopeId) {
-              _push(\`<span data-v-xxxxxxx \${_scopeId}>hello</span>\`)
+            if (_push) {
+              _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
             } else {
-              _push(\`<span data-v-xxxxxxx>hello</span>\`)
+              return [
+                createVNode(\\"span\\", null, \\"hello\\")
+              ]
             }
           },
           _compiled: true
@@ -80,30 +88,30 @@ describe('ssr: scopeId', () => {
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
-            if (_scopeId) {
-              _push(\`<span data-v-xxxxxxx \${_scopeId}>hello</span>\`)
+            if (_push) {
+              _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
               _push(_ssrRenderComponent(_component_bar, null, {
                 default: (_, _push, _parent, _scopeId) => {
-                  if (_scopeId) {
-                    _push(\`<span data-v-xxxxxxx \${_scopeId}></span>\`)
+                  if (_push) {
+                    _push(\`<span data-v-xxxxxxx\${_scopeId}></span>\`)
                   } else {
-                    _push(\`<span data-v-xxxxxxx></span>\`)
+                    return [
+                      createVNode(\\"span\\")
+                    ]
                   }
                 },
                 _compiled: true
               }, _parent))
             } else {
-              _push(\`<span data-v-xxxxxxx>hello</span>\`)
-              _push(_ssrRenderComponent(_component_bar, null, {
-                default: (_, _push, _parent, _scopeId) => {
-                  if (_scopeId) {
-                    _push(\`<span data-v-xxxxxxx \${_scopeId}></span>\`)
-                  } else {
-                    _push(\`<span data-v-xxxxxxx></span>\`)
-                  }
-                },
-                _compiled: true
-              }, _parent))
+              return [
+                createVNode(\\"span\\", null, \\"hello\\"),
+                createVNode(_component_bar, null, {
+                  default: () => [
+                    createVNode(\\"span\\")
+                  ],
+                  _compiled: true
+                })
+              ]
             }
           },
           _compiled: true

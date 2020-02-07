@@ -6,7 +6,9 @@ import {
   isBuiltInType,
   ParserOptions,
   RootNode,
-  noopDirectiveTransform
+  noopDirectiveTransform,
+  TransformPreset,
+  getBaseTransformPreset
 } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import { parserOptionsStandard } from './parserOptionsStandard'
@@ -31,25 +33,43 @@ export const isBuiltInDOMComponent = (tag: string): symbol | undefined => {
   }
 }
 
-export function compile(
-  template: string,
-  options: CompilerOptions = {}
-): CodegenResult {
-  return baseCompile(template, {
-    ...parserOptions,
-    ...options,
-    nodeTransforms: [
+export function getDOMTransformPreset(
+  prefixIdentifiers?: boolean
+): TransformPreset {
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
+    prefixIdentifiers
+  )
+  return [
+    [
+      ...nodeTransforms,
       transformStyle,
-      ...(__DEV__ ? [warnTransitionChildren] : []),
-      ...(options.nodeTransforms || [])
+      ...(__DEV__ ? [warnTransitionChildren] : [])
     ],
-    directiveTransforms: {
+    {
+      ...directiveTransforms,
       cloak: noopDirectiveTransform,
       html: transformVHtml,
       text: transformVText,
       model: transformModel, // override compiler-core
-      on: transformOn,
-      show: transformShow,
+      on: transformOn, // override compiler-core
+      show: transformShow
+    }
+  ]
+}
+
+export function compile(
+  template: string,
+  options: CompilerOptions = {}
+): CodegenResult {
+  const [nodeTransforms, directiveTransforms] = getDOMTransformPreset(
+    options.prefixIdentifiers
+  )
+  return baseCompile(template, {
+    ...parserOptions,
+    ...options,
+    nodeTransforms: [...nodeTransforms, ...(options.nodeTransforms || [])],
+    directiveTransforms: {
+      ...directiveTransforms,
       ...(options.directiveTransforms || {})
     },
     isBuiltInComponent: isBuiltInDOMComponent

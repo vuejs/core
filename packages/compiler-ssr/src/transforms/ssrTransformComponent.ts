@@ -8,7 +8,6 @@ import {
   ComponentNode,
   SlotFnBuilder,
   createFunctionExpression,
-  createBlockStatement,
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
@@ -17,7 +16,14 @@ import {
   TRANSITION_GROUP,
   createIfStatement,
   createSimpleExpression,
-  isText
+  getDOMTransformPreset,
+  transform,
+  createReturnStatement,
+  ReturnStatement,
+  Namespaces,
+  locStub,
+  RootNode,
+  TransformContext
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
@@ -25,7 +31,7 @@ import {
   processChildren,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
-import { isSymbol } from '@vue/shared'
+import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -36,6 +42,7 @@ const wipMap = new WeakMap<ComponentNode, WIPSlotEntry[]>()
 interface WIPSlotEntry {
   fn: FunctionExpression
   children: TemplateChildNode[]
+  vnodeBranch: ReturnStatement
 }
 
 const componentTypeMap = new WeakMap<ComponentNode, symbol>()
@@ -55,35 +62,38 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       return // built-in component: fallthrough
     }
 
-    // note we are not passing ssr: true here because for components, v-on
-    // handlers should still be passed
     const props =
-      node.props.length > 0 ? buildProps(node, context).props || `null` : `null`
+      node.props.length > 0
+        ? // note we are not passing ssr: true here because for components, v-on
+          // handlers should still be passed
+          buildProps(node, context).props || `null`
+        : `null`
 
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
 
     const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
-      // An SSR slot function has the signature of
-      //   (props, _push, _parent, _scopeId) => void
-      // See server-renderer/src/helpers/renderSlot.ts
       const fn = createFunctionExpression(
         [props || `_`, `_push`, `_parent`, `_scopeId`],
         undefined, // no return, assign body later
         true, // newline
-        false, // isSlot: pass false since we don't need client scopeId codegen
+        true, // isSlot
         loc
       )
-      wipEntries.push({ fn, children })
+      wipEntries.push({
+        fn,
+        children,
+        // build the children using normal vnode-based transforms
+        // TODO fixme: `children` here has already been mutated at this point
+        // so the sub-transform runs into errors :/
+        vnodeBranch: createVNodeSlotBranch(clone(children), context)
+      })
       return fn
     }
 
     const slots = node.children.length
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
-
-    // TODO option for slots bail out
-    // TODO scopeId
 
     node.ssrCodegenNode = createCallExpression(
       context.helper(SSR_RENDER_COMPONENT),
@@ -113,26 +123,79 @@ export function ssrProcessComponent(
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
     for (let i = 0; i < wipEntries.length; i++) {
-      const { fn, children } = wipEntries[i]
-      const hasNonTextChild = children.some(c => !isText(c))
-      if (hasNonTextChild) {
-        // SSR slots need to handled potential presence of scopeId of the child
-        // component. To avoid the cost of concatenation when it's unnecessary,
-        // we split the code into two paths, one with slot scopeId and one without.
-        fn.body = createBlockStatement([
-          createIfStatement(
-            createSimpleExpression(`_scopeId`, false),
-            // branch with scopeId concatenation
-            processChildrenAsStatement(children, context, false, true),
-            // branch without scopeId concatenation
-            processChildrenAsStatement(children, context, false, false)
-          )
-        ])
-      } else {
-        // only text, no need for scopeId branching.
-        fn.body = processChildrenAsStatement(children, context)
-      }
+      const { fn, children, vnodeBranch } = wipEntries[i]
+      // For each slot, we generate two branches: one SSR-optimized branch and
+      // one normal vnode-based branch. The branches are taken based on the
+      // presence of the 2nd `_push` argument (which is only present if the slot
+      // is called by `_ssrRenderSlot`.
+      fn.body = createIfStatement(
+        createSimpleExpression(`_push`, false),
+        processChildrenAsStatement(
+          children,
+          context,
+          false,
+          true /* withSlotScopeId */
+        ),
+        vnodeBranch
+      )
     }
     context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
+  }
+}
+
+function createVNodeSlotBranch(
+  children: TemplateChildNode[],
+  context: TransformContext
+): ReturnStatement {
+  // we need to process the slot children using client-side transforms.
+  // in order to do that we need to construct a fresh root.
+  // in addition, wrap the children with a wrapper template for proper child
+  // treatment.
+  const { root } = context
+  const childRoot: RootNode = {
+    ...root,
+    children: [
+      {
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'template',
+        tagType: ElementTypes.TEMPLATE,
+        isSelfClosing: false,
+        props: [],
+        children,
+        loc: locStub,
+        codegenNode: undefined
+      }
+    ]
+  }
+  const [nodeTransforms, directiveTransforms] = getDOMTransformPreset(true)
+  transform(childRoot, {
+    ...context, // copy transform options on context
+    nodeTransforms,
+    directiveTransforms
+  })
+
+  // merge helpers/components/directives/imports from the childRoot
+  // back to current root
+  ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
+    key => {
+      root[key] = [...new Set([...root[key], ...childRoot[key]])] as any
+    }
+  )
+
+  return createReturnStatement(children)
+}
+
+function clone(v: any): any {
+  if (isArray(v)) {
+    return v.map(clone)
+  } else if (isObject(v)) {
+    const res: any = {}
+    for (const key in v) {
+      res[key] = v[key]
+    }
+    return res
+  } else {
+    return v
   }
 }

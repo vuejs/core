@@ -8,6 +8,7 @@ import {
   VNode
 } from '../vnode'
 import { PatchFlags } from '@vue/shared'
+import { warn } from '../warning'
 
 export function renderSlot(
   slots: Record<string, Slot>,
@@ -17,7 +18,17 @@ export function renderSlot(
   // the compiler and guaranteed to be an array
   fallback?: VNodeArrayChildren
 ): VNode {
-  const slot = slots[name]
+  let slot = slots[name]
+
+  if (__DEV__ && slot.length > 1) {
+    warn(
+      `SSR-optimized slot function detected in a non-SSR-optimized render ` +
+        `function. You need to mark this component with $dynamic-slots in the ` +
+        `parent template.`
+    )
+    slot = () => []
+  }
+
   return (
     openBlock(),
     createBlock(

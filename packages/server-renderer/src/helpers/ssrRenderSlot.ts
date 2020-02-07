@@ -25,7 +25,7 @@ export function ssrRenderSlot(
     if (slotFn.length > 1) {
       // only ssr-optimized slot fns accept more than 1 arguments
       const scopeId = parentComponent && parentComponent.type.__scopeId
-      slotFn(slotProps, push, parentComponent, scopeId ? scopeId + `-s` : null)
+      slotFn(slotProps, push, parentComponent, scopeId ? ` ${scopeId}-s` : ``)
     } else {
       // normal slot
       renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)

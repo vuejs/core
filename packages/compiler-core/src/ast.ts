@@ -51,7 +51,8 @@ export const enum NodeTypes {
   JS_BLOCK_STATEMENT,
   JS_TEMPLATE_LITERAL,
   JS_IF_STATEMENT,
-  JS_ASSIGNMENT_EXPRESSION
+  JS_ASSIGNMENT_EXPRESSION,
+  JS_RETURN_STATEMENT
 }
 
 export const enum ElementTypes {
@@ -294,7 +295,7 @@ export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
   params: ExpressionNode | string | (ExpressionNode | string)[] | undefined
   returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
-  body?: BlockStatement
+  body?: BlockStatement | IfStatement
   newline: boolean
   // so that codegen knows it needs to generate ScopeId wrapper
   isSlot: boolean
@@ -322,7 +323,12 @@ export interface CacheExpression extends Node {
 
 // SSR-specific Node Types -----------------------------------------------------
 
-export type SSRCodegenNode = BlockStatement | TemplateLiteral | IfStatement
+export type SSRCodegenNode =
+  | BlockStatement
+  | TemplateLiteral
+  | IfStatement
+  | AssignmentExpression
+  | ReturnStatement
 
 export interface BlockStatement extends Node {
   type: NodeTypes.JS_BLOCK_STATEMENT
@@ -338,13 +344,18 @@ export interface IfStatement extends Node {
   type: NodeTypes.JS_IF_STATEMENT
   test: ExpressionNode
   consequent: BlockStatement
-  alternate: IfStatement | BlockStatement | undefined
+  alternate: IfStatement | BlockStatement | ReturnStatement | undefined
 }
 
 export interface AssignmentExpression extends Node {
   type: NodeTypes.JS_ASSIGNMENT_EXPRESSION
   left: SimpleExpressionNode
   right: JSChildNode
+}
+
+export interface ReturnStatement extends Node {
+  type: NodeTypes.JS_RETURN_STATEMENT
+  returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
 }
 
 // Codegen Node Types ----------------------------------------------------------
@@ -730,6 +741,16 @@ export function createAssignmentExpression(
     type: NodeTypes.JS_ASSIGNMENT_EXPRESSION,
     left,
     right,
+    loc: locStub
+  }
+}
+
+export function createReturnStatement(
+  returns: ReturnStatement['returns']
+): ReturnStatement {
+  return {
+    type: NodeTypes.JS_RETURN_STATEMENT,
+    returns,
     loc: locStub
   }
 }

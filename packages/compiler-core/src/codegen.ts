@@ -22,7 +22,8 @@ import {
   SSRCodegenNode,
   TemplateLiteral,
   IfStatement,
-  AssignmentExpression
+  AssignmentExpression,
+  ReturnStatement
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -44,8 +45,7 @@ import {
   CREATE_TEXT,
   PUSH_SCOPE_ID,
   POP_SCOPE_ID,
-  WITH_SCOPE_ID,
-  CREATE_BLOCK
+  WITH_SCOPE_ID
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -334,24 +334,12 @@ function genModulePreamble(
   context: CodegenContext,
   genScopeId: boolean
 ) {
-  const { push, helper, newline, scopeId, runtimeModuleName, ssr } = context
+  const { push, helper, newline, scopeId, runtimeModuleName } = context
 
-  if (!__BROWSER__) {
-    // in ssr mode, `withId` helper is only needed if the template contains
-    // de-optimized component slots (which uses the createVNode helper)
-    if (
-      ssr &&
-      !(
-        ast.helpers.includes(CREATE_VNODE) || ast.helpers.includes(CREATE_BLOCK)
-      )
-    ) {
-      genScopeId = false
-    }
-    if (genScopeId) {
-      ast.helpers.push(WITH_SCOPE_ID)
-      if (ast.hoists.length) {
-        ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
-      }
+  if (!__BROWSER__ && genScopeId) {
+    ast.helpers.push(WITH_SCOPE_ID)
+    if (ast.hoists.length) {
+      ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
     }
   }
 
@@ -571,6 +559,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
     case NodeTypes.JS_ASSIGNMENT_EXPRESSION:
       !__BROWSER__ && genAssignmentExpression(node, context)
+      break
+    case NodeTypes.JS_RETURN_STATEMENT:
+      !__BROWSER__ && genReturnStatement(node, context)
       break
 
     /* istanbul ignore next */
@@ -850,4 +841,16 @@ function genAssignmentExpression(
   genNode(node.left, context)
   context.push(` = `)
   genNode(node.right, context)
+}
+
+function genReturnStatement(
+  { returns }: ReturnStatement,
+  context: CodegenContext
+) {
+  context.push(`return `)
+  if (isArray(returns)) {
+    genNodeListAsArray(returns, context)
+  } else {
+    genNode(returns, context)
+  }
 }

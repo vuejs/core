@@ -30,7 +30,7 @@ window.init = () => {
   ssrMode.value = persistedState.ssr
   Object.assign(compilerOptions, persistedState.options)
 
-  let lastSuccessfulCode: string = `/* See console for error */`
+  let lastSuccessfulCode: string
   let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
   function compileCode(source: string): string {
     console.clear()
@@ -57,6 +57,9 @@ window.init = () => {
       lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
       lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
+      lastSuccessfulCode = `/* ERROR: ${
+        e.message
+      } (see console for more info) */`
       console.error(e)
     }
     return lastSuccessfulCode

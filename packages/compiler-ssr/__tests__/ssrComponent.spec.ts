@@ -57,10 +57,13 @@ describe('ssr: components', () => {
 
           _push(_ssrRenderComponent(_component_foo, null, {
             default: (_, _push, _parent, _scopeId) => {
-              if (_scopeId) {
-                _push(\`hello<div \${_scopeId}></div>\`)
+              if (_push) {
+                _push(\`hello<div\${_scopeId}></div>\`)
               } else {
-                _push(\`hello<div></div>\`)
+                return [
+                  createTextVNode(\\"hello\\"),
+                  createVNode(\\"div\\")
+                ]
               }
             },
             _compiled: true
@@ -80,7 +83,13 @@ describe('ssr: components', () => {
 
           _push(_ssrRenderComponent(_component_foo, null, {
             default: ({ msg }, _push, _parent, _scopeId) => {
-              _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
+              if (_push) {
+                _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
+              } else {
+                return [
+                  createTextVNode(toDisplayString(_ctx.msg + _ctx.outer))
+                ]
+              }
             },
             _compiled: true
           }, _parent))
@@ -103,10 +112,22 @@ describe('ssr: components', () => {
 
           _push(_ssrRenderComponent(_component_foo, null, {
             default: (_, _push, _parent, _scopeId) => {
-              _push(\`foo\`)
+              if (_push) {
+                _push(\`foo\`)
+              } else {
+                return [
+                  createTextVNode(\\"foo\\")
+                ]
+              }
             },
             named: (_, _push, _parent, _scopeId) => {
-              _push(\`bar\`)
+              if (_push) {
+                _push(\`bar\`)
+              } else {
+                return [
+                  createTextVNode(\\"bar\\")
+                ]
+              }
             },
             _compiled: true
           }, _parent))
@@ -131,7 +152,13 @@ describe('ssr: components', () => {
               ? {
                   name: \\"named\\",
                   fn: (_, _push, _parent, _scopeId) => {
-                    _push(\`foo\`)
+                    if (_push) {
+                      _push(\`foo\`)
+                    } else {
+                      return [
+                        createTextVNode(\\"foo\\")
+                      ]
+                    }
                   }
                 }
               : undefined

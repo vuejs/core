@@ -10,8 +10,8 @@ export {
 export { baseParse, TextModes } from './parse'
 export {
   transform,
-  createStructuralDirectiveTransform,
   TransformContext,
+  createStructuralDirectiveTransform,
   NodeTransform,
   StructuralDirectiveTransform,
   DirectiveTransform
@@ -23,18 +23,16 @@ export {
   CompilerError,
   createCompilerError
 } from './errors'
+
 export * from './ast'
 export * from './utils'
-export { registerRuntimeHelpers } from './runtimeHelpers'
-export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
+export * from './runtimeHelpers'
 
-// expose transforms so higher-order compilers can import and extend them
+export { getBaseTransformPreset, TransformPreset } from './compile'
 export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
 export { transformBind } from './transforms/vBind'
-
-// exported for compiler-ssr
-export * from './runtimeHelpers'
+export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
 export { processIf } from './transforms/vIf'
 export { processFor, createForLoopParams } from './transforms/vFor'
 export {

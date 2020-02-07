@@ -309,7 +309,6 @@ export function ssrProcessElement(
 
   // Handle slot scopeId
   if (context.withSlotScopeId) {
-    context.pushStringPart(` `)
     context.pushStringPart(createSimpleExpression(`_scopeId`, false))
   }
 

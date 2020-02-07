@@ -28,7 +28,7 @@ import { ssrProcessElement } from './transforms/ssrTransformElement'
 // passing it to codegen.
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
-  const context = createSSRTransformContext(options)
+  const context = createSSRTransformContext(ast, options)
   const isFragment =
     ast.children.length > 1 && ast.children.some(c => !isText(c))
   processChildren(ast.children, context, isFragment)
@@ -46,6 +46,7 @@ export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 
 function createSSRTransformContext(
+  root: RootNode,
   options: CompilerOptions,
   helpers: Set<symbol> = new Set(),
   withSlotScopeId = false
@@ -54,6 +55,7 @@ function createSSRTransformContext(
   let currentString: TemplateLiteral | null = null
 
   return {
+    root,
     options,
     body,
     helpers,
@@ -91,6 +93,7 @@ function createChildContext(
 ): SSRTransformContext {
   // ensure child inherits parent helpers
   return createSSRTransformContext(
+    parent.root,
     parent.options,
     parent.helpers,
     withSlotScopeId

@@ -85,8 +85,8 @@ export interface TransformContext extends Required<TransformOptions> {
   components: Set<string>
   directives: Set<string>
   hoists: JSChildNode[]
-  temps: number
   imports: Set<ImportItem>
+  temps: number
   cached: number
   identifiers: { [name: string]: number | undefined }
   scopes: {
@@ -141,8 +141,8 @@ function createTransformContext(
     components: new Set(),
     directives: new Set(),
     hoists: [],
-    temps: 0,
     imports: new Set(),
+    temps: 0,
     cached: 0,
     identifiers: {},
     scopes: {
