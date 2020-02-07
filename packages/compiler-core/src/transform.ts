@@ -109,7 +109,7 @@ export interface TransformContext extends Required<TransformOptions> {
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
 }
 
-function createTransformContext(
+export function createTransformContext(
   root: RootNode,
   {
     prefixIdentifiers = false,

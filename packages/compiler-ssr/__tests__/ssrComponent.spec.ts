@@ -49,7 +49,7 @@ describe('ssr: components', () => {
   describe('slots', () => {
     test('implicit default slot', () => {
       expect(compile(`<foo>hello<div/></foo>`).code).toMatchInlineSnapshot(`
-        "const { resolveComponent } = require(\\"vue\\")
+        "const { resolveComponent, createVNode, createTextVNode } = require(\\"vue\\")
         const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -75,7 +75,7 @@ describe('ssr: components', () => {
     test('explicit default slot', () => {
       expect(compile(`<foo v-slot="{ msg }">{{ msg + outer }}</foo>`).code)
         .toMatchInlineSnapshot(`
-        "const { resolveComponent } = require(\\"vue\\")
+        "const { resolveComponent, createTextVNode } = require(\\"vue\\")
         const { _ssrRenderComponent, _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -87,7 +87,7 @@ describe('ssr: components', () => {
                 _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
               } else {
                 return [
-                  createTextVNode(toDisplayString(_ctx.msg + _ctx.outer))
+                  createTextVNode(toDisplayString(msg + _ctx.outer))
                 ]
               }
             },
@@ -104,7 +104,7 @@ describe('ssr: components', () => {
         <template v-slot:named>bar</template>
       </foo>`).code
       ).toMatchInlineSnapshot(`
-        "const { resolveComponent } = require(\\"vue\\")
+        "const { resolveComponent, createTextVNode } = require(\\"vue\\")
         const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -141,7 +141,7 @@ describe('ssr: components', () => {
         <template v-slot:named v-if="ok">foo</template>
       </foo>`).code
       ).toMatchInlineSnapshot(`
-        "const { resolveComponent, createSlots } = require(\\"vue\\")
+        "const { resolveComponent, createTextVNode, createSlots } = require(\\"vue\\")
         const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -173,7 +173,7 @@ describe('ssr: components', () => {
         <template v-for="key in names" v-slot:[key]="{ msg }">{{ msg + key + bar }}</template>
       </foo>`).code
       ).toMatchInlineSnapshot(`
-        "const { resolveComponent, renderList, createSlots } = require(\\"vue\\")
+        "const { resolveComponent, createTextVNode, renderList, createSlots } = require(\\"vue\\")
         const { _ssrRenderComponent, _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -184,11 +184,91 @@ describe('ssr: components', () => {
               return {
                 name: key,
                 fn: ({ msg }, _push, _parent, _scopeId) => {
-                  _push(\`\${_ssrInterpolate(msg + key + _ctx.bar)}\`)
+                  if (_push) {
+                    _push(\`\${_ssrInterpolate(msg + key + _ctx.bar)}\`)
+                  } else {
+                    return [
+                      createTextVNode(toDisplayString(msg + _ctx.key + _ctx.bar))
+                    ]
+                  }
                 }
               }
             })
           ]), _parent))
+        }"
+      `)
+    })
+
+    test('nested transform scoping in vnode branch', () => {
+      expect(
+        compile(`<foo>
+        <template v-slot:foo="{ list }">
+          <div v-if="ok">
+            <span v-for="i in list"></span>
+          </div>
+        </template>
+        <template v-slot:bar="{ ok }">
+          <div v-if="ok">
+            <span v-for="i in list"></span>
+          </div>
+        </template>
+      </foo>`).code
+      ).toMatchInlineSnapshot(`
+        "const { resolveComponent, renderList, openBlock, createBlock, Fragment, createVNode, createCommentVNode } = require(\\"vue\\")
+        const { _ssrRenderComponent, _ssrRenderList } = require(\\"@vue/server-renderer\\")
+
+        return function ssrRender(_ctx, _push, _parent) {
+          const _component_foo = resolveComponent(\\"foo\\")
+
+          _push(_ssrRenderComponent(_component_foo, null, {
+            foo: ({ list }, _push, _parent, _scopeId) => {
+              if (_push) {
+                if (_ctx.ok) {
+                  _push(\`<div\${_scopeId}><!---->\`)
+                  _ssrRenderList(list, (i) => {
+                    _push(\`<span\${_scopeId}></span>\`)
+                  })
+                  _push(\`<!----></div>\`)
+                } else {
+                  _push(\`<!---->\`)
+                }
+              } else {
+                return [
+                  (openBlock(), (_ctx.ok)
+                    ? createBlock(\\"div\\", { key: 0 }, [
+                        (openBlock(false), createBlock(Fragment, null, renderList(list, (i) => {
+                          return (openBlock(), createBlock(\\"span\\"))
+                        }), 256 /* UNKEYED_FRAGMENT */))
+                      ])
+                    : createCommentVNode(\\"v-if\\", true))
+                ]
+              }
+            },
+            bar: ({ ok }, _push, _parent, _scopeId) => {
+              if (_push) {
+                if (ok) {
+                  _push(\`<div\${_scopeId}><!---->\`)
+                  _ssrRenderList(_ctx.list, (i) => {
+                    _push(\`<span\${_scopeId}></span>\`)
+                  })
+                  _push(\`<!----></div>\`)
+                } else {
+                  _push(\`<!---->\`)
+                }
+              } else {
+                return [
+                  (openBlock(), ok
+                    ? createBlock(\\"div\\", { key: 0 }, [
+                        (openBlock(false), createBlock(Fragment, null, renderList(_ctx.list, (i) => {
+                          return (openBlock(), createBlock(\\"span\\"))
+                        }), 256 /* UNKEYED_FRAGMENT */))
+                      ])
+                    : createCommentVNode(\\"v-if\\", true))
+                ]
+              }
+            },
+            _compiled: true
+          }, _parent))
         }"
       `)
     })

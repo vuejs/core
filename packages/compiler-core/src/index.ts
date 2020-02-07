@@ -11,6 +11,8 @@ export { baseParse, TextModes } from './parse'
 export {
   transform,
   TransformContext,
+  createTransformContext,
+  traverseNode,
   createStructuralDirectiveTransform,
   NodeTransform,
   StructuralDirectiveTransform,

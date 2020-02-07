@@ -10,12 +10,14 @@ import {
   trackSlotScopes,
   noopDirectiveTransform,
   transformBind,
-  transformStyle,
-  isBuiltInDOMComponent
+  transformStyle
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
-import { ssrTransformComponent } from './transforms/ssrTransformComponent'
+import {
+  ssrTransformComponent,
+  rawOptionsMap
+} from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrTransformIf } from './transforms/ssrVIf'
 import { ssrTransformFor } from './transforms/ssrVFor'
@@ -40,6 +42,10 @@ export function compile(
   }
 
   const ast = baseParse(template, options)
+
+  // Save raw options for AST. This is needed when performing sub-transforms
+  // on slot vnode branches.
+  rawOptionsMap.set(ast, options)
 
   transform(ast, {
     ...options,
@@ -66,8 +72,7 @@ export function compile(
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
       ...(options.directiveTransforms || {}) // user transforms
-    },
-    isBuiltInComponent: isBuiltInDOMComponent
+    }
   })
 
   // traverse the template AST and convert into SSR codegen AST

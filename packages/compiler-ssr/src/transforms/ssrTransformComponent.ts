@@ -17,13 +17,19 @@ import {
   createIfStatement,
   createSimpleExpression,
   getDOMTransformPreset,
-  transform,
   createReturnStatement,
   ReturnStatement,
   Namespaces,
   locStub,
   RootNode,
-  TransformContext
+  TransformContext,
+  CompilerOptions,
+  TransformOptions,
+  createRoot,
+  createTransformContext,
+  traverseNode,
+  ExpressionNode,
+  TemplateNode
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
@@ -55,12 +61,26 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     return
   }
 
+  const component = resolveComponentType(node, context, true /* ssr */)
+  if (isSymbol(component)) {
+    componentTypeMap.set(node, component)
+    return // built-in component: fallthrough
+  }
+
+  // Build the fallback vnode-based branch for the component's slots.
+  // We need to clone the node into a fresh copy and use the buildSlots' logic
+  // to get access to the children of each slot. We then compile them with
+  // a child transform pipeline using vnode-based transforms (instead of ssr-
+  // based ones), and save the result branch (a ReturnStatement) in an array.
+  // The branch is retrieved when processing slots again in ssr mode.
+  const vnodeBranches: ReturnStatement[] = []
+  const clonedNode = clone(node)
+
   return function ssrPostTransformComponent() {
-    const component = resolveComponentType(node, context, true /* ssr */)
-    if (isSymbol(component)) {
-      componentTypeMap.set(node, component)
-      return // built-in component: fallthrough
-    }
+    buildSlots(clonedNode, context, (props, children) => {
+      vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+      return createFunctionExpression(undefined)
+    })
 
     const props =
       node.props.length > 0
@@ -86,7 +106,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
         // build the children using normal vnode-based transforms
         // TODO fixme: `children` here has already been mutated at this point
         // so the sub-transform runs into errors :/
-        vnodeBranch: createVNodeSlotBranch(clone(children), context)
+        vnodeBranch: vnodeBranches[wipEntries.length]
       })
       return fn
     }
@@ -143,47 +163,79 @@ export function ssrProcessComponent(
   }
 }
 
-function createVNodeSlotBranch(
-  children: TemplateChildNode[],
-  context: TransformContext
-): ReturnStatement {
-  // we need to process the slot children using client-side transforms.
-  // in order to do that we need to construct a fresh root.
-  // in addition, wrap the children with a wrapper template for proper child
-  // treatment.
-  const { root } = context
-  const childRoot: RootNode = {
-    ...root,
-    children: [
-      {
-        type: NodeTypes.ELEMENT,
-        ns: Namespaces.HTML,
-        tag: 'template',
-        tagType: ElementTypes.TEMPLATE,
-        isSelfClosing: false,
-        props: [],
-        children,
-        loc: locStub,
-        codegenNode: undefined
-      }
-    ]
-  }
-  const [nodeTransforms, directiveTransforms] = getDOMTransformPreset(true)
-  transform(childRoot, {
-    ...context, // copy transform options on context
-    nodeTransforms,
-    directiveTransforms
-  })
+export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()
 
-  // merge helpers/components/directives/imports from the childRoot
-  // back to current root
+const [vnodeNodeTransforms, vnodeDirectiveTransforms] = getDOMTransformPreset(
+  true
+)
+
+function createVNodeSlotBranch(
+  props: ExpressionNode | undefined,
+  children: TemplateChildNode[],
+  parentContext: TransformContext
+): ReturnStatement {
+  // apply a sub-transform using vnode-based transforms.
+  const rawOptions = rawOptionsMap.get(parentContext.root)!
+  const subOptions = {
+    ...rawOptions,
+    // overwrite with vnode-based transforms
+    nodeTransforms: [
+      ...vnodeNodeTransforms,
+      ...(rawOptions.nodeTransforms || [])
+    ],
+    directiveTransforms: {
+      ...vnodeDirectiveTransforms,
+      ...(rawOptions.directiveTransforms || {})
+    }
+  }
+
+  // wrap the children with a wrapper template for proper children treatment.
+  const wrapperNode: TemplateNode = {
+    type: NodeTypes.ELEMENT,
+    ns: Namespaces.HTML,
+    tag: 'template',
+    tagType: ElementTypes.TEMPLATE,
+    isSelfClosing: false,
+    // important: provide v-slot="props" on the wrapper for proper
+    // scope analysis
+    props: [
+      {
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        exp: props,
+        arg: undefined,
+        modifiers: [],
+        loc: locStub
+      }
+    ],
+    children,
+    loc: locStub,
+    codegenNode: undefined
+  }
+  subTransform(wrapperNode, subOptions, parentContext)
+  return createReturnStatement(children)
+}
+
+function subTransform(
+  node: TemplateChildNode,
+  options: TransformOptions,
+  parentContext: TransformContext
+) {
+  const childRoot = createRoot([node])
+  const childContext = createTransformContext(childRoot, options)
+  // inherit parent scope analysis state
+  childContext.scopes = { ...parentContext.scopes }
+  childContext.identifiers = { ...parentContext.identifiers }
+  // traverse
+  traverseNode(childRoot, childContext)
+  // merge helpers/components/directives/imports into parent context
   ;(['helpers', 'components', 'directives', 'imports'] as const).forEach(
     key => {
-      root[key] = [...new Set([...root[key], ...childRoot[key]])] as any
+      childContext[key].forEach((value: any) => {
+        ;(parentContext[key] as any).add(value)
+      })
     }
   )
-
-  return createReturnStatement(children)
 }
 
 function clone(v: any): any {
@@ -192,7 +244,7 @@ function clone(v: any): any {
   } else if (isObject(v)) {
     const res: any = {}
     for (const key in v) {
-      res[key] = v[key]
+      res[key] = clone(v[key])
     }
     return res
   } else {

@@ -23,7 +23,7 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent } = require(\\"vue\\")
+      "const { resolveComponent, createTextVNode } = require(\\"vue\\")
       const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
@@ -51,7 +51,7 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent } = require(\\"vue\\")
+      "const { resolveComponent, createVNode } = require(\\"vue\\")
       const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
@@ -79,12 +79,12 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent } = require(\\"vue\\")
+      "const { resolveComponent, createVNode } = require(\\"vue\\")
       const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        const _component_bar = resolveComponent(\\"bar\\")
         const _component_foo = resolveComponent(\\"foo\\")
+        const _component_bar = resolveComponent(\\"bar\\")
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {

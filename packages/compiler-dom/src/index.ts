@@ -3,7 +3,6 @@ import {
   baseParse,
   CompilerOptions,
   CodegenResult,
-  isBuiltInType,
   ParserOptions,
   RootNode,
   noopDirectiveTransform,
@@ -18,20 +17,11 @@ import { transformVText } from './transforms/vText'
 import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
-import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { warnTransitionChildren } from './transforms/warnTransitionChildren'
 
 export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
   : parserOptionsStandard
-
-export const isBuiltInDOMComponent = (tag: string): symbol | undefined => {
-  if (isBuiltInType(tag, `Transition`)) {
-    return TRANSITION
-  } else if (isBuiltInType(tag, `TransitionGroup`)) {
-    return TRANSITION_GROUP
-  }
-}
 
 export function getDOMTransformPreset(
   prefixIdentifiers?: boolean
@@ -71,8 +61,7 @@ export function compile(
     directiveTransforms: {
       ...directiveTransforms,
       ...(options.directiveTransforms || {})
-    },
-    isBuiltInComponent: isBuiltInDOMComponent
+    }
   })
 }
 
