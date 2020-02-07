@@ -283,7 +283,7 @@ function registerKeepAliveHook(
   if (target) {
     let current = target.parent
     while (current && current.parent) {
-      if (current.parent.type === KeepAliveImpl) {
+      if (isKeepAlive(current.parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
       current = current.parent
