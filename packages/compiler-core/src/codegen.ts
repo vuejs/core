@@ -187,7 +187,7 @@ export function generate(
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
 
   // preambles
-  if (mode === 'module') {
+  if (!__BROWSER__ && mode === 'module') {
     genModulePreamble(ast, context, genScopeId)
   } else {
     genFunctionPreamble(ast, context)
@@ -222,7 +222,7 @@ export function generate(
       }
       newline()
     }
-  } else if (!ssr) {
+  } else if (!__BROWSER__ && !ssr) {
     push(`const _ctx = this`)
     if (ast.cached > 0) {
       newline()
@@ -289,15 +289,16 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     runtimeModuleName,
     runtimeGlobalName
   } = context
-  const VueBinding = ssr
-    ? `require(${JSON.stringify(runtimeModuleName)})`
-    : runtimeGlobalName
+  const VueBinding =
+    !__BROWSER__ && ssr
+      ? `require(${JSON.stringify(runtimeModuleName)})`
+      : runtimeGlobalName
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
   // with block so it doesn't incur the `in` check cost for every helper access.
   if (ast.helpers.length > 0) {
-    if (prefixIdentifiers) {
+    if (!__BROWSER__ && prefixIdentifiers) {
       push(`const { ${ast.helpers.map(helper).join(', ')} } = ${VueBinding}\n`)
     } else {
       // "with" mode.
@@ -336,7 +337,7 @@ function genModulePreamble(
 ) {
   const { push, helper, newline, scopeId, runtimeModuleName } = context
 
-  if (!__BROWSER__ && genScopeId) {
+  if (genScopeId) {
     ast.helpers.push(WITH_SCOPE_ID)
     if (ast.hoists.length) {
       ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
@@ -352,22 +353,22 @@ function genModulePreamble(
     )
   }
 
-  if (!__BROWSER__) {
-    if (ast.ssrHelpers && ast.ssrHelpers.length) {
-      push(
-        `import { ${ast.ssrHelpers
-          .map(helper)
-          .join(', ')} } from "@vue/server-renderer"\n`
-      )
-    }
-    if (ast.imports.length) {
-      genImports(ast.imports, context)
-      newline()
-    }
-    if (genScopeId) {
-      push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
-      newline()
-    }
+  if (ast.ssrHelpers && ast.ssrHelpers.length) {
+    push(
+      `import { ${ast.ssrHelpers
+        .map(helper)
+        .join(', ')} } from "@vue/server-renderer"\n`
+    )
+  }
+
+  if (ast.imports.length) {
+    genImports(ast.imports, context)
+    newline()
+  }
+
+  if (genScopeId) {
+    push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    newline()
   }
 
   genHoists(ast.hoists, context)
