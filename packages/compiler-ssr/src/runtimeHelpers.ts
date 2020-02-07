@@ -15,19 +15,19 @@ export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`ssrRenderDynamicModel`)
 export const SSR_GET_DYNAMIC_MODEL_PROPS = Symbol(`ssrGetDynamicModelProps`)
 
 export const ssrHelpers = {
-  [SSR_INTERPOLATE]: `_ssrInterpolate`,
-  [SSR_RENDER_COMPONENT]: `_ssrRenderComponent`,
-  [SSR_RENDER_SLOT]: `_ssrRenderSlot`,
-  [SSR_RENDER_CLASS]: `_ssrRenderClass`,
-  [SSR_RENDER_STYLE]: `_ssrRenderStyle`,
-  [SSR_RENDER_ATTRS]: `_ssrRenderAttrs`,
-  [SSR_RENDER_ATTR]: `_ssrRenderAttr`,
-  [SSR_RENDER_DYNAMIC_ATTR]: `_ssrRenderDynamicAttr`,
-  [SSR_RENDER_LIST]: `_ssrRenderList`,
-  [SSR_LOOSE_EQUAL]: `_ssrLooseEqual`,
-  [SSR_LOOSE_CONTAIN]: `_ssrLooseContain`,
-  [SSR_RENDER_DYNAMIC_MODEL]: `_ssrRenderDynamicModel`,
-  [SSR_GET_DYNAMIC_MODEL_PROPS]: `_ssrGetDynamicModelProps`
+  [SSR_INTERPOLATE]: `ssrInterpolate`,
+  [SSR_RENDER_COMPONENT]: `ssrRenderComponent`,
+  [SSR_RENDER_SLOT]: `ssrRenderSlot`,
+  [SSR_RENDER_CLASS]: `ssrRenderClass`,
+  [SSR_RENDER_STYLE]: `ssrRenderStyle`,
+  [SSR_RENDER_ATTRS]: `ssrRenderAttrs`,
+  [SSR_RENDER_ATTR]: `ssrRenderAttr`,
+  [SSR_RENDER_DYNAMIC_ATTR]: `ssrRenderDynamicAttr`,
+  [SSR_RENDER_LIST]: `ssrRenderList`,
+  [SSR_LOOSE_EQUAL]: `ssrLooseEqual`,
+  [SSR_LOOSE_CONTAIN]: `ssrLooseContain`,
+  [SSR_RENDER_DYNAMIC_MODEL]: `ssrRenderDynamicModel`,
+  [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`
 }
 
 // Note: these are helpers imported from @vue/server-renderer

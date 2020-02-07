@@ -80,6 +80,7 @@ function createCodegenContext(
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
+    optimizeBindings = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false
@@ -91,6 +92,7 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
+    optimizeBindings,
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
@@ -102,8 +104,7 @@ function createCodegenContext(
     indentLevel: 0,
     map: undefined,
     helper(key) {
-      const name = helperNameMap[key]
-      return prefixIdentifiers ? name : `_${name}`
+      return `_${helperNameMap[key]}`
     },
     push(code, node) {
       context.code += code
@@ -282,7 +283,6 @@ export function generate(
 function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
   const {
     ssr,
-    helper,
     prefixIdentifiers,
     push,
     newline,
@@ -293,13 +293,16 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     !__BROWSER__ && ssr
       ? `require(${JSON.stringify(runtimeModuleName)})`
       : runtimeGlobalName
+  const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
   // with block so it doesn't incur the `in` check cost for every helper access.
   if (ast.helpers.length > 0) {
     if (!__BROWSER__ && prefixIdentifiers) {
-      push(`const { ${ast.helpers.map(helper).join(', ')} } = ${VueBinding}\n`)
+      push(
+        `const { ${ast.helpers.map(aliasHelper).join(', ')} } = ${VueBinding}\n`
+      )
     } else {
       // "with" mode.
       // save Vue in a separate variable to avoid collision
@@ -310,7 +313,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       if (ast.hoists.length) {
         const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
           .filter(helper => ast.helpers.includes(helper))
-          .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
+          .map(aliasHelper)
           .join(', ')
         push(`const { ${staticHelpers} } = _Vue\n`)
       }
@@ -321,7 +324,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     // ssr guaruntees prefixIdentifier: true
     push(
       `const { ${ast.ssrHelpers
-        .map(helper)
+        .map(aliasHelper)
         .join(', ')} } = require("@vue/server-renderer")\n`
     )
   }
@@ -335,7 +338,14 @@ function genModulePreamble(
   context: CodegenContext,
   genScopeId: boolean
 ) {
-  const { push, helper, newline, scopeId, runtimeModuleName } = context
+  const {
+    push,
+    helper,
+    newline,
+    scopeId,
+    optimizeBindings,
+    runtimeModuleName
+  } = context
 
   if (genScopeId) {
     ast.helpers.push(WITH_SCOPE_ID)
@@ -346,17 +356,35 @@ function genModulePreamble(
 
   // generate import statements for helpers
   if (ast.helpers.length) {
-    push(
-      `import { ${ast.helpers.map(helper).join(', ')} } from ${JSON.stringify(
-        runtimeModuleName
-      )}\n`
-    )
+    if (optimizeBindings) {
+      // when bundled with webpack with code-split, calling an import binding
+      // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
+      // incurring both payload size increase and potential perf overhead.
+      // therefore we assign the imports to vairables (which is a constant ~50b
+      // cost per-component instead of scaling with template size)
+      push(
+        `import { ${ast.helpers
+          .map(s => helperNameMap[s])
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+      )
+      push(
+        `\n// Binding optimization for webpack code-split\nconst ${ast.helpers
+          .map(s => `_${helperNameMap[s]} = ${helperNameMap[s]}`)
+          .join(', ')}\n`
+      )
+    } else {
+      push(
+        `import { ${ast.helpers
+          .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+      )
+    }
   }
 
   if (ast.ssrHelpers && ast.ssrHelpers.length) {
     push(
       `import { ${ast.ssrHelpers
-        .map(helper)
+        .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
         .join(', ')} } from "@vue/server-renderer"\n`
     )
   }
