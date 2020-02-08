@@ -143,7 +143,7 @@ function renderComponentSubTree(
     } else if (comp.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
     } else {
-      // TODO on the fly template compilation support
+      //  TODO on the fly template compilation support
       throw new Error(
         `Component ${
           comp.name ? `${comp.name} ` : ``
