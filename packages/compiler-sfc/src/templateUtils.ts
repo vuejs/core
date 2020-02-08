@@ -2,15 +2,13 @@ import { UrlWithStringQuery, parse as uriParse } from 'url'
 import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {
-  const firstChar = url.charAt(0)
-  return firstChar === '.' || firstChar === '~' || firstChar === '@'
+  return url.startsWith('.') || url.startsWith('~') || url.startsWith('@')
 }
 
 // We need an extra transform context API for injecting arbitrary import
 // statements.
 export function parseUrl(url: string): UrlWithStringQuery {
-  const firstChar = url.charAt(0)
-  if (firstChar === '~') {
+  if (url.startsWith('~')) {
     const secondChar = url.charAt(1)
     url = url.slice(secondChar === '/' ? 2 : 1)
   }
