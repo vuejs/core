@@ -27,9 +27,9 @@ export function render() {
   const _ctx = this
   const _cache = _ctx.$cache
   return _cache[1] || (
-    setBlockTracking(-1),
+    _setBlockTracking(-1),
     _cache[1] = foo,
-    setBlockTracking(1),
+    _setBlockTracking(1),
     _cache[1]
   )
 }"
@@ -126,7 +126,7 @@ return function render() {
 `;
 
 exports[`compiler: codegen function mode preamble w/ prefixIdentifiers: true 1`] = `
-"const { createVNode, resolveDirective } = Vue
+"const { createVNode: _createVNode, resolveDirective: _resolveDirective } = Vue
 
 return function render() {
   const _ctx = this
@@ -165,7 +165,19 @@ return function render() {
 `;
 
 exports[`compiler: codegen module mode preamble 1`] = `
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
+
+export function render() {
+  const _ctx = this
+  return null
+}"
+`;
+
+exports[`compiler: codegen module mode preamble w/ optimizeBindings: true 1`] = `
 "import { createVNode, resolveDirective } from \\"vue\\"
+
+// Binding optimization for webpack code-split
+const _createVNode = createVNode, _resolveDirective = resolveDirective
 
 export function render() {
   const _ctx = this

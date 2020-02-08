@@ -91,10 +91,10 @@ return function render() {
 `;
 
 exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
-"const { toDisplayString } = Vue
+"const { toDisplayString: _toDisplayString } = Vue
 
 return function render() {
   const _ctx = this
-  return toDisplayString(_ctx.foo) + \\" bar \\" + toDisplayString(_ctx.baz + _ctx.qux)
+  return _toDisplayString(_ctx.foo) + \\" bar \\" + _toDisplayString(_ctx.baz + _ctx.qux)
 }"
 `;

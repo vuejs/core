@@ -196,7 +196,7 @@ export function generate(
 
   // enter render function
   if (genScopeId && !ssr) {
-    push(`const render = withId(`)
+    push(`const render = _withId(`)
   }
   if (!ssr) {
     push(`function render() {`)
@@ -395,7 +395,7 @@ function genModulePreamble(
   }
 
   if (genScopeId) {
-    push(`const withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    push(`const _withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
     newline()
   }
 
@@ -719,7 +719,7 @@ function genFunctionExpression(
     !__BROWSER__ && isSlot && scopeId != null && mode !== 'function'
 
   if (genScopeId) {
-    push(`withId(`)
+    push(`_withId(`)
   }
   push(`(`, node)
   if (isArray(params)) {

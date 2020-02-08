@@ -1,11 +1,11 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: transform v-model compound expression (with prefixIdentifiers) 1`] = `
-"import { createVNode, createBlock, openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
 
 export function render() {
   const _ctx = this
-  return (openBlock(), createBlock(\\"input\\", {
+  return (_openBlock(), _createBlock(\\"input\\", {
     modelValue: _ctx.model[_ctx.index],
     \\"onUpdate:modelValue\\": $event => (_ctx.model[_ctx.index] = $event)
   }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
@@ -28,11 +28,11 @@ return function render() {
 `;
 
 exports[`compiler: transform v-model simple exprssion (with prefixIdentifiers) 1`] = `
-"import { createVNode, createBlock, openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
 
 export function render() {
   const _ctx = this
-  return (openBlock(), createBlock(\\"input\\", {
+  return (_openBlock(), _createBlock(\\"input\\", {
     modelValue: _ctx.model,
     \\"onUpdate:modelValue\\": $event => (_ctx.model = $event)
   }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
@@ -70,11 +70,11 @@ return function render() {
 `;
 
 exports[`compiler: transform v-model with dynamic argument (with prefixIdentifiers) 1`] = `
-"import { createVNode, createBlock, openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
 
 export function render() {
   const _ctx = this
-  return (openBlock(), createBlock(\\"input\\", {
+  return (_openBlock(), _createBlock(\\"input\\", {
     [_ctx.value]: _ctx.model,
     [\\"onUpdate:\\" + _ctx.value]: $event => (_ctx.model = $event)
   }, null, 16 /* FULL_PROPS */))

@@ -55,9 +55,31 @@ describe('compiler: codegen', () => {
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
+      `import { ${helperNameMap[CREATE_VNODE]} as _${
+        helperNameMap[CREATE_VNODE]
+      }, ${helperNameMap[RESOLVE_DIRECTIVE]} as _${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      } } from "vue"`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('module mode preamble w/ optimizeBindings: true', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, { mode: 'module', optimizeBindings: true })
+    expect(code).toMatch(
       `import { ${helperNameMap[CREATE_VNODE]}, ${
         helperNameMap[RESOLVE_DIRECTIVE]
       } } from "vue"`
+    )
+    expect(code).toMatch(
+      `const _${helperNameMap[CREATE_VNODE]} = ${
+        helperNameMap[CREATE_VNODE]
+      }, _${helperNameMap[RESOLVE_DIRECTIVE]} = ${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      }`
     )
     expect(code).toMatchSnapshot()
   })
@@ -88,7 +110,9 @@ describe('compiler: codegen', () => {
     })
     expect(code).not.toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}, ${
+      `const { ${helperNameMap[CREATE_VNODE]}: _${
+        helperNameMap[CREATE_VNODE]
+      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
         helperNameMap[RESOLVE_DIRECTIVE]
       } } = Vue`
     )
@@ -415,9 +439,9 @@ describe('compiler: codegen', () => {
     expect(code).toMatch(
       `
   _cache[1] || (
-    setBlockTracking(-1),
+    _setBlockTracking(-1),
     _cache[1] = foo,
-    setBlockTracking(1),
+    _setBlockTracking(1),
     _cache[1]
   )
     `.trim()

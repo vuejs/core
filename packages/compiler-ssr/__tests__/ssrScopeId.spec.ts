@@ -23,11 +23,11 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent, createTextVNode } = require(\\"vue\\")
-      const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveComponent: _resolveComponent, createTextVNode: _createTextVNode } = require(\\"vue\\")
+      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        const _component_foo = resolveComponent(\\"foo\\")
+        const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
@@ -35,7 +35,7 @@ describe('ssr: scopeId', () => {
               _push(\`foo\`)
             } else {
               return [
-                createTextVNode(\\"foo\\")
+                _createTextVNode(\\"foo\\")
               ]
             }
           },
@@ -51,11 +51,11 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent, createVNode } = require(\\"vue\\")
-      const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveComponent: _resolveComponent, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        const _component_foo = resolveComponent(\\"foo\\")
+        const _component_foo = _resolveComponent(\\"foo\\")
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
@@ -63,7 +63,7 @@ describe('ssr: scopeId', () => {
               _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
             } else {
               return [
-                createVNode(\\"span\\", null, \\"hello\\")
+                _createVNode(\\"span\\", null, \\"hello\\")
               ]
             }
           },
@@ -79,12 +79,12 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent, createVNode } = require(\\"vue\\")
-      const { _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveComponent: _resolveComponent, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        const _component_foo = resolveComponent(\\"foo\\")
-        const _component_bar = resolveComponent(\\"bar\\")
+        const _component_foo = _resolveComponent(\\"foo\\")
+        const _component_bar = _resolveComponent(\\"bar\\")
 
         _push(_ssrRenderComponent(_component_foo, null, {
           default: (_, _push, _parent, _scopeId) => {
@@ -96,7 +96,7 @@ describe('ssr: scopeId', () => {
                     _push(\`<span data-v-xxxxxxx\${_scopeId}></span>\`)
                   } else {
                     return [
-                      createVNode(\\"span\\")
+                      _createVNode(\\"span\\")
                     ]
                   }
                 },
@@ -104,10 +104,10 @@ describe('ssr: scopeId', () => {
               }, _parent))
             } else {
               return [
-                createVNode(\\"span\\", null, \\"hello\\"),
-                createVNode(_component_bar, null, {
+                _createVNode(\\"span\\", null, \\"hello\\"),
+                _createVNode(_component_bar, null, {
                   default: () => [
-                    createVNode(\\"span\\")
+                    _createVNode(\\"span\\")
                   ],
                   _compiled: true
                 })

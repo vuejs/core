@@ -51,7 +51,7 @@ describe('ssr: element', () => {
     test('<textarea> with dynamic v-bind', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
-        "const { _ssrRenderAttrs, _ssrInterpolate } = require(\\"@vue/server-renderer\\")
+        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
           let _temp0
@@ -153,26 +153,26 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<div class="foo" v-bind="obj"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div\${_ssrRenderAttrs(mergeProps({ class: \\"foo\\" }, _ctx.obj))}></div>\`"`
+        `"\`<div\${_ssrRenderAttrs(_mergeProps({ class: \\"foo\\" }, _ctx.obj))}></div>\`"`
       )
 
       expect(
         getCompiledString(`<div :id="id" v-bind="obj"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div\${_ssrRenderAttrs(mergeProps({ id: _ctx.id }, _ctx.obj))}></div>\`"`
+        `"\`<div\${_ssrRenderAttrs(_mergeProps({ id: _ctx.id }, _ctx.obj))}></div>\`"`
       )
 
       // dynamic key + v-bind="object"
       expect(
         getCompiledString(`<div :[key]="id" v-bind="obj"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div\${_ssrRenderAttrs(mergeProps({ [_ctx.key]: _ctx.id }, _ctx.obj))}></div>\`"`
+        `"\`<div\${_ssrRenderAttrs(_mergeProps({ [_ctx.key]: _ctx.id }, _ctx.obj))}></div>\`"`
       )
 
       // should merge class and :class
       expect(getCompiledString(`<div class="a" :class="b" v-bind="obj"></div>`))
         .toMatchInlineSnapshot(`
-        "\`<div\${_ssrRenderAttrs(mergeProps({
+        "\`<div\${_ssrRenderAttrs(_mergeProps({
             class: [\\"a\\", _ctx.b]
           }, _ctx.obj))}></div>\`"
       `)
@@ -183,7 +183,7 @@ describe('ssr: element', () => {
           `<div style="color:red;" :style="b" v-bind="obj"></div>`
         )
       ).toMatchInlineSnapshot(`
-        "\`<div\${_ssrRenderAttrs(mergeProps({
+        "\`<div\${_ssrRenderAttrs(_mergeProps({
             style: [_hoisted_1, _ctx.b]
           }, _ctx.obj))}></div>\`"
       `)

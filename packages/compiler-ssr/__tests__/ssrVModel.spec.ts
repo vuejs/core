@@ -3,7 +3,7 @@ import { compile } from '../src'
 describe('ssr: v-model', () => {
   test('<input> (text types)', () => {
     expect(compile(`<input v-model="bar">`).code).toMatchInlineSnapshot(`
-      "const { _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttr: _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${_ssrRenderAttr(\\"value\\", _ctx.bar)}>\`)
@@ -12,7 +12,7 @@ describe('ssr: v-model', () => {
 
     expect(compile(`<input type="email" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttr: _ssrRenderAttr } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"email\\"\${_ssrRenderAttr(\\"value\\", _ctx.bar)}>\`)
@@ -23,7 +23,7 @@ describe('ssr: v-model', () => {
   test('<input type="radio">', () => {
     expect(compile(`<input type="radio" value="foo" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrLooseEqual } = require(\\"@vue/server-renderer\\")
+      "const { ssrLooseEqual: _ssrLooseEqual } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"radio\\" value=\\"foo\\"\${(_ssrLooseEqual(_ctx.bar, \\"foo\\")) ? \\" checked\\" : \\"\\"}>\`)
@@ -34,7 +34,7 @@ describe('ssr: v-model', () => {
   test('<input type="checkbox"', () => {
     expect(compile(`<input type="checkbox" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrLooseContain } = require(\\"@vue/server-renderer\\")
+      "const { ssrLooseContain: _ssrLooseContain } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"checkbox\\"\${((Array.isArray(_ctx.bar))
@@ -45,7 +45,7 @@ describe('ssr: v-model', () => {
 
     expect(compile(`<input type="checkbox" value="foo" v-model="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrLooseContain } = require(\\"@vue/server-renderer\\")
+      "const { ssrLooseContain: _ssrLooseContain } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input type=\\"checkbox\\" value=\\"foo\\"\${((Array.isArray(_ctx.bar))
@@ -58,7 +58,7 @@ describe('ssr: v-model', () => {
   test('<textarea>', () => {
     expect(compile(`<textarea v-model="foo">bar</textarea>`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrInterpolate } = require(\\"@vue/server-renderer\\")
+      "const { ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<textarea>\${_ssrInterpolate(_ctx.foo)}</textarea>\`)
@@ -69,7 +69,7 @@ describe('ssr: v-model', () => {
   test('<input :type="x">', () => {
     expect(compile(`<input :type="x" v-model="foo">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
@@ -82,7 +82,7 @@ describe('ssr: v-model', () => {
 
     expect(compile(`<input :type="x" v-model="foo" value="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
@@ -95,7 +95,7 @@ describe('ssr: v-model', () => {
 
     expect(compile(`<input :type="x" v-model="foo" :value="bar">`).code)
       .toMatchInlineSnapshot(`
-      "const { _ssrRenderAttr, _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<input\${
@@ -112,25 +112,25 @@ describe('ssr: v-model', () => {
   test('<input v-bind="obj">', () => {
     expect(compile(`<input v-bind="obj" v-model="foo">`).code)
       .toMatchInlineSnapshot(`
-      "const { mergeProps } = require(\\"vue\\")
-      const { _ssrRenderAttrs, _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
+      "const { mergeProps: _mergeProps } = require(\\"vue\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrGetDynamicModelProps: _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_ssrRenderAttrs(_temp0 = _ctx.obj, mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs(_temp0 = _ctx.obj, _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
       }"
     `)
 
     expect(compile(`<input id="x" v-bind="obj" v-model="foo" class="y">`).code)
       .toMatchInlineSnapshot(`
-      "const { mergeProps } = require(\\"vue\\")
-      const { _ssrRenderAttrs, _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
+      "const { mergeProps: _mergeProps } = require(\\"vue\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrGetDynamicModelProps: _ssrGetDynamicModelProps } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_ssrRenderAttrs(_temp0 = mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs(_temp0 = _mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
       }"
     `)
   })
