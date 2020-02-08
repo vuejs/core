@@ -10,7 +10,7 @@
 //   const flag = TEXT | CLASS
 //   if (flag & TEXT) { ... }
 //
-// Check the `patchElement` function in './createRenderer.ts' to see how the
+// Check the `patchElement` function in './renderer.ts' to see how the
 // flags are handled during diff.
 
 export const enum PatchFlags {
