@@ -24,7 +24,13 @@ import {
   MERGE_PROPS,
   isBindKey
 } from '@vue/compiler-dom'
-import { escapeHtml, isBooleanAttr, isSSRSafeAttrName, NO } from '@vue/shared'
+import {
+  escapeHtml,
+  isBooleanAttr,
+  isSSRSafeAttrName,
+  NO,
+  propsToAttrMap
+} from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
 import {
   SSR_RENDER_ATTR,
@@ -166,7 +172,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               for (let j = 0; j < props.length; j++) {
                 const { key, value } = props[j]
                 if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
-                  const attrName = key.content
+                  let attrName = key.content
                   // static key attr
                   if (attrName === 'class') {
                     openTag.push(
@@ -187,17 +193,21 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                         ))
                       )
                     }
-                  } else if (isBooleanAttr(attrName)) {
-                    openTag.push(
-                      createConditionalExpression(
-                        value,
-                        createSimpleExpression(' ' + attrName, true),
-                        createSimpleExpression('', true),
-                        false /* no newline */
-                      )
-                    )
                   } else {
-                    if (isSSRSafeAttrName(attrName)) {
+                    attrName =
+                      node.tag.indexOf('-') > 0
+                        ? attrName // preserve raw name on custom elements
+                        : propsToAttrMap[attrName] || attrName.toLowerCase()
+                    if (isBooleanAttr(attrName)) {
+                      openTag.push(
+                        createConditionalExpression(
+                          value,
+                          createSimpleExpression(' ' + attrName, true),
+                          createSimpleExpression('', true),
+                          false /* no newline */
+                        )
+                      )
+                    } else if (isSSRSafeAttrName(attrName)) {
                       openTag.push(
                         createCallExpression(context.helper(SSR_RENDER_ATTR), [
                           key,

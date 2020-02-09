@@ -57,6 +57,9 @@ export function ssrRenderDynamicAttr(
   } else if (isSSRSafeAttrName(attrKey)) {
     return ` ${attrKey}="${escapeHtml(value)}"`
   } else {
+    console.warn(
+      `[@vue/server-renderer] Skipped rendering unsafe attribute name: ${attrKey}`
+    )
     return ``
   }
 }
