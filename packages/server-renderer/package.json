@@ -28,5 +28,8 @@
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/server-renderer#readme",
   "peerDependencies": {
     "vue": "3.0.0-alpha.4"
+  },
+  "dependencies": {
+    "@vue/compiler-ssr": "3.0.0-alpha.4"
   }
 }

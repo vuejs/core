@@ -19,8 +19,10 @@ import {
   isArray,
   isFunction,
   isVoidTag,
-  escapeHtml
+  escapeHtml,
+  NO
 } from '@vue/shared'
+import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { SSRSlots } from './helpers/ssrRenderSlot'
 
@@ -142,12 +144,21 @@ function renderComponentSubTree(
       setCurrentRenderingInstance(null)
     } else if (comp.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
+    } else if (comp.template && isString(comp.template)) {
+      const compileResult = compile(comp.template, {
+        isCustomElement: instance.appContext.config.isCustomElement || NO
+      })
+      const ssrRender = Function(compileResult.code)()
+
+      // set current rendering instance for asset resolution
+      setCurrentRenderingInstance(instance)
+      ssrRender(instance.proxy, push, instance)
+      setCurrentRenderingInstance(null)
     } else {
-      //  TODO on the fly template compilation support
       throw new Error(
         `Component ${
           comp.name ? `${comp.name} ` : ``
-        } is missing render function.`
+        } doesn't provide template or render function.`
       )
     }
   }
