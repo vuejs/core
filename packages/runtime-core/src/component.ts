@@ -493,7 +493,9 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     // need to expose them through a proxy
     attrs: new Proxy(instance, SetupProxyHandlers.attrs),
     slots: new Proxy(instance, SetupProxyHandlers.slots),
-    emit: instance.emit
+    get emit() {
+      return instance.emit
+    }
   }
   return __DEV__ ? Object.freeze(context) : context
 }
