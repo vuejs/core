@@ -1,7 +1,7 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 
-const queue: Function[] = []
+const queue: (Function | null)[] = []
 const postFlushCbs: Function[] = []
 const p = Promise.resolve()
 
@@ -19,6 +19,13 @@ export function queueJob(job: () => void) {
   if (!queue.includes(job)) {
     queue.push(job)
     queueFlush()
+  }
+}
+
+export function invalidateJob(job: () => void) {
+  const i = queue.indexOf(job)
+  if (i > -1) {
+    queue[i] = null
   }
 }
 
@@ -64,6 +71,9 @@ function flushJobs(seen?: CountMap) {
     seen = seen || new Map()
   }
   while ((job = queue.shift())) {
+    if (job === null) {
+      continue
+    }
     if (__DEV__) {
       checkRecursiveUpdates(seen!, job)
     }

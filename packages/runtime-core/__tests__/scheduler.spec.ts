@@ -1,4 +1,9 @@
-import { queueJob, nextTick, queuePostFlushCb } from '../src/scheduler'
+import {
+  queueJob,
+  nextTick,
+  queuePostFlushCb,
+  invalidateJob
+} from '../src/scheduler'
 
 describe('scheduler', () => {
   it('nextTick', async () => {
@@ -229,5 +234,24 @@ describe('scheduler', () => {
       await nextTick()
       expect(calls).toEqual(['job1', 'job2', 'cb1', 'cb2'])
     })
+  })
+
+  test('invalidateJob', async () => {
+    const calls: string[] = []
+    const job1 = () => {
+      calls.push('job1')
+      invalidateJob(job2)
+      job2()
+    }
+    const job2 = () => {
+      calls.push('job2')
+    }
+    // queue both jobs
+    queueJob(job1)
+    queueJob(job2)
+    expect(calls).toEqual([])
+    await nextTick()
+    // job2 should be called only once
+    expect(calls).toEqual(['job1', 'job2'])
   })
 })

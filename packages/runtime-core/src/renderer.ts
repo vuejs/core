@@ -30,7 +30,12 @@ import {
   isFunction,
   PatchFlags
 } from '@vue/shared'
-import { queueJob, queuePostFlushCb, flushPostFlushCbs } from './scheduler'
+import {
+  queueJob,
+  queuePostFlushCb,
+  flushPostFlushCbs,
+  invalidateJob
+} from './scheduler'
 import {
   effect,
   stop,
@@ -895,6 +900,9 @@ export function createRenderer<
         } else {
           // normal update
           instance.next = n2
+          // in case the child component is also queued, remove it to avoid
+          // double updating the same child component in the same flush.
+          invalidateJob(instance.update)
           // instance.update is the reactive effect runner.
           instance.update()
         }
