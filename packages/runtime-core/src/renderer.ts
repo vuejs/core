@@ -542,12 +542,10 @@ export function createRenderer<
 
       // text
       // This flag is matched when the element has only dynamic text children.
-      // this flag is terminal (i.e. skips children diffing).
       if (patchFlag & PatchFlags.TEXT) {
         if (n1.children !== n2.children) {
           hostSetElementText(el, n2.children as string)
         }
-        return // terminal
       }
     } else if (!optimized && dynamicChildren == null) {
       // unoptimized, full diff
