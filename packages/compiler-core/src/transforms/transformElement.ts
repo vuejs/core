@@ -67,7 +67,7 @@ export const transformElement: NodeTransform = (node, context) => {
     // updates inside get proper isSVG flag at runtime. (#639, #643)
     // This is technically web-specific, but splitting the logic out of core
     // leads to too much unnecessary complexity.
-    const shouldUseBlock =
+    let shouldUseBlock =
       !isComponent && (tag === 'svg' || tag === 'foreignObject')
 
     const nodeType = isComponent
@@ -101,21 +101,35 @@ export const transformElement: NodeTransform = (node, context) => {
         args.push(`null`)
       }
 
-      if (__DEV__ && nodeType === KEEP_ALIVE && node.children.length > 1) {
-        context.onError(
-          createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
-            start: node.children[0].loc.start,
-            end: node.children[node.children.length - 1].loc.end,
-            source: ''
-          })
-        )
+      if (nodeType === KEEP_ALIVE) {
+        // Although a built-in component, we compile KeepAlive with raw children
+        // instead of slot functions so that it can be used inside Transition
+        // or other Transition-wrapping HOCs.
+        // To ensure correct updates with block optimizations, we need to:
+        // 1. Force keep-alive into a block. This avoids its children being
+        //    collected by a parent block.
+        shouldUseBlock = true
+        // 2. Force keep-alive to always be updated, since it uses raw children.
+        patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        if (__DEV__ && node.children.length > 1) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
+              start: node.children[0].loc.start,
+              end: node.children[node.children.length - 1].loc.end,
+              source: ''
+            })
+          )
+        }
       }
 
-      // Portal & KeepAlive should have normal children instead of slots
-      // Portal is not a real component has dedicated handling in the renderer
-      // KeepAlive should not track its own deps so that it can be used inside
-      // Transition
-      if (isComponent && nodeType !== PORTAL && nodeType !== KEEP_ALIVE) {
+      const shouldBuildAsSlots =
+        isComponent &&
+        // Portal is not a real component has dedicated handling in the renderer
+        nodeType !== PORTAL &&
+        // explained above.
+        nodeType !== KEEP_ALIVE
+
+      if (shouldBuildAsSlots) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
         args.push(slots)
         if (hasDynamicSlots) {

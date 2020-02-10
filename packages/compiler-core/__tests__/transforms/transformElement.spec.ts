@@ -346,18 +346,26 @@ describe('compiler: element transform', () => {
 
   test('should handle <KeepAlive>', () => {
     function assert(tag: string) {
-      const { root, node } = parseWithElementTransform(
-        `<${tag}><span /></${tag}>`
-      )
+      const root = parse(`<div><${tag}><span /></${tag}></div>`)
+      transform(root, {
+        nodeTransforms: [transformElement, transformText]
+      })
       expect(root.components.length).toBe(0)
       expect(root.helpers).toContain(KEEP_ALIVE)
-      expect(node.callee).toBe(CREATE_VNODE)
-      expect(node.arguments).toMatchObject([
-        KEEP_ALIVE,
-        `null`,
-        // keep-alive should not compile content to slots
-        [{ type: NodeTypes.ELEMENT, tag: 'span' }]
-      ])
+      const node = (root.children[0] as any).children[0].codegenNode
+      expect(node.type).toBe(NodeTypes.JS_SEQUENCE_EXPRESSION)
+      expect(node.expressions[1]).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_BLOCK, // should be forced into a block
+        arguments: [
+          KEEP_ALIVE,
+          `null`,
+          // keep-alive should not compile content to slots
+          [{ type: NodeTypes.ELEMENT, tag: 'span' }],
+          // should get a dynamic slots flag to force updates
+          genFlagText(PatchFlags.DYNAMIC_SLOTS)
+        ]
+      })
     }
 
     assert(`keep-alive`)
