@@ -34,7 +34,7 @@ describe('ssr: components', () => {
       .toMatchInlineSnapshot(`
       "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-      
+
       return function ssrRender(_ctx, _push, _parent) {
         _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo, _ctx.$), { prop: \\"b\\" }, null, _parent))
       }"

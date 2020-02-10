@@ -9,7 +9,7 @@ const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" })
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -29,7 +29,7 @@ const _hoisted_1 = _createVNode(\\"p\\", null, [
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -48,7 +48,7 @@ const _hoisted_1 = _createVNode(\\"div\\", null, [
 return function render() {
   with (this) {
     const { createCommentVNode: _createCommentVNode, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -66,7 +66,7 @@ const _hoisted_2 = _createVNode(\\"div\\")
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1,
       _hoisted_2
@@ -84,7 +84,7 @@ const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\"
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -101,7 +101,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 return function render() {
   with (this) {
     const { createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _directive_foo = _resolveDirective(\\"foo\\")
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
@@ -122,7 +122,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 return function render() {
   with (this) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", _hoisted_1, _toDisplayString(hello), 1 /* TEXT */)
     ]))
@@ -139,7 +139,7 @@ const _hoisted_1 = { id: \\"foo\\" }
 return function render() {
   with (this) {
     const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
@@ -160,7 +160,7 @@ const _hoisted_1 = { class: { foo: true } }
 return function render() {
   with (this) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"span\\", _hoisted_1, _toDisplayString(_ctx.bar), 1 /* TEXT */)
     ]))
@@ -182,7 +182,7 @@ const _hoisted_1 = _createVNode(\\"span\\", null, [
 return function render() {
   with (this) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -199,7 +199,7 @@ const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toDisplayString(1))
 return function render() {
   with (this) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -229,7 +229,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expr
 return function render() {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
@@ -247,7 +247,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expr
 return function render() {
   with (this) {
     const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, {
@@ -264,7 +264,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expr
 return function render() {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
@@ -282,7 +282,7 @@ exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
 return function render() {
   with (this) {
     const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
@@ -298,7 +298,7 @@ exports[`compiler: hoistStatic transform should NOT hoist element with dynamic k
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", { key: foo })
     ]))
@@ -312,7 +312,7 @@ exports[`compiler: hoistStatic transform should NOT hoist element with dynamic p
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"])
     ]))
@@ -326,7 +326,7 @@ exports[`compiler: hoistStatic transform should NOT hoist element with dynamic r
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", { ref: foo }, null, 32 /* NEED_PATCH */)
     ]))
@@ -340,7 +340,7 @@ exports[`compiler: hoistStatic transform should NOT hoist root node 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\"))
   }
 }"
@@ -356,7 +356,7 @@ const _hoisted_2 = _createVNode(\\"span\\")
 return function render() {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
         return (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
@@ -381,7 +381,7 @@ const _hoisted_2 = _createVNode(\\"span\\")
 return function render() {
   with (this) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       (_openBlock(), ok
         ? _createBlock(\\"div\\", _hoisted_1, [

@@ -73,7 +73,7 @@ exports[`compiler: transform component slots named slot with v-if + v-else-if + 
 return function render() {
   with (this) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
@@ -102,7 +102,7 @@ exports[`compiler: transform component slots named slot with v-if 1`] = `
 return function render() {
   with (this) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
@@ -138,7 +138,7 @@ exports[`compiler: transform component slots named slots w/ implicit default slo
 return function render() {
   with (this) {
     const { createVNode: _createVNode, resolveComponent: _resolveComponent, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, {

@@ -72,14 +72,16 @@ return function render() {
 }"
 `;
 
-exports[`compiler: codegen assets 1`] = `
+exports[`compiler: codegen assets + temps 1`] = `
 "
 return function render() {
   with (this) {
     const _component_Foo = _resolveComponent(\\"Foo\\")
     const _component_bar_baz = _resolveComponent(\\"bar-baz\\")
     const _component_barbaz = _resolveComponent(\\"barbaz\\")
-const _directive_my_dir = _resolveDirective(\\"my_dir\\")
+    const _directive_my_dir_0 = _resolveDirective(\\"my_dir_0\\")
+    const _directive_my_dir_1 = _resolveDirective(\\"my_dir_1\\")
+    let _temp0, _temp1, _temp2
 
     return null
   }
@@ -119,7 +121,7 @@ exports[`compiler: codegen function mode preamble 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, resolveDirective: _resolveDirective } = _Vue
-    
+
     return null
   }
 }"
