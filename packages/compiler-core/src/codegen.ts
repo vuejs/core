@@ -216,11 +216,11 @@ export function generate(
           .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
           .join(', ')} } = _Vue`
       )
-      newline()
       if (ast.cached > 0) {
-        push(`const _cache = $cache`)
         newline()
+        push(`const _cache = $cache`)
       }
+      push(`\n`)
       newline()
     }
   } else if (!__BROWSER__ && !ssr) {
@@ -235,18 +235,24 @@ export function generate(
   // generate asset resolution statements
   if (ast.components.length) {
     genAssets(ast.components, 'component', context)
+    if (ast.directives.length || ast.temps > 0) {
+      newline()
+    }
   }
   if (ast.directives.length) {
     genAssets(ast.directives, 'directive', context)
+    if (ast.temps > 0) {
+      newline()
+    }
   }
   if (ast.temps > 0) {
     push(`let `)
     for (let i = 0; i < ast.temps; i++) {
       push(`${i > 0 ? `, ` : ``}_temp${i}`)
     }
-    push(`\n`)
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
+    push(`\n`)
     newline()
   }
 
@@ -419,8 +425,6 @@ function genAssets(
     )
     if (i < assets.length - 1) {
       newline()
-    } else {
-      push(`\n`)
     }
   }
 }
