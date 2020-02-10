@@ -158,7 +158,7 @@ function renderComponentSubTree(
       throw new Error(
         `Component ${
           comp.name ? `${comp.name} ` : ``
-        } doesn't provide template or render function.`
+        } is missing template or render function.`
       )
     }
   }
