@@ -9,7 +9,7 @@ const _hoisted_1 = {}
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\", { textContent: text }, null, 8 /* PROPS */, [\\"textContent\\"]),
       _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),

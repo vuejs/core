@@ -18,7 +18,7 @@ exports[`compiler: transform v-model compound expression 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"input\\", {
       modelValue: model[index],
       \\"onUpdate:modelValue\\": $event => (model[index] = $event)
@@ -45,7 +45,7 @@ exports[`compiler: transform v-model simple exprssion 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"input\\", {
       modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
@@ -60,7 +60,7 @@ exports[`compiler: transform v-model with argument 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"input\\", {
       value: model,
       \\"onUpdate:value\\": $event => (model = $event)
@@ -87,7 +87,7 @@ exports[`compiler: transform v-model with dynamic argument 1`] = `
 return function render() {
   with (this) {
     const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+
     return (_openBlock(), _createBlock(\\"input\\", {
       [value]: model,
       [\\"onUpdate:\\" + value]: $event => (model = $event)
