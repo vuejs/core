@@ -36,7 +36,7 @@ export function compile(
     scopeId: options.mode === 'function' ? null : options.scopeId,
     // always prefix since compiler-ssr doesn't have size concern
     prefixIdentifiers: true,
-    // disalbe optimizations that are unnecessary for ssr
+    // disable optimizations that are unnecessary for ssr
     cacheHandlers: false,
     hoistStatic: false
   }
