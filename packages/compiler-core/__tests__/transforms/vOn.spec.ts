@@ -300,6 +300,20 @@ describe('compiler: transform v-on', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  test('case conversion for vnode hooks', () => {
+    const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
+    const props = (node.codegenNode as CallExpression)
+      .arguments[1] as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `onVnodeMounted`
+      },
+      value: {
+        content: `onMount`
+      }
+    })
+  })
+
   describe('cacheHandler', () => {
     test('empty handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click.prevent />`, {
