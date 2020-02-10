@@ -41,7 +41,7 @@ export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
-  return baseCompile(template, {
+  const result = baseCompile(template, {
     ...parserOptions,
     ...options,
     nodeTransforms: [...DOMNodeTransforms, ...(options.nodeTransforms || [])],
@@ -50,6 +50,8 @@ export function compile(
       ...(options.directiveTransforms || {})
     }
   })
+  // debugger
+  return result
 }
 
 export function parse(template: string, options: ParserOptions = {}): RootNode {

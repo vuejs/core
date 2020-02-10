@@ -11,7 +11,8 @@ import {
   CREATE_VNODE,
   WITH_DIRECTIVES,
   FRAGMENT,
-  RENDER_LIST
+  RENDER_LIST,
+  CREATE_TEXT
 } from '../../src/runtimeHelpers'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
@@ -21,6 +22,7 @@ import { transformBind } from '../../src/transforms/vBind'
 import { transformOn } from '../../src/transforms/vOn'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
+import { transformText } from '../../src/transforms/transformText'
 
 function transformWithHoist(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -30,7 +32,8 @@ function transformWithHoist(template: string, options: CompilerOptions = {}) {
       transformIf,
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
-      transformElement
+      transformElement,
+      transformText
     ],
     directiveTransforms: {
       on: transformOn,
@@ -467,6 +470,24 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('hoist static text node between elements', () => {
+    const { root } = transformWithHoist(`<div>static<div>static</div></div>`)
+    expect(root.hoists).toMatchObject([
+      {
+        callee: CREATE_TEXT,
+        arguments: [
+          {
+            type: NodeTypes.TEXT,
+            content: `static`
+          }
+        ]
+      },
+      {
+        callee: CREATE_VNODE
+      }
+    ])
+  })
+
   describe('prefixIdentifiers', () => {
     test('hoist nested static tree with static interpolation', () => {
       const { root, args } = transformWithHoist(
@@ -482,32 +503,9 @@ describe('compiler: hoistStatic transform', () => {
           arguments: [
             `"span"`,
             `null`,
-            [
-              {
-                type: NodeTypes.TEXT,
-                content: `foo `
-              },
-              {
-                type: NodeTypes.INTERPOLATION,
-                content: {
-                  content: `1`,
-                  isStatic: false,
-                  isConstant: true
-                }
-              },
-              {
-                type: NodeTypes.TEXT,
-                content: ` `
-              },
-              {
-                type: NodeTypes.INTERPOLATION,
-                content: {
-                  content: `true`,
-                  isStatic: false,
-                  isConstant: true
-                }
-              }
-            ]
+            {
+              type: NodeTypes.COMPOUND_EXPRESSION
+            }
           ]
         }
       ])

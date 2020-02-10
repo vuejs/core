@@ -21,6 +21,8 @@ export function hoistStatic(root: RootNode, context: TransformContext) {
     root.children,
     context,
     new Map(),
+    // Root node is unfortuantely non-hoistable due to potential parent
+    // fallthrough attributes.
     isSingleElementRoot(root, root.children[0])
   )
 }
@@ -86,6 +88,11 @@ function walk(
         // Do not hoist v-if single child because it has to be a block
         walk(branchChildren, context, resultCache, branchChildren.length === 1)
       }
+    } else if (
+      child.type === NodeTypes.TEXT_CALL &&
+      isStaticNode(child.content, resultCache)
+    ) {
+      child.codegenNode = context.hoist(child.codegenNode)
     }
   }
 }

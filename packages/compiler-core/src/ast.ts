@@ -243,7 +243,7 @@ export interface ForNode extends Node {
 export interface TextCallNode extends Node {
   type: NodeTypes.TEXT_CALL
   content: TextNode | InterpolationNode | CompoundExpressionNode
-  codegenNode: CallExpression
+  codegenNode: CallExpression | SimpleExpressionNode // when hoisted
 }
 
 // JS Node Types ---------------------------------------------------------------
