@@ -136,6 +136,13 @@ function renderComponentSubTree(
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance)
   } else {
+    if (!comp.ssrRender && !comp.render && isString(comp.template)) {
+      const compileResult = compile(comp.template, {
+        isCustomElement: instance.appContext.config.isCustomElement || NO
+      })
+      comp.ssrRender = Function(compileResult.code)()
+    }
+
     if (comp.ssrRender) {
       // optimized
       // set current rendering instance for asset resolution
@@ -144,16 +151,6 @@ function renderComponentSubTree(
       setCurrentRenderingInstance(null)
     } else if (comp.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
-    } else if (comp.template && isString(comp.template)) {
-      const compileResult = compile(comp.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO
-      })
-      const ssrRender = Function(compileResult.code)()
-
-      // set current rendering instance for asset resolution
-      setCurrentRenderingInstance(instance)
-      ssrRender(instance.proxy, push, instance)
-      setCurrentRenderingInstance(null)
     } else {
       throw new Error(
         `Component ${
