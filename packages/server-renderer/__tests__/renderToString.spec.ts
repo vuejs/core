@@ -6,9 +6,11 @@ import {
   resolveComponent,
   ComponentOptions
 } from 'vue'
-import { escapeHtml } from '@vue/shared'
+import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
+
+mockWarn()
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -56,17 +58,29 @@ describe('ssr: renderToString', () => {
       ).toBe(`<div>hello</div>`)
     })
 
-    test('template components', async () => {
-      expect(
-        await renderToString(
-          createApp({
-            data() {
-              return { msg: 'hello' }
-            },
-            template: `<div>{{ msg }}</div>`
-          })
-        )
-      ).toBe(`<div>hello</div>`)
+    describe('template components', () => {
+      test('render', async () => {
+        expect(
+          await renderToString(
+            createApp({
+              data() {
+                return { msg: 'hello' }
+              },
+              template: `<div>{{ msg }}</div>`
+            })
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('handle compiler errors', async () => {
+        await renderToString(createApp({ template: `<` }))
+
+        expect(
+          '[Vue warn]: Template compilation error: Unexpected EOF in tag.\n' +
+            '1  |  <\n' +
+            '   |   ^'
+        ).toHaveBeenWarned()
+      })
     })
 
     test('nested vnode components', async () => {

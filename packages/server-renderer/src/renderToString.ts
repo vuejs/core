@@ -11,7 +11,8 @@ import {
   Portal,
   ShapeFlags,
   ssrUtils,
-  Slots
+  Slots,
+  warn
 } from 'vue'
 import {
   isString,
@@ -20,11 +21,13 @@ import {
   isFunction,
   isVoidTag,
   escapeHtml,
-  NO
+  NO,
+  generateCodeFrame
 } from '@vue/shared'
 import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { SSRSlots } from './helpers/ssrRenderSlot'
+import { CompilerError } from '@vue/compiler-dom'
 
 const {
   isVNode,
@@ -136,11 +139,27 @@ function renderComponentSubTree(
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance)
   } else {
-    if (!comp.ssrRender && !comp.render && isString(comp.template)) {
-      const compileResult = compile(comp.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO
+    const { template } = comp
+    if (!comp.ssrRender && !comp.render && isString(template)) {
+      const { code } = compile(template, {
+        isCustomElement: instance.appContext.config.isCustomElement || NO,
+        onError(err: CompilerError) {
+          if (__DEV__) {
+            const message = `Template compilation error: ${err.message}`
+            const codeFrame =
+              err.loc &&
+              generateCodeFrame(
+                template as string,
+                err.loc.start.offset,
+                err.loc.end.offset
+              )
+            warn(codeFrame ? `${message}\n${codeFrame}` : message)
+          } else {
+            throw err
+          }
+        }
       })
-      comp.ssrRender = Function(compileResult.code)()
+      comp.ssrRender = Function(code)()
     }
 
     if (comp.ssrRender) {
