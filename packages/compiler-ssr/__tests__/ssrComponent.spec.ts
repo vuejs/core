@@ -30,18 +30,13 @@ describe('ssr: components', () => {
       }"
     `)
 
-    expect(compile(`<compoonent :is="foo" prop="b" />`).code)
+    expect(compile(`<component :is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+      
       return function ssrRender(_ctx, _push, _parent) {
-        const _component_compoonent = _resolveComponent(\\"compoonent\\")
-
-        _push(_ssrRenderComponent(_component_compoonent, {
-          is: _ctx.foo,
-          prop: \\"b\\"
-        }, null, _parent))
+        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo, _ctx.$), { prop: \\"b\\" }, null, _parent))
       }"
     `)
   })
