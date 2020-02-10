@@ -3,8 +3,7 @@
 exports[`compiler: transform component slots dynamically named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
@@ -18,8 +17,7 @@ return function render() {
 exports[`compiler: transform component slots implicit default slot 1`] = `
 "const { createVNode: _createVNode, resolveComponent: _resolveComponent, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
@@ -34,8 +32,7 @@ return function render() {
 exports[`compiler: transform component slots named slot with v-for w/ prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, renderList: _renderList, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
@@ -52,8 +49,7 @@ return function render() {
 exports[`compiler: transform component slots named slot with v-if + prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
@@ -70,7 +66,7 @@ return function render() {
 exports[`compiler: transform component slots named slot with v-if + v-else-if + v-else 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
 
@@ -99,7 +95,7 @@ return function render() {
 exports[`compiler: transform component slots named slot with v-if 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
 
@@ -120,8 +116,7 @@ return function render() {
 exports[`compiler: transform component slots named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
@@ -135,7 +130,7 @@ return function render() {
 exports[`compiler: transform component slots named slots w/ implicit default slot 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { createVNode: _createVNode, resolveComponent: _resolveComponent, createBlock: _createBlock, openBlock: _openBlock } = _Vue
 
@@ -156,8 +151,7 @@ return function render() {
 exports[`compiler: transform component slots nested slots scoping 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Inner = _resolveComponent(\\"Inner\\")
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -180,8 +174,7 @@ return function render() {
 exports[`compiler: transform component slots on-component default slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {

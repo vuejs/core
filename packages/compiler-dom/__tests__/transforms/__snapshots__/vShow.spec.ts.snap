@@ -3,7 +3,7 @@
 exports[`compiler: v-show transform simple expression 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { vShow: _vShow, createVNode: _createVNode, withDirectives: _withDirectives, createBlock: _createBlock, openBlock: _openBlock } = _Vue
 

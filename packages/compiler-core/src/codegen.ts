@@ -199,7 +199,7 @@ export function generate(
     push(`const render = _withId(`)
   }
   if (!ssr) {
-    push(`function render() {`)
+    push(`function render(_ctx, _cache) {`)
   } else {
     push(`function ssrRender(_ctx, _push, _parent) {`)
   }
@@ -216,20 +216,9 @@ export function generate(
           .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
           .join(', ')} } = _Vue`
       )
-      if (ast.cached > 0) {
-        newline()
-        push(`const _cache = $cache`)
-      }
       push(`\n`)
       newline()
     }
-  } else if (!__BROWSER__ && !ssr) {
-    push(`const _ctx = this`)
-    if (ast.cached > 0) {
-      newline()
-      push(`const _cache = _ctx.$cache`)
-    }
-    newline()
   }
 
   // generate asset resolution statements

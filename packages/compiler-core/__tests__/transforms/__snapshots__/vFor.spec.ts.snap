@@ -3,7 +3,7 @@
 exports[`compiler: v-for codegen basic v-for 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -17,7 +17,7 @@ return function render() {
 exports[`compiler: v-for codegen keyed template v-for 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -34,7 +34,7 @@ return function render() {
 exports[`compiler: v-for codegen keyed v-for 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -48,7 +48,7 @@ return function render() {
 exports[`compiler: v-for codegen skipped key 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -62,7 +62,7 @@ return function render() {
 exports[`compiler: v-for codegen skipped value & key 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -76,7 +76,7 @@ return function render() {
 exports[`compiler: v-for codegen skipped value 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -90,7 +90,7 @@ return function render() {
 exports[`compiler: v-for codegen template v-for 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 
@@ -107,7 +107,7 @@ return function render() {
 exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
 
@@ -121,7 +121,7 @@ return function render() {
 exports[`compiler: v-for codegen v-for on <slot/> 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
 
@@ -135,7 +135,7 @@ return function render() {
 exports[`compiler: v-for codegen v-for on element with custom directive 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective } = _Vue
 
@@ -153,7 +153,7 @@ return function render() {
 exports[`compiler: v-for codegen v-if + v-for 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
@@ -169,7 +169,7 @@ return function render() {
 exports[`compiler: v-for codegen value + key + index 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
 

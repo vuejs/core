@@ -19,7 +19,7 @@ describe('scopeId compiler support', () => {
     })
     expect(ast.helpers).toContain(WITH_SCOPE_ID)
     expect(code).toMatch(`const _withId = _withScopeId("test")`)
-    expect(code).toMatch(`export const render = _withId(function render() {`)
+    expect(code).toMatch(`export const render = _withId(function render(`)
     expect(code).toMatchSnapshot()
   })
 
@@ -68,7 +68,7 @@ describe('scopeId compiler support', () => {
 
   test('should push scopeId for hoisted nodes', () => {
     const { ast, code } = baseCompile(
-      `<div><div>hello</div><div>world</div></div>`,
+      `<div><div>hello</div>{{ foo }}<div>world</div></div>`,
       {
         mode: 'module',
         scopeId: 'test',

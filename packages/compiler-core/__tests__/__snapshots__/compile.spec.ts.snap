@@ -3,7 +3,7 @@
 exports[`compiler: integration tests function mode 1`] = `
 "const _Vue = Vue
 
-return function render() {
+return function render(_ctx, _cache) {
   with (this) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment, renderList: _renderList, createTextVNode: _createTextVNode } = _Vue
 
@@ -28,8 +28,7 @@ return function render() {
 exports[`compiler: integration tests function mode w/ prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment, renderList: _renderList, createTextVNode: _createTextVNode } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"div\\", {
     id: \\"foo\\",
     class: _ctx.bar.baz
@@ -50,8 +49,7 @@ return function render() {
 exports[`compiler: integration tests module mode 1`] = `
 "import { toDisplayString as _toDisplayString, createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock, createCommentVNode as _createCommentVNode, Fragment as _Fragment, renderList as _renderList, createTextVNode as _createTextVNode } from \\"vue\\"
 
-export function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"div\\", {
     id: \\"foo\\",
     class: _ctx.bar.baz

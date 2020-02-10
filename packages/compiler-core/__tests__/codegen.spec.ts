@@ -183,12 +183,6 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('prefixIdentifiers: true should inject _ctx statement', () => {
-    const { code } = generate(createRoot(), { prefixIdentifiers: true })
-    expect(code).toMatch(`const _ctx = this\n`)
-    expect(code).toMatchSnapshot()
-  })
-
   test('static text', () => {
     const { code } = generate(
       createRoot({
@@ -422,7 +416,6 @@ describe('compiler: codegen', () => {
         prefixIdentifiers: true
       }
     )
-    expect(code).toMatch(`const _cache = _ctx.$cache`)
     expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
     expect(code).toMatchSnapshot()
   })
@@ -442,7 +435,6 @@ describe('compiler: codegen', () => {
         prefixIdentifiers: true
       }
     )
-    expect(code).toMatch(`const _cache = _ctx.$cache`)
     expect(code).toMatch(
       `
   _cache[1] || (
@@ -596,7 +588,7 @@ describe('compiler: codegen', () => {
     )
     expect(code).toMatchInlineSnapshot(`
       "
-      return function render() {
+      return function render(_ctx, _cache) {
         with (this) {
           return foo = bar
         }

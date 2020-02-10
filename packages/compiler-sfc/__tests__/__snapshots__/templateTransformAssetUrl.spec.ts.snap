@@ -7,8 +7,7 @@ import _imports_0 from '@svg/file.svg'
 
 const _hoisted_1 = _imports_0 + '#fragment'
 
-export function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"use\\", { href: _hoisted_1 }))
 }"
 `;
@@ -16,8 +15,7 @@ export function render() {
 exports[`compiler sfc: transform asset url support uri is empty 1`] = `
 "import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
 
-export function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"use\\", { href: '' }))
 }"
 `;
@@ -28,8 +26,7 @@ import _imports_0 from './logo.png'
 import _imports_1 from 'fixtures/logo.png'
 
 
-export function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_Fragment, null, [
     _createVNode(\\"img\\", { src: _imports_0 }),
     _createVNode(\\"img\\", { src: _imports_1 }),

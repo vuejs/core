@@ -47,7 +47,8 @@ export function renderComponentRoot(
     slots,
     attrs,
     vnodeHooks,
-    emit
+    emit,
+    renderCache
   } = instance
 
   let result
@@ -57,7 +58,9 @@ export function renderComponentRoot(
   }
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode(instance.render!.call(withProxy || proxy))
+      result = normalizeVNode(
+        instance.render!.call(withProxy || proxy, proxy, renderCache)
+      )
     } else {
       // functional
       const render = Component as FunctionalComponent
