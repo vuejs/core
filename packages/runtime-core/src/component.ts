@@ -113,6 +113,7 @@ export interface ComponentInternalInstance {
   data: Data
   props: Data
   attrs: Data
+  vnodeHooks: Data
   slots: Slots
   proxy: ComponentPublicInstance | null
   // alternative proxy used only for runtime-compiled render functions using
@@ -186,6 +187,7 @@ export function createComponentInstance(
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
+    vnodeHooks: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
 
