@@ -4,7 +4,8 @@ import {
   createCommentVNode,
   withScopeId,
   resolveComponent,
-  ComponentOptions
+  ComponentOptions,
+  Portal
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
@@ -377,6 +378,27 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
     })
+  })
+
+  test('portal', async () => {
+    const trueRandom = Math.random
+    Math.random = () => 0
+
+    expect(
+      await renderToString(
+        h(
+          Portal,
+          {
+            target: `#target`
+          },
+          h('span', 'hello')
+        )
+      )
+    ).toBe(
+      `<!----><template id="p-0"><span>hello</span></template><script>window.addEventListener('load',()=>{document.querySelector('#target').innerHTML=document.querySelector('#p-0').innerHTML;})</script><!---->`
+    )
+
+    Math.random = trueRandom
   })
 
   describe('scopeId', () => {

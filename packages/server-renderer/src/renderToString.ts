@@ -176,7 +176,27 @@ function renderVNode(
       push(`<!---->`)
       break
     case Portal:
-      // TODO
+      if (!vnode.props || !vnode.props.target) {
+        console.warn(`[@vue/server-renderer] Portal doesn't have target prop`)
+        break
+      }
+      if (!isString(vnode.props.target)) {
+        console.warn(
+          `[@vue/server-renderer] Portal target must be a query selector`
+        )
+        break
+      }
+      const id = `p-${((Math.random() * 2 ** 64) | 0).toString(36)}` // ID of the portal
+      push(`<!---->`)
+      push(`<template id="${id}">`)
+      renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
+      push(`</template>`)
+      push(
+        `<script>window.addEventListener('load',()=>{document.querySelector('${
+          vnode.props.target
+        }').innerHTML=document.querySelector('#${id}').innerHTML;})</script>`
+      )
+      push(`<!---->`)
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
