@@ -131,6 +131,44 @@ function renderComponentVNode(
   }
 }
 
+type SSRRenderFunction = (
+  ctx: any,
+  push: (item: any) => void,
+  parentInstance: ComponentInternalInstance
+) => void
+const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+
+function ssrCompile(
+  template: string,
+  instance: ComponentInternalInstance
+): SSRRenderFunction {
+  const cached = compileCache[template]
+  if (cached) {
+    return cached
+  }
+
+  const { code } = compile(template, {
+    isCustomElement: instance.appContext.config.isCustomElement || NO,
+    isNativeTag: instance.appContext.config.isNativeTag || NO,
+    onError(err: CompilerError) {
+      if (__DEV__) {
+        const message = `Template compilation error: ${err.message}`
+        const codeFrame =
+          err.loc &&
+          generateCodeFrame(
+            template as string,
+            err.loc.start.offset,
+            err.loc.end.offset
+          )
+        warn(codeFrame ? `${message}\n${codeFrame}` : message)
+      } else {
+        throw err
+      }
+    }
+  })
+  return (compileCache[template] = Function(code)())
+}
+
 function renderComponentSubTree(
   instance: ComponentInternalInstance
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
@@ -139,27 +177,8 @@ function renderComponentSubTree(
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance)
   } else {
-    const { template } = comp
-    if (!comp.ssrRender && !comp.render && isString(template)) {
-      const { code } = compile(template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO,
-        onError(err: CompilerError) {
-          if (__DEV__) {
-            const message = `Template compilation error: ${err.message}`
-            const codeFrame =
-              err.loc &&
-              generateCodeFrame(
-                template as string,
-                err.loc.start.offset,
-                err.loc.end.offset
-              )
-            warn(codeFrame ? `${message}\n${codeFrame}` : message)
-          } else {
-            throw err
-          }
-        }
-      })
-      comp.ssrRender = Function(code)()
+    if (!comp.ssrRender && !comp.render && isString(comp.template)) {
+      comp.ssrRender = ssrCompile(comp.template, instance)
     }
 
     if (comp.ssrRender) {
