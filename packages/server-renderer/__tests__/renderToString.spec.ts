@@ -282,18 +282,7 @@ describe('ssr: renderToString', () => {
     test('nested components with template slots', async () => {
       const Child = {
         props: ['msg'],
-        ssrRender(ctx: any, push: any, parent: any) {
-          push(`<div class="child">`)
-          ssrRenderSlot(
-            ctx.$slots,
-            'default',
-            { msg: 'from slot' },
-            null,
-            push,
-            parent
-          )
-          push(`</div>`)
-        }
+        template: `<div class="child"><slot msg="from slot"></slot></div>`
       }
 
       const app = createApp({
@@ -304,6 +293,32 @@ describe('ssr: renderToString', () => {
       expect(await renderToString(app)).toBe(
         `<div>parent<div class="child">` +
           `<!----><span>from slot</span><!---->` +
+          `</div></div>`
+      )
+    })
+
+    test('nested render fn components with template slots', async () => {
+      const Child = {
+        props: ['msg'],
+        render(this: any) {
+          return h(
+            'div',
+            {
+              class: 'child'
+            },
+            this.$slots.default({ msg: 'from slot' })
+          )
+        }
+      }
+
+      const app = createApp({
+        template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
+      })
+      app.component('Child', Child)
+
+      expect(await renderToString(app)).toBe(
+        `<div>parent<div class="child">` +
+          `<span>from slot</span>` +
           `</div></div>`
       )
     })
