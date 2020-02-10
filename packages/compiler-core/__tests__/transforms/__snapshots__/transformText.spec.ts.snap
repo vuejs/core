@@ -7,7 +7,7 @@ return function render(_ctx, _cache) {
   with (this) {
     const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createTextVNode: _createTextVNode } = _Vue
 
-    return (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _createBlock(_Fragment, null, [
         _createTextVNode(\\"foo\\")
       ], 64 /* STABLE_FRAGMENT */))

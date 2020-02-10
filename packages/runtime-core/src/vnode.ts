@@ -134,7 +134,7 @@ let currentBlock: VNode[] | null = null
 //
 // disableTracking is true when creating a fragment block, since a fragment
 // always diffs its children.
-export function openBlock(disableTracking?: boolean) {
+export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
 

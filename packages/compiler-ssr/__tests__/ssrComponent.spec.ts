@@ -231,7 +231,7 @@ describe('ssr: components', () => {
                 return [
                   (_openBlock(), (_ctx.ok)
                     ? _createBlock(\\"div\\", { key: 0 }, [
-                        (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+                        (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
                           return (_openBlock(), _createBlock(\\"span\\"))
                         }), 256 /* UNKEYED_FRAGMENT */))
                       ])
@@ -254,7 +254,7 @@ describe('ssr: components', () => {
                 return [
                   (_openBlock(), ok
                     ? _createBlock(\\"div\\", { key: 0 }, [
-                        (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (i) => {
+                        (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (i) => {
                           return (_openBlock(), _createBlock(\\"span\\"))
                         }), 256 /* UNKEYED_FRAGMENT */))
                       ])
