@@ -1,4 +1,3 @@
-import { isMap } from './../../shared/src/index'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
@@ -172,16 +171,12 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
-    if (key !== void 0) {
+    const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
+    const iterationEffect = depsMap.get(iterationKey)
+    addRunners(effects, computedRunners, iterationEffect)
+
+    if (key !== void 0 && depsMap.get(key) !== iterationEffect) {
       addRunners(effects, computedRunners, depsMap.get(key))
-    }
-    // also run for iteration key on ADD | DELETE
-    if (
-      isMap(target) ||
-      (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE)
-    ) {
-      const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
-      addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
   }
   const run = (effect: ReactiveEffect) => {
