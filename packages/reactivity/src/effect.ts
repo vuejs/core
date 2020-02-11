@@ -1,3 +1,4 @@
+import { isMap } from './../../shared/src/index'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
 
@@ -175,7 +176,10 @@ export function trigger(
       addRunners(effects, computedRunners, depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE
-    if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
+    if (
+      isMap(target) ||
+      (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE)
+    ) {
       const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }

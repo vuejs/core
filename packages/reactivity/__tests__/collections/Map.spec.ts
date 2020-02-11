@@ -74,6 +74,8 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
