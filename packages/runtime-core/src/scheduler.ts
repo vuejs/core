@@ -70,7 +70,7 @@ function flushJobs(seen?: CountMap) {
   if (__DEV__) {
     seen = seen || new Map()
   }
-  while ((job = queue.shift())) {
+  while ((job = queue.shift()) !== undefined) {
     if (job === null) {
       continue
     }

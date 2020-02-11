@@ -246,12 +246,20 @@ describe('scheduler', () => {
     const job2 = () => {
       calls.push('job2')
     }
-    // queue both jobs
+    const job3 = () => {
+      calls.push('job3')
+    }
+    const job4 = () => {
+      calls.push('job4')
+    }
+    // queue all jobs
     queueJob(job1)
     queueJob(job2)
+    queueJob(job3)
+    queuePostFlushCb(job4)
     expect(calls).toEqual([])
     await nextTick()
     // job2 should be called only once
-    expect(calls).toEqual(['job1', 'job2'])
+    expect(calls).toEqual(['job1', 'job2', 'job3', 'job4'])
   })
 })
