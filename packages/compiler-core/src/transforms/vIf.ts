@@ -10,31 +10,23 @@ import {
   DirectiveNode,
   IfBranchNode,
   SimpleExpressionNode,
-  createSequenceExpression,
   createCallExpression,
   createConditionalExpression,
-  ConditionalExpression,
-  CallExpression,
   createSimpleExpression,
   createObjectProperty,
   createObjectExpression,
-  IfCodegenNode,
   IfConditionalExpression,
   BlockCodegenNode,
-  SlotOutletCodegenNode,
-  ElementCodegenNode,
-  ComponentCodegenNode,
-  IfNode
+  IfNode,
+  createVNodeCall
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import {
-  OPEN_BLOCK,
   CREATE_BLOCK,
   FRAGMENT,
-  WITH_DIRECTIVES,
-  CREATE_VNODE,
-  CREATE_COMMENT
+  CREATE_COMMENT,
+  OPEN_BLOCK
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 
@@ -46,14 +38,14 @@ export const transformIf = createStructuralDirectiveTransform(
       // transformed.
       return () => {
         if (isRoot) {
-          ifNode.codegenNode = createSequenceExpression([
-            createCallExpression(context.helper(OPEN_BLOCK)),
-            createCodegenNodeForBranch(branch, 0, context)
-          ]) as IfCodegenNode
+          ifNode.codegenNode = createCodegenNodeForBranch(
+            branch,
+            0,
+            context
+          ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
           let parentCondition = ifNode.codegenNode!
-            .expressions[1] as ConditionalExpression
           while (
             parentCondition.alternate.type ===
             NodeTypes.JS_CONDITIONAL_EXPRESSION
@@ -175,7 +167,7 @@ function createCodegenNodeForBranch(
       ])
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, index, context) as BlockCodegenNode
+    return createChildrenCodegenNode(branch, index, context)
   }
 }
 
@@ -183,7 +175,7 @@ function createChildrenCodegenNode(
   branch: IfBranchNode,
   index: number,
   context: TransformContext
-): CallExpression {
+): BlockCodegenNode {
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
@@ -194,35 +186,36 @@ function createChildrenCodegenNode(
   const needFragmentWrapper =
     children.length !== 1 || firstChild.type !== NodeTypes.ELEMENT
   if (needFragmentWrapper) {
-    const blockArgs: CallExpression['arguments'] = [
-      helper(FRAGMENT),
-      createObjectExpression([keyProperty]),
-      children
-    ]
     if (children.length === 1 && firstChild.type === NodeTypes.FOR) {
       // optimize away nested fragments when child is a ForNode
-      const forBlockArgs = firstChild.codegenNode!.expressions[1].arguments
-      // directly use the for block's children and patchFlag
-      blockArgs[2] = forBlockArgs[2]
-      blockArgs[3] = forBlockArgs[3]
+      const vnodeCall = firstChild.codegenNode!
+      injectProp(vnodeCall, keyProperty, context)
+      return vnodeCall
+    } else {
+      return createVNodeCall(
+        context,
+        helper(FRAGMENT),
+        createObjectExpression([keyProperty]),
+        children,
+        undefined,
+        undefined,
+        undefined,
+        true,
+        false,
+        branch.loc
+      )
     }
-    return createCallExpression(helper(CREATE_BLOCK), blockArgs)
   } else {
-    const childCodegen = (firstChild as ElementNode).codegenNode as
-      | ElementCodegenNode
-      | ComponentCodegenNode
-      | SlotOutletCodegenNode
-    let vnodeCall = childCodegen
-    // Element with custom directives. Locate the actual createVNode() call.
-    if (vnodeCall.callee === WITH_DIRECTIVES) {
-      vnodeCall = vnodeCall.arguments[0]
-    }
+    const vnodeCall = (firstChild as ElementNode)
+      .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (vnodeCall.callee === CREATE_VNODE) {
-      vnodeCall.callee = helper(CREATE_BLOCK)
+    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+      vnodeCall.isBlock = true
+      helper(OPEN_BLOCK)
+      helper(CREATE_BLOCK)
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)
-    return childCodegen
+    return vnodeCall
   }
 }

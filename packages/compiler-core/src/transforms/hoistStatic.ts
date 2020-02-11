@@ -8,11 +8,9 @@ import {
   ComponentNode,
   TemplateNode,
   ElementNode,
-  PlainElementCodegenNode,
-  CodegenNodeWithDirective
+  VNodeCall
 } from '../ast'
 import { TransformContext } from '../transform'
-import { WITH_DIRECTIVES } from '../runtimeHelpers'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet, findProp } from '../utils'
 
@@ -60,7 +58,7 @@ function walk(
         // node may contain dynamic children, but its props may be eligible for
         // hoisting.
         const codegenNode = child.codegenNode!
-        if (codegenNode.type === NodeTypes.JS_CALL_EXPRESSION) {
+        if (codegenNode.type === NodeTypes.VNODE_CALL) {
           const flag = getPatchFlag(codegenNode)
           if (
             (!flag ||
@@ -70,8 +68,8 @@ function walk(
             !hasCachedProps(child)
           ) {
             const props = getNodeProps(child)
-            if (props && props !== `null`) {
-              getVNodeCall(codegenNode).arguments[1] = context.hoist(props)
+            if (props) {
+              codegenNode.props = context.hoist(props)
             }
           }
         }
@@ -111,7 +109,7 @@ export function isStaticNode(
         return cached
       }
       const codegenNode = node.codegenNode!
-      if (codegenNode.type !== NodeTypes.JS_CALL_EXPRESSION) {
+      if (codegenNode.type !== NodeTypes.VNODE_CALL) {
         return false
       }
       const flag = getPatchFlag(codegenNode)
@@ -122,6 +120,12 @@ export function isStaticNode(
             resultCache.set(node, false)
             return false
           }
+        }
+        // only svg/foeignObject could be block here, however if they are static
+        // then they don't need to be blocks since there will be no nested
+        // udpates.
+        if (codegenNode.isBlock) {
+          codegenNode.isBlock = false
         }
         resultCache.set(node, true)
         return true
@@ -164,11 +168,7 @@ function hasCachedProps(node: PlainElementNode): boolean {
     return false
   }
   const props = getNodeProps(node)
-  if (
-    props &&
-    props !== 'null' &&
-    props.type === NodeTypes.JS_OBJECT_EXPRESSION
-  ) {
+  if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
       if (properties[i].value.type === NodeTypes.JS_CACHE_EXPRESSION) {
@@ -181,30 +181,12 @@ function hasCachedProps(node: PlainElementNode): boolean {
 
 function getNodeProps(node: PlainElementNode) {
   const codegenNode = node.codegenNode!
-  if (codegenNode.type === NodeTypes.JS_CALL_EXPRESSION) {
-    return getVNodeArgAt(
-      codegenNode,
-      1
-    ) as PlainElementCodegenNode['arguments'][1]
+  if (codegenNode.type === NodeTypes.VNODE_CALL) {
+    return codegenNode.props
   }
 }
 
-type NonCachedCodegenNode =
-  | PlainElementCodegenNode
-  | CodegenNodeWithDirective<PlainElementCodegenNode>
-
-function getVNodeArgAt(
-  node: NonCachedCodegenNode,
-  index: number
-): PlainElementCodegenNode['arguments'][number] {
-  return getVNodeCall(node).arguments[index]
-}
-
-function getVNodeCall(node: NonCachedCodegenNode) {
-  return node.callee === WITH_DIRECTIVES ? node.arguments[0] : node
-}
-
-function getPatchFlag(node: NonCachedCodegenNode): number | undefined {
-  const flag = getVNodeArgAt(node, 3) as string
+function getPatchFlag(node: VNodeCall): number | undefined {
+  const flag = node.patchFlag
   return flag ? parseInt(flag, 10) : undefined
 }

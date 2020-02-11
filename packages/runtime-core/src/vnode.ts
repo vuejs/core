@@ -335,7 +335,7 @@ export function createCommentVNode(
   asBlock: boolean = false
 ): VNode {
   return asBlock
-    ? createBlock(Comment, null, text)
+    ? (openBlock(), createBlock(Comment, null, text))
     : createVNode(Comment, null, text)
 }
 

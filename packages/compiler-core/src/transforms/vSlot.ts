@@ -19,7 +19,8 @@ import {
   FunctionExpression,
   CallExpression,
   createCallExpression,
-  createArrayExpression
+  createArrayExpression,
+  SlotsExpression
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -115,7 +116,7 @@ export function buildSlots(
   context: TransformContext,
   buildSlotFn: SlotFnBuilder = buildClientSlotFn
 ): {
-  slots: ObjectExpression | CallExpression
+  slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
   const { children, loc } = node
@@ -312,17 +313,17 @@ export function buildSlots(
     }
   }
 
-  let slots: ObjectExpression | CallExpression = createObjectExpression(
+  let slots = createObjectExpression(
     slotsProperties.concat(
       createObjectProperty(`_compiled`, createSimpleExpression(`true`, false))
     ),
     loc
-  )
+  ) as SlotsExpression
   if (dynamicSlots.length) {
     slots = createCallExpression(context.helper(CREATE_SLOTS), [
       slots,
       createArrayExpression(dynamicSlots)
-    ])
+    ]) as SlotsExpression
   }
 
   return {

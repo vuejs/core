@@ -12,12 +12,10 @@ import {
   JSChildNode,
   SimpleExpressionNode,
   ElementTypes,
-  ElementCodegenNode,
-  ComponentCodegenNode,
-  createCallExpression,
   CacheExpression,
   createCacheExpression,
-  TemplateLiteral
+  TemplateLiteral,
+  createVNodeCall
 } from './ast'
 import {
   isString,
@@ -31,11 +29,11 @@ import {
   TO_DISPLAY_STRING,
   FRAGMENT,
   helperNameMap,
-  WITH_DIRECTIVES,
   CREATE_BLOCK,
-  CREATE_COMMENT
+  CREATE_COMMENT,
+  OPEN_BLOCK
 } from './runtimeHelpers'
-import { isVSlot, createBlockExpression } from './utils'
+import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 
 // There are two types of transforms:
@@ -286,20 +284,13 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
     if (isSingleElementRoot(root, child) && child.codegenNode) {
       // single element root is never hoisted so codegenNode will never be
       // SimpleExpressionNode
-      const codegenNode = child.codegenNode as
-        | ElementCodegenNode
-        | ComponentCodegenNode
-        | CacheExpression
-      if (codegenNode.type !== NodeTypes.JS_CACHE_EXPRESSION) {
-        if (codegenNode.callee === WITH_DIRECTIVES) {
-          codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
-        } else {
-          codegenNode.callee = helper(CREATE_BLOCK)
-        }
-        root.codegenNode = createBlockExpression(codegenNode, context)
-      } else {
-        root.codegenNode = codegenNode
+      const codegenNode = child.codegenNode
+      if (codegenNode.type === NodeTypes.VNODE_CALL) {
+        codegenNode.isBlock = true
+        helper(OPEN_BLOCK)
+        helper(CREATE_BLOCK)
       }
+      root.codegenNode = codegenNode
     } else {
       // - single <slot/>, IfNode, ForNode: already blocks.
       // - single text node: always patched.
@@ -308,16 +299,17 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
     }
   } else if (children.length > 1) {
     // root has multiple nodes - return a fragment block.
-    root.codegenNode = createBlockExpression(
-      createCallExpression(helper(CREATE_BLOCK), [
-        helper(FRAGMENT),
-        `null`,
-        root.children,
-        `${PatchFlags.STABLE_FRAGMENT} /* ${
-          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-        } */`
-      ]),
-      context
+    root.codegenNode = createVNodeCall(
+      context,
+      helper(FRAGMENT),
+      undefined,
+      root.children,
+      `${PatchFlags.STABLE_FRAGMENT} /* ${
+        PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+      } */`,
+      undefined,
+      undefined,
+      true
     )
   } else {
     // no children = noop. codegen will return null.

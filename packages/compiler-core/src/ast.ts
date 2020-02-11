@@ -1,17 +1,17 @@
 import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
-  CREATE_VNODE,
-  WITH_DIRECTIVES,
   RENDER_SLOT,
   CREATE_SLOTS,
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT
+  FRAGMENT,
+  CREATE_VNODE,
+  WITH_DIRECTIVES
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
-import { ImportItem } from './transform'
+import { ImportItem, TransformContext } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -38,12 +38,12 @@ export const enum NodeTypes {
   FOR,
   TEXT_CALL,
   // codegen
+  VNODE_CALL,
   JS_CALL_EXPRESSION,
   JS_OBJECT_EXPRESSION,
   JS_PROPERTY,
   JS_ARRAY_EXPRESSION,
   JS_FUNCTION_EXPRESSION,
-  JS_SEQUENCE_EXPRESSION,
   JS_CONDITIONAL_EXPRESSION,
   JS_CACHE_EXPRESSION,
 
@@ -123,21 +123,14 @@ export interface BaseElementNode extends Node {
   isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
-  codegenNode:
-    | CallExpression
-    | SimpleExpressionNode
-    | CacheExpression
-    | SequenceExpression
-    | undefined
 }
 
 export interface PlainElementNode extends BaseElementNode {
   tagType: ElementTypes.ELEMENT
   codegenNode:
-    | ElementCodegenNode
+    | VNodeCall
     | SimpleExpressionNode // when hoisted
     | CacheExpression // when cached by v-once
-    | SequenceExpression // when turned into a block
     | undefined
   ssrCodegenNode?: TemplateLiteral
 }
@@ -145,7 +138,7 @@ export interface PlainElementNode extends BaseElementNode {
 export interface ComponentNode extends BaseElementNode {
   tagType: ElementTypes.COMPONENT
   codegenNode:
-    | ComponentCodegenNode
+    | VNodeCall
     | CacheExpression // when cached by v-once
     | undefined
   ssrCodegenNode?: CallExpression
@@ -153,13 +146,17 @@ export interface ComponentNode extends BaseElementNode {
 
 export interface SlotOutletNode extends BaseElementNode {
   tagType: ElementTypes.SLOT
-  codegenNode: SlotOutletCodegenNode | undefined | CacheExpression // when cached by v-once
+  codegenNode:
+    | RenderSlotCall
+    | CacheExpression // when cached by v-once
+    | undefined
   ssrCodegenNode?: CallExpression
 }
 
 export interface TemplateNode extends BaseElementNode {
   tagType: ElementTypes.TEMPLATE
   // TemplateNode is a container type that always gets compiled away
+  codegenNode: undefined
 }
 
 export interface TextNode extends Node {
@@ -220,7 +217,7 @@ export interface CompoundExpressionNode extends Node {
 export interface IfNode extends Node {
   type: NodeTypes.IF
   branches: IfBranchNode[]
-  codegenNode?: IfCodegenNode
+  codegenNode?: IfConditionalExpression
 }
 
 export interface IfBranchNode extends Node {
@@ -246,6 +243,28 @@ export interface TextCallNode extends Node {
   codegenNode: CallExpression | SimpleExpressionNode // when hoisted
 }
 
+export type TemplateTextChildNode =
+  | TextNode
+  | InterpolationNode
+  | CompoundExpressionNode
+
+export interface VNodeCall extends Node {
+  type: NodeTypes.VNODE_CALL
+  tag: string | symbol | CallExpression
+  props: PropsExpression | undefined
+  children:
+    | TemplateChildNode[] // multiple children
+    | TemplateTextChildNode // single text child
+    | SlotsExpression // component slots
+    | ForRenderListExpression // v-for fragment call
+    | undefined
+  patchFlag: string | undefined
+  dynamicProps: string | undefined
+  directives: DirectiveArguments | undefined
+  isBlock: boolean
+  isForBlock: boolean
+}
+
 // JS Node Types ---------------------------------------------------------------
 
 // We also include a number of JavaScript AST nodes for code generation.
@@ -253,13 +272,13 @@ export interface TextCallNode extends Node {
 // Vue render function generation.
 
 export type JSChildNode =
+  | VNodeCall
   | CallExpression
   | ObjectExpression
   | ArrayExpression
   | ExpressionNode
   | FunctionExpression
   | ConditionalExpression
-  | SequenceExpression
   | CacheExpression
   | AssignmentExpression
 
@@ -299,11 +318,6 @@ export interface FunctionExpression extends Node {
   newline: boolean
   // so that codegen knows it needs to generate ScopeId wrapper
   isSlot: boolean
-}
-
-export interface SequenceExpression extends Node {
-  type: NodeTypes.JS_SEQUENCE_EXPRESSION
-  expressions: JSChildNode[]
 }
 
 export interface ConditionalExpression extends Node {
@@ -360,57 +374,31 @@ export interface ReturnStatement extends Node {
 
 // Codegen Node Types ----------------------------------------------------------
 
-// createVNode(...)
-export interface PlainElementCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
-  arguments:  // tag, props, children, patchFlag, dynamicProps
-    | [string | symbol]
-    | [string | symbol, PropsExpression]
-    | [string | symbol, 'null' | PropsExpression, TemplateChildNode[]]
-    | [
-        string | symbol,
-        'null' | PropsExpression,
-        'null' | TemplateChildNode[],
-        string
-      ]
-    | [
-        string | symbol,
-        'null' | PropsExpression,
-        'null' | TemplateChildNode[],
-        string,
-        string
-      ]
+export interface DirectiveArguments extends ArrayExpression {
+  elements: DirectiveArgumentNode[]
 }
 
-export type ElementCodegenNode =
-  | PlainElementCodegenNode
-  | CodegenNodeWithDirective<PlainElementCodegenNode>
-
-// createVNode(...)
-export interface PlainComponentCodegenNode extends CallExpression {
-  callee: typeof CREATE_VNODE | typeof CREATE_BLOCK
-  arguments:  // Comp, props, slots, patchFlag, dynamicProps
-    | [string | symbol]
-    | [string | symbol, PropsExpression]
-    | [string | symbol, 'null' | PropsExpression, SlotsExpression]
-    | [
-        string | symbol,
-        'null' | PropsExpression,
-        'null' | SlotsExpression,
-        string
-      ]
-    | [
-        string | symbol,
-        'null' | PropsExpression,
-        'null' | SlotsExpression,
-        string,
-        string
-      ]
+export interface DirectiveArgumentNode extends ArrayExpression {
+  elements:  // dir, exp, arg, modifiers
+    | [string]
+    | [string, ExpressionNode]
+    | [string, ExpressionNode, ExpressionNode]
+    | [string, ExpressionNode, ExpressionNode, ObjectExpression]
 }
 
-export type ComponentCodegenNode =
-  | PlainComponentCodegenNode
-  | CodegenNodeWithDirective<PlainComponentCodegenNode>
+// renderSlot(...)
+export interface RenderSlotCall extends CallExpression {
+  callee: typeof RENDER_SLOT
+  arguments:  // $slots, name, props, fallback
+    | [string, string | ExpressionNode]
+    | [string, string | ExpressionNode, PropsExpression]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        TemplateChildNode[]
+      ]
+}
 
 export type SlotsExpression = SlotsObjectExpression | DynamicSlotsExpression
 
@@ -462,63 +450,20 @@ export interface DynamicSlotFnProperty extends Property {
   value: SlotFunctionExpression
 }
 
-// withDirectives(createVNode(...), [
-//    [_directive_foo, someValue],
-//    [_directive_bar, someValue, "arg", { mod: true }]
-// ])
-export interface CodegenNodeWithDirective<T extends CallExpression>
-  extends CallExpression {
-  callee: typeof WITH_DIRECTIVES
-  arguments: [T, DirectiveArguments]
-}
-
-export interface DirectiveArguments extends ArrayExpression {
-  elements: DirectiveArgumentNode[]
-}
-
-export interface DirectiveArgumentNode extends ArrayExpression {
-  elements:  // dir, exp, arg, modifiers
-    | [string]
-    | [string, ExpressionNode]
-    | [string, ExpressionNode, ExpressionNode]
-    | [string, ExpressionNode, ExpressionNode, ObjectExpression]
-}
-
-// renderSlot(...)
-export interface SlotOutletCodegenNode extends CallExpression {
-  callee: typeof RENDER_SLOT
-  arguments:  // $slots, name, props, fallback
-    | [string, string | ExpressionNode]
-    | [string, string | ExpressionNode, PropsExpression]
-    | [
-        string,
-        string | ExpressionNode,
-        PropsExpression | '{}',
-        TemplateChildNode[]
-      ]
-}
-
-export type BlockCodegenNode =
-  | ElementCodegenNode
-  | ComponentCodegenNode
-  | SlotOutletCodegenNode
-
-export interface IfCodegenNode extends SequenceExpression {
-  expressions: [OpenBlockExpression, IfConditionalExpression]
-}
+export type BlockCodegenNode = VNodeCall | RenderSlotCall
 
 export interface IfConditionalExpression extends ConditionalExpression {
   consequent: BlockCodegenNode
   alternate: BlockCodegenNode | IfConditionalExpression
 }
 
-export interface ForCodegenNode extends SequenceExpression {
-  expressions: [OpenBlockExpression, ForBlockCodegenNode]
-}
-
-export interface ForBlockCodegenNode extends CallExpression {
-  callee: typeof CREATE_BLOCK
-  arguments: [typeof FRAGMENT, 'null', ForRenderListExpression, string]
+export interface ForCodegenNode extends VNodeCall {
+  isBlock: true
+  tag: typeof FRAGMENT
+  props: undefined
+  children: ForRenderListExpression
+  patchFlag: string
+  isForBlock: true
 }
 
 export interface ForRenderListExpression extends CallExpression {
@@ -528,11 +473,6 @@ export interface ForRenderListExpression extends CallExpression {
 
 export interface ForIteratorExpression extends FunctionExpression {
   returns: BlockCodegenNode
-}
-
-export interface OpenBlockExpression extends CallExpression {
-  callee: typeof OPEN_BLOCK
-  arguments: []
 }
 
 // AST Utilities ---------------------------------------------------------------
@@ -561,6 +501,42 @@ export function createRoot(
     cached: 0,
     temps: 0,
     codegenNode: undefined,
+    loc
+  }
+}
+
+export function createVNodeCall(
+  context: TransformContext,
+  tag: VNodeCall['tag'],
+  props?: VNodeCall['props'],
+  children?: VNodeCall['children'],
+  patchFlag?: VNodeCall['patchFlag'],
+  dynamicProps?: VNodeCall['dynamicProps'],
+  directives?: VNodeCall['directives'],
+  isBlock: VNodeCall['isBlock'] = false,
+  isForBlock: VNodeCall['isForBlock'] = false,
+  loc = locStub
+): VNodeCall {
+  if (isBlock) {
+    context.helper(OPEN_BLOCK)
+    context.helper(CREATE_BLOCK)
+  } else {
+    context.helper(CREATE_VNODE)
+  }
+  if (directives) {
+    context.helper(WITH_DIRECTIVES)
+  }
+
+  return {
+    type: NodeTypes.VNODE_CALL,
+    tag,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    directives,
+    isBlock,
+    isForBlock,
     loc
   }
 }
@@ -638,15 +614,9 @@ export function createCompoundExpression(
   }
 }
 
-type InferCodegenNodeType<T> = T extends
-  | typeof CREATE_VNODE
-  | typeof CREATE_BLOCK
-  ? PlainElementCodegenNode | PlainComponentCodegenNode
-  : T extends typeof WITH_DIRECTIVES
-    ?
-        | CodegenNodeWithDirective<PlainElementCodegenNode>
-        | CodegenNodeWithDirective<PlainComponentCodegenNode>
-    : T extends typeof RENDER_SLOT ? SlotOutletCodegenNode : CallExpression
+type InferCodegenNodeType<T> = T extends typeof RENDER_SLOT
+  ? RenderSlotCall
+  : CallExpression
 
 export function createCallExpression<T extends CallExpression['callee']>(
   callee: T,
@@ -675,16 +645,6 @@ export function createFunctionExpression(
     newline,
     isSlot,
     loc
-  }
-}
-
-export function createSequenceExpression(
-  expressions: SequenceExpression['expressions']
-): SequenceExpression {
-  return {
-    type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-    expressions,
-    loc: locStub
   }
 }
 

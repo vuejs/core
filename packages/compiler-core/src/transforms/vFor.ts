@@ -8,26 +8,28 @@ import {
   createSimpleExpression,
   SourceLocation,
   SimpleExpressionNode,
-  createSequenceExpression,
   createCallExpression,
   createFunctionExpression,
   ElementTypes,
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
-  ElementCodegenNode,
-  SlotOutletCodegenNode,
+  RenderSlotCall,
   SlotOutletNode,
   ElementNode,
   DirectiveNode,
   ForNode,
-  PlainElementNode
+  PlainElementNode,
+  createVNodeCall,
+  VNodeCall,
+  ForRenderListExpression,
+  BlockCodegenNode,
+  ForIteratorExpression
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   getInnerRange,
   findProp,
-  createBlockExpression,
   isTemplateNode,
   isSlotOutlet,
   injectProp
@@ -36,8 +38,7 @@ import {
   RENDER_LIST,
   OPEN_BLOCK,
   CREATE_BLOCK,
-  FRAGMENT,
-  WITH_DIRECTIVES
+  FRAGMENT
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -51,26 +52,27 @@ export const transformFor = createStructuralDirectiveTransform(
       // iterator on exit after all children have been traversed
       const renderExp = createCallExpression(helper(RENDER_LIST), [
         forNode.source
-      ])
+      ]) as ForRenderListExpression
       const keyProp = findProp(node, `key`)
       const fragmentFlag = keyProp
         ? PatchFlags.KEYED_FRAGMENT
         : PatchFlags.UNKEYED_FRAGMENT
-      forNode.codegenNode = createSequenceExpression([
-        // v-for fragment blocks disable tracking since they always diff their
-        // children
-        createCallExpression(helper(OPEN_BLOCK), [`true`]),
-        createCallExpression(helper(CREATE_BLOCK), [
-          helper(FRAGMENT),
-          `null`,
-          renderExp,
-          `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`
-        ])
-      ]) as ForCodegenNode
+      forNode.codegenNode = createVNodeCall(
+        context,
+        helper(FRAGMENT),
+        undefined,
+        renderExp,
+        `${fragmentFlag} /* ${PatchFlagNames[fragmentFlag]} */`,
+        undefined,
+        undefined,
+        true /* isBlock */,
+        true /* isForBlock */,
+        node.loc
+      ) as ForCodegenNode
 
       return () => {
         // finish the codegen now that all children have been traversed
-        let childBlock
+        let childBlock: BlockCodegenNode
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
         const needFragmentWrapper =
@@ -92,7 +94,7 @@ export const transformFor = createStructuralDirectiveTransform(
           : null
         if (slotOutlet) {
           // <slot v-for="..."> or <template v-for="..."><slot/></template>
-          childBlock = slotOutlet.codegenNode as SlotOutletCodegenNode
+          childBlock = slotOutlet.codegenNode as RenderSlotCall
           if (isTemplate && keyProperty) {
             // <template v-for="..." :key="..."><slot/></template>
             // we need to inject the key to the renderSlot() call.
@@ -102,37 +104,33 @@ export const transformFor = createStructuralDirectiveTransform(
         } else if (needFragmentWrapper) {
           // <template v-for="..."> with text or multi-elements
           // should generate a fragment block for each loop
-          childBlock = createBlockExpression(
-            createCallExpression(helper(CREATE_BLOCK), [
-              helper(FRAGMENT),
-              keyProperty ? createObjectExpression([keyProperty]) : `null`,
-              node.children,
-              `${PatchFlags.STABLE_FRAGMENT} /* ${
-                PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
-              } */`
-            ]),
-            context
+          childBlock = createVNodeCall(
+            context,
+            helper(FRAGMENT),
+            keyProperty ? createObjectExpression([keyProperty]) : undefined,
+            node.children,
+            `${PatchFlags.STABLE_FRAGMENT} /* ${
+              PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+            } */`,
+            undefined,
+            undefined,
+            true
           )
         } else {
           // Normal element v-for. Directly use the child's codegenNode
-          // arguments, but replace createVNode() with createBlock()
-          let codegenNode = (children[0] as PlainElementNode)
-            .codegenNode as ElementCodegenNode
-          if (codegenNode.callee === WITH_DIRECTIVES) {
-            codegenNode.arguments[0].callee = helper(CREATE_BLOCK)
-          } else {
-            codegenNode.callee = helper(CREATE_BLOCK)
-          }
-          childBlock = createBlockExpression(codegenNode, context)
+          // but mark it as a block.
+          childBlock = (children[0] as PlainElementNode)
+            .codegenNode as VNodeCall
+          childBlock.isBlock = true
+          helper(OPEN_BLOCK)
+          helper(CREATE_BLOCK)
         }
 
-        renderExp.arguments.push(
-          createFunctionExpression(
-            createForLoopParams(forNode.parseResult),
-            childBlock,
-            true /* force newline */
-          )
-        )
+        renderExp.arguments.push(createFunctionExpression(
+          createForLoopParams(forNode.parseResult),
+          childBlock,
+          true /* force newline */
+        ) as ForIteratorExpression)
       }
     })
   }

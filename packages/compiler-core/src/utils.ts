@@ -4,8 +4,6 @@ import {
   ElementNode,
   NodeTypes,
   CallExpression,
-  SequenceExpression,
-  createSequenceExpression,
   createCallExpression,
   DirectiveNode,
   ElementTypes,
@@ -17,22 +15,18 @@ import {
   createObjectExpression,
   SlotOutletNode,
   TemplateNode,
-  BlockCodegenNode,
-  ElementCodegenNode,
-  SlotOutletCodegenNode,
-  ComponentCodegenNode,
+  RenderSlotCall,
   ExpressionNode,
   IfBranchNode,
   TextNode,
-  InterpolationNode
+  InterpolationNode,
+  VNodeCall
 } from './ast'
 import { parse } from 'acorn'
 import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import {
-  OPEN_BLOCK,
   MERGE_PROPS,
-  RENDER_SLOT,
   PORTAL,
   SUSPENSE,
   KEEP_ALIVE,
@@ -218,16 +212,6 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
   )
 }
 
-export function createBlockExpression(
-  blockExp: BlockCodegenNode,
-  context: TransformContext
-): SequenceExpression {
-  return createSequenceExpression([
-    createCallExpression(context.helper(OPEN_BLOCK)),
-    blockExp
-  ])
-}
-
 export function isText(
   node: TemplateChildNode
 ): node is TextNode | InterpolationNode {
@@ -253,13 +237,13 @@ export function isSlotOutlet(
 }
 
 export function injectProp(
-  node: ElementCodegenNode | ComponentCodegenNode | SlotOutletCodegenNode,
+  node: VNodeCall | RenderSlotCall,
   prop: Property,
   context: TransformContext
 ) {
   let propsWithInjection: ObjectExpression | CallExpression
   const props =
-    node.callee === RENDER_SLOT ? node.arguments[2] : node.arguments[1]
+    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   if (props == null || isString(props)) {
     propsWithInjection = createObjectExpression([prop])
   } else if (props.type === NodeTypes.JS_CALL_EXPRESSION) {
@@ -295,10 +279,10 @@ export function injectProp(
       props
     ])
   }
-  if (node.callee === RENDER_SLOT) {
-    node.arguments[2] = propsWithInjection
+  if (node.type === NodeTypes.VNODE_CALL) {
+    node.props = propsWithInjection
   } else {
-    node.arguments[1] = propsWithInjection
+    node.arguments[2] = propsWithInjection
   }
 }
 
