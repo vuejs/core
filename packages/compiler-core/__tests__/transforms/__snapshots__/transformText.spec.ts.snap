@@ -5,7 +5,7 @@ exports[`compiler: transform text <template v-for> 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createTextVNode: _createTextVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createTextVNode: _createTextVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _createBlock(_Fragment, null, [
@@ -33,7 +33,7 @@ exports[`compiler: transform text consecutive text between elements 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -49,7 +49,7 @@ exports[`compiler: transform text consecutive text mixed with elements 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -79,7 +79,7 @@ exports[`compiler: transform text text between elements (static) 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { createVNode: _createVNode, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+    const { createVNode: _createVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),

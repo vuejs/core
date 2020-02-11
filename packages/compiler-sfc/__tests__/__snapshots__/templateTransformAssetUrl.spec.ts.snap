@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler sfc: transform asset url support uri fragment 1`] = `
-"import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from '@svg/file.svg'
 
 
@@ -13,7 +13,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler sfc: transform asset url support uri is empty 1`] = `
-"import { createVNode as _createVNode, createBlock as _createBlock, openBlock as _openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(\\"use\\", { href: '' }))
@@ -21,7 +21,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler sfc: transform asset url transform assetUrls 1`] = `
-"import { createVNode as _createVNode, createBlock as _createBlock, Fragment as _Fragment, openBlock as _openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 import _imports_1 from 'fixtures/logo.png'
 

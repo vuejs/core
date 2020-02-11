@@ -506,7 +506,7 @@ export function createRoot(
 }
 
 export function createVNodeCall(
-  context: TransformContext,
+  context: TransformContext | null,
   tag: VNodeCall['tag'],
   props?: VNodeCall['props'],
   children?: VNodeCall['children'],
@@ -517,14 +517,16 @@ export function createVNodeCall(
   isForBlock: VNodeCall['isForBlock'] = false,
   loc = locStub
 ): VNodeCall {
-  if (isBlock) {
-    context.helper(OPEN_BLOCK)
-    context.helper(CREATE_BLOCK)
-  } else {
-    context.helper(CREATE_VNODE)
-  }
-  if (directives) {
-    context.helper(WITH_DIRECTIVES)
+  if (context) {
+    if (isBlock) {
+      context.helper(OPEN_BLOCK)
+      context.helper(CREATE_BLOCK)
+    } else {
+      context.helper(CREATE_VNODE)
+    }
+    if (directives) {
+      context.helper(WITH_DIRECTIVES)
+    }
   }
 
   return {

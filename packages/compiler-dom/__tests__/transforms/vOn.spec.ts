@@ -4,8 +4,8 @@ import {
   CompilerOptions,
   ElementNode,
   ObjectExpression,
-  CallExpression,
-  NodeTypes
+  NodeTypes,
+  VNodeCall
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
@@ -24,8 +24,8 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
   })
   return {
     root: ast,
-    props: (((ast.children[0] as ElementNode).codegenNode as CallExpression)
-      .arguments[1] as ObjectExpression).properties
+    props: (((ast.children[0] as ElementNode).codegenNode as VNodeCall)
+      .props as ObjectExpression).properties
   }
 }
 
@@ -158,7 +158,7 @@ describe('compiler-dom: transform v-on', () => {
     })
     expect(root.cached).toBe(1)
     // should not treat cached handler as dynamicProp, so no flags
-    expect((root as any).children[0].codegenNode.arguments.length).toBe(2)
+    expect((root as any).children[0].codegenNode.patchFlag).toBeUndefined()
     expect(prop.value).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
       index: 1,

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler sfc: transform srcset transform srcset 1`] = `
-"import { createVNode as _createVNode, createBlock as _createBlock, Fragment as _Fragment, openBlock as _openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 
 

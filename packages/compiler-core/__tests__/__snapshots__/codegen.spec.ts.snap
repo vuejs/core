@@ -59,15 +59,6 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen SequenceExpression 1`] = `
-"
-return function render(_ctx, _cache) {
-  with (this) {
-    return (foo, bar(baz))
-  }
-}"
-`;
-
 exports[`compiler: codegen assets + temps 1`] = `
 "
 return function render(_ctx, _cache) {
@@ -106,7 +97,7 @@ exports[`compiler: codegen forNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (this) {
-    return (foo, bar)
+    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(), 1))
   }
 }"
 `;
@@ -147,7 +138,9 @@ exports[`compiler: codegen ifNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (this) {
-    return (foo, bar)
+    return foo
+      ? bar
+      : baz
   }
 }"
 `;

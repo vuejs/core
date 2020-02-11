@@ -5,7 +5,7 @@ exports[`compiler: v-for codegen basic v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createBlock(\\"span\\"))
@@ -19,7 +19,7 @@ exports[`compiler: v-for codegen keyed template v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createBlock(_Fragment, { key: item }, [
@@ -36,7 +36,7 @@ exports[`compiler: v-for codegen keyed v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createBlock(\\"span\\", { key: item }))
@@ -50,7 +50,7 @@ exports[`compiler: v-for codegen skipped key 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item, __, index) => {
       return (_openBlock(), _createBlock(\\"span\\"))
@@ -64,7 +64,7 @@ exports[`compiler: v-for codegen skipped value & key 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (_, __, index) => {
       return (_openBlock(), _createBlock(\\"span\\"))
@@ -78,7 +78,7 @@ exports[`compiler: v-for codegen skipped value 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (_, key, index) => {
       return (_openBlock(), _createBlock(\\"span\\"))
@@ -92,7 +92,7 @@ exports[`compiler: v-for codegen template v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createBlock(_Fragment, null, [
@@ -109,7 +109,7 @@ exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, renderSlot: _renderSlot } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return _renderSlot($slots, \\"default\\")
@@ -123,7 +123,7 @@ exports[`compiler: v-for codegen v-for on <slot/> 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, renderSlot: _renderSlot } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, renderSlot: _renderSlot } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item) => {
       return _renderSlot($slots, \\"default\\")
@@ -137,14 +137,14 @@ exports[`compiler: v-for codegen v-for on element with custom directive 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives } = _Vue
 
     const _directive_foo = _resolveDirective(\\"foo\\")
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
-      return (_openBlock(), _withDirectives(_createBlock(\\"div\\", null, null, 32 /* NEED_PATCH */), [
+      return _withDirectives((_openBlock(), _createBlock(\\"div\\", null, null, 32 /* NEED_PATCH */)), [
         [_directive_foo]
-      ]))
+      ])
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -155,13 +155,13 @@ exports[`compiler: v-for codegen v-if + v-for 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
-    return (_openBlock(), ok
-      ? _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
+    return ok
+      ? (_openBlock(true), _createBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createBlock(\\"div\\"))
-        }), 256 /* UNKEYED_FRAGMENT */)
-      : _createCommentVNode(\\"v-if\\", true))
+        }), 256 /* UNKEYED_FRAGMENT */))
+      : _createCommentVNode(\\"v-if\\", true)
   }
 }"
 `;
@@ -171,7 +171,7 @@ exports[`compiler: v-for codegen value + key + index 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(items, (item, key, index) => {
       return (_openBlock(), _createBlock(\\"span\\"))

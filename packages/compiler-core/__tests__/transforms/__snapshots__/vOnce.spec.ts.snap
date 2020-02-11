@@ -22,7 +22,7 @@ exports[`compiler: v-once transform on component 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -43,7 +43,7 @@ exports[`compiler: v-once transform on nested plain element 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _cache[1] || (
@@ -62,7 +62,7 @@ exports[`compiler: v-once transform on slot outlet 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _cache[1] || (
@@ -81,7 +81,7 @@ exports[`compiler: v-once transform with hoistStatic: true 1`] = `
 
 return function render(_ctx, _cache) {
   with (this) {
-    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
+    const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _cache[1] || (

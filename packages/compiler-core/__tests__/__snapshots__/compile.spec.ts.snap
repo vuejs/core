@@ -12,9 +12,9 @@ return function render(_ctx, _cache) {
       class: bar.baz
     }, [
       _createTextVNode(_toDisplayString(world.burn()) + \\" \\", 1 /* TEXT */),
-      (_openBlock(), ok
-        ? _createBlock(\\"div\\", { key: 0 }, \\"yes\\")
-        : _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
+      ok
+        ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
+        : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
       (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (value, index) => {
         return (_openBlock(), _createBlock(\\"div\\", null, [
           _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
@@ -34,9 +34,9 @@ return function render(_ctx, _cache) {
     class: _ctx.bar.baz
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
-    (_openBlock(), (_ctx.ok)
-      ? _createBlock(\\"div\\", { key: 0 }, \\"yes\\")
-      : _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
+    (_ctx.ok)
+      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
+      : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
     (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createBlock(\\"div\\", null, [
         _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
@@ -55,9 +55,9 @@ export function render(_ctx, _cache) {
     class: _ctx.bar.baz
   }, [
     _createTextVNode(_toDisplayString(_ctx.world.burn()) + \\" \\", 1 /* TEXT */),
-    (_openBlock(), (_ctx.ok)
-      ? _createBlock(\\"div\\", { key: 0 }, \\"yes\\")
-      : _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
+    (_ctx.ok)
+      ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, \\"yes\\"))
+      : (_openBlock(), _createBlock(_Fragment, { key: 1 }, [\\"no\\"])),
     (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (value, index) => {
       return (_openBlock(), _createBlock(\\"div\\", null, [
         _createVNode(\\"span\\", null, _toDisplayString(value + index), 1 /* TEXT */)
