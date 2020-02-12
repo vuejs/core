@@ -90,6 +90,8 @@ export function processExpression(
 
   // fast path if expression is a simple identifier.
   const rawExp = node.content
+  // bail on parens to prevent any possible function invocations.
+  const bailConstant = rawExp.indexOf(`(`) > -1
   if (isSimpleIdentifier(rawExp)) {
     if (
       !asParams &&
@@ -98,7 +100,7 @@ export function processExpression(
       !isLiteralWhitelisted(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
-    } else if (!context.identifiers[rawExp]) {
+    } else if (!context.identifiers[rawExp] && !bailConstant) {
       // mark node constant for hoisting unless it's referring a scope variable
       node.isConstant = true
     }
@@ -139,12 +141,13 @@ export function processExpression(
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
-            node.isConstant = false
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
             // The identifier is considered constant unless it's pointing to a
             // scope variable (a v-for alias, or a v-slot prop)
-            node.isConstant = !(needPrefix && knownIds[node.name])
+            if (!(needPrefix && knownIds[node.name]) && !bailConstant) {
+              node.isConstant = true
+            }
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
@@ -234,7 +237,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
-    ret.isConstant = true
+    ret.isConstant = !bailConstant
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

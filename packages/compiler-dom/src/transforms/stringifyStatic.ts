@@ -6,12 +6,20 @@ import {
   SimpleExpressionNode,
   createCallExpression,
   HoistTransform,
-  CREATE_STATIC
+  CREATE_STATIC,
+  ExpressionNode
 } from '@vue/compiler-core'
-import { isVoidTag, isString, isSymbol, escapeHtml } from '@vue/shared'
+import {
+  isVoidTag,
+  isString,
+  isSymbol,
+  escapeHtml,
+  toDisplayString
+} from '@vue/shared'
 
 // Turn eligible hoisted static trees into stringied static nodes, e.g.
 //   const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
+// This is only performed in non-in-browser compilations.
 export const stringifyStatic: HoistTransform = (node, context) => {
   if (shouldOptimize(node)) {
     return createCallExpression(context.helper(CREATE_STATIC), [
@@ -22,6 +30,11 @@ export const stringifyStatic: HoistTransform = (node, context) => {
   }
 }
 
+export const enum StringifyThresholds {
+  ELEMENT_WITH_BINDING_COUNT = 5,
+  NODE_COUNT = 20
+}
+
 // Opt-in heuristics based on:
 // 1. number of elements with attributes > 5.
 // 2. OR: number of total nodes > 20
@@ -29,8 +42,8 @@ export const stringifyStatic: HoistTransform = (node, context) => {
 // it is only worth it when the tree is complex enough
 // (e.g. big piece of static content)
 function shouldOptimize(node: ElementNode): boolean {
-  let bindingThreshold = 5
-  let nodeThreshold = 20
+  let bindingThreshold = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+  let nodeThreshold = StringifyThresholds.NODE_COUNT
 
   // TODO: check for cases where using innerHTML will result in different
   // output compared to imperative node insertions.
@@ -67,11 +80,13 @@ function stringifyElement(
     if (p.type === NodeTypes.ATTRIBUTE) {
       res += ` ${p.name}`
       if (p.value) {
-        res += `="${p.value.content}"`
+        res += `="${escapeHtml(p.value.content)}"`
       }
     } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
       // constant v-bind, e.g. :foo="1"
-      // TODO
+      res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
+        evaluateConstant(p.exp as ExpressionNode)
+      )}"`
     }
   }
   if (context.scopeId) {
@@ -105,16 +120,42 @@ function stringifyNode(
     case NodeTypes.COMMENT:
       return `<!--${escapeHtml(node.content)}-->`
     case NodeTypes.INTERPOLATION:
-      // constants
-      // TODO check eval
-      return (node.content as SimpleExpressionNode).content
+      return escapeHtml(toDisplayString(evaluateConstant(node.content)))
     case NodeTypes.COMPOUND_EXPRESSION:
-      // TODO proper handling
-      return node.children.map((c: any) => stringifyNode(c, context)).join('')
+      return escapeHtml(evaluateConstant(node))
     case NodeTypes.TEXT_CALL:
       return stringifyNode(node.content, context)
     default:
       // static trees will not contain if/for nodes
       return ''
+  }
+}
+
+// __UNSAFE__
+// Reason: eval.
+// It's technically safe to eval because only constant expressions are possible
+// here, e.g. `{{ 1 }}` or `{{ 'foo' }}`
+// in addition, constant exps bail on presence of parens so you can't even
+// run JSFuck in here. But we mark it unsafe for security review purposes.
+// (see compiler-core/src/transformExpressions)
+function evaluateConstant(exp: ExpressionNode): string {
+  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+    return new Function(`return ${exp.content}`)()
+  } else {
+    // compound
+    let res = ``
+    exp.children.forEach(c => {
+      if (isString(c) || isSymbol(c)) {
+        return
+      }
+      if (c.type === NodeTypes.TEXT) {
+        res += c.content
+      } else if (c.type === NodeTypes.INTERPOLATION) {
+        res += evaluateConstant(c.content)
+      } else {
+        res += evaluateConstant(c)
+      }
+    })
+    return res
   }
 }
