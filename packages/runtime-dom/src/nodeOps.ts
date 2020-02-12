@@ -51,6 +51,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     return el.cloneNode(true)
   },
 
+  // __UNSAFE__
+  // Reason: innerHTML.
+  // Static content here can only come from compiled templates.
+  // As long as the user only uses trusted templates, this is safe.
   insertStaticContent(content, parent, anchor, isSVG) {
     const temp = isSVG
       ? tempSVGContainer ||

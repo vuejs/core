@@ -31,6 +31,10 @@ function compileToFunction(
     if (__DEV__ && !el) {
       warn(`Template element not found or is empty: ${template}`)
     }
+    // __UNSAFE__
+    // Reason: potential execution of JS expressions in in-DOM template.
+    // The user must make sure the in-DOM template is trusted. If it's rendered
+    // by the server, the template should not contain any user data.
     template = el ? el.innerHTML : ``
   }
 
