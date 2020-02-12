@@ -175,7 +175,11 @@ export function trigger(
     const iterationEffect = depsMap.get(iterationKey)
     addRunners(effects, computedRunners, iterationEffect)
 
-    if (key !== void 0 && depsMap.get(key) !== iterationEffect) {
+    if (
+      key !== void 0 &&
+      depsMap.get(key) &&
+      depsMap.get(key) !== iterationEffect
+    ) {
       addRunners(effects, computedRunners, depsMap.get(key))
     }
   }

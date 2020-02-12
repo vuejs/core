@@ -735,4 +735,34 @@ describe('reactivity/effect', () => {
     obj.foo = NaN
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
+
+  // My test:
+
+  it('show trigger for key:length in traverse:(traditional for loop)', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    let dummy
+    effect(() => {
+      dummy = ''
+      for (let i = 0; i < arr.length; i++) {
+        dummy += arr[i]
+      }
+    })
+    expect(dummy).toBe('abc')
+    arr.push('d')
+    expect(dummy).toBe('abcd')
+  })
+
+  it('show trigger for key:length in traverse:(.forEach method)', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    let dummy: string | undefined
+    effect(() => {
+      dummy = ''
+      arr.forEach(s => {
+        dummy += s
+      })
+    })
+    expect(dummy).toBe('abc')
+    arr.push('d')
+    expect(dummy).toBe('abcd')
+  })
 })
