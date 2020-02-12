@@ -39,7 +39,7 @@ describe('ssr: scopeId', () => {
               ]
             }
           },
-          _compiled: true
+          _: 1
         }, _parent))
       }"
     `)
@@ -67,7 +67,7 @@ describe('ssr: scopeId', () => {
               ]
             }
           },
-          _compiled: true
+          _: 1
         }, _parent))
       }"
     `)
@@ -100,7 +100,7 @@ describe('ssr: scopeId', () => {
                     ]
                   }
                 },
-                _compiled: true
+                _: 1
               }, _parent))
             } else {
               return [
@@ -109,12 +109,12 @@ describe('ssr: scopeId', () => {
                   default: () => [
                     _createVNode(\\"span\\")
                   ],
-                  _compiled: true
+                  _: 1
                 })
               ]
             }
           },
-          _compiled: true
+          _: 1
         }, _parent))
       }"
     `)

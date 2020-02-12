@@ -69,8 +69,8 @@ function createSlotMatcher(obj: Record<string, any>) {
         } as any
       })
       .concat({
-        key: { content: `_compiled` },
-        value: { content: `true` }
+        key: { content: `_` },
+        value: { content: `1`, isStatic: false }
       })
   }
 }
@@ -456,7 +456,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _compiled: `[true]`
+          _: `[1]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -498,7 +498,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _compiled: `[true]`
+          _: `[1]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -547,7 +547,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _compiled: `[true]`
+          _: `[1]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -606,7 +606,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _compiled: `[true]`
+          _: `[1]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,

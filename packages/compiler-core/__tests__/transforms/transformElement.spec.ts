@@ -321,13 +321,13 @@ describe('compiler: element transform', () => {
               fallback: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _compiled: `[true]`
+              _: `[1]`
             })
           : createObjectMatcher({
               default: {
                 type: NodeTypes.JS_FUNCTION_EXPRESSION
               },
-              _compiled: `[true]`
+              _: `[1]`
             })
       })
     }
@@ -381,7 +381,7 @@ describe('compiler: element transform', () => {
           default: {
             type: NodeTypes.JS_FUNCTION_EXPRESSION
           },
-          _compiled: `[true]`
+          _: `[1]`
         })
       })
     }

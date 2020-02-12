@@ -35,7 +35,7 @@ export function renderSlot(
       Fragment,
       { key: props.key },
       slot ? slot(props) : fallback || [],
-      slots._compiled ? 0 : PatchFlags.BAIL
+      slots._ ? 0 : PatchFlags.BAIL
     )
   )
 }

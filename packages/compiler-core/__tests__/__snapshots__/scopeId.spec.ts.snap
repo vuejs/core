@@ -29,7 +29,7 @@ export const render = _withId(function render(_ctx, _cache) {
     default: _withId(() => [
       _createVNode(\\"div\\")
     ]),
-    _compiled: true
+    _: 1
   }))
 })"
 `;
@@ -41,7 +41,7 @@ const _withId = _withScopeId(\\"test\\")
 export const render = _withId(function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _compiled: true }, [
+  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 1 }, [
     (_ctx.ok)
       ? {
           name: \\"foo\\",
@@ -76,7 +76,7 @@ export const render = _withId(function render(_ctx, _cache) {
     bar: _withId(() => [
       _createVNode(\\"div\\")
     ]),
-    _compiled: true
+    _: 1
   }))
 })"
 `;

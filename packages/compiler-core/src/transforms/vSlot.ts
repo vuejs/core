@@ -315,7 +315,7 @@ export function buildSlots(
 
   let slots = createObjectExpression(
     slotsProperties.concat(
-      createObjectProperty(`_compiled`, createSimpleExpression(`true`, false))
+      createObjectProperty(`_`, createSimpleExpression(`1`, false))
     ),
     loc
   ) as SlotsExpression

@@ -9,7 +9,7 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Comp, null, {
     [_ctx.one]: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
     [_ctx.two]: ({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)],
-    _compiled: true
+    _: 1
   }, 512 /* DYNAMIC_SLOTS */))
 }"
 `;
@@ -24,7 +24,7 @@ return function render(_ctx, _cache) {
     default: () => [
       _createVNode(\\"div\\")
     ],
-    _compiled: true
+    _: 1
   }))
 }"
 `;
@@ -35,7 +35,7 @@ exports[`compiler: transform component slots named slot with v-for w/ prefixIden
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
     _renderList(_ctx.list, (name) => {
       return {
         name: name,
@@ -52,7 +52,7 @@ exports[`compiler: transform component slots named slot with v-if + prefixIdenti
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
     (_ctx.ok)
       ? {
           name: \\"one\\",
@@ -72,7 +72,7 @@ return function render(_ctx, _cache) {
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
       ok
         ? {
             name: \\"one\\",
@@ -101,7 +101,7 @@ return function render(_ctx, _cache) {
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _compiled: true }, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
       ok
         ? {
             name: \\"one\\",
@@ -122,7 +122,7 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Comp, null, {
     one: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
     two: ({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)],
-    _compiled: true
+    _: 1
   }))
 }"
 `;
@@ -142,7 +142,7 @@ return function render(_ctx, _cache) {
         \\"bar\\",
         _createVNode(\\"span\\")
       ],
-      _compiled: true
+      _: 1
     }))
   }
 }"
@@ -159,14 +159,14 @@ return function render(_ctx, _cache) {
     default: ({ foo }) => [
       _createVNode(_component_Inner, null, {
         default: ({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)],
-        _compiled: true
+        _: 1
       }, 512 /* DYNAMIC_SLOTS */),
       \\" \\",
       _toDisplayString(foo),
       _toDisplayString(_ctx.bar),
       _toDisplayString(_ctx.baz)
     ],
-    _compiled: true
+    _: 1
   }))
 }"
 `;
@@ -179,7 +179,7 @@ return function render(_ctx, _cache) {
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
-    _compiled: true
+    _: 1
   }))
 }"
 `;

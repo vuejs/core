@@ -218,7 +218,7 @@ describe('ssr: renderToString', () => {
                       push(`<span>${msg}</span>`)
                     },
                     // important to avoid slots being normalized
-                    _compiled: true as any
+                    _: 1 as any
                   },
                   parent
                 )

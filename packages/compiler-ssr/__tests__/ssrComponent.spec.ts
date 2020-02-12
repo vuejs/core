@@ -61,7 +61,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -86,7 +86,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -124,7 +124,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -142,7 +142,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -174,7 +174,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             _renderList(_ctx.names, (key) => {
               return {
                 name: key,
@@ -262,7 +262,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
