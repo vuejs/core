@@ -32,6 +32,10 @@ function shouldOptimize(node: ElementNode): boolean {
   let bindingThreshold = 5
   let nodeThreshold = 20
 
+  // TODO: check for cases where using innerHTML will result in different
+  // output compared to imperative node insertions.
+  // probably only need to check for most common case
+  // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode) {
     for (let i = 0; i < node.children.length; i++) {
       if (--nodeThreshold === 0) {

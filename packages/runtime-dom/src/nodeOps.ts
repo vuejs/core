@@ -1,4 +1,4 @@
-import { RendererOptions } from '@vue/runtime-core/src'
+import { RendererOptions } from '@vue/runtime-core'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 const svgNS = 'http://www.w3.org/2000/svg'
