@@ -61,11 +61,14 @@ export const enum PatchFlags {
   // Components with this flag are always force updated.
   DYNAMIC_SLOTS = 1 << 9,
 
+  // A special flag that indicates a hoisted, static vnode.
+  HOISTED = -1,
+
   // A special flag that indicates that the diffing algorithm should bail out
   // of optimized mode. This is only on block fragments created by renderSlot()
   // when encountering non-compiler generated slots (i.e. manually written
   // render functions, which should always be fully diffed)
-  BAIL = -1
+  BAIL = -2
 }
 
 // runtime object for public consumption

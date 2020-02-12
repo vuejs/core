@@ -81,8 +81,8 @@ describe('scopeId compiler support', () => {
     expect(code).toMatch(
       [
         `_pushScopeId("test")`,
-        `const _hoisted_1 = _createVNode("div", null, "hello")`,
-        `const _hoisted_2 = _createVNode("div", null, "world")`,
+        `const _hoisted_1 = _createVNode("div", null, "hello", -1)`,
+        `const _hoisted_2 = _createVNode("div", null, "world", -1)`,
         `_popScopeId()`
       ].join('\n')
     )

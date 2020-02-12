@@ -411,8 +411,12 @@ export function createRenderer<
     optimized: boolean
   ) {
     let el: HostElement
-    const { type, props, shapeFlag, transition, scopeId } = vnode
-    if (vnode.el != null && hostCloneNode !== undefined) {
+    const { type, props, shapeFlag, transition, scopeId, patchFlag } = vnode
+    if (
+      vnode.el !== null &&
+      hostCloneNode !== undefined &&
+      patchFlag === PatchFlags.HOISTED
+    ) {
       // If a vnode has non-null el, it means it's being reused.
       // Only static vnodes can be reused, so its mounted DOM nodes should be
       // exactly the same, and we can simply do a clone here.
