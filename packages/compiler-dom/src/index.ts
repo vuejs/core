@@ -18,6 +18,7 @@ import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { warnTransitionChildren } from './transforms/warnTransitionChildren'
+import { stringifyStatic } from './stringifyStatic'
 
 export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
@@ -41,17 +42,16 @@ export function compile(
   template: string,
   options: CompilerOptions = {}
 ): CodegenResult {
-  const result = baseCompile(template, {
+  return baseCompile(template, {
     ...parserOptions,
     ...options,
     nodeTransforms: [...DOMNodeTransforms, ...(options.nodeTransforms || [])],
     directiveTransforms: {
       ...DOMDirectiveTransforms,
       ...(options.directiveTransforms || {})
-    }
+    },
+    transformHoist: __BROWSER__ ? null : stringifyStatic
   })
-  // debugger
-  return result
 }
 
 export function parse(template: string, options: ParserOptions = {}): RootNode {

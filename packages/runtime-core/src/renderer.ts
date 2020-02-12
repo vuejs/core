@@ -8,7 +8,8 @@ import {
   VNode,
   VNodeArrayChildren,
   createVNode,
-  isSameVNodeType
+  isSameVNodeType,
+  Static
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -28,7 +29,8 @@ import {
   EMPTY_ARR,
   isReservedProp,
   isFunction,
-  PatchFlags
+  PatchFlags,
+  NOOP
 } from '@vue/shared'
 import {
   queueJob,
@@ -88,8 +90,15 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   setElementText(node: HostElement, text: string): void
   parentNode(node: HostNode): HostElement | null
   nextSibling(node: HostNode): HostNode | null
-  querySelector(selector: string): HostElement | null
-  setScopeId(el: HostNode, id: string): void
+  querySelector?(selector: string): HostElement | null
+  setScopeId?(el: HostElement, id: string): void
+  cloneNode?(node: HostNode): HostNode
+  insertStaticContent?(
+    content: string,
+    parent: HostElement,
+    anchor: HostNode | null,
+    isSVG: boolean
+  ): HostElement
 }
 
 export type RootRenderFunction<HostNode, HostElement> = (
@@ -197,7 +206,9 @@ export function createRenderer<
     parentNode: hostParentNode,
     nextSibling: hostNextSibling,
     querySelector: hostQuerySelector,
-    setScopeId: hostSetScopeId
+    setScopeId: hostSetScopeId = NOOP,
+    cloneNode: hostCloneNode,
+    insertStaticContent: hostInsertStaticContent
   } = options
 
   const internals: RendererInternals<HostNode, HostElement> = {
@@ -232,6 +243,11 @@ export function createRenderer<
         break
       case Comment:
         processCommentNode(n1, n2, container, anchor)
+        break
+      case Static:
+        if (n1 == null) {
+          mountStaticNode(n2, container, anchor, isSVG)
+        } // static nodes are noop on patch
         break
       case Fragment:
         processFragment(
@@ -336,6 +352,26 @@ export function createRenderer<
     }
   }
 
+  function mountStaticNode(
+    n2: HostVNode,
+    container: HostElement,
+    anchor: HostNode | null,
+    isSVG: boolean
+  ) {
+    if (n2.el != null && hostCloneNode !== undefined) {
+      hostInsert(hostCloneNode(n2.el), container, anchor)
+    } else {
+      // static nodes are only present when used with compiler-dom/runtime-dom
+      // which guarantees presence of hostInsertStaticContent.
+      n2.el = hostInsertStaticContent!(
+        n2.children as string,
+        container,
+        anchor,
+        isSVG
+      )
+    }
+  }
+
   function processElement(
     n1: HostVNode | null,
     n2: HostVNode,
@@ -374,50 +410,58 @@ export function createRenderer<
     isSVG: boolean,
     optimized: boolean
   ) {
-    const el = (vnode.el = hostCreateElement(vnode.type as string, isSVG))
+    let el: HostElement
     const { type, props, shapeFlag, transition, scopeId } = vnode
+    if (vnode.el != null && hostCloneNode !== undefined) {
+      // If a vnode has non-null el, it means it's being reused.
+      // Only static vnodes can be reused, so its mounted DOM nodes should be
+      // exactly the same, and we can simply do a clone here.
+      el = vnode.el = hostCloneNode(vnode.el) as HostElement
+    } else {
+      el = vnode.el = hostCreateElement(vnode.type as string, isSVG)
+      // props
+      if (props != null) {
+        for (const key in props) {
+          if (isReservedProp(key)) continue
+          hostPatchProp(el, key, props[key], null, isSVG)
+        }
+        if (props.onVnodeBeforeMount != null) {
+          invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
+        }
+      }
 
-    // props
-    if (props != null) {
-      for (const key in props) {
-        if (isReservedProp(key)) continue
-        hostPatchProp(el, key, props[key], null, isSVG)
+      // scopeId
+      if (__BUNDLER__) {
+        if (scopeId !== null) {
+          hostSetScopeId(el, scopeId)
+        }
+        const treeOwnerId = parentComponent && parentComponent.type.__scopeId
+        // vnode's own scopeId and the current patched component's scopeId is
+        // different - this is a slot content node.
+        if (treeOwnerId != null && treeOwnerId !== scopeId) {
+          hostSetScopeId(el, treeOwnerId + '-s')
+        }
       }
-      if (props.onVnodeBeforeMount != null) {
-        invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
+
+      // children
+      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        hostSetElementText(el, vnode.children as string)
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        mountChildren(
+          vnode.children as HostVNodeChildren,
+          el,
+          null,
+          parentComponent,
+          parentSuspense,
+          isSVG && type !== 'foreignObject',
+          optimized || vnode.dynamicChildren !== null
+        )
+      }
+      if (transition != null && !transition.persisted) {
+        transition.beforeEnter(el)
       }
     }
 
-    // scopeId
-    if (__BUNDLER__) {
-      if (scopeId !== null) {
-        hostSetScopeId(el, scopeId)
-      }
-      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-      // vnode's own scopeId and the current patched component's scopeId is
-      // different - this is a slot content node.
-      if (treeOwnerId != null && treeOwnerId !== scopeId) {
-        hostSetScopeId(el, treeOwnerId + '-s')
-      }
-    }
-
-    // children
-    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      hostSetElementText(el, vnode.children as string)
-    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(
-        vnode.children as HostVNodeChildren,
-        el,
-        null,
-        parentComponent,
-        parentSuspense,
-        isSVG && type !== 'foreignObject',
-        optimized || vnode.dynamicChildren !== null
-      )
-    }
-    if (transition != null && !transition.persisted) {
-      transition.beforeEnter(el)
-    }
     hostInsert(el, container, anchor)
     const vnodeMountedHook = props && props.onVnodeMounted
     if (
@@ -776,8 +820,14 @@ export function createRenderer<
     const targetSelector = n2.props && n2.props.target
     const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
+      if (__DEV__ && isString(targetSelector) && !hostQuerySelector) {
+        warn(
+          `Current renderer does not support string target for Portals. ` +
+            `(missing querySelector renderer option)`
+        )
+      }
       const target = (n2.target = isString(targetSelector)
-        ? hostQuerySelector(targetSelector)
+        ? hostQuerySelector!(targetSelector)
         : targetSelector)
       if (target != null) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -825,7 +875,7 @@ export function createRenderer<
       // target changed
       if (targetSelector !== (n1.props && n1.props.target)) {
         const nextTarget = (n2.target = isString(targetSelector)
-          ? hostQuerySelector(targetSelector)
+          ? hostQuerySelector!(targetSelector)
           : targetSelector)
         if (nextTarget != null) {
           // move content

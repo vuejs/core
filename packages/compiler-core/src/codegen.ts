@@ -48,7 +48,8 @@ import {
   WITH_SCOPE_ID,
   WITH_DIRECTIVES,
   CREATE_BLOCK,
-  OPEN_BLOCK
+  OPEN_BLOCK,
+  CREATE_STATIC
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -309,7 +310,12 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       // has check cost, but hoists are lifted out of the function - we need
       // to provide the helper here.
       if (ast.hoists.length) {
-        const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
+        const staticHelpers = [
+          CREATE_VNODE,
+          CREATE_COMMENT,
+          CREATE_TEXT,
+          CREATE_STATIC
+        ]
           .filter(helper => ast.helpers.includes(helper))
           .map(aliasHelper)
           .join(', ')
