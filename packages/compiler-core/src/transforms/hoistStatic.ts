@@ -176,7 +176,17 @@ function hasCachedProps(node: PlainElementNode): boolean {
   if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
-      if (properties[i].value.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      const val = properties[i].value
+      if (val.type === NodeTypes.JS_CACHE_EXPRESSION) {
+        return true
+      }
+      // merged event handlers
+      if (
+        val.type === NodeTypes.JS_ARRAY_EXPRESSION &&
+        val.elements.some(
+          e => !isString(e) && e.type === NodeTypes.JS_CACHE_EXPRESSION
+        )
+      ) {
         return true
       }
     }
