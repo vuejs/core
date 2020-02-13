@@ -58,7 +58,13 @@ function compileToFunction(
     ...options
   })
 
-  const render = new Function('Vue', code)(runtimeDom) as RenderFunction
+  // The wildcard import results in a huge object with every export
+  // with keys that cannot be mangled, and can be quite heavy size-wise.
+  // In the global build we know `Vue` is available globally so we can avoid
+  // the wildcard object.
+  const render = (__GLOBAL__
+    ? new Function(code)()
+    : new Function('Vue', code)(runtimeDom)) as RenderFunction
   return (compileCache[key] = render)
 }
 
