@@ -63,7 +63,9 @@ describe('api: watch', () => {
         dummy = [count, prevCount]
         // assert types
         count + 1
-        prevCount + 1
+        if (prevCount) {
+          prevCount + 1
+        }
       }
     )
     await nextTick()
@@ -81,7 +83,9 @@ describe('api: watch', () => {
       dummy = [count, prevCount]
       // assert types
       count + 1
-      prevCount + 1
+      if (prevCount) {
+        prevCount + 1
+      }
     })
     await nextTick()
     expect(dummy).toMatchObject([0, undefined])
@@ -99,7 +103,9 @@ describe('api: watch', () => {
       dummy = [count, prevCount]
       // assert types
       count + 1
-      prevCount + 1
+      if (prevCount) {
+        prevCount + 1
+      }
     })
     await nextTick()
     expect(dummy).toMatchObject([1, undefined])
@@ -377,6 +383,7 @@ describe('api: watch', () => {
   it('ignore lazy option when using simple callback', async () => {
     const count = ref(0)
     let dummy
+    // @ts-ignore
     watch(
       () => {
         dummy = count.value

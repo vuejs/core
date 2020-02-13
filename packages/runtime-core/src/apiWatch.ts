@@ -37,9 +37,9 @@ export type WatchEffect = (onCleanup: CleanupRegistrator) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
-export type WatchCallback<T = any> = (
-  value: T,
-  oldValue: T,
+export type WatchCallback<V = any, OV = any> = (
+  value: V,
+  oldValue: OV,
   onCleanup: CleanupRegistrator
 ) => any
 
@@ -47,10 +47,16 @@ type MapSources<T> = {
   [K in keyof T]: T[K] extends WatchSource<infer V> ? V : never
 }
 
+type MapOldSources<T, Lazy> = {
+  [K in keyof T]: T[K] extends WatchSource<infer V>
+    ? Lazy extends true ? V : (V | undefined)
+    : never
+}
+
 export type CleanupRegistrator = (invalidate: () => void) => void
 
-export interface WatchOptions {
-  lazy?: boolean
+export interface WatchOptions<Lazy = boolean> {
+  lazy?: Lazy
   flush?: 'pre' | 'post' | 'sync'
   deep?: boolean
   onTrack?: ReactiveEffectOptions['onTrack']
@@ -65,23 +71,29 @@ const invoke = (fn: Function) => fn()
 const INITIAL_WATCHER_VALUE = {}
 
 // overload #1: simple effect
-export function watch(effect: WatchEffect, options?: WatchOptions): StopHandle
+export function watch(
+  effect: WatchEffect,
+  options?: WatchOptions<false>
+): StopHandle
 
 // overload #2: single source + cb
-export function watch<T>(
+export function watch<T, Lazy extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T>,
-  options?: WatchOptions
+  cb: WatchCallback<T, Lazy extends true ? T : (T | undefined)>,
+  options?: WatchOptions<Lazy>
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
-export function watch<T extends Readonly<WatchSource<unknown>[]>>(
+export function watch<
+  T extends Readonly<WatchSource<unknown>[]>,
+  Lazy extends Readonly<boolean> = false
+>(
   sources: T,
-  cb: WatchCallback<MapSources<T>>,
-  options?: WatchOptions
+  cb: WatchCallback<MapSources<T>, MapOldSources<T, Lazy>>,
+  options?: WatchOptions<Lazy>
 ): StopHandle
 
 // implementation
