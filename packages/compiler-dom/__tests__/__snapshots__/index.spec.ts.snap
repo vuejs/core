@@ -7,7 +7,7 @@ const { createVNode: _createVNode } = _Vue
 const _hoisted_1 = {}
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [

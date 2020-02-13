@@ -589,7 +589,7 @@ describe('compiler: codegen', () => {
     expect(code).toMatchInlineSnapshot(`
       "
       return function render(_ctx, _cache) {
-        with (this) {
+        with (_ctx) {
           return foo = bar
         }
       }"
@@ -602,7 +602,7 @@ describe('compiler: codegen', () => {
         createRoot({
           codegenNode: node
         })
-      ).code.match(/with \(this\) \{\s+([^]+)\s+\}\s+\}$/)![1]
+      ).code.match(/with \(_ctx\) \{\s+([^]+)\s+\}\s+\}$/)![1]
     }
 
     const mockProps = createObjectExpression([

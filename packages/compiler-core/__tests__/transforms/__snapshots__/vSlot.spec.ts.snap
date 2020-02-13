@@ -10,7 +10,7 @@ return function render(_ctx, _cache) {
     [_ctx.one]: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
     [_ctx.two]: ({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)],
     _: 1
-  }, 512 /* DYNAMIC_SLOTS */))
+  }, 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 
@@ -42,7 +42,7 @@ return function render(_ctx, _cache) {
         fn: () => [_toDisplayString(name)]
       }
     })
-  ]), 512 /* DYNAMIC_SLOTS */))
+  ]), 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 
@@ -59,7 +59,7 @@ return function render(_ctx, _cache) {
           fn: (props) => [_toDisplayString(props)]
         }
       : undefined
-  ]), 512 /* DYNAMIC_SLOTS */))
+  ]), 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 
@@ -67,7 +67,7 @@ exports[`compiler: transform component slots named slot with v-if + v-else-if + 
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -87,7 +87,7 @@ return function render(_ctx, _cache) {
               name: \\"one\\",
               fn: () => [\\"baz\\"]
             }
-    ]), 512 /* DYNAMIC_SLOTS */))
+    ]), 1024 /* DYNAMIC_SLOTS */))
   }
 }"
 `;
@@ -96,7 +96,7 @@ exports[`compiler: transform component slots named slot with v-if 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -108,7 +108,7 @@ return function render(_ctx, _cache) {
             fn: () => [\\"hello\\"]
           }
         : undefined
-    ]), 512 /* DYNAMIC_SLOTS */))
+    ]), 1024 /* DYNAMIC_SLOTS */))
   }
 }"
 `;
@@ -131,7 +131,7 @@ exports[`compiler: transform component slots named slots w/ implicit default slo
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -160,7 +160,7 @@ return function render(_ctx, _cache) {
       _createVNode(_component_Inner, null, {
         default: ({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)],
         _: 1
-      }, 512 /* DYNAMIC_SLOTS */),
+      }, 1024 /* DYNAMIC_SLOTS */),
       \\" \\",
       _toDisplayString(foo),
       _toDisplayString(_ctx.bar),

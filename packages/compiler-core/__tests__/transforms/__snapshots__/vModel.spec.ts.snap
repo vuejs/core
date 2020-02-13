@@ -15,7 +15,7 @@ exports[`compiler: transform v-model compound expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"input\\", {
@@ -41,7 +41,7 @@ exports[`compiler: transform v-model simple exprssion 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"input\\", {
@@ -56,13 +56,13 @@ exports[`compiler: transform v-model with argument 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"input\\", {
       value: model,
       \\"onUpdate:value\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"value\\", \\"onUpdate:value\\"]))
+    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"value\\", \\"onUpdate:value\\"]))
   }
 }"
 `;
@@ -82,7 +82,7 @@ exports[`compiler: transform v-model with dynamic argument 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"input\\", {

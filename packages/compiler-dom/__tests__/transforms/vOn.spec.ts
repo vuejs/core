@@ -11,7 +11,11 @@ import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformExpression } from '../../../compiler-core/src/transforms/transformExpression'
-import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
+import {
+  createObjectMatcher,
+  genFlagText
+} from '../../../compiler-core/__tests__/testUtils'
+import { PatchFlags } from '@vue/shared'
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -157,8 +161,11 @@ describe('compiler-dom: transform v-on', () => {
       cacheHandlers: true
     })
     expect(root.cached).toBe(1)
-    // should not treat cached handler as dynamicProp, so no flags
-    expect((root as any).children[0].codegenNode.patchFlag).toBeUndefined()
+    // should not treat cached handler as dynamicProp, so it should have no
+    // dynamicProps flags and only the hydration flag
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      genFlagText(PatchFlags.HYDRATE_EVENTS)
+    )
     expect(prop.value).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
       index: 1,

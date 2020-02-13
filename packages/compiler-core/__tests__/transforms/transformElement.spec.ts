@@ -770,6 +770,29 @@ describe('compiler: element transform', () => {
       const { node } = parseWithBind(`<div v-foo />`)
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
+
+    test('HYDRATE_EVENTS', () => {
+      // ignore click events (has dedicated fast path)
+      const { node } = parseWithElementTransform(`<div @click="foo" />`, {
+        directiveTransforms: {
+          on: transformOn
+        }
+      })
+      // should only have props flag
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.PROPS))
+
+      const { node: node2 } = parseWithElementTransform(
+        `<div @keyup="foo" />`,
+        {
+          directiveTransforms: {
+            on: transformOn
+          }
+        }
+      )
+      expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+      )
+    })
   })
 
   describe('dynamic component', () => {

@@ -4,7 +4,7 @@ exports[`compiler: integration tests function mode 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Fragment: _Fragment, renderList: _renderList, createTextVNode: _createTextVNode } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", {

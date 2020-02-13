@@ -4,7 +4,7 @@ exports[`compiler: transform v-model input w/ dynamic v-bind 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelDynamic: _vModelDynamic, mergeProps: _mergeProps, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", _mergeProps(obj, {
@@ -21,7 +21,7 @@ exports[`compiler: transform v-model input w/ dynamic v-bind 2`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _directive_bind = _resolveDirective(\\"bind\\")
@@ -41,7 +41,7 @@ exports[`compiler: transform v-model modifiers .lazy 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -63,7 +63,7 @@ exports[`compiler: transform v-model modifiers .number 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -85,7 +85,7 @@ exports[`compiler: transform v-model modifiers .trim 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -107,7 +107,7 @@ exports[`compiler: transform v-model simple expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -124,7 +124,7 @@ exports[`compiler: transform v-model simple expression for input (checkbox) 1`] 
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelCheckbox: _vModelCheckbox, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -142,7 +142,7 @@ exports[`compiler: transform v-model simple expression for input (dynamic type) 
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _directive_bind = _resolveDirective(\\"bind\\")
@@ -162,7 +162,7 @@ exports[`compiler: transform v-model simple expression for input (radio) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelRadio: _vModelRadio, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -180,7 +180,7 @@ exports[`compiler: transform v-model simple expression for input (text) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
@@ -198,7 +198,7 @@ exports[`compiler: transform v-model simple expression for select 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelSelect: _vModelSelect, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"select\\", {
@@ -215,7 +215,7 @@ exports[`compiler: transform v-model simple expression for textarea 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"textarea\\", {

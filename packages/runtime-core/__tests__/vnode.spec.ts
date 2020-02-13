@@ -8,6 +8,7 @@ import {
 } from '@vue/runtime-core'
 import { mergeProps, normalizeVNode } from '../src/vnode'
 import { Data } from '../src/component'
+import { PatchFlags } from '@vue/shared'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -238,9 +239,19 @@ describe('vnode', () => {
       const vnode = (openBlock(),
       createBlock('div', null, [
         hoist,
-        (vnode1 = createVNode('div', null, 'text', 1 /* TEXT */))
+        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    test('should not track vnodes with only HYDRATE_EVENTS flag', () => {
+      const hoist = createVNode('div')
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        createVNode('div', null, 'text', PatchFlags.HYDRATE_EVENTS)
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([])
     })
 
     test('many times call openBlock', () => {
@@ -249,11 +260,11 @@ describe('vnode', () => {
       const vnode = (openBlock(),
       createBlock('div', null, [
         hoist,
-        (vnode1 = createVNode('div', null, 'text', 1 /* TEXT */)),
+        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
         (vnode2 = (openBlock(),
         createBlock('div', null, [
           hoist,
-          (vnode3 = createVNode('div', null, 'text', 1 /* TEXT */))
+          (vnode3 = createVNode('div', null, 'text', PatchFlags.TEXT))
         ])))
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])

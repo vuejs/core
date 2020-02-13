@@ -4,7 +4,7 @@ exports[`compiler: v-once transform as root node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { setBlockTracking: _setBlockTracking, createVNode: _createVNode } = _Vue
 
     return _cache[1] || (
@@ -21,7 +21,7 @@ exports[`compiler: v-once transform on component 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { setBlockTracking: _setBlockTracking, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -42,7 +42,7 @@ exports[`compiler: v-once transform on nested plain element 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
@@ -61,7 +61,7 @@ exports[`compiler: v-once transform on slot outlet 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { setBlockTracking: _setBlockTracking, renderSlot: _renderSlot, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
@@ -80,7 +80,7 @@ exports[`compiler: v-once transform with hoistStatic: true 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
-  with (this) {
+  with (_ctx) {
     const { setBlockTracking: _setBlockTracking, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [

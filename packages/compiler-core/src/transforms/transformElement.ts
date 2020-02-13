@@ -269,9 +269,15 @@ export function buildProps(
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
       const name = key.content
-      if (!isComponent && isOn(name) && name.toLowerCase() !== 'onclick') {
-        // This flag is for hydrating event handlers only. We omit the flag for
-        // click handlers becaues hydration gives click dedicated fast path.
+      if (
+        !isComponent &&
+        isOn(name) &&
+        // omit the flag for click handlers becaues hydration gives click
+        // dedicated fast path.
+        name.toLowerCase() !== 'onclick' &&
+        // omit v-model handlers
+        name !== 'onUpdate:modelValue'
+      ) {
         hasHydrationEventBinding = true
       }
       if (
@@ -289,7 +295,7 @@ export function buildProps(
         hasClassBinding = true
       } else if (name === 'style') {
         hasStyleBinding = true
-      } else if (name !== 'key') {
+      } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
         dynamicPropNames.push(name)
       }
     } else {
@@ -447,8 +453,11 @@ export function buildProps(
       patchFlag |= PatchFlags.HYDRATE_EVENTS
     }
   }
-  if (patchFlag === 0 && (hasRef || runtimeDirectives.length > 0)) {
-    patchFlag = PatchFlags.NEED_PATCH
+  if (
+    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
+    (hasRef || runtimeDirectives.length > 0)
+  ) {
+    patchFlag |= PatchFlags.NEED_PATCH
   }
 
   return {

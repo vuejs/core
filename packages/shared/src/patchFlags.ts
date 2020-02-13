@@ -53,10 +53,16 @@ export const enum PatchFlags {
   // Indicates a fragment with unkeyed children.
   UNKEYED_FRAGMENT = 1 << 8,
 
+  // Indicates an element that only needs non-props patching, e.g. ref or
+  // directives (onVnodeXXX hooks). since every patched vnode checks for refs
+  // and onVnodeXXX hooks, itt simply marks the vnode so that a parent block
+  // will track it.
+  NEED_PATCH = 1 << 9,
+
   // Indicates a component with dynamic slots (e.g. slot that references a v-for
   // iterated value, or dynamic slot names).
   // Components with this flag are always force updated.
-  DYNAMIC_SLOTS = 1 << 9,
+  DYNAMIC_SLOTS = 1 << 10,
 
   // SPECIAL FLAGS -------------------------------------------------------------
 
@@ -65,21 +71,15 @@ export const enum PatchFlags {
   // patchFlag > 0), and are mutually exclusive. When checking for a speical
   // flag, simply check patchFlag === FLAG.
 
-  // Indicates an element that only needs non-props patching, e.g. ref or
-  // directives (onVnodeXXX hooks). since every patched vnode checks for refs
-  // and onVnodeXXX hooks, itt simply marks the vnode so that a parent block
-  // will track it.
-  NEED_PATCH = -1,
-
   // Indicates a hoisted static vnode. This is a hint for hydration to skip
   // the entire sub tree since static content never needs to be updated.
-  HOISTED = -2,
+  HOISTED = -1,
 
   // A special flag that indicates that the diffing algorithm should bail out
   // of optimized mode. This is only on block fragments created by renderSlot()
   // when encountering non-compiler generated slots (i.e. manually written
   // render functions, which should always be fully diffed)
-  BAIL = -3
+  BAIL = -2
 }
 
 // runtime object for public consumption
