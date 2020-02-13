@@ -142,7 +142,7 @@ return function render(_ctx, _cache) {
     const _directive_foo = _resolveDirective(\\"foo\\")
 
     return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
-      return _withDirectives((_openBlock(), _createBlock(\\"div\\", null, null, 32 /* NEED_PATCH */)), [
+      return _withDirectives((_openBlock(), _createBlock(\\"div\\", null, null, -1 /* NEED_PATCH */)), [
         [_directive_foo]
       ])
     }), 256 /* UNKEYED_FRAGMENT */))

@@ -4,7 +4,7 @@ exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
 "const _Vue = Vue
 const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" }, null, -1)
+const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" }, null, -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -24,7 +24,7 @@ const { createVNode: _createVNode } = _Vue
 const _hoisted_1 = _createVNode(\\"p\\", null, [
   _createVNode(\\"span\\"),
   _createVNode(\\"span\\")
-], -1)
+], -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -43,7 +43,7 @@ const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _
 
 const _hoisted_1 = _createVNode(\\"div\\", null, [
   _createCommentVNode(\\"comment\\")
-], -1)
+], -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -60,8 +60,8 @@ exports[`compiler: hoistStatic transform hoist siblings with common non-hoistabl
 "const _Vue = Vue
 const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", null, null, -1)
-const _hoisted_2 = _createVNode(\\"div\\", null, null, -1)
+const _hoisted_1 = _createVNode(\\"span\\", null, null, -2 /* HOISTED */)
+const _hoisted_2 = _createVNode(\\"div\\", null, null, -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -79,7 +79,7 @@ exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 "const _Vue = Vue
 const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -1)
+const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -105,7 +105,7 @@ return function render(_ctx, _cache) {
     const _directive_foo = _resolveDirective(\\"foo\\")
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _withDirectives(_createVNode(\\"div\\", _hoisted_1, null, 32 /* NEED_PATCH */), [
+      _withDirectives(_createVNode(\\"div\\", _hoisted_1, null, -1 /* NEED_PATCH */), [
         [_directive_foo]
       ])
     ]))
@@ -172,7 +172,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", null, \\"foo \\" + _toDisplayString(1) + \\" \\" + _toDisplayString(true), -1)
+const _hoisted_1 = _createVNode(\\"span\\", null, \\"foo \\" + _toDisplayString(1) + \\" \\" + _toDisplayString(true), -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -189,7 +189,7 @@ exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static t
 "const _Vue = Vue
 const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toDisplayString(1), -1)
+const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toDisplayString(1), -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -323,7 +323,7 @@ return function render(_ctx, _cache) {
     const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", { ref: foo }, null, 32 /* NEED_PATCH */)
+      _createVNode(\\"div\\", { ref: foo }, null, -1 /* NEED_PATCH */)
     ]))
   }
 }"
@@ -346,7 +346,7 @@ exports[`compiler: hoistStatic transform should hoist v-for children if static 1
 const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
-const _hoisted_2 = _createVNode(\\"span\\", null, null, -1)
+const _hoisted_2 = _createVNode(\\"span\\", null, null, -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {
@@ -371,7 +371,7 @@ const _hoisted_1 = {
   key: 0,
   id: \\"foo\\"
 }
-const _hoisted_2 = _createVNode(\\"span\\", null, null, -1)
+const _hoisted_2 = _createVNode(\\"span\\", null, null, -2 /* HOISTED */)
 
 return function render(_ctx, _cache) {
   with (this) {

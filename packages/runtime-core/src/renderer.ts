@@ -30,7 +30,8 @@ import {
   isReservedProp,
   isFunction,
   PatchFlags,
-  NOOP
+  NOOP,
+  isOn
 } from '@vue/shared'
 import {
   queueJob,
@@ -188,6 +189,7 @@ export function createRenderer<
   options: RendererOptions<HostNode, HostElement>
 ): {
   render: RootRenderFunction<HostNode, HostElement>
+  hydrate: RootRenderFunction<HostNode, HostElement>
   createApp: CreateAppFunction<HostElement>
 } {
   type HostVNode = VNode<HostNode, HostElement>
@@ -426,8 +428,9 @@ export function createRenderer<
       // props
       if (props != null) {
         for (const key in props) {
-          if (isReservedProp(key)) continue
-          hostPatchProp(el, key, props[key], null, isSVG)
+          if (!isReservedProp(key)) {
+            hostPatchProp(el, key, props[key], null, isSVG)
+          }
         }
         if (props.onVnodeBeforeMount != null) {
           invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
@@ -1813,8 +1816,118 @@ export function createRenderer<
     container._vnode = vnode
   }
 
+  function hydrate(vnode: HostVNode, container: any) {
+    hydrateNode(container.firstChild, vnode, container)
+    flushPostFlushCbs()
+  }
+
+  // TODO handle mismatches
+  function hydrateNode(
+    node: any,
+    vnode: HostVNode,
+    container: any,
+    parentComponent: ComponentInternalInstance | null = null
+  ): any {
+    const { type, shapeFlag } = vnode
+    switch (type) {
+      case Text:
+      case Comment:
+      case Static:
+        vnode.el = node
+        return node.nextSibling
+      case Fragment:
+        vnode.el = node
+        const anchor = (vnode.anchor = hydrateChildren(
+          node.nextSibling,
+          vnode.children as HostVNode[],
+          container,
+          parentComponent
+        ))
+        return anchor.nextSibling
+      case Portal:
+        // TODO
+        break
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          return hydrateElement(node, vnode, parentComponent)
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // TODO
+        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+          // TODO
+        } else if (__DEV__) {
+          warn('Invalid HostVNode type:', type, `(${typeof type})`)
+        }
+    }
+  }
+
+  function hydrateElement(
+    el: any,
+    vnode: HostVNode,
+    parentComponent: ComponentInternalInstance | null
+  ) {
+    vnode.el = el
+    const { props, patchFlag } = vnode
+    // skip props & children if this is hoisted static nodes
+    if (patchFlag !== PatchFlags.HOISTED) {
+      // props
+      if (props !== null) {
+        if (
+          patchFlag & PatchFlags.FULL_PROPS ||
+          patchFlag & PatchFlags.HYDRATE_EVENTS
+        ) {
+          for (const key in props) {
+            if (!isReservedProp(key) && isOn(key)) {
+              hostPatchProp(el, key, props[key], null)
+            }
+          }
+        } else if (props.onClick != null) {
+          // Fast path for click listeners (which is most often) to avoid
+          // iterating through props.
+          hostPatchProp(el, 'onClick', props.onClick, null)
+        }
+        // vnode mounted hook
+        const { onVnodeMounted } = props
+        if (onVnodeMounted != null) {
+          queuePostFlushCb(() => {
+            invokeDirectiveHook(onVnodeMounted, parentComponent, vnode, null)
+          })
+        }
+      }
+      // children
+      if (
+        vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
+        // skip if element has innerHTML / textContent
+        !(props !== null && (props.innerHTML || props.textContent))
+      ) {
+        hydrateChildren(
+          el.firstChild,
+          vnode.children as HostVNode[],
+          el,
+          parentComponent
+        )
+      }
+    }
+    return el.nextSibling
+  }
+
+  function hydrateChildren(
+    node: any,
+    vnodes: HostVNode[],
+    container: any,
+    parentComponent: ComponentInternalInstance | null = null
+  ) {
+    for (let i = 0; i < vnodes.length; i++) {
+      // TODO can skip normalizeVNode in optimized mode
+      // (need hint on rendered markup?)
+      const vnode = (vnodes[i] = normalizeVNode(vnodes[i]))
+      node = hydrateNode(node, vnode, container, parentComponent)
+    }
+    return node
+  }
+
   return {
     render,
+    hydrate,
     createApp: createAppAPI(render)
   }
 }

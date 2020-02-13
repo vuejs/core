@@ -9,13 +9,18 @@ import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
 
-const { render: baseRender, createApp: baseCreateApp } = createRenderer({
+const {
+  render: baseRender,
+  hydrate: baseHydrate,
+  createApp: baseCreateApp
+} = createRenderer({
   patchProp,
   ...nodeOps
 })
 
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = baseRender as RootRenderFunction<Node, Element>
+export const hydrate = baseHydrate as RootRenderFunction<Node, Element>
 
 export const createApp: CreateAppFunction<Element> = (...args) => {
   const app = baseCreateApp(...args)

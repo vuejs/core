@@ -5,8 +5,8 @@ exports[`scopeId compiler support should push scopeId for hoisted nodes 1`] = `
 const _withId = _withScopeId(\\"test\\")
 
 _pushScopeId(\\"test\\")
-const _hoisted_1 = _createVNode(\\"div\\", null, \\"hello\\", -1)
-const _hoisted_2 = _createVNode(\\"div\\", null, \\"world\\", -1)
+const _hoisted_1 = _createVNode(\\"div\\", null, \\"hello\\", -2 /* HOISTED */)
+const _hoisted_2 = _createVNode(\\"div\\", null, \\"world\\", -2 /* HOISTED */)
 _popScopeId()
 
 export const render = _withId(function render(_ctx, _cache) {

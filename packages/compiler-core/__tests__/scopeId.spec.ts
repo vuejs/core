@@ -4,6 +4,8 @@ import {
   PUSH_SCOPE_ID,
   POP_SCOPE_ID
 } from '../src/runtimeHelpers'
+import { PatchFlags } from '@vue/shared'
+import { genFlagText } from './testUtils'
 
 describe('scopeId compiler support', () => {
   test('should only work in module mode', () => {
@@ -81,8 +83,12 @@ describe('scopeId compiler support', () => {
     expect(code).toMatch(
       [
         `_pushScopeId("test")`,
-        `const _hoisted_1 = _createVNode("div", null, "hello", -1)`,
-        `const _hoisted_2 = _createVNode("div", null, "world", -1)`,
+        `const _hoisted_1 = _createVNode("div", null, "hello", ${genFlagText(
+          PatchFlags.HOISTED
+        )})`,
+        `const _hoisted_2 = _createVNode("div", null, "world", ${genFlagText(
+          PatchFlags.HOISTED
+        )})`,
         `_popScopeId()`
       ].join('\n')
     )

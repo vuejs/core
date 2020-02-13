@@ -52,7 +52,8 @@ function walk(
     ) {
       if (!doNotHoistNode && isStaticNode(child, resultCache)) {
         // whole tree is static
-        ;(child.codegenNode as VNodeCall).patchFlag = PatchFlags.HOISTED + ``
+        ;(child.codegenNode as VNodeCall).patchFlag =
+          PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
         const hoisted = context.transformHoist
           ? context.transformHoist(child, context)
           : child.codegenNode!

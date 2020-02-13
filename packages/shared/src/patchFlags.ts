@@ -40,12 +40,9 @@ export const enum PatchFlags {
   // exclusive with CLASS, STYLE and PROPS.
   FULL_PROPS = 1 << 4,
 
-  // Indicates an element that only needs non-props patching, e.g. ref or
-  // directives (onVnodeXXX hooks). It simply marks the vnode as "need patch",
-  // since every patched vnode checks for refs and onVnodeXXX hooks.
-  // This flag is never directly matched against, it simply serves as a non-zero
-  // value.
-  NEED_PATCH = 1 << 5,
+  // Indicates an element with event listeners (which need to be attached
+  // during hydration)
+  HYDRATE_EVENTS = 1 << 5,
 
   // Indicates a fragment whose children order doesn't change.
   STABLE_FRAGMENT = 1 << 6,
@@ -61,14 +58,28 @@ export const enum PatchFlags {
   // Components with this flag are always force updated.
   DYNAMIC_SLOTS = 1 << 9,
 
-  // A special flag that indicates a hoisted, static vnode.
-  HOISTED = -1,
+  // SPECIAL FLAGS -------------------------------------------------------------
+
+  // Special flags are negative integers. They are never matched against using
+  // bitwise operators (bitwise matching should only happen in branches where
+  // patchFlag > 0), and are mutually exclusive. When checking for a speical
+  // flag, simply check patchFlag === FLAG.
+
+  // Indicates an element that only needs non-props patching, e.g. ref or
+  // directives (onVnodeXXX hooks). since every patched vnode checks for refs
+  // and onVnodeXXX hooks, itt simply marks the vnode so that a parent block
+  // will track it.
+  NEED_PATCH = -1,
+
+  // Indicates a hoisted static vnode. This is a hint for hydration to skip
+  // the entire sub tree since static content never needs to be updated.
+  HOISTED = -2,
 
   // A special flag that indicates that the diffing algorithm should bail out
   // of optimized mode. This is only on block fragments created by renderSlot()
   // when encountering non-compiler generated slots (i.e. manually written
   // render functions, which should always be fully diffed)
-  BAIL = -2
+  BAIL = -3
 }
 
 // runtime object for public consumption
@@ -91,11 +102,13 @@ export const PatchFlagNames = {
   [PatchFlags.CLASS]: `CLASS`,
   [PatchFlags.STYLE]: `STYLE`,
   [PatchFlags.PROPS]: `PROPS`,
-  [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
   [PatchFlags.FULL_PROPS]: `FULL_PROPS`,
+  [PatchFlags.HYDRATE_EVENTS]: `HYDRATE_EVENTS`,
   [PatchFlags.STABLE_FRAGMENT]: `STABLE_FRAGMENT`,
   [PatchFlags.KEYED_FRAGMENT]: `KEYED_FRAGMENT`,
   [PatchFlags.UNKEYED_FRAGMENT]: `UNKEYED_FRAGMENT`,
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
+  [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
+  [PatchFlags.HOISTED]: `HOISTED`,
   [PatchFlags.BAIL]: `BAIL`
 }

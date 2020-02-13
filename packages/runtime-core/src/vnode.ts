@@ -6,7 +6,8 @@ import {
   EMPTY_ARR,
   extend,
   normalizeClass,
-  normalizeStyle
+  normalizeStyle,
+  PatchFlags
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -277,7 +278,11 @@ export function createVNode(
   if (
     shouldTrack > 0 &&
     currentBlock !== null &&
+    // the EVENTS flag is only for hydration and if it is the only flag, the
+    // vnode should not be considered dynamic.
+    patchFlag !== PatchFlags.HYDRATE_EVENTS &&
     (patchFlag > 0 ||
+      patchFlag === PatchFlags.NEED_PATCH ||
       shapeFlag & ShapeFlags.SUSPENSE ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)

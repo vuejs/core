@@ -20,7 +20,7 @@ import {
   DirectiveArguments,
   createVNodeCall
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol, isOn } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   RESOLVE_DIRECTIVE,
@@ -159,12 +159,18 @@ export const transformElement: NodeTransform = (node, context) => {
     // patchFlag & dynamicPropNames
     if (patchFlag !== 0) {
       if (__DEV__) {
-        const flagNames = Object.keys(PatchFlagNames)
-          .map(Number)
-          .filter(n => n > 0 && patchFlag & n)
-          .map(n => PatchFlagNames[n])
-          .join(`, `)
-        vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
+        if (patchFlag < 0) {
+          // special flags (negative and mutually exclusive)
+          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+        } else {
+          // bitwise flags
+          const flagNames = Object.keys(PatchFlagNames)
+            .map(Number)
+            .filter(n => n > 0 && patchFlag & n)
+            .map(n => PatchFlagNames[n])
+            .join(`, `)
+          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
+        }
       } else {
         vnodePatchFlag = String(patchFlag)
       }
@@ -256,20 +262,27 @@ export function buildProps(
   let hasRef = false
   let hasClassBinding = false
   let hasStyleBinding = false
+  let hasHydrationEventBinding = false
   let hasDynamicKeys = false
   const dynamicPropNames: string[] = []
 
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+      const name = key.content
+      if (!isComponent && isOn(name) && name.toLowerCase() !== 'onclick') {
+        // This flag is for hydrating event handlers only. We omit the flag for
+        // click handlers becaues hydration gives click dedicated fast path.
+        hasHydrationEventBinding = true
+      }
       if (
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
           isStaticNode(value))
       ) {
+        // skip if the prop is a cached handler or has constant value
         return
       }
-      const name = key.content
       if (name === 'ref') {
         hasRef = true
       } else if (name === 'class') {
@@ -430,9 +443,12 @@ export function buildProps(
     if (dynamicPropNames.length) {
       patchFlag |= PatchFlags.PROPS
     }
+    if (hasHydrationEventBinding) {
+      patchFlag |= PatchFlags.HYDRATE_EVENTS
+    }
   }
   if (patchFlag === 0 && (hasRef || runtimeDirectives.length > 0)) {
-    patchFlag |= PatchFlags.NEED_PATCH
+    patchFlag = PatchFlags.NEED_PATCH
   }
 
   return {
