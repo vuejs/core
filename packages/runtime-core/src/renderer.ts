@@ -90,11 +90,7 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
     prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
     parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
-    unmountChildren?: (
-      children: VNode<HostNode, HostElement>[],
-      parentComponent: ComponentInternalInstance | null,
-      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null
-    ) => void
+    unmountChildren?: UnmountChildrenFn<HostNode, HostElement>
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -115,6 +111,75 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
     isSVG: boolean
   ): HostElement
 }
+
+// An object exposing the internals of a renderer, passed to tree-shakeable
+// features so that they can be decoupled from this file.
+export interface RendererInternals<HostNode = any, HostElement = any> {
+  patch: PatchFn<HostNode, HostElement>
+  unmount: UnmountFn<HostNode, HostElement>
+  move: MoveFn<HostNode, HostElement>
+  next: NextFn<HostNode, HostElement>
+  options: RendererOptions<HostNode, HostElement>
+}
+
+// These functions are created inside a closure and therefore there types cannot
+// be directly exported. In order to avoid maintaining function signatures in
+// two places, we declare them once here and use them inside the closure.
+type PatchFn<HostNode, HostElement> = (
+  n1: VNode<HostNode, HostElement> | null, // null means this is a mount
+  n2: VNode<HostNode, HostElement>,
+  container: HostElement,
+  anchor?: HostNode | null,
+  parentComponent?: ComponentInternalInstance | null,
+  parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
+  isSVG?: boolean,
+  optimized?: boolean
+) => void
+
+type UnmountFn<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement>,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  doRemove?: boolean
+) => void
+
+type MoveFn<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement>,
+  container: HostElement,
+  anchor: HostNode | null,
+  type: MoveType,
+  parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null
+) => void
+
+type NextFn<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement>
+) => HostNode | null
+
+type UnmountChildrenFn<HostNode, HostElement> = (
+  children: VNode<HostNode, HostElement>[],
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  doRemove?: boolean,
+  start?: number
+) => void
+
+export type MountComponentFn<HostNode, HostElement> = (
+  initialVNode: VNode<HostNode, HostElement>,
+  container: HostElement | null, // only null during hydration
+  anchor: HostNode | null,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  isSVG: boolean
+) => void
+
+export type SetupRenderEffectFn<HostNode, HostElement> = (
+  instance: ComponentInternalInstance,
+  initialVNode: VNode<HostNode, HostElement>,
+  container: HostElement | null, // only null during hydration
+  anchor: HostNode | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  isSVG: boolean
+) => void
 
 export const enum MoveType {
   ENTER,
@@ -223,15 +288,17 @@ function baseCreateRenderer<
     insertStaticContent: hostInsertStaticContent
   } = options
 
-  const patch = (
-    n1: HostVNode | null, // null means this is a mount
-    n2: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null = null,
-    parentComponent: ComponentInternalInstance | null = null,
-    parentSuspense: HostSuspenseBoundary | null = null,
-    isSVG: boolean = false,
-    optimized: boolean = false
+  // Note: functions inside this closure should use `const xxx = () => {}`
+  // style in order to prevent being inlined by minifiers.
+  const patch: PatchFn<HostNode, HostElement> = (
+    n1,
+    n2,
+    container,
+    anchor = null,
+    parentComponent = null,
+    parentSuspense = null,
+    isSVG = false,
+    optimized = false
   ) => {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameVNodeType(n1, n2)) {
@@ -984,13 +1051,13 @@ function baseCreateRenderer<
     }
   }
 
-  const mountComponent = (
-    initialVNode: HostVNode,
-    container: HostElement | null, // only null during hydration
-    anchor: HostNode | null,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean
+  const mountComponent: MountComponentFn<HostNode, HostElement> = (
+    initialVNode,
+    container, // only null during hydration
+    anchor,
+    parentComponent,
+    parentSuspense,
+    isSVG
   ) => {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
@@ -1046,13 +1113,13 @@ function baseCreateRenderer<
     }
   }
 
-  const setupRenderEffect = (
-    instance: ComponentInternalInstance,
-    initialVNode: HostVNode,
-    container: HostElement | null, // only null during hydration
-    anchor: HostNode | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean
+  const setupRenderEffect: SetupRenderEffectFn<HostNode, HostElement> = (
+    instance,
+    initialVNode,
+    container,
+    anchor,
+    parentSuspense,
+    isSVG
   ) => {
     // create reactive effect for rendering
     instance.update = effect(function componentEffect() {
@@ -1545,12 +1612,12 @@ function baseCreateRenderer<
     }
   }
 
-  const move = (
-    vnode: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    type: MoveType,
-    parentSuspense: HostSuspenseBoundary | null = null
+  const move: MoveFn<HostNode, HostElement> = (
+    vnode,
+    container,
+    anchor,
+    type,
+    parentSuspense = null
   ) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       move(vnode.component!.subTree, container, anchor, type)
@@ -1600,11 +1667,11 @@ function baseCreateRenderer<
     }
   }
 
-  const unmount = (
-    vnode: HostVNode,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    doRemove?: boolean
+  const unmount: UnmountFn<HostNode, HostElement> = (
+    vnode,
+    parentComponent,
+    parentSuspense,
+    doRemove = false
   ) => {
     const { props, ref, children, dynamicChildren, shapeFlag } = vnode
 
@@ -1755,19 +1822,19 @@ function baseCreateRenderer<
     }
   }
 
-  const unmountChildren = (
-    children: HostVNode[],
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    doRemove?: boolean,
-    start: number = 0
+  const unmountChildren: UnmountChildrenFn<HostNode, HostElement> = (
+    children,
+    parentComponent,
+    parentSuspense,
+    doRemove = false,
+    start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], parentComponent, parentSuspense, doRemove)
     }
   }
 
-  const getNextHostNode = (vnode: HostVNode): HostNode | null => {
+  const getNextHostNode: NextFn<HostNode, HostElement> = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
     }
@@ -1842,7 +1909,10 @@ function baseCreateRenderer<
   let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
   let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
   if (createHydrationFns) {
-    ;[hydrate, hydrateNode] = createHydrationFns(mountComponent, hostPatchProp)
+    ;[hydrate, hydrateNode] = createHydrationFns(
+      mountComponent as MountComponentFn<Node, Element>,
+      hostPatchProp
+    )
   }
 
   return {
@@ -1850,36 +1920,6 @@ function baseCreateRenderer<
     hydrate,
     createApp: createAppAPI(render, hydrate) as CreateAppFunction<HostElement>
   }
-}
-
-// An object exposing the internals of a renderer, passed to tree-shakeable
-// features so that they can be decoupled from this file.
-export interface RendererInternals<HostNode = any, HostElement = any> {
-  patch: (
-    n1: VNode<HostNode, HostElement> | null, // null means this is a mount
-    n2: VNode<HostNode, HostElement>,
-    container: HostElement,
-    anchor?: HostNode | null,
-    parentComponent?: ComponentInternalInstance | null,
-    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
-    isSVG?: boolean,
-    optimized?: boolean
-  ) => void
-  unmount: (
-    vnode: VNode<HostNode, HostElement>,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-    doRemove?: boolean
-  ) => void
-  move: (
-    vnode: VNode<HostNode, HostElement>,
-    container: HostElement,
-    anchor: HostNode | null,
-    type: MoveType,
-    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null
-  ) => void
-  next: (vnode: VNode<HostNode, HostElement>) => HostNode | null
-  options: RendererOptions<HostNode, HostElement>
 }
 
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence

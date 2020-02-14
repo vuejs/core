@@ -2,7 +2,7 @@ import { VNode, normalizeVNode, VNodeChild } from '../vnode'
 import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals, MoveType } from '../renderer'
+import { RendererInternals, MoveType, SetupRenderEffectFn } from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { handleError, ErrorCodes } from '../errorHandling'
@@ -216,14 +216,7 @@ export interface SuspenseBoundary<
   next(): HostNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: (
-      instance: ComponentInternalInstance,
-      initialVNode: VNode<HostNode, HostElement>,
-      container: HostElement | null,
-      anchor: HostNode | null,
-      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-      isSVG: boolean
-    ) => void
+    setupRenderEffect: SetupRenderEffectFn<HostNode, HostElement>
   ): void
   unmount(
     parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,

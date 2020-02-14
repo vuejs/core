@@ -12,7 +12,7 @@ import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererOptions } from './renderer'
+import { RendererOptions, MountComponentFn } from './renderer'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -25,7 +25,7 @@ export type RootHydrateFunction = (
 // Hydration also depends on some renderer internal logic which needs to be
 // passed in via arguments.
 export function createHydrationFunctions(
-  mountComponent: any, // TODO
+  mountComponent: MountComponentFn<Node, Element>,
   patchProp: RendererOptions['patchProp']
 ) {
   const hydrate: RootHydrateFunction = (vnode, container) => {
@@ -68,6 +68,9 @@ export function createHydrationFunctions(
         if (shapeFlag & ShapeFlags.ELEMENT) {
           return hydrateElement(node as Element, vnode, parentComponent)
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // when setting up the render effect, if the initial vnode already
+          // has .el set, the component will perform hydration instead of mount
+          // on its sub-tree.
           mountComponent(vnode, null, null, parentComponent, null, false)
           const subTree = vnode.component!.subTree
           return (subTree.anchor || subTree.el).nextSibling
