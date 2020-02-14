@@ -143,6 +143,7 @@ export function isStaticNode(
       return true
     case NodeTypes.IF:
     case NodeTypes.FOR:
+    case NodeTypes.IF_BRANCH:
       return false
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:

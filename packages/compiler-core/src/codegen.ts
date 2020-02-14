@@ -597,6 +597,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
 
     /* istanbul ignore next */
+    case NodeTypes.IF_BRANCH:
+      // noop
+      break
     default:
       if (__DEV__) {
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
