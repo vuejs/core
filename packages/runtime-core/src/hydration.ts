@@ -12,6 +12,7 @@ import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
+import { RendererOptions } from './renderer'
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
@@ -20,9 +21,9 @@ import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
 // passed in via arguments.
 export function createHydrationFunctions(
   mountComponent: any, // TODO
-  patchProp: any // TODO
+  patchProp: RendererOptions['patchProp']
 ) {
-  function hydrate(vnode: VNode, container: Element) {
+  const hydrate = (vnode: VNode, container: Element) => {
     if (__DEV__ && !container.hasChildNodes()) {
       warn(`Attempting to hydrate existing markup but container is empty.`)
       return
@@ -34,11 +35,11 @@ export function createHydrationFunctions(
   // TODO handle mismatches
   // TODO SVG
   // TODO Suspense
-  function hydrateNode(
+  const hydrateNode = (
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null = null
-  ): Node | null | undefined {
+  ): Node | null | undefined => {
     const { type, shapeFlag } = vnode
     vnode.el = node
     switch (type) {
@@ -73,11 +74,11 @@ export function createHydrationFunctions(
     }
   }
 
-  function hydrateElement(
+  const hydrateElement = (
     el: Element,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null
-  ) {
+  ) => {
     const { props, patchFlag } = vnode
     // skip props & children if this is hoisted static nodes
     if (patchFlag !== PatchFlags.HOISTED) {
@@ -124,11 +125,11 @@ export function createHydrationFunctions(
     return el.nextSibling
   }
 
-  function hydrateChildren(
+  const hydrateChildren = (
     node: Node | null | undefined,
     vnodes: VNode[],
     parentComponent: ComponentInternalInstance | null
-  ): Node | null | undefined {
+  ): Node | null | undefined => {
     for (let i = 0; node != null && i < vnodes.length; i++) {
       // TODO can skip normalizeVNode in optimized mode
       // (need hint on rendered markup?)

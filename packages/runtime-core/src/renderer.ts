@@ -233,21 +233,7 @@ function baseCreateRenderer<
     insertStaticContent: hostInsertStaticContent
   } = options
 
-  const internals: RendererInternals<HostNode, HostElement> = {
-    patch,
-    unmount,
-    move,
-    next: getNextHostNode,
-    options
-  }
-
-  let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
-  let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
-  if (createHydrationFns) {
-    ;[hydrate, hydrateNode] = createHydrationFns(mountComponent, hostPatchProp)
-  }
-
-  function patch(
+  const patch = (
     n1: HostVNode | null, // null means this is a mount
     n2: HostVNode,
     container: HostElement,
@@ -256,7 +242,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null = null,
     isSVG: boolean = false,
     optimized: boolean = false
-  ) {
+  ) => {
     // patching & not same type, unmount old tree
     if (n1 != null && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
@@ -342,12 +328,12 @@ function baseCreateRenderer<
     }
   }
 
-  function processText(
+  const processText = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
     anchor: HostNode | null
-  ) {
+  ) => {
     if (n1 == null) {
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
@@ -362,12 +348,12 @@ function baseCreateRenderer<
     }
   }
 
-  function processCommentNode(
+  const processCommentNode = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
     anchor: HostNode | null
-  ) {
+  ) => {
     if (n1 == null) {
       hostInsert(
         (n2.el = hostCreateComment((n2.children as string) || '')),
@@ -380,12 +366,12 @@ function baseCreateRenderer<
     }
   }
 
-  function mountStaticNode(
+  const mountStaticNode = (
     n2: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
     isSVG: boolean
-  ) {
+  ) => {
     if (n2.el != null && hostCloneNode !== undefined) {
       hostInsert(hostCloneNode(n2.el), container, anchor)
     } else {
@@ -400,7 +386,7 @@ function baseCreateRenderer<
     }
   }
 
-  function processElement(
+  const processElement = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
@@ -409,7 +395,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     isSVG = isSVG || (n2.type as string) === 'svg'
     if (n1 == null) {
       mountElement(
@@ -429,7 +415,7 @@ function baseCreateRenderer<
     }
   }
 
-  function mountElement(
+  const mountElement = (
     vnode: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
@@ -437,7 +423,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     let el: HostElement
     const { type, props, shapeFlag, transition, scopeId, patchFlag } = vnode
     if (
@@ -509,7 +495,7 @@ function baseCreateRenderer<
     }
   }
 
-  function mountChildren(
+  const mountChildren = (
     children: HostVNodeChildren,
     container: HostElement,
     anchor: HostNode | null,
@@ -518,7 +504,7 @@ function baseCreateRenderer<
     isSVG: boolean,
     optimized: boolean,
     start: number = 0
-  ) {
+  ) => {
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as HostVNode)
@@ -536,14 +522,14 @@ function baseCreateRenderer<
     }
   }
 
-  function patchElement(
+  const patchElement = (
     n1: HostVNode,
     n2: HostVNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     const el = (n2.el = n1.el) as HostElement
     let { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
@@ -673,14 +659,14 @@ function baseCreateRenderer<
   }
 
   // The fast path for blocks.
-  function patchBlockChildren(
+  const patchBlockChildren = (
     oldChildren: HostVNode[],
     newChildren: HostVNode[],
     fallbackContainer: HostElement,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
-  ) {
+  ) => {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i]
       const newVNode = newChildren[i]
@@ -711,7 +697,7 @@ function baseCreateRenderer<
     }
   }
 
-  function patchProps(
+  const patchProps = (
     el: HostElement,
     vnode: HostVNode,
     oldProps: Data,
@@ -719,7 +705,7 @@ function baseCreateRenderer<
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
-  ) {
+  ) => {
     if (oldProps !== newProps) {
       for (const key in newProps) {
         if (isReservedProp(key)) continue
@@ -761,7 +747,7 @@ function baseCreateRenderer<
 
   let devFragmentID = 0
 
-  function processFragment(
+  const processFragment = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
@@ -770,7 +756,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     const showID = __DEV__ && !__TEST__
     const fragmentStartAnchor = (n2.el = n1
       ? n1.el
@@ -840,7 +826,7 @@ function baseCreateRenderer<
     }
   }
 
-  function processPortal(
+  const processPortal = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
@@ -849,7 +835,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     const targetSelector = n2.props && n2.props.target
     const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
@@ -934,7 +920,7 @@ function baseCreateRenderer<
     processCommentNode(n1, n2, container, anchor)
   }
 
-  function processComponent(
+  const processComponent = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
@@ -943,7 +929,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         ;(parentComponent!.sink as KeepAliveSink).activate(
@@ -1008,14 +994,14 @@ function baseCreateRenderer<
     }
   }
 
-  function mountComponent(
+  const mountComponent = (
     initialVNode: HostVNode,
     container: HostElement | null, // only null during hydration
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
-  ) {
+  ) => {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
       parentComponent
@@ -1070,14 +1056,14 @@ function baseCreateRenderer<
     }
   }
 
-  function setupRenderEffect(
+  const setupRenderEffect = (
     instance: ComponentInternalInstance,
     initialVNode: HostVNode,
     container: HostElement | null, // only null during hydration
     anchor: HostNode | null,
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
-  ) {
+  ) => {
     // create reactive effect for rendering
     instance.update = effect(function componentEffect() {
       if (!instance.isMounted) {
@@ -1168,10 +1154,10 @@ function baseCreateRenderer<
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
   }
 
-  function updateComponentPreRender(
+  const updateComponentPreRender = (
     instance: ComponentInternalInstance,
     nextVNode: HostVNode
-  ) {
+  ) => {
     nextVNode.component = instance
     instance.vnode = nextVNode
     instance.next = null
@@ -1179,7 +1165,7 @@ function baseCreateRenderer<
     resolveSlots(instance, nextVNode.children)
   }
 
-  function patchChildren(
+  const patchChildren = (
     n1: HostVNode | null,
     n2: HostVNode,
     container: HostElement,
@@ -1188,7 +1174,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean = false
-  ) {
+  ) => {
     const c1 = n1 && n1.children
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
     const c2 = n2.children
@@ -1284,7 +1270,7 @@ function baseCreateRenderer<
     }
   }
 
-  function patchUnkeyedChildren(
+  const patchUnkeyedChildren = (
     c1: HostVNode[],
     c2: HostVNodeChildren,
     container: HostElement,
@@ -1293,7 +1279,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     c1 = c1 || EMPTY_ARR
     c2 = c2 || EMPTY_ARR
     const oldLength = c1.length
@@ -1334,7 +1320,7 @@ function baseCreateRenderer<
   }
 
   // can be all-keyed or mixed
-  function patchKeyedChildren(
+  const patchKeyedChildren = (
     c1: HostVNode[],
     c2: HostVNodeChildren,
     container: HostElement,
@@ -1343,7 +1329,7 @@ function baseCreateRenderer<
     parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean,
     optimized: boolean
-  ) {
+  ) => {
     let i = 0
     const l2 = c2.length
     let e1 = c1.length - 1 // prev ending index
@@ -1569,13 +1555,13 @@ function baseCreateRenderer<
     }
   }
 
-  function move(
+  const move = (
     vnode: HostVNode,
     container: HostElement,
     anchor: HostNode | null,
     type: MoveType,
     parentSuspense: HostSuspenseBoundary | null = null
-  ) {
+  ) => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       move(vnode.component!.subTree, container, anchor, type)
       return
@@ -1624,12 +1610,12 @@ function baseCreateRenderer<
     }
   }
 
-  function unmount(
+  const unmount = (
     vnode: HostVNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
-  ) {
+  ) => {
     const { props, ref, children, dynamicChildren, shapeFlag } = vnode
 
     // unset ref
@@ -1673,7 +1659,7 @@ function baseCreateRenderer<
     }
   }
 
-  function remove(vnode: HostVNode) {
+  const remove = (vnode: HostVNode) => {
     const { type, el, anchor, transition } = vnode
     if (type === Fragment) {
       removeFragment(el!, anchor!)
@@ -1708,7 +1694,7 @@ function baseCreateRenderer<
     }
   }
 
-  function removeFragment(cur: HostNode, end: HostNode) {
+  const removeFragment = (cur: HostNode, end: HostNode) => {
     // For fragments, directly remove all contained DOM nodes.
     // (fragment child nodes cannot have transition)
     let next
@@ -1720,11 +1706,11 @@ function baseCreateRenderer<
     hostRemove(end)
   }
 
-  function unmountComponent(
+  const unmountComponent = (
     instance: ComponentInternalInstance,
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean
-  ) {
+  ) => {
     if (__HMR__ && instance.type.__hmrId != null) {
       unregisterHMR(instance)
     }
@@ -1779,19 +1765,19 @@ function baseCreateRenderer<
     }
   }
 
-  function unmountChildren(
+  const unmountChildren = (
     children: HostVNode[],
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
     doRemove?: boolean,
     start: number = 0
-  ) {
+  ) => {
     for (let i = start; i < children.length; i++) {
       unmount(children[i], parentComponent, parentSuspense, doRemove)
     }
   }
 
-  function getNextHostNode(vnode: HostVNode): HostNode | null {
+  const getNextHostNode = (vnode: HostVNode): HostNode | null => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
     }
@@ -1801,12 +1787,12 @@ function baseCreateRenderer<
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
-  function setRef(
+  const setRef = (
     ref: string | Function | Ref,
     oldRef: string | Function | Ref | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
-  ) {
+  ) => {
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
     const renderContext = toRaw(parent.renderContext)
 
@@ -1853,6 +1839,20 @@ function baseCreateRenderer<
     }
     flushPostFlushCbs()
     container._vnode = vnode
+  }
+
+  const internals: RendererInternals<HostNode, HostElement> = {
+    patch,
+    unmount,
+    move,
+    next: getNextHostNode,
+    options
+  }
+
+  let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
+  let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
+  if (createHydrationFns) {
+    ;[hydrate, hydrateNode] = createHydrationFns(mountComponent, hostPatchProp)
   }
 
   return {
