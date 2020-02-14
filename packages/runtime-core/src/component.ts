@@ -26,7 +26,8 @@ import {
   makeMap,
   isPromise,
   isArray,
-  hyphenate
+  hyphenate,
+  ShapeFlags
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -34,7 +35,6 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
-import { ShapeFlags } from './shapeFlags'
 
 export type Data = { [key: string]: unknown }
 

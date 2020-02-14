@@ -30,6 +30,7 @@ import {
   isReservedProp,
   isFunction,
   PatchFlags,
+  ShapeFlags,
   NOOP
 } from '@vue/shared'
 import {
@@ -49,11 +50,10 @@ import {
 } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
-import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
-import { createAppAPI } from './apiCreateApp'
+import { createAppAPI, CreateAppFunction } from './apiCreateApp'
 import {
   SuspenseBoundary,
   queueEffectWithSuspense,
@@ -1858,7 +1858,7 @@ function baseCreateRenderer<
   return {
     render,
     hydrate,
-    createApp: createAppAPI<HostNode, HostElement>(render, hydrate)
+    createApp: createAppAPI(render, hydrate) as CreateAppFunction<HostElement>
   }
 }
 

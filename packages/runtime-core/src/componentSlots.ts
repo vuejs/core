@@ -5,8 +5,7 @@ import {
   normalizeVNode,
   VNodeChild
 } from './vnode'
-import { isArray, isFunction, EMPTY_OBJ } from '@vue/shared'
-import { ShapeFlags } from './shapeFlags'
+import { isArray, isFunction, EMPTY_OBJ, ShapeFlags } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
 

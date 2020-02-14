@@ -9,9 +9,8 @@ import {
   mergeProps,
   normalizeVNode
 } from '../src/vnode'
-import { ShapeFlags } from '../src/shapeFlags'
 import { Data } from '../src/component'
-import { PatchFlags } from '@vue/shared'
+import { ShapeFlags, PatchFlags } from '@vue/shared'
 
 describe('vnode', () => {
   test('create with just tag', () => {

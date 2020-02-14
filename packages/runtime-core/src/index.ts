@@ -56,8 +56,6 @@ export {
   BaseTransition,
   BaseTransitionProps
 } from './components/BaseTransition'
-export { PatchFlags } from '@vue/shared'
-export { ShapeFlags } from './shapeFlags'
 
 // SFC CSS Modules
 export { useCSSModule } from './helpers/useCssModule'

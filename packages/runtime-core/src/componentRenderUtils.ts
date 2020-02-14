@@ -10,9 +10,8 @@ import {
   Comment,
   cloneVNode
 } from './vnode'
-import { ShapeFlags } from './shapeFlags'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, EMPTY_OBJ } from '@vue/shared'
+import { PatchFlags, ShapeFlags, EMPTY_OBJ } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.

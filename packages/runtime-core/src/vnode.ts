@@ -7,7 +7,8 @@ import {
   extend,
   normalizeClass,
   normalizeStyle,
-  PatchFlags
+  PatchFlags,
+  ShapeFlags
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -16,7 +17,6 @@ import {
   Component
 } from './component'
 import { RawSlots } from './componentSlots'
-import { ShapeFlags } from './shapeFlags'
 import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import { SuspenseBoundary } from './components/Suspense'

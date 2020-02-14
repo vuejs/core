@@ -9,12 +9,12 @@ import {
   Comment,
   Fragment,
   Portal,
-  ShapeFlags,
   ssrUtils,
   Slots,
   warn
 } from 'vue'
 import {
+  ShapeFlags,
   isString,
   isPromise,
   isArray,

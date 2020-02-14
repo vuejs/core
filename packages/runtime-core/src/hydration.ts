@@ -10,9 +10,8 @@ import {
 import { queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
-import { ShapeFlags } from './shapeFlags'
 import { warn } from './warning'
-import { PatchFlags, isReservedProp, isOn } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting

@@ -6,13 +6,13 @@ import {
   NodeTypes,
   TestElement,
   Fragment,
-  PatchFlags,
   resetOps,
   dumpOps,
   NodeOpTypes,
   serializeInner,
   createTextVNode
 } from '@vue/runtime-test'
+import { PatchFlags } from '@vue/shared'
 
 describe('renderer: fragment', () => {
   it('should allow returning multiple component root nodes', () => {

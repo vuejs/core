@@ -1,6 +1,5 @@
 import { VNode, normalizeVNode, VNodeChild } from '../vnode'
-import { ShapeFlags } from '../shapeFlags'
-import { isFunction, isArray } from '@vue/shared'
+import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
 import { RendererInternals, MoveType } from '../renderer'
