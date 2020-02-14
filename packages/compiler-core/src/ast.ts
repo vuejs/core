@@ -92,6 +92,7 @@ export type TemplateChildNode =
   | TextNode
   | CommentNode
   | IfNode
+  | IfBranchNode
   | ForNode
   | TextCallNode
 

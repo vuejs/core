@@ -1,7 +1,7 @@
 import {
   createStructuralDirectiveTransform,
-  traverseChildren,
-  TransformContext
+  TransformContext,
+  traverseNode
 } from '../transform'
 import {
   NodeTypes,
@@ -125,7 +125,7 @@ export function processIf(
         const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
         // make sure to traverse here.
-        traverseChildren(branch, context)
+        traverseNode(branch, context)
         // call on exit
         if (onExit) onExit()
         // make sure to reset currentNode after traversal to indicate this

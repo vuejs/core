@@ -329,7 +329,6 @@ export function traverseChildren(
   for (; i < parent.children.length; i++) {
     const child = parent.children[i]
     if (isString(child)) continue
-    context.currentNode = child
     context.parent = parent
     context.childIndex = i
     context.onNodeRemoved = nodeRemoved
@@ -341,6 +340,7 @@ export function traverseNode(
   node: RootNode | TemplateChildNode,
   context: TransformContext
 ) {
+  context.currentNode = node
   // apply transform plugins
   const { nodeTransforms } = context
   const exitFns = []
@@ -380,9 +380,10 @@ export function traverseNode(
     // for container types, further traverse downwards
     case NodeTypes.IF:
       for (let i = 0; i < node.branches.length; i++) {
-        traverseChildren(node.branches[i], context)
+        traverseNode(node.branches[i], context)
       }
       break
+    case NodeTypes.IF_BRANCH:
     case NodeTypes.FOR:
     case NodeTypes.ELEMENT:
     case NodeTypes.ROOT:
