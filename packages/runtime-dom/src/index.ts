@@ -35,7 +35,7 @@ export const createApp: CreateAppFunction<Element> = (...args) => {
   }
 
   const { mount } = app
-  app.mount = (container): any => {
+  app.mount = (container: Element | string): any => {
     if (isString(container)) {
       container = document.querySelector(container)!
       if (!container) {
@@ -53,9 +53,12 @@ export const createApp: CreateAppFunction<Element> = (...args) => {
     ) {
       component.template = container.innerHTML
     }
-    // clear content before mounting
-    container.innerHTML = ''
-    return mount(container)
+    const isHydrate = container.hasAttribute('data-server-rendered')
+    if (!isHydrate) {
+      // clear content before mounting
+      container.innerHTML = ''
+    }
+    return mount(container, isHydrate)
   }
 
   return app

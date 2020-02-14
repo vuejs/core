@@ -30,8 +30,7 @@ import {
   isReservedProp,
   isFunction,
   PatchFlags,
-  NOOP,
-  isOn
+  NOOP
 } from '@vue/shared'
 import {
   queueJob,
@@ -54,7 +53,7 @@ import { ShapeFlags } from './shapeFlags'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { invokeDirectiveHook } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
-import { createAppAPI, CreateAppFunction } from './apiCreateApp'
+import { createAppAPI } from './apiCreateApp'
 import {
   SuspenseBoundary,
   queueEffectWithSuspense,
@@ -63,6 +62,7 @@ import {
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
+import { createHydrateFn } from './hydration'
 
 const __HMR__ = __BUNDLER__ && __DEV__
 
@@ -185,13 +185,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export function createRenderer<
   HostNode extends object = any,
   HostElement extends HostNode = any
->(
-  options: RendererOptions<HostNode, HostElement>
-): {
-  render: RootRenderFunction<HostNode, HostElement>
-  hydrate: RootRenderFunction<HostNode, HostElement>
-  createApp: CreateAppFunction<HostElement>
-} {
+>(options: RendererOptions<HostNode, HostElement>) {
   type HostVNode = VNode<HostNode, HostElement>
   type HostVNodeChildren = VNodeArrayChildren<HostNode, HostElement>
   type HostSuspenseBoundary = SuspenseBoundary<HostNode, HostElement>
@@ -984,7 +978,7 @@ export function createRenderer<
 
   function mountComponent(
     initialVNode: HostVNode,
-    container: HostElement,
+    container: HostElement | null, // only null during hydration
     anchor: HostNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: HostSuspenseBoundary | null,
@@ -1023,19 +1017,19 @@ export function createRenderer<
 
       parentSuspense.registerDep(instance, setupRenderEffect)
 
-      // give it a placeholder
+      // Give it a placeholder if this is not hydration
       const placeholder = (instance.subTree = createVNode(Comment))
-      processCommentNode(null, placeholder, container, anchor)
+      processCommentNode(null, placeholder, container!, anchor)
       initialVNode.el = placeholder.el
       return
     }
 
     setupRenderEffect(
       instance,
-      parentSuspense,
       initialVNode,
       container,
       anchor,
+      parentSuspense,
       isSVG
     )
 
@@ -1046,10 +1040,10 @@ export function createRenderer<
 
   function setupRenderEffect(
     instance: ComponentInternalInstance,
-    parentSuspense: HostSuspenseBoundary | null,
     initialVNode: HostVNode,
-    container: HostElement,
+    container: HostElement | null, // only null during hydration
     anchor: HostNode | null,
+    parentSuspense: HostSuspenseBoundary | null,
     isSVG: boolean
   ) {
     // create reactive effect for rendering
@@ -1060,8 +1054,21 @@ export function createRenderer<
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
-        patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
-        initialVNode.el = subTree.el
+        if (initialVNode.el) {
+          // vnode has adopted host node - perform hydration instead of mount.
+          hydrateNode(initialVNode.el as Node, subTree, instance)
+        } else {
+          patch(
+            null,
+            subTree,
+            container!, // container is only null during hydration
+            anchor,
+            instance,
+            parentSuspense,
+            isSVG
+          )
+          initialVNode.el = subTree.el
+        }
         // mounted hook
         if (instance.m !== null) {
           queuePostRenderEffect(instance.m, parentSuspense)
@@ -1816,119 +1823,12 @@ export function createRenderer<
     container._vnode = vnode
   }
 
-  function hydrate(vnode: HostVNode, container: any) {
-    hydrateNode(container.firstChild, vnode, container)
-    flushPostFlushCbs()
-  }
-
-  // TODO handle mismatches
-  function hydrateNode(
-    node: any,
-    vnode: HostVNode,
-    container: any,
-    parentComponent: ComponentInternalInstance | null = null
-  ): any {
-    const { type, shapeFlag } = vnode
-    switch (type) {
-      case Text:
-      case Comment:
-      case Static:
-        vnode.el = node
-        return node.nextSibling
-      case Fragment:
-        vnode.el = node
-        const anchor = (vnode.anchor = hydrateChildren(
-          node.nextSibling,
-          vnode.children as HostVNode[],
-          container,
-          parentComponent
-        ))
-        return anchor.nextSibling
-      case Portal:
-        // TODO
-        break
-      default:
-        if (shapeFlag & ShapeFlags.ELEMENT) {
-          return hydrateElement(node, vnode, parentComponent)
-        } else if (shapeFlag & ShapeFlags.COMPONENT) {
-          // TODO
-        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          // TODO
-        } else if (__DEV__) {
-          warn('Invalid HostVNode type:', type, `(${typeof type})`)
-        }
-    }
-  }
-
-  function hydrateElement(
-    el: any,
-    vnode: HostVNode,
-    parentComponent: ComponentInternalInstance | null
-  ) {
-    vnode.el = el
-    const { props, patchFlag } = vnode
-    // skip props & children if this is hoisted static nodes
-    if (patchFlag !== PatchFlags.HOISTED) {
-      // props
-      if (props !== null) {
-        if (
-          patchFlag & PatchFlags.FULL_PROPS ||
-          patchFlag & PatchFlags.HYDRATE_EVENTS
-        ) {
-          for (const key in props) {
-            if (!isReservedProp(key) && isOn(key)) {
-              hostPatchProp(el, key, props[key], null)
-            }
-          }
-        } else if (props.onClick != null) {
-          // Fast path for click listeners (which is most often) to avoid
-          // iterating through props.
-          hostPatchProp(el, 'onClick', props.onClick, null)
-        }
-        // vnode mounted hook
-        const { onVnodeMounted } = props
-        if (onVnodeMounted != null) {
-          queuePostFlushCb(() => {
-            invokeDirectiveHook(onVnodeMounted, parentComponent, vnode, null)
-          })
-        }
-      }
-      // children
-      if (
-        vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
-        // skip if element has innerHTML / textContent
-        !(props !== null && (props.innerHTML || props.textContent))
-      ) {
-        hydrateChildren(
-          el.firstChild,
-          vnode.children as HostVNode[],
-          el,
-          parentComponent
-        )
-      }
-    }
-    return el.nextSibling
-  }
-
-  function hydrateChildren(
-    node: any,
-    vnodes: HostVNode[],
-    container: any,
-    parentComponent: ComponentInternalInstance | null = null
-  ) {
-    for (let i = 0; i < vnodes.length; i++) {
-      // TODO can skip normalizeVNode in optimized mode
-      // (need hint on rendered markup?)
-      const vnode = (vnodes[i] = normalizeVNode(vnodes[i]))
-      node = hydrateNode(node, vnode, container, parentComponent)
-    }
-    return node
-  }
+  const [hydrate, hydrateNode] = createHydrateFn(mountComponent, hostPatchProp)
 
   return {
     render,
     hydrate,
-    createApp: createAppAPI(render)
+    createApp: createAppAPI<HostNode, HostElement>(render, hydrate)
   }
 }
 

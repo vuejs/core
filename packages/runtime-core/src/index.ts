@@ -23,9 +23,8 @@ export {
   openBlock,
   createBlock
 } from './vnode'
-// VNode type symbols
-export { Text, Comment, Fragment, Portal } from './vnode'
 // Internal Components
+export { Fragment, Portal } from './vnode'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {

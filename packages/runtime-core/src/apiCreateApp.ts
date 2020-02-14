@@ -6,7 +6,7 @@ import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
-import { createVNode, cloneVNode } from './vnode'
+import { createVNode, cloneVNode, VNode } from './vnode'
 
 export interface App<HostElement = any> {
   config: AppConfig
@@ -16,7 +16,10 @@ export interface App<HostElement = any> {
   component(name: string, component: Component): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
-  mount(rootContainer: HostElement | string): ComponentPublicInstance
+  mount(
+    rootContainer: HostElement | string,
+    isHydrate?: boolean
+  ): ComponentPublicInstance
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
@@ -87,7 +90,8 @@ export type CreateAppFunction<HostElement> = (
 ) => App<HostElement>
 
 export function createAppAPI<HostNode, HostElement>(
-  render: RootRenderFunction<HostNode, HostElement>
+  render: RootRenderFunction<HostNode, HostElement>,
+  hydrate: (vnode: VNode, container: Element) => void
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent: Component, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
@@ -182,7 +186,7 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      mount(rootContainer: HostElement): any {
+      mount(rootContainer: HostElement, isHydrate?: boolean): any {
         if (!isMounted) {
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
@@ -196,7 +200,11 @@ export function createAppAPI<HostNode, HostElement>(
             }
           }
 
-          render(vnode, rootContainer)
+          if (isHydrate) {
+            hydrate(vnode, rootContainer as any)
+          } else {
+            render(vnode, rootContainer)
+          }
           isMounted = true
           app._container = rootContainer
           return vnode.component!.proxy
