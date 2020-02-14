@@ -1,12 +1,15 @@
-import { createBlock, createVNode, openBlock } from '@vue/runtime-test'
 import {
-  ShapeFlags,
+  createBlock,
+  createVNode,
+  openBlock,
   Comment,
   Fragment,
   Text,
-  cloneVNode
-} from '@vue/runtime-core'
-import { mergeProps, normalizeVNode } from '../src/vnode'
+  cloneVNode,
+  mergeProps,
+  normalizeVNode
+} from '../src/vnode'
+import { ShapeFlags } from '../src/shapeFlags'
 import { Data } from '../src/component'
 import { PatchFlags } from '@vue/shared'
 

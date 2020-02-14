@@ -82,20 +82,6 @@ export const enum PatchFlags {
   BAIL = -2
 }
 
-// runtime object for public consumption
-export const PublicPatchFlags = {
-  TEXT: PatchFlags.TEXT,
-  CLASS: PatchFlags.CLASS,
-  STYLE: PatchFlags.STYLE,
-  PROPS: PatchFlags.PROPS,
-  NEED_PATCH: PatchFlags.NEED_PATCH,
-  FULL_PROPS: PatchFlags.FULL_PROPS,
-  KEYED_FRAGMENT: PatchFlags.KEYED_FRAGMENT,
-  UNKEYED_FRAGMENT: PatchFlags.UNKEYED_FRAGMENT,
-  DYNAMIC_SLOTS: PatchFlags.DYNAMIC_SLOTS,
-  BAIL: PatchFlags.BAIL
-}
-
 // dev only flag -> name mapping
 export const PatchFlagNames = {
   [PatchFlags.TEXT]: `TEXT`,

@@ -501,3 +501,11 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
   }
   return __DEV__ ? Object.freeze(context) : context
 }
+
+// record effects created during a component's setup() so that they can be
+// stopped when the component unmounts
+export function recordInstanceBoundEffect(effect: ReactiveEffect) {
+  if (currentInstance) {
+    ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
+  }
+}

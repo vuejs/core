@@ -417,6 +417,8 @@ function createSuspenseBoundary<HostNode, HostElement>(
             pushWarningContext(vnode)
           }
           handleSetupResult(instance, asyncSetupResult, suspense)
+          // unset placeholder, otherwise this will be treated as a hydration mount
+          vnode.el = null
           setupRenderEffect(
             instance,
             vnode,

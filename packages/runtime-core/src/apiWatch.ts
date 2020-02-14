@@ -16,13 +16,13 @@ import {
   hasChanged,
   NOOP
 } from '@vue/shared'
-import { recordEffect } from './apiReactivity'
 import {
   currentInstance,
   ComponentInternalInstance,
   currentSuspense,
   Data,
-  isInSSRComponentSetup
+  isInSSRComponentSetup,
+  recordInstanceBoundEffect
 } from './component'
 import {
   ErrorCodes,
@@ -235,7 +235,7 @@ function doWatch(
     }
   }
 
-  recordEffect(runner)
+  recordInstanceBoundEffect(runner)
   return () => {
     stop(runner)
     if (instance) {
