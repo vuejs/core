@@ -179,7 +179,13 @@ export {
   ComponentOptionsWithArrayProps
 } from './apiOptions'
 export { ComponentPublicInstance } from './componentProxy'
-export { RendererOptions, RootRenderFunction } from './renderer'
+export {
+  Renderer,
+  HydrationRenderer,
+  RendererOptions,
+  RootRenderFunction
+} from './renderer'
+export { RootHydrateFunction } from './hydration'
 export { Slot, Slots } from './componentSlots'
 export {
   Prop,

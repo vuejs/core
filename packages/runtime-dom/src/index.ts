@@ -4,8 +4,10 @@ import {
   warn,
   RootRenderFunction,
   CreateAppFunction,
-  VNode,
-  App
+  Renderer,
+  HydrationRenderer,
+  App,
+  RootHydrateFunction
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -19,9 +21,7 @@ const rendererOptions = {
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer:
-  | ReturnType<typeof createRenderer>
-  | ReturnType<typeof createHydrationRenderer>
+let renderer: Renderer | HydrationRenderer
 
 let enabledHydration = false
 
@@ -34,7 +34,7 @@ function ensureHydrationRenderer() {
     ? renderer
     : createHydrationRenderer(rendererOptions)
   enabledHydration = true
-  return renderer as ReturnType<typeof createHydrationRenderer>
+  return renderer as HydrationRenderer
 }
 
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
@@ -44,7 +44,7 @@ export const render = ((...args) => {
 
 export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
-}) as (vnode: VNode, container: Element) => void
+}) as RootHydrateFunction
 
 export const createApp = ((...args) => {
   const app = ensureRenderer().createApp(...args)

@@ -62,9 +62,23 @@ import {
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
-import { createHydrationFunctions } from './hydration'
+import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 
 const __HMR__ = __BUNDLER__ && __DEV__
+
+export interface Renderer<HostNode = any, HostElement = any> {
+  render: RootRenderFunction<HostNode, HostElement>
+  createApp: CreateAppFunction<HostElement>
+}
+
+export interface HydrationRenderer extends Renderer<Node, Element> {
+  hydrate: RootHydrateFunction
+}
+
+export type RootRenderFunction<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement> | null,
+  container: HostElement
+) => void
 
 export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
@@ -100,41 +114,6 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
     anchor: HostNode | null,
     isSVG: boolean
   ): HostElement
-}
-
-export type RootRenderFunction<HostNode, HostElement> = (
-  vnode: VNode<HostNode, HostElement> | null,
-  dom: HostElement
-) => void
-
-// An object exposing the internals of a renderer, passed to tree-shakeable
-// features so that they can be decoupled from this file.
-export interface RendererInternals<HostNode = any, HostElement = any> {
-  patch: (
-    n1: VNode<HostNode, HostElement> | null, // null means this is a mount
-    n2: VNode<HostNode, HostElement>,
-    container: HostElement,
-    anchor?: HostNode | null,
-    parentComponent?: ComponentInternalInstance | null,
-    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
-    isSVG?: boolean,
-    optimized?: boolean
-  ) => void
-  unmount: (
-    vnode: VNode<HostNode, HostElement>,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-    doRemove?: boolean
-  ) => void
-  move: (
-    vnode: VNode<HostNode, HostElement>,
-    container: HostElement,
-    anchor: HostNode | null,
-    type: MoveType,
-    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null
-  ) => void
-  next: (vnode: VNode<HostNode, HostElement>) => HostNode | null
-  options: RendererOptions<HostNode, HostElement>
 }
 
 export const enum MoveType {
@@ -186,25 +165,36 @@ export function createRenderer<
   HostNode extends object = any,
   HostElement extends HostNode = any
 >(options: RendererOptions<HostNode, HostElement>) {
-  const res = baseCreateRenderer(options)
-  return res as typeof res & {
-    hydrate: undefined
-  }
+  return baseCreateRenderer<HostNode, HostElement>(options)
 }
 
 // Separate API for creating hydration-enabled renderer.
 // Hydration logic is only used when calling this function, making it
 // tree-shakable.
-export function createHydrationRenderer<
-  HostNode extends object = any,
-  HostElement extends HostNode = any
->(options: RendererOptions<HostNode, HostElement>) {
-  const res = baseCreateRenderer(options, createHydrationFunctions)
-  return res as typeof res & {
-    hydrate: ReturnType<typeof createHydrationFunctions>[0]
-  }
+export function createHydrationRenderer(
+  options: RendererOptions<Node, Element>
+) {
+  return baseCreateRenderer<Node, Element>(options, createHydrationFunctions)
 }
 
+// overload 1: no hydration
+function baseCreateRenderer<
+  HostNode extends object = any,
+  HostElement extends HostNode = any
+>(
+  options: RendererOptions<HostNode, HostElement>
+): Renderer<HostNode, HostElement>
+
+// overload 2: with hydration
+function baseCreateRenderer<
+  HostNode extends object = any,
+  HostElement extends HostNode = any
+>(
+  options: RendererOptions<HostNode, HostElement>,
+  createHydrationFns: typeof createHydrationFunctions
+): HydrationRenderer
+
+// implementation
 function baseCreateRenderer<
   HostNode extends object = any,
   HostElement extends HostNode = any
@@ -1860,6 +1850,36 @@ function baseCreateRenderer<
     hydrate,
     createApp: createAppAPI(render, hydrate) as CreateAppFunction<HostElement>
   }
+}
+
+// An object exposing the internals of a renderer, passed to tree-shakeable
+// features so that they can be decoupled from this file.
+export interface RendererInternals<HostNode = any, HostElement = any> {
+  patch: (
+    n1: VNode<HostNode, HostElement> | null, // null means this is a mount
+    n2: VNode<HostNode, HostElement>,
+    container: HostElement,
+    anchor?: HostNode | null,
+    parentComponent?: ComponentInternalInstance | null,
+    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null,
+    isSVG?: boolean,
+    optimized?: boolean
+  ) => void
+  unmount: (
+    vnode: VNode<HostNode, HostElement>,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+    doRemove?: boolean
+  ) => void
+  move: (
+    vnode: VNode<HostNode, HostElement>,
+    container: HostElement,
+    anchor: HostNode | null,
+    type: MoveType,
+    parentSuspense?: SuspenseBoundary<HostNode, HostElement> | null
+  ) => void
+  next: (vnode: VNode<HostNode, HostElement>) => HostNode | null
+  options: RendererOptions<HostNode, HostElement>
 }
 
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence

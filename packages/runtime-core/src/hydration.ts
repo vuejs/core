@@ -14,6 +14,11 @@ import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
 import { RendererOptions } from './renderer'
 
+export type RootHydrateFunction = (
+  vnode: VNode<Node, Element>,
+  container: Element
+) => void
+
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
 // it out creates a ton of unnecessary complexity.
@@ -23,7 +28,7 @@ export function createHydrationFunctions(
   mountComponent: any, // TODO
   patchProp: RendererOptions['patchProp']
 ) {
-  const hydrate = (vnode: VNode, container: Element) => {
+  const hydrate: RootHydrateFunction = (vnode, container) => {
     if (__DEV__ && !container.hasChildNodes()) {
       warn(`Attempting to hydrate existing markup but container is empty.`)
       return
