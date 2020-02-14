@@ -65,7 +65,7 @@ export { useCSSModule } from './helpers/useCssModule'
 // Internal API ----------------------------------------------------------------
 
 // For custom renderers
-export { createRenderer } from './renderer'
+export { createRenderer, createHydrationRenderer } from './renderer'
 export { warn } from './warning'
 export {
   handleError,

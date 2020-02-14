@@ -91,7 +91,7 @@ export type CreateAppFunction<HostElement> = (
 
 export function createAppAPI<HostNode, HostElement>(
   render: RootRenderFunction<HostNode, HostElement>,
-  hydrate: (vnode: VNode, container: Element) => void
+  hydrate?: (vnode: VNode, container: Element) => void
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent: Component, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
@@ -200,7 +200,7 @@ export function createAppAPI<HostNode, HostElement>(
             }
           }
 
-          if (isHydrate) {
+          if (isHydrate && hydrate) {
             hydrate(vnode, rootContainer as any)
           } else {
             render(vnode, rootContainer)

@@ -15,9 +15,11 @@ import { warn } from './warning'
 import { PatchFlags, isReservedProp, isOn } from '@vue/shared'
 
 // Note: hydration is DOM-specific
-// but we have to place it in core due to tight coupling with core - splitting
+// But we have to place it in core due to tight coupling with core - splitting
 // it out creates a ton of unnecessary complexity.
-export function createHydrateFn(
+// Hydration also depends on some renderer internal logic which needs to be
+// passed in via arguments.
+export function createHydrationFunctions(
   mountComponent: any, // TODO
   patchProp: any // TODO
 ) {

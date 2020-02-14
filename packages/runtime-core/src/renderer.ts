@@ -62,7 +62,7 @@ import {
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
-import { createHydrateFn } from './hydration'
+import { createHydrationFunctions } from './hydration'
 
 const __HMR__ = __BUNDLER__ && __DEV__
 
@@ -186,6 +186,32 @@ export function createRenderer<
   HostNode extends object = any,
   HostElement extends HostNode = any
 >(options: RendererOptions<HostNode, HostElement>) {
+  const res = baseCreateRenderer(options)
+  return res as typeof res & {
+    hydrate: undefined
+  }
+}
+
+// Separate API for creating hydration-enabled renderer.
+// Hydration logic is only used when calling this function, making it
+// tree-shakable.
+export function createHydrationRenderer<
+  HostNode extends object = any,
+  HostElement extends HostNode = any
+>(options: RendererOptions<HostNode, HostElement>) {
+  const res = baseCreateRenderer(options, createHydrationFunctions)
+  return res as typeof res & {
+    hydrate: ReturnType<typeof createHydrationFunctions>[0]
+  }
+}
+
+function baseCreateRenderer<
+  HostNode extends object = any,
+  HostElement extends HostNode = any
+>(
+  options: RendererOptions<HostNode, HostElement>,
+  createHydrationFns?: typeof createHydrationFunctions
+) {
   type HostVNode = VNode<HostNode, HostElement>
   type HostVNodeChildren = VNodeArrayChildren<HostNode, HostElement>
   type HostSuspenseBoundary = SuspenseBoundary<HostNode, HostElement>
@@ -213,6 +239,12 @@ export function createRenderer<
     move,
     next: getNextHostNode,
     options
+  }
+
+  let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
+  let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
+  if (createHydrationFns) {
+    ;[hydrate, hydrateNode] = createHydrationFns(mountComponent, hostPatchProp)
   }
 
   function patch(
@@ -1054,7 +1086,7 @@ export function createRenderer<
         if (instance.bm !== null) {
           invokeHooks(instance.bm)
         }
-        if (initialVNode.el) {
+        if (initialVNode.el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
           hydrateNode(initialVNode.el as Node, subTree, instance)
         } else {
@@ -1822,8 +1854,6 @@ export function createRenderer<
     flushPostFlushCbs()
     container._vnode = vnode
   }
-
-  const [hydrate, hydrateNode] = createHydrateFn(mountComponent, hostPatchProp)
 
   return {
     render,
