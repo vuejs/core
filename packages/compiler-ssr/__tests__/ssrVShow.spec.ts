@@ -6,7 +6,7 @@ describe('ssr: v-show', () => {
       "const { ssrRenderStyle: _ssrRenderStyle } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div\${_ssrRenderStyle((_ctx.foo) ? null : { display: \\"none\\" })}></div>\`)
+        _push(\`<div style=\\"\${_ssrRenderStyle((_ctx.foo) ? null : { display: \\"none\\" })}\\"></div>\`)
       }"
     `)
   })
@@ -19,10 +19,10 @@ describe('ssr: v-show', () => {
       const _hoisted_1 = {\\"color\\":\\"red\\"}
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div\${_ssrRenderStyle([
+        _push(\`<div style=\\"\${_ssrRenderStyle([
           _hoisted_1,
           (_ctx.foo) ? null : { display: \\"none\\" }
-        ])}></div>\`)
+        ])}\\"></div>\`)
       }"
     `)
   })
@@ -33,10 +33,10 @@ describe('ssr: v-show', () => {
       "const { ssrRenderStyle: _ssrRenderStyle } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div\${_ssrRenderStyle([
+        _push(\`<div style=\\"\${_ssrRenderStyle([
           { color: 'red' },
           (_ctx.foo) ? null : { display: \\"none\\" }
-        ])}></div>\`)
+        ])}\\"></div>\`)
       }"
     `)
   })
@@ -51,11 +51,11 @@ describe('ssr: v-show', () => {
       const _hoisted_1 = {\\"color\\":\\"red\\"}
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div\${_ssrRenderStyle([
+        _push(\`<div style=\\"\${_ssrRenderStyle([
           _hoisted_1,
           { fontSize: 14 },
           (_ctx.foo) ? null : { display: \\"none\\" }
-        ])}></div>\`)
+        ])}\\"></div>\`)
       }"
     `)
   })
