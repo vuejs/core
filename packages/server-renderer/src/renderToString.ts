@@ -225,7 +225,7 @@ function renderVNode(
             await Promise.all(content)
           )
 
-          return [`<!----><!---->`]
+          return []
         })()
       )
 

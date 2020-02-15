@@ -386,18 +386,16 @@ describe('ssr: renderToString', () => {
 
   test('portal', async () => {
     const ctx: SSRContext = { portals: {} }
-    expect(
-      await renderToString(
-        h(
-          Portal,
-          {
-            target: `#target`
-          },
-          h('span', 'hello')
-        ),
-        ctx
-      )
-    ).toBe(`<!----><!---->`)
+    await renderToString(
+      h(
+        Portal,
+        {
+          target: `#target`
+        },
+        h('span', 'hello')
+      ),
+      ctx
+    )
     expect(ctx.portals['#target']).toBe('<span>hello</span>')
   })
 
