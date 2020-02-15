@@ -2,8 +2,8 @@ import {
   baseParse as parse,
   transform,
   ElementNode,
-  CallExpression,
-  noopDirectiveTransform
+  noopDirectiveTransform,
+  VNodeCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 
@@ -17,10 +17,8 @@ describe('compiler: noop directive transform', () => {
       }
     })
     const node = ast.children[0] as ElementNode
-    const codegenArgs = (node.codegenNode as CallExpression).arguments
-
     // As v-noop adds no properties the codegen should be identical to
     // rendering a div with no props or reactive data (so just the tag as the arg)
-    expect(codegenArgs.length).toBe(1)
+    expect((node.codegenNode as VNodeCall).props).toBeUndefined()
   })
 })

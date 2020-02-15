@@ -1,10 +1,35 @@
 // Public API ------------------------------------------------------------------
 
 export const version = __VERSION__
-export * from './apiReactivity'
-export * from './apiWatch'
-export * from './apiLifecycle'
-export * from './apiInject'
+export {
+  ref,
+  isRef,
+  toRefs,
+  reactive,
+  isReactive,
+  readonly,
+  isReadonly,
+  shallowReactive,
+  toRaw,
+  markReadonly,
+  markNonReactive
+} from '@vue/reactivity'
+export { computed } from './apiComputed'
+export { watch } from './apiWatch'
+export {
+  onBeforeMount,
+  onMounted,
+  onBeforeUpdate,
+  onUpdated,
+  onBeforeUnmount,
+  onUnmounted,
+  onActivated,
+  onDeactivated,
+  onRenderTracked,
+  onRenderTriggered,
+  onErrorCaptured
+} from './apiLifecycle'
+export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 
@@ -23,39 +48,22 @@ export {
   openBlock,
   createBlock
 } from './vnode'
-// VNode type symbols
-export { Text, Comment, Fragment, Portal } from './vnode'
 // Internal Components
+export { Text, Comment, Fragment, Portal } from './vnode'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
   BaseTransitionProps
 } from './components/BaseTransition'
-// VNode flags
-export { PublicShapeFlags as ShapeFlags } from './shapeFlags'
-import { PublicPatchFlags } from '@vue/shared'
-export const PatchFlags = PublicPatchFlags as {
-  // export patch flags as plain numbers to avoid d.ts relying on @vue/shared
-  // the enum type is internal anyway.
-  TEXT: number
-  CLASS: number
-  STYLE: number
-  PROPS: number
-  NEED_PATCH: number
-  FULL_PROPS: number
-  STABLE_FRAGMENT: number
-  KEYED_FRAGMENT: number
-  UNKEYED_FRAGMENT: number
-  DYNAMIC_SLOTS: number
-  BAIL: number
-}
 
 // SFC CSS Modules
 export { useCSSModule } from './helpers/useCssModule'
 
+// Internal API ----------------------------------------------------------------
+
 // For custom renderers
-export { createRenderer, RootRenderFunction } from './renderer'
+export { createRenderer, createHydrationRenderer } from './renderer'
 export { warn } from './warning'
 export {
   handleError,
@@ -64,13 +72,9 @@ export {
 } from './errorHandling'
 export {
   useTransitionState,
-  TransitionState,
   resolveTransitionHooks,
-  setTransitionHooks,
-  TransitionHooks
+  setTransitionHooks
 } from './components/BaseTransition'
-
-// Internal API ----------------------------------------------------------------
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
@@ -85,7 +89,12 @@ export { toHandlers } from './helpers/toHandlers'
 export { renderSlot } from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
 export { pushScopeId, popScopeId, withScopeId } from './helpers/scopeId'
-export { setBlockTracking, createTextVNode, createCommentVNode } from './vnode'
+export {
+  setBlockTracking,
+  createTextVNode,
+  createCommentVNode,
+  createStaticVNode
+} from './vnode'
 // Since @vue/shared is inlined into final builds,
 // when re-exporting from @vue/shared we need to avoid relying on their original
 // types so that the bundled d.ts does not attempt to import from it.
@@ -100,6 +109,7 @@ export const camelize = _camelize as (s: string) => string
 export { registerRuntimeCompiler } from './component'
 
 // SSR -------------------------------------------------------------------------
+
 import { createComponentInstance, setupComponent } from './component'
 import {
   renderComponentRoot,
@@ -121,6 +131,26 @@ export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // Types -----------------------------------------------------------------------
 
+export {
+  ReactiveEffect,
+  ReactiveEffectOptions,
+  DebuggerEvent,
+  TrackOpTypes,
+  TriggerOpTypes,
+  Ref,
+  ComputedRef,
+  UnwrapRef,
+  WritableComputedOptions
+} from '@vue/reactivity'
+export {
+  // types
+  WatchOptions,
+  WatchCallback,
+  CleanupRegistrator,
+  WatchSource,
+  StopHandle
+} from './apiWatch'
+export { InjectionKey } from './apiInject'
 export {
   App,
   AppConfig,
@@ -148,9 +178,14 @@ export {
   ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
 } from './apiOptions'
-
 export { ComponentPublicInstance } from './componentProxy'
-export { RendererOptions } from './renderer'
+export {
+  Renderer,
+  HydrationRenderer,
+  RendererOptions,
+  RootRenderFunction
+} from './renderer'
+export { RootHydrateFunction } from './hydration'
 export { Slot, Slots } from './componentSlots'
 export {
   Prop,
@@ -167,4 +202,5 @@ export {
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
+export { TransitionState, TransitionHooks } from './components/BaseTransition'
 export { HMRRuntime } from './hmr'

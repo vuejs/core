@@ -10,9 +10,8 @@ import {
   Comment,
   cloneVNode
 } from './vnode'
-import { ShapeFlags } from './shapeFlags'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, EMPTY_OBJ } from '@vue/shared'
+import { PatchFlags, ShapeFlags, EMPTY_OBJ } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
@@ -46,7 +45,9 @@ export function renderComponentRoot(
     props,
     slots,
     attrs,
-    emit
+    vnodeHooks,
+    emit,
+    renderCache
   } = instance
 
   let result
@@ -56,7 +57,12 @@ export function renderComponentRoot(
   }
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      result = normalizeVNode(instance.render!.call(withProxy || proxy))
+      // withProxy is a proxy with a diffrent `has` trap only for
+      // runtime-compiled render functions using `with` block.
+      const proxyToUse = withProxy || proxy
+      result = normalizeVNode(
+        instance.render!.call(proxyToUse, proxyToUse, renderCache)
+      )
     } else {
       // functional
       const render = Component as FunctionalComponent
@@ -92,14 +98,23 @@ export function renderComponentRoot(
       }
     }
 
+    // inherit vnode hooks
+    if (vnodeHooks !== EMPTY_OBJ) {
+      result = cloneVNode(result, vnodeHooks)
+    }
+    // inherit directives
+    if (vnode.dirs != null) {
+      if (__DEV__ && !isElementRoot(result)) {
+        warn(
+          `Runtime directive used on component with non-element root node. ` +
+            `The directives will not function as intended.`
+        )
+      }
+      result.dirs = vnode.dirs
+    }
     // inherit transition data
     if (vnode.transition != null) {
-      if (
-        __DEV__ &&
-        !(result.shapeFlag & ShapeFlags.COMPONENT) &&
-        !(result.shapeFlag & ShapeFlags.ELEMENT) &&
-        result.type !== Comment
-      ) {
+      if (__DEV__ && !isElementRoot(result)) {
         warn(
           `Component inside <Transition> renders non-element root node ` +
             `that cannot be animated.`
@@ -113,6 +128,14 @@ export function renderComponentRoot(
   }
   currentRenderingInstance = null
   return result
+}
+
+function isElementRoot(vnode: VNode) {
+  return (
+    vnode.shapeFlag & ShapeFlags.COMPONENT ||
+    vnode.shapeFlag & ShapeFlags.ELEMENT ||
+    vnode.type === Comment // potential v-if branch switch
+  )
 }
 
 export function shouldUpdateComponent(
@@ -137,6 +160,11 @@ export function shouldUpdateComponent(
     return true
   }
 
+  // force child update on runtime directive usage on component vnode.
+  if (nextVNode.dirs != null) {
+    return true
+  }
+
   if (patchFlag > 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
@@ -146,12 +174,20 @@ export function shouldUpdateComponent(
     if (patchFlag & PatchFlags.FULL_PROPS) {
       // presence of this flag indicates props are always non-null
       return hasPropsChanged(prevProps!, nextProps!)
-    } else if (patchFlag & PatchFlags.PROPS) {
-      const dynamicProps = nextVNode.dynamicProps!
-      for (let i = 0; i < dynamicProps.length; i++) {
-        const key = dynamicProps[i]
-        if (nextProps![key] !== prevProps![key]) {
-          return true
+    } else {
+      if (patchFlag & PatchFlags.CLASS) {
+        return prevProps!.class === nextProps!.class
+      }
+      if (patchFlag & PatchFlags.STYLE) {
+        return hasPropsChanged(prevProps!.style, nextProps!.style)
+      }
+      if (patchFlag & PatchFlags.PROPS) {
+        const dynamicProps = nextVNode.dynamicProps!
+        for (let i = 0; i < dynamicProps.length; i++) {
+          const key = dynamicProps[i]
+          if (nextProps![key] !== prevProps![key]) {
+            return true
+          }
         }
       }
     }
@@ -174,6 +210,7 @@ export function shouldUpdateComponent(
     }
     return hasPropsChanged(prevProps, nextProps)
   }
+
   return false
 }
 

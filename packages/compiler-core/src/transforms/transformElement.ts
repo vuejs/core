@@ -14,23 +14,22 @@ import {
   createSimpleExpression,
   createObjectExpression,
   Property,
-  createSequenceExpression,
-  ComponentNode
+  ComponentNode,
+  VNodeCall,
+  TemplateTextChildNode,
+  DirectiveArguments,
+  createVNodeCall
 } from '../ast'
-import { PatchFlags, PatchFlagNames, isSymbol } from '@vue/shared'
+import { PatchFlags, PatchFlagNames, isSymbol, isOn } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
-  CREATE_VNODE,
-  WITH_DIRECTIVES,
   RESOLVE_DIRECTIVE,
   RESOLVE_COMPONENT,
   RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
   TO_HANDLERS,
   PORTAL,
-  KEEP_ALIVE,
-  OPEN_BLOCK,
-  CREATE_BLOCK
+  KEEP_ALIVE
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -63,61 +62,75 @@ export const transformElement: NodeTransform = (node, context) => {
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
+    // The goal of the transform is to create a codegenNode implementing the
+    // VNodeCall interface.
+    const vnodeTag = isComponent
+      ? resolveComponentType(node as ComponentNode, context)
+      : `"${tag}"`
+
+    let vnodeProps: VNodeCall['props']
+    let vnodeChildren: VNodeCall['children']
+    let vnodePatchFlag: VNodeCall['patchFlag']
+    let patchFlag: number = 0
+    let vnodeDynamicProps: VNodeCall['dynamicProps']
+    let dynamicPropNames: string[] | undefined
+    let vnodeDirectives: VNodeCall['directives']
+
     // <svg> and <foreignObject> must be forced into blocks so that block
     // updates inside get proper isSVG flag at runtime. (#639, #643)
     // This is technically web-specific, but splitting the logic out of core
     // leads to too much unnecessary complexity.
-    const shouldUseBlock =
+    let shouldUseBlock =
       !isComponent && (tag === 'svg' || tag === 'foreignObject')
 
-    const nodeType = isComponent
-      ? resolveComponentType(node as ComponentNode, context)
-      : `"${tag}"`
-
-    const args: CallExpression['arguments'] = [nodeType]
-
-    let hasProps = props.length > 0
-    let patchFlag: number = 0
-    let runtimeDirectives: DirectiveNode[] | undefined
-    let dynamicPropNames: string[] | undefined
-
     // props
-    if (hasProps) {
+    if (props.length > 0) {
       const propsBuildResult = buildProps(node, context)
+      vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
-      runtimeDirectives = propsBuildResult.directives
-      if (!propsBuildResult.props) {
-        hasProps = false
-      } else {
-        args.push(propsBuildResult.props)
-      }
+      const directives = propsBuildResult.directives
+      vnodeDirectives =
+        directives && directives.length
+          ? (createArrayExpression(
+              directives.map(dir => buildDirectiveArgs(dir, context))
+            ) as DirectiveArguments)
+          : undefined
     }
 
     // children
-    const hasChildren = node.children.length > 0
-    if (hasChildren) {
-      if (!hasProps) {
-        args.push(`null`)
+    if (node.children.length > 0) {
+      if (vnodeTag === KEEP_ALIVE) {
+        // Although a built-in component, we compile KeepAlive with raw children
+        // instead of slot functions so that it can be used inside Transition
+        // or other Transition-wrapping HOCs.
+        // To ensure correct updates with block optimizations, we need to:
+        // 1. Force keep-alive into a block. This avoids its children being
+        //    collected by a parent block.
+        shouldUseBlock = true
+        // 2. Force keep-alive to always be updated, since it uses raw children.
+        patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        if (__DEV__ && node.children.length > 1) {
+          context.onError(
+            createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
+              start: node.children[0].loc.start,
+              end: node.children[node.children.length - 1].loc.end,
+              source: ''
+            })
+          )
+        }
       }
 
-      if (__DEV__ && nodeType === KEEP_ALIVE && node.children.length > 1) {
-        context.onError(
-          createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
-            start: node.children[0].loc.start,
-            end: node.children[node.children.length - 1].loc.end,
-            source: ''
-          })
-        )
-      }
+      const shouldBuildAsSlots =
+        isComponent &&
+        // Portal is not a real component has dedicated handling in the renderer
+        vnodeTag !== PORTAL &&
+        // explained above.
+        vnodeTag !== KEEP_ALIVE
 
-      // Portal & KeepAlive should have normal children instead of slots
-      // Portal is not a real component has dedicated handling in the renderer
-      // KeepAlive should not track its own deps so that it can be used inside
-      // Transition
-      if (isComponent && nodeType !== PORTAL && nodeType !== KEEP_ALIVE) {
+      if (shouldBuildAsSlots) {
         const { slots, hasDynamicSlots } = buildSlots(node, context)
-        args.push(slots)
+        vnodeChildren = slots
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
@@ -134,60 +147,50 @@ export const transformElement: NodeTransform = (node, context) => {
         // pass directly if the only child is a text node
         // (plain / interpolation / expression)
         if (hasDynamicTextChild || type === NodeTypes.TEXT) {
-          args.push(child)
+          vnodeChildren = child as TemplateTextChildNode
         } else {
-          args.push(node.children)
+          vnodeChildren = node.children
         }
       } else {
-        args.push(node.children)
+        vnodeChildren = node.children
       }
     }
 
     // patchFlag & dynamicPropNames
     if (patchFlag !== 0) {
-      if (!hasChildren) {
-        if (!hasProps) {
-          args.push(`null`)
-        }
-        args.push(`null`)
-      }
       if (__DEV__) {
-        const flagNames = Object.keys(PatchFlagNames)
-          .map(Number)
-          .filter(n => n > 0 && patchFlag & n)
-          .map(n => PatchFlagNames[n])
-          .join(`, `)
-        args.push(patchFlag + ` /* ${flagNames} */`)
+        if (patchFlag < 0) {
+          // special flags (negative and mutually exclusive)
+          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+        } else {
+          // bitwise flags
+          const flagNames = Object.keys(PatchFlagNames)
+            .map(Number)
+            .filter(n => n > 0 && patchFlag & n)
+            .map(n => PatchFlagNames[n])
+            .join(`, `)
+          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
+        }
       } else {
-        args.push(patchFlag + '')
+        vnodePatchFlag = String(patchFlag)
       }
       if (dynamicPropNames && dynamicPropNames.length) {
-        args.push(stringifyDynamicPropNames(dynamicPropNames))
+        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
       }
     }
 
-    const { loc } = node
-    const vnode = shouldUseBlock
-      ? createSequenceExpression([
-          createCallExpression(context.helper(OPEN_BLOCK)),
-          createCallExpression(context.helper(CREATE_BLOCK), args, loc)
-        ])
-      : createCallExpression(context.helper(CREATE_VNODE), args, loc)
-    if (runtimeDirectives && runtimeDirectives.length) {
-      node.codegenNode = createCallExpression(
-        context.helper(WITH_DIRECTIVES),
-        [
-          vnode,
-          createArrayExpression(
-            runtimeDirectives.map(dir => buildDirectiveArgs(dir, context)),
-            loc
-          )
-        ],
-        loc
-      )
-    } else {
-      node.codegenNode = vnode
-    }
+    node.codegenNode = createVNodeCall(
+      context,
+      vnodeTag,
+      vnodeProps,
+      vnodeChildren,
+      vnodePatchFlag,
+      vnodeDynamicProps,
+      vnodeDirectives,
+      shouldUseBlock,
+      false /* isForBlock */,
+      node.loc
+    )
   }
 }
 
@@ -259,27 +262,40 @@ export function buildProps(
   let hasRef = false
   let hasClassBinding = false
   let hasStyleBinding = false
+  let hasHydrationEventBinding = false
   let hasDynamicKeys = false
   const dynamicPropNames: string[] = []
 
   const analyzePatchFlag = ({ key, value }: Property) => {
     if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+      const name = key.content
+      if (
+        !isComponent &&
+        isOn(name) &&
+        // omit the flag for click handlers becaues hydration gives click
+        // dedicated fast path.
+        name.toLowerCase() !== 'onclick' &&
+        // omit v-model handlers
+        name !== 'onUpdate:modelValue'
+      ) {
+        hasHydrationEventBinding = true
+      }
       if (
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
           isStaticNode(value))
       ) {
+        // skip if the prop is a cached handler or has constant value
         return
       }
-      const name = key.content
       if (name === 'ref') {
         hasRef = true
       } else if (name === 'class') {
         hasClassBinding = true
       } else if (name === 'style') {
         hasStyleBinding = true
-      } else if (name !== 'key') {
+      } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
         dynamicPropNames.push(name)
       }
     } else {
@@ -433,8 +449,14 @@ export function buildProps(
     if (dynamicPropNames.length) {
       patchFlag |= PatchFlags.PROPS
     }
+    if (hasHydrationEventBinding) {
+      patchFlag |= PatchFlags.HYDRATE_EVENTS
+    }
   }
-  if (patchFlag === 0 && (hasRef || runtimeDirectives.length > 0)) {
+  if (
+    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
+    (hasRef || runtimeDirectives.length > 0)
+  ) {
     patchFlag |= PatchFlags.NEED_PATCH
   }
 

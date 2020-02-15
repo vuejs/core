@@ -61,7 +61,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -86,7 +86,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -124,7 +124,7 @@ describe('ssr: components', () => {
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)
@@ -142,7 +142,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -174,7 +174,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _compiled: true }, [
+          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             _renderList(_ctx.names, (key) => {
               return {
                 name: key,
@@ -209,7 +209,7 @@ describe('ssr: components', () => {
         </template>
       </foo>`).code
       ).toMatchInlineSnapshot(`
-        "const { resolveComponent: _resolveComponent, renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
+        "const { resolveComponent: _resolveComponent, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {
@@ -229,13 +229,13 @@ describe('ssr: components', () => {
                 }
               } else {
                 return [
-                  (_openBlock(), (_ctx.ok)
-                    ? _createBlock(\\"div\\", { key: 0 }, [
-                        (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+                  (_ctx.ok)
+                    ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, [
+                        (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
                           return (_openBlock(), _createBlock(\\"span\\"))
                         }), 256 /* UNKEYED_FRAGMENT */))
-                      ])
-                    : _createCommentVNode(\\"v-if\\", true))
+                      ]))
+                    : _createCommentVNode(\\"v-if\\", true)
                 ]
               }
             },
@@ -252,17 +252,17 @@ describe('ssr: components', () => {
                 }
               } else {
                 return [
-                  (_openBlock(), ok
-                    ? _createBlock(\\"div\\", { key: 0 }, [
-                        (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (i) => {
+                  ok
+                    ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }, [
+                        (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (i) => {
                           return (_openBlock(), _createBlock(\\"span\\"))
                         }), 256 /* UNKEYED_FRAGMENT */))
-                      ])
-                    : _createCommentVNode(\\"v-if\\", true))
+                      ]))
+                    : _createCommentVNode(\\"v-if\\", true)
                 ]
               }
             },
-            _compiled: true
+            _: 1
           }, _parent))
         }"
       `)

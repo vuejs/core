@@ -8,7 +8,7 @@ import {
   createCompoundExpression,
   SimpleExpressionNode
 } from '../ast'
-import { capitalize } from '@vue/shared'
+import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
@@ -38,11 +38,12 @@ export const transformOn: DirectiveTransform = (
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
-      eventName = createSimpleExpression(
-        `on${capitalize(arg.content)}`,
-        true,
-        arg.loc
-      )
+      const rawName = arg.content
+      // for @vnode-xxx event listeners, auto convert it to camelCase
+      const normalizedName = rawName.startsWith(`vnode`)
+        ? capitalize(camelize(rawName))
+        : capitalize(rawName)
+      eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
       eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }

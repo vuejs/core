@@ -15,7 +15,6 @@ import {
   CompoundExpressionNode,
   SimpleExpressionNode,
   FunctionExpression,
-  SequenceExpression,
   ConditionalExpression,
   CacheExpression,
   locStub,
@@ -23,7 +22,8 @@ import {
   TemplateLiteral,
   IfStatement,
   AssignmentExpression,
-  ReturnStatement
+  ReturnStatement,
+  VNodeCall
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -45,7 +45,11 @@ import {
   CREATE_TEXT,
   PUSH_SCOPE_ID,
   POP_SCOPE_ID,
-  WITH_SCOPE_ID
+  WITH_SCOPE_ID,
+  WITH_DIRECTIVES,
+  CREATE_BLOCK,
+  OPEN_BLOCK,
+  CREATE_STATIC
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -199,14 +203,14 @@ export function generate(
     push(`const render = _withId(`)
   }
   if (!ssr) {
-    push(`function render() {`)
+    push(`function render(_ctx, _cache) {`)
   } else {
     push(`function ssrRender(_ctx, _push, _parent) {`)
   }
   indent()
 
   if (useWithBlock) {
-    push(`with (this) {`)
+    push(`with (_ctx) {`)
     indent()
     // function mode const declarations should be inside with block
     // also they should be renamed to avoid collision with user properties
@@ -216,20 +220,9 @@ export function generate(
           .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
           .join(', ')} } = _Vue`
       )
-      if (ast.cached > 0) {
-        newline()
-        push(`const _cache = $cache`)
-      }
       push(`\n`)
       newline()
     }
-  } else if (!__BROWSER__ && !ssr) {
-    push(`const _ctx = this`)
-    if (ast.cached > 0) {
-      newline()
-      push(`const _cache = _ctx.$cache`)
-    }
-    newline()
   }
 
   // generate asset resolution statements
@@ -317,7 +310,12 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
       // has check cost, but hoists are lifted out of the function - we need
       // to provide the helper here.
       if (ast.hoists.length) {
-        const staticHelpers = [CREATE_VNODE, CREATE_COMMENT, CREATE_TEXT]
+        const staticHelpers = [
+          CREATE_VNODE,
+          CREATE_COMMENT,
+          CREATE_TEXT,
+          CREATE_STATIC
+        ]
           .filter(helper => ast.helpers.includes(helper))
           .map(aliasHelper)
           .join(', ')
@@ -558,6 +556,10 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.COMMENT:
       genComment(node, context)
       break
+    case NodeTypes.VNODE_CALL:
+      genVNodeCall(node, context)
+      break
+
     case NodeTypes.JS_CALL_EXPRESSION:
       genCallExpression(node, context)
       break
@@ -569,9 +571,6 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
     case NodeTypes.JS_FUNCTION_EXPRESSION:
       genFunctionExpression(node, context)
-      break
-    case NodeTypes.JS_SEQUENCE_EXPRESSION:
-      genSequenceExpression(node, context)
       break
     case NodeTypes.JS_CONDITIONAL_EXPRESSION:
       genConditionalExpression(node, context)
@@ -598,6 +597,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       break
 
     /* istanbul ignore next */
+    case NodeTypes.IF_BRANCH:
+      // noop
+      break
     default:
       if (__DEV__) {
         assert(false, `unhandled codegen node type: ${(node as any).type}`)
@@ -666,6 +668,48 @@ function genComment(node: CommentNode, context: CodegenContext) {
     const { push, helper } = context
     push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
   }
+}
+
+function genVNodeCall(node: VNodeCall, context: CodegenContext) {
+  const { push, helper } = context
+  const {
+    tag,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    directives,
+    isBlock,
+    isForBlock
+  } = node
+  if (directives) {
+    push(helper(WITH_DIRECTIVES) + `(`)
+  }
+  if (isBlock) {
+    push(`(${helper(OPEN_BLOCK)}(${isForBlock ? `true` : ``}), `)
+  }
+  push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
+  genNodeList(
+    genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
+    context
+  )
+  push(`)`)
+  if (isBlock) {
+    push(`)`)
+  }
+  if (directives) {
+    push(`, `)
+    genNode(directives, context)
+    push(`)`)
+  }
+}
+
+function genNullableArgs(args: any[]): CallExpression['arguments'] {
+  let i = args.length
+  while (i--) {
+    if (args[i] != null) break
+  }
+  return args.slice(0, i + 1).map(arg => arg || `null`)
 }
 
 // JavaScript
@@ -791,15 +835,6 @@ function genConditionalExpression(
     context.indentLevel--
   }
   needNewline && deindent(true /* without newline */)
-}
-
-function genSequenceExpression(
-  node: SequenceExpression,
-  context: CodegenContext
-) {
-  context.push(`(`)
-  genNodeList(node.expressions, context)
-  context.push(`)`)
 }
 
 function genCacheExpression(node: CacheExpression, context: CodegenContext) {

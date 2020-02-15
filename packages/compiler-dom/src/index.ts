@@ -18,6 +18,7 @@ import { transformModel } from './transforms/vModel'
 import { transformOn } from './transforms/vOn'
 import { transformShow } from './transforms/vShow'
 import { warnTransitionChildren } from './transforms/warnTransitionChildren'
+import { stringifyStatic } from './transforms/stringifyStatic'
 
 export const parserOptions = __BROWSER__
   ? parserOptionsMinimal
@@ -48,7 +49,8 @@ export function compile(
     directiveTransforms: {
       ...DOMDirectiveTransforms,
       ...(options.directiveTransforms || {})
-    }
+    },
+    transformHoist: __BROWSER__ ? null : stringifyStatic
   })
 }
 

@@ -1,9 +1,8 @@
 import { VNode, normalizeVNode, VNodeChild } from '../vnode'
-import { ShapeFlags } from '../shapeFlags'
-import { isFunction, isArray } from '@vue/shared'
+import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals, MoveType } from '../renderer'
+import { RendererInternals, MoveType, SetupRenderEffectFn } from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { handleError, ErrorCodes } from '../errorHandling'
@@ -217,14 +216,7 @@ export interface SuspenseBoundary<
   next(): HostNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: (
-      instance: ComponentInternalInstance,
-      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-      initialVNode: VNode<HostNode, HostElement>,
-      container: HostElement,
-      anchor: HostNode | null,
-      isSVG: boolean
-    ) => void
+    setupRenderEffect: SetupRenderEffectFn<HostNode, HostElement>
   ): void
   unmount(
     parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
@@ -417,13 +409,15 @@ function createSuspenseBoundary<HostNode, HostElement>(
             pushWarningContext(vnode)
           }
           handleSetupResult(instance, asyncSetupResult, suspense)
+          // unset placeholder, otherwise this will be treated as a hydration mount
+          vnode.el = null
           setupRenderEffect(
             instance,
-            suspense,
             vnode,
             // component may have been moved before resolve
             parentNode(instance.subTree.el)!,
             next(instance.subTree),
+            suspense,
             isSVG
           )
           updateHOCHostEl(instance, vnode.el)

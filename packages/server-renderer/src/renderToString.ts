@@ -9,20 +9,25 @@ import {
   Comment,
   Fragment,
   Portal,
-  ShapeFlags,
   ssrUtils,
-  Slots
+  Slots,
+  warn
 } from 'vue'
 import {
+  ShapeFlags,
   isString,
   isPromise,
   isArray,
   isFunction,
   isVoidTag,
-  escapeHtml
+  escapeHtml,
+  NO,
+  generateCodeFrame
 } from '@vue/shared'
+import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { SSRSlots } from './helpers/ssrRenderSlot'
+import { CompilerError } from '@vue/compiler-dom'
 
 const {
   isVNode,
@@ -142,6 +147,44 @@ function renderComponentVNode(
   }
 }
 
+type SSRRenderFunction = (
+  ctx: any,
+  push: (item: any) => void,
+  parentInstance: ComponentInternalInstance
+) => void
+const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+
+function ssrCompile(
+  template: string,
+  instance: ComponentInternalInstance
+): SSRRenderFunction {
+  const cached = compileCache[template]
+  if (cached) {
+    return cached
+  }
+
+  const { code } = compile(template, {
+    isCustomElement: instance.appContext.config.isCustomElement || NO,
+    isNativeTag: instance.appContext.config.isNativeTag || NO,
+    onError(err: CompilerError) {
+      if (__DEV__) {
+        const message = `Template compilation error: ${err.message}`
+        const codeFrame =
+          err.loc &&
+          generateCodeFrame(
+            template as string,
+            err.loc.start.offset,
+            err.loc.end.offset
+          )
+        warn(codeFrame ? `${message}\n${codeFrame}` : message)
+      } else {
+        throw err
+      }
+    }
+  })
+  return (compileCache[template] = Function(code)())
+}
+
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   ctx: SSRContext = { portals: {} }
@@ -151,20 +194,23 @@ function renderComponentSubTree(
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance, ctx)
   } else {
+    if (!instance.render && !comp.ssrRender && isString(comp.template)) {
+      comp.ssrRender = ssrCompile(comp.template, instance)
+    }
+
     if (comp.ssrRender) {
       // optimized
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
       comp.ssrRender(instance.proxy, push, instance)
       setCurrentRenderingInstance(null)
-    } else if (comp.render) {
+    } else if (instance.render) {
       renderVNode(push, renderComponentRoot(instance), instance, ctx)
     } else {
-      // TODO on the fly template compilation support
       throw new Error(
         `Component ${
           comp.name ? `${comp.name} ` : ``
-        } is missing render function.`
+        } is missing template or render function.`
       )
     }
   }

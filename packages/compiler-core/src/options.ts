@@ -1,7 +1,11 @@
-import { ElementNode, Namespace } from './ast'
+import { ElementNode, Namespace, JSChildNode, PlainElementNode } from './ast'
 import { TextModes } from './parse'
 import { CompilerError } from './errors'
-import { NodeTransform, DirectiveTransform } from './transform'
+import {
+  NodeTransform,
+  DirectiveTransform,
+  TransformContext
+} from './transform'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
@@ -26,9 +30,17 @@ export interface ParserOptions {
   onError?: (error: CompilerError) => void
 }
 
+export type HoistTransform = (
+  node: PlainElementNode,
+  context: TransformContext
+) => JSChildNode
+
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
   directiveTransforms?: Record<string, DirectiveTransform | undefined>
+  // an optional hook to transform a node being hoisted.
+  // used by compiler-dom to turn hoisted nodes into stringified HTML vnodes.
+  transformHoist?: HoistTransform | null
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
   // If this option is false, the generated code will be wrapped in a

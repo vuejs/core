@@ -77,7 +77,7 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<div id="foo" :class="bar"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div id=\\"foo\\"\${_ssrRenderClass(_ctx.bar)}></div>\`"`
+        `"\`<div id=\\"foo\\" class=\\"\${_ssrRenderClass(_ctx.bar)}\\"></div>\`"`
       )
     })
 
@@ -85,7 +85,7 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<div class="foo" :class="bar"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div\${_ssrRenderClass([_ctx.bar, \\"foo\\"])}></div>\`"`
+        `"\`<div class=\\"\${_ssrRenderClass([_ctx.bar, \\"foo\\"])}\\"></div>\`"`
       )
     })
 
@@ -93,7 +93,7 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<div id="foo" :style="bar"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div id=\\"foo\\"\${_ssrRenderStyle(_ctx.bar)}></div>\`"`
+        `"\`<div id=\\"foo\\" style=\\"\${_ssrRenderStyle(_ctx.bar)}\\"></div>\`"`
       )
     })
 
@@ -101,7 +101,7 @@ describe('ssr: element', () => {
       expect(
         getCompiledString(`<div style="color:red;" :style="bar"></div>`)
       ).toMatchInlineSnapshot(
-        `"\`<div\${_ssrRenderStyle([_hoisted_1, _ctx.bar])}></div>\`"`
+        `"\`<div style=\\"\${_ssrRenderStyle([_hoisted_1, _ctx.bar])}\\"></div>\`"`
       )
     })
 

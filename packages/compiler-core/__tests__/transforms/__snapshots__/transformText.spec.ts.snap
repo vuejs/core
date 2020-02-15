@@ -3,11 +3,11 @@
 exports[`compiler: transform text <template v-for> 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createTextVNode: _createTextVNode } = _Vue
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createTextVNode: _createTextVNode } = _Vue
 
-    return (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
       return (_openBlock(), _createBlock(_Fragment, null, [
         _createTextVNode(\\"foo\\")
       ], 64 /* STABLE_FRAGMENT */))
@@ -19,8 +19,8 @@ return function render() {
 exports[`compiler: transform text consecutive text 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
+return function render(_ctx, _cache) {
+  with (_ctx) {
     const { toDisplayString: _toDisplayString } = _Vue
 
     return _toDisplayString(foo) + \\" bar \\" + _toDisplayString(baz)
@@ -31,9 +31,9 @@ return function render() {
 exports[`compiler: transform text consecutive text between elements 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -47,9 +47,9 @@ return function render() {
 exports[`compiler: transform text consecutive text mixed with elements 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -65,8 +65,8 @@ return function render() {
 exports[`compiler: transform text no consecutive text 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
+return function render(_ctx, _cache) {
+  with (_ctx) {
     const { toDisplayString: _toDisplayString } = _Vue
 
     return _toDisplayString(foo)
@@ -77,9 +77,9 @@ return function render() {
 exports[`compiler: transform text text between elements (static) 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createTextVNode: _createTextVNode, createBlock: _createBlock, Fragment: _Fragment, openBlock: _openBlock } = _Vue
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\"),
@@ -93,8 +93,7 @@ return function render() {
 exports[`compiler: transform text with prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   return _toDisplayString(_ctx.foo) + \\" bar \\" + _toDisplayString(_ctx.baz + _ctx.qux)
 }"
 `;

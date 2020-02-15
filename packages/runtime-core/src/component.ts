@@ -26,7 +26,8 @@ import {
   makeMap,
   isPromise,
   isArray,
-  hyphenate
+  hyphenate,
+  ShapeFlags
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -34,7 +35,6 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
-import { ShapeFlags } from './shapeFlags'
 
 export type Data = { [key: string]: unknown }
 
@@ -113,6 +113,7 @@ export interface ComponentInternalInstance {
   data: Data
   props: Data
   attrs: Data
+  vnodeHooks: Data
   slots: Slots
   proxy: ComponentPublicInstance | null
   // alternative proxy used only for runtime-compiled render functions using
@@ -186,6 +187,7 @@ export function createComponentInstance(
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
+    vnodeHooks: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
 
@@ -498,4 +500,12 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
     }
   }
   return __DEV__ ? Object.freeze(context) : context
+}
+
+// record effects created during a component's setup() so that they can be
+// stopped when the component unmounts
+export function recordInstanceBoundEffect(effect: ReactiveEffect) {
+  if (currentInstance) {
+    ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
+  }
 }

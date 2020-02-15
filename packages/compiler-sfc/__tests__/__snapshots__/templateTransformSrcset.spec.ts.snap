@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler sfc: transform srcset transform srcset 1`] = `
-"import { createVNode as _createVNode, createBlock as _createBlock, Fragment as _Fragment, openBlock as _openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 
 
@@ -14,8 +14,7 @@ const _hoisted_6 = _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_8 = \\"/logo.png\\" + ', ' + _imports_0 + '2x'
 
-export function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_Fragment, null, [
     _createVNode(\\"img\\", {
       src: \\"./logo.png\\",

@@ -4,9 +4,8 @@ import {
   locStub,
   Namespaces,
   ElementTypes,
-  PlainElementCodegenNode
+  VNodeCall
 } from '../src'
-import { CREATE_VNODE } from '../src/runtimeHelpers'
 import { isString, PatchFlags, PatchFlagNames, isArray } from '@vue/shared'
 
 const leadingBracketRE = /^\[/
@@ -39,7 +38,11 @@ export function createObjectMatcher(obj: Record<string, any>) {
 }
 
 export function createElementWithCodegen(
-  args: PlainElementCodegenNode['arguments']
+  tag: VNodeCall['tag'],
+  props?: VNodeCall['props'],
+  children?: VNodeCall['children'],
+  patchFlag?: VNodeCall['patchFlag'],
+  dynamicProps?: VNodeCall['dynamicProps']
 ): ElementNode {
   return {
     type: NodeTypes.ELEMENT,
@@ -51,10 +54,16 @@ export function createElementWithCodegen(
     props: [],
     children: [],
     codegenNode: {
-      type: NodeTypes.JS_CALL_EXPRESSION,
-      loc: locStub,
-      callee: CREATE_VNODE,
-      arguments: args
+      type: NodeTypes.VNODE_CALL,
+      tag,
+      props,
+      children,
+      patchFlag,
+      dynamicProps,
+      directives: undefined,
+      isBlock: false,
+      isForBlock: false,
+      loc: locStub
     }
   }
 }
