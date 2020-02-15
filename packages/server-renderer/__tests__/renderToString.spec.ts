@@ -398,7 +398,7 @@ describe('ssr: renderToString', () => {
         ctx
       )
     ).toBe(`<!----><!---->`)
-    expect(ctx.portals['#target']).toBe('<!----><span>hello</span><!---->')
+    expect(ctx.portals['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {
