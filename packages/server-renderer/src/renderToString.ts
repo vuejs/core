@@ -11,7 +11,8 @@ import {
   Portal,
   ssrUtils,
   Slots,
-  warn
+  warn,
+  createApp
 } from 'vue'
 import {
   ShapeFlags,
@@ -47,8 +48,21 @@ const {
 type SSRBuffer = SSRBufferItem[]
 type SSRBufferItem = string | ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
 type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
+
 export type PushFn = (item: SSRBufferItem) => void
+
 export type Props = Record<string, unknown>
+
+const ssrContextKey = Symbol()
+
+export type SSRContext = {
+  [key: string]: any
+  portals?: Record<string, string>
+  __portalBuffers?: Record<
+    string,
+    ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
+  >
+}
 
 function createBuffer() {
   let appendable = false
@@ -88,30 +102,33 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
   return ret
 }
 
-export interface SSRContext {
-  portals: Record<string, string>
-}
-
 export async function renderToString(
   input: App | VNode,
-  ctx: SSRContext = { portals: {} }
+  context: SSRContext = {}
 ): Promise<string> {
   let buffer: ResolvedSSRBuffer
   if (isVNode(input)) {
-    // raw vnode, wrap with component
-    buffer = await renderComponent(
-      { render: () => input },
-      null,
-      null,
-      null,
-      ctx
-    )
+    // raw vnode, wrap with app (for context)
+    return renderToString(createApp({ render: () => input }), context)
   } else {
     // rendering an app
     const vnode = createVNode(input._component, input._props)
     vnode.appContext = input._context
-    buffer = await renderComponentVNode(vnode, null, ctx)
+    // provide the ssr context to the tree
+    input.provide(ssrContextKey, context)
+    buffer = await renderComponentVNode(vnode)
   }
+
+  // resolve portals
+  if (context.__portalBuffers) {
+    context.portals = context.portals || {}
+    for (const key in context.__portalBuffers) {
+      // note: it's OK to await sequentially here because the Promises were
+      // created eagerly in parallel.
+      context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
+    }
+  }
+
   return unrollBuffer(buffer)
 }
 
@@ -119,20 +136,17 @@ export function renderComponent(
   comp: Component,
   props: Props | null = null,
   children: Slots | SSRSlots | null = null,
-  parentComponent: ComponentInternalInstance | null = null,
-  ctx: SSRContext = { portals: {} }
+  parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   return renderComponentVNode(
     createVNode(comp, props, children),
-    parentComponent,
-    ctx
+    parentComponent
   )
 }
 
 function renderComponentVNode(
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null = null,
-  ctx: SSRContext = { portals: {} }
+  parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent)
   const res = setupComponent(
@@ -141,14 +155,14 @@ function renderComponentVNode(
     true /* isSSR */
   )
   if (isPromise(res)) {
-    return res.then(() => renderComponentSubTree(instance, ctx))
+    return res.then(() => renderComponentSubTree(instance))
   } else {
-    return renderComponentSubTree(instance, ctx)
+    return renderComponentSubTree(instance)
   }
 }
 
 type SSRRenderFunction = (
-  ctx: any,
+  context: any,
   push: (item: any) => void,
   parentInstance: ComponentInternalInstance
 ) => void
@@ -186,13 +200,12 @@ function ssrCompile(
 }
 
 function renderComponentSubTree(
-  instance: ComponentInternalInstance,
-  ctx: SSRContext = { portals: {} }
+  instance: ComponentInternalInstance
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const comp = instance.type as Component
   const { buffer, push, hasAsync } = createBuffer()
   if (isFunction(comp)) {
-    renderVNode(push, renderComponentRoot(instance), instance, ctx)
+    renderVNode(push, renderComponentRoot(instance), instance)
   } else {
     if (!instance.render && !comp.ssrRender && isString(comp.template)) {
       comp.ssrRender = ssrCompile(comp.template, instance)
@@ -205,7 +218,7 @@ function renderComponentSubTree(
       comp.ssrRender(instance.proxy, push, instance)
       setCurrentRenderingInstance(null)
     } else if (instance.render) {
-      renderVNode(push, renderComponentRoot(instance), instance, ctx)
+      renderVNode(push, renderComponentRoot(instance), instance)
     } else {
       throw new Error(
         `Component ${
@@ -223,8 +236,7 @@ function renderComponentSubTree(
 function renderVNode(
   push: PushFn,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null = null,
-  ctx: SSRContext = { portals: {} }
+  parentComponent: ComponentInternalInstance
 ) {
   const { type, shapeFlag, children } = vnode
   switch (type) {
@@ -236,51 +248,17 @@ function renderVNode(
       break
     case Fragment:
       push(`<!---->`)
-      renderVNodeChildren(
-        push,
-        children as VNodeArrayChildren,
-        parentComponent,
-        ctx
-      )
+      renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
       push(`<!---->`)
       break
     case Portal:
-      if (!vnode.props || !vnode.props.target) {
-        console.warn(`[@vue/server-renderer] Portal doesn't have target prop`)
-        break
-      }
-      if (!isString(vnode.props.target)) {
-        console.warn(
-          `[@vue/server-renderer] Portal target must be a query selector`
-        )
-        break
-      }
-
-      push(
-        (async () => {
-          const { buffer: content, push: portalPush } = createBuffer()
-
-          renderVNodeChildren(
-            portalPush,
-            children as VNodeArrayChildren,
-            parentComponent,
-            ctx
-          )
-
-          ctx.portals[vnode.props!.target] = unrollBuffer(
-            await Promise.all(content)
-          )
-
-          return []
-        })()
-      )
-
+      renderPortal(vnode, parentComponent)
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElement(push, vnode, parentComponent, ctx)
+        renderElement(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponentVNode(vnode, parentComponent, ctx))
+        push(renderComponentVNode(vnode, parentComponent))
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         // TODO
       } else {
@@ -296,19 +274,17 @@ function renderVNode(
 export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
-  parentComponent: ComponentInternalInstance | null = null,
-  ctx: SSRContext = { portals: {} }
+  parentComponent: ComponentInternalInstance
 ) {
   for (let i = 0; i < children.length; i++) {
-    renderVNode(push, normalizeVNode(children[i]), parentComponent, ctx)
+    renderVNode(push, normalizeVNode(children[i]), parentComponent)
   }
 }
 
 function renderElement(
   push: PushFn,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null = null,
-  ctx: SSRContext = { portals: {} }
+  parentComponent: ComponentInternalInstance
 ) {
   const tag = vnode.type as string
   const { props, children, shapeFlag, scopeId } = vnode
@@ -352,11 +328,42 @@ function renderElement(
         renderVNodeChildren(
           push,
           children as VNodeArrayChildren,
-          parentComponent,
-          ctx
+          parentComponent
         )
       }
     }
     push(`</${tag}>`)
   }
+}
+
+function renderPortal(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance
+) {
+  const target = vnode.props && vnode.props.target
+  if (!target) {
+    console.warn(`[@vue/server-renderer] Portal is missing target prop.`)
+    return []
+  }
+  if (!isString(target)) {
+    console.warn(
+      `[@vue/server-renderer] Portal target must be a query selector string.`
+    )
+    return []
+  }
+
+  const { buffer, push, hasAsync } = createBuffer()
+  renderVNodeChildren(
+    push,
+    vnode.children as VNodeArrayChildren,
+    parentComponent
+  )
+  const context = parentComponent.appContext.provides[
+    ssrContextKey as any
+  ] as SSRContext
+  const portalBuffers =
+    context.__portalBuffers || (context.__portalBuffers = {})
+  portalBuffers[target] = hasAsync()
+    ? Promise.all(buffer)
+    : (buffer as ResolvedSSRBuffer)
 }

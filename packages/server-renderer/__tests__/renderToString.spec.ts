@@ -514,7 +514,7 @@ describe('ssr: renderToString', () => {
   })
 
   test('portal', async () => {
-    const ctx: SSRContext = { portals: {} }
+    const ctx: SSRContext = {}
     await renderToString(
       h(
         Portal,
@@ -525,7 +525,7 @@ describe('ssr: renderToString', () => {
       ),
       ctx
     )
-    expect(ctx.portals['#target']).toBe('<span>hello</span>')
+    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {
