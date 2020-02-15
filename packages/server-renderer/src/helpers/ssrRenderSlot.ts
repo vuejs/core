@@ -16,7 +16,7 @@ export function ssrRenderSlot(
   slotProps: Props,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
-  parentComponent: ComponentInternalInstance | null = null
+  parentComponent: ComponentInternalInstance
 ) {
   const slotFn = slots[slotName]
   // template-compiled slots are always rendered as fragments
