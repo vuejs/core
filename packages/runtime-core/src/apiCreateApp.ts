@@ -217,7 +217,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       unmount() {
         if (isMounted) {
-          render(null, app._container!)
+          render(null, app._container)
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }
