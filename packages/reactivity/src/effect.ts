@@ -173,7 +173,7 @@ export function trigger(
     // schedule runs for SET | ADD | DELETE
     const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
     const iterationEffect = depsMap.get(iterationKey)
-    addRunners(effects, computedRunners, iterationEffect)
+    iterationEffect && addRunners(effects, computedRunners, iterationEffect)
 
     if (
       key !== void 0 &&
