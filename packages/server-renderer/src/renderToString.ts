@@ -177,7 +177,7 @@ function renderComponentSubTree(
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance)
   } else {
-    if (!comp.ssrRender && !comp.render && isString(comp.template)) {
+    if (!instance.render && !comp.ssrRender && isString(comp.template)) {
       comp.ssrRender = ssrCompile(comp.template, instance)
     }
 
@@ -187,7 +187,7 @@ function renderComponentSubTree(
       setCurrentRenderingInstance(instance)
       comp.ssrRender(instance.proxy, push, instance)
       setCurrentRenderingInstance(null)
-    } else if (comp.render) {
+    } else if (instance.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
     } else {
       throw new Error(

@@ -4,7 +4,9 @@ import {
   createCommentVNode,
   withScopeId,
   resolveComponent,
-  ComponentOptions
+  ComponentOptions,
+  ref,
+  defineComponent
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
@@ -39,6 +41,32 @@ describe('ssr: renderToString', () => {
               return h('div', this.msg)
             }
           })
+        )
+      ).toBe(`<div>hello</div>`)
+    })
+
+    test('option components returning render from setup', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            setup() {
+              const msg = ref('hello')
+              return () => h('div', msg.value)
+            }
+          })
+        )
+      ).toBe(`<div>hello</div>`)
+    })
+
+    test('setup components returning render from setup', async () => {
+      expect(
+        await renderToString(
+          createApp(
+            defineComponent((props: {}) => {
+              const msg = ref('hello')
+              return () => h('div', msg.value)
+            })
+          )
         )
       ).toBe(`<div>hello</div>`)
     })
