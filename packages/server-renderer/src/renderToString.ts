@@ -91,8 +91,12 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
 export async function renderToString(input: App | VNode): Promise<string> {
   let buffer: ResolvedSSRBuffer
   if (isVNode(input)) {
-    // raw vnode, wrap with component
-    buffer = await renderComponent({ render: () => input })
+    const { push, buffer: content, hasAsync } = createBuffer()
+    renderVNode(push, input)
+
+    buffer = hasAsync()
+      ? await Promise.all(content)
+      : (content as ResolvedSSRBuffer)
   } else {
     // rendering an app
     const vnode = createVNode(input._component, input._props)
