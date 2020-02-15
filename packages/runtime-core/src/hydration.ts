@@ -11,7 +11,13 @@ import { queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
-import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isReservedProp,
+  isOn,
+  isString
+} from '@vue/shared'
 import { RendererOptions, MountComponentFn } from './renderer'
 
 export type RootHydrateFunction = (
@@ -38,8 +44,6 @@ export function createHydrationFunctions(
   }
 
   // TODO handle mismatches
-  // TODO SVG
-  // TODO Suspense
   const hydrateNode = (
     node: Node,
     vnode: VNode,
@@ -62,8 +66,8 @@ export function createHydrationFunctions(
         // back anchor as expected.
         return anchor.nextSibling
       case Portal:
-        // TODO
-        break
+        hydratePortal(vnode, parentComponent)
+        return node.nextSibling
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           return hydrateElement(node as Element, vnode, parentComponent)
@@ -75,7 +79,7 @@ export function createHydrationFunctions(
           const subTree = vnode.component!.subTree
           return (subTree.anchor || subTree.el).nextSibling
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          // TODO
+          // TODO Suspense
         } else if (__DEV__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
@@ -145,6 +149,23 @@ export function createHydrationFunctions(
       node = hydrateNode(node, vnode, parentComponent)
     }
     return node
+  }
+
+  const hydratePortal = (
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null
+  ) => {
+    const targetSelector = vnode.props && vnode.props.target
+    const target = (vnode.target = isString(targetSelector)
+      ? document.querySelector(targetSelector)
+      : targetSelector)
+    if (target != null && vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      hydrateChildren(
+        target.firstChild,
+        vnode.children as VNode[],
+        parentComponent
+      )
+    }
   }
 
   return [hydrate, hydrateNode] as const
