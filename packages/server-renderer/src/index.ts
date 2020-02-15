@@ -2,7 +2,7 @@
 export { renderToString } from './renderToString'
 
 // internal runtime helpers
-export { renderComponent } from './renderToString'
+export { renderComponent as ssrRenderComponent } from './renderToString'
 export { ssrRenderSlot } from './helpers/ssrRenderSlot'
 export {
   ssrRenderClass,
