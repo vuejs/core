@@ -8,7 +8,11 @@ import {
   Portal
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
-import { renderToString, renderComponent } from '../src/renderToString'
+import {
+  renderToString,
+  renderComponent,
+  SSRContext
+} from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
 describe('ssr: renderToString', () => {
@@ -381,9 +385,7 @@ describe('ssr: renderToString', () => {
   })
 
   test('portal', async () => {
-    const trueRandom = Math.random
-    Math.random = () => 0
-
+    const ctx: SSRContext = { portals: {} }
     expect(
       await renderToString(
         h(
@@ -392,13 +394,11 @@ describe('ssr: renderToString', () => {
             target: `#target`
           },
           h('span', 'hello')
-        )
+        ),
+        ctx
       )
-    ).toBe(
-      `<!----><template id="p-0"><span>hello</span></template><script>window.addEventListener('load',()=>{document.querySelector('#target').innerHTML=document.querySelector('#p-0').innerHTML;})</script><!---->`
-    )
-
-    Math.random = trueRandom
+    ).toBe(`<!----><!---->`)
+    expect(ctx.portals['#target']).toBe('<!----><span>hello</span><!---->')
   })
 
   describe('scopeId', () => {

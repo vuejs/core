@@ -83,7 +83,19 @@ function unrollBuffer(buffer: ResolvedSSRBuffer): string {
   return ret
 }
 
-export async function renderToString(input: App | VNode): Promise<string> {
+export interface SSRContext {
+  portals: Record<string, string>
+}
+let ssrContext: SSRContext
+
+export async function renderToString(
+  input: App | VNode,
+  ctx: SSRContext = { portals: {} }
+): Promise<string> {
+  ssrContext = {
+    portals: {},
+    ...ctx
+  }
   let buffer: ResolvedSSRBuffer
   if (isVNode(input)) {
     // raw vnode, wrap with component
@@ -186,17 +198,27 @@ function renderVNode(
         )
         break
       }
-      const id = `p-${((Math.random() * 2 ** 64) | 0).toString(36)}` // ID of the portal
-      push(`<!---->`)
-      push(`<template id="${id}">`)
-      renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
-      push(`</template>`)
+
       push(
-        `<script>window.addEventListener('load',()=>{document.querySelector('${
-          vnode.props.target
-        }').innerHTML=document.querySelector('#${id}').innerHTML;})</script>`
+        (async () => {
+          const { buffer: content, push: portalPush } = createBuffer()
+
+          portalPush(`<!---->`)
+          renderVNodeChildren(
+            portalPush,
+            children as VNodeArrayChildren,
+            parentComponent
+          )
+          portalPush(`<!---->`)
+
+          ssrContext.portals[vnode.props!.target] = unrollBuffer(
+            await Promise.all(content)
+          )
+
+          return [`<!----><!---->`]
+        })()
       )
-      push(`<!---->`)
+
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
