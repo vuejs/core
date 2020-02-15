@@ -141,19 +141,18 @@ export function createAppAPI<HostNode, HostElement>(
       },
 
       mixin(mixin: ComponentOptions) {
-        if (__DEV__ && !__FEATURE_OPTIONS__) {
+        if (__FEATURE_OPTIONS__) {
+          if (!context.mixins.includes(mixin)) {
+            context.mixins.push(mixin)
+          } else if (__DEV__) {
+            warn(
+              'Mixin has already been applied to target app' +
+                (mixin.name ? `: ${mixin.name}` : '')
+            )
+          }
+        } else if (__DEV__) {
           warn('Mixins are only available in builds supporting Options API')
         }
-
-        if (!context.mixins.includes(mixin)) {
-          context.mixins.push(mixin)
-        } else if (__DEV__) {
-          warn(
-            'Mixin has already been applied to target app' +
-              (mixin.name ? `: ${mixin.name}` : '')
-          )
-        }
-
         return app
       },
 

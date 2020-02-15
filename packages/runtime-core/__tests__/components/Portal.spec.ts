@@ -12,7 +12,7 @@ import {
   TestElement,
   TestNode
 } from '@vue/runtime-test'
-import { VNodeArrayChildren } from '../src/vnode'
+import { VNodeArrayChildren } from '../../src/vnode'
 
 describe('renderer: portal', () => {
   test('should work', () => {

@@ -13,6 +13,8 @@ export interface SuspenseProps {
   onRecede?: () => void
 }
 
+export const isSuspense = (type: any): boolean => type.__isSuspense
+
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -79,8 +81,8 @@ function mountSuspense(
   rendererInternals: RendererInternals
 ) {
   const {
-    patch,
-    options: { createElement }
+    p: patch,
+    o: { createElement }
   } = rendererInternals
   const hiddenContainer = createElement('div')
   const suspense = (n2.suspense = createSuspenseBoundary(
@@ -138,7 +140,7 @@ function patchSuspense(
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
   optimized: boolean,
-  { patch }: RendererInternals
+  { p: patch }: RendererInternals
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
@@ -236,11 +238,11 @@ function createSuspenseBoundary<HostNode, HostElement>(
   rendererInternals: RendererInternals<HostNode, HostElement>
 ): SuspenseBoundary<HostNode, HostElement> {
   const {
-    patch,
-    move,
-    unmount,
-    next,
-    options: { parentNode }
+    p: patch,
+    m: move,
+    um: unmount,
+    n: next,
+    o: { parentNode }
   } = rendererInternals
 
   const suspense: SuspenseBoundary<HostNode, HostElement> = {

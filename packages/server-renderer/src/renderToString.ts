@@ -8,7 +8,6 @@ import {
   Text,
   Comment,
   Fragment,
-  Portal,
   ssrUtils,
   Slots,
   warn,
@@ -251,14 +250,13 @@ function renderVNode(
       renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
       push(`<!---->`)
       break
-    case Portal:
-      renderPortal(vnode, parentComponent)
-      break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElement(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent))
+      } else if (shapeFlag & ShapeFlags.PORTAL) {
+        renderPortal(vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         // TODO
       } else {

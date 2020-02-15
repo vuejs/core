@@ -72,9 +72,9 @@ const KeepAliveImpl = {
     const sink = instance.sink as KeepAliveSink
     const {
       renderer: {
-        move,
-        unmount: _unmount,
-        options: { createElement }
+        m: move,
+        um: _unmount,
+        o: { createElement }
       },
       parentSuspense
     } = sink

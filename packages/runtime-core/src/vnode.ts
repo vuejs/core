@@ -19,23 +19,21 @@ import {
 import { RawSlots } from './componentSlots'
 import { isReactive, Ref } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
-import { SuspenseBoundary } from './components/Suspense'
+import {
+  SuspenseImpl,
+  isSuspense,
+  SuspenseBoundary
+} from './components/Suspense'
 import { DirectiveBinding } from './directives'
-import { SuspenseImpl } from './components/Suspense'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
+import { PortalImpl, isPortal } from './components/Portal'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
   new (): {
     $props: VNodeProps
-  }
-}
-export const Portal = (Symbol(__DEV__ ? 'Portal' : undefined) as any) as {
-  __isPortal: true
-  new (): {
-    $props: VNodeProps & { target: string | object }
   }
 }
 export const Text = Symbol(__DEV__ ? 'Text' : undefined)
@@ -45,11 +43,11 @@ export const Static = Symbol(__DEV__ ? 'Static' : undefined)
 export type VNodeTypes =
   | string
   | Component
-  | typeof Fragment
-  | typeof Portal
   | typeof Text
   | typeof Static
   | typeof Comment
+  | typeof Fragment
+  | typeof PortalImpl
   | typeof SuspenseImpl
 
 export interface VNodeProps {
@@ -239,13 +237,15 @@ export function createVNode(
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
-    : __FEATURE_SUSPENSE__ && (type as any).__isSuspense === true
+    : __FEATURE_SUSPENSE__ && isSuspense(type)
       ? ShapeFlags.SUSPENSE
-      : isObject(type)
-        ? ShapeFlags.STATEFUL_COMPONENT
-        : isFunction(type)
-          ? ShapeFlags.FUNCTIONAL_COMPONENT
-          : 0
+      : isPortal(type)
+        ? ShapeFlags.PORTAL
+        : isObject(type)
+          ? ShapeFlags.STATEFUL_COMPONENT
+          : isFunction(type)
+            ? ShapeFlags.FUNCTIONAL_COMPONENT
+            : 0
 
   const vnode: VNode = {
     _isVNode: true,

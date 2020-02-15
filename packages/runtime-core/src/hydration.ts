@@ -1,12 +1,4 @@
-import {
-  VNode,
-  normalizeVNode,
-  Text,
-  Comment,
-  Static,
-  Fragment,
-  Portal
-} from './vnode'
+import { VNode, normalizeVNode, Text, Comment, Static, Fragment } from './vnode'
 import { queuePostFlushCb, flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
@@ -18,7 +10,7 @@ import {
   isOn,
   isString
 } from '@vue/shared'
-import { RendererOptions, MountComponentFn } from './renderer'
+import { RendererInternals } from './renderer'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -30,10 +22,10 @@ export type RootHydrateFunction = (
 // it out creates a ton of unnecessary complexity.
 // Hydration also depends on some renderer internal logic which needs to be
 // passed in via arguments.
-export function createHydrationFunctions(
-  mountComponent: MountComponentFn<Node, Element>,
-  patchProp: RendererOptions['patchProp']
-) {
+export function createHydrationFunctions({
+  mt: mountComponent,
+  o: { patchProp }
+}: RendererInternals<Node, Element>) {
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (__DEV__ && !container.hasChildNodes()) {
       warn(`Attempting to hydrate existing markup but container is empty.`)
@@ -65,9 +57,6 @@ export function createHydrationFunctions(
         // TODO handle potential hydration error if fragment didn't get
         // back anchor as expected.
         return anchor.nextSibling
-      case Portal:
-        hydratePortal(vnode, parentComponent)
-        return node.nextSibling
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           return hydrateElement(node as Element, vnode, parentComponent)
@@ -78,6 +67,9 @@ export function createHydrationFunctions(
           mountComponent(vnode, null, null, parentComponent, null, false)
           const subTree = vnode.component!.subTree
           return (subTree.anchor || subTree.el).nextSibling
+        } else if (shapeFlag & ShapeFlags.PORTAL) {
+          hydratePortal(vnode, parentComponent)
+          return node.nextSibling
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
           // TODO Suspense
         } else if (__DEV__) {

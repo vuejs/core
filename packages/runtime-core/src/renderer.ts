@@ -2,7 +2,6 @@ import {
   Text,
   Fragment,
   Comment,
-  Portal,
   cloneIfMounted,
   normalizeVNode,
   VNode,
@@ -59,9 +58,10 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { PortalImpl } from './components/Portal'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 
 const __HMR__ = __BUNDLER__ && __DEV__
@@ -113,13 +113,19 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
 }
 
 // An object exposing the internals of a renderer, passed to tree-shakeable
-// features so that they can be decoupled from this file.
+// features so that they can be decoupled from this file. Keys are shortened
+// to optimize bundle size.
 export interface RendererInternals<HostNode = any, HostElement = any> {
-  patch: PatchFn<HostNode, HostElement>
-  unmount: UnmountFn<HostNode, HostElement>
-  move: MoveFn<HostNode, HostElement>
-  next: NextFn<HostNode, HostElement>
-  options: RendererOptions<HostNode, HostElement>
+  p: PatchFn<HostNode, HostElement>
+  um: UnmountFn<HostNode, HostElement>
+  m: MoveFn<HostNode, HostElement>
+  mt: MountComponentFn<HostNode, HostElement>
+  mc: MountChildrenFn<HostNode, HostElement>
+  pc: PatchChildrenFn<HostNode, HostElement>
+  pbc: PatchBlockChildrenFn<HostNode, HostElement>
+  n: NextFn<HostNode, HostElement>
+  o: RendererOptions<HostNode, HostElement>
+  c: ProcessTextOrCommentFn<HostNode, HostElement>
 }
 
 // These functions are created inside a closure and therefore there types cannot
@@ -136,11 +142,35 @@ type PatchFn<HostNode, HostElement> = (
   optimized?: boolean
 ) => void
 
-type UnmountFn<HostNode, HostElement> = (
-  vnode: VNode<HostNode, HostElement>,
+type MountChildrenFn<HostNode, HostElement> = (
+  children: VNodeArrayChildren<HostNode, HostElement>,
+  container: HostElement,
+  anchor: HostNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-  doRemove?: boolean
+  isSVG: boolean,
+  optimized: boolean,
+  start?: number
+) => void
+
+type PatchChildrenFn<HostNode, HostElement> = (
+  n1: VNode<HostNode, HostElement> | null,
+  n2: VNode<HostNode, HostElement>,
+  container: HostElement,
+  anchor: HostNode | null,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  isSVG: boolean,
+  optimized?: boolean
+) => void
+
+type PatchBlockChildrenFn<HostNode, HostElement> = (
+  oldChildren: VNode<HostNode, HostElement>[],
+  newChildren: VNode<HostNode, HostElement>[],
+  fallbackContainer: HostElement,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  isSVG: boolean
 ) => void
 
 type MoveFn<HostNode, HostElement> = (
@@ -154,6 +184,13 @@ type MoveFn<HostNode, HostElement> = (
 type NextFn<HostNode, HostElement> = (
   vnode: VNode<HostNode, HostElement>
 ) => HostNode | null
+
+type UnmountFn<HostNode, HostElement> = (
+  vnode: VNode<HostNode, HostElement>,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
+  doRemove?: boolean
+) => void
 
 type UnmountChildrenFn<HostNode, HostElement> = (
   children: VNode<HostNode, HostElement>[],
@@ -170,6 +207,13 @@ export type MountComponentFn<HostNode, HostElement> = (
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
   isSVG: boolean
+) => void
+
+type ProcessTextOrCommentFn<HostNode, HostElement> = (
+  n1: VNode<HostNode, HostElement> | null,
+  n2: VNode<HostNode, HostElement>,
+  container: HostElement,
+  anchor: HostNode | null
 ) => void
 
 export type SetupRenderEffectFn<HostNode, HostElement> = (
@@ -282,7 +326,6 @@ function baseCreateRenderer<
     setElementText: hostSetElementText,
     parentNode: hostParentNode,
     nextSibling: hostNextSibling,
-    querySelector: hostQuerySelector,
     setScopeId: hostSetScopeId = NOOP,
     cloneNode: hostCloneNode,
     insertStaticContent: hostInsertStaticContent
@@ -332,18 +375,6 @@ function baseCreateRenderer<
           optimized
         )
         break
-      case Portal:
-        processPortal(
-          n1,
-          n2,
-          container,
-          anchor,
-          parentComponent,
-          parentSuspense,
-          isSVG,
-          optimized
-        )
-        break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(
@@ -367,6 +398,18 @@ function baseCreateRenderer<
             isSVG,
             optimized
           )
+        } else if (shapeFlag & ShapeFlags.PORTAL) {
+          ;(type as typeof PortalImpl).process(
+            n1,
+            n2,
+            container,
+            anchor,
+            parentComponent,
+            parentSuspense,
+            isSVG,
+            optimized,
+            internals
+          )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
           ;(type as typeof SuspenseImpl).process(
             n1,
@@ -385,11 +428,11 @@ function baseCreateRenderer<
     }
   }
 
-  const processText = (
-    n1: HostVNode | null,
-    n2: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null
+  const processText: ProcessTextOrCommentFn<HostNode, HostElement> = (
+    n1,
+    n2,
+    container,
+    anchor
   ) => {
     if (n1 == null) {
       hostInsert(
@@ -405,11 +448,11 @@ function baseCreateRenderer<
     }
   }
 
-  const processCommentNode = (
-    n1: HostVNode | null,
-    n2: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null
+  const processCommentNode: ProcessTextOrCommentFn<HostNode, HostElement> = (
+    n1,
+    n2,
+    container,
+    anchor
   ) => {
     if (n1 == null) {
       hostInsert(
@@ -552,15 +595,15 @@ function baseCreateRenderer<
     }
   }
 
-  const mountChildren = (
-    children: HostVNodeChildren,
-    container: HostElement,
-    anchor: HostNode | null,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean,
-    optimized: boolean,
-    start: number = 0
+  const mountChildren: MountChildrenFn<HostNode, HostElement> = (
+    children,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    isSVG,
+    optimized,
+    start = 0
   ) => {
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
@@ -716,13 +759,13 @@ function baseCreateRenderer<
   }
 
   // The fast path for blocks.
-  const patchBlockChildren = (
-    oldChildren: HostVNode[],
-    newChildren: HostVNode[],
-    fallbackContainer: HostElement,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean
+  const patchBlockChildren: PatchBlockChildrenFn<HostNode, HostElement> = (
+    oldChildren,
+    newChildren,
+    fallbackContainer,
+    parentComponent,
+    parentSuspense,
+    isSVG
   ) => {
     for (let i = 0; i < newChildren.length; i++) {
       const oldVNode = oldChildren[i]
@@ -881,100 +924,6 @@ function baseCreateRenderer<
         )
       }
     }
-  }
-
-  const processPortal = (
-    n1: HostVNode | null,
-    n2: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean,
-    optimized: boolean
-  ) => {
-    const targetSelector = n2.props && n2.props.target
-    const { patchFlag, shapeFlag, children } = n2
-    if (n1 == null) {
-      if (__DEV__ && isString(targetSelector) && !hostQuerySelector) {
-        warn(
-          `Current renderer does not support string target for Portals. ` +
-            `(missing querySelector renderer option)`
-        )
-      }
-      const target = (n2.target = isString(targetSelector)
-        ? hostQuerySelector!(targetSelector)
-        : targetSelector)
-      if (target != null) {
-        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-          hostSetElementText(target, children as string)
-        } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(
-            children as HostVNodeChildren,
-            target,
-            null,
-            parentComponent,
-            parentSuspense,
-            isSVG,
-            optimized
-          )
-        }
-      } else if (__DEV__) {
-        warn('Invalid Portal target on mount:', target, `(${typeof target})`)
-      }
-    } else {
-      // update content
-      const target = (n2.target = n1.target)!
-      if (patchFlag === PatchFlags.TEXT) {
-        hostSetElementText(target, children as string)
-      } else if (n2.dynamicChildren) {
-        // fast path when the portal happens to be a block root
-        patchBlockChildren(
-          n1.dynamicChildren!,
-          n2.dynamicChildren,
-          container,
-          parentComponent,
-          parentSuspense,
-          isSVG
-        )
-      } else if (!optimized) {
-        patchChildren(
-          n1,
-          n2,
-          target,
-          null,
-          parentComponent,
-          parentSuspense,
-          isSVG
-        )
-      }
-      // target changed
-      if (targetSelector !== (n1.props && n1.props.target)) {
-        const nextTarget = (n2.target = isString(targetSelector)
-          ? hostQuerySelector!(targetSelector)
-          : targetSelector)
-        if (nextTarget != null) {
-          // move content
-          if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-            hostSetElementText(target, '')
-            hostSetElementText(nextTarget, children as string)
-          } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-            for (let i = 0; i < (children as HostVNode[]).length; i++) {
-              move(
-                (children as HostVNode[])[i],
-                nextTarget,
-                null,
-                MoveType.REORDER
-              )
-            }
-          }
-        } else if (__DEV__) {
-          warn('Invalid Portal target on update:', target, `(${typeof target})`)
-        }
-      }
-    }
-    // insert an empty node as the placeholder for the portal
-    processCommentNode(n1, n2, container, anchor)
   }
 
   const processComponent = (
@@ -1222,15 +1171,15 @@ function baseCreateRenderer<
     resolveSlots(instance, nextVNode.children)
   }
 
-  const patchChildren = (
-    n1: HostVNode | null,
-    n2: HostVNode,
-    container: HostElement,
-    anchor: HostNode | null,
-    parentComponent: ComponentInternalInstance | null,
-    parentSuspense: HostSuspenseBoundary | null,
-    isSVG: boolean,
-    optimized: boolean = false
+  const patchChildren: PatchChildrenFn<HostNode, HostElement> = (
+    n1,
+    n2,
+    container,
+    anchor,
+    parentComponent,
+    parentSuspense,
+    isSVG,
+    optimized = false
   ) => {
     const c1 = n1 && n1.children
     const prevShapeFlag = n1 ? n1.shapeFlag : 0
@@ -1899,20 +1848,25 @@ function baseCreateRenderer<
   }
 
   const internals: RendererInternals<HostNode, HostElement> = {
-    patch,
-    unmount,
-    move,
-    next: getNextHostNode,
-    options
+    p: patch,
+    um: unmount,
+    m: move,
+    mt: mountComponent,
+    mc: mountChildren,
+    pc: patchChildren,
+    pbc: patchBlockChildren,
+    n: getNextHostNode,
+    c: processCommentNode,
+    o: options
   }
 
   let hydrate: ReturnType<typeof createHydrationFunctions>[0] | undefined
   let hydrateNode: ReturnType<typeof createHydrationFunctions>[1] | undefined
   if (createHydrationFns) {
-    ;[hydrate, hydrateNode] = createHydrationFns(
-      mountComponent as MountComponentFn<Node, Element>,
-      hostPatchProp
-    )
+    ;[hydrate, hydrateNode] = createHydrationFns(internals as RendererInternals<
+      Node,
+      Element
+    >)
   }
 
   return {

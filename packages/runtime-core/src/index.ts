@@ -49,7 +49,8 @@ export {
   createBlock
 } from './vnode'
 // Internal Components
-export { Text, Comment, Fragment, Portal } from './vnode'
+export { Text, Comment, Fragment } from './vnode'
+export { Portal, PortalProps } from './components/Portal'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
