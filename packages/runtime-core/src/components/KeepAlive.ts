@@ -7,7 +7,7 @@ import {
   LifecycleHooks,
   currentInstance
 } from '../component'
-import { VNode, cloneVNode, isVNode } from '../vnode'
+import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
 import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
 import { isString, isArray, ShapeFlags } from '@vue/shared'
@@ -218,7 +218,7 @@ const KeepAliveImpl = {
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
   new (): {
-    $props: KeepAliveProps
+    $props: VNodeProps & KeepAliveProps
   }
 }
 

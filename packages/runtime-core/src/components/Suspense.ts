@@ -1,4 +1,4 @@
-import { VNode, normalizeVNode, VNodeChild } from '../vnode'
+import { VNode, normalizeVNode, VNodeChild, VNodeProps } from '../vnode'
 import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
@@ -67,7 +67,7 @@ export const Suspense = ((__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as any) as {
   __isSuspense: true
-  new (): { $props: SuspenseProps }
+  new (): { $props: VNodeProps & SuspenseProps }
 }
 
 function mountSuspense(

@@ -1,7 +1,7 @@
 import { ComponentInternalInstance } from '../component'
 import { SuspenseBoundary } from './Suspense'
 import { RendererInternals, MoveType } from '../renderer'
-import { VNode, VNodeArrayChildren } from '../vnode'
+import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags, PatchFlags } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -114,5 +114,5 @@ export const PortalImpl = {
 // Force-casted public typing for h and TSX props inference
 export const Portal = (PortalImpl as any) as {
   __isPortal: true
-  new (): { $props: PortalProps }
+  new (): { $props: VNodeProps & PortalProps }
 }
