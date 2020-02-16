@@ -1,4 +1,9 @@
-import { Component, Data, validateComponentName } from './component'
+import {
+  Component,
+  Data,
+  validateComponentName,
+  PublicAPIComponent
+} from './component'
 import { ComponentOptions } from './apiOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive, validateDirectiveName } from './directives'
@@ -82,10 +87,7 @@ export function createAppContext(): AppContext {
 }
 
 export type CreateAppFunction<HostElement> = (
-  rootComponent:
-    | Component
-    // for compatibility with defineComponent() return types
-    | { new (): ComponentPublicInstance<any, any, any, any, any> },
+  rootComponent: PublicAPIComponent,
   rootProps?: Data | null
 ) => App<HostElement>
 
@@ -156,7 +158,7 @@ export function createAppAPI<HostNode, HostElement>(
         return app
       },
 
-      component(name: string, component?: Component): any {
+      component(name: string, component?: PublicAPIComponent): any {
         if (__DEV__) {
           validateComponentName(name, context.config)
         }
@@ -166,7 +168,7 @@ export function createAppAPI<HostNode, HostElement>(
         if (__DEV__ && context.components[name]) {
           warn(`Component "${name}" has already been registered in target app.`)
         }
-        context.components[name] = component
+        context.components[name] = component as Component
         return app
       },
 
