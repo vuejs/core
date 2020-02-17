@@ -1,7 +1,7 @@
 import { ComponentInternalInstance, Data, Emit } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted } from '@vue/shared'
+import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
@@ -63,7 +63,7 @@ const publicPropertiesMap: Record<
   $options: i => i.type,
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
-  $watch: i => instanceWatch.bind(i)
+  $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
 }
 
 const enum AccessTypes {
