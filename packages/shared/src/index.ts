@@ -50,7 +50,7 @@ export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
-export function isPromise<T = any>(val: unknown): val is Promise<T> {
+export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return isObject(val) && isFunction(val.then) && isFunction(val.catch)
 }
 
@@ -58,7 +58,7 @@ export const objectToString = Object.prototype.toString
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
-export function toRawType(value: unknown): string {
+export const toRawType = (value: unknown): string => {
   return toTypeString(value).slice(8, -1)
 }
 
@@ -72,7 +72,7 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted'
 )
 
-function cacheStringFunction<T extends (str: string) => string>(fn: T): T {
+const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
   return ((str: string) => {
     const hit = cache[str]
@@ -105,7 +105,7 @@ export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
 
 // for converting {{ interpolation }} values to displayed strings.
-export function toDisplayString(val: unknown): string {
+export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
