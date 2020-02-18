@@ -114,7 +114,7 @@ export interface ComponentInternalInstance {
   accessCache: Data | null
   // cache for render function values that rely on _ctx but won't need updates
   // after initialized (e.g. inline handlers)
-  renderCache: (Function | VNode)[] | null
+  renderCache: (Function | VNode)[]
 
   // assets for fast resolution
   components: Record<string, Component>
@@ -192,7 +192,7 @@ export function createComponentInstance(
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
-    renderCache: null,
+    renderCache: [],
 
     // setup context properties
     renderContext: EMPTY_OBJ,
