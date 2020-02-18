@@ -149,30 +149,24 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
+      expect(spy).toHaveReturnedWith(ctx)
     }
-
-    assertCall(spyA, 0, [1, undefined])
-    assertCall(spyB, 0, [2, undefined])
-    assertCall(spyC, 0, [{ qux: 3 }, undefined])
-    expect(spyA).toHaveReturnedWith(ctx)
-    expect(spyB).toHaveReturnedWith(ctx)
-    expect(spyC).toHaveReturnedWith(ctx)
 
     ctx.foo++
     await nextTick()
-    expect(spyA).toHaveBeenCalledTimes(2)
-    assertCall(spyA, 1, [2, 1])
+    expect(spyA).toHaveBeenCalledTimes(1)
+    assertCall(spyA, 0, [2, 1])
 
     ctx.bar++
     await nextTick()
-    expect(spyB).toHaveBeenCalledTimes(2)
-    assertCall(spyB, 1, [3, 2])
+    expect(spyB).toHaveBeenCalledTimes(1)
+    assertCall(spyB, 0, [3, 2])
 
     ctx.baz.qux++
     await nextTick()
-    expect(spyC).toHaveBeenCalledTimes(2)
+    expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
-    assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
+    assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
   test('watch array', async () => {
@@ -218,30 +212,24 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
+      expect(spy).toHaveReturnedWith(ctx)
     }
-
-    assertCall(spyA, 0, [1, undefined])
-    assertCall(spyB, 0, [2, undefined])
-    assertCall(spyC, 0, [{ qux: 3 }, undefined])
-    expect(spyA).toHaveReturnedWith(ctx)
-    expect(spyB).toHaveReturnedWith(ctx)
-    expect(spyC).toHaveReturnedWith(ctx)
 
     ctx.foo++
     await nextTick()
-    expect(spyA).toHaveBeenCalledTimes(2)
-    assertCall(spyA, 1, [2, 1])
+    expect(spyA).toHaveBeenCalledTimes(1)
+    assertCall(spyA, 0, [2, 1])
 
     ctx.bar++
     await nextTick()
-    expect(spyB).toHaveBeenCalledTimes(2)
-    assertCall(spyB, 1, [3, 2])
+    expect(spyB).toHaveBeenCalledTimes(1)
+    assertCall(spyB, 0, [3, 2])
 
     ctx.baz.qux++
     await nextTick()
-    expect(spyC).toHaveBeenCalledTimes(2)
+    expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
-    assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
+    assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
   test('provide/inject', () => {

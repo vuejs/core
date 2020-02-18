@@ -135,8 +135,7 @@ const KeepAliveImpl = {
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => matches(exclude, name))
-      },
-      { lazy: true }
+      }
     )
 
     onBeforeUnmount(() => {

@@ -47,20 +47,23 @@ type MapSources<T> = {
   [K in keyof T]: T[K] extends WatchSource<infer V> ? V : never
 }
 
-type MapOldSources<T, Lazy> = {
+type MapOldSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
-    ? Lazy extends true ? V : (V | undefined)
+    ? Immediate extends true ? (V | undefined) : V
     : never
 }
 
 export type CleanupRegistrator = (invalidate: () => void) => void
 
-export interface WatchOptions<Lazy = boolean> {
-  lazy?: Lazy
+export interface BaseWatchOptions {
   flush?: 'pre' | 'post' | 'sync'
-  deep?: boolean
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
+}
+
+export interface WatchOptions<Immediate = boolean> extends BaseWatchOptions {
+  immediate?: Immediate
+  deep?: boolean
 }
 
 export type StopHandle = () => void
@@ -73,14 +76,14 @@ const INITIAL_WATCHER_VALUE = {}
 // overload #1: simple effect
 export function watch(
   effect: WatchEffect,
-  options?: WatchOptions<false>
+  options?: BaseWatchOptions
 ): StopHandle
 
 // overload #2: single source + cb
-export function watch<T, Lazy extends Readonly<boolean> = false>(
+export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T, Lazy extends true ? T : (T | undefined)>,
-  options?: WatchOptions<Lazy>
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  options?: WatchOptions<Immediate>
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
@@ -89,11 +92,11 @@ export function watch<T, Lazy extends Readonly<boolean> = false>(
 // of all possible value types.
 export function watch<
   T extends Readonly<WatchSource<unknown>[]>,
-  Lazy extends Readonly<boolean> = false
+  Immediate extends Readonly<boolean> = false
 >(
   sources: T,
-  cb: WatchCallback<MapSources<T>, MapOldSources<T, Lazy>>,
-  options?: WatchOptions<Lazy>
+  cb: WatchCallback<MapSources<T>, MapOldSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>
 ): StopHandle
 
 // implementation
@@ -102,15 +105,11 @@ export function watch<T = any>(
   cbOrOptions?: WatchCallback<T> | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
-  if (isInSSRComponentSetup && !(options && options.flush === 'sync')) {
-    // component watchers during SSR are no-op
-    return NOOP
-  } else if (isFunction(cbOrOptions)) {
-    // effect callback as 2nd argument - this is a source watcher
+  if (isFunction(cbOrOptions)) {
+    // watch(source, cb)
     return doWatch(effectOrSource, cbOrOptions, options)
   } else {
-    // 2nd argument is either missing or an options object
-    // - this is a simple effect watcher
+    // watch(effect)
     return doWatch(effectOrSource, null, cbOrOptions)
   }
 }
@@ -118,8 +117,23 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
+  if (__DEV__ && !cb) {
+    if (immediate !== undefined) {
+      warn(
+        `watch() "immediate" option is only respected when using the ` +
+          `watch(source, callback) signature.`
+      )
+    }
+    if (deep !== undefined) {
+      warn(
+        `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback) signature.`
+      )
+    }
+  }
+
   const instance = currentInstance
   const suspense = currentSuspense
 
@@ -166,6 +180,21 @@ function doWatch(
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
+  }
+
+  // in SSR there is no need to setup an actual effect, and it should be noop
+  // unless it's eager
+  if (__NODE_JS__ && isInSSRComponentSetup) {
+    if (!cb) {
+      getter()
+    } else if (immediate) {
+      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+        getter(),
+        undefined,
+        registerCleanup
+      ])
+    }
+    return NOOP
   }
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
@@ -219,23 +248,19 @@ function doWatch(
     scheduler: applyCb ? () => scheduler(applyCb) : scheduler
   })
 
-  if (lazy && cb) {
-    oldValue = runner()
-  } else {
-    if (__DEV__ && lazy && !cb) {
-      warn(
-        `watch() lazy option is only respected when using the ` +
-          `watch(getter, callback) signature.`
-      )
-    }
-    if (applyCb) {
-      scheduler(applyCb)
+  recordInstanceBoundEffect(runner)
+
+  // initial run
+  if (applyCb) {
+    if (immediate) {
+      applyCb()
     } else {
-      scheduler(runner)
+      oldValue = runner()
     }
+  } else {
+    runner()
   }
 
-  recordInstanceBoundEffect(runner)
   return () => {
     stop(runner)
     if (instance) {
