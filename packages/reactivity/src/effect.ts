@@ -210,10 +210,16 @@ function addRunners(
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
-      if (effect.options.computed) {
-        computedRunners.add(effect)
+      if (effect !== activeEffect) {
+        if (effect.options.computed) {
+          computedRunners.add(effect)
+        } else {
+          effects.add(effect)
+        }
       } else {
-        effects.add(effect)
+        // the effect mutated its own dependency during its execution.
+        // this can be caused by operations like foo.value++
+        // do not trigger or we end in an infinite loop
       }
     })
   }
