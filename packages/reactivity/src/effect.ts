@@ -95,11 +95,13 @@ function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
   if (!effectStack.includes(effect)) {
     cleanup(effect)
     try {
+      enableTracking()
       effectStack.push(effect)
       activeEffect = effect
       return fn(...args)
     } finally {
       effectStack.pop()
+      resetTracking()
       activeEffect = effectStack[effectStack.length - 1]
     }
   }
@@ -116,13 +118,21 @@ function cleanup(effect: ReactiveEffect) {
 }
 
 let shouldTrack = true
+const trackStack: boolean[] = []
 
 export function pauseTracking() {
+  trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
-export function resumeTracking() {
+export function enableTracking() {
+  trackStack.push(shouldTrack)
   shouldTrack = true
+}
+
+export function resetTracking() {
+  const last = trackStack.pop()
+  shouldTrack = last === undefined ? true : last
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {

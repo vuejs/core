@@ -21,8 +21,11 @@ export {
 export {
   effect,
   stop,
+  trigger,
+  track,
+  enableTracking,
   pauseTracking,
-  resumeTracking,
+  resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,

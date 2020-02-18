@@ -1,5 +1,10 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
-import { ReactiveEffect, shallowReadonly } from '@vue/reactivity'
+import {
+  ReactiveEffect,
+  shallowReadonly,
+  pauseTracking,
+  resetTracking
+} from '@vue/reactivity'
 import {
   PublicInstanceProxyHandlers,
   ComponentPublicInstance,
@@ -341,12 +346,14 @@ function setupStatefulComponent(
 
     currentInstance = instance
     currentSuspense = parentSuspense
+    pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
       [propsProxy, setupContext]
     )
+    resetTracking()
     currentInstance = null
     currentSuspense = null
 
