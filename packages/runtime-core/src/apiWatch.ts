@@ -14,7 +14,8 @@ import {
   isFunction,
   isString,
   hasChanged,
-  NOOP
+  NOOP,
+  remove
 } from '@vue/shared'
 import {
   currentInstance,
@@ -264,11 +265,7 @@ function doWatch(
   return () => {
     stop(runner)
     if (instance) {
-      const effects = instance.effects!
-      const index = effects.indexOf(runner)
-      if (index > -1) {
-        effects.splice(index, 1)
-      }
+      remove(instance.effects!, runner)
     }
   }
 }
