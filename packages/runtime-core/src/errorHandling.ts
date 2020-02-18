@@ -93,10 +93,12 @@ export function callWithAsyncErrorHandling(
 }
 
 export function handleError(
-  err: Error,
+  argError: any,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes
 ) {
+  const err = toError(argError)
+
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
     let cur = instance.parent
@@ -151,4 +153,12 @@ function logError(err: Error, type: ErrorTypes, contextVNode: VNode | null) {
   } else {
     throw err
   }
+}
+
+export const toError = (val: any): Error => {
+  if (val instanceof Error) {
+    return val
+  }
+
+  return new Error(String(val))
 }
