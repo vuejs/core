@@ -24,14 +24,30 @@ describe('api: setup context', () => {
           // object exposed as-is
           object: reactive({ msg: 'bar' }),
           // primitive value exposed as-is
-          value: 'baz'
+          value: 'baz',
+          // nested ref at the end should auto-unwrap
+          nested: { ref: ref('qux') },
+          // ref with nested should auto-unwrap
+          refNested: ref({
+            nested: {
+              ref: ref('foo')
+            }
+          }),
+          // nested ref in the middle should auto-unwrap
+          refMiddleNested: {
+            nested: ref({
+              msg: 'bar'
+            })
+          }
         }
       },
       render() {
-        return `${this.ref} ${this.object.msg} ${this.value}`
+        return `${this.ref} ${this.object.msg} ${this.value} ${
+          this.nested.ref
+        } ${this.refNested.nested.ref} ${this.refMiddleNested.nested.msg}`
       }
     })
-    expect(renderToString(h(Comp))).toMatch(`foo bar baz`)
+    expect(renderToString(h(Comp))).toMatch(`foo bar baz qux foo bar`)
   })
 
   it('should support returning render function', () => {

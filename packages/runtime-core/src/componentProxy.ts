@@ -1,14 +1,26 @@
 import { ComponentInternalInstance, Data, Emit } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  hasOwn,
+  isGloballyWhitelisted,
+  NOOP,
+  isObject
+} from '@vue/shared'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions
 } from './apiOptions'
-import { UnwrapRef, ReactiveEffect, isRef, isReactive } from '@vue/reactivity'
+import {
+  UnwrapRef,
+  ReactiveEffect,
+  isRef,
+  isReactive,
+  reactive
+} from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
 import {
@@ -72,7 +84,8 @@ const enum AccessTypes {
   OTHER
 }
 
-const unwrapRef = (val: unknown) => (isRef(val) ? val.value : val)
+const unwrapRef = (val: unknown) =>
+  isRef(val) ? val.value : isObject(val) ? reactive(val) : val
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
