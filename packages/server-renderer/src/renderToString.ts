@@ -11,7 +11,8 @@ import {
   ssrUtils,
   Slots,
   warn,
-  createApp
+  createApp,
+  ssrContextKey
 } from 'vue'
 import {
   ShapeFlags,
@@ -51,8 +52,6 @@ type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
 export type PushFn = (item: SSRBufferItem) => void
 
 export type Props = Record<string, unknown>
-
-const ssrContextKey = Symbol()
 
 export type SSRContext = {
   [key: string]: any

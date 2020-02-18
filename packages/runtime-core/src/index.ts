@@ -61,6 +61,9 @@ export {
 // SFC CSS Modules
 export { useCSSModule } from './helpers/useCssModule'
 
+// SSR context
+export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
+
 // Internal API ----------------------------------------------------------------
 
 // For custom renderers
