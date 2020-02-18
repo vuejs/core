@@ -13,6 +13,7 @@
   ],
   "buildOptions": {
     "name": "Vue",
+    "isRuntimeCompileBuild": true,
     "formats": [
       "esm-bundler",
       "esm-bundler-runtime",
