@@ -184,8 +184,12 @@ export function trigger(
     if (key !== void 0) {
       addRunners(effects, computedRunners, depsMap.get(key))
     }
-    // also run for iteration key on ADD | DELETE
-    if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
+    // also run for iteration key on ADD | DELETE | Map.SET
+    if (
+      type === TriggerOpTypes.ADD ||
+      type === TriggerOpTypes.DELETE ||
+      (type === TriggerOpTypes.SET && target instanceof Map)
+    ) {
       const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
