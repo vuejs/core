@@ -56,6 +56,9 @@ export const transformOn: DirectiveTransform = (
 
   // handler processing
   let exp: ExpressionNode | undefined = dir.exp
+  if (exp && !exp.content.trim()) {
+    exp = undefined
+  }
   let isCacheable: boolean = !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
