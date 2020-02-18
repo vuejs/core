@@ -302,12 +302,12 @@ export function applyOptions(
       __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
 
       if (isFunction(opt)) {
-        renderContext[key] = computed(opt.bind(ctx))
+        renderContext[key] = computed(opt.bind(ctx, ctx))
       } else {
         const { get, set } = opt
         if (isFunction(get)) {
           renderContext[key] = computed({
-            get: get.bind(ctx),
+            get: get.bind(ctx, ctx),
             set: isFunction(set)
               ? set.bind(ctx)
               : __DEV__

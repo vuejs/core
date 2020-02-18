@@ -52,9 +52,7 @@ describe('api: options', () => {
         bar(): number {
           return this.foo + 1
         },
-        baz(): number {
-          return this.bar + 1
-        }
+        baz: (vm): number => vm.bar + 1
       },
       render() {
         return h(
