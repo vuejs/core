@@ -995,11 +995,11 @@ function isEnd(
   switch (mode) {
     case TextModes.DATA:
       if (startsWith(s, '</')) {
-        //TODO: probably bad performance
-        for (let i = ancestors.length - 1; i >= 0; --i) {
-          if (startsWithEndTagOpen(s, ancestors[i].tag)) {
-            return true
-          }
+        if (
+          ancestors.length &&
+          startsWithEndTagOpen(s, ancestors[ancestors.length - 1].tag)
+        ) {
+          return true
         }
       }
       break
