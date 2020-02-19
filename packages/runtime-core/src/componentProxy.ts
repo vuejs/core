@@ -8,7 +8,13 @@ import {
   ComputedOptions,
   MethodOptions
 } from './apiOptions'
-import { UnwrapRef, ReactiveEffect, isRef, isReactive } from '@vue/reactivity'
+import {
+  ReactiveEffect,
+  isRef,
+  isReactive,
+  Ref,
+  ComputedRef
+} from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
 import {
@@ -19,9 +25,9 @@ import {
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
-  P = {},
-  B = {},
-  D = {},
+  P = {}, // props type extracted from props option
+  B = {}, // raw bindings returned from setup()
+  D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   PublicProps = P
@@ -40,10 +46,16 @@ export type ComponentPublicInstance<
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
 } & P &
-  UnwrapRef<B> &
+  UnwrapSetupBindings<B> &
   D &
   ExtractComputedReturns<C> &
   M
+
+type UnwrapSetupBindings<B> = { [K in keyof B]: UnwrapBinding<B[K]> }
+
+type UnwrapBinding<B> = B extends ComputedRef<any>
+  ? B extends ComputedRef<infer V> ? V : B
+  : B extends Ref<infer V> ? V : B
 
 const publicPropertiesMap: Record<
   string,
