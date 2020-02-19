@@ -82,7 +82,7 @@ function createConfig(format, output, plugins = []) {
   const isRawESMBuild = format === 'esm'
   const isNodeBuild = format === 'cjs'
   const isBundlerESMBuild = /esm-bundler/.test(format)
-  const isRuntimeCompileBuild = /vue\./.test(output.file)
+  const isRuntimeCompileBuild = packageOptions.isRuntimeCompileBuild
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
