@@ -161,10 +161,7 @@ export function createTransformContext(
       return name
     },
     helperString(name) {
-      return (
-        (context.prefixIdentifiers ? `` : `_`) +
-        helperNameMap[context.helper(name)]
-      )
+      return `_${helperNameMap[context.helper(name)]}`
     },
     replaceNode(node) {
       /* istanbul ignore if */

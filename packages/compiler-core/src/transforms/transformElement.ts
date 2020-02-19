@@ -517,7 +517,6 @@ function buildDirectiveArgs(
   const dirArgs: ArrayExpression['elements'] = []
   const runtime = directiveImportMap.get(dir)
   if (runtime) {
-    context.helper(runtime)
     dirArgs.push(context.helperString(runtime))
   } else {
     // inject statement for resolving directive
