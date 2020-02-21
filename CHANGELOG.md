@@ -40,7 +40,7 @@
 
 ### Code Refactoring
 
-* **watch:** adjsut watch API behavior ([9571ede](https://github.com/vuejs/vue-next/commit/9571ede84bb6949e13c25807cc8f016ace29dc8a))
+* **watch:** adjust watch API behavior ([9571ede](https://github.com/vuejs/vue-next/commit/9571ede84bb6949e13c25807cc8f016ace29dc8a))
 
 
 ### Features
