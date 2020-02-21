@@ -54,6 +54,8 @@ export function ssrRenderDynamicAttr(
       : propsToAttrMap[key] || key.toLowerCase()
   if (isBooleanAttr(attrKey)) {
     return value === false ? `` : ` ${attrKey}`
+  } else if (value === '') {
+    return ` ${attrKey}`
   } else if (isSSRSafeAttrName(attrKey)) {
     return ` ${attrKey}="${escapeHtml(value)}"`
   } else {

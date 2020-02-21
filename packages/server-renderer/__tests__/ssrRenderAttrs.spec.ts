@@ -26,6 +26,14 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` id="foo" title="bar"`)
   })
 
+  test('empty value attrs', () => {
+    expect(
+      ssrRenderAttrs({
+        'data-v-abc': ''
+      })
+    ).toBe(` data-v-abc`)
+  })
+
   test('escape attrs', () => {
     expect(
       ssrRenderAttrs({
