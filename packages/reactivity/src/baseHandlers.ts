@@ -91,20 +91,10 @@ function createSetter(isReadonly = false, shallow = false) {
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
-      /* istanbul ignore else */
-      if (__DEV__) {
-        const extraInfo = { oldValue, newValue: value }
-        if (!hadKey) {
-          trigger(target, TriggerOpTypes.ADD, key, extraInfo)
-        } else if (hasChanged(value, oldValue)) {
-          trigger(target, TriggerOpTypes.SET, key, extraInfo)
-        }
-      } else {
-        if (!hadKey) {
-          trigger(target, TriggerOpTypes.ADD, key)
-        } else if (hasChanged(value, oldValue)) {
-          trigger(target, TriggerOpTypes.SET, key)
-        }
+      if (!hadKey) {
+        trigger(target, TriggerOpTypes.ADD, key, value)
+      } else if (hasChanged(value, oldValue)) {
+        trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
     return result
@@ -116,12 +106,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   const oldValue = (target as any)[key]
   const result = Reflect.deleteProperty(target, key)
   if (result && hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, TriggerOpTypes.DELETE, key, { oldValue })
-    } else {
-      trigger(target, TriggerOpTypes.DELETE, key)
-    }
+    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
 }

@@ -165,7 +165,9 @@ export function trigger(
   target: object,
   type: TriggerOpTypes,
   key?: unknown,
-  extraInfo?: DebuggerEventExtraInfo
+  newValue?: unknown,
+  oldValue?: unknown,
+  oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
   const depsMap = targetMap.get(target)
   if (depsMap === void 0) {
@@ -174,7 +176,12 @@ export function trigger(
   }
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  if (type === TriggerOpTypes.CLEAR || (key === 'length' && isArray(target))) {
+  if (
+    type === TriggerOpTypes.CLEAR ||
+    (key === 'length' &&
+      isArray(target) &&
+      (newValue as number) < (oldValue as number))
+  ) {
     // collection being cleared or Array length mutation
     // trigger all effects for target
     depsMap.forEach(dep => {
@@ -196,7 +203,19 @@ export function trigger(
     }
   }
   const run = (effect: ReactiveEffect) => {
-    scheduleRun(effect, target, type, key, extraInfo)
+    scheduleRun(
+      effect,
+      target,
+      type,
+      key,
+      __DEV__
+        ? {
+            newValue,
+            oldValue,
+            oldTarget
+          }
+        : undefined
+    )
   }
   // Important: computed effects must be run first so that computed getters
   // can be invalidated before any normal effects that depend on them are run.
