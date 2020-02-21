@@ -227,6 +227,27 @@ describe('attribute fallthrough', () => {
     expect(node.hasAttribute('foo')).toBe(false)
   })
 
+  it('should fallthrough with inheritAttrs: true and no declared props', () => {
+    const Parent = {
+      render() {
+        return h(Child, { class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      inheritAttrs: true,
+      render() {
+        return h('div')
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(root.innerHTML).toMatch(`<div class="parent"></div>`)
+  })
+
   it('should not fallthrough with inheritAttrs: false', () => {
     const Parent = {
       render() {

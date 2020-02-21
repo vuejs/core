@@ -80,8 +80,8 @@ export function renderComponentRoot(
 
     // attr merging
     if (
-      Component.props != null &&
-      Component.inheritAttrs !== false &&
+      (Component.inheritAttrs ||
+        (Component.props != null && Component.inheritAttrs !== false)) &&
       attrs !== EMPTY_OBJ &&
       Object.keys(attrs).length
     ) {
