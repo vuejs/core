@@ -101,9 +101,9 @@ function createSetter(isReadonly = false, shallow = false) {
         }
       } else {
         if (!hadKey) {
-          trigger(target, TriggerOpTypes.ADD, key)
+          trigger(target, TriggerOpTypes.ADD, key, { newValue: value })
         } else if (hasChanged(value, oldValue)) {
-          trigger(target, TriggerOpTypes.SET, key)
+          trigger(target, TriggerOpTypes.SET, key, { newValue: value })
         }
       }
     }
