@@ -165,7 +165,8 @@ export function trigger(
   target: object,
   type: TriggerOpTypes,
   key?: unknown,
-  extraInfo?: DebuggerEventExtraInfo
+  extraInfo?: DebuggerEventExtraInfo,
+  newValue?: unknown
 ) {
   const depsMap = targetMap.get(target)
   if (depsMap === void 0) {
@@ -174,11 +175,18 @@ export function trigger(
   }
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  if (type === TriggerOpTypes.CLEAR || (key === 'length' && isArray(target))) {
+  if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared or Array length mutation
     // trigger all effects for target
-    depsMap.forEach(dep => {
+    depsMap.forEach((dep, i) => {
       addRunners(effects, computedRunners, dep)
+    })
+  } else if (key === 'length' && isArray(target)) {
+    const startIndex: number = (newValue as number) || 0
+    depsMap.forEach((dep, i) => {
+      if (i >= startIndex || i === 'length') {
+        addRunners(effects, computedRunners, dep)
+      }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
