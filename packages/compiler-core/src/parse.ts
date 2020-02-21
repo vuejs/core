@@ -694,7 +694,7 @@ function parseAttributeValue(
     if (!match) {
       return undefined
     }
-    let unexpectedChars = /["'<=`]/g
+    const unexpectedChars = /["'<=`]/g
     let m: RegExpExecArray | null
     while ((m = unexpectedChars.exec(match[0])) !== null) {
       emitError(
