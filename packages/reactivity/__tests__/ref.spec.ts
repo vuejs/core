@@ -49,23 +49,20 @@ describe('reactivity/ref', () => {
     const obj = reactive({
       a,
       b: {
-        c: a,
-        d: [a]
+        c: a
       }
     })
 
     let dummy1: number
     let dummy2: number
-    let dummy3: number
 
     effect(() => {
       dummy1 = obj.a
       dummy2 = obj.b.c
-      dummy3 = obj.b.d[0]
     })
 
     const assertDummiesEqualTo = (val: number) =>
-      [dummy1, dummy2, dummy3].forEach(dummy => expect(dummy).toBe(val))
+      [dummy1, dummy2].forEach(dummy => expect(dummy).toBe(val))
 
     assertDummiesEqualTo(1)
     a.value++
@@ -74,8 +71,6 @@ describe('reactivity/ref', () => {
     assertDummiesEqualTo(3)
     obj.b.c++
     assertDummiesEqualTo(4)
-    obj.b.d[0]++
-    assertDummiesEqualTo(5)
   })
 
   it('should unwrap nested ref in types', () => {
@@ -95,15 +90,14 @@ describe('reactivity/ref', () => {
     expect(typeof (c.value.b + 1)).toBe('number')
   })
 
-  it('should properly unwrap ref types nested inside arrays', () => {
+  it('should NOT unwrap ref types nested inside arrays', () => {
     const arr = ref([1, ref(1)]).value
-    // should unwrap to number[]
-    arr[0]++
-    arr[1]++
+    ;(arr[0] as number)++
+    ;(arr[1] as Ref<number>).value++
 
     const arr2 = ref([1, new Map<string, any>(), ref('1')]).value
     const value = arr2[0]
-    if (typeof value === 'string') {
+    if (isRef(value)) {
       value + 'foo'
     } else if (typeof value === 'number') {
       value + 1
@@ -131,8 +125,8 @@ describe('reactivity/ref', () => {
     tupleRef.value[2].a++
     expect(tupleRef.value[2].a).toBe(2)
     expect(tupleRef.value[3]()).toBe(0)
-    tupleRef.value[4]++
-    expect(tupleRef.value[4]).toBe(1)
+    tupleRef.value[4].value++
+    expect(tupleRef.value[4].value).toBe(1)
   })
 
   test('isRef', () => {
