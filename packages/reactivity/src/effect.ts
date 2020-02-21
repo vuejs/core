@@ -164,7 +164,7 @@ export function trigger(
   }
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  if (type === TriggerOpTypes.CLEAR) {
+  if (type === TriggerOpTypes.CLEAR || ('length' === key && isArray(target))) {
     // collection being cleared, trigger all effects for target
     depsMap.forEach(dep => {
       addRunners(effects, computedRunners, dep)
