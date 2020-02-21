@@ -770,4 +770,20 @@ describe('reactivity/effect', () => {
     count.value = 10
     expect(count.value).toBe(11)
   })
+
+  it.only('arrayIdentityInstrumentations should trigger effect', () => {
+    const observed: any = reactive([1])
+    let index
+    effect(() => {
+      index =
+        observed.indexOf(1) + observed.lastIndexOf(1) + observed.includes(1)
+    })
+    expect(index).toBe(1)
+
+    observed.unshift(2)
+    expect(index).toBe(3)
+
+    observed.length = 0
+    expect(index).toBe(-2)
+  })
 })
