@@ -165,8 +165,7 @@ export function trigger(
   target: object,
   type: TriggerOpTypes,
   key?: unknown,
-  extraInfo?: DebuggerEventExtraInfo,
-  newValue?: unknown
+  extraInfo?: DebuggerEventExtraInfo
 ) {
   const depsMap = targetMap.get(target)
   if (depsMap === void 0) {
@@ -182,6 +181,7 @@ export function trigger(
       addRunners(effects, computedRunners, dep)
     })
   } else if (key === 'length' && isArray(target)) {
+    const newValue = extraInfo.newValue
     const startIndex: number = (newValue as number) || 0
     depsMap.forEach((dep, i) => {
       if (i >= startIndex || i === 'length') {
