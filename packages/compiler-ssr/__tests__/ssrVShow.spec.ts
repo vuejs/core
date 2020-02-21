@@ -16,11 +16,9 @@ describe('ssr: v-show', () => {
       .toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle } = require(\\"@vue/server-renderer\\")
 
-      const _hoisted_1 = {\\"color\\":\\"red\\"}
-
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<div style=\\"\${_ssrRenderStyle([
-          _hoisted_1,
+          {\\"color\\":\\"red\\"},
           (_ctx.foo) ? null : { display: \\"none\\" }
         ])}\\"></div>\`)
       }"
@@ -48,11 +46,9 @@ describe('ssr: v-show', () => {
     ).toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle } = require(\\"@vue/server-renderer\\")
 
-      const _hoisted_1 = {\\"color\\":\\"red\\"}
-
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<div style=\\"\${_ssrRenderStyle([
-          _hoisted_1,
+          {\\"color\\":\\"red\\"},
           { fontSize: 14 },
           (_ctx.foo) ? null : { display: \\"none\\" }
         ])}\\"></div>\`)
@@ -69,12 +65,10 @@ describe('ssr: v-show', () => {
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
 
-      const _hoisted_1 = {\\"color\\":\\"red\\"}
-
       return function ssrRender(_ctx, _push, _parent) {
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_ctx.baz, {
           style: [
-            _hoisted_1,
+            {\\"color\\":\\"red\\"},
             { fontSize: 14 },
             (_ctx.foo) ? null : { display: \\"none\\" }
           ]

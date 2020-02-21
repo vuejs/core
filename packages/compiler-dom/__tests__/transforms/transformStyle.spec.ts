@@ -26,17 +26,8 @@ function transformWithStyleTransform(
 }
 
 describe('compiler: style transform', () => {
-  test('should transform into directive node and hoist value', () => {
-    const { root, node } = transformWithStyleTransform(
-      `<div style="color: red"/>`
-    )
-    expect(root.hoists).toMatchObject([
-      {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: `{"color":"red"}`,
-        isStatic: false
-      }
-    ])
+  test('should transform into directive node', () => {
+    const { node } = transformWithStyleTransform(`<div style="color: red"/>`)
     expect(node.props[0]).toMatchObject({
       type: NodeTypes.DIRECTIVE,
       name: `bind`,
@@ -47,7 +38,7 @@ describe('compiler: style transform', () => {
       },
       exp: {
         type: NodeTypes.SIMPLE_EXPRESSION,
-        content: `_hoisted_1`,
+        content: `{"color":"red"}`,
         isStatic: false
       }
     })
@@ -71,7 +62,7 @@ describe('compiler: style transform', () => {
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`,
+            content: `{"color":"red"}`,
             isStatic: false
           }
         }
