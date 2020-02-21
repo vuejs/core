@@ -39,6 +39,7 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
+    parent,
     vnode,
     proxy,
     withProxy,
@@ -127,6 +128,11 @@ export function renderComponentRoot(
     result = createVNode(Comment)
   }
   currentRenderingInstance = null
+
+  if (parent && parent.type.__scopeId) {
+    result = cloneVNode(result, { [parent && parent.type.__scopeId]: '' })
+  }
+
   return result
 }
 
