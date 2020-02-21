@@ -22,10 +22,10 @@ describe('ssr: text', () => {
 
   test('interpolation', () => {
     expect(compile(`foo {{ bar }} baz`).code).toMatchInlineSnapshot(`
-      "const { _interpolate } = require(\\"@vue/server-renderer\\")
+      "const { ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`foo \${_interpolate(_ctx.bar)} baz\`)
+        _push(\`foo \${_ssrInterpolate(_ctx.bar)} baz\`)
       }"
     `)
   })
@@ -35,10 +35,14 @@ describe('ssr: text', () => {
       compile(`<div><span>{{ foo }} bar</span><span>baz {{ qux }}</span></div>`)
         .code
     ).toMatchInlineSnapshot(`
-      "const { _interpolate } = require(\\"@vue/server-renderer\\")
+      "const { ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div><span>\${_interpolate(_ctx.foo)} bar</span><span>baz \${_interpolate(_ctx.qux)}</span></div>\`)
+        _push(\`<div><span>\${
+          _ssrInterpolate(_ctx.foo)
+        } bar</span><span>baz \${
+          _ssrInterpolate(_ctx.qux)
+        }</span></div>\`)
       }"
     `)
   })

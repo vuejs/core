@@ -4,9 +4,9 @@ import {
   createVNode,
   VNodeArrayChildren,
   Fragment,
-  Portal,
   isVNode
 } from './vnode'
+import { Portal, PortalProps } from './components/Portal'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
@@ -95,7 +95,7 @@ export function h(
 // portal (target prop is required)
 export function h(
   type: typeof Portal,
-  props: RawProps & { target: any },
+  props: RawProps & PortalProps,
   children: RawChildren
 ): VNode
 

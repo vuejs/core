@@ -1,3 +1,0 @@
-test('ssr: renderList', () => {
-  // TODO
-})

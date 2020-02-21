@@ -1,5 +1,5 @@
 import { escapeHtml, toDisplayString } from '@vue/shared'
 
-export function interpolate(value: unknown): string {
+export function ssrInterpolate(value: unknown): string {
   return escapeHtml(toDisplayString(value))
 }

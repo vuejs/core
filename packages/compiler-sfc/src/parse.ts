@@ -108,7 +108,7 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length) {
+    if (!node.children.length && !hasSrc(node)) {
       return
     }
     switch (node.tag) {
@@ -188,9 +188,13 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  const start = node.children[0].loc.start
-  const end = node.children[node.children.length - 1].loc.end
-  const content = source.slice(start.offset, end.offset)
+  let { start, end } = node.loc
+  let content = ''
+  if (node.children.length) {
+    start = node.children[0].loc.start
+    end = node.children[node.children.length - 1].loc.end
+    content = source.slice(start.offset, end.offset)
+  }
   const loc = {
     source: content,
     start,
@@ -274,4 +278,13 @@ function padContent(
     const padChar = block.type === 'script' && !block.lang ? '//\n' : '\n'
     return Array(offset).join(padChar)
   }
+}
+
+function hasSrc(node: ElementNode) {
+  return node.props.some(p => {
+    if (p.type !== NodeTypes.ATTRIBUTE) {
+      return false
+    }
+    return p.name === 'src'
+  })
 }

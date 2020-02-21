@@ -1,10 +1,10 @@
 import {
   ComponentInternalInstance,
   Data,
-  Component,
   SetupContext,
   RenderFunction,
-  SFCInternalOptions
+  SFCInternalOptions,
+  PublicAPIComponent
 } from './component'
 import {
   isFunction,
@@ -15,7 +15,7 @@ import {
   EMPTY_OBJ,
   NOOP
 } from '@vue/shared'
-import { computed } from './apiReactivity'
+import { computed } from './apiComputed'
 import { watch, WatchOptions, WatchCallback } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
@@ -70,10 +70,7 @@ export interface ComponentOptionsBase<
     push: (item: any) => void,
     parentInstance: ComponentInternalInstance
   ) => void
-  components?: Record<
-    string,
-    Component | { new (): ComponentPublicInstance<any, any, any, any, any> }
-  >
+  components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
@@ -305,12 +302,12 @@ export function applyOptions(
       __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
 
       if (isFunction(opt)) {
-        renderContext[key] = computed(opt.bind(ctx))
+        renderContext[key] = computed(opt.bind(ctx, ctx))
       } else {
         const { get, set } = opt
         if (isFunction(get)) {
           renderContext[key] = computed({
-            get: get.bind(ctx),
+            get: get.bind(ctx, ctx),
             set: isFunction(set)
               ? set.bind(ctx)
               : __DEV__

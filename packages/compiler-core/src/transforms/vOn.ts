@@ -8,7 +8,7 @@ import {
   createCompoundExpression,
   SimpleExpressionNode
 } from '../ast'
-import { capitalize } from '@vue/shared'
+import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
@@ -38,11 +38,12 @@ export const transformOn: DirectiveTransform = (
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
-      eventName = createSimpleExpression(
-        `on${capitalize(arg.content)}`,
-        true,
-        arg.loc
-      )
+      const rawName = arg.content
+      // for @vnode-xxx event listeners, auto convert it to camelCase
+      const normalizedName = rawName.startsWith(`vnode`)
+        ? capitalize(camelize(rawName))
+        : capitalize(rawName)
+      eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
       eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }
@@ -55,6 +56,9 @@ export const transformOn: DirectiveTransform = (
 
   // handler processing
   let exp: ExpressionNode | undefined = dir.exp
+  if (exp && !exp.content.trim()) {
+    exp = undefined
+  }
   let isCacheable: boolean = !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
@@ -87,7 +91,7 @@ export const transformOn: DirectiveTransform = (
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
         `$event => ${hasMultipleStatements ? `{` : `(`}`,
-        ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
+        exp,
         hasMultipleStatements ? `}` : `)`
       ])
     }
@@ -99,8 +103,7 @@ export const transformOn: DirectiveTransform = (
         eventName,
         exp || createSimpleExpression(`() => {}`, false, loc)
       )
-    ],
-    needRuntime: false
+    ]
   }
 
   // apply extended compiler augmentor

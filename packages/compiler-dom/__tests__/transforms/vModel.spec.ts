@@ -63,6 +63,19 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('input w/ dynamic v-bind', () => {
+    const root = transformWithModel('<input v-bind="obj" v-model="model" />')
+
+    expect(root.helpers).toContain(V_MODEL_DYNAMIC)
+    expect(generate(root).code).toMatchSnapshot()
+
+    const root2 = transformWithModel(
+      '<input v-bind:[key]="val" v-model="model" />'
+    )
+    expect(root2.helpers).toContain(V_MODEL_DYNAMIC)
+    expect(generate(root2).code).toMatchSnapshot()
+  })
+
   test('simple expression for select', () => {
     const root = transformWithModel('<select v-model="model" />')
 

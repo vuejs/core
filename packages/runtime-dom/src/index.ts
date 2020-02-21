@@ -1,44 +1,62 @@
 import {
   createRenderer,
+  createHydrationRenderer,
   warn,
   RootRenderFunction,
-  CreateAppFunction
+  CreateAppFunction,
+  Renderer,
+  HydrationRenderer,
+  App,
+  RootHydrateFunction
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
 
-const { render: baseRender, createApp: baseCreateApp } = createRenderer({
+const rendererOptions = {
   patchProp,
   ...nodeOps
-})
+}
+
+// lazy create the renderer - this makes core renderer logic tree-shakable
+// in case the user only imports reactivity utilities from Vue.
+let renderer: Renderer | HydrationRenderer
+
+let enabledHydration = false
+
+function ensureRenderer() {
+  return renderer || (renderer = createRenderer(rendererOptions))
+}
+
+function ensureHydrationRenderer() {
+  renderer = enabledHydration
+    ? renderer
+    : createHydrationRenderer(rendererOptions)
+  enabledHydration = true
+  return renderer as HydrationRenderer
+}
 
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
-export const render = baseRender as RootRenderFunction<Node, Element>
+export const render = ((...args) => {
+  ensureRenderer().render(...args)
+}) as RootRenderFunction<Node, Element>
 
-export const createApp: CreateAppFunction<Element> = (...args) => {
-  const app = baseCreateApp(...args)
+export const hydrate = ((...args) => {
+  ensureHydrationRenderer().hydrate(...args)
+}) as RootHydrateFunction
+
+export const createApp = ((...args) => {
+  const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
-    // Inject `isNativeTag`
-    // this is used for component name validation (dev only)
-    Object.defineProperty(app.config, 'isNativeTag', {
-      value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
-      writable: false
-    })
+    injectNativeTagCheck(app)
   }
 
   const { mount } = app
-  app.mount = (container): any => {
-    if (isString(container)) {
-      container = document.querySelector(container)!
-      if (!container) {
-        __DEV__ &&
-          warn(`Failed to mount app: mount target selector returned null.`)
-        return
-      }
-    }
+  app.mount = (containerOrSelector: Element | string): any => {
+    const container = normalizeContainer(containerOrSelector)
+    if (!container) return
     const component = app._component
     if (
       __RUNTIME_COMPILE__ &&
@@ -54,6 +72,44 @@ export const createApp: CreateAppFunction<Element> = (...args) => {
   }
 
   return app
+}) as CreateAppFunction<Element>
+
+export const createSSRApp = ((...args) => {
+  const app = ensureHydrationRenderer().createApp(...args)
+
+  if (__DEV__) {
+    injectNativeTagCheck(app)
+  }
+
+  const { mount } = app
+  app.mount = (containerOrSelector: Element | string): any => {
+    const container = normalizeContainer(containerOrSelector)
+    if (container) {
+      return mount(container, true)
+    }
+  }
+
+  return app
+}) as CreateAppFunction<Element>
+
+function injectNativeTagCheck(app: App) {
+  // Inject `isNativeTag`
+  // this is used for component name validation (dev only)
+  Object.defineProperty(app.config, 'isNativeTag', {
+    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
+    writable: false
+  })
+}
+
+function normalizeContainer(container: Element | string): Element | null {
+  if (isString(container)) {
+    const res = document.querySelector(container)
+    if (__DEV__ && !res) {
+      warn(`Failed to mount app: mount target selector returned null.`)
+    }
+    return res
+  }
+  return container
 }
 
 // DOM-only runtime directive helpers

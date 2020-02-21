@@ -28,14 +28,17 @@ expectType<JSX.Element>(<Fragment />)
 expectType<JSX.Element>(<Fragment key="1" />)
 
 expectType<JSX.Element>(<Portal target="#foo" />)
-// target is required
+expectType<JSX.Element>(<Portal target="#foo" key="1" />)
 expectError(<Portal />)
+expectError(<Portal target={1} />)
 
 // KeepAlive
 expectType<JSX.Element>(<KeepAlive include="foo" exclude={['a']} />)
+expectType<JSX.Element>(<KeepAlive key="1" />)
 expectError(<KeepAlive include={123} />)
 
 // Suspense
 expectType<JSX.Element>(<Suspense />)
+expectType<JSX.Element>(<Suspense key="1" />)
 expectType<JSX.Element>(<Suspense onResolve={() => {}} onRecede={() => {}} />)
 expectError(<Suspense onResolve={123} />)

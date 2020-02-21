@@ -241,7 +241,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'ref function')
   })
 
-  test('in watch (simple usage)', () => {
+  test('in watch (effect)', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -268,7 +268,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
   })
 
-  test('in watch getter', () => {
+  test('in watch (getter)', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -298,7 +298,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher getter')
   })
 
-  test('in watch callback', () => {
+  test('in watch (callback)', async () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -312,10 +312,11 @@ describe('error handling', () => {
       }
     }
 
+    const count = ref(0)
     const Child = {
       setup() {
         watch(
-          () => 1,
+          () => count.value,
           () => {
             throw err
           }
@@ -325,6 +326,9 @@ describe('error handling', () => {
     }
 
     render(h(Comp), nodeOps.createElement('div'))
+
+    count.value++
+    await nextTick()
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
   })
 

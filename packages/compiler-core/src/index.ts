@@ -5,13 +5,16 @@ export {
   CompilerOptions,
   ParserOptions,
   TransformOptions,
-  CodegenOptions
+  CodegenOptions,
+  HoistTransform
 } from './options'
 export { baseParse, TextModes } from './parse'
 export {
   transform,
-  createStructuralDirectiveTransform,
   TransformContext,
+  createTransformContext,
+  traverseNode,
+  createStructuralDirectiveTransform,
   NodeTransform,
   StructuralDirectiveTransform,
   DirectiveTransform
@@ -23,23 +26,30 @@ export {
   CompilerError,
   createCompilerError
 } from './errors'
+
 export * from './ast'
 export * from './utils'
-export { registerRuntimeHelpers } from './runtimeHelpers'
+export * from './runtimeHelpers'
 
-// expose transforms so higher-order compilers can import and extend them
+export { getBaseTransformPreset, TransformPreset } from './compile'
 export { transformModel } from './transforms/vModel'
 export { transformOn } from './transforms/vOn'
-
-// exported for compiler-ssr
-export { processIfBranches } from './transforms/vIf'
-export { processForNode, createForLoopParams } from './transforms/vFor'
+export { transformBind } from './transforms/vBind'
+export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
+export { processIf } from './transforms/vIf'
+export { processFor, createForLoopParams } from './transforms/vFor'
 export {
   transformExpression,
   processExpression
 } from './transforms/transformExpression'
-export { trackVForSlotScopes, trackSlotScopes } from './transforms/vSlot'
-export { buildProps } from './transforms/transformElement'
+export {
+  buildSlots,
+  SlotFnBuilder,
+  trackVForSlotScopes,
+  trackSlotScopes
+} from './transforms/vSlot'
+export { resolveComponentType, buildProps } from './transforms/transformElement'
+export { processSlotOutlet } from './transforms/transformSlotOutlet'
 
 // utility, but need to rewrite typing to avoid dts relying on @vue/shared
 import { generateCodeFrame as _genCodeFrame } from '@vue/shared'

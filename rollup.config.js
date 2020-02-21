@@ -82,16 +82,13 @@ function createConfig(format, output, plugins = []) {
   const isRawESMBuild = format === 'esm'
   const isNodeBuild = format === 'cjs'
   const isBundlerESMBuild = /esm-bundler/.test(format)
-  const isRuntimeCompileBuild = /vue\./.test(output.file)
+  const isRuntimeCompileBuild = packageOptions.isRuntimeCompileBuild
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
   }
 
-  const shouldEmitDeclarations =
-    process.env.TYPES != null &&
-    process.env.NODE_ENV === 'production' &&
-    !hasTSChecked
+  const shouldEmitDeclarations = process.env.TYPES != null && !hasTSChecked
 
   const tsPlugin = ts({
     check: process.env.NODE_ENV === 'production' && !hasTSChecked,
@@ -136,6 +133,7 @@ function createConfig(format, output, plugins = []) {
         (isGlobalBuild || isRawESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
         isRuntimeCompileBuild,
+        isGlobalBuild,
         isNodeBuild
       ),
       ...plugins
@@ -154,6 +152,7 @@ function createReplacePlugin(
   isBundlerESMBuild,
   isBrowserBuild,
   isRuntimeCompileBuild,
+  isGlobalBuild,
   isNodeBuild
 ) {
   const replacements = {
@@ -172,12 +171,21 @@ function createReplacePlugin(
     __BUNDLER__: isBundlerESMBuild,
     // support compile in browser?
     __RUNTIME_COMPILE__: isRuntimeCompileBuild,
+    __GLOBAL__: isGlobalBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
     __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
-    __FEATURE_SUSPENSE__: true
+    __FEATURE_SUSPENSE__: true,
+    ...(isProduction && isBrowserBuild
+      ? {
+          'context.onError(': `/*#__PURE__*/ context.onError(`,
+          'emitError(': `/*#__PURE__*/ emitError(`,
+          'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
+          'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
+        }
+      : {})
   }
   // allow inline overrides like
   //__RUNTIME_COMPILE__=true yarn build runtime-core
@@ -206,7 +214,11 @@ function createMinifiedConfig(format) {
     },
     [
       terser({
-        module: /^esm/.test(format)
+        module: /^esm/.test(format),
+        compress: {
+          ecma: 2015,
+          pure_getters: true
+        }
       })
     ]
   )

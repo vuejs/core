@@ -7,12 +7,11 @@ import {
   LifecycleHooks,
   currentInstance
 } from '../component'
-import { VNode, cloneVNode, isVNode } from '../vnode'
+import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
 import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
-import { isString, isArray } from '@vue/shared'
+import { isString, isArray, ShapeFlags, remove } from '@vue/shared'
 import { watch } from '../apiWatch'
-import { ShapeFlags } from '../shapeFlags'
 import { SuspenseBoundary } from './Suspense'
 import {
   RendererInternals,
@@ -73,9 +72,9 @@ const KeepAliveImpl = {
     const sink = instance.sink as KeepAliveSink
     const {
       renderer: {
-        move,
-        unmount: _unmount,
-        options: { createElement }
+        m: move,
+        um: _unmount,
+        o: { createElement }
       },
       parentSuspense
     } = sink
@@ -136,8 +135,7 @@ const KeepAliveImpl = {
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => matches(exclude, name))
-      },
-      { lazy: true }
+      }
     )
 
     onBeforeUnmount(() => {
@@ -219,7 +217,7 @@ const KeepAliveImpl = {
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
   new (): {
-    $props: KeepAliveProps
+    $props: VNodeProps & KeepAliveProps
   }
 }
 
@@ -283,7 +281,7 @@ function registerKeepAliveHook(
   if (target) {
     let current = target.parent
     while (current && current.parent) {
-      if (current.parent.type === KeepAliveImpl) {
+      if (isKeepAlive(current.parent.vnode)) {
         injectToKeepAliveRoot(wrappedHook, type, target, current)
       }
       current = current.parent
@@ -299,7 +297,6 @@ function injectToKeepAliveRoot(
 ) {
   injectHook(type, hook, keepAliveRoot, true /* prepend */)
   onUnmounted(() => {
-    const hooks = keepAliveRoot[type]!
-    hooks.splice(hooks.indexOf(hook), 1)
+    remove(keepAliveRoot[type]!, hook)
   }, target)
 }

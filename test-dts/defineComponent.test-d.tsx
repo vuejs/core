@@ -1,5 +1,13 @@
 import { expectError, expectType } from 'tsd'
-import { describe, defineComponent, PropType, ref, createApp } from './index'
+import {
+  describe,
+  defineComponent,
+  PropType,
+  ref,
+  Ref,
+  reactive,
+  createApp
+} from './index'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -57,11 +65,14 @@ describe('with object props', () => {
       // setup context
       return {
         c: ref(1),
-        d: {
+        d: reactive({
           e: ref('hi')
-        },
-        f: {
+        }),
+        f: reactive({
           g: ref('hello' as GT)
+        }),
+        h: {
+          i: ref('hi')
         }
       }
     },
@@ -94,6 +105,9 @@ describe('with object props', () => {
       expectType<number>(this.c)
       expectType<string>(this.d.e)
       expectType<GT>(this.f.g)
+
+      // should not unwrap refs nested under non-reactive objects
+      expectType<Ref<string>>(this.h.i)
 
       // setup context properties should be mutable
       this.c = 2

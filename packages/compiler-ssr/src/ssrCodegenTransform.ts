@@ -13,10 +13,13 @@ import {
   IfStatement,
   CallExpression
 } from '@vue/compiler-dom'
-import { isString, escapeHtml, NO } from '@vue/shared'
-import { SSR_INTERPOLATE } from './runtimeHelpers'
-import { processIf } from './transforms/ssrVIf'
-import { processFor } from './transforms/ssrVFor'
+import { isString, escapeHtml } from '@vue/shared'
+import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
+import { ssrProcessIf } from './transforms/ssrVIf'
+import { ssrProcessFor } from './transforms/ssrVFor'
+import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
+import { ssrProcessComponent } from './transforms/ssrTransformComponent'
+import { ssrProcessElement } from './transforms/ssrTransformElement'
 
 // Because SSR codegen output is completely different from client-side output
 // (e.g. multiple elements can be concatenated into a single template literal
@@ -25,35 +28,38 @@ import { processFor } from './transforms/ssrVFor'
 // passing it to codegen.
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
-  const context = createSSRTransformContext(options)
-
+  const context = createSSRTransformContext(ast, options)
   const isFragment =
-    ast.children.length > 1 && !ast.children.every(c => isText(c))
-  if (isFragment) {
-    context.pushStringPart(`<!---->`)
-  }
-  processChildren(ast.children, context)
-  if (isFragment) {
-    context.pushStringPart(`<!---->`)
-  }
-
+    ast.children.length > 1 && ast.children.some(c => !isText(c))
+  processChildren(ast.children, context, isFragment)
   ast.codegenNode = createBlockStatement(context.body)
-  ast.ssrHelpers = [...context.helpers]
+
+  // Finalize helpers.
+  // We need to separate helpers imported from 'vue' vs. '@vue/server-renderer'
+  ast.ssrHelpers = [
+    ...ast.helpers.filter(h => h in ssrHelpers),
+    ...context.helpers
+  ]
+  ast.helpers = ast.helpers.filter(h => !(h in ssrHelpers))
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
 
 function createSSRTransformContext(
+  root: RootNode,
   options: CompilerOptions,
-  helpers: Set<symbol> = new Set()
+  helpers: Set<symbol> = new Set(),
+  withSlotScopeId = false
 ) {
   const body: BlockStatement['body'] = []
   let currentString: TemplateLiteral | null = null
 
   return {
+    root,
     options,
     body,
     helpers,
+    withSlotScopeId,
     helper<T extends symbol>(name: T): T {
       helpers.add(name)
       return name
@@ -81,38 +87,36 @@ function createSSRTransformContext(
   }
 }
 
-export function createChildContext(
-  parent: SSRTransformContext
+function createChildContext(
+  parent: SSRTransformContext,
+  withSlotScopeId = parent.withSlotScopeId
 ): SSRTransformContext {
   // ensure child inherits parent helpers
-  return createSSRTransformContext(parent.options, parent.helpers)
+  return createSSRTransformContext(
+    parent.root,
+    parent.options,
+    parent.helpers,
+    withSlotScopeId
+  )
 }
 
 export function processChildren(
   children: TemplateChildNode[],
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  asFragment = false
 ) {
-  const isVoidTag = context.options.isVoidTag || NO
+  if (asFragment) {
+    context.pushStringPart(`<!---->`)
+  }
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.type === NodeTypes.ELEMENT) {
       if (child.tagType === ElementTypes.ELEMENT) {
-        const elementsToAdd = child.ssrCodegenNode!.elements
-        for (let j = 0; j < elementsToAdd.length; j++) {
-          context.pushStringPart(elementsToAdd[j])
-        }
-        if (child.children.length) {
-          processChildren(child.children, context)
-        }
-
-        if (!isVoidTag(child.tag)) {
-          // push closing tag
-          context.pushStringPart(`</${child.tag}>`)
-        }
+        ssrProcessElement(child, context)
       } else if (child.tagType === ElementTypes.COMPONENT) {
-        // TODO
+        ssrProcessComponent(child, context)
       } else if (child.tagType === ElementTypes.SLOT) {
-        // TODO
+        ssrProcessSlotOutlet(child, context)
       }
     } else if (child.type === NodeTypes.TEXT) {
       context.pushStringPart(escapeHtml(child.content))
@@ -121,9 +125,23 @@ export function processChildren(
         createCallExpression(context.helper(SSR_INTERPOLATE), [child.content])
       )
     } else if (child.type === NodeTypes.IF) {
-      processIf(child, context)
+      ssrProcessIf(child, context)
     } else if (child.type === NodeTypes.FOR) {
-      processFor(child, context)
+      ssrProcessFor(child, context)
     }
   }
+  if (asFragment) {
+    context.pushStringPart(`<!---->`)
+  }
+}
+
+export function processChildrenAsStatement(
+  children: TemplateChildNode[],
+  parentContext: SSRTransformContext,
+  asFragment = false,
+  withSlotScopeId = parentContext.withSlotScopeId
+): BlockStatement {
+  const childContext = createChildContext(parentContext, withSlotScopeId)
+  processChildren(children, childContext, asFragment)
+  return createBlockStatement(childContext.body)
 }

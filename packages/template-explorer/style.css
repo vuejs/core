@@ -14,6 +14,7 @@ body {
   border-bottom: 1px solid #333;
   padding: 0.3em 1.6em;
   color: #fff;
+  z-index: 1;
 }
 
 h1 {
@@ -22,17 +23,34 @@ h1 {
   margin-right: 15px;
 }
 
+#options-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 10px;
+}
+
+#options-wrapper:hover #options {
+  display: block;
+}
+
+#options-label {
+  cursor: pointer;
+  text-align: right;
+  padding-right: 10px;
+  font-weight: bold;
+}
+
 #options {
-  float: right;
-  margin-top: 1em;
+  display: none;
+  margin-top: 15px;
+  list-style-type: none;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  padding: 15px 30px;
 }
 
-.options-group {
-  margin-right: 30px;
-}
-
-#header span, #header label, #header input, #header a {
-  display: inline-block;
+#options li {
+  margin: 8px 0;
 }
 
 #header a {
@@ -45,7 +63,6 @@ h1 {
 }
 
 #header input {
-  margin-left: 12px;
   margin-right: 6px;
 }
 

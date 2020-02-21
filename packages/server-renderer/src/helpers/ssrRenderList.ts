@@ -1,6 +1,6 @@
 import { isArray, isString, isObject } from '@vue/shared'
 
-export function renderList(
+export function ssrRenderList(
   source: unknown,
   renderItem: (value: unknown, key: string | number, index?: number) => void
 ) {

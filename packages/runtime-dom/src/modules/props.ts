@@ -1,3 +1,7 @@
+// __UNSAFE__
+// Reason: potentially setting innerHTML.
+// This can come from explicit usage of v-html or innerHTML as a prop in render
+// functions. The user is reponsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
   key: string,

@@ -4,23 +4,19 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn } from '@vue/shared'
-import {
-  ComponentInternalInstance,
-  SuspenseBoundary,
-  VNode
-} from '@vue/runtime-core'
+import { RendererOptions } from '@vue/runtime-core'
 
-export function patchProp(
-  el: Element,
-  key: string,
-  nextValue: any,
-  prevValue: any,
-  isSVG: boolean,
-  prevChildren?: VNode[],
-  parentComponent?: ComponentInternalInstance,
-  parentSuspense?: SuspenseBoundary<Node, Element>,
-  unmountChildren?: any
-) {
+export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
+  el,
+  key,
+  nextValue,
+  prevValue,
+  isSVG = false,
+  prevChildren,
+  parentComponent,
+  parentSuspense,
+  unmountChildren
+) => {
   switch (key) {
     // special
     case 'class':

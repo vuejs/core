@@ -187,9 +187,11 @@ function hasCSSTransform(
   // is applied.
   const clone = el.cloneNode() as HTMLElement
   if (el._vtc) {
-    el._vtc.forEach(cls => clone.classList.remove(cls))
+    el._vtc.forEach(cls => {
+      cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
+    })
   }
-  clone.classList.add(moveClass)
+  moveClass.split(/\s+/).forEach(c => c && clone.classList.add(c))
   clone.style.display = 'none'
   const container = (root.nodeType === 1
     ? root

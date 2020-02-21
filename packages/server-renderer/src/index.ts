@@ -2,14 +2,22 @@
 export { renderToString } from './renderToString'
 
 // internal runtime helpers
+export { renderComponent as ssrRenderComponent } from './renderToString'
+export { ssrRenderSlot } from './helpers/ssrRenderSlot'
 export {
-  renderComponent as _renderComponent,
-  renderSlot as _renderSlot
-} from './renderToString'
+  ssrRenderClass,
+  ssrRenderStyle,
+  ssrRenderAttrs,
+  ssrRenderAttr,
+  ssrRenderDynamicAttr
+} from './helpers/ssrRenderAttrs'
+export { ssrInterpolate } from './helpers/ssrInterpolate'
+export { ssrRenderList } from './helpers/ssrRenderList'
+
+// v-model helpers
 export {
-  renderClass as _renderClass,
-  renderStyle as _renderStyle,
-  renderAttrs as _renderAttrs
-} from './helpers/renderAttrs'
-export { interpolate as _interpolate } from './helpers/interpolate'
-export { renderList as _renderList } from './helpers/renderList'
+  ssrLooseEqual,
+  ssrLooseContain,
+  ssrRenderDynamicModel,
+  ssrGetDynamicModelProps
+} from './helpers/ssrVModelHelpers'

@@ -4,14 +4,20 @@ import {
   createCommentVNode,
   withScopeId,
   resolveComponent,
-  ComponentOptions
+  ComponentOptions,
+  Portal,
+  ref,
+  defineComponent
 } from 'vue'
-import { escapeHtml } from '@vue/shared'
+import { escapeHtml, mockWarn } from '@vue/shared'
 import {
   renderToString,
   renderComponent,
-  renderSlot
+  SSRContext
 } from '../src/renderToString'
+import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
+
+mockWarn()
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -44,6 +50,32 @@ describe('ssr: renderToString', () => {
       ).toBe(`<div>hello</div>`)
     })
 
+    test('option components returning render from setup', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            setup() {
+              const msg = ref('hello')
+              return () => h('div', msg.value)
+            }
+          })
+        )
+      ).toBe(`<div>hello</div>`)
+    })
+
+    test('setup components returning render from setup', async () => {
+      expect(
+        await renderToString(
+          createApp(
+            defineComponent((props: {}) => {
+              const msg = ref('hello')
+              return () => h('div', msg.value)
+            })
+          )
+        )
+      ).toBe(`<div>hello</div>`)
+    })
+
     test('optimized components', async () => {
       expect(
         await renderToString(
@@ -57,6 +89,31 @@ describe('ssr: renderToString', () => {
           })
         )
       ).toBe(`<div>hello</div>`)
+    })
+
+    describe('template components', () => {
+      test('render', async () => {
+        expect(
+          await renderToString(
+            createApp({
+              data() {
+                return { msg: 'hello' }
+              },
+              template: `<div>{{ msg }}</div>`
+            })
+          )
+        ).toBe(`<div>hello</div>`)
+      })
+
+      test('handle compiler errors', async () => {
+        await renderToString(createApp({ template: `<` }))
+
+        expect(
+          '[Vue warn]: Template compilation error: Unexpected EOF in tag.\n' +
+            '1  |  <\n' +
+            '   |   ^'
+        ).toHaveBeenWarned()
+      })
     })
 
     test('nested vnode components', async () => {
@@ -99,7 +156,22 @@ describe('ssr: renderToString', () => {
       ).toBe(`<div>parent<div>hello</div></div>`)
     })
 
-    test('mixing optimized / vnode components', async () => {
+    test('nested template components', async () => {
+      const Child = {
+        props: ['msg'],
+        template: `<div>{{ msg }}</div>`
+      }
+      const app = createApp({
+        template: `<div>parent<Child msg="hello" /></div>`
+      })
+      app.component('Child', Child)
+
+      expect(await renderToString(app)).toBe(
+        `<div>parent<div>hello</div></div>`
+      )
+    })
+
+    test('mixing optimized / vnode / template components', async () => {
       const OptimizedChild = {
         props: ['msg'],
         ssrRender(ctx: any, push: any) {
@@ -114,6 +186,11 @@ describe('ssr: renderToString', () => {
         }
       }
 
+      const TemplateChild = {
+        props: ['msg'],
+        template: `<div>{{ msg }}</div>`
+      }
+
       expect(
         await renderToString(
           createApp({
@@ -123,11 +200,21 @@ describe('ssr: renderToString', () => {
                 renderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
               )
               push(renderComponent(VNodeChild, { msg: 'vnode' }, null, parent))
+              push(
+                renderComponent(
+                  TemplateChild,
+                  { msg: 'template' },
+                  null,
+                  parent
+                )
+              )
               push(`</div>`)
             }
           })
         )
-      ).toBe(`<div>parent<div>opt</div><div>vnode</div></div>`)
+      ).toBe(
+        `<div>parent<div>opt</div><div>vnode</div><div>template</div></div>`
+      )
     })
 
     test('nested components with optimized slots', async () => {
@@ -135,7 +222,16 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(ctx.$slots.default, { msg: 'from slot' }, push, parent)
+          ssrRenderSlot(
+            ctx.$slots,
+            'default',
+            { msg: 'from slot' },
+            () => {
+              push(`fallback`)
+            },
+            push,
+            parent
+          )
           push(`</div>`)
         }
       }
@@ -155,7 +251,7 @@ describe('ssr: renderToString', () => {
                       push(`<span>${msg}</span>`)
                     },
                     // important to avoid slots being normalized
-                    _compiled: true as any
+                    _: 1 as any
                   },
                   parent
                 )
@@ -169,6 +265,19 @@ describe('ssr: renderToString', () => {
           `<!----><span>from slot</span><!---->` +
           `</div></div>`
       )
+
+      // test fallback
+      expect(
+        await renderToString(
+          createApp({
+            ssrRender(_ctx, push, parent) {
+              push(`<div>parent`)
+              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(`</div>`)
+            }
+          })
+        )
+      ).toBe(`<div>parent<div class="child"><!---->fallback<!----></div></div>`)
     })
 
     test('nested components with vnode slots', async () => {
@@ -176,7 +285,14 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(ctx.$slots.default, { msg: 'from slot' }, push, parent)
+          ssrRenderSlot(
+            ctx.$slots,
+            'default',
+            { msg: 'from slot' },
+            null,
+            push,
+            parent
+          )
           push(`</div>`)
         }
       }
@@ -206,6 +322,50 @@ describe('ssr: renderToString', () => {
       ).toBe(
         `<div>parent<div class="child">` +
           `<!----><span>from slot</span><!---->` +
+          `</div></div>`
+      )
+    })
+
+    test('nested components with template slots', async () => {
+      const Child = {
+        props: ['msg'],
+        template: `<div class="child"><slot msg="from slot"></slot></div>`
+      }
+
+      const app = createApp({
+        template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
+      })
+      app.component('Child', Child)
+
+      expect(await renderToString(app)).toBe(
+        `<div>parent<div class="child">` +
+          `<!----><span>from slot</span><!---->` +
+          `</div></div>`
+      )
+    })
+
+    test('nested render fn components with template slots', async () => {
+      const Child = {
+        props: ['msg'],
+        render(this: any) {
+          return h(
+            'div',
+            {
+              class: 'child'
+            },
+            this.$slots.default({ msg: 'from slot' })
+          )
+        }
+      }
+
+      const app = createApp({
+        template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
+      })
+      app.component('Child', Child)
+
+      expect(await renderToString(app)).toBe(
+        `<div>parent<div class="child">` +
+          `<span>from slot</span>` +
           `</div></div>`
       )
     })
@@ -351,6 +511,21 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
     })
+  })
+
+  test('portal', async () => {
+    const ctx: SSRContext = {}
+    await renderToString(
+      h(
+        Portal,
+        {
+          target: `#target`
+        },
+        h('span', 'hello')
+      ),
+      ctx
+    )
+    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {

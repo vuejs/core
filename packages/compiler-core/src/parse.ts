@@ -21,7 +21,8 @@ import {
   SourceLocation,
   TextNode,
   TemplateChildNode,
-  InterpolationNode
+  InterpolationNode,
+  createRoot
 } from './ast'
 import { extend } from '@vue/shared'
 
@@ -72,19 +73,10 @@ export function baseParse(
 ): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
-
-  return {
-    type: NodeTypes.ROOT,
-    children: parseChildren(context, TextModes.DATA, []),
-    helpers: [],
-    components: [],
-    directives: [],
-    hoists: [],
-    imports: [],
-    cached: 0,
-    codegenNode: undefined,
-    loc: getSelection(context, start)
-  }
+  return createRoot(
+    parseChildren(context, TextModes.DATA, []),
+    getSelection(context, start)
+  )
 }
 
 function createParserContext(
@@ -464,7 +456,8 @@ function parseTag(
     } else if (
       isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
-      /^[A-Z]/.test(tag)
+      /^[A-Z]/.test(tag) ||
+      tag === 'component'
     ) {
       tagType = ElementTypes.COMPONENT
     }
@@ -701,7 +694,7 @@ function parseAttributeValue(
     if (!match) {
       return undefined
     }
-    let unexpectedChars = /["'<=`]/g
+    const unexpectedChars = /["'<=`]/g
     let m: RegExpExecArray | null
     while ((m = unexpectedChars.exec(match[0])) !== null) {
       emitError(

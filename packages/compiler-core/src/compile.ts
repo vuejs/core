@@ -1,6 +1,6 @@
 import { CompilerOptions } from './options'
 import { baseParse } from './parse'
-import { transform } from './transform'
+import { transform, NodeTransform, DirectiveTransform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
 import { isString } from '@vue/shared'
@@ -16,6 +16,39 @@ import { transformText } from './transforms/transformText'
 import { transformOnce } from './transforms/vOnce'
 import { transformModel } from './transforms/vModel'
 import { defaultOnError, createCompilerError, ErrorCodes } from './errors'
+
+export type TransformPreset = [
+  NodeTransform[],
+  Record<string, DirectiveTransform>
+]
+
+export function getBaseTransformPreset(
+  prefixIdentifiers?: boolean
+): TransformPreset {
+  return [
+    [
+      transformOnce,
+      transformIf,
+      transformFor,
+      ...(!__BROWSER__ && prefixIdentifiers
+        ? [
+            // order is important
+            trackVForSlotScopes,
+            transformExpression
+          ]
+        : []),
+      transformSlotOutlet,
+      transformElement,
+      trackSlotScopes,
+      transformText
+    ],
+    {
+      on: transformOn,
+      bind: transformBind,
+      model: transformModel
+    }
+  ]
+}
 
 // we name it `baseCompile` so that higher order compilers like
 // @vue/compiler-dom can export `compile` while re-exporting everything else.
@@ -44,30 +77,18 @@ export function baseCompile(
   }
 
   const ast = isString(template) ? baseParse(template, options) : template
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(
+    prefixIdentifiers
+  )
   transform(ast, {
     ...options,
     prefixIdentifiers,
     nodeTransforms: [
-      transformOnce,
-      transformIf,
-      transformFor,
-      ...(prefixIdentifiers
-        ? [
-            // order is important
-            trackVForSlotScopes,
-            transformExpression
-          ]
-        : []),
-      transformSlotOutlet,
-      transformElement,
-      trackSlotScopes,
-      transformText,
+      ...nodeTransforms,
       ...(options.nodeTransforms || []) // user transforms
     ],
     directiveTransforms: {
-      on: transformOn,
-      bind: transformBind,
-      model: transformModel,
+      ...directiveTransforms,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })

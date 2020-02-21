@@ -164,8 +164,14 @@ describe('Suspense', () => {
         deps.push(p.then(() => Promise.resolve()))
 
         watch(() => {
+          calls.push('immediate effect')
+        })
+
+        const count = ref(0)
+        watch(count, v => {
           calls.push('watch callback')
         })
+        count.value++ // trigger the watcher now
 
         onMounted(() => {
           calls.push('mounted')
@@ -193,18 +199,24 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual([])
+    expect(calls).toEqual([`immediate effect`])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>async</div>`)
-    expect(calls).toEqual([`watch callback`, `mounted`])
+    expect(calls).toEqual([`immediate effect`, `watch callback`, `mounted`])
 
     // effects inside an already resolved suspense should happen at normal timing
     toggle.value = false
     await nextTick()
+    await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    expect(calls).toEqual([`watch callback`, `mounted`, 'unmounted'])
+    expect(calls).toEqual([
+      `immediate effect`,
+      `watch callback`,
+      `mounted`,
+      'unmounted'
+    ])
   })
 
   test('content update before suspense resolve', async () => {
@@ -254,8 +266,14 @@ describe('Suspense', () => {
         deps.push(p)
 
         watch(() => {
+          calls.push('immediate effect')
+        })
+
+        const count = ref(0)
+        watch(count, () => {
           calls.push('watch callback')
         })
+        count.value++ // trigger the watcher now
 
         onMounted(() => {
           calls.push('mounted')
@@ -283,7 +301,7 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual([])
+    expect(calls).toEqual(['immediate effect'])
 
     // remove the async dep before it's resolved
     toggle.value = false
@@ -294,8 +312,8 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    // should discard effects
-    expect(calls).toEqual([])
+    // should discard effects (except for immediate ones)
+    expect(calls).toEqual(['immediate effect'])
   })
 
   test('unmount suspense after resolve', async () => {

@@ -2,6 +2,7 @@ import { makeMap } from './makeMap'
 
 export { makeMap }
 export * from './patchFlags'
+export * from './shapeFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
 export * from './mockWarn'
@@ -9,6 +10,7 @@ export * from './normalizeProp'
 export * from './domTagConfig'
 export * from './domAttrConfig'
 export * from './escapeHtml'
+export * from './looseEqual'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -34,6 +36,13 @@ export const extend = <T extends object, U extends object>(
   return a as any
 }
 
+export const remove = <T>(arr: T[], el: T) => {
+  const i = arr.indexOf(el)
+  if (i > -1) {
+    arr.splice(i, 1)
+  }
+}
+
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
@@ -48,7 +57,7 @@ export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
-export function isPromise<T = any>(val: unknown): val is Promise<T> {
+export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return isObject(val) && isFunction(val.then) && isFunction(val.catch)
 }
 
@@ -56,7 +65,7 @@ export const objectToString = Object.prototype.toString
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
-export function toRawType(value: unknown): string {
+export const toRawType = (value: unknown): string => {
   return toTypeString(value).slice(8, -1)
 }
 
@@ -70,7 +79,7 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted'
 )
 
-function cacheStringFunction<T extends (str: string) => string>(fn: T): T {
+const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
   return ((str: string) => {
     const hit = cache[str]
@@ -103,7 +112,7 @@ export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
 
 // for converting {{ interpolation }} values to displayed strings.
-export function toDisplayString(val: unknown): string {
+export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)

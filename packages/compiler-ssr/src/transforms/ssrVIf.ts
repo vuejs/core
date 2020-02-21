@@ -1,6 +1,6 @@
 import {
   createStructuralDirectiveTransform,
-  processIfBranches,
+  processIf,
   IfNode,
   createIfStatement,
   createBlockStatement,
@@ -11,19 +11,18 @@ import {
 } from '@vue/compiler-dom'
 import {
   SSRTransformContext,
-  createChildContext,
-  processChildren
+  processChildrenAsStatement
 } from '../ssrCodegenTransform'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
-  processIfBranches
+  processIf
 )
 
 // This is called during the 2nd transform pass to construct the SSR-sepcific
 // codegen nodes.
-export function processIf(node: IfNode, context: SSRTransformContext) {
+export function ssrProcessIf(node: IfNode, context: SSRTransformContext) {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
     rootBranch.condition!,
@@ -63,13 +62,5 @@ function processIfBranch(
     (children.length !== 1 || children[0].type !== NodeTypes.ELEMENT) &&
     // optimize away nested fragments when the only child is a ForNode
     !(children.length === 1 && children[0].type === NodeTypes.FOR)
-  const childContext = createChildContext(context)
-  if (needFragmentWrapper) {
-    childContext.pushStringPart(`<!---->`)
-  }
-  processChildren(children, childContext)
-  if (needFragmentWrapper) {
-    childContext.pushStringPart(`<!---->`)
-  }
-  return createBlockStatement(childContext.body)
+  return processChildrenAsStatement(children, context, needFragmentWrapper)
 }

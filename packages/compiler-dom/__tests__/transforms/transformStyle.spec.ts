@@ -4,7 +4,7 @@ import {
   CompilerOptions,
   ElementNode,
   NodeTypes,
-  CallExpression
+  VNodeCall
 } from '@vue/compiler-core'
 import { transformBind } from '../../../compiler-core/src/transforms/vBind'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -60,7 +60,7 @@ describe('compiler: style transform', () => {
         bind: transformBind
       }
     })
-    expect((node.codegenNode as CallExpression).arguments[1]).toMatchObject({
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
       properties: [
         {
@@ -78,6 +78,6 @@ describe('compiler: style transform', () => {
       ]
     })
     // should not cause the STYLE patchFlag to be attached
-    expect((node.codegenNode as CallExpression).arguments.length).toBe(2)
+    expect((node.codegenNode as VNodeCall).patchFlag).toBeUndefined()
   })
 })

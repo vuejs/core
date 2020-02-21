@@ -1,9 +1,8 @@
-import { VNode, normalizeVNode, VNodeChild } from '../vnode'
-import { ShapeFlags } from '../shapeFlags'
-import { isFunction, isArray } from '@vue/shared'
+import { VNode, normalizeVNode, VNodeChild, VNodeProps } from '../vnode'
+import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals, MoveType } from '../renderer'
+import { RendererInternals, MoveType, SetupRenderEffectFn } from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { handleError, ErrorCodes } from '../errorHandling'
@@ -13,6 +12,8 @@ export interface SuspenseProps {
   onResolve?: () => void
   onRecede?: () => void
 }
+
+export const isSuspense = (type: any): boolean => type.__isSuspense
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -66,7 +67,7 @@ export const Suspense = ((__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as any) as {
   __isSuspense: true
-  new (): { $props: SuspenseProps }
+  new (): { $props: VNodeProps & SuspenseProps }
 }
 
 function mountSuspense(
@@ -80,8 +81,8 @@ function mountSuspense(
   rendererInternals: RendererInternals
 ) {
   const {
-    patch,
-    options: { createElement }
+    p: patch,
+    o: { createElement }
   } = rendererInternals
   const hiddenContainer = createElement('div')
   const suspense = (n2.suspense = createSuspenseBoundary(
@@ -139,7 +140,7 @@ function patchSuspense(
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
   optimized: boolean,
-  { patch }: RendererInternals
+  { p: patch }: RendererInternals
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
@@ -217,14 +218,7 @@ export interface SuspenseBoundary<
   next(): HostNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: (
-      instance: ComponentInternalInstance,
-      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-      initialVNode: VNode<HostNode, HostElement>,
-      container: HostElement,
-      anchor: HostNode | null,
-      isSVG: boolean
-    ) => void
+    setupRenderEffect: SetupRenderEffectFn<HostNode, HostElement>
   ): void
   unmount(
     parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
@@ -244,11 +238,11 @@ function createSuspenseBoundary<HostNode, HostElement>(
   rendererInternals: RendererInternals<HostNode, HostElement>
 ): SuspenseBoundary<HostNode, HostElement> {
   const {
-    patch,
-    move,
-    unmount,
-    next,
-    options: { parentNode }
+    p: patch,
+    m: move,
+    um: unmount,
+    n: next,
+    o: { parentNode }
   } = rendererInternals
 
   const suspense: SuspenseBoundary<HostNode, HostElement> = {
@@ -417,13 +411,15 @@ function createSuspenseBoundary<HostNode, HostElement>(
             pushWarningContext(vnode)
           }
           handleSetupResult(instance, asyncSetupResult, suspense)
+          // unset placeholder, otherwise this will be treated as a hydration mount
+          vnode.el = null
           setupRenderEffect(
             instance,
-            suspense,
             vnode,
             // component may have been moved before resolve
             parentNode(instance.subTree.el)!,
             next(instance.subTree),
+            suspense,
             isSVG
           )
           updateHOCHostEl(instance, vnode.el)

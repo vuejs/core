@@ -16,7 +16,8 @@ export const transformText: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ROOT ||
     node.type === NodeTypes.ELEMENT ||
-    node.type === NodeTypes.FOR
+    node.type === NodeTypes.FOR ||
+    node.type === NodeTypes.IF_BRANCH
   ) {
     // perform the transform on node exit so that all expressions have already
     // been processed.
@@ -77,7 +78,7 @@ export const transformText: NodeTransform = (node, context) => {
             callArgs.push(child)
           }
           // mark dynamic text with flag so it gets patched inside a block
-          if (child.type !== NodeTypes.TEXT) {
+          if (!context.ssr && child.type !== NodeTypes.TEXT) {
             callArgs.push(
               `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
             )

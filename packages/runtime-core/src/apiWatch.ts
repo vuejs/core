@@ -14,15 +14,16 @@ import {
   isFunction,
   isString,
   hasChanged,
-  NOOP
+  NOOP,
+  remove
 } from '@vue/shared'
-import { recordEffect } from './apiReactivity'
 import {
   currentInstance,
   ComponentInternalInstance,
   currentSuspense,
   Data,
-  isInSSRComponentSetup
+  isInSSRComponentSetup,
+  recordInstanceBoundEffect
 } from './component'
 import {
   ErrorCodes,
@@ -37,9 +38,9 @@ export type WatchEffect = (onCleanup: CleanupRegistrator) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
-export type WatchCallback<T = any> = (
-  value: T,
-  oldValue: T,
+export type WatchCallback<V = any, OV = any> = (
+  value: V,
+  oldValue: OV,
   onCleanup: CleanupRegistrator
 ) => any
 
@@ -47,38 +48,56 @@ type MapSources<T> = {
   [K in keyof T]: T[K] extends WatchSource<infer V> ? V : never
 }
 
+type MapOldSources<T, Immediate> = {
+  [K in keyof T]: T[K] extends WatchSource<infer V>
+    ? Immediate extends true ? (V | undefined) : V
+    : never
+}
+
 export type CleanupRegistrator = (invalidate: () => void) => void
 
-export interface WatchOptions {
-  lazy?: boolean
+export interface BaseWatchOptions {
   flush?: 'pre' | 'post' | 'sync'
-  deep?: boolean
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
+}
+
+export interface WatchOptions<Immediate = boolean> extends BaseWatchOptions {
+  immediate?: Immediate
+  deep?: boolean
 }
 
 export type StopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
+// initial value for watchers to trigger on undefined initial values
+const INITIAL_WATCHER_VALUE = {}
+
 // overload #1: simple effect
-export function watch(effect: WatchEffect, options?: WatchOptions): StopHandle
+export function watch(
+  effect: WatchEffect,
+  options?: BaseWatchOptions
+): StopHandle
 
 // overload #2: single source + cb
-export function watch<T>(
+export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
-  cb: WatchCallback<T>,
-  options?: WatchOptions
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  options?: WatchOptions<Immediate>
 ): StopHandle
 
 // overload #3: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
-export function watch<T extends Readonly<WatchSource<unknown>[]>>(
+export function watch<
+  T extends Readonly<WatchSource<unknown>[]>,
+  Immediate extends Readonly<boolean> = false
+>(
   sources: T,
-  cb: WatchCallback<MapSources<T>>,
-  options?: WatchOptions
+  cb: WatchCallback<MapSources<T>, MapOldSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>
 ): StopHandle
 
 // implementation
@@ -87,15 +106,11 @@ export function watch<T = any>(
   cbOrOptions?: WatchCallback<T> | WatchOptions,
   options?: WatchOptions
 ): StopHandle {
-  if (isInSSRComponentSetup && !(options && options.flush === 'sync')) {
-    // component watchers during SSR are no-op
-    return NOOP
-  } else if (isFunction(cbOrOptions)) {
-    // effect callback as 2nd argument - this is a source watcher
+  if (isFunction(cbOrOptions)) {
+    // watch(source, cb)
     return doWatch(effectOrSource, cbOrOptions, options)
   } else {
-    // 2nd argument is either missing or an options object
-    // - this is a simple effect watcher
+    // watch(effect)
     return doWatch(effectOrSource, null, cbOrOptions)
   }
 }
@@ -103,8 +118,23 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { lazy, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): StopHandle {
+  if (__DEV__ && !cb) {
+    if (immediate !== undefined) {
+      warn(
+        `watch() "immediate" option is only respected when using the ` +
+          `watch(source, callback) signature.`
+      )
+    }
+    if (deep !== undefined) {
+      warn(
+        `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback) signature.`
+      )
+    }
+  }
+
   const instance = currentInstance
   const suspense = currentSuspense
 
@@ -153,7 +183,22 @@ function doWatch(
     }
   }
 
-  let oldValue = isArray(source) ? [] : undefined
+  // in SSR there is no need to setup an actual effect, and it should be noop
+  // unless it's eager
+  if (__NODE_JS__ && isInSSRComponentSetup) {
+    if (!cb) {
+      getter()
+    } else if (immediate) {
+      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+        getter(),
+        undefined,
+        registerCleanup
+      ])
+    }
+    return NOOP
+  }
+
+  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
   const applyCb = cb
     ? () => {
         if (instance && instance.isUnmounted) {
@@ -167,7 +212,8 @@ function doWatch(
           }
           callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
             newValue,
-            oldValue,
+            // pass undefined as the old value when it's changed for the first time
+            oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
             registerCleanup
           ])
           oldValue = newValue
@@ -203,31 +249,23 @@ function doWatch(
     scheduler: applyCb ? () => scheduler(applyCb) : scheduler
   })
 
-  if (lazy && cb) {
-    oldValue = runner()
-  } else {
-    if (__DEV__ && lazy && !cb) {
-      warn(
-        `watch() lazy option is only respected when using the ` +
-          `watch(getter, callback) signature.`
-      )
-    }
-    if (applyCb) {
-      scheduler(applyCb)
+  recordInstanceBoundEffect(runner)
+
+  // initial run
+  if (applyCb) {
+    if (immediate) {
+      applyCb()
     } else {
-      scheduler(runner)
+      oldValue = runner()
     }
+  } else {
+    runner()
   }
 
-  recordEffect(runner)
   return () => {
     stop(runner)
     if (instance) {
-      const effects = instance.effects!
-      const index = effects.indexOf(runner)
-      if (index > -1) {
-        effects.splice(index, 1)
-      }
+      remove(instance.effects!, runner)
     }
   }
 }

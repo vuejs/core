@@ -9,5 +9,5 @@ const RootComponent = {
   }
 }
 
-createApp().mount(RootComponent, '#app')
+createApp(RootComponent).mount('#app')
 ```

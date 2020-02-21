@@ -14,7 +14,7 @@ import {
 
 const shouldIgnoreProp = makeMap(`key,ref,innerHTML,textContent`)
 
-export function renderAttrs(
+export function ssrRenderAttrs(
   props: Record<string, unknown>,
   tag?: string
 ): string {
@@ -29,18 +29,23 @@ export function renderAttrs(
     }
     const value = props[key]
     if (key === 'class') {
-      ret += ` class="${renderClass(value)}"`
+      ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
-      ret += ` style="${renderStyle(value)}"`
+      ret += ` style="${ssrRenderStyle(value)}"`
     } else {
-      ret += renderAttr(key, value, tag)
+      ret += ssrRenderDynamicAttr(key, value, tag)
     }
   }
   return ret
 }
 
-export function renderAttr(key: string, value: unknown, tag?: string): string {
-  if (value == null) {
+// render an attr with dynamic (unknown) key.
+export function ssrRenderDynamicAttr(
+  key: string,
+  value: unknown,
+  tag?: string
+): string {
+  if (!isRenderableValue(value)) {
     return ``
   }
   const attrKey =
@@ -52,15 +57,35 @@ export function renderAttr(key: string, value: unknown, tag?: string): string {
   } else if (isSSRSafeAttrName(attrKey)) {
     return ` ${attrKey}="${escapeHtml(value)}"`
   } else {
+    console.warn(
+      `[@vue/server-renderer] Skipped rendering unsafe attribute name: ${attrKey}`
+    )
     return ``
   }
 }
 
-export function renderClass(raw: unknown): string {
+// Render a v-bind attr with static key. The key is pre-processed at compile
+// time and we only need to check and escape value.
+export function ssrRenderAttr(key: string, value: unknown): string {
+  if (!isRenderableValue(value)) {
+    return ``
+  }
+  return ` ${key}="${escapeHtml(value)}"`
+}
+
+function isRenderableValue(value: unknown): boolean {
+  if (value == null) {
+    return false
+  }
+  const type = typeof value
+  return type === 'string' || type === 'number' || type === 'boolean'
+}
+
+export function ssrRenderClass(raw: unknown): string {
   return escapeHtml(normalizeClass(raw))
 }
 
-export function renderStyle(raw: unknown): string {
+export function ssrRenderStyle(raw: unknown): string {
   if (!raw) {
     return ''
   }

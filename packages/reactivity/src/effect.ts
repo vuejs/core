@@ -95,11 +95,13 @@ function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
   if (!effectStack.includes(effect)) {
     cleanup(effect)
     try {
+      enableTracking()
       effectStack.push(effect)
       activeEffect = effect
       return fn(...args)
     } finally {
       effectStack.pop()
+      resetTracking()
       activeEffect = effectStack[effectStack.length - 1]
     }
   }
@@ -116,13 +118,21 @@ function cleanup(effect: ReactiveEffect) {
 }
 
 let shouldTrack = true
+const trackStack: boolean[] = []
 
 export function pauseTracking() {
+  trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
-export function resumeTracking() {
+export function enableTracking() {
+  trackStack.push(shouldTrack)
   shouldTrack = true
+}
+
+export function resetTracking() {
+  const last = trackStack.pop()
+  shouldTrack = last === undefined ? true : last
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {
@@ -174,8 +184,12 @@ export function trigger(
     if (key !== void 0) {
       addRunners(effects, computedRunners, depsMap.get(key))
     }
-    // also run for iteration key on ADD | DELETE
-    if (type === TriggerOpTypes.ADD || type === TriggerOpTypes.DELETE) {
+    // also run for iteration key on ADD | DELETE | Map.SET
+    if (
+      type === TriggerOpTypes.ADD ||
+      type === TriggerOpTypes.DELETE ||
+      (type === TriggerOpTypes.SET && target instanceof Map)
+    ) {
       const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
       addRunners(effects, computedRunners, depsMap.get(iterationKey))
     }
@@ -196,10 +210,16 @@ function addRunners(
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
-      if (effect.options.computed) {
-        computedRunners.add(effect)
+      if (effect !== activeEffect) {
+        if (effect.options.computed) {
+          computedRunners.add(effect)
+        } else {
+          effects.add(effect)
+        }
       } else {
-        effects.add(effect)
+        // the effect mutated its own dependency during its execution.
+        // this can be caused by operations like foo.value++
+        // do not trigger or we end in an infinite loop
       }
     })
   }
