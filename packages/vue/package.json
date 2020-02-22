@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.0.0-alpha.5",
+  "version": "3.0.0-alpha.6",
   "description": "vue",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -36,8 +36,8 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
   "dependencies": {
-    "@vue/compiler-dom": "3.0.0-alpha.5",
-    "@vue/runtime-dom": "3.0.0-alpha.5"
+    "@vue/compiler-dom": "3.0.0-alpha.6",
+    "@vue/runtime-dom": "3.0.0-alpha.6"
   },
   "devDependencies": {
     "lodash": "^4.17.15",
