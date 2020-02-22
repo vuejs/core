@@ -96,7 +96,6 @@ function createSetter(isReadonly = false, shallow = false) {
       if (!hadKey) {
         trigger(target, TriggerOpTypes.ADD, key, value)
       } else if (hasChanged(value, oldValue)) {
-        debugger
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
