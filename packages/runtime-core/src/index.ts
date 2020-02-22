@@ -3,6 +3,8 @@
 export const version = __VERSION__
 export {
   ref,
+  unref,
+  shallowRef,
   isRef,
   toRefs,
   reactive,

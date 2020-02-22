@@ -1,5 +1,14 @@
-import { ref, effect, reactive, isRef, toRefs, Ref } from '../src/index'
+import {
+  ref,
+  effect,
+  reactive,
+  isRef,
+  toRefs,
+  Ref,
+  isReactive
+} from '../src/index'
 import { computed } from '@vue/runtime-dom'
+import { shallowRef, unref } from '../src/ref'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -127,6 +136,26 @@ describe('reactivity/ref', () => {
     expect(tupleRef.value[3]()).toBe(0)
     tupleRef.value[4].value++
     expect(tupleRef.value[4].value).toBe(1)
+  })
+
+  test('unref', () => {
+    expect(unref(1)).toBe(1)
+    expect(unref(ref(1))).toBe(1)
+  })
+
+  test('shallowRef', () => {
+    const sref = shallowRef({ a: 1 })
+    expect(isReactive(sref.value)).toBe(false)
+
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value = { a: 2 }
+    expect(isReactive(sref.value)).toBe(false)
+    expect(dummy).toBe(2)
   })
 
   test('isRef', () => {
