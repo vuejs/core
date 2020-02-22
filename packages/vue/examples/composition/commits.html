@@ -22,7 +22,7 @@
 </div>
 
 <script>
-const { createApp, ref, watch } = Vue
+const { createApp, ref, watchEffect } = Vue
 const API_URL = `https://api.github.com/repos/vuejs/vue-next/commits?per_page=3&sha=`
 
 const truncate = v => {
@@ -37,7 +37,7 @@ createApp({
     const currentBranch = ref('master')
     const commits = ref(null)
 
-    watch(() => {
+    watchEffect(() => {
       fetch(`${API_URL}${currentBranch.value}`)
         .then(res => res.json())
         .then(data => {
