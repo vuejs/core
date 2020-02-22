@@ -184,7 +184,7 @@ export function trigger(
     })
   } else if (key === 'length' && isArray(target)) {
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key > (newValue as number)) {
+      if (key === 'length' || key >= (newValue as number)) {
         addRunners(effects, computedRunners, dep)
       }
     })
