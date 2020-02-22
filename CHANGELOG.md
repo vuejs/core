@@ -30,16 +30,31 @@
 
 ### BREAKING CHANGES
 
-* **runtime-core:** replae `watch(fn, options?)` with `watchEffect`
+* **runtime-core:** replace `watch(fn, options?)` with `watchEffect`
 
     The `watch(fn, options?)` signature has been replaced by the new
     `watchEffect` API, which has the same usage and behavior. `watch`
-    now only supports the `watch(source, cb, options?)` signautre.
-* reactive arrays no longer unwraps contained refs
+    now only supports the `watch(source, cb, options?)` signature.
+
+* **reactivity:** reactive arrays no longer unwraps contained refs
 
     When reactive arrays contain refs, especially a mix of refs and
     plain values, Array prototype methods will fail to function
     properly - e.g. sort() or reverse() will overwrite the ref's value
+    instead of moving it (see #737).
+
+    Ensuring correct behavior for all possible Array methods while
+    retaining the ref unwrapping behavior is exceedinly complicated; In
+    addition, even if Vue handles the built-in methods internally, it
+    would still break when the user attempts to use a 3rd party utility
+    functioon (e.g. lodash) on a reactive array containing refs.
+
+    After this commit, similar to other collection types like Map and
+    Set, Arrays will no longer automatically unwrap contained refs.
+
+    The usage of mixed refs and plain values in Arrays should be rare in
+    practice. In cases where this is necessary, the user can create a
+    computed property that performs the unwrapping.
 
 
 
