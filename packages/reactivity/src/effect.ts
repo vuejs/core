@@ -177,15 +177,14 @@ export function trigger(
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
   if (type === TriggerOpTypes.CLEAR) {
-    // collection being cleared or Array length mutation
+    // collection being cleared
     // trigger all effects for target
-    depsMap.forEach((dep, i) => {
+    depsMap.forEach(dep => {
       addRunners(effects, computedRunners, dep)
     })
   } else if (key === 'length' && isArray(target)) {
-    const startIndex: number = (newValue as number) || 0
-    depsMap.forEach((dep, i) => {
-      if (i >= startIndex || i === 'length') {
+    depsMap.forEach((dep, key) => {
+      if (key === 'length' || key > (newValue as number)) {
         addRunners(effects, computedRunners, dep)
       }
     })
