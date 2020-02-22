@@ -142,7 +142,7 @@ describe('api: template refs', () => {
       foo: ref(null),
       bar: ref(null)
     }
-    const refKey: Ref<keyof typeof refs> = ref('foo')
+    const refKey = ref('foo') as Ref<keyof typeof refs>
 
     const Comp = {
       setup() {
