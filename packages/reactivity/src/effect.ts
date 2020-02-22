@@ -176,16 +176,17 @@ export function trigger(
   }
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  if (
-    type === TriggerOpTypes.CLEAR ||
-    (key === 'length' &&
-      isArray(target) &&
-      (newValue as number) < (oldValue as number))
-  ) {
-    // collection being cleared or Array length mutation
+  if (type === TriggerOpTypes.CLEAR) {
+    // collection being cleared
     // trigger all effects for target
     depsMap.forEach(dep => {
       addRunners(effects, computedRunners, dep)
+    })
+  } else if (key === 'length' && isArray(target)) {
+    depsMap.forEach((dep, key) => {
+      if (key === 'length' || key >= (newValue as number)) {
+        addRunners(effects, computedRunners, dep)
+      }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
