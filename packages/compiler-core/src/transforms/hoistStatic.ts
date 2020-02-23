@@ -126,9 +126,9 @@ export function isStaticNode(
             return false
           }
         }
-        // only svg/foeignObject could be block here, however if they are static
+        // only svg/foreignObject could be block here, however if they are static
         // then they don't need to be blocks since there will be no nested
-        // udpates.
+        // updates.
         if (codegenNode.isBlock) {
           codegenNode.isBlock = false
         }

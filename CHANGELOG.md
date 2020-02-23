@@ -6,7 +6,7 @@
 * **compiler-core:** should alias name in helperString ([#743](https://github.com/vuejs/vue-next/issues/743)) ([7b987d9](https://github.com/vuejs/vue-next/commit/7b987d9450fc7befcd0946a0d53991d27ed299ec)), closes [#740](https://github.com/vuejs/vue-next/issues/740)
 * **compiler-dom:** properly stringify class/style bindings when hoisting static strings ([1b9b235](https://github.com/vuejs/vue-next/commit/1b9b235663b75db040172d2ffbee1dd40b4db032))
 * **reactivity:** should trigger all effects when array length is mutated ([#754](https://github.com/vuejs/vue-next/issues/754)) ([5fac655](https://github.com/vuejs/vue-next/commit/5fac65589b4455b98fd4e2f9eb3754f0acde97bb))
-* **sfc:** inherit parent scopeId on child rooot ([#756](https://github.com/vuejs/vue-next/issues/756)) ([9547c2b](https://github.com/vuejs/vue-next/commit/9547c2b93d6d8f469314cfe055960746a3e3acbe))
+* **sfc:** inherit parent scopeId on child root ([#756](https://github.com/vuejs/vue-next/issues/756)) ([9547c2b](https://github.com/vuejs/vue-next/commit/9547c2b93d6d8f469314cfe055960746a3e3acbe))
 * **types:** improve ref typing, close [#759](https://github.com/vuejs/vue-next/issues/759) ([627b9df](https://github.com/vuejs/vue-next/commit/627b9df4a293ae18071009d9cac7a5e995d40716))
 * **types:** update setup binding unwrap types for 6b10f0c ([a840e7d](https://github.com/vuejs/vue-next/commit/a840e7ddf0b470b5da27b7b2b8b5fcf39a7197a2)), closes [#738](https://github.com/vuejs/vue-next/issues/738)
 
@@ -44,10 +44,10 @@
     instead of moving it (see #737).
 
     Ensuring correct behavior for all possible Array methods while
-    retaining the ref unwrapping behavior is exceedinly complicated; In
+    retaining the ref unwrapping behavior is exceedingly complicated; In
     addition, even if Vue handles the built-in methods internally, it
     would still break when the user attempts to use a 3rd party utility
-    functioon (e.g. lodash) on a reactive array containing refs.
+    function (e.g. lodash) on a reactive array containing refs.
 
     After this commit, similar to other collection types like Map and
     Set, Arrays will no longer automatically unwrap contained refs.
@@ -145,7 +145,7 @@
       behaves exactly the same as 2.x.
 
     - When using the effect signature or `{ immediate: true }`, the
-      intital execution is now performed synchronously instead of
+      initial execution is now performed synchronously instead of
       deferred until the component is mounted. This is necessary for
       certain use cases to work properly with `async setup()` and
       Suspense.
