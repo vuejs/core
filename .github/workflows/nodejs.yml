@@ -1,0 +1,96 @@
+name: Node CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: cache node_modules
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: deps-${{ hashFiles(format('{0}{1}', github.workspace, '/yarn.lock')) }}
+
+      - name: install
+        run: yarn --check-files --frozen-lockfile --non-interactive
+
+      - name: cache workspace
+        uses: actions/cache@v1
+        with:
+          path: ${{ github.workspace }}
+          key: workspace-${{ github.sha }}
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: restore workspace cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ github.workspace }}
+          key: workspace-${{ github.sha }}
+
+      - name: test
+        run: yarn test --ci --runInBand
+    needs: setup
+
+  test-dts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: restore workspace cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ github.workspace }}
+          key: workspace-${{ github.sha }}
+
+      - name: test-dts
+        run: yarn test-dts
+    needs: setup
+
+  check-size:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: restore workspace cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ github.workspace }}
+          key: workspace-${{ github.sha }}
+
+      - name: check-size
+        run: yarn size
+    needs: setup
