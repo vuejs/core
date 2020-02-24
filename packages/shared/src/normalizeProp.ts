@@ -1,4 +1,5 @@
-import { isArray, isString, isObject } from './'
+import { isArray, isString, isObject, hyphenate } from './'
+import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export function normalizeStyle(
   value: unknown
@@ -17,6 +18,27 @@ export function normalizeStyle(
   } else if (isObject(value)) {
     return value
   }
+}
+
+export function stringifyStyle(
+  styles: Record<string, string | number> | undefined
+): string {
+  let ret = ''
+  if (!styles) {
+    return ret
+  }
+  for (const key in styles) {
+    const value = styles[key]
+    const normalizedKey = key.indexOf(`--`) === 0 ? key : hyphenate(key)
+    if (
+      isString(value) ||
+      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
+    ) {
+      // only render valid values
+      ret += `${normalizedKey}:${value};`
+    }
+  }
+  return ret
 }
 
 export function normalizeClass(value: unknown): string {

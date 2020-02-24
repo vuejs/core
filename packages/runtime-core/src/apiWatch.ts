@@ -71,6 +71,14 @@ export type StopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
+// Simple effect.
+export function watchEffect(
+  effect: WatchEffect,
+  options?: BaseWatchOptions
+): StopHandle {
+  return doWatch(effect, null, options)
+}
+
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
@@ -110,6 +118,13 @@ export function watch<T = any>(
     // watch(source, cb)
     return doWatch(effectOrSource, cbOrOptions, options)
   } else {
+    // TODO remove this in the next release
+    __DEV__ &&
+      warn(
+        `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
+          `Use \`watchEffect(fn, options?)\` instead. \`watch\` will only ` +
+          `support \`watch(source, cb, options?) signature in the next release.`
+      )
     // watch(effect)
     return doWatch(effectOrSource, null, cbOrOptions)
   }
@@ -124,13 +139,13 @@ function doWatch(
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
   }
@@ -171,7 +186,7 @@ function doWatch(
     }
   }
 
-  if (deep) {
+  if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }

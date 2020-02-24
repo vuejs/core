@@ -3,6 +3,8 @@
 export const version = __VERSION__
 export {
   ref,
+  unref,
+  shallowRef,
   isRef,
   toRefs,
   reactive,
@@ -15,7 +17,7 @@ export {
   markNonReactive
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
-export { watch } from './apiWatch'
+export { watch, watchEffect } from './apiWatch'
 export {
   onBeforeMount,
   onMounted,

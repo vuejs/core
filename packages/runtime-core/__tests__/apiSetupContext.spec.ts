@@ -6,7 +6,7 @@ import {
   render,
   serializeInner,
   nextTick,
-  watch,
+  watchEffect,
   defineComponent,
   triggerEvent,
   TestElement
@@ -55,7 +55,7 @@ describe('api: setup context', () => {
 
     const Child = defineComponent({
       setup(props: { count: number }) {
-        watch(() => {
+        watchEffect(() => {
           dummy = props.count
         })
         return () => h('div', props.count)
@@ -88,7 +88,7 @@ describe('api: setup context', () => {
       },
 
       setup(props) {
-        watch(() => {
+        watchEffect(() => {
           dummy = props.count
         })
         return () => h('div', props.count)

@@ -7,7 +7,8 @@ import {
   watch,
   ref,
   nextTick,
-  defineComponent
+  defineComponent,
+  watchEffect
 } from '@vue/runtime-test'
 import { setErrorRecovery } from '../src/errorHandling'
 import { mockWarn } from '@vue/shared'
@@ -241,7 +242,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'ref function')
   })
 
-  test('in watch (effect)', () => {
+  test('in effect', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -257,7 +258,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
-        watch(() => {
+        watchEffect(() => {
           throw err
         })
         return () => null
@@ -268,7 +269,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
   })
 
-  test('in watch (getter)', () => {
+  test('in watch getter', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -298,7 +299,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher getter')
   })
 
-  test('in watch (callback)', async () => {
+  test('in watch callback', async () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -332,7 +333,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
   })
 
-  test('in watch cleanup', async () => {
+  test('in effect cleanup', async () => {
     const err = new Error('foo')
     const count = ref(0)
     const fn = jest.fn()
@@ -349,7 +350,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
-        watch(onCleanup => {
+        watchEffect(onCleanup => {
           count.value
           onCleanup(() => {
             throw err

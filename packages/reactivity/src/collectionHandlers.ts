@@ -51,12 +51,7 @@ function add(this: SetTypes, value: unknown) {
   const hadKey = proto.has.call(target, value)
   const result = proto.add.call(target, value)
   if (!hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, TriggerOpTypes.ADD, value, { newValue: value })
-    } else {
-      trigger(target, TriggerOpTypes.ADD, value)
-    }
+    trigger(target, TriggerOpTypes.ADD, value, value)
   }
   return result
 }
@@ -69,20 +64,10 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const hadKey = proto.has.call(target, key)
   const oldValue = proto.get.call(target, key)
   const result = proto.set.call(target, key, value)
-  /* istanbul ignore else */
-  if (__DEV__) {
-    const extraInfo = { oldValue, newValue: value }
-    if (!hadKey) {
-      trigger(target, TriggerOpTypes.ADD, key, extraInfo)
-    } else if (hasChanged(value, oldValue)) {
-      trigger(target, TriggerOpTypes.SET, key, extraInfo)
-    }
-  } else {
-    if (!hadKey) {
-      trigger(target, TriggerOpTypes.ADD, key)
-    } else if (hasChanged(value, oldValue)) {
-      trigger(target, TriggerOpTypes.SET, key)
-    }
+  if (!hadKey) {
+    trigger(target, TriggerOpTypes.ADD, key, value)
+  } else if (hasChanged(value, oldValue)) {
+    trigger(target, TriggerOpTypes.SET, key, value, oldValue)
   }
   return result
 }
@@ -96,12 +81,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   // forward the operation before queueing reactions
   const result = proto.delete.call(target, key)
   if (hadKey) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, TriggerOpTypes.DELETE, key, { oldValue })
-    } else {
-      trigger(target, TriggerOpTypes.DELETE, key)
-    }
+    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
   return result
 }
@@ -117,12 +97,7 @@ function clear(this: IterableCollections) {
   // forward the operation before queueing reactions
   const result = getProto(target).clear.call(target)
   if (hadItems) {
-    /* istanbul ignore else */
-    if (__DEV__) {
-      trigger(target, TriggerOpTypes.CLEAR, void 0, { oldTarget })
-    } else {
-      trigger(target, TriggerOpTypes.CLEAR)
-    }
+    trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
   }
   return result
 }

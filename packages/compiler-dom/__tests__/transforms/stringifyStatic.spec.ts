@@ -77,8 +77,8 @@ describe('stringify static html', () => {
 
   test('serliazing constant bindings', () => {
     const { ast } = compileWithStringify(
-      `<div><div>${repeat(
-        `<span :class="'foo' + 'bar'">{{ 1 }} + {{ false }}</span>`,
+      `<div><div :style="{ color: 'red' }">${repeat(
+        `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</div></div>`
     )
@@ -89,8 +89,8 @@ describe('stringify static html', () => {
       callee: CREATE_STATIC,
       arguments: [
         JSON.stringify(
-          `<div>${repeat(
-            `<span class="foobar">1 + false</span>`,
+          `<div style="color:red;">${repeat(
+            `<span class="foo bar">1 + false</span>`,
             StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
           )}</div>`
         )

@@ -623,7 +623,7 @@ describe('compiler: element transform', () => {
 
   test(`props merging: style`, () => {
     const { node } = parseWithElementTransform(
-      `<div style="color: red" :style="{ color: 'red' }" />`,
+      `<div style="color: green" :style="{ color: 'red' }" />`,
       {
         nodeTransforms: [transformStyle, transformElement],
         directiveTransforms: {
@@ -646,7 +646,7 @@ describe('compiler: element transform', () => {
             elements: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,
-                content: `_hoisted_1`,
+                content: `{"color":"green"}`,
                 isStatic: false
               },
               {

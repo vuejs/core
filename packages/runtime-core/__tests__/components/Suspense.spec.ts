@@ -9,6 +9,7 @@ import {
   nextTick,
   onMounted,
   watch,
+  watchEffect,
   onUnmounted,
   onErrorCaptured
 } from '@vue/runtime-test'
@@ -163,7 +164,7 @@ describe('Suspense', () => {
         // extra tick needed for Node 12+
         deps.push(p.then(() => Promise.resolve()))
 
-        watch(() => {
+        watchEffect(() => {
           calls.push('immediate effect')
         })
 
@@ -265,7 +266,7 @@ describe('Suspense', () => {
         const p = new Promise(r => setTimeout(r, 1))
         deps.push(p)
 
-        watch(() => {
+        watchEffect(() => {
           calls.push('immediate effect')
         })
 
