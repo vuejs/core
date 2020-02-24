@@ -23,19 +23,30 @@ export interface Ref<T = any> {
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
-export function isRef<T>(r: Ref<T> | T): r is Ref<T>
+export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return r ? r._isRef === true : false
 }
 
-export function ref<T extends Ref>(value: T): T
-export function ref<T>(value: T): Ref<T>
+export function ref<T>(value: T): T extends Ref ? T : Ref<T>
 export function ref<T = any>(): Ref<T>
 export function ref(value?: unknown) {
+  return createRef(value)
+}
+
+export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T = any>(): Ref<T>
+export function shallowRef(value?: unknown) {
+  return createRef(value, true)
+}
+
+function createRef(value: unknown, shallow = false) {
   if (isRef(value)) {
     return value
   }
-  value = convert(value)
+  if (!shallow) {
+    value = convert(value)
+  }
   const r = {
     _isRef: true,
     get value() {
@@ -43,7 +54,7 @@ export function ref(value?: unknown) {
       return value
     },
     set value(newVal) {
-      value = convert(newVal)
+      value = shallow ? newVal : convert(newVal)
       trigger(
         r,
         TriggerOpTypes.SET,
@@ -53,6 +64,10 @@ export function ref(value?: unknown) {
     }
   }
   return r
+}
+
+export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
+  return isRef(ref) ? (ref.value as any) : ref
 }
 
 export function toRefs<T extends object>(
@@ -83,8 +98,6 @@ function toProxyRef<T extends object, K extends keyof T>(
   } as any
 }
 
-type UnwrapArray<T> = { [P in keyof T]: UnwrapRef<T[P]> }
-
 // corner case when use narrows type
 // Ex. type RelativePath = string & { __brand: unknown }
 // RelativePath extends object -> true
@@ -94,7 +107,7 @@ type BaseTypes = string | number | boolean
 export type UnwrapRef<T> = {
   cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
   ref: T extends Ref<infer V> ? UnwrapRef<V> : T
-  array: T extends Array<infer V> ? Array<UnwrapRef<V>> & UnwrapArray<T> : T
+  array: T
   object: { [K in keyof T]: UnwrapRef<T[K]> }
 }[T extends ComputedRef<any>
   ? 'cRef'

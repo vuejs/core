@@ -1,4 +1,12 @@
-import { watch, reactive, computed, nextTick, ref, h } from '../src/index'
+import {
+  watch,
+  watchEffect,
+  reactive,
+  computed,
+  nextTick,
+  ref,
+  h
+} from '../src/index'
 import { render, nodeOps, serializeInner } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
@@ -13,10 +21,10 @@ import { mockWarn } from '@vue/shared'
 describe('api: watch', () => {
   mockWarn()
 
-  it('watch(effect)', async () => {
+  it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
-    watch(() => {
+    watchEffect(() => {
       dummy = state.count
     })
     expect(dummy).toBe(0)
@@ -117,10 +125,10 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([[2, true], [1, false]])
   })
 
-  it('stopping the watcher', async () => {
+  it('stopping the watcher (effect)', async () => {
     const state = reactive({ count: 0 })
     let dummy
-    const stop = watch(() => {
+    const stop = watchEffect(() => {
       dummy = state.count
     })
     expect(dummy).toBe(0)
@@ -132,11 +140,32 @@ describe('api: watch', () => {
     expect(dummy).toBe(0)
   })
 
+  it('stopping the watcher (with source)', async () => {
+    const state = reactive({ count: 0 })
+    let dummy
+    const stop = watch(
+      () => state.count,
+      count => {
+        dummy = count
+      }
+    )
+
+    state.count++
+    await nextTick()
+    expect(dummy).toBe(1)
+
+    stop()
+    state.count++
+    await nextTick()
+    // should not update
+    expect(dummy).toBe(1)
+  })
+
   it('cleanup registration (effect)', async () => {
     const state = reactive({ count: 0 })
     const cleanup = jest.fn()
     let dummy
-    const stop = watch(onCleanup => {
+    const stop = watchEffect(onCleanup => {
       onCleanup(cleanup)
       dummy = state.count
     })
@@ -187,7 +216,7 @@ describe('api: watch', () => {
 
     const Comp = {
       setup() {
-        watch(() => {
+        watchEffect(() => {
           assertion(count.value)
         })
         return () => count.value
@@ -221,7 +250,7 @@ describe('api: watch', () => {
 
     const Comp = {
       setup() {
-        watch(
+        watchEffect(
           () => {
             assertion(count.value, count2.value)
           },
@@ -263,7 +292,7 @@ describe('api: watch', () => {
 
     const Comp = {
       setup() {
-        watch(
+        watchEffect(
           () => {
             assertion(count.value)
           },
@@ -363,14 +392,14 @@ describe('api: watch', () => {
     expect(spy).toHaveBeenCalledTimes(3)
   })
 
-  it('warn immediate option when using effect signature', async () => {
+  it('warn immediate option when using effect', async () => {
     const count = ref(0)
     let dummy
-    // @ts-ignore
-    watch(
+    watchEffect(
       () => {
         dummy = count.value
       },
+      // @ts-ignore
       { immediate: false }
     )
     expect(dummy).toBe(0)
@@ -388,7 +417,7 @@ describe('api: watch', () => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
-    watch(
+    watchEffect(
       () => {
         dummy = [obj.foo, 'bar' in obj, Object.keys(obj)]
       },
@@ -423,7 +452,7 @@ describe('api: watch', () => {
       events.push(e)
     })
     const obj = reactive({ foo: 1 })
-    watch(
+    watchEffect(
       () => {
         dummy = obj.foo
       },

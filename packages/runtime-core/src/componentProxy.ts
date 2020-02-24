@@ -13,7 +13,8 @@ import {
   isRef,
   isReactive,
   Ref,
-  ComputedRef
+  ComputedRef,
+  unref
 } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
@@ -84,8 +85,6 @@ const enum AccessTypes {
   OTHER
 }
 
-const unwrapRef = (val: unknown) => (isRef(val) ? val.value : val)
-
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
     // fast path for unscopables when using `with` block
@@ -115,7 +114,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.DATA:
             return data[key]
           case AccessTypes.CONTEXT:
-            return unwrapRef(renderContext[key])
+            return unref(renderContext[key])
           case AccessTypes.PROPS:
             return propsProxy![key]
           // default: just fallthrough
@@ -125,7 +124,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         return data[key]
       } else if (hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
-        return unwrapRef(renderContext[key])
+        return unref(renderContext[key])
       } else if (type.props != null) {
         // only cache other properties when instance has declared (this stable)
         // props
