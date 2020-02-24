@@ -139,13 +139,13 @@ function doWatch(
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
   }
@@ -186,7 +186,7 @@ function doWatch(
     }
   }
 
-  if (deep) {
+  if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
