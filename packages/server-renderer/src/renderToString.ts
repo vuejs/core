@@ -67,9 +67,11 @@ function createBuffer() {
   let hasAsync = false
   const buffer: SSRBuffer = []
   return {
-    buffer,
-    hasAsync() {
-      return hasAsync
+    getBuffer(): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
+      // If the current component's buffer contains any Promise from async children,
+      // then it must return a Promise too. Otherwise this is a component that
+      // contains only sync children so we can avoid the async book-keeping overhead.
+      return hasAsync ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
     },
     push(item: SSRBufferItem) {
       const isStringItem = isString(item)
@@ -104,28 +106,19 @@ export async function renderToString(
   input: App | VNode,
   context: SSRContext = {}
 ): Promise<string> {
-  let buffer: ResolvedSSRBuffer
   if (isVNode(input)) {
     // raw vnode, wrap with app (for context)
     return renderToString(createApp({ render: () => input }), context)
-  } else {
-    // rendering an app
-    const vnode = createVNode(input._component, input._props)
-    vnode.appContext = input._context
-    // provide the ssr context to the tree
-    input.provide(ssrContextKey, context)
-    buffer = await renderComponentVNode(vnode)
   }
 
-  // resolve portals
-  if (context.__portalBuffers) {
-    context.portals = context.portals || {}
-    for (const key in context.__portalBuffers) {
-      // note: it's OK to await sequentially here because the Promises were
-      // created eagerly in parallel.
-      context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
-    }
-  }
+  // rendering an app
+  const vnode = createVNode(input._component, input._props)
+  vnode.appContext = input._context
+  // provide the ssr context to the tree
+  input.provide(ssrContextKey, context)
+  const buffer = await renderComponentVNode(vnode)
+
+  await resolvePortals(context)
 
   return unrollBuffer(buffer)
 }
@@ -201,7 +194,7 @@ function renderComponentSubTree(
   instance: ComponentInternalInstance
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const comp = instance.type as Component
-  const { buffer, push, hasAsync } = createBuffer()
+  const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
     renderVNode(push, renderComponentRoot(instance), instance)
   } else {
@@ -225,10 +218,7 @@ function renderComponentSubTree(
       )
     }
   }
-  // If the current component's buffer contains any Promise from async children,
-  // then it must return a Promise too. Otherwise this is a component that
-  // contains only sync children so we can avoid the async book-keeping overhead.
-  return hasAsync() ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
+  return getBuffer()
 }
 
 function renderVNode(
@@ -349,7 +339,7 @@ function renderPortal(
     return []
   }
 
-  const { buffer, push, hasAsync } = createBuffer()
+  const { getBuffer, push } = createBuffer()
   renderVNodeChildren(
     push,
     vnode.children as VNodeArrayChildren,
@@ -360,7 +350,17 @@ function renderPortal(
   ] as SSRContext
   const portalBuffers =
     context.__portalBuffers || (context.__portalBuffers = {})
-  portalBuffers[target] = hasAsync()
-    ? Promise.all(buffer)
-    : (buffer as ResolvedSSRBuffer)
+
+  portalBuffers[target] = getBuffer()
+}
+
+async function resolvePortals(context: SSRContext) {
+  if (context.__portalBuffers) {
+    context.portals = context.portals || {}
+    for (const key in context.__portalBuffers) {
+      // note: it's OK to await sequentially here because the Promises were
+      // created eagerly in parallel.
+      context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
+    }
+  }
 }
