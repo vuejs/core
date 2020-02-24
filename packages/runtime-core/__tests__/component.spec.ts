@@ -4,17 +4,70 @@ import {
   render,
   nodeOps,
   nextTick,
-  defineComponent
+  defineComponent,
+  serializeInner as inner
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
-  test.todo('should work')
+  it('should render basic component', () => {
+    const Component = {
+      setup() {
+        const foo = ref('foo')
+        return () => h('div', foo.value)
+      }
+    }
 
-  test.todo('shouldUpdateComponent')
+    const root = nodeOps.createElement('div')
+    render(h(Component), root)
+    expect(inner(root)).toBe('<div>foo</div>')
+  })
 
-  test.todo('componentProxy')
+  it('should update component', async () => {
+    const foo = ref('foo')
 
-  test.todo('componentProps')
+    const Component = {
+      setup() {
+        return () => h('div', foo.value)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Component), root)
+    expect(inner(root)).toBe('<div>foo</div>')
+
+    foo.value = 'bar'
+    await nextTick()
+    expect(inner(root)).toBe('<div>bar</div>')
+  })
+
+  it('should work component props', async () => {
+    const foo = ref('foo')
+
+    const Child = defineComponent({
+      props: {
+        foo: {
+          type: String,
+          required: true
+        }
+      },
+      setup(props) {
+        return () => h('div', props.foo)
+      }
+    })
+    const Parent = defineComponent({
+      setup() {
+        return () => h(Child, { foo: foo.value })
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    expect(inner(root)).toBe('<div>foo</div>')
+
+    foo.value = 'bar'
+    await nextTick()
+    expect(inner(root)).toBe('<div>bar</div>')
+  })
 
   describe('slots', () => {
     test('should respect $stable flag', async () => {
