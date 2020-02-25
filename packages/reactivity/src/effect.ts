@@ -199,8 +199,7 @@ export function trigger(
       type === TriggerOpTypes.DELETE ||
       (type === TriggerOpTypes.SET && target instanceof Map)
     ) {
-      const iterationKey = isArray(target) ? 'length' : ITERATE_KEY
-      addRunners(effects, computedRunners, depsMap.get(iterationKey))
+      addRunners(effects, computedRunners, depsMap.get(ITERATE_KEY))
     }
   }
   const run = (effect: ReactiveEffect) => {
