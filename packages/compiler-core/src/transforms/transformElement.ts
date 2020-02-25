@@ -134,6 +134,11 @@ export const transformElement: NodeTransform = (node, context) => {
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
+
+        // sub-component‘s direct child should openBlock
+        for (let i = 0; i < node.children.length; i++) {
+          node.children[i].codegenNode!.isBlock = true
+        }
       } else if (node.children.length === 1) {
         const child = node.children[0]
         const type = child.type
