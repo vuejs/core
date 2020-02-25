@@ -103,14 +103,14 @@ describe('class', () => {
     const component1 = defineComponent({
       props: {},
       render() {
-        return this.$slots.default()[0]
+        return this.$slots.default!()[0]
       }
     })
 
     const component2 = defineComponent({
       props: {},
       render() {
-        return this.$slots.default()[0]
+        return this.$slots.default!()[0]
       }
     })
 
@@ -122,7 +122,7 @@ describe('class', () => {
           {
             class: 'staticClass'
           },
-          [this.$slots.default()]
+          [this.$slots.default!()]
         )
       }
     })
