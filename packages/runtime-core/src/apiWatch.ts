@@ -82,20 +82,14 @@ export function watchEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-// overload #1: simple effect
-export function watch(
-  effect: WatchEffect,
-  options?: BaseWatchOptions
-): StopHandle
-
-// overload #2: single source + cb
+// overload #1: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
 ): StopHandle
 
-// overload #3: array of multiple sources + cb
+// overload #2: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
@@ -110,24 +104,18 @@ export function watch<
 
 // implementation
 export function watch<T = any>(
-  effectOrSource: WatchSource<T> | WatchSource<T>[] | WatchEffect,
-  cbOrOptions?: WatchCallback<T> | WatchOptions,
+  source: WatchSource<T> | WatchSource<T>[],
+  cb: WatchCallback<T>,
   options?: WatchOptions
 ): StopHandle {
-  if (isFunction(cbOrOptions)) {
-    // watch(source, cb)
-    return doWatch(effectOrSource, cbOrOptions, options)
-  } else {
-    // TODO remove this in the next release
-    __DEV__ &&
-      warn(
-        `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
-          `Use \`watchEffect(fn, options?)\` instead. \`watch\` will only ` +
-          `support \`watch(source, cb, options?) signature in the next release.`
-      )
-    // watch(effect)
-    return doWatch(effectOrSource, null, cbOrOptions)
+  if (__DEV__ && !isFunction(cb)) {
+    warn(
+      `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
+        `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
+        `supports \`watch(source, cb, options?) signature.`
+    )
   }
+  return doWatch(source, cb, options)
 }
 
 function doWatch(
