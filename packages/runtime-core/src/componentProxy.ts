@@ -33,6 +33,7 @@ export type ComponentPublicInstance<
   M extends MethodOptions = {},
   PublicProps = P
 > = {
+  $: ComponentInternalInstance
   $data: D
   $props: PublicProps
   $attrs: Data

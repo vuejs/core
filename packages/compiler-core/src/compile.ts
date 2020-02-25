@@ -4,6 +4,7 @@ import { transform, NodeTransform, DirectiveTransform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
 import { isString } from '@vue/shared'
+import { transformRef } from './transforms/transformRef'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { transformExpression } from './transforms/transformExpression'
@@ -27,6 +28,7 @@ export function getBaseTransformPreset(
 ): TransformPreset {
   return [
     [
+      transformRef,
       transformOnce,
       transformIf,
       transformFor,

@@ -30,7 +30,8 @@ import {
   isFunction,
   PatchFlags,
   ShapeFlags,
-  NOOP
+  NOOP,
+  isArray
 } from '@vue/shared'
 import {
   queueJob,
@@ -1793,11 +1794,19 @@ function baseCreateRenderer<
   }
 
   const setRef = (
-    ref: string | Function | Ref,
-    oldRef: string | Function | Ref | null,
+    ref: string | Function | Ref | [ComponentPublicInstance, string],
+    oldRef: string | Function | Ref | [ComponentPublicInstance, string] | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
   ) => {
+    if (isArray(ref)) {
+      // template string refs are compiled into tuples like [ctx, key] to
+      // ensure refs inside slots are set on the correct owner instance.
+      const [{ $: owner }, key] = ref
+      setRef(key, oldRef && (oldRef as any[])[1], owner, value)
+      return
+    }
+
     const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
     const renderContext = toRaw(parent.renderContext)
 
@@ -1823,7 +1832,7 @@ function baseCreateRenderer<
     } else if (isRef(ref)) {
       ref.value = value
     } else if (isFunction(ref)) {
-      callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value, refs])
+      callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value])
     } else if (__DEV__) {
       warn('Invalid template ref type:', value, `(${typeof value})`)
     }
