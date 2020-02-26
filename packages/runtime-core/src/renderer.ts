@@ -126,7 +126,6 @@ export interface RendererInternals<HostNode = any, HostElement = any> {
   pbc: PatchBlockChildrenFn<HostNode, HostElement>
   n: NextFn<HostNode, HostElement>
   o: RendererOptions<HostNode, HostElement>
-  c: ProcessTextOrCommentFn<HostNode, HostElement>
 }
 
 // These functions are created inside a closure and therefore their types cannot
@@ -845,8 +844,6 @@ function baseCreateRenderer<
     }
   }
 
-  let devFragmentID = 0
-
   const processFragment = (
     n1: HostVNode | null,
     n2: HostVNode,
@@ -857,13 +854,8 @@ function baseCreateRenderer<
     isSVG: boolean,
     optimized: boolean
   ) => {
-    const showID = __DEV__ && !__TEST__
-    const fragmentStartAnchor = (n2.el = n1
-      ? n1.el
-      : hostCreateComment(showID ? `fragment-${devFragmentID}-start` : ''))!
-    const fragmentEndAnchor = (n2.anchor = n1
-      ? n1.anchor
-      : hostCreateComment(showID ? `fragment-${devFragmentID}-end` : ''))!
+    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
+    const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
     let { patchFlag, dynamicChildren } = n2
     if (patchFlag > 0) {
@@ -878,9 +870,6 @@ function baseCreateRenderer<
     }
 
     if (n1 == null) {
-      if (showID) {
-        devFragmentID++
-      }
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
@@ -1864,7 +1853,6 @@ function baseCreateRenderer<
     pc: patchChildren,
     pbc: patchBlockChildren,
     n: getNextHostNode,
-    c: processCommentNode,
     o: options
   }
 

@@ -24,7 +24,7 @@ export type RootHydrateFunction = (
 // passed in via arguments.
 export function createHydrationFunctions({
   mt: mountComponent,
-  o: { patchProp }
+  o: { patchProp, createText }
 }: RendererInternals<Node, Element>) {
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (__DEV__ && !container.hasChildNodes()) {
@@ -40,7 +40,7 @@ export function createHydrationFunctions({
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null = null
-  ): Node | null | undefined => {
+  ): Node | null => {
     const { type, shapeFlag } = vnode
     vnode.el = node
     switch (type) {
@@ -49,14 +49,15 @@ export function createHydrationFunctions({
       case Static:
         return node.nextSibling
       case Fragment:
-        const anchor = (vnode.anchor = hydrateChildren(
-          node.nextSibling,
+        const parent = node.parentNode!
+        parent.insertBefore((vnode.el = createText('')), node)
+        const next = hydrateChildren(
+          node,
           vnode.children as VNode[],
           parentComponent
-        )!)
-        // TODO handle potential hydration error if fragment didn't get
-        // back anchor as expected.
-        return anchor.nextSibling
+        )
+        parent.insertBefore((vnode.anchor = createText('')), next)
+        return next
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           return hydrateElement(node as Element, vnode, parentComponent)
@@ -75,6 +76,7 @@ export function createHydrationFunctions({
         } else if (__DEV__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
+        return null
     }
   }
 
@@ -130,10 +132,10 @@ export function createHydrationFunctions({
   }
 
   const hydrateChildren = (
-    node: Node | null | undefined,
+    node: Node | null,
     vnodes: VNode[],
     parentComponent: ComponentInternalInstance | null
-  ): Node | null | undefined => {
+  ): Node | null => {
     for (let i = 0; node != null && i < vnodes.length; i++) {
       // TODO can skip normalizeVNode in optimized mode
       // (need hint on rendered markup?)

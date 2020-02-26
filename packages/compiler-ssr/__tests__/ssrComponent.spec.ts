@@ -219,11 +219,11 @@ describe('ssr: components', () => {
             foo: ({ list }, _push, _parent, _scopeId) => {
               if (_push) {
                 if (_ctx.ok) {
-                  _push(\`<div\${_scopeId}><!---->\`)
+                  _push(\`<div\${_scopeId}>\`)
                   _ssrRenderList(list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!----></div>\`)
+                  _push(\`</div>\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -242,11 +242,11 @@ describe('ssr: components', () => {
             bar: ({ ok }, _push, _parent, _scopeId) => {
               if (_push) {
                 if (ok) {
-                  _push(\`<div\${_scopeId}><!---->\`)
+                  _push(\`<div\${_scopeId}>\`)
                   _ssrRenderList(_ctx.list, (i) => {
                     _push(\`<span\${_scopeId}></span>\`)
                   })
-                  _push(\`<!----></div>\`)
+                  _push(\`</div>\`)
                 } else {
                   _push(\`<!---->\`)
                 }
@@ -283,7 +283,7 @@ describe('ssr: components', () => {
         .toMatchInlineSnapshot(`
         "
         return function ssrRender(_ctx, _push, _parent) {
-          _push(\`<!----><div></div><!---->\`)
+          _push(\`<div></div>\`)
         }"
       `)
 
@@ -305,7 +305,7 @@ describe('ssr: components', () => {
         .toMatchInlineSnapshot(`
         "
         return function ssrRender(_ctx, _push, _parent) {
-          _push(\`<!----><div></div><!---->\`)
+          _push(\`<div></div>\`)
         }"
       `)
     })

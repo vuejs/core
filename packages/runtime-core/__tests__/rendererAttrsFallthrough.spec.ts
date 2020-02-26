@@ -322,9 +322,7 @@ describe('attribute fallthrough', () => {
     render(h(Parent), root)
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-    expect(root.innerHTML).toBe(
-      `<!----><div></div><div class="parent"></div><!---->`
-    )
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
   })
 
   it('should not warn when context.attrs is used during render', () => {
@@ -346,8 +344,6 @@ describe('attribute fallthrough', () => {
     render(h(Parent), root)
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
-    expect(root.innerHTML).toBe(
-      `<!----><div></div><div class="parent"></div><!---->`
-    )
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
   })
 })

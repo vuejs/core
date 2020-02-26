@@ -12,8 +12,6 @@ import {
   FunctionExpression,
   TemplateChildNode,
   PORTAL,
-  SUSPENSE,
-  TRANSITION_GROUP,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -135,14 +133,10 @@ export function ssrProcessComponent(
     // this is a built-in component that fell-through.
     // just render its children.
     const component = componentTypeMap.get(node)!
-
     if (component === PORTAL) {
       return ssrProcessPortal(node, context)
     }
-
-    const needFragmentWrapper =
-      component === SUSPENSE || component === TRANSITION_GROUP
-    processChildren(node.children, context, needFragmentWrapper)
+    processChildren(node.children, context)
   } else {
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
@@ -157,7 +151,6 @@ export function ssrProcessComponent(
         processChildrenAsStatement(
           children,
           context,
-          false,
           true /* withSlotScopeId */
         ),
         vnodeBranch

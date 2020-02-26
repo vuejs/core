@@ -6,18 +6,18 @@ exports[`renderer: portal should update children 2`] = `""`;
 
 exports[`renderer: portal should update children 3`] = `"teleported"`;
 
-exports[`renderer: portal should update target 1`] = `"<!----><!--[object Object]--><div>root</div><!---->"`;
+exports[`renderer: portal should update target 1`] = `"<!--portal--><div>root</div>"`;
 
 exports[`renderer: portal should update target 2`] = `"<div>teleported</div>"`;
 
 exports[`renderer: portal should update target 3`] = `""`;
 
-exports[`renderer: portal should update target 4`] = `"<!----><!--[object Object]--><div>root</div><!---->"`;
+exports[`renderer: portal should update target 4`] = `"<!--portal--><div>root</div>"`;
 
 exports[`renderer: portal should update target 5`] = `""`;
 
 exports[`renderer: portal should update target 6`] = `"<div>teleported</div>"`;
 
-exports[`renderer: portal should work 1`] = `"<!----><!--[object Object]--><div>root</div><!---->"`;
+exports[`renderer: portal should work 1`] = `"<!--portal--><div>root</div>"`;
 
 exports[`renderer: portal should work 2`] = `"<div>teleported</div>"`;

@@ -451,14 +451,14 @@ describe('Suspense', () => {
     await deps[0]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>fallback inner</div><!---->`
+      `<div>async outer</div><div>fallback inner</div>`
     )
     expect(calls).toEqual([`outer mounted`])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>async inner</div><!---->`
+      `<div>async outer</div><div>async inner</div>`
     )
     expect(calls).toEqual([`outer mounted`, `inner mounted`])
   })
@@ -522,7 +522,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>async inner</div><!---->`
+      `<div>async outer</div><div>async inner</div>`
     )
     expect(calls).toEqual([`inner mounted`, `outer mounted`])
   })
@@ -663,7 +663,7 @@ describe('Suspense', () => {
     await deps[3]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested fallback</div><div>root async</div><!---->`
+      `<div>nested fallback</div><div>root async</div>`
     )
     expect(calls).toEqual([0, 1, 3])
 
@@ -674,7 +674,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested changed</div><div>root async</div><!---->`
+      `<div>nested changed</div><div>root async</div>`
     )
     expect(calls).toEqual([0, 1, 3, 2])
 
@@ -682,7 +682,7 @@ describe('Suspense', () => {
     msg.value = 'nested changed again'
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested changed again</div><div>root async</div><!---->`
+      `<div>nested changed again</div><div>root async</div>`
     )
   })
 
@@ -717,7 +717,7 @@ describe('Suspense', () => {
 
     await deps[0]
     await nextTick()
-    expect(serializeInner(root)).toBe(`<!----><div>Child A</div><!----><!---->`)
+    expect(serializeInner(root)).toBe(`<div>Child A</div><!---->`)
 
     toggle.value = true
     await nextTick()
@@ -725,9 +725,7 @@ describe('Suspense', () => {
 
     await deps[1]
     await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<!----><div>Child A</div><div>Child B</div><!---->`
-    )
+    expect(serializeInner(root)).toBe(`<div>Child A</div><div>Child B</div>`)
   })
 
   test.todo('portal inside suspense')

@@ -238,9 +238,7 @@ function renderVNode(
       push(children ? `<!--${children}-->` : `<!---->`)
       break
     case Fragment:
-      push(`<!---->`)
       renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
-      push(`<!---->`)
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {

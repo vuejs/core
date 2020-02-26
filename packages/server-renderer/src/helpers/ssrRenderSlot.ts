@@ -19,8 +19,6 @@ export function ssrRenderSlot(
   parentComponent: ComponentInternalInstance
 ) {
   const slotFn = slots[slotName]
-  // template-compiled slots are always rendered as fragments
-  push(`<!---->`)
   if (slotFn) {
     if (slotFn.length > 1) {
       // only ssr-optimized slot fns accept more than 1 arguments
@@ -33,5 +31,4 @@ export function ssrRenderSlot(
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
   }
-  push(`<!---->`)
 }

@@ -9,7 +9,6 @@ import {
   ElementTypes,
   createBlockStatement,
   CompilerOptions,
-  isText,
   IfStatement,
   CallExpression
 } from '@vue/compiler-dom'
@@ -29,9 +28,7 @@ import { ssrProcessElement } from './transforms/ssrTransformElement'
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
-  const isFragment =
-    ast.children.length > 1 && ast.children.some(c => !isText(c))
-  processChildren(ast.children, context, isFragment)
+  processChildren(ast.children, context)
   ast.codegenNode = createBlockStatement(context.body)
 
   // Finalize helpers.
@@ -107,12 +104,8 @@ function createChildContext(
 
 export function processChildren(
   children: TemplateChildNode[],
-  context: SSRTransformContext,
-  asFragment = false
+  context: SSRTransformContext
 ) {
-  if (asFragment) {
-    context.pushStringPart(`<!---->`)
-  }
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.type === NodeTypes.ELEMENT) {
@@ -135,18 +128,14 @@ export function processChildren(
       ssrProcessFor(child, context)
     }
   }
-  if (asFragment) {
-    context.pushStringPart(`<!---->`)
-  }
 }
 
 export function processChildrenAsStatement(
   children: TemplateChildNode[],
   parentContext: SSRTransformContext,
-  asFragment = false,
   withSlotScopeId = parentContext.withSlotScopeId
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
-  processChildren(children, childContext, asFragment)
+  processChildren(children, childContext)
   return createBlockStatement(childContext.body)
 }
