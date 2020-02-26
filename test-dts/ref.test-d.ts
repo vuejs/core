@@ -19,6 +19,7 @@ function foo(arg: number | Ref<number>) {
     foo: ref(1)
   })
   expectType<Ref<{ foo: number }>>(nestedRef)
+  expectType<{ foo: number }>(nestedRef.value)
 }
 
 foo(1)
