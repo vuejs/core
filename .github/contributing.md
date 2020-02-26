@@ -19,10 +19,12 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 - Checkout a topic branch from a base branch, e.g. `master`, and merge back against that branch.
 
 - If adding a new feature:
+
   - Add accompanying test case.
   - Provide a convincing reason to add this feature. Ideally, you should open a suggestion issue first and have it approved before working on it.
 
 - If fixing bug:
+
   - If you are resolving a special issue, add `(fix #xxxx[,#xxxx])` (#xxxx is the issue id) in your PR title for a better release log, e.g. `update entities encoding/decoding (fix #3899)`.
   - Provide a detailed description of the bug in the PR. Live demo preferred.
   - Add appropriate test coverage if applicable. You can check the coverage of your code addition by running `yarn test --coverage`.
@@ -41,7 +43,7 @@ You will need [Node.js](http://nodejs.org) **version 10+**, and [Yarn](https://y
 
 After cloning the repo, run:
 
-``` bash
+```bash
 $ yarn # install the dependencies of the project
 ```
 
@@ -60,7 +62,7 @@ The `build` script builds all public packages (packages without `private: true` 
 
 Packages to build can be specified with fuzzy matching:
 
-``` bash
+```bash
 # build runtime-core only
 yarn build runtime-core
 
@@ -73,10 +75,12 @@ yarn build runtime --all
 By default, each package will be built in multiple distribution formats as specified in the `buildOptions.formats` field in its `package.json`. These can be overwritten via the `-f` flag. The following formats are supported:
 
 - **`global`**:
+
   - For direct use via `<script>` in the browser. The global variable exposed is specified via the `buildOptions.name` field in a package's `package.json`.
   - Note: global builds are not [UMD](https://github.com/umdjs/umd) builds. Instead they are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
 
 - **`esm-bundler`**:
+
   - Leaves prod/dev branches with `process.env.NODE_ENV` guards (to be replaced by bundler)
   - Does not ship a minified build (to be done together with the rest of the code after bundling)
   - For use with bundlers like `webpack`, `rollup` and `parcel`.
@@ -85,6 +89,7 @@ By default, each package will be built in multiple distribution formats as speci
     - This means you **can** install/import these deps without ending up with different instances of these dependencies
 
 - **`esm`**:
+
   - For usage via native ES modules imports (in browser via `<script type="module">`, or via Node.js native ES modules support in the future)
   - Inlines all dependencies - i.e. it's a single ES module with no imports from other files
     - This means you **must** import everything from this file and this file only to ensure you are getting the same instance of code.
@@ -96,13 +101,13 @@ By default, each package will be built in multiple distribution formats as speci
 
 For example, to build `runtime-core` with the global build only:
 
-``` bash
+```bash
 yarn build runtime-core -f global
 ```
 
 Multiple formats can be specified as a comma-separated list:
 
-``` bash
+```bash
 yarn build runtime-core -f esm,cjs
 ```
 
@@ -114,7 +119,7 @@ Use the `--sourcemap` or `-s` flag to build with source maps. Note this will mak
 
 The `--types` or `-t` flag will generate type declarations during the build and in addition:
 
-- Roll the declarations into a single `.dts` file for each package;
+- Roll the declarations into a single `.d.ts` file for each package;
 - Generate an API report in `<projectRoot>/temp/<packageName>.api.md`. This report contains potential warnings emitted by [api-extractor](https://api-extractor.com/).
 - Generate an API model json in `<projectRoot>/temp/<packageName>.api.json`. This file can be used to generate a Markdown version of the exported APIs.
 
@@ -122,7 +127,7 @@ The `--types` or `-t` flag will generate type declarations during the build and 
 
 The `dev` script bundles a target package (default: `vue`) in a specified format (default: `global`) in dev mode and watches for changes. This is useful when you want to load up a build in an HTML page for quick debugging:
 
-``` bash
+```bash
 $ yarn dev
 
 > rollup v1.19.4
@@ -139,7 +144,7 @@ $ yarn dev
 
 The `yarn test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
 
-``` bash
+```bash
 # run all tests
 $ yarn test
 
@@ -184,9 +189,11 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
   - **Note:** if re-exporting a function from `@vue/shared` as a public API, it is necessary to re-define its type before exporting so that the final `d.ts` doesn't attempt to import `@vue/shared`, e.g.:
 
-    ``` ts
+    ```ts
     import { foo } from '@vue/shared'
-    export const publicFoo = foo as { /* re-define type */ }
+    export const publicFoo = foo as {
+      /* re-define type */
+    }
     ```
 
 - `vue`: The public facing "full build" which includes both the runtime AND the compiler.
@@ -195,7 +202,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
 The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
 
-``` js
+```js
 import { h } from '@vue/runtime-core'
 ```
 
@@ -208,7 +215,6 @@ This is made possible via several configurations:
 ### Package Dependencies
 
 ```
-
                                     +---------------------+
                                     |                     |
                                     |  @vue/compiler-sfc  |
