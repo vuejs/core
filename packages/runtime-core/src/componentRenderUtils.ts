@@ -183,7 +183,7 @@ export function shouldUpdateComponent(
       return hasPropsChanged(prevProps!, nextProps!)
     } else {
       if (patchFlag & PatchFlags.CLASS) {
-        return prevProps!.class === nextProps!.class
+        return prevProps!.class !== nextProps!.class
       }
       if (patchFlag & PatchFlags.STYLE) {
         return hasPropsChanged(prevProps!.style, nextProps!.style)
