@@ -73,7 +73,7 @@ function createConfig(format, output, plugins = []) {
     process.exit(1)
   }
 
-  output.sourcemap = !!process.env.SOURCE_MAP
+  output.sourcemap = process.env.SOURCE_MAP === 'true'
   output.externalLiveBindings = false
 
   const isProductionBuild =
@@ -176,7 +176,7 @@ function createReplacePlugin(
     __NODE_JS__: isNodeBuild,
     // support options?
     // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
+    __FEATURE_OPTIONS__: !packageOptions.lean && process.env.LEAN !== 'true',
     __FEATURE_SUSPENSE__: true,
     ...(isProduction && isBrowserBuild
       ? {
