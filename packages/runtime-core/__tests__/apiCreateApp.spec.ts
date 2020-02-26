@@ -79,6 +79,9 @@ describe('api: createApp', () => {
       setup() {
         const foo = inject('foo')
         const bar = inject('bar')
+        try {
+          inject('__proto__')
+        } catch (e) {}
         return () => `${foo},${bar}`
       }
     }
@@ -90,6 +93,7 @@ describe('api: createApp', () => {
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe(`3,2`)
+    expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
   })
 
   test('component', () => {
