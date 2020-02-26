@@ -34,14 +34,14 @@ import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
-export type WatchEffect = (onCleanup: CleanupRegistrator) => void
+export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
-  onCleanup: CleanupRegistrator
+  onInvalidate: InvalidateCbRegistrator
 ) => any
 
 type MapSources<T> = {
@@ -54,7 +54,7 @@ type MapOldSources<T, Immediate> = {
     : never
 }
 
-export type CleanupRegistrator = (invalidate: () => void) => void
+type InvalidateCbRegistrator = (cb: () => void) => void
 
 export interface BaseWatchOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -169,7 +169,7 @@ function doWatch(
         source,
         instance,
         ErrorCodes.WATCH_CALLBACK,
-        [registerCleanup]
+        [onInvalidate]
       )
     }
   }
@@ -180,7 +180,7 @@ function doWatch(
   }
 
   let cleanup: Function
-  const registerCleanup: CleanupRegistrator = (fn: () => void) => {
+  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -195,7 +195,7 @@ function doWatch(
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         undefined,
-        registerCleanup
+        onInvalidate
       ])
     }
     return NOOP
@@ -217,7 +217,7 @@ function doWatch(
             newValue,
             // pass undefined as the old value when it's changed for the first time
             oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-            registerCleanup
+            onInvalidate
           ])
           oldValue = newValue
         }

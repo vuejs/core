@@ -152,7 +152,6 @@ export {
   // types
   WatchOptions,
   WatchCallback,
-  CleanupRegistrator,
   WatchSource,
   StopHandle
 } from './apiWatch'
