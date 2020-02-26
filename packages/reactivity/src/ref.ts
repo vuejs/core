@@ -34,7 +34,7 @@ export function ref(value?: unknown) {
   return createRef(value)
 }
 
-export function shallowRef<T>(value: T): T extends Ref ? T : Ref<UnwrapRef<T>>
+export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
 export function shallowRef<T = any>(): Ref<T>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
