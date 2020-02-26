@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0-alpha.7",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "types": "dist/server-renderer.d.ts",
@@ -27,9 +27,9 @@
   },
   "homepage": "https://github.com/vuejs/vue/tree/dev/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.0.0-alpha.6"
+    "vue": "3.0.0-alpha.7"
   },
   "dependencies": {
-    "@vue/compiler-ssr": "3.0.0-alpha.6"
+    "@vue/compiler-ssr": "3.0.0-alpha.7"
   }
 }
