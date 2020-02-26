@@ -27,13 +27,14 @@ export const PortalImpl = {
       pc: patchChildren,
       pbc: patchBlockChildren,
       m: move,
-      c: insertComment,
-      o: { querySelector, setElementText }
+      o: { insert, querySelector, setElementText, createComment }
     }: RendererInternals
   ) {
     const targetSelector = n2.props && n2.props.target
     const { patchFlag, shapeFlag, children } = n2
     if (n1 == null) {
+      // insert an empty node as the placeholder for the portal
+      insert((n2.el = createComment(`portal`)), container, anchor)
       if (__DEV__ && isString(targetSelector) && !querySelector) {
         warn(
           `Current renderer does not support string target for Portals. ` +
@@ -61,6 +62,7 @@ export const PortalImpl = {
         warn('Invalid Portal target on mount:', target, `(${typeof target})`)
       }
     } else {
+      n2.el = n1.el
       // update content
       const target = (n2.target = n1.target)!
       if (patchFlag === PatchFlags.TEXT) {
@@ -106,8 +108,6 @@ export const PortalImpl = {
         }
       }
     }
-    // insert an empty node as the placeholder for the portal
-    insertComment(n1, n2, container, anchor)
   }
 }
 
