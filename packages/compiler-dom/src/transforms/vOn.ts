@@ -5,7 +5,9 @@ import {
   createCallExpression,
   createObjectExpression,
   createSimpleExpression,
-  NodeTypes
+  NodeTypes,
+  createCompoundExpression,
+  ExpressionNode
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap } from '@vue/shared'
@@ -24,20 +26,72 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
   true
 )
 
+const generateModifiers = (modifiers: string[]) => {
+  const keyModifiers = []
+  const nonKeyModifiers = []
+  const eventOptionModifiers = []
+
+  for (let i = 0; i < modifiers.length; i++) {
+    const modifier = modifiers[i]
+
+    if (isEventOptionModifier(modifier)) {
+      // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
+      eventOptionModifiers.push(modifier)
+    } else {
+      // runtimeModifiers: modifiers that needs runtime guards
+      if (isNonKeyModifier(modifier)) {
+        nonKeyModifiers.push(modifier)
+      } else {
+        keyModifiers.push(modifier)
+      }
+    }
+  }
+
+  return {
+    keyModifiers,
+    nonKeyModifiers,
+    eventOptionModifiers
+  }
+}
+
+const transformClick = (key: ExpressionNode, event: string) => {
+  const isStaticClick =
+    key.type === NodeTypes.SIMPLE_EXPRESSION &&
+    key.isStatic &&
+    key.content.toLowerCase() === 'onclick'
+  return isStaticClick
+    ? createSimpleExpression(event, true)
+    : key.type !== NodeTypes.SIMPLE_EXPRESSION
+      ? createCompoundExpression([
+          `(`,
+          key,
+          `).toLowerCase() === "onclick" ? "${event}" : (`,
+          key,
+          `)`
+        ])
+      : key
+}
+
 export const transformOn: DirectiveTransform = (dir, node, context) => {
   return baseTransform(dir, node, context, baseResult => {
     const { modifiers } = dir
     if (!modifiers.length) return baseResult
 
     let { key, value: handlerExp } = baseResult.props[0]
+    const {
+      keyModifiers,
+      nonKeyModifiers,
+      eventOptionModifiers
+    } = generateModifiers(modifiers)
 
-    // modifiers for addEventListener() options, e.g. .passive & .capture
-    const eventOptionModifiers = modifiers.filter(isEventOptionModifier)
-    // modifiers that needs runtime guards
-    const runtimeModifiers = modifiers.filter(m => !isEventOptionModifier(m))
+    // normalize click.right and click.middle since they don't actually fire
+    if (nonKeyModifiers.includes('right')) {
+      key = transformClick(key, `onContextmenu`)
+    }
+    if (nonKeyModifiers.includes('middle')) {
+      key = transformClick(key, `onMouseup`)
+    }
 
-    // built-in modifiers that are not keys
-    const nonKeyModifiers = runtimeModifiers.filter(isNonKeyModifier)
     if (nonKeyModifiers.length) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_MODIFIERS), [
         handlerExp,
@@ -45,7 +99,6 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       ])
     }
 
-    const keyModifiers = runtimeModifiers.filter(m => !isNonKeyModifier(m))
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
@@ -77,8 +130,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     return {
-      props: [createObjectProperty(key, handlerExp)],
-      needRuntime: false
+      props: [createObjectProperty(key, handlerExp)]
     }
   })
 }

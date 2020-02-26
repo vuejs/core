@@ -1,3 +1,5 @@
+import { hyphenate } from '@vue/shared'
+
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
@@ -35,17 +37,17 @@ export const withModifiers = (fn: Function, modifiers: string[]) => {
 const keyNames: Record<string, string | string[]> = {
   esc: 'escape',
   space: ' ',
-  up: 'arrowup',
-  left: 'arrowleft',
-  right: 'arrowright',
-  down: 'arrowdown',
+  up: 'arrow-up',
+  left: 'arrow-left',
+  right: 'arrow-right',
+  down: 'arrow-down',
   delete: 'backspace'
 }
 
 export const withKeys = (fn: Function, modifiers: string[]) => {
   return (event: KeyboardEvent) => {
     if (!('key' in event)) return
-    const eventKey = event.key.toLowerCase()
+    const eventKey = hyphenate(event.key)
     if (
       // None of the provided key modifiers match the current event key
       !modifiers.some(k => k === eventKey || keyNames[k] === eventKey)

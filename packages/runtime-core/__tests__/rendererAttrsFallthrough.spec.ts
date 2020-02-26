@@ -6,10 +6,13 @@ import {
   mergeProps,
   ref,
   onUpdated,
-  createComponent
+  defineComponent
 } from '@vue/runtime-dom'
+import { mockWarn } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
+  mockWarn()
+
   it('everything should be in props when component has no declared props', async () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
@@ -29,7 +32,8 @@ describe('attribute fallthrough', () => {
             id: 'test',
             class: 'c' + count.value,
             style: { color: count.value ? 'red' : 'green' },
-            onClick: inc
+            onClick: inc,
+            'data-id': 1
           })
       }
     }
@@ -63,6 +67,7 @@ describe('attribute fallthrough', () => {
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
+    expect(node.dataset.id).toBe('1')
     node.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
 
@@ -75,7 +80,7 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
   })
 
-  it('should separate in attrs when component has declared props', async () => {
+  it('should implicitly fallthrough on single root nodes', async () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
 
@@ -99,22 +104,19 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         foo: Number
       },
-      setup(props, { attrs }) {
+      setup(props) {
         onUpdated(childUpdated)
         return () =>
           h(
             'div',
-            mergeProps(
-              {
-                class: 'c2',
-                style: { fontWeight: 'bold' }
-              },
-              attrs
-            ),
+            {
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
             props.foo
           )
       }
@@ -147,7 +149,7 @@ describe('attribute fallthrough', () => {
     expect(node.hasAttribute('foo')).toBe(false)
   })
 
-  it('should fallthrough on multi-nested components', async () => {
+  it('should fallthrough for nested components', async () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
     const grandChildUpdated = jest.fn()
@@ -179,22 +181,19 @@ describe('attribute fallthrough', () => {
       }
     }
 
-    const GrandChild = createComponent({
+    const GrandChild = defineComponent({
       props: {
         foo: Number
       },
-      setup(props, { attrs }) {
+      setup(props) {
         onUpdated(grandChildUpdated)
         return () =>
           h(
             'div',
-            mergeProps(
-              {
-                class: 'c2',
-                style: { fontWeight: 'bold' }
-              },
-              attrs
-            ),
+            {
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
             props.foo
           )
       }
@@ -226,5 +225,125 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
 
     expect(node.hasAttribute('foo')).toBe(false)
+  })
+
+  it('should not fallthrough with inheritAttrs: false', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      inheritAttrs: false,
+      render() {
+        return h('div', this.foo)
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    // should not contain class
+    expect(root.innerHTML).toMatch(`<div>1</div>`)
+  })
+
+  it('explicit spreading with inheritAttrs: false', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      inheritAttrs: false,
+      render() {
+        return h(
+          'div',
+          mergeProps(
+            {
+              class: 'child'
+            },
+            this.$attrs
+          ),
+          this.foo
+        )
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    // should merge parent/child classes
+    expect(root.innerHTML).toMatch(`<div class="child parent">1</div>`)
+  })
+
+  it('should warn when fallthrough fails on non-single-root', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      render() {
+        return [h('div'), h('div')]
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+  })
+
+  it('should not warn when $attrs is used during render', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      render() {
+        return [h('div'), h('div', this.$attrs)]
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+  })
+
+  it('should not warn when context.attrs is used during render', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent' })
+      }
+    }
+
+    const Child = defineComponent({
+      props: ['foo'],
+      setup(_props, { attrs }) {
+        return () => [h('div'), h('div', attrs)]
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
   })
 })

@@ -6,7 +6,7 @@ import {
   ref,
   WritableComputedRef
 } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('reactivity/computed', () => {
   mockWarn()

@@ -1,17 +1,17 @@
 import {
-  mockWarn,
   createApp,
   nodeOps,
   resolveComponent,
   resolveDirective,
   Component,
   Directive,
-  resolveDynamicComponent
+  resolveDynamicComponent,
+  getCurrentInstance
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('resolveAssets', () => {
   test('should work', () => {
-    const app = createApp()
     const FooBar = () => null
     const BarBaz = { mounted: () => null }
 
@@ -48,8 +48,9 @@ describe('resolveAssets', () => {
       }
     }
 
+    const app = createApp(Root)
     const root = nodeOps.createElement('div')
-    app.mount(Root, root)
+    app.mount(root)
     expect(component1!).toBe(FooBar)
     expect(component2!).toBe(FooBar)
     expect(component3!).toBe(FooBar)
@@ -77,7 +78,6 @@ describe('resolveAssets', () => {
     })
 
     test('not exist', () => {
-      const app = createApp()
       const Root = {
         setup() {
           resolveComponent('foo')
@@ -86,14 +86,14 @@ describe('resolveAssets', () => {
         }
       }
 
+      const app = createApp(Root)
       const root = nodeOps.createElement('div')
-      app.mount(Root, root)
+      app.mount(root)
       expect('Failed to resolve component: foo').toHaveBeenWarned()
       expect('Failed to resolve directive: bar').toHaveBeenWarned()
     })
 
     test('resolve dynamic component', () => {
-      const app = createApp()
       const dynamicComponents = {
         foo: () => 'foo',
         bar: () => 'bar',
@@ -103,15 +103,18 @@ describe('resolveAssets', () => {
       const Root = {
         components: { foo: dynamicComponents.foo },
         setup() {
+          const instance = getCurrentInstance()!
           return () => {
-            foo = resolveDynamicComponent('foo') // <component is="foo"/>
-            bar = resolveDynamicComponent(dynamicComponents.bar) // <component :is="bar"/>, function
-            baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
+            foo = resolveDynamicComponent('foo', instance) // <component is="foo"/>
+            bar = resolveDynamicComponent(dynamicComponents.bar, instance) // <component :is="bar"/>, function
+            baz = resolveDynamicComponent(dynamicComponents.baz, instance) // <component :is="baz"/>, object
           }
         }
       }
+
+      const app = createApp(Root)
       const root = nodeOps.createElement('div')
-      app.mount(Root, root)
+      app.mount(root)
       expect(foo).toBe(dynamicComponents.foo)
       expect(bar).toBe(dynamicComponents.bar)
       expect(baz).toBe(dynamicComponents.baz)

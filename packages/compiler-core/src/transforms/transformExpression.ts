@@ -40,11 +40,15 @@ export const transformExpression: NodeTransform = (node, context) => {
       const dir = node.props[i]
       // do not process for v-on & v-for since they are special handled
       if (dir.type === NodeTypes.DIRECTIVE && dir.name !== 'for') {
-        const exp = dir.exp as SimpleExpressionNode | undefined
-        const arg = dir.arg as SimpleExpressionNode | undefined
+        const exp = dir.exp
+        const arg = dir.arg
         // do not process exp if this is v-on:arg - we need special handling
         // for wrapping inline statements.
-        if (exp && !(dir.name === 'on' && arg)) {
+        if (
+          exp &&
+          exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+          !(dir.name === 'on' && arg)
+        ) {
           dir.exp = processExpression(
             exp,
             context,
@@ -52,7 +56,7 @@ export const transformExpression: NodeTransform = (node, context) => {
             dir.name === 'slot'
           )
         }
-        if (arg && !arg.isStatic) {
+        if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
           dir.arg = processExpression(arg, context)
         }
       }
@@ -76,7 +80,9 @@ export function processExpression(
   context: TransformContext,
   // some expressions like v-slot props & v-for aliases should be parsed as
   // function params
-  asParams: boolean = false
+  asParams = false,
+  // v-on handler values may contain multiple statements
+  asRawStatements = false
 ): ExpressionNode {
   if (!context.prefixIdentifiers || !node.content.trim()) {
     return node
@@ -84,6 +90,8 @@ export function processExpression(
 
   // fast path if expression is a simple identifier.
   const rawExp = node.content
+  // bail on parens to prevent any possible function invocations.
+  const bailConstant = rawExp.indexOf(`(`) > -1
   if (isSimpleIdentifier(rawExp)) {
     if (
       !asParams &&
@@ -92,7 +100,7 @@ export function processExpression(
       !isLiteralWhitelisted(rawExp)
     ) {
       node.content = `_ctx.${rawExp}`
-    } else if (!context.identifiers[rawExp]) {
+    } else if (!context.identifiers[rawExp] && !bailConstant) {
       // mark node constant for hoisting unless it's referring a scope variable
       node.isConstant = true
     }
@@ -100,9 +108,14 @@ export function processExpression(
   }
 
   let ast: any
-  // if the expression is supposed to be used in a function params position
-  // we need to parse it differently.
-  const source = `(${rawExp})${asParams ? `=>{}` : ``}`
+  // exp needs to be parsed differently:
+  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+  //    exp, but make sure to pad with spaces for consistent ranges
+  // 2. Expressions: wrap with parens (for e.g. object expressions)
+  // 3. Function arguments (v-for, v-slot): place in a function argument position
+  const source = asRawStatements
+    ? ` ${rawExp} `
+    : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parseJS(source, { ranges: true })
   } catch (e) {
@@ -128,12 +141,13 @@ export function processExpression(
               node.prefix = `${node.name}: `
             }
             node.name = `_ctx.${node.name}`
-            node.isConstant = false
             ids.push(node)
           } else if (!isStaticPropertyKey(node, parent)) {
             // The identifier is considered constant unless it's pointing to a
             // scope variable (a v-for alias, or a v-slot prop)
-            node.isConstant = !(needPrefix && knownIds[node.name])
+            if (!(needPrefix && knownIds[node.name]) && !bailConstant) {
+              node.isConstant = true
+            }
             // also generate sub-expressions for other identifiers for better
             // source map support. (except for property keys which are static)
             ids.push(node)
@@ -223,7 +237,7 @@ export function processExpression(
     ret = createCompoundExpression(children, node.loc)
   } else {
     ret = node
-    ret.isConstant = true
+    ret.isConstant = !bailConstant
   }
   ret.identifiers = Object.keys(knownIds)
   return ret

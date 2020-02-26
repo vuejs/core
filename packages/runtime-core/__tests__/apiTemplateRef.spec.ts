@@ -5,7 +5,7 @@ import {
   render,
   nextTick,
   Ref,
-  createComponent
+  defineComponent
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
@@ -22,7 +22,9 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return h('div', { ref: 'refKey' })
+        // Note: string refs are compiled into [ctx, key] tuples by the compiler
+        // to ensure correct context.
+        return h('div', { ref: [this, 'refKey'] as any })
       }
     }
     render(h(Comp), root)
@@ -43,7 +45,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return h('div', { ref: refKey.value })
+        return h('div', { ref: [this, refKey.value] as any })
       }
     }
     render(h(Comp), root)
@@ -68,7 +70,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return toggle.value ? h('div', { ref: 'refKey' }) : null
+        return toggle.value ? h('div', { ref: [this, 'refKey'] as any }) : null
       }
     }
     render(h(Comp), root)
@@ -83,7 +85,7 @@ describe('api: template refs', () => {
     const root = nodeOps.createElement('div')
     const fn = jest.fn()
 
-    const Comp = createComponent(() => () => h('div', { ref: fn }))
+    const Comp = defineComponent(() => () => h('div', { ref: fn }))
     render(h(Comp), root)
     expect(fn.mock.calls[0][0]).toBe(root.children[0])
   })
@@ -94,7 +96,7 @@ describe('api: template refs', () => {
     const fn2 = jest.fn()
     const fn = ref(fn1)
 
-    const Comp = createComponent(() => () => h('div', { ref: fn.value }))
+    const Comp = defineComponent(() => () => h('div', { ref: fn.value }))
 
     render(h(Comp), root)
     expect(fn1.mock.calls).toHaveLength(1)
@@ -113,7 +115,7 @@ describe('api: template refs', () => {
     const fn = jest.fn()
     const toggle = ref(true)
 
-    const Comp = createComponent(() => () =>
+    const Comp = defineComponent(() => () =>
       toggle.value ? h('div', { ref: fn }) : null
     )
     render(h(Comp), root)
@@ -142,7 +144,7 @@ describe('api: template refs', () => {
       foo: ref(null),
       bar: ref(null)
     }
-    const refKey: Ref<keyof typeof refs> = ref('foo')
+    const refKey = ref('foo') as Ref<keyof typeof refs>
 
     const Comp = {
       setup() {

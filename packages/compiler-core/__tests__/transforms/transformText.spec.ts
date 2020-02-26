@@ -1,10 +1,12 @@
 import {
   CompilerOptions,
-  parse,
+  baseParse as parse,
   transform,
   NodeTypes,
-  generate
+  generate,
+  ForNode
 } from '../../src'
+import { transformFor } from '../../src/transforms/vFor'
 import { transformText } from '../../src/transforms/transformText'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -16,6 +18,7 @@ function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
+      transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformText,
       transformElement
@@ -146,6 +149,20 @@ describe('compiler: transform text', () => {
       }
     })
     expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('<template v-for>', () => {
+    const root = transformWithTextOpt(
+      `<template v-for="i in list">foo</template>`
+    )
+    expect(root.children[0].type).toBe(NodeTypes.FOR)
+    const forNode = root.children[0] as ForNode
+    // should convert template v-for text children because they are inside
+    // fragments
+    expect(forNode.children[0]).toMatchObject({
+      type: NodeTypes.TEXT_CALL
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 

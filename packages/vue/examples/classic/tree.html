@@ -1,0 +1,127 @@
+<script src="../../dist/vue.global.js"></script>
+
+<!-- item template -->
+<script type="text/x-template" id="item-template">
+  <li>
+    <div
+      :class="{bold: isFolder}"
+      @click="toggle"
+      @dblclick="changeType">
+      {{model.name}}
+      <span v-if="isFolder">[{{open ? '-' : '+'}}]</span>
+    </div>
+    <ul v-show="open" v-if="isFolder">
+      <tree-item
+        class="item"
+        v-for="model in model.children"
+        :model="model">
+      </tree-item>
+      <li class="add" @click="addChild">+</li>
+    </ul>
+  </li>
+</script>
+<!-- item script -->
+<script>
+const TreeItem = {
+  name: 'TreeItem', // necessary for self-reference
+  template: '#item-template',
+  props: {
+    model: Object
+  },
+  data() {
+    return {
+      open: false
+    }
+  },
+  computed: {
+    isFolder() {
+      return this.model.children &&
+        this.model.children.length
+    }
+  },
+  methods: {
+    toggle() {
+      if (this.isFolder) {
+        this.open = !this.open
+      }
+    },
+    changeType() {
+      if (!this.isFolder) {
+        this.model.children = []
+        this.addChild()
+        this.open = true
+      }
+    },
+    addChild() {
+      this.model.children.push({
+        name: 'new stuff'
+      })
+    }
+  }
+}
+</script>
+
+<p>(You can double click on an item to turn it into a folder.)</p>
+
+<!-- the app root element -->
+<ul id="demo">
+  <tree-item class="item" :model="treeData"></tree-item>
+</ul>
+
+<script>
+const treeData = {
+  name: 'My Tree',
+  children: [
+    { name: 'hello' },
+    { name: 'wat' },
+    {
+      name: 'child folder',
+      children: [
+        {
+          name: 'child folder',
+          children: [
+            { name: 'hello' },
+            { name: 'wat' }
+          ]
+        },
+        { name: 'hello' },
+        { name: 'wat' },
+        {
+          name: 'child folder',
+          children: [
+            { name: 'hello' },
+            { name: 'wat' }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Vue.createApp({
+  components: {
+    TreeItem
+  },
+  data: () => ({
+    treeData
+  })
+}).mount('#demo')
+</script>
+
+<style>
+  body {
+    font-family: Menlo, Consolas, monospace;
+    color: #444;
+  }
+  .item {
+    cursor: pointer;
+  }
+  .bold {
+    font-weight: bold;
+  }
+  ul {
+    padding-left: 1em;
+    line-height: 1.5em;
+    list-style-type: dot;
+  }
+</style>

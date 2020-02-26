@@ -1,8 +1,8 @@
 import {
-  createApp,
   h,
+  render,
   nextTick,
-  createComponent,
+  defineComponent,
   vModelDynamic,
   withDirectives,
   VNode
@@ -20,16 +20,15 @@ const setValue = function(this: any, value: any) {
   this.value = value
 }
 
-let app: any, root: any
+let root: any
 
 beforeEach(() => {
-  app = createApp()
   root = document.createElement('div') as any
 })
 
 describe('vModel', () => {
   it('should work with text input', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -44,9 +43,9 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
-    const input = root.querySelector('input')
+    const input = root.querySelector('input')!
     const data = root._vnode.component.data
 
     input.value = 'foo'
@@ -60,7 +59,7 @@ describe('vModel', () => {
   })
 
   it('should work with textarea', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -75,7 +74,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('textarea')
     const data = root._vnode.component.data
@@ -91,7 +90,7 @@ describe('vModel', () => {
   })
 
   it('should support modifiers', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { number: null, trim: null, lazy: null }
       },
@@ -136,7 +135,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const number = root.querySelector('.number')
     const trim = root.querySelector('.trim')
@@ -160,7 +159,7 @@ describe('vModel', () => {
   })
 
   it('should work with checkbox', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -176,7 +175,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('input')
     const data = root._vnode.component.data
@@ -189,10 +188,105 @@ describe('vModel', () => {
     data.value = false
     await nextTick()
     expect(input.checked).toEqual(false)
+
+    data.value = true
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual(false)
+  })
+
+  it('should work with checkbox and true-value/false-value', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'true-value': 'yes',
+              'false-value': 'no',
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('yes')
+
+    data.value = 'no'
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('no')
+  })
+
+  it('should work with checkbox and true-value/false-value with object values', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'true-value': { yes: 'yes' },
+              'false-value': { no: 'no' },
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    input.checked = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual({ yes: 'yes' })
+
+    data.value = { no: 'no' }
+    await nextTick()
+    expect(input.checked).toEqual(false)
+
+    data.value = { yes: 'yes' }
+    await nextTick()
+    expect(input.checked).toEqual(true)
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual({ no: 'no' })
   })
 
   it(`should support array as a checkbox model`, async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: [] }
       },
@@ -219,7 +313,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const foo = root.querySelector('.foo')
     const bar = root.querySelector('.bar')
@@ -262,7 +356,7 @@ describe('vModel', () => {
   })
 
   it('should work with radio', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -289,7 +383,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const foo = root.querySelector('.foo')
     const bar = root.querySelector('.bar')
@@ -322,7 +416,7 @@ describe('vModel', () => {
   })
 
   it('should work with single select', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: null }
       },
@@ -342,7 +436,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('select')
     const foo = root.querySelector('option[value=foo]')
@@ -378,7 +472,7 @@ describe('vModel', () => {
   })
 
   it('should work with multiple select', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: [] }
       },
@@ -399,7 +493,7 @@ describe('vModel', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const input = root.querySelector('select')
     const foo = root.querySelector('option[value=foo]')

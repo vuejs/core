@@ -26,6 +26,22 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(undefined)
     })
 
+    it('should observe mutations with observed value as key', () => {
+      let dummy
+      const key = reactive({})
+      const value = reactive({})
+      const map = reactive(new Map())
+      effect(() => {
+        dummy = map.get(key)
+      })
+
+      expect(dummy).toBe(undefined)
+      map.set(key, value)
+      expect(dummy).toBe(value)
+      map.delete(key)
+      expect(dummy).toBe(undefined)
+    })
+
     it('should observe size mutations', () => {
       let dummy
       const map = reactive(new Map())
@@ -58,6 +74,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -77,6 +96,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -119,6 +141,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -147,6 +172,10 @@ describe('reactivity/collections', () => {
       map.set('key2', 2)
       expect(dummy).toBe('key1key2')
       expect(dummy2).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe('key1key2')
+      expect(dummy2).toBe(6)
       map.delete('key1')
       expect(dummy).toBe('key2')
       expect(dummy2).toBe(2)

@@ -43,13 +43,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const propName = arg ? arg : createSimpleExpression('modelValue', true)
   const eventName = arg
     ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
-      ? createSimpleExpression('onUpdate:' + arg.content, true)
-      : createCompoundExpression([
-          createSimpleExpression('onUpdate:', true),
-          '+',
-          ...(arg.type === NodeTypes.SIMPLE_EXPRESSION ? [arg] : arg.children)
-        ])
-    : createSimpleExpression('onUpdate:modelValue', true)
+      ? `onUpdate:${arg.content}`
+      : createCompoundExpression(['"onUpdate:" + ', arg])
+    : `onUpdate:modelValue`
 
   const props = [
     // modelValue: foo
@@ -57,11 +53,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     // "onUpdate:modelValue": $event => (foo = $event)
     createObjectProperty(
       eventName,
-      createCompoundExpression([
-        `$event => (`,
-        ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        ` = $event)`
-      ])
+      createCompoundExpression([`$event => (`, exp, ` = $event)`])
     )
   ]
 
@@ -80,9 +72,14 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     const modifiers = dir.modifiers
       .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
       .join(`, `)
+    const modifiersKey = arg
+      ? arg.type === NodeTypes.SIMPLE_EXPRESSION && arg.isStatic
+        ? `${arg.content}Modifiers`
+        : createCompoundExpression([arg, ' + "Modifiers"'])
+      : `modelModifiers`
     props.push(
       createObjectProperty(
-        `modelModifiers`,
+        modifiersKey,
         createSimpleExpression(`{ ${modifiers} }`, false, dir.loc, true)
       )
     )
@@ -92,5 +89,5 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 }
 
 function createTransformProps(props: Property[] = []) {
-  return { props, needRuntime: false }
+  return { props }
 }

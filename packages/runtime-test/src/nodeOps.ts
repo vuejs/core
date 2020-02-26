@@ -228,6 +228,10 @@ function querySelector(): any {
   throw new Error('querySelector not supported in test renderer.')
 }
 
+function setScopeId(el: TestElement, id: string) {
+  el.props[id] = ''
+}
+
 export const nodeOps = {
   insert,
   remove,
@@ -238,5 +242,6 @@ export const nodeOps = {
   setElementText,
   parentNode,
   nextSibling,
-  querySelector
+  querySelector,
+  setScopeId
 }

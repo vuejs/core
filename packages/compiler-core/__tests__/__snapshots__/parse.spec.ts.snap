@@ -42,7 +42,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -51,6 +51,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -64,6 +65,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -110,7 +112,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -119,6 +121,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -132,6 +135,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -178,7 +182,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -187,6 +191,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 29,
@@ -200,6 +205,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -263,7 +269,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -272,6 +278,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 35,
@@ -285,6 +292,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -348,7 +356,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -357,6 +365,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 34,
@@ -370,6 +379,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -433,7 +443,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -442,6 +452,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 36,
@@ -455,6 +466,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -518,7 +530,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -527,6 +539,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 35,
@@ -540,6 +553,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -586,7 +600,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -595,6 +609,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -608,6 +623,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -654,7 +670,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -663,6 +679,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 26,
@@ -676,6 +693,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -722,7 +740,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -731,6 +749,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -744,6 +763,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -790,7 +810,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -799,6 +819,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -812,6 +833,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -858,7 +880,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -867,6 +889,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 39,
@@ -880,6 +903,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -950,7 +974,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -959,6 +983,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 50,
@@ -972,6 +997,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1018,7 +1044,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1027,6 +1053,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 32,
@@ -1040,6 +1067,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1086,7 +1114,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1095,6 +1123,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 29,
@@ -1108,6 +1137,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1154,7 +1184,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1163,6 +1193,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -1176,6 +1207,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1297,7 +1329,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1306,6 +1338,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 45,
@@ -1319,6 +1352,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1371,7 +1405,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1380,6 +1414,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 39,
@@ -1393,6 +1428,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1445,7 +1481,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1454,6 +1490,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 34,
@@ -1467,6 +1504,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1513,7 +1551,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1522,6 +1560,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 12,
@@ -1535,6 +1574,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1581,7 +1621,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1590,6 +1630,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 13,
@@ -1603,6 +1644,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1655,7 +1697,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1664,6 +1706,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -1677,6 +1720,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1747,7 +1791,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1756,6 +1800,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 30,
@@ -1769,6 +1814,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1815,7 +1861,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1824,6 +1870,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 13,
@@ -1837,6 +1884,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1883,7 +1931,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1892,6 +1940,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 14,
@@ -1905,6 +1954,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1951,7 +2001,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1960,6 +2010,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 15,
@@ -1973,6 +2024,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2019,7 +2071,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2028,6 +2080,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 22,
@@ -2041,6 +2094,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2087,7 +2141,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2096,6 +2150,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 16,
@@ -2109,6 +2164,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2164,6 +2220,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 33,
@@ -2177,6 +2234,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2232,6 +2290,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 29,
@@ -2245,6 +2304,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2297,7 +2357,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2306,6 +2366,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 16,
@@ -2319,6 +2380,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2371,7 +2433,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2380,6 +2442,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 15,
@@ -2393,6 +2456,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2464,7 +2528,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2473,6 +2537,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 19,
@@ -2486,6 +2551,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2557,7 +2623,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2566,6 +2632,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 20,
@@ -2579,6 +2646,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2650,7 +2718,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2659,6 +2727,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 18,
@@ -2672,6 +2741,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2759,7 +2829,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2768,6 +2838,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 23,
@@ -2781,6 +2852,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2868,7 +2940,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2877,6 +2949,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 24,
@@ -2890,6 +2963,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2977,7 +3051,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2986,6 +3060,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -2999,6 +3074,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3086,7 +3162,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3095,6 +3171,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 23,
@@ -3108,6 +3185,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3195,7 +3273,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3204,6 +3282,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 24,
@@ -3217,6 +3296,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3304,7 +3384,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3313,6 +3393,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -3326,6 +3407,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3413,7 +3495,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3422,6 +3504,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 24,
@@ -3435,6 +3518,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3522,7 +3606,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3531,6 +3615,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 22,
@@ -3544,6 +3629,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3590,7 +3676,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3599,6 +3685,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 37,
@@ -3612,6 +3699,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3643,6 +3731,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 16,
@@ -3656,6 +3745,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3702,7 +3792,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3711,6 +3801,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -3724,6 +3815,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3770,7 +3862,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3779,6 +3871,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 26,
@@ -3792,6 +3885,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3838,7 +3932,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3847,6 +3941,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 41,
@@ -3860,6 +3955,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3906,7 +4002,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3915,6 +4011,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 26,
@@ -3928,6 +4025,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3974,7 +4072,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3983,6 +4081,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -3996,6 +4095,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4060,7 +4160,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4069,6 +4169,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 31,
@@ -4082,6 +4183,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4128,7 +4230,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4137,6 +4239,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -4150,6 +4253,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4213,7 +4317,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4222,6 +4326,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -4235,6 +4340,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4322,7 +4428,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4331,6 +4437,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 39,
@@ -4344,6 +4451,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4415,7 +4523,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4424,6 +4532,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 38,
@@ -4437,6 +4546,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4508,7 +4618,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4517,6 +4627,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 37,
@@ -4530,6 +4641,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4558,7 +4670,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4567,6 +4679,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -4580,6 +4693,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4626,7 +4740,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4635,6 +4749,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 26,
@@ -4648,6 +4763,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4694,7 +4810,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4703,6 +4819,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -4716,6 +4833,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4762,7 +4880,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4771,6 +4889,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 26,
@@ -4784,6 +4903,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4907,7 +5027,7 @@ class=\\"bar\\"></div></template>",
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4916,6 +5036,7 @@ class=\\"bar\\"></div></template>",
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 30,
@@ -4930,6 +5051,7 @@ class=\\"bar\\"></div></template>",
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5051,7 +5173,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5060,6 +5182,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 53,
@@ -5073,6 +5196,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5119,7 +5243,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5128,6 +5252,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 20,
@@ -5141,6 +5266,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5187,7 +5313,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5196,6 +5322,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 32,
@@ -5209,6 +5336,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5255,7 +5383,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5264,6 +5392,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 40,
@@ -5277,6 +5406,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5323,7 +5453,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5332,6 +5462,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 35,
@@ -5345,6 +5476,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5391,7 +5523,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5400,6 +5532,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 31,
@@ -5413,6 +5546,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5459,7 +5593,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5468,6 +5602,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 30,
@@ -5481,6 +5616,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5527,7 +5663,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5536,6 +5672,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 29,
@@ -5549,6 +5686,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5595,7 +5733,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5604,6 +5742,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 30,
@@ -5617,6 +5756,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5704,7 +5844,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5713,6 +5853,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 41,
@@ -5726,6 +5867,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5813,7 +5955,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5822,6 +5964,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 41,
@@ -5835,6 +5978,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5922,7 +6066,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5931,6 +6075,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 41,
@@ -5944,6 +6089,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6031,7 +6177,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6040,6 +6186,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 42,
@@ -6053,6 +6200,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6140,7 +6288,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6149,6 +6297,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 42,
@@ -6162,6 +6311,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6249,7 +6399,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6258,6 +6408,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 45,
@@ -6271,6 +6422,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6358,7 +6510,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6367,6 +6519,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 45,
@@ -6380,6 +6533,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6467,7 +6621,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6476,6 +6630,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 42,
@@ -6489,6 +6644,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6560,7 +6716,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6569,6 +6725,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 35,
@@ -6582,6 +6739,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6669,7 +6827,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6678,6 +6836,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 42,
@@ -6691,6 +6850,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6737,7 +6897,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6746,6 +6906,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 29,
@@ -6759,6 +6920,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6848,7 +7010,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6857,6 +7019,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 37,
@@ -6870,74 +7033,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown;</template> 1`] = `
-Object {
-  "cached": 0,
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&unknown;",
-          "loc": Object {
-            "end": Object {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "&unknown;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 31,
-          "line": 1,
-          "offset": 30,
-        },
-        "source": "<template>&unknown;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": Array [],
-  "directives": Array [],
-  "helpers": Array [],
-  "hoists": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 31,
-      "line": 1,
-      "offset": 30,
-    },
-    "source": "<template>&unknown;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6993,6 +7089,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 30,
@@ -7006,6 +7103,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7061,6 +7159,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -7074,6 +7173,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7102,7 +7202,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7111,6 +7211,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 34,
@@ -7124,6 +7225,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7152,7 +7254,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7161,6 +7263,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -7174,6 +7277,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7238,7 +7342,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7247,6 +7351,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 34,
@@ -7260,6 +7365,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7315,6 +7421,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 28,
@@ -7328,6 +7435,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7422,6 +7530,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 25,
@@ -7435,6 +7544,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7487,7 +7597,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7496,6 +7606,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 16,
@@ -7509,6 +7620,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7561,7 +7673,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7570,6 +7682,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 27,
@@ -7583,6 +7696,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7614,6 +7728,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 3,
@@ -7627,6 +7742,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7658,6 +7774,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 7,
@@ -7671,6 +7788,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7720,6 +7838,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 5,
@@ -7733,6 +7852,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7797,6 +7917,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 8,
@@ -7813,6 +7934,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7987,6 +8109,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 37,
@@ -8001,6 +8124,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -8196,6 +8320,7 @@ Object {
   "directives": Array [],
   "helpers": Array [],
   "hoists": Array [],
+  "imports": Array [],
   "loc": Object {
     "end": Object {
       "column": 7,
@@ -8212,6 +8337,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;

@@ -1,9 +1,10 @@
 import {
   ComponentInternalInstance,
   Data,
-  Component,
   SetupContext,
-  RenderFunction
+  RenderFunction,
+  SFCInternalOptions,
+  PublicAPIComponent
 } from './component'
 import {
   isFunction,
@@ -14,8 +15,8 @@ import {
   EMPTY_OBJ,
   NOOP
 } from '@vue/shared'
-import { computed } from './apiReactivity'
-import { watch, WatchOptions, WatchHandler } from './apiWatch'
+import { computed } from './apiComputed'
+import { watch, WatchOptions, WatchCallback } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -26,6 +27,8 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
+  onActivated,
+  onDeactivated,
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook
@@ -46,22 +49,38 @@ export interface ComponentOptionsBase<
   D,
   C extends ComputedOptions,
   M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M> {
+> extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
   setup?: (
-    this: null,
+    this: void,
     props: Props,
     ctx: SetupContext
   ) => RawBindings | RenderFunction | void
   name?: string
-  template?: string
+  template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
   // since any type with signature will cause the whole inference to fail when
   // the return expression contains reference to `this`.
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
+  // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
+  // not user facing, so the typing is lax and for test only.
+  ssrRender?: (
+    ctx: any,
+    push: (item: any) => void,
+    parentInstance: ComponentInternalInstance
+  ) => void
+  components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
+  inheritAttrs?: boolean
+
+  // type-only differentiator to separate OptionWithoutProps from a constructor
+  // type returned by defineComponent() or FunctionalComponent
+  call?: never
+  // type-only differentiators for built-in Vnode types
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
 }
 
 export type ComponentOptionsWithoutProps<
@@ -70,9 +89,9 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -80,7 +99,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: unknown }
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -91,7 +110,7 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
+  Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
@@ -121,8 +140,8 @@ export type ExtractComputedReturns<T extends any> = {
 
 type WatchOptionItem =
   | string
-  | WatchHandler
-  | { handler: WatchHandler } & WatchOptions
+  | WatchCallback
+  | { handler: WatchCallback } & WatchOptions
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -135,7 +154,6 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-// TODO type inference for these options
 export interface LegacyOptions<
   Props,
   RawBindings,
@@ -200,11 +218,7 @@ export function applyOptions(
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
-  const renderContext =
-    instance.renderContext === EMPTY_OBJ
-      ? (instance.renderContext = reactive({}))
-      : instance.renderContext
-  const ctx = instance.renderProxy!
+  const ctx = instance.proxy!
   const {
     // composition
     mixins,
@@ -225,14 +239,19 @@ export function applyOptions(
     mounted,
     beforeUpdate,
     updated,
-    // TODO activated
-    // TODO deactivated
+    activated,
+    deactivated,
     beforeUnmount,
     unmounted,
     renderTracked,
     renderTriggered,
     errorCaptured
   } = options
+
+  const renderContext =
+    instance.renderContext === EMPTY_OBJ
+      ? (instance.renderContext = {})
+      : instance.renderContext
 
   const globalMixins = instance.appContext.mixins
   // call it only during dev
@@ -275,6 +294,7 @@ export function applyOptions(
       extend(instance.data, data)
     }
   }
+
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
@@ -282,12 +302,12 @@ export function applyOptions(
       __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
 
       if (isFunction(opt)) {
-        renderContext[key] = computed(opt.bind(ctx))
+        renderContext[key] = computed(opt.bind(ctx, ctx))
       } else {
         const { get, set } = opt
         if (isFunction(get)) {
           renderContext[key] = computed({
-            get: get.bind(ctx),
+            get: get.bind(ctx, ctx),
             set: isFunction(set)
               ? set.bind(ctx)
               : __DEV__
@@ -319,11 +339,13 @@ export function applyOptions(
       }
     }
   }
+
   if (watchOptions) {
     for (const key in watchOptions) {
       createWatcher(watchOptions[key], renderContext, ctx, key)
     }
   }
+
   if (provideOptions) {
     const provides = isFunction(provideOptions)
       ? provideOptions.call(ctx)
@@ -332,6 +354,7 @@ export function applyOptions(
       provide(key, provides[key])
     }
   }
+
   if (injectOptions) {
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
@@ -375,6 +398,12 @@ export function applyOptions(
   }
   if (updated) {
     onUpdated(updated.bind(ctx))
+  }
+  if (activated) {
+    onActivated(activated.bind(ctx))
+  }
+  if (deactivated) {
+    onDeactivated(deactivated.bind(ctx))
   }
   if (errorCaptured) {
     onErrorCaptured(errorCaptured.bind(ctx))
@@ -442,11 +471,11 @@ function createWatcher(
   ctx: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => ctx[key]
+  const getter = () => (ctx as Data)[key]
   if (isString(raw)) {
     const handler = renderContext[raw]
     if (isFunction(handler)) {
-      watch(getter, handler as WatchHandler)
+      watch(getter, handler as WatchCallback)
     } else if (__DEV__) {
       warn(`Invalid watch handler specified by key "${raw}"`, handler)
     }

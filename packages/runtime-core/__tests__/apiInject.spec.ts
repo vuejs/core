@@ -9,7 +9,8 @@ import {
   readonly,
   reactive
 } from '../src/index'
-import { render, nodeOps, serialize, mockWarn } from '@vue/runtime-test'
+import { render, nodeOps, serialize } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
 
