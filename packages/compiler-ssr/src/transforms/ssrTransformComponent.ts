@@ -31,9 +31,11 @@ import {
   createTransformContext,
   traverseNode,
   ExpressionNode,
-  TemplateNode
+  TemplateNode,
+  findProp,
+  JSChildNode
 } from '@vue/compiler-dom'
-import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
+import { SSR_RENDER_COMPONENT, SSR_RENDER_PORTAL } from '../runtimeHelpers'
 import {
   SSRTransformContext,
   processChildren,
@@ -134,7 +136,34 @@ export function ssrProcessComponent(
     const component = componentTypeMap.get(node)!
 
     if (component === PORTAL) {
-      // TODO
+      const targetProp = findProp(node, 'target')
+      if (!targetProp) return
+
+      let target: JSChildNode
+      if (targetProp.type === NodeTypes.ATTRIBUTE && targetProp.value) {
+        target = createSimpleExpression(targetProp.value.content, true)
+      } else if (targetProp.type === NodeTypes.DIRECTIVE && targetProp.exp) {
+        target = targetProp.exp
+      } else {
+        return
+      }
+
+      const contentRenderFn = createFunctionExpression(
+        [`_push`],
+        undefined, // Body is added later
+        true, // newline
+        false, // isSlot
+        node.loc
+      )
+      contentRenderFn.body = processChildrenAsStatement(node.children, context)
+      context.pushStatement(
+        createCallExpression(context.helper(SSR_RENDER_PORTAL), [
+          contentRenderFn,
+          target,
+          `_parent`
+        ])
+      )
+
       return
     }
 

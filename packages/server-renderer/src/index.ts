@@ -13,6 +13,7 @@ export {
 } from './helpers/ssrRenderAttrs'
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
+export { ssrRenderPortal } from './helpers/ssrRenderPortal'
 
 // v-model helpers
 export {
