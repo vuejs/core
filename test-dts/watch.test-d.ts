@@ -52,3 +52,13 @@ watch(
   },
   { immediate: true }
 )
+
+// should provide correct ref.value inner type to callbacks
+const nestedRefSource = ref({
+  foo: ref(1)
+})
+
+watch(nestedRefSource, (v, ov) => {
+  expectType<{ foo: number }>(v)
+  expectType<{ foo: number }>(ov)
+})

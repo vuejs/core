@@ -1,10 +1,10 @@
 import { effect, ReactiveEffect, trigger, track } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
-import { Ref, UnwrapRef } from './ref'
+import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: UnwrapRef<T>
+  readonly value: T
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {

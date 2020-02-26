@@ -17,7 +17,7 @@ export interface Ref<T = any> {
   // don't want this internal field to leak into userland autocompletion -
   // a private symbol, on the other hand, achieves just that.
   [isRefSymbol]: true
-  value: UnwrapRef<T>
+  value: T
 }
 
 const convert = <T extends unknown>(val: T): T =>
@@ -28,13 +28,13 @@ export function isRef(r: any): r is Ref {
   return r ? r._isRef === true : false
 }
 
-export function ref<T>(value: T): T extends Ref ? T : Ref<T>
+export function ref<T>(value: T): T extends Ref ? T : Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T>
 export function ref(value?: unknown) {
   return createRef(value)
 }
 
-export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T>(value: T): T extends Ref ? T : Ref<UnwrapRef<T>>
 export function shallowRef<T = any>(): Ref<T>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
