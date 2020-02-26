@@ -9,7 +9,6 @@ import {
   DirectiveBinding,
   nextTick
 } from '@vue/runtime-test'
-import { currentInstance, ComponentInternalInstance } from '../src/component'
 
 describe('directives', () => {
   it('should work', async () => {
@@ -18,7 +17,6 @@ describe('directives', () => {
     function assertBindings(binding: DirectiveBinding) {
       expect(binding.value).toBe(count.value)
       expect(binding.arg).toBe('foo')
-      expect(binding.instance).toBe(_instance && _instance.proxy)
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
@@ -107,13 +105,9 @@ describe('directives', () => {
       unmounted
     }
 
-    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
     const Comp = {
-      setup() {
-        _instance = currentInstance
-      },
       render() {
         _prevVnode = _vnode
         _vnode = withDirectives(h('div', count.value), [
@@ -153,7 +147,6 @@ describe('directives', () => {
     function assertBindings(binding: DirectiveBinding) {
       expect(binding.value).toBe(count.value)
       expect(binding.arg).toBe('foo')
-      expect(binding.instance).toBe(_instance && _instance.proxy)
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
@@ -167,13 +160,9 @@ describe('directives', () => {
       expect(prevVNode).toBe(_prevVnode)
     }) as DirectiveHook)
 
-    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
     const Comp = {
-      setup() {
-        _instance = currentInstance
-      },
       render() {
         _prevVnode = _vnode
         _vnode = withDirectives(h('div', count.value), [
@@ -207,7 +196,6 @@ describe('directives', () => {
     function assertBindings(binding: DirectiveBinding) {
       expect(binding.value).toBe(count.value)
       expect(binding.arg).toBe('foo')
-      expect(binding.instance).toBe(_instance && _instance.proxy)
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
@@ -296,7 +284,6 @@ describe('directives', () => {
       unmounted
     }
 
-    let _instance: ComponentInternalInstance | null = null
     let _vnode: VNode | null = null
     let _prevVnode: VNode | null = null
 
@@ -307,9 +294,6 @@ describe('directives', () => {
     }
 
     const Comp = {
-      setup() {
-        _instance = currentInstance
-      },
       render() {
         return withDirectives(h(Child, { count: count.value }), [
           [

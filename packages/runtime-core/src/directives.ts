@@ -15,12 +15,9 @@ import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap, EMPTY_ARR } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance } from './component'
-import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentProxy'
 
 export interface DirectiveBinding {
-  instance: ComponentPublicInstance | null
   value: any
   oldValue: any
   arg?: string
@@ -108,14 +105,9 @@ export function withDirectives<T extends VNode>(
   vnode: T,
   directives: DirectiveArguments
 ): T {
-  const internalInstance = currentRenderingInstance
-  if (internalInstance === null) {
-    __DEV__ && warn(`withDirectives can only be used inside render functions.`)
-    return vnode
-  }
-  const instance = internalInstance.proxy
   const props = vnode.props || (vnode.props = {})
-  const bindings = vnode.dirs || (vnode.dirs = new Array(directives.length))
+  const bindings: DirectiveBinding[] =
+    vnode.dirs || (vnode.dirs = new Array(directives.length))
   const injected: Record<string, true> = {}
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
@@ -127,7 +119,6 @@ export function withDirectives<T extends VNode>(
     }
     bindings[i] = {
       dir,
-      instance,
       value,
       oldValue: void 0,
       arg,
