@@ -42,6 +42,7 @@ import {
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { isSymbol, isObject, isArray } from '@vue/shared'
+import { createSSRCompilerError, SSRErrorCodes } from '../errors'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -136,35 +137,7 @@ export function ssrProcessComponent(
     const component = componentTypeMap.get(node)!
 
     if (component === PORTAL) {
-      const targetProp = findProp(node, 'target')
-      if (!targetProp) return
-
-      let target: JSChildNode
-      if (targetProp.type === NodeTypes.ATTRIBUTE && targetProp.value) {
-        target = createSimpleExpression(targetProp.value.content, true)
-      } else if (targetProp.type === NodeTypes.DIRECTIVE && targetProp.exp) {
-        target = targetProp.exp
-      } else {
-        return
-      }
-
-      const contentRenderFn = createFunctionExpression(
-        [`_push`],
-        undefined, // Body is added later
-        true, // newline
-        false, // isSlot
-        node.loc
-      )
-      contentRenderFn.body = processChildrenAsStatement(node.children, context)
-      context.pushStatement(
-        createCallExpression(context.helper(SSR_RENDER_PORTAL), [
-          contentRenderFn,
-          target,
-          `_parent`
-        ])
-      )
-
-      return
+      return ssrProcessPortal(node, context)
     }
 
     const needFragmentWrapper =
@@ -192,6 +165,47 @@ export function ssrProcessComponent(
     }
     context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
   }
+}
+
+function ssrProcessPortal(node: ComponentNode, context: SSRTransformContext) {
+  const targetProp = findProp(node, 'target')
+  if (!targetProp) {
+    context.onError(
+      createSSRCompilerError(SSRErrorCodes.X_SSR_NO_PORTAL_TARGET, node.loc)
+    )
+    return
+  }
+
+  let target: JSChildNode
+  if (targetProp.type === NodeTypes.ATTRIBUTE && targetProp.value) {
+    target = createSimpleExpression(targetProp.value.content, true)
+  } else if (targetProp.type === NodeTypes.DIRECTIVE && targetProp.exp) {
+    target = targetProp.exp
+  } else {
+    context.onError(
+      createSSRCompilerError(
+        SSRErrorCodes.X_SSR_NO_PORTAL_TARGET,
+        targetProp.loc
+      )
+    )
+    return
+  }
+
+  const contentRenderFn = createFunctionExpression(
+    [`_push`],
+    undefined, // Body is added later
+    true, // newline
+    false, // isSlot
+    node.loc
+  )
+  contentRenderFn.body = processChildrenAsStatement(node.children, context)
+  context.pushStatement(
+    createCallExpression(context.helper(SSR_RENDER_PORTAL), [
+      contentRenderFn,
+      target,
+      `_parent`
+    ])
+  )
 }
 
 export const rawOptionsMap = new WeakMap<RootNode, CompilerOptions>()

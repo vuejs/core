@@ -60,6 +60,11 @@ function createSSRTransformContext(
     body,
     helpers,
     withSlotScopeId,
+    onError:
+      options.onError ||
+      (e => {
+        throw e
+      }),
     helper<T extends symbol>(name: T): T {
       helpers.add(name)
       return name
