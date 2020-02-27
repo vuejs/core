@@ -249,8 +249,9 @@ export function applyOptions(
   } = options
 
   const renderContext =
-    instance.renderContext === EMPTY_OBJ
-      ? (instance.renderContext = {})
+    instance.renderContext === EMPTY_OBJ &&
+    (computedOptions || methods || watchOptions || injectOptions)
+      ? (instance.renderContext = reactive({}))
       : instance.renderContext
 
   const globalMixins = instance.appContext.mixins
