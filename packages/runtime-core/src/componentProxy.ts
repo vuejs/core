@@ -8,14 +8,7 @@ import {
   ComputedOptions,
   MethodOptions
 } from './apiOptions'
-import {
-  ReactiveEffect,
-  isRef,
-  isReactive,
-  Ref,
-  ComputedRef,
-  unref
-} from '@vue/reactivity'
+import { ReactiveEffect, UnwrapRef } from '@vue/reactivity'
 import { warn } from './warning'
 import { Slots } from './componentSlots'
 import {
@@ -48,16 +41,10 @@ export type ComponentPublicInstance<
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
 } & P &
-  UnwrapSetupBindings<B> &
+  UnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M
-
-type UnwrapSetupBindings<B> = { [K in keyof B]: UnwrapBinding<B[K]> }
-
-type UnwrapBinding<B> = B extends ComputedRef<any>
-  ? B extends ComputedRef<infer V> ? V : B
-  : B extends Ref<infer V> ? V : B
 
 const publicPropertiesMap: Record<
   string,
@@ -115,7 +102,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.DATA:
             return data[key]
           case AccessTypes.CONTEXT:
-            return unref(renderContext[key])
+            return renderContext[key]
           case AccessTypes.PROPS:
             return propsProxy![key]
           // default: just fallthrough
@@ -123,9 +110,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
-      } else if (hasOwn(renderContext, key)) {
+      } else if (renderContext !== EMPTY_OBJ && hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
-        return unref(renderContext[key])
+        return renderContext[key]
       } else if (type.props != null) {
         // only cache other properties when instance has declared (this stable)
         // props
@@ -180,19 +167,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
     } else if (hasOwn(renderContext, key)) {
-      // context is already reactive (user returned reactive object from setup())
-      // just set directly
-      if (isReactive(renderContext)) {
-        renderContext[key] = value
-      } else {
-        // handle potential ref set
-        const oldValue = renderContext[key]
-        if (isRef(oldValue) && !isRef(value)) {
-          oldValue.value = value
-        } else {
-          renderContext[key] = value
-        }
-      }
+      renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in target) {
       __DEV__ &&
         warn(

@@ -4,7 +4,6 @@ import {
   defineComponent,
   PropType,
   ref,
-  Ref,
   reactive,
   createApp
 } from './index'
@@ -65,15 +64,12 @@ describe('with object props', () => {
       // setup context
       return {
         c: ref(1),
-        d: reactive({
+        d: {
           e: ref('hi')
-        }),
+        },
         f: reactive({
           g: ref('hello' as GT)
-        }),
-        h: {
-          i: ref('hi')
-        }
+        })
       }
     },
     render() {
@@ -105,9 +101,6 @@ describe('with object props', () => {
       expectType<number>(this.c)
       expectType<string>(this.d.e)
       expectType<GT>(this.f.g)
-
-      // should not unwrap refs nested under non-reactive objects
-      expectType<Ref<string>>(this.h.i)
 
       // setup context properties should be mutable
       this.c = 2
