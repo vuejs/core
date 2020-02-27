@@ -79,9 +79,6 @@ export function watchEffect(
   return doWatch(effect, null, options)
 }
 
-// initial value for watchers to trigger on undefined initial values
-const INITIAL_WATCHER_VALUE = {}
-
 // overload #1: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
@@ -201,7 +198,9 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  // initial value for watchers to trigger on undefined initial values
+  const INITIAL_WATCHER_VALUE = {}
+  let oldValue = INITIAL_WATCHER_VALUE
   const applyCb = cb
     ? () => {
         if (instance && instance.isUnmounted) {

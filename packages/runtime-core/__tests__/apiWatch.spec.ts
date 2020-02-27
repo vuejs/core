@@ -391,7 +391,26 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(3)
   })
+  it('immediate: set undefined as oldValue param in cb at first run ', () => {
+    let dummy
+    watch(
+      [],
+      (newValue, oldValue) => {
+        dummy = [newValue, oldValue]
+      },
+      { immediate: true }
+    )
+    expect(dummy).toEqual([[], undefined])
 
+    watch(
+      ref(0),
+      (newValue, oldValue) => {
+        dummy = [newValue, oldValue]
+      },
+      { immediate: true }
+    )
+    expect(dummy).toEqual([0, undefined])
+  })
   it('warn immediate option when using effect', async () => {
     const count = ref(0)
     let dummy
