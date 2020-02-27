@@ -116,6 +116,13 @@ function createConfig(format, output, plugins = []) {
       ? []
       : knownExternals.concat(Object.keys(pkg.dependencies || []))
 
+  const nodePlugins = packageOptions.enableNonBrowserBranches
+    ? [
+        require('@rollup/plugin-node-resolve')(),
+        require('@rollup/plugin-commonjs')()
+      ]
+    : []
+
   return {
     input: resolve(entryFile),
     // Global and Browser ESM builds inlines everything so that they can be
@@ -136,6 +143,7 @@ function createConfig(format, output, plugins = []) {
         isGlobalBuild,
         isNodeBuild
       ),
+      ...nodePlugins,
       ...plugins
     ],
     output,

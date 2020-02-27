@@ -16,9 +16,13 @@ export function defaultOnError(error: CompilerError) {
 export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
-  messages?: { [code: number]: string }
+  messages?: { [code: number]: string },
+  additionalMessage?: string
 ): T extends ErrorCodes ? CoreCompilerError : CompilerError {
-  const msg = __DEV__ || !__BROWSER__ ? (messages || errorMessages)[code] : code
+  const msg =
+    __DEV__ || !__BROWSER__
+      ? (messages || errorMessages)[code] + (additionalMessage || ``)
+      : code
   const error = new SyntaxError(String(msg)) as CompilerError
   error.code = code
   error.loc = loc
@@ -174,7 +178,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
-  [ErrorCodes.X_INVALID_EXPRESSION]: `Invalid JavaScript expression.`,
+  [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
 
   // generic errors

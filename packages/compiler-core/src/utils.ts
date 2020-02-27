@@ -22,8 +22,6 @@ import {
   InterpolationNode,
   VNodeCall
 } from './ast'
-import { parse } from 'acorn'
-import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import {
   MERGE_PROPS,
@@ -33,6 +31,8 @@ import {
   BASE_TRANSITION
 } from './runtimeHelpers'
 import { isString, isFunction, isObject, hyphenate } from '@vue/shared'
+import { parse } from '@babel/parser'
+import { Node } from '@babel/types'
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
@@ -53,7 +53,7 @@ export function isCoreComponent(tag: string): symbol | void {
 // lazy require dependencies so that they don't end up in rollup's dep graph
 // and thus can be tree-shaken in browser builds.
 let _parse: typeof parse
-let _walk: typeof walk
+let _walk: any
 
 export function loadDep(name: string) {
   if (!__BROWSER__ && typeof process !== 'undefined' && isFunction(require)) {
@@ -70,11 +70,18 @@ export const parseJS: typeof parse = (code, options) => {
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`
   )
-  const parse = _parse || (_parse = loadDep('acorn').parse)
-  return parse(code, options)
+  if (!_parse) {
+    _parse = loadDep('@babel/parser').parse
+  }
+  return _parse(code, options)
 }
 
-export const walkJS: typeof walk = (ast, walker) => {
+interface Walker {
+  enter?(node: Node, parent: Node): void
+  leave?(node: Node): void
+}
+
+export const walkJS = (ast: Node, walker: Walker) => {
   assert(
     !__BROWSER__,
     `Expression AST analysis can only be performed in non-browser builds.`

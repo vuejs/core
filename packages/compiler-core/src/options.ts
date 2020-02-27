@@ -6,6 +6,7 @@ import {
   DirectiveTransform,
   TransformContext
 } from './transform'
+import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
   isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
@@ -61,6 +62,9 @@ export interface TransformOptions {
   //   analysis to determine if a handler is safe to cache.
   // - Default: false
   cacheHandlers?: boolean
+  // a list of parser plugins to enable for @babel/parser
+  // https://babeljs.io/docs/en/next/babel-parser#plugins
+  expressionPlugins?: ParserPlugin[]
   // SFC scoped styles ID
   scopeId?: string | null
   ssr?: boolean
