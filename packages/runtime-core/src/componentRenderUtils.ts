@@ -64,6 +64,13 @@ export function renderComponentRoot(
       result = normalizeVNode(
         instance.render!.call(proxyToUse, proxyToUse, renderCache)
       )
+      // root node should inherit class/style in component tag and patch
+      if (vnode.patchFlag & PatchFlags.CLASS) {
+        result.patchFlag |= PatchFlags.CLASS
+      }
+      if (vnode.patchFlag & PatchFlags.STYLE) {
+        result.patchFlag |= PatchFlags.STYLE
+      }
     } else {
       // functional
       const render = Component as FunctionalComponent
