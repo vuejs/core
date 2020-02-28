@@ -15,7 +15,7 @@ import { mockWarn } from '@vue/shared'
 describe('attribute fallthrough', () => {
   mockWarn()
 
-  it('everything should be in props when component has no declared props', async () => {
+  it('should allow whitelisted attrs to fallthrough', async () => {
     const click = jest.fn()
     const childUpdated = jest.fn()
 
@@ -46,13 +46,11 @@ describe('attribute fallthrough', () => {
         return () =>
           h(
             'div',
-            mergeProps(
-              {
-                class: 'c2',
-                style: { fontWeight: 'bold' }
-              },
-              props
-            ),
+            {
+              id: props.id, // id is not whitelisted
+              class: 'c2',
+              style: { fontWeight: 'bold' }
+            },
             props.foo
           )
       }
@@ -64,8 +62,8 @@ describe('attribute fallthrough', () => {
 
     const node = root.children[0] as HTMLElement
 
-    expect(node.getAttribute('id')).toBe('test')
-    expect(node.getAttribute('foo')).toBe('1')
+    expect(node.getAttribute('id')).toBe('test') // id is not whitelisted, but explicitly bound
+    expect(node.getAttribute('foo')).toBe(null) // foo is not whitelisted
     expect(node.getAttribute('class')).toBe('c2 c0')
     expect(node.style.color).toBe('green')
     expect(node.style.fontWeight).toBe('bold')
@@ -76,79 +74,10 @@ describe('attribute fallthrough', () => {
     await nextTick()
     expect(childUpdated).toHaveBeenCalled()
     expect(node.getAttribute('id')).toBe('test')
-    expect(node.getAttribute('foo')).toBe('1')
+    expect(node.getAttribute('foo')).toBe(null)
     expect(node.getAttribute('class')).toBe('c2 c1')
     expect(node.style.color).toBe('red')
     expect(node.style.fontWeight).toBe('bold')
-  })
-
-  it('should implicitly fallthrough on single root nodes', async () => {
-    const click = jest.fn()
-    const childUpdated = jest.fn()
-
-    const Hello = {
-      setup() {
-        const count = ref(0)
-
-        function inc() {
-          count.value++
-          click()
-        }
-
-        return () =>
-          h(Child, {
-            foo: 1,
-            id: 'test',
-            class: 'c' + count.value,
-            style: { color: count.value ? 'red' : 'green' },
-            onClick: inc
-          })
-      }
-    }
-
-    const Child = defineComponent({
-      props: {
-        foo: Number
-      },
-      setup(props) {
-        onUpdated(childUpdated)
-        return () =>
-          h(
-            'div',
-            {
-              class: 'c2',
-              style: { fontWeight: 'bold' }
-            },
-            props.foo
-          )
-      }
-    })
-
-    const root = document.createElement('div')
-    document.body.appendChild(root)
-    render(h(Hello), root)
-
-    const node = root.children[0] as HTMLElement
-
-    // with declared props, any parent attr that isn't a prop falls through
-    expect(node.getAttribute('id')).toBe('test')
-    expect(node.getAttribute('class')).toBe('c2 c0')
-    expect(node.style.color).toBe('green')
-    expect(node.style.fontWeight).toBe('bold')
-    node.dispatchEvent(new CustomEvent('click'))
-    expect(click).toHaveBeenCalled()
-
-    // ...while declared ones remain props
-    expect(node.hasAttribute('foo')).toBe(false)
-
-    await nextTick()
-    expect(childUpdated).toHaveBeenCalled()
-    expect(node.getAttribute('id')).toBe('test')
-    expect(node.getAttribute('class')).toBe('c2 c1')
-    expect(node.style.color).toBe('red')
-    expect(node.style.fontWeight).toBe('bold')
-
-    expect(node.hasAttribute('foo')).toBe(false)
   })
 
   it('should fallthrough for nested components', async () => {
@@ -179,12 +108,16 @@ describe('attribute fallthrough', () => {
     const Child = {
       setup(props: any) {
         onUpdated(childUpdated)
+        // HOC simply passing props down.
+        // this will result in merging the same attrs, but should be deduped by
+        // `mergeProps`.
         return () => h(GrandChild, props)
       }
     }
 
     const GrandChild = defineComponent({
       props: {
+        id: String,
         foo: Number
       },
       setup(props) {
@@ -193,6 +126,7 @@ describe('attribute fallthrough', () => {
           h(
             'div',
             {
+              id: props.id,
               class: 'c2',
               style: { fontWeight: 'bold' }
             },
@@ -351,11 +285,11 @@ describe('attribute fallthrough', () => {
 
   // #677
   it('should update merged dynamic attrs on optimized child root', async () => {
-    const id = ref('foo')
+    const aria = ref('true')
     const cls = ref('bar')
     const Parent = {
       render() {
-        return h(Child, { id: id.value, class: cls.value })
+        return h(Child, { 'aria-hidden': aria.value, class: cls.value })
       }
     }
 
@@ -370,14 +304,14 @@ describe('attribute fallthrough', () => {
     document.body.appendChild(root)
     render(h(Parent), root)
 
-    expect(root.innerHTML).toBe(`<div id="foo" class="bar"></div>`)
+    expect(root.innerHTML).toBe(`<div aria-hidden="true" class="bar"></div>`)
 
-    id.value = 'fooo'
+    aria.value = 'false'
     await nextTick()
-    expect(root.innerHTML).toBe(`<div id="fooo" class="bar"></div>`)
+    expect(root.innerHTML).toBe(`<div aria-hidden="false" class="bar"></div>`)
 
     cls.value = 'barr'
     await nextTick()
-    expect(root.innerHTML).toBe(`<div id="fooo" class="barr"></div>`)
+    expect(root.innerHTML).toBe(`<div aria-hidden="false" class="barr"></div>`)
   })
 })

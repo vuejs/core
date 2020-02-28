@@ -11,7 +11,7 @@ import {
   cloneVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, EMPTY_OBJ } from '@vue/shared'
+import { PatchFlags, ShapeFlags, EMPTY_OBJ, isOn } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
@@ -79,17 +79,17 @@ export function renderComponentRoot(
     }
 
     // attr merging
+    let fallthroughAttrs
     if (
-      Component.props != null &&
       Component.inheritAttrs !== false &&
       attrs !== EMPTY_OBJ &&
-      Object.keys(attrs).length
+      (fallthroughAttrs = getFallthroughAttrs(attrs))
     ) {
       if (
         result.shapeFlag & ShapeFlags.ELEMENT ||
         result.shapeFlag & ShapeFlags.COMPONENT
       ) {
-        result = cloneVNode(result, attrs)
+        result = cloneVNode(result, fallthroughAttrs)
         // If the child root node is a compiler optimized vnode, make sure it
         // force update full props to account for the merged attrs.
         if (result.dynamicChildren !== null) {
@@ -97,7 +97,8 @@ export function renderComponentRoot(
         }
       } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
         warn(
-          `Extraneous non-props attributes (${Object.keys(attrs).join(',')}) ` +
+          `Extraneous non-props attributes (` +
+            `${Object.keys(attrs).join(', ')}) ` +
             `were passed to component but could not be automatically inherited ` +
             `because component renders fragment or text root nodes.`
         )
@@ -142,7 +143,24 @@ export function renderComponentRoot(
   return result
 }
 
-function isElementRoot(vnode: VNode) {
+const getFallthroughAttrs = (attrs: Data): Data | undefined => {
+  let res: Data | undefined
+  for (const key in attrs) {
+    if (
+      key === 'class' ||
+      key === 'style' ||
+      key === 'role' ||
+      isOn(key) ||
+      key.indexOf('aria-') === 0 ||
+      key.indexOf('data-') === 0
+    ) {
+      ;(res || (res = {}))[key] = attrs[key]
+    }
+  }
+  return res
+}
+
+const isElementRoot = (vnode: VNode) => {
   return (
     vnode.shapeFlag & ShapeFlags.COMPONENT ||
     vnode.shapeFlag & ShapeFlags.ELEMENT ||
