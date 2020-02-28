@@ -90,6 +90,11 @@ export function renderComponentRoot(
         result.shapeFlag & ShapeFlags.COMPONENT
       ) {
         result = cloneVNode(result, attrs)
+        // If the child root node is a compiler optimized vnode, make sure it
+        // force update full props to account for the merged attrs.
+        if (result.dynamicChildren !== null) {
+          result.patchFlag |= PatchFlags.FULL_PROPS
+        }
       } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
         warn(
           `Extraneous non-props attributes (${Object.keys(attrs).join(',')}) ` +
@@ -183,7 +188,7 @@ export function shouldUpdateComponent(
       return hasPropsChanged(prevProps!, nextProps!)
     } else {
       if (patchFlag & PatchFlags.CLASS) {
-        return prevProps!.class === nextProps!.class
+        return prevProps!.class !== nextProps!.class
       }
       if (patchFlag & PatchFlags.STYLE) {
         return hasPropsChanged(prevProps!.style, nextProps!.style)

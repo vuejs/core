@@ -6,7 +6,9 @@ import {
   mergeProps,
   ref,
   onUpdated,
-  defineComponent
+  defineComponent,
+  openBlock,
+  createBlock
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/shared'
 
@@ -345,5 +347,37 @@ describe('attribute fallthrough', () => {
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
     expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+  })
+
+  // #677
+  it('should update merged dynamic attrs on optimized child root', async () => {
+    const id = ref('foo')
+    const cls = ref('bar')
+    const Parent = {
+      render() {
+        return h(Child, { id: id.value, class: cls.value })
+      }
+    }
+
+    const Child = {
+      props: [],
+      render() {
+        return openBlock(), createBlock('div')
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(root.innerHTML).toBe(`<div id="foo" class="bar"></div>`)
+
+    id.value = 'fooo'
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div id="fooo" class="bar"></div>`)
+
+    cls.value = 'barr'
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div id="fooo" class="barr"></div>`)
   })
 })
