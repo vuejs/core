@@ -101,15 +101,7 @@ export {
   createCommentVNode,
   createStaticVNode
 } from './vnode'
-// Since @vue/shared is inlined into final builds,
-// when re-exporting from @vue/shared we need to avoid relying on their original
-// types so that the bundled d.ts does not attempt to import from it.
-import {
-  toDisplayString as _toDisplayString,
-  camelize as _camelize
-} from '@vue/shared'
-export const toDisplayString = _toDisplayString as (s: unknown) => string
-export const camelize = _camelize as (s: string) => string
+export { toDisplayString, camelize } from '@vue/shared'
 
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

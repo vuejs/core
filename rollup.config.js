@@ -1,4 +1,3 @@
-import fs from 'fs'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
@@ -15,10 +14,6 @@ const name = path.basename(packageDir)
 const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
-
-const knownExternals = fs.readdirSync(packagesDir).filter(p => {
-  return p !== '@vue/shared'
-})
 
 // ensure TS checks only once for each build
 let hasTSChecked = false
@@ -112,9 +107,7 @@ function createConfig(format, output, plugins = []) {
     format === 'esm-bundler-runtime' ? `src/runtime.ts` : `src/index.ts`
 
   const external =
-    isGlobalBuild || isRawESMBuild
-      ? []
-      : knownExternals.concat(Object.keys(pkg.dependencies || []))
+    isGlobalBuild || isRawESMBuild ? [] : Object.keys(pkg.dependencies || {})
 
   const nodePlugins = packageOptions.enableNonBrowserBranches
     ? [
