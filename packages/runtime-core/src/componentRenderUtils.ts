@@ -77,7 +77,7 @@ export function renderComponentRoot(
           : render(props, null as any /* we know it doesn't need it */)
       )
     }
-
+    debugger
     // attr merging
     let fallthroughAttrs
     if (
@@ -114,7 +114,7 @@ export function renderComponentRoot(
               PatchFlags.PROPS)
           if (inheritFlag) {
             result.patchFlag |= inheritFlag
-          } else {
+          } else if (vnode.dynamicProps === null) {
             result.patchFlag |= PatchFlags.FULL_PROPS
           }
         }
