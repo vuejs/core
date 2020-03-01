@@ -8,9 +8,10 @@ import {
   onUpdated,
   defineComponent,
   openBlock,
-  createBlock
+  createBlock,
+  createVNode
 } from '@vue/runtime-dom'
-import { mockWarn } from '@vue/shared'
+import { mockWarn, PatchFlags } from '@vue/shared'
 
 describe('attribute fallthrough', () => {
   mockWarn()
@@ -313,5 +314,60 @@ describe('attribute fallthrough', () => {
     cls.value = 'barr'
     await nextTick()
     expect(root.innerHTML).toBe(`<div aria-hidden="false" class="barr"></div>`)
+  })
+
+  it('should optimize update merged dynamic attrs on optimized child root', async () => {
+    const aria = ref('true')
+    const cls = ref('bar')
+    const isRed = ref(true)
+
+    const Parent = {
+      render() {
+        return createVNode(
+          Child,
+          {
+            'aria-hidden': aria.value,
+            class: cls.value,
+            style: { color: isRed.value ? 'red' : 'gray' }
+          },
+          null,
+          PatchFlags.STYLE | PatchFlags.CLASS | PatchFlags.PROPS,
+          ['aria-hidden']
+        )
+      }
+    }
+
+    const Child = {
+      props: [],
+      render() {
+        return openBlock(), createBlock('div')
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(root.innerHTML).toBe(
+      `<div aria-hidden="true" class="bar" style="color: red;"></div>`
+    )
+
+    cls.value = 'barr'
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<div aria-hidden="true" class="barr" style="color: red;"></div>`
+    )
+
+    isRed.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<div aria-hidden="true" class="barr" style="color: gray;"></div>`
+    )
+
+    aria.value = 'false'
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<div aria-hidden="false" class="barr" style="color: gray;"></div>`
+    )
   })
 })

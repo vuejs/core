@@ -90,10 +90,33 @@ export function renderComponentRoot(
         result.shapeFlag & ShapeFlags.COMPONENT
       ) {
         result = cloneVNode(result, fallthroughAttrs)
+
         // If the child root node is a compiler optimized vnode, make sure it
-        // force update full props to account for the merged attrs.
+        // inherit patchFlag
         if (result.dynamicChildren !== null) {
-          result.patchFlag |= PatchFlags.FULL_PROPS
+          // inherit dynamicProps
+          if (vnode.patchFlag & PatchFlags.PROPS && vnode.dynamicProps) {
+            let fallthroughDynamicProps: string[] = []
+            for (let i = 0; i < vnode.dynamicProps.length; i++) {
+              let _dynamicProps = vnode.dynamicProps[i]
+              if (_dynamicProps) {
+                fallthroughDynamicProps.push(_dynamicProps)
+              }
+            }
+            result.dynamicProps = fallthroughDynamicProps
+          }
+
+          let inheritFlag =
+            vnode.patchFlag &
+            (PatchFlags.FULL_PROPS |
+              PatchFlags.CLASS |
+              PatchFlags.STYLE |
+              PatchFlags.PROPS)
+          if (inheritFlag) {
+            result.patchFlag |= inheritFlag
+          } else {
+            result.patchFlag |= PatchFlags.FULL_PROPS
+          }
         }
       } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
         warn(
@@ -206,10 +229,14 @@ export function shouldUpdateComponent(
       return hasPropsChanged(prevProps!, nextProps!)
     } else {
       if (patchFlag & PatchFlags.CLASS) {
-        return prevProps!.class !== nextProps!.class
+        if (prevProps!.class !== nextProps!.class) {
+          return true
+        }
       }
       if (patchFlag & PatchFlags.STYLE) {
-        return hasPropsChanged(prevProps!.style, nextProps!.style)
+        if (hasPropsChanged(prevProps!.style, nextProps!.style)) {
+          return true
+        }
       }
       if (patchFlag & PatchFlags.PROPS) {
         const dynamicProps = nextVNode.dynamicProps!
