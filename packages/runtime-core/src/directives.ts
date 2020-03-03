@@ -126,8 +126,9 @@ export function withDirectives<T extends VNode>(
     }
     // inject onVnodeXXX hooks
     for (const key in dir) {
-      if (!injected[key]) {
-        const { 0: hookName, 1: hook } = directiveToVnodeHooksMap[key]
+      const mapped = directiveToVnodeHooksMap[key]
+      if (mapped && !injected[key]) {
+        const { 0: hookName, 1: hook } = mapped
         const existing = props[hookName]
         props[hookName] = existing ? [].concat(existing, hook as any) : hook
         injected[key] = true
