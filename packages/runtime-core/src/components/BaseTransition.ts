@@ -44,6 +44,7 @@ export interface BaseTransitionProps {
 }
 
 export interface TransitionHooks {
+  state: TransitionState
   persisted: boolean
   beforeEnter(el: object): void
   enter(el: object): void
@@ -272,6 +273,7 @@ export function resolveTransitionHooks(
   }
 
   const hooks: TransitionHooks = {
+    state,
     persisted,
     beforeEnter(el: TransitionElement) {
       if (!appear && !state.isMounted) {

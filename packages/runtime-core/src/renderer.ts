@@ -1119,17 +1119,32 @@ function baseCreateRenderer<
         if (instance.refs !== EMPTY_OBJ) {
           instance.refs = {}
         }
-        patch(
-          prevTree,
-          nextTree,
-          // parent may have changed if it's in a portal
-          hostParentNode(prevTree.el as HostNode) as HostElement,
-          // anchor may have changed if it's in a fragment
-          getNextHostNode(prevTree),
-          instance,
-          parentSuspense,
-          isSVG
-        )
+        let shouldPatch = true
+        // if patch component in the process of transition
+        if (instance.subTree.transition) {
+          let key = instance.vnode.key
+          if (key) {
+            // if the key is in the transition leavingVNodes, skip patch
+            shouldPatch = !instance.vnode.transition!.state.leavingVNodes.get(
+              instance.type
+            )![key]
+          }
+        }
+        if (shouldPatch) {
+          patch(
+            prevTree,
+            nextTree,
+            // parent may have changed if it's in a portal
+            hostParentNode(prevTree.el as HostNode) as HostElement,
+            // anchor may have changed if it's in a fragment
+            getNextHostNode(prevTree),
+            instance,
+            parentSuspense,
+            isSVG
+          )
+        } else {
+          nextTree.el = prevTree.el
+        }
         instance.vnode.el = nextTree.el
         if (next === null) {
           // self-triggered update. In case of HOC, update parent component
