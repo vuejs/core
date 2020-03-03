@@ -16,7 +16,6 @@ import {
   CompoundExpressionNode,
   createCompoundExpression
 } from '../ast'
-import { Node, Function, Identifier, Property } from 'estree'
 import {
   advancePositionWithClone,
   isSimpleIdentifier,
@@ -25,6 +24,7 @@ import {
 } from '../utils'
 import { isGloballyWhitelisted, makeMap } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
+import { Node, Function, Identifier, ObjectProperty } from '@babel/types'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
@@ -117,22 +117,39 @@ export function processExpression(
     ? ` ${rawExp} `
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
-    ast = parseJS(source, { ranges: true })
+    ast = parseJS(source, {
+      plugins: [
+        ...context.expressionPlugins,
+        // by default we enable proposals slated for ES2020.
+        // full list at https://babeljs.io/docs/en/next/babel-parser#plugins
+        // this will need to be updated as the spec moves forward.
+        'bigInt',
+        'optionalChaining',
+        'nullishCoalescingOperator'
+      ]
+    }).program
   } catch (e) {
     context.onError(
-      createCompilerError(ErrorCodes.X_INVALID_EXPRESSION, node.loc)
+      createCompilerError(
+        ErrorCodes.X_INVALID_EXPRESSION,
+        node.loc,
+        undefined,
+        e.message
+      )
     )
     return node
   }
 
   const ids: (Identifier & PrefixMeta)[] = []
   const knownIds = Object.create(context.identifiers)
+  const isDuplicate = (node: Node & PrefixMeta): boolean =>
+    ids.some(id => id.start === node.start)
 
   // walk the AST and look for identifiers that need to be prefixed with `_ctx.`.
   walkJS(ast, {
     enter(node: Node & PrefixMeta, parent) {
       if (node.type === 'Identifier') {
-        if (!ids.includes(node)) {
+        if (!isDuplicate(node)) {
           const needPrefix = shouldPrefix(node, parent)
           if (!knownIds[node.name] && needPrefix) {
             if (isPropertyShorthand(node, parent)) {
@@ -246,17 +263,20 @@ export function processExpression(
 const isFunction = (node: Node): node is Function =>
   /Function(Expression|Declaration)$/.test(node.type)
 
-const isPropertyKey = (node: Node, parent: Node) =>
-  parent &&
-  parent.type === 'Property' &&
-  parent.key === node &&
-  !parent.computed
+const isStaticProperty = (node: Node): node is ObjectProperty =>
+  node && node.type === 'ObjectProperty' && !node.computed
 
-const isPropertyShorthand = (node: Node, parent: Node) =>
-  isPropertyKey(node, parent) && (parent as Property).value === node
+const isPropertyShorthand = (node: Node, parent: Node) => {
+  return (
+    isStaticProperty(parent) &&
+    parent.value === node &&
+    parent.key.type === 'Identifier' &&
+    parent.key.name === (node as Identifier).name
+  )
+}
 
 const isStaticPropertyKey = (node: Node, parent: Node) =>
-  isPropertyKey(node, parent) && (parent as Property).value !== node
+  isStaticProperty(parent) && parent.key === node
 
 function shouldPrefix(identifier: Identifier, parent: Node) {
   if (
@@ -271,7 +291,8 @@ function shouldPrefix(identifier: Identifier, parent: Node) {
     !isStaticPropertyKey(identifier, parent) &&
     // not a property of a MemberExpression
     !(
-      parent.type === 'MemberExpression' &&
+      (parent.type === 'MemberExpression' ||
+        parent.type === 'OptionalMemberExpression') &&
       parent.property === identifier &&
       !parent.computed
     ) &&

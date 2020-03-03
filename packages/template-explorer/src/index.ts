@@ -2,8 +2,11 @@ import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
-import { watch } from '@vue/runtime-dom'
+import { watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
+import { parse } from '@babel/parser'
+
+window._deps['@babel/parser'] = { parse }
 
 declare global {
   interface Window {
@@ -221,7 +224,7 @@ window.init = () => {
   )
 
   initOptions()
-  watch(reCompile)
+  watchEffect(reCompile)
 }
 
 function debounce<T extends (...args: any[]) => any>(

@@ -60,13 +60,13 @@ describe('hot module replacement', () => {
     createRecord(parentId, Parent)
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<div>0<!---->0<!----></div>`)
+    expect(serializeInner(root)).toBe(`<div>00</div>`)
 
     // Perform some state change. This change should be preserved after the
     // re-render!
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>1<!---->1<!----></div>`)
+    expect(serializeInner(root)).toBe(`<div>11</div>`)
 
     // Update text while preserving state
     rerender(
@@ -75,7 +75,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`
       )
     )
-    expect(serializeInner(root)).toBe(`<div>1!<!---->1<!----></div>`)
+    expect(serializeInner(root)).toBe(`<div>1!1</div>`)
 
     // Should force child update on slot content change
     rerender(
@@ -84,7 +84,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`
       )
     )
-    expect(serializeInner(root)).toBe(`<div>1!<!---->1!<!----></div>`)
+    expect(serializeInner(root)).toBe(`<div>1!1!</div>`)
 
     // Should force update element children despite block optimization
     rerender(
@@ -95,9 +95,7 @@ describe('hot module replacement', () => {
       </div>`
       )
     )
-    expect(serializeInner(root)).toBe(
-      `<div>1<span>1</span><!---->1!<!----></div>`
-    )
+    expect(serializeInner(root)).toBe(`<div>1<span>1</span>1!</div>`)
 
     // Should force update child slot elements
     rerender(
@@ -108,7 +106,7 @@ describe('hot module replacement', () => {
       </div>`
       )
     )
-    expect(serializeInner(root)).toBe(`<div><!----><span>1</span><!----></div>`)
+    expect(serializeInner(root)).toBe(`<div><span>1</span></div>`)
   })
 
   test('reload', async () => {

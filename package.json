@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.0.0-alpha.6",
+  "version": "3.0.0-alpha.7",
   "workspaces": [
     "packages/*"
   ],
@@ -10,7 +10,7 @@
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
     "lint": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "test": "node scripts/build.js vue -f global -d && jest",
-    "test-dts": "node scripts/build.js reactivity runtime-core runtime-dom -dt -f esm-bundler && tsd",
+    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsd",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
@@ -37,7 +37,9 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.3.9",
+    "@rollup/plugin-commonjs": "^11.0.2",
     "@rollup/plugin-json": "^4.0.0",
+    "@rollup/plugin-node-resolve": "^7.1.1",
     "@rollup/plugin-replace": "^2.2.1",
     "@types/jest": "^24.0.21",
     "@types/puppeteer": "^2.0.0",

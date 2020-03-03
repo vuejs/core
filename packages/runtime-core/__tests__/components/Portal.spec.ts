@@ -6,7 +6,6 @@ import {
   defineComponent,
   Portal,
   Text,
-  Fragment,
   ref,
   nextTick,
   TestElement,
@@ -19,12 +18,10 @@ describe('renderer: portal', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
-    const Comp = defineComponent(() => () =>
-      h(Fragment, [
-        h(Portal, { target }, h('div', 'teleported')),
-        h('div', 'root')
-      ])
-    )
+    const Comp = defineComponent(() => () => [
+      h(Portal, { target }, h('div', 'teleported')),
+      h('div', 'root')
+    ])
     render(h(Comp), root)
 
     expect(serializeInner(root)).toMatchSnapshot()
@@ -37,12 +34,10 @@ describe('renderer: portal', () => {
     const target = ref(targetA)
     const root = nodeOps.createElement('div')
 
-    const Comp = defineComponent(() => () =>
-      h(Fragment, [
-        h(Portal, { target: target.value }, h('div', 'teleported')),
-        h('div', 'root')
-      ])
-    )
+    const Comp = defineComponent(() => () => [
+      h(Portal, { target: target.value }, h('div', 'teleported')),
+      h('div', 'root')
+    ])
     render(h(Comp), root)
 
     expect(serializeInner(root)).toMatchSnapshot()

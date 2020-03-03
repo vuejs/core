@@ -24,7 +24,7 @@ export type RootHydrateFunction = (
 // passed in via arguments.
 export function createHydrationFunctions({
   mt: mountComponent,
-  o: { patchProp }
+  o: { patchProp, createText }
 }: RendererInternals<Node, Element>) {
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (__DEV__ && !container.hasChildNodes()) {
@@ -39,8 +39,9 @@ export function createHydrationFunctions({
   const hydrateNode = (
     node: Node,
     vnode: VNode,
-    parentComponent: ComponentInternalInstance | null = null
-  ): Node | null | undefined => {
+    parentComponent: ComponentInternalInstance | null = null,
+    optimized = false
+  ): Node | null => {
     const { type, shapeFlag } = vnode
     vnode.el = node
     switch (type) {
@@ -49,17 +50,15 @@ export function createHydrationFunctions({
       case Static:
         return node.nextSibling
       case Fragment:
-        const anchor = (vnode.anchor = hydrateChildren(
-          node.nextSibling,
-          vnode.children as VNode[],
-          parentComponent
-        )!)
-        // TODO handle potential hydration error if fragment didn't get
-        // back anchor as expected.
-        return anchor.nextSibling
+        return hydrateFragment(node, vnode, parentComponent, optimized)
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          return hydrateElement(node as Element, vnode, parentComponent)
+          return hydrateElement(
+            node as Element,
+            vnode,
+            parentComponent,
+            optimized
+          )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
@@ -68,20 +67,22 @@ export function createHydrationFunctions({
           const subTree = vnode.component!.subTree
           return (subTree.anchor || subTree.el).nextSibling
         } else if (shapeFlag & ShapeFlags.PORTAL) {
-          hydratePortal(vnode, parentComponent)
+          hydratePortal(vnode, parentComponent, optimized)
           return node.nextSibling
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
           // TODO Suspense
         } else if (__DEV__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
+        return null
     }
   }
 
   const hydrateElement = (
     el: Element,
     vnode: VNode,
-    parentComponent: ComponentInternalInstance | null
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
   ) => {
     const { props, patchFlag } = vnode
     // skip props & children if this is hoisted static nodes
@@ -121,8 +122,9 @@ export function createHydrationFunctions({
       ) {
         hydrateChildren(
           el.firstChild,
-          vnode.children as VNode[],
-          parentComponent
+          vnode,
+          parentComponent,
+          optimized || vnode.dynamicChildren !== null
         )
       }
     }
@@ -130,33 +132,46 @@ export function createHydrationFunctions({
   }
 
   const hydrateChildren = (
-    node: Node | null | undefined,
-    vnodes: VNode[],
-    parentComponent: ComponentInternalInstance | null
-  ): Node | null | undefined => {
-    for (let i = 0; node != null && i < vnodes.length; i++) {
-      // TODO can skip normalizeVNode in optimized mode
-      // (need hint on rendered markup?)
-      const vnode = (vnodes[i] = normalizeVNode(vnodes[i]))
-      node = hydrateNode(node, vnode, parentComponent)
+    node: Node | null,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
+  ): Node | null => {
+    const children = vnode.children as VNode[]
+    optimized = optimized || vnode.dynamicChildren !== null
+    for (let i = 0; node != null && i < children.length; i++) {
+      const vnode = optimized
+        ? children[i]
+        : (children[i] = normalizeVNode(children[i]))
+      node = hydrateNode(node, vnode, parentComponent, optimized)
     }
     return node
   }
 
+  const hydrateFragment = (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
+  ) => {
+    const parent = node.parentNode!
+    parent.insertBefore((vnode.el = createText('')), node)
+    const next = hydrateChildren(node, vnode, parentComponent, optimized)
+    parent.insertBefore((vnode.anchor = createText('')), next)
+    return next
+  }
+
   const hydratePortal = (
     vnode: VNode,
-    parentComponent: ComponentInternalInstance | null
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
   ) => {
     const targetSelector = vnode.props && vnode.props.target
     const target = (vnode.target = isString(targetSelector)
       ? document.querySelector(targetSelector)
       : targetSelector)
     if (target != null && vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      hydrateChildren(
-        target.firstChild,
-        vnode.children as VNode[],
-        parentComponent
-      )
+      hydrateChildren(target.firstChild, vnode, parentComponent, optimized)
     }
   }
 

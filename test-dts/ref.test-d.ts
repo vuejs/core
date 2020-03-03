@@ -13,6 +13,13 @@ function foo(arg: number | Ref<number>) {
 
   // ref unwrapping
   expectType<number>(unref(arg))
+
+  // ref inner type should be unwrapped
+  const nestedRef = ref({
+    foo: ref(1)
+  })
+  expectType<Ref<{ foo: number }>>(nestedRef)
+  expectType<{ foo: number }>(nestedRef.value)
 }
 
 foo(1)

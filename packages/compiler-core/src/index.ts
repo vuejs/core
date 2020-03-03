@@ -50,12 +50,4 @@ export {
 } from './transforms/vSlot'
 export { resolveComponentType, buildProps } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
-
-// utility, but need to rewrite typing to avoid dts relying on @vue/shared
-import { generateCodeFrame as _genCodeFrame } from '@vue/shared'
-const generateCodeFrame = _genCodeFrame as (
-  source: string,
-  start?: number,
-  end?: number
-) => string
-export { generateCodeFrame }
+export { generateCodeFrame } from '@vue/shared'

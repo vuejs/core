@@ -22,7 +22,9 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return h('div', { ref: 'refKey' })
+        // Note: string refs are compiled into [ctx, key] tuples by the compiler
+        // to ensure correct context.
+        return h('div', { ref: [this, 'refKey'] as any })
       }
     }
     render(h(Comp), root)
@@ -43,7 +45,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return h('div', { ref: refKey.value })
+        return h('div', { ref: [this, refKey.value] as any })
       }
     }
     render(h(Comp), root)
@@ -68,7 +70,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return toggle.value ? h('div', { ref: 'refKey' }) : null
+        return toggle.value ? h('div', { ref: [this, 'refKey'] as any }) : null
       }
     }
     render(h(Comp), root)

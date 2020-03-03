@@ -34,14 +34,14 @@ import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
-export type WatchEffect = (onCleanup: CleanupRegistrator) => void
+export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
 export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
-  onCleanup: CleanupRegistrator
+  onInvalidate: InvalidateCbRegistrator
 ) => any
 
 type MapSources<T> = {
@@ -54,7 +54,7 @@ type MapOldSources<T, Immediate> = {
     : never
 }
 
-export type CleanupRegistrator = (invalidate: () => void) => void
+type InvalidateCbRegistrator = (cb: () => void) => void
 
 export interface BaseWatchOptions {
   flush?: 'pre' | 'post' | 'sync'
@@ -82,20 +82,14 @@ export function watchEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-// overload #1: simple effect
-export function watch(
-  effect: WatchEffect,
-  options?: BaseWatchOptions
-): StopHandle
-
-// overload #2: single source + cb
+// overload #1: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
 ): StopHandle
 
-// overload #3: array of multiple sources + cb
+// overload #2: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
@@ -110,24 +104,18 @@ export function watch<
 
 // implementation
 export function watch<T = any>(
-  effectOrSource: WatchSource<T> | WatchSource<T>[] | WatchEffect,
-  cbOrOptions?: WatchCallback<T> | WatchOptions,
+  source: WatchSource<T> | WatchSource<T>[],
+  cb: WatchCallback<T>,
   options?: WatchOptions
 ): StopHandle {
-  if (isFunction(cbOrOptions)) {
-    // watch(source, cb)
-    return doWatch(effectOrSource, cbOrOptions, options)
-  } else {
-    // TODO remove this in the next release
-    __DEV__ &&
-      warn(
-        `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
-          `Use \`watchEffect(fn, options?)\` instead. \`watch\` will only ` +
-          `support \`watch(source, cb, options?) signature in the next release.`
-      )
-    // watch(effect)
-    return doWatch(effectOrSource, null, cbOrOptions)
+  if (__DEV__ && !isFunction(cb)) {
+    warn(
+      `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
+        `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
+        `supports \`watch(source, cb, options?) signature.`
+    )
   }
+  return doWatch(source, cb, options)
 }
 
 function doWatch(
@@ -139,13 +127,13 @@ function doWatch(
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback) signature.`
+          `watch(source, callback, options?) signature.`
       )
     }
   }
@@ -181,18 +169,18 @@ function doWatch(
         source,
         instance,
         ErrorCodes.WATCH_CALLBACK,
-        [registerCleanup]
+        [onInvalidate]
       )
     }
   }
 
-  if (deep) {
+  if (cb && deep) {
     const baseGetter = getter
     getter = () => traverse(baseGetter())
   }
 
   let cleanup: Function
-  const registerCleanup: CleanupRegistrator = (fn: () => void) => {
+  const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
     }
@@ -207,7 +195,7 @@ function doWatch(
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         undefined,
-        registerCleanup
+        onInvalidate
       ])
     }
     return NOOP
@@ -229,7 +217,7 @@ function doWatch(
             newValue,
             // pass undefined as the old value when it's changed for the first time
             oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-            registerCleanup
+            onInvalidate
           ])
           oldValue = newValue
         }

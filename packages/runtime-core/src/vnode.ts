@@ -399,15 +399,20 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
     const toMerge = args[i]
     for (const key in toMerge) {
       if (key === 'class') {
-        ret.class = normalizeClass([ret.class, toMerge.class])
+        if (ret.class !== toMerge.class) {
+          ret.class = normalizeClass([ret.class, toMerge.class])
+        }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
       } else if (handlersRE.test(key)) {
         // on*, vnode*
         const existing = ret[key]
-        ret[key] = existing
-          ? [].concat(existing as any, toMerge[key] as any)
-          : toMerge[key]
+        const incoming = toMerge[key]
+        if (existing !== incoming) {
+          ret[key] = existing
+            ? [].concat(existing as any, toMerge[key] as any)
+            : incoming
+        }
       } else {
         ret[key] = toMerge[key]
       }

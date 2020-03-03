@@ -1,5 +1,6 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
+  reactive,
   ReactiveEffect,
   shallowReadonly,
   pauseTracking,
@@ -398,7 +399,7 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
-    instance.renderContext = setupResult
+    instance.renderContext = reactive(setupResult)
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
       `setup() should return an object. Received: ${
@@ -473,10 +474,6 @@ function finishComponentSetup(
     applyOptions(instance, Component)
     currentInstance = null
     currentSuspense = null
-  }
-
-  if (instance.renderContext === EMPTY_OBJ) {
-    instance.renderContext = {}
   }
 }
 

@@ -214,7 +214,7 @@ export function resolveProps(
   lock()
 
   instance.props = props
-  instance.attrs = options ? attrs || EMPTY_OBJ : props
+  instance.attrs = attrs || EMPTY_OBJ
   instance.vnodeHooks = vnodeHooks || EMPTY_OBJ
 }
 

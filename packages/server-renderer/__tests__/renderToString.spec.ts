@@ -262,7 +262,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<!----><span>from slot</span><!---->` +
+          `<span>from slot</span>` +
           `</div></div>`
       )
 
@@ -277,7 +277,7 @@ describe('ssr: renderToString', () => {
             }
           })
         )
-      ).toBe(`<div>parent<div class="child"><!---->fallback<!----></div></div>`)
+      ).toBe(`<div>parent<div class="child">fallback</div></div>`)
     })
 
     test('nested components with vnode slots', async () => {
@@ -321,7 +321,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<!----><span>from slot</span><!---->` +
+          `<span>from slot</span>` +
           `</div></div>`
       )
     })
@@ -339,7 +339,7 @@ describe('ssr: renderToString', () => {
 
       expect(await renderToString(app)).toBe(
         `<div>parent<div class="child">` +
-          `<!----><span>from slot</span><!---->` +
+          `<span>from slot</span>` +
           `</div></div>`
       )
     })
@@ -461,9 +461,7 @@ describe('ssr: renderToString', () => {
             createCommentVNode('qux')
           ])
         )
-      ).toBe(
-        `<div>foo<span>bar</span><!----><span>baz</span><!----><!--qux--></div>`
-      )
+      ).toBe(`<div>foo<span>bar</span><span>baz</span><!--qux--></div>`)
     })
 
     test('void elements', async () => {

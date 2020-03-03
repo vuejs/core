@@ -55,7 +55,7 @@ export const enum PatchFlags {
 
   // Indicates an element that only needs non-props patching, e.g. ref or
   // directives (onVnodeXXX hooks). since every patched vnode checks for refs
-  // and onVnodeXXX hooks, itt simply marks the vnode so that a parent block
+  // and onVnodeXXX hooks, it simply marks the vnode so that a parent block
   // will track it.
   NEED_PATCH = 1 << 9,
 

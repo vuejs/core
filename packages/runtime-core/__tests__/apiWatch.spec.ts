@@ -410,6 +410,24 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })
 
+  it('warn and not respect deep option when using effect', async () => {
+    const arr = ref([1, [2]])
+    let spy = jest.fn()
+    watchEffect(
+      () => {
+        spy()
+        return arr
+      },
+      // @ts-ignore
+      { deep: true }
+    )
+    expect(spy).toHaveBeenCalledTimes(1)
+    ;(arr.value[1] as Array<number>)[0] = 3
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(`"deep" option is only respected`).toHaveBeenWarned()
+  })
+
   it('onTrack', async () => {
     const events: DebuggerEvent[] = []
     let dummy

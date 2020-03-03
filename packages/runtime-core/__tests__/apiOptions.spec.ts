@@ -281,7 +281,7 @@ describe('api: options', () => {
       }
     } as any
 
-    expect(renderToString(h(Root))).toBe(`<!---->1112<!---->`)
+    expect(renderToString(h(Root))).toBe(`1112`)
   })
 
   test('lifecycle', async () => {
