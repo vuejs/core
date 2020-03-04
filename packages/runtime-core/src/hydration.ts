@@ -23,7 +23,7 @@ const enum DOMNodeTypes {
   COMMENT = 8
 }
 
-let hasHydrationMismatch = false
+let hasMismatch = false
 
 // Note: hydration is DOM-specific
 // But we have to place it in core due to tight coupling with core - splitting
@@ -44,10 +44,10 @@ export function createHydrationFunctions({
       patch(null, vnode, container)
       return
     }
-    hasHydrationMismatch = false
+    hasMismatch = false
     hydrateNode(container.firstChild!, vnode)
     flushPostFlushCbs()
-    if (hasHydrationMismatch) {
+    if (hasMismatch && !__TEST__) {
       // this error should show up in production
       console.error(`Hydration completed but contains mismatches.`)
     }
@@ -70,7 +70,7 @@ export function createHydrationFunctions({
           return handleMismtach(node, vnode, parentComponent)
         }
         if ((node as Text).data !== vnode.children) {
-          hasHydrationMismatch = true
+          hasMismatch = true
           __DEV__ &&
             warn(
               `Hydration text mismatch:` +
@@ -114,12 +114,7 @@ export function createHydrationFunctions({
           if (domType !== DOMNodeTypes.COMMENT) {
             return handleMismtach(node, vnode, parentComponent)
           }
-          hydratePortal(
-            vnode,
-            node.parentNode as Element,
-            parentComponent,
-            optimized
-          )
+          hydratePortal(vnode, parentComponent, optimized)
           return node.nextSibling
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
           // TODO Suspense
@@ -180,7 +175,7 @@ export function createHydrationFunctions({
           optimized || vnode.dynamicChildren !== null
         )
         while (next) {
-          hasHydrationMismatch = true
+          hasMismatch = true
           __DEV__ &&
             warn(
               `Hydration children mismatch: ` +
@@ -205,16 +200,17 @@ export function createHydrationFunctions({
     parentComponent: ComponentInternalInstance | null,
     optimized: boolean
   ): Node | null => {
-    const children = vnode.children as VNode[]
     optimized = optimized || vnode.dynamicChildren !== null
-    for (let i = 0; i < children.length; i++) {
+    const children = vnode.children as VNode[]
+    const l = children.length
+    for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
       if (node) {
         node = hydrateNode(node, vnode, parentComponent, optimized)
       } else {
-        hasHydrationMismatch = true
+        hasMismatch = true
         __DEV__ &&
           warn(
             `Hydration children mismatch: ` +
@@ -248,7 +244,6 @@ export function createHydrationFunctions({
 
   const hydratePortal = (
     vnode: VNode,
-    container: Element,
     parentComponent: ComponentInternalInstance | null,
     optimized: boolean
   ) => {
@@ -260,9 +255,14 @@ export function createHydrationFunctions({
       hydrateChildren(
         target.firstChild,
         vnode,
-        container,
+        target,
         parentComponent,
         optimized
+      )
+    } else if (__DEV__) {
+      warn(
+        `Attempting to hydrate portal but target ${targetSelector} does not ` +
+          `exist in server-rendered markup.`
       )
     }
   }
@@ -272,7 +272,7 @@ export function createHydrationFunctions({
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null
   ) => {
-    hasHydrationMismatch = true
+    hasMismatch = true
     __DEV__ &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
