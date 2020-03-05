@@ -1,4 +1,12 @@
-import { createSSRApp, h, ref, nextTick, VNode, Portal } from '@vue/runtime-dom'
+import {
+  createSSRApp,
+  h,
+  ref,
+  nextTick,
+  VNode,
+  Portal,
+  createStaticVNode
+} from '@vue/runtime-dom'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -26,6 +34,21 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.textContent).toBe('bar')
+  })
+
+  test('comment', () => {
+    const { vnode, container } = mountWithHydration('<!---->', () => null)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.el.nodeType).toBe(8) // comment
+  })
+
+  test('static', () => {
+    const html = '<div><span>hello</span></div>'
+    const { vnode, container } = mountWithHydration(html, () =>
+      createStaticVNode(html)
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.el.outerHTML).toBe(html)
   })
 
   test('element with text children', async () => {
@@ -147,10 +170,6 @@ describe('SSR hydration', () => {
       `<span>bar</span><span class="bar"></span>`
     )
   })
-
-  test('comment', () => {})
-
-  test('static', () => {})
 
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', () => {})

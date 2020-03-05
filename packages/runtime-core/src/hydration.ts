@@ -131,14 +131,16 @@ export function createHydrationFunctions({
     parentComponent: ComponentInternalInstance | null,
     optimized: boolean
   ) => {
+    optimized = optimized || vnode.dynamicChildren !== null
     const { props, patchFlag, shapeFlag } = vnode
     // skip props & children if this is hoisted static nodes
     if (patchFlag !== PatchFlags.HOISTED) {
       // props
       if (props !== null) {
         if (
-          patchFlag & PatchFlags.FULL_PROPS ||
-          patchFlag & PatchFlags.HYDRATE_EVENTS
+          !optimized ||
+          (patchFlag & PatchFlags.FULL_PROPS ||
+            patchFlag & PatchFlags.HYDRATE_EVENTS)
         ) {
           for (const key in props) {
             if (!isReservedProp(key) && isOn(key)) {
@@ -172,7 +174,7 @@ export function createHydrationFunctions({
           vnode,
           el,
           parentComponent,
-          optimized || vnode.dynamicChildren !== null
+          optimized
         )
         while (next) {
           hasMismatch = true
