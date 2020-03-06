@@ -231,7 +231,7 @@ function addRunners(
 ) {
   if (effectsToAdd !== void 0) {
     effectsToAdd.forEach(effect => {
-      if (effect !== activeEffect) {
+      if (effect !== activeEffect || !shouldTrack) {
         if (effect.options.computed) {
           computedRunners.add(effect)
         } else {
