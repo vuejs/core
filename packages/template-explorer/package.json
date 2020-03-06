@@ -10,6 +10,6 @@
     "enableNonBrowserBranches": true
   },
   "dependencies": {
-    "monaco-editor": "^0.18.1"
+    "monaco-editor": "^0.20.0"
   }
 }
