@@ -155,6 +155,37 @@ function renderComponentVNode(
   }
 }
 
+function renderComponentSubTree(
+  instance: ComponentInternalInstance
+): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
+  const comp = instance.type as Component
+  const { getBuffer, push } = createBuffer()
+  if (isFunction(comp)) {
+    renderVNode(push, renderComponentRoot(instance), instance)
+  } else {
+    if (!instance.render && !comp.ssrRender && isString(comp.template)) {
+      comp.ssrRender = ssrCompile(comp.template, instance)
+    }
+
+    if (comp.ssrRender) {
+      // optimized
+      // set current rendering instance for asset resolution
+      setCurrentRenderingInstance(instance)
+      comp.ssrRender(instance.proxy, push, instance)
+      setCurrentRenderingInstance(null)
+    } else if (instance.render) {
+      renderVNode(push, renderComponentRoot(instance), instance)
+    } else {
+      throw new Error(
+        `Component ${
+          comp.name ? `${comp.name} ` : ``
+        } is missing template or render function.`
+      )
+    }
+  }
+  return getBuffer()
+}
+
 type SSRRenderFunction = (
   context: any,
   push: (item: any) => void,
@@ -190,38 +221,7 @@ function ssrCompile(
       }
     }
   })
-  return (compileCache[template] = Function(code)())
-}
-
-function renderComponentSubTree(
-  instance: ComponentInternalInstance
-): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
-  const comp = instance.type as Component
-  const { getBuffer, push } = createBuffer()
-  if (isFunction(comp)) {
-    renderVNode(push, renderComponentRoot(instance), instance)
-  } else {
-    if (!instance.render && !comp.ssrRender && isString(comp.template)) {
-      comp.ssrRender = ssrCompile(comp.template, instance)
-    }
-
-    if (comp.ssrRender) {
-      // optimized
-      // set current rendering instance for asset resolution
-      setCurrentRenderingInstance(instance)
-      comp.ssrRender(instance.proxy, push, instance)
-      setCurrentRenderingInstance(null)
-    } else if (instance.render) {
-      renderVNode(push, renderComponentRoot(instance), instance)
-    } else {
-      throw new Error(
-        `Component ${
-          comp.name ? `${comp.name} ` : ``
-        } is missing template or render function.`
-      )
-    }
-  }
-  return getBuffer()
+  return (compileCache[template] = Function('require', code)(require))
 }
 
 function renderVNode(

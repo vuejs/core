@@ -80,6 +80,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   const clonedNode = clone(node)
 
   return function ssrPostTransformComponent() {
+    // Using the cloned node, build the normal VNode-based branches (for
+    // fallback in case the child is render-fn based). Store them in an array
+    // for later use.
     buildSlots(clonedNode, context, (props, children) => {
       vnodeBranches.push(createVNodeSlotBranch(props, children, context))
       return createFunctionExpression(undefined)
@@ -106,9 +109,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       wipEntries.push({
         fn,
         children,
-        // build the children using normal vnode-based transforms
-        // TODO fixme: `children` here has already been mutated at this point
-        // so the sub-transform runs into errors :/
+        // also collect the corresponding vnode branch built earlier
         vnodeBranch: vnodeBranches[wipEntries.length]
       })
       return fn
@@ -266,6 +267,9 @@ function subTransform(
 ) {
   const childRoot = createRoot([node])
   const childContext = createTransformContext(childRoot, options)
+  // this sub transform is for vnode fallback branch so it should be handled
+  // like normal render functions
+  childContext.ssr = false
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }

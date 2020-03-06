@@ -300,7 +300,7 @@ export function setupComponent(
   // setup stateful logic
   let setupResult
   if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    setupResult = setupStatefulComponent(instance, parentSuspense)
+    setupResult = setupStatefulComponent(instance, parentSuspense, isSSR)
   }
   isInSSRComponentSetup = false
   return setupResult
@@ -308,7 +308,8 @@ export function setupComponent(
 
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
 
@@ -362,7 +363,7 @@ function setupStatefulComponent(
       if (isInSSRComponentSetup) {
         // return the promise so server-renderer can wait on it
         return setupResult.then(resolvedResult => {
-          handleSetupResult(instance, resolvedResult, parentSuspense)
+          handleSetupResult(instance, resolvedResult, parentSuspense, isSSR)
         })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
@@ -375,17 +376,18 @@ function setupStatefulComponent(
         )
       }
     } else {
-      handleSetupResult(instance, setupResult, parentSuspense)
+      handleSetupResult(instance, setupResult, parentSuspense, isSSR)
     }
   } else {
-    finishComponentSetup(instance, parentSuspense)
+    finishComponentSetup(instance, parentSuspense, isSSR)
   }
 }
 
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
@@ -407,7 +409,7 @@ export function handleSetupResult(
       }`
     )
   }
-  finishComponentSetup(instance, parentSuspense)
+  finishComponentSetup(instance, parentSuspense, isSSR)
 }
 
 type CompileFunction = (
@@ -424,10 +426,17 @@ export function registerRuntimeCompiler(_compile: any) {
 
 function finishComponentSetup(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
-  if (!instance.render) {
+
+  // template / render function normalization
+  if (__NODE_JS__ && isSSR) {
+    if (Component.render) {
+      instance.render = Component.render as RenderFunction
+    }
+  } else if (!instance.render) {
     if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
       // __RUNTIME_COMPILE__ ensures `compile` is provided
       Component.render = compile!(Component.template, {
@@ -437,7 +446,7 @@ function finishComponentSetup(
       ;(Component.render as RenderFunction).isRuntimeCompiled = true
     }
 
-    if (__DEV__ && !Component.render && !Component.ssrRender) {
+    if (__DEV__ && !Component.render) {
       /* istanbul ignore if */
       if (!__RUNTIME_COMPILE__ && Component.template) {
         warn(
