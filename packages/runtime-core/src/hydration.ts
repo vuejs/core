@@ -94,7 +94,10 @@ export function createHydrationFunctions({
         return hydrateFragment(node, vnode, parentComponent, optimized)
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          if (domType !== DOMNodeTypes.ELEMENT) {
+          if (
+            domType !== DOMNodeTypes.ELEMENT ||
+            vnode.type !== (node as Element).tagName.toLowerCase()
+          ) {
             return handleMismtach(node, vnode, parentComponent)
           }
           return hydrateElement(
@@ -176,20 +179,32 @@ export function createHydrationFunctions({
           parentComponent,
           optimized
         )
+        let hasWarned = false
         while (next) {
           hasMismatch = true
-          __DEV__ &&
+          if (__DEV__ && !hasWarned) {
             warn(
-              `Hydration children mismatch: ` +
+              `Hydration children mismatch in <${vnode.type as string}>: ` +
                 `server rendered element contains more child nodes than client vdom.`
             )
+            hasWarned = true
+          }
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
           next = next.nextSibling
           el.removeChild(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        el.textContent = vnode.children as string
+        if (el.textContent !== vnode.children) {
+          hasMismatch = true
+          __DEV__ &&
+            warn(
+              `Hydration text content mismatch in <${vnode.type as string}>:\n` +
+                `- Client: ${el.textContent}\n` +
+                `- Server: ${vnode.children as string}`
+            )
+          el.textContent = vnode.children as string
+        }
       }
     }
     return el.nextSibling
@@ -205,6 +220,7 @@ export function createHydrationFunctions({
     optimized = optimized || vnode.dynamicChildren !== null
     const children = vnode.children as VNode[]
     const l = children.length
+    let hasWarned = false
     for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
@@ -213,11 +229,13 @@ export function createHydrationFunctions({
         node = hydrateNode(node, vnode, parentComponent, optimized)
       } else {
         hasMismatch = true
-        __DEV__ &&
+        if (__DEV__ && !hasWarned) {
           warn(
-            `Hydration children mismatch: ` +
+            `Hydration children mismatch in <${container.tagName.toLowerCase()}>: ` +
               `server rendered element contains fewer child nodes than client vdom.`
           )
+          hasWarned = true
+        }
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
         patch(null, vnode, container)
       }

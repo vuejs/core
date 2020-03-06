@@ -8,6 +8,7 @@ import {
   createStaticVNode
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
+import { mockWarn } from '@vue/shared'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -268,12 +269,48 @@ describe('SSR hydration', () => {
   })
 
   describe('mismatch handling', () => {
-    test('text', () => {})
+    mockWarn()
 
-    test('not enough children', () => {})
+    test('text node', () => {
+      const { container } = mountWithHydration(`foo`, () => 'bar')
+      expect(container.textContent).toBe('bar')
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+    })
 
-    test('too many children', () => {})
+    test('element text content', () => {
+      const { container } = mountWithHydration(`<div>foo</div>`, () =>
+        h('div', 'bar')
+      )
+      expect(container.innerHTML).toBe('<div>bar</div>')
+      expect(`Hydration text content mismatch in <div>`).toHaveBeenWarned()
+    })
 
-    test('complete mismatch', () => {})
+    test('not enough children', () => {
+      const { container } = mountWithHydration(`<div></div>`, () =>
+        h('div', [h('span', 'foo'), h('span', 'bar')])
+      )
+      expect(container.innerHTML).toBe(
+        '<div><span>foo</span><span>bar</span></div>'
+      )
+      expect(`Hydration children mismatch in <div>`).toHaveBeenWarned()
+    })
+
+    test('too many children', () => {
+      const { container } = mountWithHydration(
+        `<div><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('span', 'foo')])
+      )
+      expect(container.innerHTML).toBe('<div><span>foo</span></div>')
+      expect(`Hydration children mismatch in <div>`).toHaveBeenWarned()
+    })
+
+    test('complete mismatch', () => {
+      const { container } = mountWithHydration(
+        `<div><span>foo</span><span>bar</span></div>`,
+        () => h('div', [h('div', 'foo'), h('p', 'bar')])
+      )
+      expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
+    })
   })
 })
