@@ -368,5 +368,17 @@ describe('reactivity/collections', () => {
       })
       expect(dummy).toBe(2)
     })
+
+    it('should work with reactive entries in raw set', () => {
+      const raw = new Set()
+      const entry = reactive({})
+      raw.add(entry)
+      const set = reactive(raw)
+
+      expect(set.has(entry)).toBe(true)
+
+      expect(set.delete(entry)).toBe(true)
+      expect(set.has(entry)).toBe(false)
+    })
   })
 })

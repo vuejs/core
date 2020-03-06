@@ -67,6 +67,14 @@ describe('reactivity/reactive/Array', () => {
     expect(arr.lastIndexOf(observed, 1)).toBe(-1)
   })
 
+  test('Array identity methods should work if raw value contains reactive objects', () => {
+    const raw = []
+    const obj = reactive({})
+    raw.push(obj)
+    const arr = reactive(raw)
+    expect(arr.includes(obj)).toBe(true)
+  })
+
   test('Array identity methods should be reactive', () => {
     const obj = {}
     const arr = reactive([obj, {}])

@@ -348,5 +348,19 @@ describe('reactivity/collections', () => {
       map.set('foo', NaN)
       expect(mapSpy).toHaveBeenCalledTimes(1)
     })
+
+    it('should work with reactive keys in raw map', () => {
+      const raw = new Map()
+      const key = reactive({})
+      raw.set(key, 1)
+      const map = reactive(raw)
+
+      expect(map.has(key)).toBe(true)
+      expect(map.get(key)).toBe(1)
+
+      expect(map.delete(key)).toBe(true)
+      expect(map.has(key)).toBe(false)
+      expect(map.get(key)).toBeUndefined()
+    })
   })
 })
