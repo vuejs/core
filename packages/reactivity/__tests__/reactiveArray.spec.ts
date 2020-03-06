@@ -88,6 +88,17 @@ describe('reactivity/reactive/Array', () => {
     expect(index).toBe(1)
   })
 
+  test('delete on Array should not trigger length dependency', () => {
+    const arr = reactive([1, 2, 3])
+    const fn = jest.fn()
+    effect(() => {
+      fn(arr.length)
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    delete arr[1]
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {
