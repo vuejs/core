@@ -200,8 +200,8 @@ const readonlyInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
     return get(this, key, toReadonly)
   },
-  get size(this: IterableCollections) {
-    return size(this)
+  get size() {
+    return size((this as unknown) as IterableCollections)
   },
   has,
   add: createReadonlyMethod(add, TriggerOpTypes.ADD),
