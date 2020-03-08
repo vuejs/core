@@ -831,7 +831,7 @@ function baseCreateRenderer<
               el,
               key,
               null,
-              null,
+              oldProps[key],
               isSVG,
               vnode.children as HostVNode[],
               parentComponent,
