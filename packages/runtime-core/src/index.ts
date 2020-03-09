@@ -114,6 +114,7 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
+import { normalizeSuspenseChildren } from './components/Suspense'
 
 // SSR utils are only exposed in cjs builds.
 const _ssrUtils = {
@@ -122,7 +123,8 @@ const _ssrUtils = {
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 }
 
 export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils

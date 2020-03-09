@@ -449,7 +449,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
   return suspense
 }
 
-function normalizeSuspenseChildren(
+export function normalizeSuspenseChildren(
   vnode: VNode
 ): {
   content: VNode

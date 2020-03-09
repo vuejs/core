@@ -36,7 +36,8 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 } = ssrUtils
 
 // Each component has a buffer array.
@@ -224,27 +225,6 @@ function ssrCompile(
   return (compileCache[template] = Function('require', code)(require))
 }
 
-function normalizeSuspenseChildren(
-  vnode: VNode
-): {
-  content: VNode
-  fallback: VNode
-} {
-  const { shapeFlag, children } = vnode
-  if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    const { default: d, fallback } = children as Slots
-    return {
-      content: normalizeVNode(isFunction(d) ? d() : d),
-      fallback: normalizeVNode(isFunction(fallback) ? fallback() : fallback)
-    }
-  } else {
-    return {
-      content: normalizeVNode(children as any),
-      fallback: normalizeVNode(null)
-    }
-  }
-}
-
 function renderVNode(
   push: PushFn,
   vnode: VNode,
@@ -269,21 +249,7 @@ function renderVNode(
       } else if (shapeFlag & ShapeFlags.PORTAL) {
         renderPortal(vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        const { content, fallback } = normalizeSuspenseChildren(vnode)
-
-        push(
-          (async () => {
-            try {
-              const suspenseBuffer = createBuffer()
-              renderVNode(suspenseBuffer.push, content, parentComponent)
-              return await Promise.all(suspenseBuffer.buffer)
-            } catch {
-              const fallbackBuffer = createBuffer()
-              renderVNode(fallbackBuffer.push, fallback, parentComponent)
-              return await Promise.all(fallbackBuffer.buffer)
-            }
-          })()
-        )
+        push(renderSuspense(vnode, parentComponent))
       } else {
         console.warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -398,5 +364,21 @@ async function resolvePortals(context: SSRContext) {
       // created eagerly in parallel.
       context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
     }
+  }
+}
+
+async function renderSuspense(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance
+): Promise<ResolvedSSRBuffer> {
+  const { content, fallback } = normalizeSuspenseChildren(vnode)
+  try {
+    const { push, getBuffer } = createBuffer()
+    renderVNode(push, content, parentComponent)
+    return await getBuffer()
+  } catch {
+    const { push, getBuffer } = createBuffer()
+    renderVNode(push, fallback, parentComponent)
+    return getBuffer()
   }
 }
