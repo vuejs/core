@@ -147,13 +147,13 @@ export function createHydrationFunctions({
         ) {
           for (const key in props) {
             if (!isReservedProp(key) && isOn(key)) {
-              patchProp(el, key, props[key], null)
+              patchProp(el, key, null, props[key])
             }
           }
         } else if (props.onClick != null) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
-          patchProp(el, 'onClick', props.onClick, null)
+          patchProp(el, 'onClick', null, props.onClick)
         }
         // vnode hooks
         const { onVnodeBeforeMount, onVnodeMounted } = props

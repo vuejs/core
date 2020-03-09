@@ -85,8 +85,8 @@ export interface RendererOptions<HostNode = any, HostElement = any> {
   patchProp(
     el: HostElement,
     key: string,
-    value: any,
-    oldValue: any,
+    prevValue: any,
+    nextValue: any,
     isSVG?: boolean,
     prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
@@ -541,7 +541,7 @@ function baseCreateRenderer<
       if (props != null) {
         for (const key in props) {
           if (!isReservedProp(key)) {
-            hostPatchProp(el, key, props[key], null, isSVG)
+            hostPatchProp(el, key, null, props[key], isSVG)
           }
         }
         if (props.onVnodeBeforeMount != null) {
@@ -667,14 +667,14 @@ function baseCreateRenderer<
         // this flag is matched when the element has dynamic class bindings.
         if (patchFlag & PatchFlags.CLASS) {
           if (oldProps.class !== newProps.class) {
-            hostPatchProp(el, 'class', newProps.class, null, isSVG)
+            hostPatchProp(el, 'class', null, newProps.class, isSVG)
           }
         }
 
         // style
         // this flag is matched when the element has dynamic style bindings
         if (patchFlag & PatchFlags.STYLE) {
-          hostPatchProp(el, 'style', newProps.style, oldProps.style, isSVG)
+          hostPatchProp(el, 'style', oldProps.style, newProps.style, isSVG)
         }
 
         // props
@@ -694,8 +694,8 @@ function baseCreateRenderer<
               hostPatchProp(
                 el,
                 key,
-                next,
                 prev,
+                next,
                 isSVG,
                 n1.children as HostVNode[],
                 parentComponent,
@@ -814,8 +814,8 @@ function baseCreateRenderer<
           hostPatchProp(
             el,
             key,
-            next,
             prev,
+            next,
             isSVG,
             vnode.children as HostVNode[],
             parentComponent,
@@ -830,8 +830,8 @@ function baseCreateRenderer<
             hostPatchProp(
               el,
               key,
-              null,
               oldProps[key],
+              null,
               isSVG,
               vnode.children as HostVNode[],
               parentComponent,

@@ -4,8 +4,8 @@ import { isOn } from '@vue/shared'
 export function patchProp(
   el: TestElement,
   key: string,
-  nextValue: any,
-  prevValue: any
+  prevValue: any,
+  nextValue: any
 ) {
   logNodeOp({
     type: NodeOpTypes.PATCH,
