@@ -23,7 +23,7 @@ const arrayInstrumentations: Record<string, Function> = {}
     for (let i = 0, l = (this as any).length; i < l; i++) {
       track(arr, TrackOpTypes.GET, i + '')
     }
-    // we run the method using the orignal args first (which may be reactive)
+    // we run the method using the original args first (which may be reactive)
     const res = arr[key](...args)
     if (res === -1 || res === false) {
       // if that didn't work, run it again using raw values.
