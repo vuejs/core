@@ -36,7 +36,8 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 } = ssrUtils
 
 // Each component has a buffer array.
@@ -248,7 +249,7 @@ function renderVNode(
       } else if (shapeFlag & ShapeFlags.PORTAL) {
         renderPortal(vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        // TODO
+        push(renderSuspense(vnode, parentComponent))
       } else {
         console.warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -363,5 +364,21 @@ async function resolvePortals(context: SSRContext) {
       // created eagerly in parallel.
       context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
     }
+  }
+}
+
+async function renderSuspense(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance
+): Promise<ResolvedSSRBuffer> {
+  const { content, fallback } = normalizeSuspenseChildren(vnode)
+  try {
+    const { push, getBuffer } = createBuffer()
+    renderVNode(push, content, parentComponent)
+    return await getBuffer()
+  } catch {
+    const { push, getBuffer } = createBuffer()
+    renderVNode(push, fallback, parentComponent)
+    return getBuffer()
   }
 }
