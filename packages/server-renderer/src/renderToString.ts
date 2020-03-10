@@ -10,7 +10,6 @@ import {
   Fragment,
   ssrUtils,
   Slots,
-  warn,
   createApp,
   ssrContextKey
 } from 'vue'
@@ -139,6 +138,8 @@ export function renderComponent(
   )
 }
 
+export const AsyncSetupErrorMarker = Symbol('Vue async setup error')
+
 function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
@@ -150,7 +151,21 @@ function renderComponentVNode(
     true /* isSSR */
   )
   if (isPromise(res)) {
-    return res.then(() => renderComponentSubTree(instance))
+    return res
+      .catch(err => {
+        // normalize async setup rejection
+        if (!(err instanceof Error)) {
+          err = new Error(String(err))
+        }
+        err[AsyncSetupErrorMarker] = true
+        console.error(
+          `[@vue/server-renderer]: Uncaught error in async setup:\n`,
+          err
+        )
+        // rethrow for suspense
+        throw err
+      })
+      .then(() => renderComponentSubTree(instance))
   } else {
     return renderComponentSubTree(instance)
   }
@@ -208,7 +223,9 @@ function ssrCompile(
     isNativeTag: instance.appContext.config.isNativeTag || NO,
     onError(err: CompilerError) {
       if (__DEV__) {
-        const message = `Template compilation error: ${err.message}`
+        const message = `[@vue/server-renderer] Template compilation error: ${
+          err.message
+        }`
         const codeFrame =
           err.loc &&
           generateCodeFrame(
@@ -216,7 +233,7 @@ function ssrCompile(
             err.loc.start.offset,
             err.loc.end.offset
           )
-        warn(codeFrame ? `${message}\n${codeFrame}` : message)
+        console.error(codeFrame ? `${message}\n${codeFrame}` : message)
       } else {
         throw err
       }
@@ -243,15 +260,15 @@ function renderVNode(
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElement(push, vnode, parentComponent)
+        renderElementVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent))
       } else if (shapeFlag & ShapeFlags.PORTAL) {
-        renderPortal(vnode, parentComponent)
+        renderPortalVNode(vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        push(renderSuspense(vnode, parentComponent))
+        push(renderSuspenseVNode(vnode, parentComponent))
       } else {
-        console.warn(
+        console.error(
           '[@vue/server-renderer] Invalid VNode type:',
           type,
           `(${typeof type})`
@@ -270,7 +287,7 @@ export function renderVNodeChildren(
   }
 }
 
-function renderElement(
+function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
@@ -325,17 +342,17 @@ function renderElement(
   }
 }
 
-function renderPortal(
+function renderPortalVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance
 ) {
   const target = vnode.props && vnode.props.target
   if (!target) {
-    console.warn(`[@vue/server-renderer] Portal is missing target prop.`)
+    console.error(`[@vue/server-renderer] Portal is missing target prop.`)
     return []
   }
   if (!isString(target)) {
-    console.warn(
+    console.error(
       `[@vue/server-renderer] Portal target must be a query selector string.`
     )
     return []
@@ -367,7 +384,7 @@ async function resolvePortals(context: SSRContext) {
   }
 }
 
-async function renderSuspense(
+async function renderSuspenseVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance
 ): Promise<ResolvedSSRBuffer> {
@@ -375,10 +392,15 @@ async function renderSuspense(
   try {
     const { push, getBuffer } = createBuffer()
     renderVNode(push, content, parentComponent)
+    // await here so error can be caught
     return await getBuffer()
-  } catch {
-    const { push, getBuffer } = createBuffer()
-    renderVNode(push, fallback, parentComponent)
-    return getBuffer()
+  } catch (e) {
+    if (e[AsyncSetupErrorMarker]) {
+      const { push, getBuffer } = createBuffer()
+      renderVNode(push, fallback, parentComponent)
+      return getBuffer()
+    } else {
+      throw e
+    }
   }
 }

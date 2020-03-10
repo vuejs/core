@@ -337,7 +337,7 @@ function setupStatefulComponent(
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = isInSSRComponentSetup
+  const propsProxy = (instance.propsProxy = isSSR
     ? instance.props
     : shallowReadonly(instance.props))
   // 3. call setup()
@@ -360,7 +360,7 @@ function setupStatefulComponent(
     currentSuspense = null
 
     if (isPromise(setupResult)) {
-      if (isInSSRComponentSetup) {
+      if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult.then(resolvedResult => {
           handleSetupResult(instance, resolvedResult, parentSuspense, isSSR)

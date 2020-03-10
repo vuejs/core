@@ -2,6 +2,16 @@ import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 describe('SSR Suspense', () => {
+  let logError: jest.SpyInstance
+
+  beforeEach(() => {
+    logError = jest.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    logError.mockRestore()
+  })
+
   const ResolvingAsync = {
     async setup() {
       return () => h('div', 'async')
@@ -10,7 +20,7 @@ describe('SSR Suspense', () => {
 
   const RejectingAsync = {
     setup() {
-      return new Promise((_, reject) => reject())
+      return new Promise((_, reject) => reject('foo'))
     }
   }
 
@@ -25,6 +35,7 @@ describe('SSR Suspense', () => {
     }
 
     expect(await renderToString(createApp(Comp))).toBe(`<div>async</div>`)
+    expect(logError).not.toHaveBeenCalled()
   })
 
   test('fallback', async () => {
@@ -38,6 +49,7 @@ describe('SSR Suspense', () => {
     }
 
     expect(await renderToString(createApp(Comp))).toBe(`<div>fallback</div>`)
+    expect(logError).toHaveBeenCalled()
   })
 
   test('2 components', async () => {
@@ -53,6 +65,7 @@ describe('SSR Suspense', () => {
     expect(await renderToString(createApp(Comp))).toBe(
       `<div><div>async</div><div>async</div></div>`
     )
+    expect(logError).not.toHaveBeenCalled()
   })
 
   test('resolving component + rejecting component', async () => {
@@ -66,6 +79,7 @@ describe('SSR Suspense', () => {
     }
 
     expect(await renderToString(createApp(Comp))).toBe(`<div>fallback</div>`)
+    expect(logError).toHaveBeenCalled()
   })
 
   test('failing suspense in passing suspense', async () => {
@@ -87,6 +101,7 @@ describe('SSR Suspense', () => {
     expect(await renderToString(createApp(Comp))).toBe(
       `<div><div>async</div><div>fallback 2</div></div>`
     )
+    expect(logError).toHaveBeenCalled()
   })
 
   test('passing suspense in failing suspense', async () => {
@@ -106,5 +121,6 @@ describe('SSR Suspense', () => {
     }
 
     expect(await renderToString(createApp(Comp))).toBe(`<div>fallback 1</div>`)
+    expect(logError).toHaveBeenCalled()
   })
 })
