@@ -1,9 +1,9 @@
-import { createApp } from 'vue'
+import { createApp, h, Portal } from 'vue'
 import { renderToString, SSRContext } from '../src/renderToString'
 import { ssrRenderPortal } from '../src/helpers/ssrRenderPortal'
 
 describe('ssrRenderPortal', () => {
-  test('portal rendering', async () => {
+  test('portal rendering (compiled)', async () => {
     const ctx = {
       portals: {}
     } as SSRContext
@@ -25,5 +25,20 @@ describe('ssrRenderPortal', () => {
       ctx
     )
     expect(ctx.portals!['#target']).toBe(`<div>content</div>`)
+  })
+
+  test('portal rendering (vnode)', async () => {
+    const ctx: SSRContext = {}
+    await renderToString(
+      h(
+        Portal,
+        {
+          target: `#target`
+        },
+        h('span', 'hello')
+      ),
+      ctx
+    )
+    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 })

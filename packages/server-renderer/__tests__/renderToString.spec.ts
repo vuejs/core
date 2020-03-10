@@ -5,16 +5,11 @@ import {
   withScopeId,
   resolveComponent,
   ComponentOptions,
-  Portal,
   ref,
   defineComponent
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import {
-  renderToString,
-  renderComponent,
-  SSRContext
-} from '../src/renderToString'
+import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
 mockWarn()
@@ -509,21 +504,6 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
     })
-  })
-
-  test('portal', async () => {
-    const ctx: SSRContext = {}
-    await renderToString(
-      h(
-        Portal,
-        {
-          target: `#target`
-        },
-        h('span', 'hello')
-      ),
-      ctx
-    )
-    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {
