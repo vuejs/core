@@ -2,17 +2,10 @@ import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { ssrRenderSuspense } from '../src/helpers/ssrRenderSuspense'
 import { ssrRenderComponent } from '../src'
+import { mockError } from '@vue/shared'
 
 describe('SSR Suspense', () => {
-  let logError: jest.SpyInstance
-
-  beforeEach(() => {
-    logError = jest.spyOn(console, 'error').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    logError.mockRestore()
-  })
+  mockError()
 
   const ResolvingAsync = {
     async setup() {
@@ -41,7 +34,6 @@ describe('SSR Suspense', () => {
       })
 
       expect(await renderToString(app)).toBe(`<div>async</div>`)
-      expect(logError).not.toHaveBeenCalled()
     })
 
     test('with async component', async () => {
@@ -58,7 +50,6 @@ describe('SSR Suspense', () => {
       })
 
       expect(await renderToString(app)).toBe(`<div>async</div>`)
-      expect(logError).not.toHaveBeenCalled()
     })
 
     test('fallback', async () => {
@@ -78,7 +69,7 @@ describe('SSR Suspense', () => {
       })
 
       expect(await renderToString(app)).toBe(`<div>fallback</div>`)
-      expect(logError).toHaveBeenCalled()
+      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
   })
 
@@ -94,7 +85,6 @@ describe('SSR Suspense', () => {
       }
 
       expect(await renderToString(createApp(Comp))).toBe(`<div>async</div>`)
-      expect(logError).not.toHaveBeenCalled()
     })
 
     test('fallback', async () => {
@@ -108,7 +98,7 @@ describe('SSR Suspense', () => {
       }
 
       expect(await renderToString(createApp(Comp))).toBe(`<div>fallback</div>`)
-      expect(logError).toHaveBeenCalled()
+      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
 
     test('2 components', async () => {
@@ -124,7 +114,6 @@ describe('SSR Suspense', () => {
       expect(await renderToString(createApp(Comp))).toBe(
         `<div><div>async</div><div>async</div></div>`
       )
-      expect(logError).not.toHaveBeenCalled()
     })
 
     test('resolving component + rejecting component', async () => {
@@ -138,7 +127,7 @@ describe('SSR Suspense', () => {
       }
 
       expect(await renderToString(createApp(Comp))).toBe(`<div>fallback</div>`)
-      expect(logError).toHaveBeenCalled()
+      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
 
     test('failing suspense in passing suspense', async () => {
@@ -160,7 +149,7 @@ describe('SSR Suspense', () => {
       expect(await renderToString(createApp(Comp))).toBe(
         `<div><div>async</div><div>fallback 2</div></div>`
       )
-      expect(logError).toHaveBeenCalled()
+      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
 
     test('passing suspense in failing suspense', async () => {
@@ -182,7 +171,7 @@ describe('SSR Suspense', () => {
       expect(await renderToString(createApp(Comp))).toBe(
         `<div>fallback 1</div>`
       )
-      expect(logError).toHaveBeenCalled()
+      expect('Uncaught error in async setup').toHaveBeenWarned()
     })
   })
 })

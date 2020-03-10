@@ -8,11 +8,11 @@ import {
   ref,
   defineComponent
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
+import { escapeHtml, mockError } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
-mockWarn()
+mockError()
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -104,7 +104,7 @@ describe('ssr: renderToString', () => {
         await renderToString(createApp({ template: `<` }))
 
         expect(
-          '[Vue warn]: Template compilation error: Unexpected EOF in tag.\n' +
+          'Template compilation error: Unexpected EOF in tag.\n' +
             '1  |  <\n' +
             '   |   ^'
         ).toHaveBeenWarned()
