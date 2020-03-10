@@ -5,7 +5,8 @@ import {
   nextTick,
   VNode,
   Portal,
-  createStaticVNode
+  createStaticVNode,
+  Suspense
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
@@ -137,6 +138,44 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
+  })
+
+  describe('suspense', () => {
+    test('default', async () => {
+      const ResolveComp = {
+        async setup() {
+          return () => h('div', 'resolve')
+        }
+      }
+      const html = `<div>resolve</div>`
+      const { vnode, container } = mountWithHydration(html, () => {
+        return h(Suspense, null, {
+          default: h(ResolveComp),
+          fallback: h('div', 'fallback')
+        })
+      })
+      await nextTick()
+      expect(vnode.el).toStrictEqual(container.firstChild)
+      expect(container.innerHTML).toBe(html)
+    })
+
+    test('fallback', async () => {
+      const RejectComp = {
+        setup() {
+          return new Promise((resolve, reject) => reject())
+        }
+      }
+      const html = `<div>fallback</div>`
+      const { vnode, container } = mountWithHydration(html, () => {
+        return h(Suspense, null, {
+          default: h(RejectComp),
+          fallback: h('div', 'fallback')
+        })
+      })
+      await nextTick()
+      expect(vnode.el).toStrictEqual(container.firstChild)
+      expect(container.innerHTML).toBe(html)
+    })
   })
 
   test('portal', async () => {

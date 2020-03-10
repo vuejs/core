@@ -11,6 +11,7 @@ import {
   isString
 } from '@vue/shared'
 import { RendererInternals } from './renderer'
+import { SuspenseBoundary, SuspenseImpl } from './components/Suspense'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -30,11 +31,14 @@ let hasMismatch = false
 // it out creates a ton of unnecessary complexity.
 // Hydration also depends on some renderer internal logic which needs to be
 // passed in via arguments.
-export function createHydrationFunctions({
-  mt: mountComponent,
-  p: patch,
-  o: { patchProp, createText }
-}: RendererInternals<Node, Element>) {
+export function createHydrationFunctions(
+  rendererInternals: RendererInternals<Node, Element>
+) {
+  const {
+    mt: mountComponent,
+    p: patch,
+    o: { createElement, patchProp, createText }
+  } = rendererInternals
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (__DEV__ && !container.hasChildNodes()) {
       warn(
@@ -57,6 +61,7 @@ export function createHydrationFunctions({
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null = null,
+    parentSuspense: SuspenseBoundary<Node, Element> | null = null,
     optimized = false
   ): Node | null => {
     const { type, shapeFlag } = vnode
@@ -91,7 +96,13 @@ export function createHydrationFunctions({
         }
         return node.nextSibling
       case Fragment:
-        return hydrateFragment(node, vnode, parentComponent, optimized)
+        return hydrateFragment(
+          node,
+          vnode,
+          parentComponent,
+          parentSuspense,
+          optimized
+        )
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
@@ -104,23 +115,32 @@ export function createHydrationFunctions({
             node as Element,
             vnode,
             parentComponent,
+            parentSuspense,
             optimized
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
-          mountComponent(vnode, null, null, parentComponent, null, false)
+          mountComponent(
+            vnode,
+            createElement('div'),
+            null,
+            parentComponent,
+            parentSuspense,
+            false
+          )
           const subTree = vnode.component!.subTree
           return (subTree.anchor || subTree.el).nextSibling
         } else if (shapeFlag & ShapeFlags.PORTAL) {
           if (domType !== DOMNodeTypes.COMMENT) {
             return handleMismtach(node, vnode, parentComponent)
           }
-          hydratePortal(vnode, parentComponent, optimized)
+          hydratePortal(vnode, parentComponent, parentSuspense, optimized)
           return node.nextSibling
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-          // TODO Suspense
+          hydrateSuspense(node, vnode, parentComponent, optimized)
+          return node.nextSibling
         } else if (__DEV__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
@@ -132,6 +152,7 @@ export function createHydrationFunctions({
     el: Element,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary<Node, Element> | null,
     optimized: boolean
   ) => {
     optimized = optimized || vnode.dynamicChildren !== null
@@ -177,6 +198,7 @@ export function createHydrationFunctions({
           vnode,
           el,
           parentComponent,
+          parentSuspense,
           optimized
         )
         let hasWarned = false
@@ -215,6 +237,7 @@ export function createHydrationFunctions({
     vnode: VNode,
     container: Element,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary<Node, Element> | null,
     optimized: boolean
   ): Node | null => {
     optimized = optimized || vnode.dynamicChildren !== null
@@ -226,7 +249,13 @@ export function createHydrationFunctions({
         ? children[i]
         : (children[i] = normalizeVNode(children[i]))
       if (node) {
-        node = hydrateNode(node, vnode, parentComponent, optimized)
+        node = hydrateNode(
+          node,
+          vnode,
+          parentComponent,
+          parentSuspense,
+          optimized
+        )
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {
@@ -247,6 +276,7 @@ export function createHydrationFunctions({
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary<Node, Element> | null,
     optimized: boolean
   ) => {
     const parent = node.parentNode as Element
@@ -256,6 +286,7 @@ export function createHydrationFunctions({
       vnode,
       parent,
       parentComponent,
+      parentSuspense,
       optimized
     )
     parent.insertBefore((vnode.anchor = createText('')), next)
@@ -265,6 +296,7 @@ export function createHydrationFunctions({
   const hydratePortal = (
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary<Node, Element> | null,
     optimized: boolean
   ) => {
     const targetSelector = vnode.props && vnode.props.target
@@ -277,6 +309,7 @@ export function createHydrationFunctions({
         vnode,
         target,
         parentComponent,
+        parentSuspense,
         optimized
       )
     } else if (__DEV__) {
@@ -285,6 +318,27 @@ export function createHydrationFunctions({
           `exist in server-rendered markup.`
       )
     }
+  }
+
+  const hydrateSuspense = (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
+  ) => {
+    ;(vnode.type as typeof SuspenseImpl).process(
+      null,
+      vnode,
+      createElement('div'),
+      null,
+      parentComponent,
+      null,
+      false,
+      optimized,
+      rendererInternals
+    )
+    const { subTree } = vnode.suspense!
+    hydrateNode(node, subTree, parentComponent, vnode.suspense, optimized)
   }
 
   const handleMismtach = (
