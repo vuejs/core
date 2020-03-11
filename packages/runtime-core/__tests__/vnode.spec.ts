@@ -280,6 +280,23 @@ describe('vnode', () => {
       expect(vnode.dynamicChildren).toStrictEqual([vnode1, vnode2])
       expect(vnode2.dynamicChildren).toStrictEqual([vnode3])
     })
+    
+    test('Whether to be collected by the parent node', () => {
+      const hoist = createVNode('div')
+      let vnode1, vnode2
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        hoist,
+        (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT)),
+        (vnode2 = (openBlock(),
+        createBlock('div', null, [
+          hoist,
+          createVNode('div', null, 'text', PatchFlags.HYDRATE_EVENTS)
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+      expect(vnode2.dynamicChildren).toStrictEqual([])
+    })
 
     test('with stateful component', () => {
       const hoist = createVNode('div')
