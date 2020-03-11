@@ -163,10 +163,10 @@ export function setBlockTracking(value: number) {
 // `dynamicChildren` array.
 export function createBlock(
   type: VNodeTypes,
-  props?: { [key: string]: any } | null,
-  children?: any,
-  patchFlag?: number,
-  dynamicProps?: string[]
+  props: { [key: string]: any } | null = null,
+  children: unknown = null,
+  patchFlag: number = 0,
+  dynamicProps: string[] | null = null
 ): VNode {
   // avoid a block with patchFlag tracking itself
   shouldTrack--
@@ -179,7 +179,15 @@ export function createBlock(
   currentBlock = blockStack[blockStack.length - 1] || null
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock !== null && vnode.dynamicChildren.length !== 0) {
+  if (
+    currentBlock !== null &&
+    (dynamicChildren.length !== 0 ||
+      (patchFlag !== PatchFlags.HYDRATE_EVENTS &&
+        (patchFlag > 0 ||
+          shapeFlag & ShapeFlags.SUSPENSE ||
+          shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
+          shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)))
+  ) {
     currentBlock.push(vnode)
   }
   return vnode
