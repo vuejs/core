@@ -255,8 +255,8 @@ function createSuspenseBoundary<HostNode, HostElement>(
     hiddenContainer,
     anchor,
     deps: 0,
-    subTree: null as any, // will be set immediately after creation
-    fallbackTree: null as any, // will be set immediately after creation
+    subTree: (null as unknown) as VNode, // will be set immediately after creation
+    fallbackTree: (null as unknown) as VNode, // will be set immediately after creation
     isResolved: false,
     isUnmounted: false,
     effects: [],
@@ -290,11 +290,11 @@ function createSuspenseBoundary<HostNode, HostElement>(
         // if the fallback tree was mounted, it may have been moved
         // as part of a parent suspense. get the latest anchor for insertion
         anchor = next(fallbackTree)
-        unmount(fallbackTree as VNode, parentComponent, suspense, true)
+        unmount(fallbackTree, parentComponent, suspense, true)
       }
       // move content from off-dom container to actual container
-      move(subTree as VNode, container, anchor, MoveType.ENTER)
-      const el = (vnode.el = (subTree as VNode).el!)
+      move(subTree, container, anchor, MoveType.ENTER)
+      const el = (vnode.el = subTree.el!)
       // suspense as the root node of a component...
       if (parentComponent && parentComponent.subTree === vnode) {
         parentComponent.vnode.el = el
@@ -340,7 +340,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
 
       // move content tree back to the off-dom container
       const anchor = next(subTree)
-      move(subTree as VNode, hiddenContainer, null, MoveType.LEAVE)
+      move(subTree, hiddenContainer, null, MoveType.LEAVE)
       // remount the fallback tree
       patch(
         null,
@@ -352,7 +352,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         isSVG,
         optimized
       )
-      const el = (vnode.el = (fallbackTree as VNode).el!)
+      const el = (vnode.el = fallbackTree.el!)
       // suspense as the root node of a component...
       if (parentComponent && parentComponent.subTree === vnode) {
         parentComponent.vnode.el = el
