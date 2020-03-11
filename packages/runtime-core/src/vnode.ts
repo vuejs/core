@@ -209,8 +209,10 @@ export function createVNode(
   patchFlag: number = 0,
   dynamicProps: string[] | null = null
 ): VNode {
-  if (__DEV__ && !type) {
-    warn(`Invalid vnode type when creating vnode: ${type}.`)
+  if (!type) {
+    if (__DEV__) {
+      warn(`Invalid vnode type when creating vnode: ${type}.`)
+    }
     type = Comment
   }
 
