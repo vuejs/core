@@ -260,7 +260,7 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
 
 export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
-  el: object // HostNode
+  el: typeof vnode.el // HostNode
 ) {
   while (parent && parent.subTree === vnode) {
     ;(vnode = parent.vnode).el = el
