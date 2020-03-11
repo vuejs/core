@@ -75,10 +75,6 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
-    // fast path for unscopables when using `with` block
-    if (__RUNTIME_COMPILE__ && (key as any) === Symbol.unscopables) {
-      return
-    }
     const {
       renderContext,
       data,
@@ -189,6 +185,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
 export const runtimeCompiledRenderProxyHandlers = {
   ...PublicInstanceProxyHandlers,
+  get(target: ComponentInternalInstance, key: string) {
+    // fast path for unscopables when using `with` block
+    if ((key as any) === Symbol.unscopables) {
+      return
+    }
+    return PublicInstanceProxyHandlers.get!(target, key, target)
+  },
   has(_target: ComponentInternalInstance, key: string) {
     return key[0] !== '_' && !isGloballyWhitelisted(key)
   }

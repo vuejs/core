@@ -96,7 +96,7 @@ export interface SetupContext {
 
 export type RenderFunction = {
   (): VNodeChild
-  isRuntimeCompiled?: boolean
+  _rc?: boolean // isRuntimeCompiled
 }
 
 export interface ComponentInternalInstance {
@@ -437,29 +437,24 @@ function finishComponentSetup(
       instance.render = Component.render as RenderFunction
     }
   } else if (!instance.render) {
-    if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
-      // __RUNTIME_COMPILE__ ensures `compile` is provided
-      Component.render = compile!(Component.template, {
+    if (compile && Component.template && !Component.render) {
+      Component.render = compile(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement || NO
       })
       // mark the function as runtime compiled
-      ;(Component.render as RenderFunction).isRuntimeCompiled = true
+      ;(Component.render as RenderFunction)._rc = true
     }
 
     if (__DEV__ && !Component.render) {
       /* istanbul ignore if */
-      if (!__RUNTIME_COMPILE__ && Component.template) {
+      if (!compile && Component.template) {
         warn(
           `Component provides template but the build of Vue you are running ` +
             `does not support runtime template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
       } else {
-        warn(
-          `Component is missing${
-            __RUNTIME_COMPILE__ ? ` template or` : ``
-          } render function.`
-        )
+        warn(`Component is missing template or render function.`)
       }
     }
 
@@ -468,7 +463,7 @@ function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
-    if (__RUNTIME_COMPILE__ && instance.render.isRuntimeCompiled) {
+    if (instance.render._rc) {
       instance.withProxy = new Proxy(
         instance,
         runtimeCompiledRenderProxyHandlers

@@ -58,12 +58,7 @@ export const createApp = ((...args) => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
     const component = app._component
-    if (
-      __RUNTIME_COMPILE__ &&
-      !isFunction(component) &&
-      !component.render &&
-      !component.template
-    ) {
+    if (!isFunction(component) && !component.render && !component.template) {
       component.template = container.innerHTML
     }
     // clear content before mounting
