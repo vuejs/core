@@ -130,7 +130,7 @@ export function h<O>(
   children?: RawChildren | RawSlots
 ): VNode
 
-// fake constructor type returned by `defineComponent`
+// fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,

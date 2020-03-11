@@ -46,6 +46,15 @@ describe('vnode', () => {
     }
   })
 
+  test('create with class component', () => {
+    class Component {
+      $props: any
+      static __vueClassComponentOptions = { template: '<div />' }
+    }
+    const vnode = createVNode(Component)
+    expect(vnode.type).toEqual(Component.__vueClassComponentOptions)
+  })
+
   describe('class normalization', () => {
     test('string', () => {
       const vnode = createVNode('p', { class: 'foo baz' })
