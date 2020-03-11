@@ -179,6 +179,7 @@ export function createBlock(
   currentBlock = blockStack[blockStack.length - 1] || null
   // a block is always going to be patched, so track it as a child of its
   // parent block
+  const { dynamicChildren, shapeFlag } = vnode
   if (
     currentBlock !== null &&
     (dynamicChildren.length !== 0 ||
