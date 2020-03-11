@@ -179,7 +179,7 @@ export function createBlock(
   currentBlock = blockStack[blockStack.length - 1] || null
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock !== null) {
+  if (currentBlock !== null && vnode.dynamicChildren.length !== 0) {
     currentBlock.push(vnode)
   }
   return vnode
