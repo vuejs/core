@@ -5,19 +5,14 @@ import {
   withScopeId,
   resolveComponent,
   ComponentOptions,
-  Portal,
   ref,
   defineComponent
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
-import {
-  renderToString,
-  renderComponent,
-  SSRContext
-} from '../src/renderToString'
+import { escapeHtml, mockError } from '@vue/shared'
+import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
-mockWarn()
+mockError()
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {
@@ -109,7 +104,7 @@ describe('ssr: renderToString', () => {
         await renderToString(createApp({ template: `<` }))
 
         expect(
-          '[Vue warn]: Template compilation error: Unexpected EOF in tag.\n' +
+          'Template compilation error: Unexpected EOF in tag.\n' +
             '1  |  <\n' +
             '   |   ^'
         ).toHaveBeenWarned()
@@ -509,21 +504,6 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
     })
-  })
-
-  test('portal', async () => {
-    const ctx: SSRContext = {}
-    await renderToString(
-      h(
-        Portal,
-        {
-          target: `#target`
-        },
-        h('span', 'hello')
-      ),
-      ctx
-    )
-    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {

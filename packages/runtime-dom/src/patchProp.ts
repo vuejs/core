@@ -9,8 +9,8 @@ import { RendererOptions } from '@vue/runtime-core'
 export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
   el,
   key,
-  nextValue,
   prevValue,
+  nextValue,
   isSVG = false,
   prevChildren,
   parentComponent,

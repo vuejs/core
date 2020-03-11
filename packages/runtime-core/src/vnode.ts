@@ -251,7 +251,7 @@ export function createVNode(
     _isVNode: true,
     type,
     props,
-    key: (props !== null && props.key) || null,
+    key: props !== null && props.key !== undefined ? props.key : null,
     ref: (props !== null && props.ref) || null,
     scopeId: currentScopeId,
     children: null,

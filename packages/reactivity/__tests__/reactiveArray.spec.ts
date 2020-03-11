@@ -67,6 +67,14 @@ describe('reactivity/reactive/Array', () => {
     expect(arr.lastIndexOf(observed, 1)).toBe(-1)
   })
 
+  test('Array identity methods should work if raw value contains reactive objects', () => {
+    const raw = []
+    const obj = reactive({})
+    raw.push(obj)
+    const arr = reactive(raw)
+    expect(arr.includes(obj)).toBe(true)
+  })
+
   test('Array identity methods should be reactive', () => {
     const obj = {}
     const arr = reactive([obj, {}])
@@ -78,6 +86,17 @@ describe('reactivity/reactive/Array', () => {
     expect(index).toBe(0)
     arr.reverse()
     expect(index).toBe(1)
+  })
+
+  test('delete on Array should not trigger length dependency', () => {
+    const arr = reactive([1, 2, 3])
+    const fn = jest.fn()
+    effect(() => {
+      fn(arr.length)
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    delete arr[1]
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 
   describe('Array methods w/ refs', () => {

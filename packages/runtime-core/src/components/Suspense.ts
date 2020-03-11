@@ -410,7 +410,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
           if (__DEV__) {
             pushWarningContext(vnode)
           }
-          handleSetupResult(instance, asyncSetupResult, suspense)
+          handleSetupResult(instance, asyncSetupResult, suspense, false)
           // unset placeholder, otherwise this will be treated as a hydration mount
           vnode.el = null
           setupRenderEffect(
@@ -449,7 +449,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
   return suspense
 }
 
-function normalizeSuspenseChildren(
+export function normalizeSuspenseChildren(
   vnode: VNode
 ): {
   content: VNode

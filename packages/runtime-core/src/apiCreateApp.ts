@@ -41,7 +41,7 @@ export interface AppConfig {
   readonly isNativeTag?: (tag: string) => boolean
   isCustomElement?: (tag: string) => boolean
   errorHandler?: (
-    err: Error,
+    err: unknown,
     instance: ComponentPublicInstance | null,
     info: string
   ) => void

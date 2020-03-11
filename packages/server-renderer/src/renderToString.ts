@@ -10,7 +10,6 @@ import {
   Fragment,
   ssrUtils,
   Slots,
-  warn,
   createApp,
   ssrContextKey
 } from 'vue'
@@ -36,7 +35,8 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 } = ssrUtils
 
 // Each component has a buffer array.
@@ -138,6 +138,8 @@ export function renderComponent(
   )
 }
 
+export const AsyncSetupErrorMarker = Symbol('Vue async setup error')
+
 function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
@@ -149,48 +151,24 @@ function renderComponentVNode(
     true /* isSSR */
   )
   if (isPromise(res)) {
-    return res.then(() => renderComponentSubTree(instance))
+    return res
+      .catch(err => {
+        // normalize async setup rejection
+        if (!(err instanceof Error)) {
+          err = new Error(String(err))
+        }
+        err[AsyncSetupErrorMarker] = true
+        console.error(
+          `[@vue/server-renderer]: Uncaught error in async setup:\n`,
+          err
+        )
+        // rethrow for suspense
+        throw err
+      })
+      .then(() => renderComponentSubTree(instance))
   } else {
     return renderComponentSubTree(instance)
   }
-}
-
-type SSRRenderFunction = (
-  context: any,
-  push: (item: any) => void,
-  parentInstance: ComponentInternalInstance
-) => void
-const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
-
-function ssrCompile(
-  template: string,
-  instance: ComponentInternalInstance
-): SSRRenderFunction {
-  const cached = compileCache[template]
-  if (cached) {
-    return cached
-  }
-
-  const { code } = compile(template, {
-    isCustomElement: instance.appContext.config.isCustomElement || NO,
-    isNativeTag: instance.appContext.config.isNativeTag || NO,
-    onError(err: CompilerError) {
-      if (__DEV__) {
-        const message = `Template compilation error: ${err.message}`
-        const codeFrame =
-          err.loc &&
-          generateCodeFrame(
-            template as string,
-            err.loc.start.offset,
-            err.loc.end.offset
-          )
-        warn(codeFrame ? `${message}\n${codeFrame}` : message)
-      } else {
-        throw err
-      }
-    }
-  })
-  return (compileCache[template] = Function(code)())
 }
 
 function renderComponentSubTree(
@@ -224,6 +202,46 @@ function renderComponentSubTree(
   return getBuffer()
 }
 
+type SSRRenderFunction = (
+  context: any,
+  push: (item: any) => void,
+  parentInstance: ComponentInternalInstance
+) => void
+const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+
+function ssrCompile(
+  template: string,
+  instance: ComponentInternalInstance
+): SSRRenderFunction {
+  const cached = compileCache[template]
+  if (cached) {
+    return cached
+  }
+
+  const { code } = compile(template, {
+    isCustomElement: instance.appContext.config.isCustomElement || NO,
+    isNativeTag: instance.appContext.config.isNativeTag || NO,
+    onError(err: CompilerError) {
+      if (__DEV__) {
+        const message = `[@vue/server-renderer] Template compilation error: ${
+          err.message
+        }`
+        const codeFrame =
+          err.loc &&
+          generateCodeFrame(
+            template as string,
+            err.loc.start.offset,
+            err.loc.end.offset
+          )
+        console.error(codeFrame ? `${message}\n${codeFrame}` : message)
+      } else {
+        throw err
+      }
+    }
+  })
+  return (compileCache[template] = Function('require', code)(require))
+}
+
 function renderVNode(
   push: PushFn,
   vnode: VNode,
@@ -242,15 +260,15 @@ function renderVNode(
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElement(push, vnode, parentComponent)
+        renderElementVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent))
       } else if (shapeFlag & ShapeFlags.PORTAL) {
-        renderPortal(vnode, parentComponent)
+        renderPortalVNode(vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        // TODO
+        push(renderSuspenseVNode(vnode, parentComponent))
       } else {
-        console.warn(
+        console.error(
           '[@vue/server-renderer] Invalid VNode type:',
           type,
           `(${typeof type})`
@@ -269,7 +287,7 @@ export function renderVNodeChildren(
   }
 }
 
-function renderElement(
+function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
@@ -324,17 +342,17 @@ function renderElement(
   }
 }
 
-function renderPortal(
+function renderPortalVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance
 ) {
   const target = vnode.props && vnode.props.target
   if (!target) {
-    console.warn(`[@vue/server-renderer] Portal is missing target prop.`)
+    console.error(`[@vue/server-renderer] Portal is missing target prop.`)
     return []
   }
   if (!isString(target)) {
-    console.warn(
+    console.error(
       `[@vue/server-renderer] Portal target must be a query selector string.`
     )
     return []
@@ -362,6 +380,27 @@ async function resolvePortals(context: SSRContext) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
       context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
+    }
+  }
+}
+
+async function renderSuspenseVNode(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance
+): Promise<ResolvedSSRBuffer> {
+  const { content, fallback } = normalizeSuspenseChildren(vnode)
+  try {
+    const { push, getBuffer } = createBuffer()
+    renderVNode(push, content, parentComponent)
+    // await here so error can be caught
+    return await getBuffer()
+  } catch (e) {
+    if (e[AsyncSetupErrorMarker]) {
+      const { push, getBuffer } = createBuffer()
+      renderVNode(push, fallback, parentComponent)
+      return getBuffer()
+    } else {
+      throw e
     }
   }
 }

@@ -536,15 +536,18 @@ describe('Suspense', () => {
 
     const Comp = {
       setup() {
-        const error = ref<Error | null>(null)
-        onErrorCaptured(e => {
-          error.value = e
+        const errorMessage = ref<string | null>(null)
+        onErrorCaptured(err => {
+          errorMessage.value =
+            err instanceof Error
+              ? err.message
+              : `A non-Error value thrown: ${err}`
           return true
         })
 
         return () =>
-          error.value
-            ? h('div', error.value.message)
+          errorMessage.value
+            ? h('div', errorMessage.value)
             : h(Suspense, null, {
                 default: h(Async),
                 fallback: h('div', 'fallback')
