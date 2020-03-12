@@ -216,8 +216,8 @@ export function createVNode(
   }
 
   // class component normalization.
-  if (isFunction(type) && '__vueClassComponentOptions' in type) {
-    type = type.__vueClassComponentOptions
+  if (isFunction(type) && '__vccOpts' in type) {
+    type = type.__vccOpts
   }
 
   // class & style normalization.

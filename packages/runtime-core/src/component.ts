@@ -60,7 +60,7 @@ export interface FunctionalComponent<P = {}> extends SFCInternalOptions {
 
 export interface ClassComponent {
   new (...args: any[]): ComponentPublicInstance<any, any, any, any, any>
-  __vueClassComponentOptions: ComponentOptions
+  __vccOpts: ComponentOptions
 }
 
 export type Component = ComponentOptions | FunctionalComponent

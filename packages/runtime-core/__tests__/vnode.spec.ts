@@ -49,10 +49,10 @@ describe('vnode', () => {
   test('create with class component', () => {
     class Component {
       $props: any
-      static __vueClassComponentOptions = { template: '<div />' }
+      static __vccOpts = { template: '<div />' }
     }
     const vnode = createVNode(Component)
-    expect(vnode.type).toEqual(Component.__vueClassComponentOptions)
+    expect(vnode.type).toEqual(Component.__vccOpts)
   })
 
   describe('class normalization', () => {
