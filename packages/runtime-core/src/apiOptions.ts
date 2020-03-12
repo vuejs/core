@@ -286,7 +286,7 @@ export function applyOptions(
           `Plain object usage is no longer supported.`
       )
     }
-    const data = dataOptions.call(ctx)
+    const data = dataOptions.call(ctx, ctx)
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
