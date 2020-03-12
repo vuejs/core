@@ -17,8 +17,8 @@ export interface App<HostElement = any> {
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
-  component(name: string): Component | undefined
-  component(name: string, component: Component): this
+  component(name: string): PublicAPIComponent | undefined
+  component(name: string, component: PublicAPIComponent): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(
@@ -55,7 +55,7 @@ export interface AppConfig {
 export interface AppContext {
   config: AppConfig
   mixins: ComponentOptions[]
-  components: Record<string, Component>
+  components: Record<string, PublicAPIComponent>
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
   reload?: () => void // HMR only
@@ -168,7 +168,7 @@ export function createAppAPI<HostNode, HostElement>(
         if (__DEV__ && context.components[name]) {
           warn(`Component "${name}" has already been registered in target app.`)
         }
-        context.components[name] = component as Component
+        context.components[name] = component
         return app
       },
 
