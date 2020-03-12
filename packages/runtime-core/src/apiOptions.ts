@@ -167,7 +167,7 @@ export interface LegacyOptions<
   // Limitation: we cannot expose RawBindings on the `this` context for data
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
-  data?: D | ((this: ComponentPublicInstance<Props>) => D)
+  data?: (this: ComponentPublicInstance<Props>) => D
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
@@ -280,7 +280,13 @@ export function applyOptions(
 
   // state options
   if (dataOptions) {
-    const data = isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions
+    if (__DEV__ && !isFunction(dataOptions)) {
+      warn(
+        `The data option must be a function. ` +
+          `Plain object usage is no longer supported.`
+      )
+    }
+    const data = dataOptions.call(ctx)
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
