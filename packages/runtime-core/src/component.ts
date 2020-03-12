@@ -58,13 +58,18 @@ export interface FunctionalComponent<P = {}> extends SFCInternalOptions {
   displayName?: string
 }
 
+export interface ClassComponent {
+  new (...args: any[]): ComponentPublicInstance<any, any, any, any, any>
+  __vccOpts: ComponentOptions
+}
+
 export type Component = ComponentOptions | FunctionalComponent
 
 // A type used in public APIs where a component type is expected.
 // The constructor type is an artificial type returned by defineComponent().
 export type PublicAPIComponent =
   | Component
-  | { new (): ComponentPublicInstance<any, any, any, any, any> }
+  | { new (...args: any[]): ComponentPublicInstance<any, any, any, any, any> }
 
 export { ComponentOptions }
 
