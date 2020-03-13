@@ -47,7 +47,6 @@ export function createHydrationFunctions(
   const {
     mt: mountComponent,
     p: patch,
-    n: next,
     o: { patchProp, nextSibling, parentNode }
   } = rendererInternals
 
@@ -152,16 +151,12 @@ export function createHydrationFunctions(
             parentSuspense,
             isSVGContainer(container)
           )
-          const subTree = vnode.component!.subTree
-          if (subTree) {
-            return next(subTree)
-          } else {
-            // no subTree means this is an async component
-            // try to locate the ending node
-            return isFragmentStart
-              ? locateClosingAsyncAnchor(node)
-              : nextSibling(node)
-          }
+          // component may be async, so in the case of fragments we cannot rely
+          // on component's rendered output to determine the end of the fragment
+          // instead, we do a lookahead to find the end anchor node.
+          return isFragmentStart
+            ? locateClosingAsyncAnchor(node)
+            : nextSibling(node)
         } else if (shapeFlag & ShapeFlags.PORTAL) {
           if (domType !== DOMNodeTypes.COMMENT) {
             return handleMismtach(node, vnode, parentComponent, parentSuspense)

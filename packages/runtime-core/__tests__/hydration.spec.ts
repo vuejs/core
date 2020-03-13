@@ -5,7 +5,9 @@ import {
   nextTick,
   VNode,
   Portal,
-  createStaticVNode
+  createStaticVNode,
+  Suspense,
+  onMounted
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
@@ -28,6 +30,8 @@ const triggerEvent = (type: string, el: Element) => {
 }
 
 describe('SSR hydration', () => {
+  mockWarn()
+
   test('text', async () => {
     const msg = ref('foo')
     const { vnode, container } = mountWithHydration('foo', () => msg.value)
@@ -94,7 +98,7 @@ describe('SSR hydration', () => {
     expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
   })
 
-  test('fragment', async () => {
+  test('Fragment', async () => {
     const msg = ref('foo')
     const fn = jest.fn()
     const { vnode, container } = mountWithHydration(
@@ -142,7 +146,7 @@ describe('SSR hydration', () => {
     expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
   })
 
-  test('portal', async () => {
+  test('Portal', async () => {
     const msg = ref('foo')
     const fn = jest.fn()
     const portalContainer = document.createElement('div')
@@ -271,9 +275,109 @@ describe('SSR hydration', () => {
     expect(text.textContent).toBe('bye')
   })
 
-  describe('mismatch handling', () => {
-    mockWarn()
+  test('Suspense', async () => {
+    const AsyncChild = {
+      async setup() {
+        const count = ref(0)
+        return () =>
+          h(
+            'span',
+            {
+              onClick: () => {
+                count.value++
+              }
+            },
+            count.value
+          )
+      }
+    }
+    const { vnode, container } = mountWithHydration('<span>0</span>', () =>
+      h(Suspense, () => h(AsyncChild))
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    // wait for hydration to finish
+    await new Promise(r => setTimeout(r))
+    triggerEvent('click', container.querySelector('span')!)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<span>1</span>`)
+  })
 
+  test('Suspense (full integration)', async () => {
+    const mountedCalls: number[] = []
+    const asyncDeps: Promise<any>[] = []
+
+    const AsyncChild = {
+      async setup(props: { n: number }) {
+        const count = ref(props.n)
+        onMounted(() => {
+          mountedCalls.push(props.n)
+        })
+        const p = new Promise(r => setTimeout(r, props.n * 10))
+        asyncDeps.push(p)
+        await p
+        return () =>
+          h(
+            'span',
+            {
+              onClick: () => {
+                count.value++
+              }
+            },
+            count.value
+          )
+      }
+    }
+
+    const done = jest.fn()
+    const App = {
+      template: `
+      <Suspense @resolve="done">
+        <AsyncChild :n="1" />
+        <AsyncChild :n="2" />
+      </Suspense>`,
+      components: {
+        AsyncChild
+      },
+      methods: {
+        done
+      }
+    }
+
+    const container = document.createElement('div')
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><span>1</span><span>2</span><!--]-->"`
+    )
+    // reset asyncDeps from ssr
+    asyncDeps.length = 0
+    // hydrate
+    createSSRApp(App).mount(container)
+
+    expect(mountedCalls.length).toBe(0)
+    expect(asyncDeps.length).toBe(2)
+
+    // wait for hydration to complete
+    await Promise.all(asyncDeps)
+    await new Promise(r => setTimeout(r))
+
+    // should flush buffered effects
+    expect(mountedCalls).toMatchObject([1, 2])
+    // should have removed fragment markers
+    expect(container.innerHTML).toMatch(`<span>1</span><span>2</span>`)
+
+    const span1 = container.querySelector('span')!
+    triggerEvent('click', span1)
+    await nextTick()
+    expect(container.innerHTML).toMatch(`<span>2</span><span>2</span>`)
+
+    const span2 = span1.nextSibling as Element
+    triggerEvent('click', span2)
+    await nextTick()
+    expect(container.innerHTML).toMatch(`<span>2</span><span>3</span>`)
+  })
+
+  describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
       expect(container.textContent).toBe('bar')
