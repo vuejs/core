@@ -202,7 +202,7 @@ type UnmountChildrenFn<HostNode, HostElement> = (
 
 export type MountComponentFn<HostNode, HostElement> = (
   initialVNode: VNode<HostNode, HostElement>,
-  container: HostElement | null, // only null during hydration
+  container: HostElement,
   anchor: HostNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
@@ -219,7 +219,7 @@ type ProcessTextOrCommentFn<HostNode, HostElement> = (
 export type SetupRenderEffectFn<HostNode, HostElement> = (
   instance: ComponentInternalInstance,
   initialVNode: VNode<HostNode, HostElement>,
-  container: HostElement | null, // only null during hydration
+  container: HostElement,
   anchor: HostNode | null,
   parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
   isSVG: boolean
@@ -991,7 +991,7 @@ function baseCreateRenderer<
 
   const mountComponent: MountComponentFn<HostNode, HostElement> = (
     initialVNode,
-    container, // only null during hydration
+    container,
     anchor,
     parentComponent,
     parentSuspense,
@@ -1031,9 +1031,10 @@ function baseCreateRenderer<
       parentSuspense.registerDep(instance, setupRenderEffect)
 
       // Give it a placeholder if this is not hydration
-      const placeholder = (instance.subTree = createVNode(Comment))
-      processCommentNode(null, placeholder, container!, anchor)
-      initialVNode.el = placeholder.el
+      if (!initialVNode.el) {
+        const placeholder = (instance.subTree = createVNode(Comment))
+        processCommentNode(null, placeholder, container!, anchor)
+      }
       return
     }
 
@@ -1069,12 +1070,17 @@ function baseCreateRenderer<
         }
         if (initialVNode.el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
-          hydrateNode(initialVNode.el as Node, subTree, instance)
+          hydrateNode(
+            initialVNode.el as Node,
+            subTree,
+            instance,
+            parentSuspense
+          )
         } else {
           patch(
             null,
             subTree,
-            container!, // container is only null during hydration
+            container,
             anchor,
             instance,
             parentSuspense,

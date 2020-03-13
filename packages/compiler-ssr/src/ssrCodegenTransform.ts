@@ -10,7 +10,8 @@ import {
   createBlockStatement,
   CompilerOptions,
   IfStatement,
-  CallExpression
+  CallExpression,
+  isText
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
@@ -28,7 +29,9 @@ import { ssrProcessElement } from './transforms/ssrTransformElement'
 
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
-  processChildren(ast.children, context)
+  const isFragment =
+    ast.children.length > 1 && ast.children.some(c => !isText(c))
+  processChildren(ast.children, context, isFragment)
   ast.codegenNode = createBlockStatement(context.body)
 
   // Finalize helpers.
@@ -104,8 +107,12 @@ function createChildContext(
 
 export function processChildren(
   children: TemplateChildNode[],
-  context: SSRTransformContext
+  context: SSRTransformContext,
+  asFragment = false
 ) {
+  if (asFragment) {
+    context.pushStringPart(`<!--1-->`)
+  }
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.type === NodeTypes.ELEMENT) {
@@ -128,14 +135,18 @@ export function processChildren(
       ssrProcessFor(child, context)
     }
   }
+  if (asFragment) {
+    context.pushStringPart(`<!--0-->`)
+  }
 }
 
 export function processChildrenAsStatement(
   children: TemplateChildNode[],
   parentContext: SSRTransformContext,
+  asFragment = false,
   withSlotScopeId = parentContext.withSlotScopeId
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
-  processChildren(children, childContext)
+  processChildren(children, childContext, asFragment)
   return createBlockStatement(childContext.body)
 }

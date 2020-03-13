@@ -33,7 +33,7 @@ describe('SSR Suspense', () => {
         }
       })
 
-      expect(await renderToString(app)).toBe(`<div>async</div>`)
+      expect(await renderToString(app)).toBe(`<!--1--><div>async</div><!--0-->`)
     })
 
     test('with async component', async () => {
@@ -49,7 +49,7 @@ describe('SSR Suspense', () => {
         }
       })
 
-      expect(await renderToString(app)).toBe(`<div>async</div>`)
+      expect(await renderToString(app)).toBe(`<!--1--><div>async</div><!--0-->`)
     })
 
     test('fallback', async () => {
@@ -68,7 +68,9 @@ describe('SSR Suspense', () => {
         }
       })
 
-      expect(await renderToString(app)).toBe(`<div>fallback</div>`)
+      expect(await renderToString(app)).toBe(
+        `<!--1--><div>fallback</div><!--0-->`
+      )
       expect('Uncaught error in async setup').toHaveBeenWarned()
     })
   })

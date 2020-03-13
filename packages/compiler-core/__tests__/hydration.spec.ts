@@ -98,7 +98,7 @@ describe('SSR hydration', () => {
     const msg = ref('foo')
     const fn = jest.fn()
     const { vnode, container } = mountWithHydration(
-      '<div><span>foo</span><span class="foo"></span></div>',
+      '<div><!----><span>foo</span><!----><span class="foo"></span><!----><!----></div>',
       () =>
         h('div', [
           [h('span', msg.value), [h('span', { class: msg.value, onClick: fn })]]
@@ -136,7 +136,9 @@ describe('SSR hydration', () => {
 
     msg.value = 'bar'
     await nextTick()
-    expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
+    expect(vnode.el.innerHTML).toBe(
+      `<!----><span>bar</span><!----><span class="bar"></span><!----><!---->`
+    )
   })
 
   test('portal', async () => {

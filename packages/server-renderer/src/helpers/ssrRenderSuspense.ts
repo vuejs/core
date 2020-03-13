@@ -1,19 +1,30 @@
 import { PushFn, ResolvedSSRBuffer, createBuffer } from '../renderToString'
-import { NOOP } from '@vue/shared'
 
 type ContentRenderFn = (push: PushFn) => void
 
 export async function ssrRenderSuspense({
-  default: renderContent = NOOP,
-  fallback: renderFallback = NOOP
+  default: renderContent,
+  fallback: renderFallback
 }: Record<string, ContentRenderFn | undefined>): Promise<ResolvedSSRBuffer> {
   try {
-    const { push, getBuffer } = createBuffer()
-    renderContent(push)
-    return await getBuffer()
+    if (renderContent) {
+      const { push, getBuffer } = createBuffer()
+      push(`<!--1-->`)
+      renderContent(push)
+      push(`<!--0-->`)
+      return await getBuffer()
+    } else {
+      return []
+    }
   } catch {
-    const { push, getBuffer } = createBuffer()
-    renderFallback(push)
-    return getBuffer()
+    if (renderFallback) {
+      const { push, getBuffer } = createBuffer()
+      push(`<!--1-->`)
+      renderFallback(push)
+      push(`<!--0-->`)
+      return getBuffer()
+    } else {
+      return []
+    }
   }
 }

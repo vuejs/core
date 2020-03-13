@@ -106,7 +106,12 @@ function createConfig(format, output, plugins = []) {
     format === 'esm-bundler-runtime' ? `src/runtime.ts` : `src/index.ts`
 
   const external =
-    isGlobalBuild || isRawESMBuild ? [] : Object.keys(pkg.dependencies || {})
+    isGlobalBuild || isRawESMBuild
+      ? []
+      : [
+          ...Object.keys(pkg.dependencies || {}),
+          ...Object.keys(pkg.peerDependencies || {})
+        ]
 
   const nodePlugins = packageOptions.enableNonBrowserBranches
     ? [

@@ -30,7 +30,8 @@ import {
   traverseNode,
   ExpressionNode,
   TemplateNode,
-  SUSPENSE
+  SUSPENSE,
+  TRANSITION_GROUP
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
@@ -151,7 +152,7 @@ export function ssrProcessComponent(
       return ssrProcessSuspense(node, context)
     } else {
       // real fall-through (e.g. KeepAlive): just render its children.
-      processChildren(node.children, context)
+      processChildren(node.children, context, component === TRANSITION_GROUP)
     }
   } else {
     // finish up slot function expressions from the 1st pass.
@@ -167,6 +168,7 @@ export function ssrProcessComponent(
         processChildrenAsStatement(
           children,
           context,
+          false,
           true /* withSlotScopeId */
         ),
         vnodeBranch

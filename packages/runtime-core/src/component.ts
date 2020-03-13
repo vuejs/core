@@ -144,7 +144,6 @@ export interface ComponentInternalInstance {
 
   // suspense related
   asyncDep: Promise<any> | null
-  asyncResult: unknown
   asyncResolved: boolean
 
   // storage for any extra properties
@@ -215,7 +214,6 @@ export function createComponentInstance(
 
     // async dependency management
     asyncDep: null,
-    asyncResult: null,
     asyncResolved: false,
 
     // user namespace for storing whatever the user assigns to `this`
@@ -367,7 +365,7 @@ function setupStatefulComponent(
     if (isPromise(setupResult)) {
       if (isSSR) {
         // return the promise so server-renderer can wait on it
-        return setupResult.then(resolvedResult => {
+        return setupResult.then((resolvedResult: unknown) => {
           handleSetupResult(instance, resolvedResult, parentSuspense, isSSR)
         })
       } else if (__FEATURE_SUSPENSE__) {
