@@ -110,8 +110,9 @@ describe('SSR hydration', () => {
     )
     expect(vnode.el).toBe(container.firstChild)
 
-    // should remove anchors in dev mode
-    expect(vnode.el.innerHTML).toBe(`<span>foo</span><span class="foo"></span>`)
+    expect(vnode.el.innerHTML).toBe(
+      `<!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]-->`
+    )
 
     // start fragment 1
     const fragment1 = (vnode.children as VNode[])[0]
@@ -143,7 +144,9 @@ describe('SSR hydration', () => {
 
     msg.value = 'bar'
     await nextTick()
-    expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
+    expect(vnode.el.innerHTML).toBe(
+      `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`
+    )
   })
 
   test('Portal', async () => {
@@ -363,7 +366,6 @@ describe('SSR hydration', () => {
 
     // should flush buffered effects
     expect(mountedCalls).toMatchObject([1, 2])
-    // should have removed fragment markers
     expect(container.innerHTML).toMatch(`<span>1</span><span>2</span>`)
 
     const span1 = container.querySelector('span')!
@@ -418,6 +420,41 @@ describe('SSR hydration', () => {
       )
       expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
+    test('fragment mismatch removal', () => {
+      const { container } = mountWithHydration(
+        `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
+        () => h('div', [h('span', 'replaced')])
+      )
+      expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('fragment not enough children', () => {
+      const { container } = mountWithHydration(
+        `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')])
+      )
+      expect(container.innerHTML).toBe(
+        '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>'
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('fragment too many children', () => {
+      const { container } = mountWithHydration(
+        `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+        () => h('div', [[h('div', 'foo')], h('div', 'baz')])
+      )
+      expect(container.innerHTML).toBe(
+        '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>'
+      )
+      // fragment ends early and attempts to hydrate the extra <div>bar</div>
+      // as 2nd fragment child.
+      expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      // exccesive children removal
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })
 })

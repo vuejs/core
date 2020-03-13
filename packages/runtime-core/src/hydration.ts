@@ -47,7 +47,7 @@ export function createHydrationFunctions(
   const {
     mt: mountComponent,
     p: patch,
-    o: { patchProp, nextSibling, parentNode }
+    o: { patchProp, nextSibling, parentNode, remove, insert, createComment }
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
@@ -76,11 +76,14 @@ export function createHydrationFunctions(
     optimized = false
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
-    if (__DEV__ && isFragmentStart) {
-      // in dev mode, replace comment anchors with invisible text nodes
-      // for easier debugging
-      node = replaceAnchor(node, parentNode(node)!)
-    }
+    const onMismatch = () =>
+      handleMismtach(
+        node,
+        vnode,
+        parentComponent,
+        parentSuspense,
+        isFragmentStart
+      )
 
     const { type, shapeFlag } = vnode
     const domType = node.nodeType
@@ -89,7 +92,7 @@ export function createHydrationFunctions(
     switch (type) {
       case Text:
         if (domType !== DOMNodeTypes.TEXT) {
-          return handleMismtach(node, vnode, parentComponent, parentSuspense)
+          return onMismatch()
         }
         if ((node as Text).data !== vnode.children) {
           hasMismatch = true
@@ -103,18 +106,18 @@ export function createHydrationFunctions(
         }
         return nextSibling(node)
       case Comment:
-        if (domType !== DOMNodeTypes.COMMENT) {
-          return handleMismtach(node, vnode, parentComponent, parentSuspense)
+        if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
+          return onMismatch()
         }
         return nextSibling(node)
       case Static:
         if (domType !== DOMNodeTypes.ELEMENT) {
-          return handleMismtach(node, vnode, parentComponent, parentSuspense)
+          return onMismatch()
         }
         return nextSibling(node)
       case Fragment:
-        if (domType !== (__DEV__ ? DOMNodeTypes.TEXT : DOMNodeTypes.COMMENT)) {
-          return handleMismtach(node, vnode, parentComponent, parentSuspense)
+        if (!isFragmentStart) {
+          return onMismatch()
         }
         return hydrateFragment(
           node as Comment,
@@ -129,7 +132,7 @@ export function createHydrationFunctions(
             domType !== DOMNodeTypes.ELEMENT ||
             vnode.type !== (node as Element).tagName.toLowerCase()
           ) {
-            return handleMismtach(node, vnode, parentComponent, parentSuspense)
+            return onMismatch()
           }
           return hydrateElement(
             node as Element,
@@ -159,7 +162,7 @@ export function createHydrationFunctions(
             : nextSibling(node)
         } else if (shapeFlag & ShapeFlags.PORTAL) {
           if (domType !== DOMNodeTypes.COMMENT) {
-            return handleMismtach(node, vnode, parentComponent, parentSuspense)
+            return onMismatch()
           }
           hydratePortal(vnode, parentComponent, parentSuspense, optimized)
           return nextSibling(node)
@@ -247,7 +250,7 @@ export function createHydrationFunctions(
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
           next = next.nextSibling
-          el.removeChild(cur)
+          remove(cur)
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
@@ -321,18 +324,24 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     const container = parentNode(node)!
-    let next = hydrateChildren(
+    const next = hydrateChildren(
       nextSibling(node)!,
       vnode,
       container,
       parentComponent,
       parentSuspense,
       optimized
-    )!
-    if (__DEV__) {
-      next = replaceAnchor(next, container)
+    )
+    if (next && isComment(next) && next.data === ']') {
+      return nextSibling((vnode.anchor = next))
+    } else {
+      // fragment didn't hydrate successfully, since we didn't get a end anchor
+      // back. This should have led to node/children mismatch warnings.
+      hasMismatch = true
+      // since the anchor is missing, we need to create one and insert it
+      insert((vnode.anchor = createComment(`]`)), container, next)
+      return next
     }
-    return nextSibling((vnode.anchor = next))
   }
 
   const hydratePortal = (
@@ -366,7 +375,8 @@ export function createHydrationFunctions(
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
-    parentSuspense: SuspenseBoundary | null
+    parentSuspense: SuspenseBoundary | null,
+    isFragment: boolean
   ) => {
     hasMismatch = true
     __DEV__ &&
@@ -375,12 +385,31 @@ export function createHydrationFunctions(
         vnode.type,
         `\n- Server rendered DOM:`,
         node,
-        node.nodeType === DOMNodeTypes.TEXT ? `(text)` : ``
+        node.nodeType === DOMNodeTypes.TEXT
+          ? `(text)`
+          : isComment(node) && node.data === '['
+            ? `(start of fragment)`
+            : ``
       )
     vnode.el = null
+
+    if (isFragment) {
+      // remove excessive fragment nodes
+      const end = locateClosingAsyncAnchor(node)
+      while (true) {
+        const next = nextSibling(node)
+        if (next && next !== end) {
+          remove(next)
+        } else {
+          break
+        }
+      }
+    }
+
     const next = nextSibling(node)
     const container = parentNode(node)!
-    container.removeChild(node)
+    remove(node)
+
     patch(
       null,
       vnode,
@@ -409,13 +438,6 @@ export function createHydrationFunctions(
       }
     }
     return node
-  }
-
-  const replaceAnchor = (node: Node, parent: Element): Node => {
-    const text = document.createTextNode('')
-    parent.insertBefore(text, node)
-    parent.removeChild(node)
-    return text
   }
 
   return [hydrate, hydrateNode] as const
