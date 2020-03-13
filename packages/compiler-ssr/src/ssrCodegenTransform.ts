@@ -111,7 +111,7 @@ export function processChildren(
   asFragment = false
 ) {
   if (asFragment) {
-    context.pushStringPart(`<!--1-->`)
+    context.pushStringPart(`<!--[-->`)
   }
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -136,7 +136,7 @@ export function processChildren(
     }
   }
   if (asFragment) {
-    context.pushStringPart(`<!--0-->`)
+    context.pushStringPart(`<!--]-->`)
   }
 }
 

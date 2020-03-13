@@ -33,12 +33,12 @@ export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
     needFragmentWrapper
   )
   // v-for always renders a fragment
-  context.pushStringPart(`<!--1-->`)
+  context.pushStringPart(`<!--[-->`)
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_LIST), [
       node.source,
       renderLoop
     ])
   )
-  context.pushStringPart(`<!--0-->`)
+  context.pushStringPart(`<!--]-->`)
 }

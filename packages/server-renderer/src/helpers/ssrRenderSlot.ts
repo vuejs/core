@@ -19,7 +19,7 @@ export function ssrRenderSlot(
   parentComponent: ComponentInternalInstance
 ) {
   // template-compiled slots are always rendered as fragments
-  push(`<!--1-->`)
+  push(`<!--[-->`)
   const slotFn = slots[slotName]
   if (slotFn) {
     if (slotFn.length > 1) {
@@ -33,5 +33,5 @@ export function ssrRenderSlot(
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
   }
-  push(`<!--0-->`)
+  push(`<!--]-->`)
 }

@@ -256,9 +256,9 @@ function renderVNode(
       push(children ? `<!--${children}-->` : `<!---->`)
       break
     case Fragment:
-      push(`<!--1-->`) // open
+      push(`<!--[-->`) // open
       renderVNodeChildren(push, children as VNodeArrayChildren, parentComponent)
-      push(`<!--0-->`) // close
+      push(`<!--]-->`) // close
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {

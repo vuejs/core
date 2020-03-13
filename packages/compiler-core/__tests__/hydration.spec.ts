@@ -98,13 +98,16 @@ describe('SSR hydration', () => {
     const msg = ref('foo')
     const fn = jest.fn()
     const { vnode, container } = mountWithHydration(
-      '<div><!----><span>foo</span><!----><span class="foo"></span><!----><!----></div>',
+      '<div><!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]--></div>',
       () =>
         h('div', [
           [h('span', msg.value), [h('span', { class: msg.value, onClick: fn })]]
         ])
     )
     expect(vnode.el).toBe(container.firstChild)
+
+    // should remove anchors in dev mode
+    expect(vnode.el.innerHTML).toBe(`<span>foo</span><span class="foo"></span>`)
 
     // start fragment 1
     const fragment1 = (vnode.children as VNode[])[0]
@@ -136,9 +139,7 @@ describe('SSR hydration', () => {
 
     msg.value = 'bar'
     await nextTick()
-    expect(vnode.el.innerHTML).toBe(
-      `<!----><span>bar</span><!----><span class="bar"></span><!----><!---->`
-    )
+    expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
   })
 
   test('portal', async () => {

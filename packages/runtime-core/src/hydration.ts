@@ -76,7 +76,7 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     optimized = false
   ): Node | null => {
-    const isFragmentStart = isComment(node) && node.data === '1'
+    const isFragmentStart = isComment(node) && node.data === '['
     if (__DEV__ && isFragmentStart) {
       // in dev mode, replace comment anchors with invisible text nodes
       // for easier debugging
@@ -403,8 +403,8 @@ export function createHydrationFunctions(
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === '1') match++
-        if (node.data === '0') {
+        if (node.data === '[') match++
+        if (node.data === ']') {
           if (match === 0) {
             return nextSibling(node)
           } else {

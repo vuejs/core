@@ -257,7 +257,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<!--1--><span>from slot</span><!--0-->` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
 
@@ -273,7 +273,7 @@ describe('ssr: renderToString', () => {
           })
         )
       ).toBe(
-        `<div>parent<div class="child"><!--1-->fallback<!--0--></div></div>`
+        `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`
       )
     })
 
@@ -318,7 +318,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<!--1--><span>from slot</span><!--0-->` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
     })
@@ -336,7 +336,7 @@ describe('ssr: renderToString', () => {
 
       expect(await renderToString(app)).toBe(
         `<div>parent<div class="child">` +
-          `<!--1--><span>from slot</span><!--0-->` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
     })
@@ -460,7 +460,7 @@ describe('ssr: renderToString', () => {
           ])
         )
       ).toBe(
-        `<div>foo<span>bar</span><!--1--><span>baz</span><!--0--><!--qux--></div>`
+        `<div>foo<span>bar</span><!--[--><span>baz</span><!--]--><!--qux--></div>`
       )
     })
 

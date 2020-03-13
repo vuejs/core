@@ -80,7 +80,7 @@ describe('ssr: v-if', () => {
       "
       return function ssrRender(_ctx, _push, _parent) {
         if (_ctx.foo) {
-          _push(\`<!--1-->hello<!--0-->\`)
+          _push(\`<!--[-->hello<!--]-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -110,7 +110,7 @@ describe('ssr: v-if', () => {
       "
       return function ssrRender(_ctx, _push, _parent) {
         if (_ctx.foo) {
-          _push(\`<!--1--><div>hi</div><div>ho</div><!--0-->\`)
+          _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -126,11 +126,11 @@ describe('ssr: v-if', () => {
 
       return function ssrRender(_ctx, _push, _parent) {
         if (_ctx.foo) {
-          _push(\`<!--1-->\`)
+          _push(\`<!--[-->\`)
           _ssrRenderList(_ctx.list, (i) => {
             _push(\`<div></div>\`)
           })
-          _push(\`<!--0-->\`)
+          _push(\`<!--]-->\`)
         } else {
           _push(\`<!---->\`)
         }
@@ -147,7 +147,7 @@ describe('ssr: v-if', () => {
       "
       return function ssrRender(_ctx, _push, _parent) {
         if (_ctx.foo) {
-          _push(\`<!--1--><div>hi</div><div>ho</div><!--0-->\`)
+          _push(\`<!--[--><div>hi</div><div>ho</div><!--]-->\`)
         } else {
           _push(\`<div></div>\`)
         }

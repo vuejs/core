@@ -9,9 +9,9 @@ export async function ssrRenderSuspense({
   try {
     if (renderContent) {
       const { push, getBuffer } = createBuffer()
-      push(`<!--1-->`)
+      push(`<!--[-->`)
       renderContent(push)
-      push(`<!--0-->`)
+      push(`<!--]-->`)
       return await getBuffer()
     } else {
       return []
@@ -19,9 +19,9 @@ export async function ssrRenderSuspense({
   } catch {
     if (renderFallback) {
       const { push, getBuffer } = createBuffer()
-      push(`<!--1-->`)
+      push(`<!--[-->`)
       renderFallback(push)
-      push(`<!--0-->`)
+      push(`<!--]-->`)
       return getBuffer()
     } else {
       return []
