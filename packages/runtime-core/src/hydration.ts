@@ -76,9 +76,15 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     optimized = false
   ): Node | null => {
+    const isFragmentStart = isComment(node) && node.data === '1'
+    if (__DEV__ && isFragmentStart) {
+      // in dev mode, replace comment anchors with invisible text nodes
+      // for easier debugging
+      node = replaceAnchor(node, parentNode(node)!)
+    }
+
     const { type, shapeFlag } = vnode
     const domType = node.nodeType
-
     vnode.el = node
 
     switch (type) {
@@ -108,7 +114,7 @@ export function createHydrationFunctions(
         }
         return nextSibling(node)
       case Fragment:
-        if (domType !== DOMNodeTypes.COMMENT) {
+        if (domType !== (__DEV__ ? DOMNodeTypes.TEXT : DOMNodeTypes.COMMENT)) {
           return handleMismtach(node, vnode, parentComponent, parentSuspense)
         }
         return hydrateFragment(
@@ -152,7 +158,7 @@ export function createHydrationFunctions(
           } else {
             // no subTree means this is an async component
             // try to locate the ending node
-            return isComment(node) && node.data === '1'
+            return isFragmentStart
               ? locateClosingAsyncAnchor(node)
               : nextSibling(node)
           }
@@ -319,16 +325,19 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean
   ) => {
-    return nextSibling(
-      (vnode.anchor = hydrateChildren(
-        nextSibling(node)!,
-        vnode,
-        parentNode(node)!,
-        parentComponent,
-        parentSuspense,
-        optimized
-      )!)
-    )
+    const container = parentNode(node)!
+    let next = hydrateChildren(
+      nextSibling(node)!,
+      vnode,
+      container,
+      parentComponent,
+      parentSuspense,
+      optimized
+    )!
+    if (__DEV__) {
+      next = replaceAnchor(next, container)
+    }
+    return nextSibling((vnode.anchor = next))
   }
 
   const hydratePortal = (
@@ -377,7 +386,6 @@ export function createHydrationFunctions(
     const next = nextSibling(node)
     const container = parentNode(node)!
     container.removeChild(node)
-    // TODO Suspense
     patch(
       null,
       vnode,
@@ -406,6 +414,13 @@ export function createHydrationFunctions(
       }
     }
     return node
+  }
+
+  const replaceAnchor = (node: Node, parent: Element): Node => {
+    const text = document.createTextNode('')
+    parent.insertBefore(text, node)
+    parent.removeChild(node)
+    return text
   }
 
   return [hydrate, hydrateNode] as const
