@@ -1,7 +1,7 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 
-const queue: (Function | null)[] = []
+const queue: (null | (Function & { options?: any }))[] = []
 const postFlushCbs: Function[] = []
 const p = Promise.resolve()
 
@@ -15,7 +15,22 @@ export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
 }
 
-export function queueJob(job: () => void) {
+export function queueJob(job: (() => void) & { options?: any }) {
+  if (
+    queue.length > 0 &&
+    job.options &&
+    job.options.instance &&
+    job.options.instance.vnode.transition
+  ) {
+    let parent = job.options.instance.parent
+    const parents = queue.map(job => job && job.options && job.options.instance)
+    while (parent) {
+      if (parents.includes(parent)) {
+        return
+      }
+      parent = parent.parent
+    }
+  }
   if (!queue.includes(job)) {
     queue.push(job)
     queueFlush()
