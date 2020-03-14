@@ -164,3 +164,12 @@ export function markNonReactive<T>(value: T): T {
   nonReactiveValues.add(value)
   return value
 }
+
+export function markReactive<T>(react: T, raw: object) {
+  if (__DEV__ && rawToReactive.has(raw)) {
+    console.warn('Raw value is already registered with a reactive wrapper', raw)
+  }
+  reactiveToRaw.set(react, raw)
+  rawToReactive.set(raw, react)
+  return react
+}

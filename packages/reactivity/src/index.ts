@@ -1,4 +1,13 @@
-export { ref, unref, shallowRef, isRef, toRefs, Ref, UnwrapRef } from './ref'
+export {
+  ref,
+  unref,
+  shallowRef,
+  isRef,
+  markRef,
+  toRefs,
+  Ref,
+  UnwrapRef
+} from './ref'
 export {
   reactive,
   isReactive,
@@ -8,7 +17,8 @@ export {
   shallowReadonly,
   toRaw,
   markReadonly,
-  markNonReactive
+  markNonReactive,
+  markReactive
 } from './reactive'
 export {
   computed,

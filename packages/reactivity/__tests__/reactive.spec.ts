@@ -4,6 +4,7 @@ import {
   isReactive,
   toRaw,
   markNonReactive,
+  markReactive,
   shallowReactive
 } from '../src/reactive'
 import { mockWarn } from '@vue/shared'
@@ -153,6 +154,17 @@ describe('reactivity/reactive', () => {
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
+  })
+
+  test('markReactive', () => {
+    const raw = { a: 1, b: 2 }
+    const proxy = new Proxy(raw, {})
+    const myReactive = markReactive(proxy, raw)
+
+    expect(myReactive).toBe(proxy)
+    expect(isReactive(myReactive)).toBe(true)
+    expect(toRaw(myReactive)).toBe(raw)
+    expect(reactive(myReactive)).toBe(myReactive)
   })
 
   describe('shallowReactive', () => {

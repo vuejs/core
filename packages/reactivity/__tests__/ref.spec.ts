@@ -3,6 +3,7 @@ import {
   effect,
   reactive,
   isRef,
+  markRef,
   toRefs,
   Ref,
   isReactive
@@ -166,6 +167,17 @@ describe('reactivity/ref', () => {
     expect(isRef(1)).toBe(false)
     // an object that looks like a ref isn't necessarily a ref
     expect(isRef({ value: 0 })).toBe(false)
+  })
+
+  test('markRef', () => {
+    const raw = { value: 4 }
+    const myRef = markRef(raw)
+
+    expect(myRef).toBe(raw)
+    expect(myRef.value).toBe(4)
+    expect(isRef(myRef)).toBe(true)
+    expect(unref(myRef)).toBe(4)
+    expect(ref(myRef).value).toBe(4)
   })
 
   test('toRefs', () => {

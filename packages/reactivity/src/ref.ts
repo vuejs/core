@@ -40,6 +40,11 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+export function markRef<T>(r: { value: T }) {
+  ;(r as any)._isRef = true
+  return r as Ref<T>
+}
+
 function createRef(value: unknown, shallow = false) {
   if (isRef(value)) {
     return value
