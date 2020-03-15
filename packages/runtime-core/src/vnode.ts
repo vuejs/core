@@ -30,6 +30,7 @@ import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
 import { PortalImpl, isPortal } from './components/Portal'
+import { ComponentPublicInstance } from './componentProxy'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -54,7 +55,7 @@ export type VNodeTypes =
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref | ((ref: object | null) => void)
+  ref?: VNodeRef
 
   // vnode hooks
   onVnodeBeforeMount?: (vnode: VNode) => void
@@ -89,12 +90,18 @@ export type VNodeNormalizedChildren<HostNode = any, HostElement = any> =
   | RawSlots
   | null
 
+export type VNodeRef =
+  | string
+  | ((ref: object | null) => unknown)
+  | Ref
+  | [ComponentPublicInstance, string]
+
 export interface VNode<HostNode = any, HostElement = any> {
   _isVNode: true
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
-  ref: string | Ref | ((ref: object | null) => void) | null
+  ref: VNodeRef | null
   scopeId: string | null // SFC only
   children: VNodeNormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null

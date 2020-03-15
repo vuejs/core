@@ -8,7 +8,8 @@ import {
   VNodeArrayChildren,
   createVNode,
   isSameVNodeType,
-  Static
+  Static,
+  VNodeRef
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -44,7 +45,6 @@ import {
   stop,
   ReactiveEffectOptions,
   isRef,
-  Ref,
   toRaw,
   DebuggerEvent
 } from '@vue/reactivity'
@@ -1789,8 +1789,8 @@ function baseCreateRenderer<
   }
 
   const setRef = (
-    ref: string | Function | Ref | [ComponentPublicInstance, string],
-    oldRef: string | Function | Ref | [ComponentPublicInstance, string] | null,
+    ref: VNodeRef,
+    oldRef: VNodeRef | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
   ) => {
