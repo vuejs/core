@@ -14,7 +14,34 @@ describe('renderer: component', () => {
 
   test.todo('componentProxy')
 
-  test.todo('componentProps')
+  describe('componentProps', () => {
+    test.todo('should work')
+
+    test('should convert empty booleans to true', () => {
+      let b1: any, b2: any, b3: any
+
+      const Comp = defineComponent({
+        props: {
+          b1: Boolean,
+          b2: [Boolean, String],
+          b3: [String, Boolean]
+        },
+        setup(props) {
+          ;({ b1, b2, b3 } = props)
+          return () => ''
+        }
+      })
+
+      render(
+        h(Comp, <any>{ b1: '', b2: '', b3: '' }),
+        nodeOps.createElement('div')
+      )
+
+      expect(b1).toBe(true)
+      expect(b2).toBe(true)
+      expect(b3).toBe('')
+    })
+  })
 
   describe('slots', () => {
     test('should respect $stable flag', async () => {
