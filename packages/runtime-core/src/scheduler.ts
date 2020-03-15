@@ -23,9 +23,9 @@ export function queueJob(
   if (
     queue.length > 0 &&
     job.options &&
-    // avoid errors because instance is undefined in unit tests
+    // Instance is undefined in unit tests
     job.options.instance &&
-    // if this vnode is inside <transition>
+    // If this vnode is inside <transition>
     job.options.instance.vnode.transition
   ) {
     let parent = job.options.instance.parent
