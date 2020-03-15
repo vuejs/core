@@ -1,7 +1,8 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
+import { ReactiveEffectOptions } from '@vue/reactivity'
 
-const queue: (null | (Function & { options?: any }))[] = []
+const queue: (null | (Function & { options?: ReactiveEffectOptions }))[] = []
 const postFlushCbs: Function[] = []
 const p = Promise.resolve()
 
@@ -15,7 +16,9 @@ export function nextTick(fn?: () => void): Promise<void> {
   return fn ? p.then(fn) : p
 }
 
-export function queueJob(job: (() => void) & { options?: any }) {
+export function queueJob(
+  job: (() => void) & { options?: ReactiveEffectOptions }
+) {
   // fix transition: https://github.com/vuejs/vue-next/issues/681
   if (
     queue.length > 0 &&
