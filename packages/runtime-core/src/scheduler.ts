@@ -32,7 +32,20 @@ export function queueJob(
     const queuedJobInstances = queue.map(
       job => job && job.options && job.options.instance
     )
-    while (parent) {
+    while (
+      parent &&
+      /**
+       * early stop for performance reason, may cause issue in case:
+       * <transition>
+       *   <div :key="key0">
+       *     <transition>
+       *       <comp :key="key1"/>
+       *     </transition>
+       *   </div>
+       * </transition>
+       */
+      parent.vnode.transition
+    ) {
       // If any queued effect has a corresponding instance that is parent
       // of this effect's instance, don't queue this effect
       if (queuedJobInstances.includes(parent)) {
