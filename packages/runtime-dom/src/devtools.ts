@@ -1,5 +1,6 @@
 import { setDevtoolsHook } from '@vue/runtime-core'
 
-setDevtoolsHook(
-  ((__BROWSER__ ? window : global) as any).__VUE_DEVTOOLS_GLOBAL_HOOK__
-)
+const target: any = __BROWSER__ ? window : global
+
+target.__VUE__ = true
+setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__)
