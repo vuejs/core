@@ -1,5 +1,6 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { EMPTY_OBJ, extend, isArray } from '@vue/shared'
+import { ComponentInternalInstance } from '@vue/runtime-core'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -21,6 +22,7 @@ export interface ReactiveEffect<T = any> {
 export interface ReactiveEffectOptions {
   lazy?: boolean
   computed?: boolean
+  instance?: ComponentInternalInstance
   scheduler?: (run: Function) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void

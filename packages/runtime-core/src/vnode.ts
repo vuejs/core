@@ -212,7 +212,7 @@ export function createVNode(
 ): VNode {
   if (!type) {
     if (__DEV__) {
-      warn(`fsef Invalid vnode type when creating vnode: ${type}.`)
+      warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment
   }

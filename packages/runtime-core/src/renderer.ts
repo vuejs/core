@@ -239,6 +239,7 @@ function createDevEffectOptions(
   instance: ComponentInternalInstance
 ): ReactiveEffectOptions {
   return {
+    instance,
     scheduler: queueJob,
     onTrack: instance.rtc ? e => invokeHooks(instance.rtc!, e) : void 0,
     onTrigger: instance.rtg ? e => invokeHooks(instance.rtg!, e) : void 0

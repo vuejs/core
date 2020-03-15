@@ -16,6 +16,7 @@ export function nextTick(fn?: () => void): Promise<void> {
 }
 
 export function queueJob(job: (() => void) & { options?: any }) {
+  // fix transition: https://github.com/vuejs/vue-next/issues/681
   if (
     queue.length > 0 &&
     job.options &&
