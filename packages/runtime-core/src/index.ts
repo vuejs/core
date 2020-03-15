@@ -74,16 +74,14 @@ export { warn } from './warning'
 export {
   handleError,
   callWithErrorHandling,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  ErrorCodes
 } from './errorHandling'
 export {
   useTransitionState,
   resolveTransitionHooks,
   setTransitionHooks
 } from './components/BaseTransition'
-// export errorTypes to can be used with callWithErrorHandling
-export { LifecycleHooks } from './component'
-export { ErrorCodes } from './errorHandling'
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
