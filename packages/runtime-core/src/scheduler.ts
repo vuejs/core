@@ -29,13 +29,13 @@ export function queueJob(
     job.options.instance.vnode.transition
   ) {
     let parent = job.options.instance.parent
-    const queuedInstances = queue.map(
+    const queuedJobInstances = queue.map(
       job => job && job.options && job.options.instance
     )
     while (parent) {
       // If any queued effect has a corresponding instance that is parent
       // of this effect's instance, don't queue this effect
-      if (queuedInstances.includes(parent)) {
+      if (queuedJobInstances.includes(parent)) {
         return
       }
       parent = parent.parent
