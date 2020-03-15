@@ -20,13 +20,19 @@ export function queueJob(job: (() => void) & { options?: any }) {
   if (
     queue.length > 0 &&
     job.options &&
+    // avoid errors because instance is undefined in unit tests
     job.options.instance &&
+    // if this vnode is inside <transition>
     job.options.instance.vnode.transition
   ) {
     let parent = job.options.instance.parent
-    const parents = queue.map(job => job && job.options && job.options.instance)
+    const queuedInstances = queue.map(
+      job => job && job.options && job.options.instance
+    )
     while (parent) {
-      if (parents.includes(parent)) {
+      // If any queued effect has a corresponding instance that is parent
+      // of this effect's instance, don't queue this effect
+      if (queuedInstances.includes(parent)) {
         return
       }
       parent = parent.parent
