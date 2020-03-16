@@ -223,6 +223,15 @@ const normalizationMap = new WeakMap<
   NormalizedPropsOptions
 >()
 
+function validatePropName(key: string) {
+  if (key[0] !== '$') {
+    return true
+  } else if (__DEV__) {
+    warn(`Invalid prop name: "${key}" is a reserved property.`)
+  }
+  return false
+}
+
 function normalizePropsOptions(
   raw: ComponentPropsOptions | void
 ): NormalizedPropsOptions {
@@ -240,10 +249,8 @@ function normalizePropsOptions(
         warn(`props must be strings when using array syntax.`, raw[i])
       }
       const normalizedKey = camelize(raw[i])
-      if (normalizedKey[0] !== '$') {
+      if (validatePropName(normalizedKey)) {
         options[normalizedKey] = EMPTY_OBJ
-      } else if (__DEV__) {
-        warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
       }
     }
   } else {
@@ -252,7 +259,7 @@ function normalizePropsOptions(
     }
     for (const key in raw) {
       const normalizedKey = camelize(key)
-      if (normalizedKey[0] !== '$') {
+      if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         const prop: NormalizedProp = (options[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
@@ -267,8 +274,6 @@ function normalizePropsOptions(
             needCastKeys.push(normalizedKey)
           }
         }
-      } else if (__DEV__) {
-        warn(`Invalid prop name: "${normalizedKey}" is a reserved property.`)
       }
     }
   }
