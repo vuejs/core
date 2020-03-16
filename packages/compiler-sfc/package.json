@@ -33,6 +33,7 @@
     "@vue/shared": "3.0.0-alpha.8",
     "@vue/compiler-core": "3.0.0-alpha.8",
     "@vue/compiler-dom": "3.0.0-alpha.8",
+    "@vue/compiler-ssr": "3.0.0-alpha.8",
     "consolidate": "^0.15.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
