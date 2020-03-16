@@ -22,9 +22,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        // Note: string refs are compiled into [ctx, key] tuples by the compiler
-        // to ensure correct context.
-        return h('div', { ref: [this, 'refKey'] as any })
+        return h('div', { ref: 'refKey' })
       }
     }
     render(h(Comp), root)
@@ -45,7 +43,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return h('div', { ref: [this, refKey.value] as any })
+        return h('div', { ref: refKey.value })
       }
     }
     render(h(Comp), root)
@@ -70,7 +68,7 @@ describe('api: template refs', () => {
         }
       },
       render() {
-        return toggle.value ? h('div', { ref: [this, 'refKey'] as any }) : null
+        return toggle.value ? h('div', { ref: 'refKey' }) : null
       }
     }
     render(h(Comp), root)
@@ -177,5 +175,29 @@ describe('api: template refs', () => {
     toggle.value = false
     await nextTick()
     expect(el.value).toBe(null)
+  })
+
+  test('string ref inside slots', async () => {
+    const root = nodeOps.createElement('div')
+    const spy = jest.fn()
+    const Child = {
+      render(this: any) {
+        return this.$slots.default()
+      }
+    }
+
+    const Comp = {
+      render() {
+        return h(Child, () => {
+          return h('div', { ref: 'foo' })
+        })
+      },
+      mounted(this: any) {
+        spy(this.$refs.foo.tag)
+      }
+    }
+    render(h(Comp), root)
+
+    expect(spy).toHaveBeenCalledWith('div')
   })
 })

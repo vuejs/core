@@ -52,10 +52,17 @@ export type VNodeTypes =
   | typeof PortalImpl
   | typeof SuspenseImpl
 
+export type VNodeRef =
+  | string
+  | Ref
+  | ((ref: object | null, refs: Record<string, any>) => void)
+
+export type VNodeNormalizedRef = [ComponentInternalInstance, VNodeRef]
+
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
-  ref?: string | Ref | ((ref: object | null) => void)
+  ref?: VNodeRef
 
   // vnode hooks
   onVnodeBeforeMount?: (vnode: VNode) => void
@@ -95,7 +102,7 @@ export interface VNode<HostNode = any, HostElement = any> {
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
-  ref: string | Ref | ((ref: object | null) => void) | null
+  ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
   children: VNodeNormalizedChildren<HostNode, HostElement>
   component: ComponentInternalInstance | null
@@ -261,7 +268,10 @@ export function createVNode(
     type,
     props,
     key: props !== null && props.key !== undefined ? props.key : null,
-    ref: (props !== null && props.ref) || null,
+    ref:
+      props !== null && props.ref !== undefined
+        ? [currentRenderingInstance!, props.ref]
+        : null,
     scopeId: currentScopeId,
     children: null,
     component: null,

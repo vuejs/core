@@ -8,7 +8,8 @@ import {
   VNodeArrayChildren,
   createVNode,
   isSameVNodeType,
-  Static
+  Static,
+  VNodeNormalizedRef
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -30,8 +31,7 @@ import {
   isFunction,
   PatchFlags,
   ShapeFlags,
-  NOOP,
-  isArray
+  NOOP
 } from '@vue/shared'
 import {
   queueJob,
@@ -44,7 +44,6 @@ import {
   stop,
   ReactiveEffectOptions,
   isRef,
-  Ref,
   toRaw,
   DebuggerEvent
 } from '@vue/reactivity'
@@ -1789,21 +1788,22 @@ function baseCreateRenderer<
   }
 
   const setRef = (
-    ref: string | Function | Ref | [ComponentPublicInstance, string],
-    oldRef: string | Function | Ref | [ComponentPublicInstance, string] | null,
+    rawRef: VNodeNormalizedRef,
+    oldRawRef: VNodeNormalizedRef | null,
     parent: ComponentInternalInstance,
     value: HostNode | ComponentPublicInstance | null
   ) => {
-    if (isArray(ref)) {
-      // template string refs are compiled into tuples like [ctx, key] to
-      // ensure refs inside slots are set on the correct owner instance.
-      const [{ $: owner }, key] = ref
-      setRef(key, oldRef && (oldRef as any[])[1], owner, value)
+    const [owner, ref] = rawRef
+    if (__DEV__ && !owner) {
+      warn(
+        `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
+          `A vnode with ref must be created inside the render function.`
+      )
       return
     }
-
-    const refs = parent.refs === EMPTY_OBJ ? (parent.refs = {}) : parent.refs
-    const renderContext = toRaw(parent.renderContext)
+    const oldRef = oldRawRef && oldRawRef[1]
+    const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
+    const renderContext = toRaw(owner.renderContext)
 
     // unset old ref
     if (oldRef !== null && oldRef !== ref) {
@@ -1827,7 +1827,7 @@ function baseCreateRenderer<
     } else if (isRef(ref)) {
       ref.value = value
     } else if (isFunction(ref)) {
-      callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value])
+      callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value, refs])
     } else if (__DEV__) {
       warn('Invalid template ref type:', value, `(${typeof value})`)
     }
