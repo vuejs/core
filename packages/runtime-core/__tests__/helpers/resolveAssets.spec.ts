@@ -6,7 +6,7 @@ import {
   Component,
   Directive,
   resolveDynamicComponent,
-  getCurrentInstance
+  h
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -100,14 +100,23 @@ describe('resolveAssets', () => {
         baz: { render: () => 'baz' }
       }
       let foo, bar, baz // dynamic components
+
+      const Child = {
+        render(this: any) {
+          return this.$slots.default()
+        }
+      }
+
       const Root = {
         components: { foo: dynamicComponents.foo },
         setup() {
-          const instance = getCurrentInstance()!
           return () => {
-            foo = resolveDynamicComponent('foo', instance) // <component is="foo"/>
-            bar = resolveDynamicComponent(dynamicComponents.bar, instance) // <component :is="bar"/>, function
-            baz = resolveDynamicComponent(dynamicComponents.baz, instance) // <component :is="baz"/>, object
+            foo = resolveDynamicComponent('foo') // <component is="foo"/>
+            bar = resolveDynamicComponent(dynamicComponents.bar) // <component :is="bar"/>, function
+            return h(Child, () => {
+              // check inside child slots
+              baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
+            })
           }
         }
       }
