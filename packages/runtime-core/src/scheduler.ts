@@ -33,8 +33,9 @@ export function queueJob(
     )
     while (
       parent &&
-      typeof parent.vnode.type === 'object' &&
-      (parent.vnode.type as Component).name === 'BaseTransition'
+      (parent.vnode.transition ||
+        (typeof parent.vnode.type === 'object' &&
+          (parent.vnode.type as Component).name === 'BaseTransition'))
     ) {
       // If any queued effect has a corresponding instance that is parent
       // of this effect's instance, don't queue this effect
