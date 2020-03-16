@@ -8,11 +8,11 @@ import {
   ref,
   defineComponent
 } from 'vue'
-import { escapeHtml, mockError } from '@vue/shared'
+import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
-mockError()
+mockWarn()
 
 describe('ssr: renderToString', () => {
   test('should apply app context', async () => {

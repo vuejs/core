@@ -9,12 +9,12 @@ describe('ssr compile: suspense', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        _push(_ssrRenderSuspense({
-          default: (_push) => {
+        _ssrRenderSuspense(_push, {
+          default: () => {
             _push(_ssrRenderComponent(_component_foo, null, null, _parent))
           },
           _: 1
-        }))
+        })
       }"
     `)
   })
@@ -36,15 +36,15 @@ describe('ssr compile: suspense', () => {
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        _push(_ssrRenderSuspense({
-          default: (_push) => {
+        _ssrRenderSuspense(_push, {
+          default: () => {
             _push(_ssrRenderComponent(_component_foo, null, null, _parent))
           },
-          fallback: (_push) => {
+          fallback: () => {
             _push(\` loading... \`)
           },
           _: 1
-        }))
+        })
       }"
     `)
   })

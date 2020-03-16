@@ -38,7 +38,7 @@ export function ssrTransformSuspense(
       wipMap.set(node, wipEntry)
       wipEntry.slotsExp = buildSlots(node, context, (_props, children, loc) => {
         const fn = createFunctionExpression(
-          [`_push`],
+          [],
           undefined, // no return, assign body later
           true, // newline
           false, // suspense slots are not treated as normal slots
@@ -71,8 +71,9 @@ export function ssrProcessSuspense(
   }
   // _push(ssrRenderSuspense(slots))
   context.pushStatement(
-    createCallExpression(`_push`, [
-      createCallExpression(context.helper(SSR_RENDER_SUSPENSE), [slotsExp])
+    createCallExpression(context.helper(SSR_RENDER_SUSPENSE), [
+      `_push`,
+      slotsExp
     ])
   )
 }
