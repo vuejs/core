@@ -1,7 +1,8 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { isArray } from '@vue/shared'
+import { isArray, isObject } from '@vue/shared'
 import { ReactiveEffectOptions } from '@vue/reactivity'
 import { Component } from './component'
+import { BaseTransition } from './components/BaseTransition'
 
 const queue: (null | (Function & { options?: ReactiveEffectOptions }))[] = []
 const postFlushCbs: Function[] = []
@@ -31,15 +32,15 @@ export function queueJob(
     const queuedJobInstances = queue.map(
       job => job && job.options && job.options.instance
     )
-    while (
-      parent &&
-      (parent.vnode.transition ||
-        (typeof parent.vnode.type === 'object' &&
-          (parent.vnode.type as Component).name === 'BaseTransition'))
-    ) {
+    while (parent) {
       // If any queued effect has a corresponding instance that is parent
       // of this effect's instance, don't queue this effect
-      if (queuedJobInstances.includes(parent)) {
+      if (
+        parent.vnode.transition ||
+        (isObject(parent.vnode.type) &&
+          (parent.vnode.type as Component).name === BaseTransition.name &&
+          queuedJobInstances.includes(parent))
+      ) {
         return
       }
       parent = parent.parent
