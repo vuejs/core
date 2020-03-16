@@ -36,7 +36,7 @@ describe('ssr: components', () => {
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo, _ctx.$), { prop: \\"b\\" }, null, _parent))
+        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo), { prop: \\"b\\" }, null, _parent))
       }"
     `)
   })
