@@ -1,6 +1,7 @@
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { isArray } from '@vue/shared'
 import { ReactiveEffectOptions } from '@vue/reactivity'
+import { Component } from './component'
 
 const queue: (null | (Function & { options?: ReactiveEffectOptions }))[] = []
 const postFlushCbs: Function[] = []
@@ -24,9 +25,7 @@ export function queueJob(
     queue.length > 0 &&
     job.options &&
     // Instance is undefined in unit tests
-    job.options.instance &&
-    // If this vnode is inside <transition>
-    job.options.instance.vnode.transition
+    job.options.instance
   ) {
     let parent = job.options.instance.parent
     const queuedJobInstances = queue.map(
@@ -34,17 +33,8 @@ export function queueJob(
     )
     while (
       parent &&
-      /**
-       * early stop for performance reason, may cause issue in case:
-       * <transition>
-       *   <div :key="key0">
-       *     <transition>
-       *       <comp :key="key1"/>
-       *     </transition>
-       *   </div>
-       * </transition>
-       */
-      parent.vnode.transition
+      typeof parent.vnode.type === 'object' &&
+      (parent.vnode.type as Component).name === 'BaseTransition'
     ) {
       // If any queued effect has a corresponding instance that is parent
       // of this effect's instance, don't queue this effect
