@@ -814,8 +814,7 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'foo'
-            },
-            '$'
+            }
           ]
         }
       })

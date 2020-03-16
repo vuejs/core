@@ -23,16 +23,11 @@ export function resolveComponent(name: string): Component | undefined {
 }
 
 export function resolveDynamicComponent(
-  component: unknown,
-  // Dynamic component resolution has to be called inline due to potential
-  // access to scope variables. When called inside slots it will be inside
-  // a different component's render cycle, so the owner instance must be passed
-  // in explicitly.
-  instance: ComponentInternalInstance
+  component: unknown
 ): Component | undefined {
   if (!component) return
   if (isString(component)) {
-    return resolveAsset(COMPONENTS, component, instance)
+    return resolveAsset(COMPONENTS, component, currentRenderingInstance)
   } else if (isFunction(component) || isObject(component)) {
     return component
   }
@@ -46,13 +41,13 @@ export function resolveDirective(name: string): Directive | undefined {
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
-  instance?: ComponentInternalInstance
+  instance?: ComponentInternalInstance | null
 ): Component | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
   name: string,
-  instance?: ComponentInternalInstance
+  instance?: ComponentInternalInstance | null
 ): Directive | undefined
 
 function resolveAsset(

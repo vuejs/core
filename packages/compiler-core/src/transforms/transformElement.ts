@@ -215,11 +215,9 @@ export function resolveComponentType(
     }
     // dynamic <component :is="asdf" />
     else if (isProp.exp) {
-      return createCallExpression(
-        context.helper(RESOLVE_DYNAMIC_COMPONENT),
-        // _ctx.$ exposes the owner instance of current render function
-        [isProp.exp, context.prefixIdentifiers ? `_ctx.$` : `$`]
-      )
+      return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
+        isProp.exp
+      ])
     }
   }
 
