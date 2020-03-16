@@ -7,8 +7,8 @@ return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    [_ctx.one]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
-    [_ctx.two]: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)], _ctx),
+    [_ctx.one]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
+    [_ctx.two]: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)]),
     _: 1
   }, 1024 /* DYNAMIC_SLOTS */))
 }"
@@ -23,7 +23,7 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(() => [
       _createVNode(\\"div\\")
-    ], _ctx),
+    ]),
     _: 1
   }))
 }"
@@ -39,7 +39,7 @@ return function render(_ctx, _cache) {
     _renderList(_ctx.list, (name) => {
       return {
         name: name,
-        fn: _withCtx(() => [_toDisplayString(name)], _ctx)
+        fn: _withCtx(() => [_toDisplayString(name)])
       }
     })
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -56,7 +56,7 @@ return function render(_ctx, _cache) {
     (_ctx.ok)
       ? {
           name: \\"one\\",
-          fn: _withCtx((props) => [_toDisplayString(props)], _ctx)
+          fn: _withCtx((props) => [_toDisplayString(props)])
         }
       : undefined
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -76,16 +76,16 @@ return function render(_ctx, _cache) {
       ok
         ? {
             name: \\"one\\",
-            fn: _withCtx(() => [\\"foo\\"], _ctx)
+            fn: _withCtx(() => [\\"foo\\"])
           }
         : orNot
           ? {
               name: \\"two\\",
-              fn: _withCtx((props) => [\\"bar\\"], _ctx)
+              fn: _withCtx((props) => [\\"bar\\"])
             }
           : {
               name: \\"one\\",
-              fn: _withCtx(() => [\\"baz\\"], _ctx)
+              fn: _withCtx(() => [\\"baz\\"])
             }
     ]), 1024 /* DYNAMIC_SLOTS */))
   }
@@ -105,7 +105,7 @@ return function render(_ctx, _cache) {
       ok
         ? {
             name: \\"one\\",
-            fn: _withCtx(() => [\\"hello\\"], _ctx)
+            fn: _withCtx(() => [\\"hello\\"])
           }
         : undefined
     ]), 1024 /* DYNAMIC_SLOTS */))
@@ -120,8 +120,8 @@ return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    one: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
-    two: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)], _ctx),
+    one: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
+    two: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)]),
     _: 1
   }))
 }"
@@ -137,11 +137,11 @@ return function render(_ctx, _cache) {
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, {
-      one: _withCtx(() => [\\"foo\\"], _ctx),
+      one: _withCtx(() => [\\"foo\\"]),
       default: _withCtx(() => [
         \\"bar\\",
         _createVNode(\\"span\\")
-      ], _ctx),
+      ]),
       _: 1
     }))
   }
@@ -158,14 +158,14 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(({ foo }) => [
       _createVNode(_component_Inner, null, {
-        default: _withCtx(({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)], _ctx),
+        default: _withCtx(({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)]),
         _: 1
       }, 1024 /* DYNAMIC_SLOTS */),
       \\" \\",
       _toDisplayString(foo),
       _toDisplayString(_ctx.bar),
       _toDisplayString(_ctx.baz)
-    ], _ctx),
+    ]),
     _: 1
   }))
 }"
@@ -178,7 +178,7 @@ return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    default: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
+    default: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
     _: 1
   }))
 }"

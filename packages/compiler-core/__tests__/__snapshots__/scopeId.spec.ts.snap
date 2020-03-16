@@ -28,7 +28,7 @@ export const render = _withId(function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Child, null, {
     default: _withId(() => [
       _createVNode(\\"div\\")
-    ], _ctx),
+    ]),
     _: 1
   }))
 })"
@@ -47,7 +47,7 @@ export const render = _withId(function render(_ctx, _cache) {
           name: \\"foo\\",
           fn: _withId(() => [
             _createVNode(\\"div\\")
-          ], _ctx)
+          ])
         }
       : undefined,
     _renderList(_ctx.list, (i) => {
@@ -55,7 +55,7 @@ export const render = _withId(function render(_ctx, _cache) {
         name: i,
         fn: _withId(() => [
           _createVNode(\\"div\\")
-        ], _ctx)
+        ])
       }
     })
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -72,10 +72,10 @@ export const render = _withId(function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Child, null, {
     foo: _withId(({ msg }) => [
       _createTextVNode(_toDisplayString(msg), 1 /* TEXT */)
-    ], _ctx),
+    ]),
     bar: _withId(() => [
       _createVNode(\\"div\\")
-    ], _ctx),
+    ]),
     _: 1
   }))
 })"

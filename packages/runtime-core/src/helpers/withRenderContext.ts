@@ -1,13 +1,13 @@
 import { Slot } from '../componentSlots'
-import { ComponentInternalInstance } from '../component'
 import {
   setCurrentRenderingInstance,
   currentRenderingInstance
 } from '../componentRenderUtils'
+import { ComponentInternalInstance } from '../component'
 
 export function withCtx(
   fn: Slot,
-  ctx: ComponentInternalInstance | null | undefined
+  ctx: ComponentInternalInstance | null = currentRenderingInstance
 ) {
   if (!ctx) return fn
   return function renderFnWithContext() {

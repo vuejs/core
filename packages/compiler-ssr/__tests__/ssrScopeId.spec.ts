@@ -38,7 +38,7 @@ describe('ssr: scopeId', () => {
                 _createTextVNode(\\"foo\\")
               ]
             }
-          }, _ctx),
+          }),
           _: 1
         }, _parent))
       }"
@@ -66,7 +66,7 @@ describe('ssr: scopeId', () => {
                 _createVNode(\\"span\\", null, \\"hello\\")
               ]
             }
-          }, _ctx),
+          }),
           _: 1
         }, _parent))
       }"
@@ -99,7 +99,7 @@ describe('ssr: scopeId', () => {
                       _createVNode(\\"span\\")
                     ]
                   }
-                }, _ctx),
+                }),
                 _: 1
               }, _parent))
             } else {
@@ -108,12 +108,12 @@ describe('ssr: scopeId', () => {
                 _createVNode(_component_bar, null, {
                   default: _withCtx(() => [
                     _createVNode(\\"span\\")
-                  ], _ctx),
+                  ]),
                   _: 1
                 })
               ]
             }
-          }, _ctx),
+          }),
           _: 1
         }, _parent))
       }"

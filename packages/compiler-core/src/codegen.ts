@@ -49,7 +49,8 @@ import {
   WITH_DIRECTIVES,
   CREATE_BLOCK,
   OPEN_BLOCK,
-  CREATE_STATIC
+  CREATE_STATIC,
+  WITH_CTX
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -769,7 +770,7 @@ function genFunctionExpression(
   if (genScopeId) {
     push(`_withId(`)
   } else if (isSlot) {
-    push(`_withCtx(`)
+    push(`_${helperNameMap[WITH_CTX]}(`)
   }
   push(`(`, node)
   if (isArray(params)) {
@@ -799,7 +800,7 @@ function genFunctionExpression(
     push(`}`)
   }
   if (genScopeId || isSlot) {
-    push(`, _ctx)`)
+    push(`)`)
   }
 }
 

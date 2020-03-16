@@ -60,7 +60,7 @@ describe('ssr: components', () => {
                   _createVNode(\\"div\\")
                 ]
               }
-            }, _ctx),
+            }),
             _: 1
           }, _parent))
         }"
@@ -85,7 +85,7 @@ describe('ssr: components', () => {
                   _createTextVNode(_toDisplayString(msg + _ctx.outer), 1 /* TEXT */)
                 ]
               }
-            }, _ctx),
+            }),
             _: 1
           }, _parent))
         }"
@@ -114,7 +114,7 @@ describe('ssr: components', () => {
                   _createTextVNode(\\"foo\\")
                 ]
               }
-            }, _ctx),
+            }),
             named: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`bar\`)
@@ -123,7 +123,7 @@ describe('ssr: components', () => {
                   _createTextVNode(\\"bar\\")
                 ]
               }
-            }, _ctx),
+            }),
             _: 1
           }, _parent))
         }"
@@ -154,7 +154,7 @@ describe('ssr: components', () => {
                         _createTextVNode(\\"foo\\")
                       ]
                     }
-                  }, _ctx)
+                  })
                 }
               : undefined
           ]), _parent))
@@ -186,7 +186,7 @@ describe('ssr: components', () => {
                       _createTextVNode(_toDisplayString(msg + _ctx.key + _ctx.bar), 1 /* TEXT */)
                     ]
                   }
-                }, _ctx)
+                })
               }
             })
           ]), _parent))
@@ -238,7 +238,7 @@ describe('ssr: components', () => {
                     : _createCommentVNode(\\"v-if\\", true)
                 ]
               }
-            }, _ctx),
+            }),
             bar: _withCtx(({ ok }, _push, _parent, _scopeId) => {
               if (_push) {
                 if (ok) {
@@ -261,7 +261,7 @@ describe('ssr: components', () => {
                     : _createCommentVNode(\\"v-if\\", true)
                 ]
               }
-            }, _ctx),
+            }),
             _: 1
           }, _parent))
         }"
