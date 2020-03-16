@@ -105,7 +105,7 @@ export type RenderFunction = {
 }
 
 export interface ComponentInternalInstance {
-  type: FunctionalComponent | ComponentOptions
+  type: Component
   parent: ComponentInternalInstance | null
   appContext: AppContext
   root: ComponentInternalInstance
