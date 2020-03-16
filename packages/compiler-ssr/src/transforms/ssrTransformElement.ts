@@ -22,7 +22,8 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey
+  isBindKey,
+  createSequenceExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -107,16 +108,18 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               const tempId = `_temp${context.temps++}`
               const tempExp = createSimpleExpression(tempId, false)
               propsExp.arguments = [
-                createAssignmentExpression(tempExp, props),
-                createCallExpression(context.helper(MERGE_PROPS), [
-                  tempExp,
-                  createCallExpression(
-                    context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
-                    [
-                      tempExp, // existing props
-                      vModel.exp! // model
-                    ]
-                  )
+                createSequenceExpression([
+                  createAssignmentExpression(tempExp, props),
+                  createCallExpression(context.helper(MERGE_PROPS), [
+                    tempExp,
+                    createCallExpression(
+                      context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
+                      [
+                        tempExp, // existing props
+                        vModel.exp! // model
+                      ]
+                    )
+                  ])
                 ])
               ]
             }

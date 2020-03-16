@@ -118,7 +118,7 @@ describe('ssr: v-model', () => {
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_ssrRenderAttrs(_temp0 = _ctx.obj, _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs((_temp0 = _ctx.obj, _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo))))}>\`)
       }"
     `)
 
@@ -130,7 +130,7 @@ describe('ssr: v-model', () => {
       return function ssrRender(_ctx, _push, _parent) {
         let _temp0
 
-        _push(\`<input\${_ssrRenderAttrs(_temp0 = _mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo)))}>\`)
+        _push(\`<input\${_ssrRenderAttrs((_temp0 = _mergeProps({ id: \\"x\\" }, _ctx.obj, { class: \\"y\\" }), _mergeProps(_temp0, _ssrGetDynamicModelProps(_temp0, _ctx.foo))))}>\`)
       }"
     `)
   })

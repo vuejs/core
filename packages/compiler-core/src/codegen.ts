@@ -23,7 +23,8 @@ import {
   IfStatement,
   AssignmentExpression,
   ReturnStatement,
-  VNodeCall
+  VNodeCall,
+  SequenceExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
@@ -593,6 +594,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_ASSIGNMENT_EXPRESSION:
       !__BROWSER__ && genAssignmentExpression(node, context)
       break
+    case NodeTypes.JS_SEQUENCE_EXPRESSION:
+      !__BROWSER__ && genSequenceExpression(node, context)
+      break
     case NodeTypes.JS_RETURN_STATEMENT:
       !__BROWSER__ && genReturnStatement(node, context)
       break
@@ -912,6 +916,15 @@ function genAssignmentExpression(
   genNode(node.left, context)
   context.push(` = `)
   genNode(node.right, context)
+}
+
+function genSequenceExpression(
+  node: SequenceExpression,
+  context: CodegenContext
+) {
+  context.push(`(`)
+  genNodeList(node.expressions, context)
+  context.push(`)`)
 }
 
 function genReturnStatement(
