@@ -38,12 +38,12 @@ describe('vnode', () => {
     expect(vnode.props).toBe(null)
   })
 
-  test('valid vnode keys', () => {
-    let vnode
-    for (const key in ['', '1', -1, 0, 1, null]) {
-      vnode = createVNode('div', { key })
-      expect(vnode.key).toBe(key)
+  test('vnode keys', () => {
+    for (const key of ['', 'a', 0, 1, NaN]) {
+      expect(createVNode('div', { key }).key).toBe(key)
     }
+    expect(createVNode('div').key).toBe(null)
+    expect(createVNode('div', { key: undefined }).key).toBe(null)
   })
 
   test('create with class component', () => {
