@@ -25,19 +25,18 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
     case 'style':
       patchStyle(el, prevValue, nextValue)
       break
-    case 'modelValue':
-    case 'onUpdate:modelValue':
-      // Do nothing. This is handled by v-model directives.
-      break
     default:
       if (isOn(key)) {
-        patchEvent(
-          el,
-          key.slice(2).toLowerCase(),
-          prevValue,
-          nextValue,
-          parentComponent
-        )
+        // ignore v-model listeners
+        if (key.indexOf('onUpdate:') < 0) {
+          patchEvent(
+            el,
+            key.slice(2).toLowerCase(),
+            prevValue,
+            nextValue,
+            parentComponent
+          )
+        }
       } else if (!isSVG && key in el) {
         patchDOMProp(
           el,
