@@ -2,7 +2,7 @@ import { patchAttr, xlinkNS } from '../../src/modules/attrs'
 
 describe('attrs', () => {
   test('xlink attributes', () => {
-    const el = document.createElementNS(xlinkNS, 'use')
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
     patchAttr(el, 'xlink:href', 'a', true)
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
     patchAttr(el, 'xlink:href', null, true)
