@@ -12,7 +12,10 @@ import {
   Slots,
   createApp,
   ssrContextKey,
-  warn
+  warn,
+  DirectiveBinding,
+  VNodeProps,
+  mergeProps
 } from 'vue'
 import {
   ShapeFlags,
@@ -289,10 +292,12 @@ function renderElementVNode(
   parentComponent: ComponentInternalInstance
 ) {
   const tag = vnode.type as string
-  const { props, children, shapeFlag, scopeId } = vnode
+  let { props, children, shapeFlag, scopeId, dirs } = vnode
   let openTag = `<${tag}`
 
-  // TODO directives
+  if (dirs !== null) {
+    props = applySSRDirectives(vnode, props, dirs)
+  }
 
   if (props !== null) {
     openTag += ssrRenderAttrs(props, tag)
@@ -336,6 +341,25 @@ function renderElementVNode(
     }
     push(`</${tag}>`)
   }
+}
+
+function applySSRDirectives(
+  vnode: VNode,
+  rawProps: VNodeProps | null,
+  dirs: DirectiveBinding[]
+): VNodeProps {
+  const toMerge: VNodeProps[] = []
+  for (let i = 0; i < dirs.length; i++) {
+    const binding = dirs[i]
+    const {
+      dir: { getSSRProps }
+    } = binding
+    if (getSSRProps) {
+      const props = getSSRProps(binding, vnode)
+      if (props) toMerge.push(props)
+    }
+  }
+  return mergeProps(rawProps || {}, ...toMerge)
 }
 
 function renderPortalVNode(

@@ -40,6 +40,14 @@ export const vShow: ObjectDirective<VShowElement> = {
   }
 }
 
+if (__NODE_JS__) {
+  vShow.getSSRProps = ({ value }) => {
+    if (!value) {
+      return { style: { display: 'none' } }
+    }
+  }
+}
+
 function setDisplay(el: VShowElement, value: unknown): void {
   el.style.display = value ? el._vod : 'none'
 }

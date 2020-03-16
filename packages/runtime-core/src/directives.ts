@@ -14,7 +14,7 @@ return withDirectives(h(comp), [
 import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap, EMPTY_ARR } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance } from './component'
+import { ComponentInternalInstance, Data } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentProxy'
@@ -35,6 +35,11 @@ export type DirectiveHook<T = any> = (
   prevVNode: VNode<any, T> | null
 ) => void
 
+export type SSRDirectiveHook = (
+  binding: DirectiveBinding,
+  vnode: VNode
+) => Data | undefined
+
 export interface ObjectDirective<T = any> {
   beforeMount?: DirectiveHook<T>
   mounted?: DirectiveHook<T>
@@ -42,6 +47,7 @@ export interface ObjectDirective<T = any> {
   updated?: DirectiveHook<T>
   beforeUnmount?: DirectiveHook<T>
   unmounted?: DirectiveHook<T>
+  getSSRProps?: SSRDirectiveHook
 }
 
 export type FunctionDirective<T = any> = DirectiveHook<T>
@@ -81,7 +87,7 @@ const directiveToVnodeHooksMap = /*#__PURE__*/ [
       const prevBindings = prevVnode ? prevVnode.dirs! : EMPTY_ARR
       for (let i = 0; i < bindings.length; i++) {
         const binding = bindings[i]
-        const hook = binding.dir[key]
+        const hook = binding.dir[key] as DirectiveHook
         if (hook != null) {
           if (prevVnode != null) {
             binding.oldValue = prevBindings[i].value

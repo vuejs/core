@@ -218,7 +218,7 @@ function callModelHook(
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: keyof ObjectDirective
+  hook: 'beforeMount' | 'mounted' | 'beforeUpdate' | 'updated'
 ) {
   let modelToUse: ObjectDirective
   switch (el.tagName) {
@@ -242,4 +242,25 @@ function callModelHook(
   }
   const fn = modelToUse[hook]
   fn && fn(el, binding, vnode, prevVNode)
+}
+
+// SSR vnode transforms
+if (__NODE_JS__) {
+  vModelText.getSSRProps = ({ value }) => ({ value })
+
+  vModelRadio.getSSRProps = ({ value }, vnode) => {
+    if (vnode.props && looseEqual(vnode.props.value, value)) {
+      return { checked: true }
+    }
+  }
+
+  vModelCheckbox.getSSRProps = ({ value }, vnode) => {
+    if (isArray(value)) {
+      if (vnode.props && looseIndexOf(value, vnode.props.value) > -1) {
+        return { checked: true }
+      }
+    } else if (value) {
+      return { checked: true }
+    }
+  }
 }
