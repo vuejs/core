@@ -768,6 +768,8 @@ function genFunctionExpression(
 
   if (genScopeId) {
     push(`_withId(`)
+  } else if (isSlot) {
+    push(`_withCtx(`)
   }
   push(`(`, node)
   if (isArray(params)) {
@@ -796,8 +798,8 @@ function genFunctionExpression(
     deindent()
     push(`}`)
   }
-  if (genScopeId) {
-    push(`)`)
+  if (genScopeId || isSlot) {
+    push(`, _ctx)`)
   }
 }
 

@@ -1,36 +1,36 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler: transform component slots dynamically named slots 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    [_ctx.one]: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
-    [_ctx.two]: ({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)],
+    [_ctx.one]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
+    [_ctx.two]: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)], _ctx),
     _: 1
   }, 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 
 exports[`compiler: transform component slots implicit default slot 1`] = `
-"const { createVNode: _createVNode, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    default: () => [
+    default: _withCtx(() => [
       _createVNode(\\"div\\")
-    ],
+    ], _ctx),
     _: 1
   }))
 }"
 `;
 
 exports[`compiler: transform component slots named slot with v-for w/ prefixIdentifiers: true 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, renderList: _renderList, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -39,7 +39,7 @@ return function render(_ctx, _cache) {
     _renderList(_ctx.list, (name) => {
       return {
         name: name,
-        fn: () => [_toDisplayString(name)]
+        fn: _withCtx(() => [_toDisplayString(name)], _ctx)
       }
     })
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -47,7 +47,7 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots named slot with v-if + prefixIdentifiers: true 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
@@ -56,7 +56,7 @@ return function render(_ctx, _cache) {
     (_ctx.ok)
       ? {
           name: \\"one\\",
-          fn: (props) => [_toDisplayString(props)]
+          fn: _withCtx((props) => [_toDisplayString(props)], _ctx)
         }
       : undefined
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -68,7 +68,7 @@ exports[`compiler: transform component slots named slot with v-if + v-else-if + 
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -76,16 +76,16 @@ return function render(_ctx, _cache) {
       ok
         ? {
             name: \\"one\\",
-            fn: () => [\\"foo\\"]
+            fn: _withCtx(() => [\\"foo\\"], _ctx)
           }
         : orNot
           ? {
               name: \\"two\\",
-              fn: (props) => [\\"bar\\"]
+              fn: _withCtx((props) => [\\"bar\\"], _ctx)
             }
           : {
               name: \\"one\\",
-              fn: () => [\\"baz\\"]
+              fn: _withCtx(() => [\\"baz\\"], _ctx)
             }
     ]), 1024 /* DYNAMIC_SLOTS */))
   }
@@ -97,7 +97,7 @@ exports[`compiler: transform component slots named slot with v-if 1`] = `
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { resolveComponent: _resolveComponent, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
@@ -105,7 +105,7 @@ return function render(_ctx, _cache) {
       ok
         ? {
             name: \\"one\\",
-            fn: () => [\\"hello\\"]
+            fn: _withCtx(() => [\\"hello\\"], _ctx)
           }
         : undefined
     ]), 1024 /* DYNAMIC_SLOTS */))
@@ -114,14 +114,14 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots named slots 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    one: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
-    two: ({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)],
+    one: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
+    two: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)], _ctx),
     _: 1
   }))
 }"
@@ -132,16 +132,16 @@ exports[`compiler: transform component slots named slots w/ implicit default slo
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, resolveComponent: _resolveComponent, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
     return (_openBlock(), _createBlock(_component_Comp, null, {
-      one: () => [\\"foo\\"],
-      default: () => [
+      one: _withCtx(() => [\\"foo\\"], _ctx),
+      default: _withCtx(() => [
         \\"bar\\",
         _createVNode(\\"span\\")
-      ],
+      ], _ctx),
       _: 1
     }))
   }
@@ -149,36 +149,36 @@ return function render(_ctx, _cache) {
 `;
 
 exports[`compiler: transform component slots nested slots scoping 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Inner = _resolveComponent(\\"Inner\\")
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    default: ({ foo }) => [
+    default: _withCtx(({ foo }) => [
       _createVNode(_component_Inner, null, {
-        default: ({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)],
+        default: _withCtx(({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)], _ctx),
         _: 1
       }, 1024 /* DYNAMIC_SLOTS */),
       \\" \\",
       _toDisplayString(foo),
       _toDisplayString(_ctx.bar),
       _toDisplayString(_ctx.baz)
-    ],
+    ], _ctx),
     _: 1
   }))
 }"
 `;
 
 exports[`compiler: transform component slots on-component default slot 1`] = `
-"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
+"const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    default: ({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)],
+    default: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)], _ctx),
     _: 1
   }))
 }"

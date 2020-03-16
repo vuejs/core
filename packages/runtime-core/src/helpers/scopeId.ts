@@ -2,6 +2,9 @@
 // These are only used in esm-bundler builds, but since exports cannot be
 // conditional, we can only drop inner implementations in non-bundler builds.
 
+import { ComponentInternalInstance } from '../component'
+import { withCtx } from './withRenderContext'
+
 export let currentScopeId: string | null = null
 const scopeIdStack: string[] = []
 
@@ -20,13 +23,14 @@ export function popScopeId() {
 
 export function withScopeId(id: string): <T extends Function>(fn: T) => T {
   if (__BUNDLER__) {
-    return ((fn: Function) => {
-      return function(this: any) {
+    return ((fn: Function, ctx?: ComponentInternalInstance) => {
+      function renderWithId(this: any) {
         pushScopeId(id)
         const res = fn.apply(this, arguments)
         popScopeId()
         return res
       }
+      return ctx ? withCtx(renderWithId, ctx) : renderWithId
     }) as any
   } else {
     return undefined as any

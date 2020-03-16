@@ -19,7 +19,7 @@ export const render = _withId(function render(_ctx, _cache) {
 `;
 
 exports[`scopeId compiler support should wrap default slot 1`] = `
-"import { createVNode as _createVNode, resolveComponent as _resolveComponent, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createVNode as _createVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = _withScopeId(\\"test\\")
 
 export const render = _withId(function render(_ctx, _cache) {
@@ -28,14 +28,14 @@ export const render = _withId(function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Child, null, {
     default: _withId(() => [
       _createVNode(\\"div\\")
-    ]),
+    ], _ctx),
     _: 1
   }))
 })"
 `;
 
 exports[`scopeId compiler support should wrap dynamic slots 1`] = `
-"import { createVNode as _createVNode, resolveComponent as _resolveComponent, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { createVNode as _createVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = _withScopeId(\\"test\\")
 
 export const render = _withId(function render(_ctx, _cache) {
@@ -47,7 +47,7 @@ export const render = _withId(function render(_ctx, _cache) {
           name: \\"foo\\",
           fn: _withId(() => [
             _createVNode(\\"div\\")
-          ])
+          ], _ctx)
         }
       : undefined,
     _renderList(_ctx.list, (i) => {
@@ -55,7 +55,7 @@ export const render = _withId(function render(_ctx, _cache) {
         name: i,
         fn: _withId(() => [
           _createVNode(\\"div\\")
-        ])
+        ], _ctx)
       }
     })
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -63,7 +63,7 @@ export const render = _withId(function render(_ctx, _cache) {
 `;
 
 exports[`scopeId compiler support should wrap named slots 1`] = `
-"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createVNode as _createVNode, resolveComponent as _resolveComponent, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
+"import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createVNode as _createVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock, withScopeId as _withScopeId } from \\"vue\\"
 const _withId = _withScopeId(\\"test\\")
 
 export const render = _withId(function render(_ctx, _cache) {
@@ -72,10 +72,10 @@ export const render = _withId(function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Child, null, {
     foo: _withId(({ msg }) => [
       _createTextVNode(_toDisplayString(msg), 1 /* TEXT */)
-    ]),
+    ], _ctx),
     bar: _withId(() => [
       _createVNode(\\"div\\")
-    ]),
+    ], _ctx),
     _: 1
   }))
 })"

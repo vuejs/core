@@ -85,6 +85,7 @@ export {
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
+export { withCtx } from './helpers/withRenderContext'
 export { withDirectives } from './directives'
 export {
   resolveComponent,

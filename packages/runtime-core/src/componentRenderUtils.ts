@@ -18,7 +18,6 @@ import { warn } from './warning'
 // resolveComponent, resolveDirective) during render
 export let currentRenderingInstance: ComponentInternalInstance | null = null
 
-// exposed for server-renderer only
 export function setCurrentRenderingInstance(
   instance: ComponentInternalInstance | null
 ) {

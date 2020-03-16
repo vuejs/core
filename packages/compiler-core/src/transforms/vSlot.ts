@@ -25,7 +25,7 @@ import {
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
-import { CREATE_SLOTS, RENDER_LIST } from '../runtimeHelpers'
+import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
 
 const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
@@ -119,6 +119,8 @@ export function buildSlots(
   slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
+  context.helper(WITH_CTX)
+
   const { children, loc } = node
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
