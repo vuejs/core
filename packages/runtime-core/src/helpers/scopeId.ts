@@ -24,13 +24,12 @@ export function popScopeId() {
 export function withScopeId(id: string): <T extends Function>(fn: T) => T {
   if (__BUNDLER__) {
     return ((fn: Function, ctx?: ComponentInternalInstance) => {
-      function renderWithId(this: any) {
+      return withCtx(function(this: any) {
         pushScopeId(id)
         const res = fn.apply(this, arguments)
         popScopeId()
         return res
-      }
-      return ctx ? withCtx(renderWithId, ctx) : renderWithId
+      }, ctx)
     }) as any
   } else {
     return undefined as any

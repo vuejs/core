@@ -5,7 +5,11 @@ import {
   currentRenderingInstance
 } from '../componentRenderUtils'
 
-export function withCtx(fn: Slot, ctx: ComponentInternalInstance) {
+export function withCtx(
+  fn: Slot,
+  ctx: ComponentInternalInstance | null | undefined
+) {
+  if (!ctx) return fn
   return function renderFnWithContext() {
     const owner = currentRenderingInstance
     setCurrentRenderingInstance(ctx)

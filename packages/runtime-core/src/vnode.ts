@@ -30,6 +30,7 @@ import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
 import { PortalImpl, isPortal } from './components/Portal'
+import { currentRenderingInstance } from './componentRenderUtils'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -387,8 +388,11 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
     type = ShapeFlags.SLOTS_CHILDREN
+    if (!(children as RawSlots)._) {
+      ;(children as RawSlots)._ctx = currentRenderingInstance
+    }
   } else if (isFunction(children)) {
-    children = { default: children }
+    children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
     children = String(children)

@@ -8,6 +8,7 @@ import {
 import { isArray, isFunction, EMPTY_OBJ, ShapeFlags } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
+import { withCtx } from './helpers/withRenderContext'
 
 export type Slot = (...args: any[]) => VNode[]
 
@@ -21,6 +22,9 @@ export type RawSlots = {
   [name: string]: unknown
   // manual render fn hint to skip forced children updates
   $stable?: boolean
+  // internal, for tracking slot owner instance. This is attached during
+  // normalizeChildren when the component vnode is created.
+  _ctx?: ComponentInternalInstance | null
   // internal, indicates compiler generated slots = can skip normalization
   _?: 1
 }
@@ -30,18 +34,21 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
     ? value.map(normalizeVNode)
     : [normalizeVNode(value as VNodeChild)]
 
-const normalizeSlot = (key: string, rawSlot: Function): Slot => (
-  props: any
-) => {
-  if (__DEV__ && currentInstance != null) {
-    warn(
-      `Slot "${key}" invoked outside of the render function: ` +
-        `this will not track dependencies used in the slot. ` +
-        `Invoke the slot function inside the render function instead.`
-    )
-  }
-  return normalizeSlotValue(rawSlot(props))
-}
+const normalizeSlot = (
+  key: string,
+  rawSlot: Function,
+  ctx: ComponentInternalInstance | null | undefined
+): Slot =>
+  withCtx((props: any) => {
+    if (__DEV__ && currentInstance != null) {
+      warn(
+        `Slot "${key}" invoked outside of the render function: ` +
+          `this will not track dependencies used in the slot. ` +
+          `Invoke the slot function inside the render function instead.`
+      )
+    }
+    return normalizeSlotValue(rawSlot(props))
+  }, ctx)
 
 export function resolveSlots(
   instance: ComponentInternalInstance,
@@ -55,11 +62,12 @@ export function resolveSlots(
       slots = children as Slots
     } else {
       slots = {}
+      const ctx = rawSlots._ctx
       for (const key in rawSlots) {
-        if (key === '$stable') continue
+        if (key === '$stable' || key === '_ctx') continue
         const value = rawSlots[key]
         if (isFunction(value)) {
-          slots[key] = normalizeSlot(key, value)
+          slots[key] = normalizeSlot(key, value, ctx)
         } else if (value != null) {
           if (__DEV__) {
             warn(

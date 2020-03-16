@@ -494,6 +494,9 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
       if (__DEV__) {
         markAttrsAccessed()
       }
+      // if the user pass the slots proxy to h(), normalizeChildren should not
+      // attempt to attach ctx to the object
+      if (key === '_') return 1
       return instance[type][key]
     },
     has: (instance, key) => key === SetupProxySymbol || key in instance[type],
