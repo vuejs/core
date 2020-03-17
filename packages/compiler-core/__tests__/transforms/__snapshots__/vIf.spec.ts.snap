@@ -26,7 +26,7 @@ return function render(_ctx, _cache) {
           _createVNode(\\"div\\"),
           \\"hello\\",
           _createVNode(\\"p\\")
-        ]))
+        ], 64 /* STABLE_FRAGMENT */))
       : _createCommentVNode(\\"v-if\\", true)
   }
 }"
@@ -71,7 +71,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(), _createBlock(\\"div\\", { key: 0 }))
       : orNot
         ? (_openBlock(), _createBlock(\\"p\\", { key: 1 }))
-        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [\\"fine\\"]))
+        : (_openBlock(), _createBlock(_Fragment, { key: 2 }, [\\"fine\\"], 64 /* STABLE_FRAGMENT */))
   }
 }"
 `;

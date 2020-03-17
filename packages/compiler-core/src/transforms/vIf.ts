@@ -29,6 +29,7 @@ import {
   OPEN_BLOCK
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -197,7 +198,9 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        undefined,
+        `${PatchFlags.STABLE_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+        } */`,
         undefined,
         undefined,
         true,
