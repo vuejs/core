@@ -156,7 +156,6 @@ export function resolveProps(
       const key = needCastKeys[i]
       let opt = options[key]
       if (opt == null) continue
-      const isAbsent = !hasOwn(props, key)
       const hasDefault = hasOwn(opt, 'default')
       const currentValue = props[key]
       // default values
@@ -166,7 +165,7 @@ export function resolveProps(
       }
       // boolean casting
       if (opt[BooleanFlags.shouldCast]) {
-        if (isAbsent && !hasDefault) {
+        if (!hasOwn(props, key) && !hasDefault) {
           setProp(key, false)
         } else if (
           opt[BooleanFlags.shouldCastTrue] &&
@@ -181,13 +180,7 @@ export function resolveProps(
       for (const key in options) {
         let opt = options[key]
         if (opt == null) continue
-        let rawValue
-        if (!(key in rawProps) && hyphenate(key) in rawProps) {
-          rawValue = rawProps[hyphenate(key)]
-        } else {
-          rawValue = rawProps[key]
-        }
-        validateProp(key, toRaw(rawValue), opt, !hasOwn(props, key))
+        validateProp(key, props[key], opt, !hasOwn(props, key))
       }
     }
   } else {

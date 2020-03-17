@@ -6,11 +6,8 @@ import {
   nextTick,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('renderer: component', () => {
-  mockWarn()
-
   test.todo('should work')
 
   test.todo('shouldUpdateComponent')
@@ -43,7 +40,6 @@ describe('renderer: component', () => {
       expect(b1).toBe(true)
       expect(b2).toBe(true)
       expect(b3).toBe('')
-      expect('type check failed for prop "b1"').toHaveBeenWarned()
     })
   })
 
