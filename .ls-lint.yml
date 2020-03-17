@@ -1,0 +1,39 @@
+ls:
+  .js: kebab-case
+  .ts: camelCase
+  .d.ts: kebab-case
+  .mock.ts: kebab-case
+  .spec.ts: camelCase
+  .test-d.ts: kebab-case
+  .config.js: kebab-case
+  .umd.js: kebab-case
+  .spec.ts.snap: camelCase
+
+  scripts:
+    .js: camelCase
+
+  packages/reactivity/__tests__/collections:
+    .spec.ts: PascalCase
+
+  packages/runtime-core/src/components:
+    .ts: PascalCase
+
+  packages/runtime-dom/src/components:
+    .ts: PascalCase
+
+  packages/runtime-core/__tests__/components:
+    .spec.ts: PascalCase
+
+  packages/vue/examples/__tests__:
+    .ts: regex:[a-zA-Z0-9]+
+    .spec.ts: camelCase
+    .mock.ts: kebab-case
+
+ignore:
+  - packages/compiler-ssr
+  - packages/server-renderer
+  - node_modules
+  - .git
+  - .circleci
+  - .github
+  - .vscode
