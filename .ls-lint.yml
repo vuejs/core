@@ -32,6 +32,7 @@ ls:
 ignore:
   - packages/compiler-ssr
   - packages/server-renderer
+  - packages/vue/dist
   - node_modules
   - .git
   - .circleci
