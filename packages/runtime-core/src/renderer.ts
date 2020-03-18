@@ -1152,6 +1152,7 @@ function baseCreateRenderer<
         const nextTree = renderComponentRoot(instance)
         const prevTree = instance.subTree
         instance.subTree = nextTree
+        next.el = vnode.el
         // beforeUpdate hook
         if (bu !== null) {
           invokeHooks(bu)
@@ -1673,36 +1674,40 @@ function baseCreateRenderer<
       setRef(ref, null, parentComponent, null)
     }
 
+    if ((vnodeHook = props && props.onVnodeBeforeUnmount) != null) {
+      invokeVNodeHook(vnodeHook, parentComponent, vnode)
+    }
+
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
         ;(parentComponent!.sink as KeepAliveSink).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
       }
-      return
-    }
+    } else {
+      if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+        vnode.suspense!.unmount(parentSuspense, doRemove)
+        return
+      }
 
-    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
-      vnode.suspense!.unmount(parentSuspense, doRemove)
-      return
-    }
+      if (shouldInvokeDirs) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
+      }
 
-    if ((vnodeHook = props && props.onVnodeBeforeUnmount) != null) {
-      invokeVNodeHook(vnodeHook, parentComponent, vnode)
-    }
-    if (shouldInvokeDirs) {
-      invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
-    }
+      if (dynamicChildren != null) {
+        // fast path for block nodes: only need to unmount dynamic children.
+        unmountChildren(dynamicChildren, parentComponent, parentSuspense)
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        unmountChildren(
+          children as HostVNode[],
+          parentComponent,
+          parentSuspense
+        )
+      }
 
-    if (dynamicChildren != null) {
-      // fast path for block nodes: only need to unmount dynamic children.
-      unmountChildren(dynamicChildren, parentComponent, parentSuspense)
-    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      unmountChildren(children as HostVNode[], parentComponent, parentSuspense)
-    }
-
-    if (doRemove) {
-      remove(vnode)
+      if (doRemove) {
+        remove(vnode)
+      }
     }
 
     if (
