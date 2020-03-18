@@ -45,7 +45,6 @@ export function renderComponentRoot(
     props,
     slots,
     attrs,
-    vnodeHooks,
     emit,
     renderCache
   } = instance
@@ -104,10 +103,6 @@ export function renderComponentRoot(
       }
     }
 
-    // inherit vnode hooks
-    if (vnodeHooks !== EMPTY_OBJ) {
-      result = cloneVNode(result, vnodeHooks)
-    }
     // inherit scopeId
     const parentScopeId = parent && parent.type.__scopeId
     if (parentScopeId) {

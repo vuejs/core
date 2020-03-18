@@ -106,7 +106,6 @@ export function resolveProps(
   const { 0: options, 1: needCastKeys } = normalizePropsOptions(_options)!
   const props: Data = {}
   let attrs: Data | undefined = undefined
-  let vnodeHooks: Data | undefined = undefined
 
   // update the instance propsProxy (passed to setup()) to trigger potential
   // changes
@@ -128,10 +127,6 @@ export function resolveProps(
       const value = rawProps[key]
       // key, ref are reserved and never passed down
       if (isReservedProp(key)) {
-        if (key !== 'key' && key !== 'ref') {
-          // vnode hooks.
-          ;(vnodeHooks || (vnodeHooks = {}))[key] = value
-        }
         continue
       }
       // prop option names are camelized during normalization, so to support
@@ -208,7 +203,6 @@ export function resolveProps(
 
   instance.props = props
   instance.attrs = attrs || EMPTY_OBJ
-  instance.vnodeHooks = vnodeHooks || EMPTY_OBJ
 }
 
 const normalizationMap = new WeakMap<

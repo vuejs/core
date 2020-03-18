@@ -1,4 +1,12 @@
-import { VNode, normalizeVNode, Text, Comment, Static, Fragment } from './vnode'
+import {
+  VNode,
+  normalizeVNode,
+  Text,
+  Comment,
+  Static,
+  Fragment,
+  VNodeHook
+} from './vnode'
 import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
@@ -10,7 +18,7 @@ import {
   isOn,
   isString
 } from '@vue/shared'
-import { RendererInternals } from './renderer'
+import { RendererInternals, invokeVNodeHook } from './renderer'
 import {
   SuspenseImpl,
   SuspenseBoundary,
@@ -192,7 +200,7 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || vnode.dynamicChildren !== null
-    const { props, patchFlag, shapeFlag } = vnode
+    const { props, patchFlag, shapeFlag, dirs } = vnode
     // skip props & children if this is hoisted static nodes
     if (patchFlag !== PatchFlags.HOISTED) {
       // props
@@ -212,16 +220,23 @@ export function createHydrationFunctions(
           // iterating through props.
           patchProp(el, 'onClick', null, props.onClick)
         }
-        // vnode hooks
-        const { onVnodeBeforeMount, onVnodeMounted } = props
-        if (onVnodeBeforeMount != null) {
-          invokeDirectiveHook(onVnodeBeforeMount, parentComponent, vnode)
-        }
-        if (onVnodeMounted != null) {
-          queueEffectWithSuspense(() => {
-            invokeDirectiveHook(onVnodeMounted, parentComponent, vnode)
-          }, parentSuspense)
-        }
+      }
+      // vnode / directive hooks
+      let vnodeHooks: VNodeHook | null | undefined
+      if ((vnodeHooks = props && props.onVnodeBeforeMount) != null) {
+        invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+      }
+      if (dirs != null) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
+      }
+      if (
+        (vnodeHooks = props && props.onVnodeMounted) != null ||
+        dirs != null
+      ) {
+        queueEffectWithSuspense(() => {
+          vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        }, parentSuspense)
       }
       // children
       if (
