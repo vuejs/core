@@ -1,6 +1,7 @@
 import {
   ObjectDirective,
   VNode,
+  DirectiveHook,
   DirectiveBinding,
   warn
 } from '@vue/runtime-core'
@@ -240,7 +241,7 @@ function callModelHook(
           modelToUse = vModelText
       }
   }
-  const fn = modelToUse[hook]
+  const fn = modelToUse[hook] as DirectiveHook
   fn && fn(el, binding, vnode, prevVNode)
 }
 

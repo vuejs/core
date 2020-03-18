@@ -28,11 +28,11 @@ export interface DirectiveBinding {
   dir: ObjectDirective
 }
 
-export type DirectiveHook<T = any> = (
+export type DirectiveHook<T = any, Prev = VNode<any, T> | null> = (
   el: T,
   binding: DirectiveBinding,
   vnode: VNode<any, T>,
-  prevVNode: VNode<any, T> | null
+  prevVNode: Prev
 ) => void
 
 export type SSRDirectiveHook = (
@@ -41,12 +41,12 @@ export type SSRDirectiveHook = (
 ) => Data | undefined
 
 export interface ObjectDirective<T = any> {
-  beforeMount?: DirectiveHook<T>
-  mounted?: DirectiveHook<T>
-  beforeUpdate?: DirectiveHook<T>
-  updated?: DirectiveHook<T>
-  beforeUnmount?: DirectiveHook<T>
-  unmounted?: DirectiveHook<T>
+  beforeMount?: DirectiveHook<T, null>
+  mounted?: DirectiveHook<T, null>
+  beforeUpdate?: DirectiveHook<T, VNode<any, T>>
+  updated?: DirectiveHook<T, VNode<any, T>>
+  beforeUnmount?: DirectiveHook<T, null>
+  unmounted?: DirectiveHook<T, null>
   getSSRProps?: SSRDirectiveHook
 }
 
