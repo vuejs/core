@@ -212,7 +212,10 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+    if (
+      vnodeCall.type === NodeTypes.VNODE_CALL &&
+      (firstChild as ElementNode).tagType !== ElementTypes.COMPONENT
+    ) {
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
       helper(CREATE_BLOCK)
