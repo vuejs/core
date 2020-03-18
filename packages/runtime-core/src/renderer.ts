@@ -9,7 +9,8 @@ import {
   createVNode,
   isSameVNodeType,
   Static,
-  VNodeNormalizedRef
+  VNodeNormalizedRef,
+  VNodeHook
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -524,6 +525,7 @@ function baseCreateRenderer<
     optimized: boolean
   ) => {
     let el: HostElement
+    let vnodeHook: VNodeHook | undefined | null
     const { type, props, shapeFlag, transition, scopeId, patchFlag } = vnode
     if (
       vnode.el !== null &&
@@ -543,8 +545,8 @@ function baseCreateRenderer<
             hostPatchProp(el, key, null, props[key], isSVG)
           }
         }
-        if (props.onVnodeBeforeMount != null) {
-          invokeDirectiveHook(props.onVnodeBeforeMount, parentComponent, vnode)
+        if ((vnodeHook = props.onVnodeBeforeMount) != null) {
+          invokeDirectiveHook(vnodeHook, parentComponent, vnode)
         }
       }
 
@@ -581,14 +583,12 @@ function baseCreateRenderer<
     }
 
     hostInsert(el, container, anchor)
-    const vnodeMountedHook = props && props.onVnodeMounted
     if (
-      vnodeMountedHook != null ||
+      (vnodeHook = props && props.onVnodeMounted) != null ||
       (transition != null && !transition.persisted)
     ) {
       queuePostRenderEffect(() => {
-        vnodeMountedHook &&
-          invokeDirectiveHook(vnodeMountedHook, parentComponent, vnode)
+        vnodeHook && invokeDirectiveHook(vnodeHook, parentComponent, vnode)
         transition && !transition.persisted && transition.enter(el)
       }, parentSuspense)
     }
@@ -633,9 +633,10 @@ function baseCreateRenderer<
     let { patchFlag, dynamicChildren } = n2
     const oldProps = (n1 && n1.props) || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
+    let vnodeHook: VNodeHook | undefined | null
 
-    if (newProps.onVnodeBeforeUpdate != null) {
-      invokeDirectiveHook(newProps.onVnodeBeforeUpdate, parentComponent, n2, n1)
+    if ((vnodeHook = newProps.onVnodeBeforeUpdate) != null) {
+      invokeDirectiveHook(vnodeHook, parentComponent, n2, n1)
     }
 
     if (__HMR__ && parentComponent && parentComponent.renderUpdated) {
@@ -749,9 +750,9 @@ function baseCreateRenderer<
       )
     }
 
-    if (newProps.onVnodeUpdated != null) {
+    if ((vnodeHook = newProps.onVnodeUpdated) != null) {
       queuePostRenderEffect(() => {
-        invokeDirectiveHook(newProps.onVnodeUpdated, parentComponent, n2, n1)
+        invokeDirectiveHook(vnodeHook!, parentComponent, n2, n1)
       }, parentSuspense)
     }
   }
@@ -1617,6 +1618,7 @@ function baseCreateRenderer<
     doRemove = false
   ) => {
     const { props, ref, children, dynamicChildren, shapeFlag } = vnode
+    let vnodeHook: VNodeHook | undefined | null
 
     // unset ref
     if (ref !== null && parentComponent !== null) {
@@ -1637,8 +1639,8 @@ function baseCreateRenderer<
       return
     }
 
-    if (props != null && props.onVnodeBeforeUnmount != null) {
-      invokeDirectiveHook(props.onVnodeBeforeUnmount, parentComponent, vnode)
+    if ((vnodeHook = props && props.onVnodeBeforeUnmount) != null) {
+      invokeDirectiveHook(vnodeHook, parentComponent, vnode)
     }
 
     if (dynamicChildren != null) {
@@ -1652,9 +1654,9 @@ function baseCreateRenderer<
       remove(vnode)
     }
 
-    if (props != null && props.onVnodeUnmounted != null) {
+    if ((vnodeHook = props && props.onVnodeUnmounted) != null) {
       queuePostRenderEffect(() => {
-        invokeDirectiveHook(props.onVnodeUnmounted!, parentComponent, vnode)
+        invokeDirectiveHook(vnodeHook!, parentComponent, vnode)
       }, parentSuspense)
     }
   }

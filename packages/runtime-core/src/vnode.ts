@@ -59,18 +59,22 @@ export type VNodeRef =
 
 export type VNodeNormalizedRef = [ComponentInternalInstance, VNodeRef]
 
+type VNodeMountHook = (vnode: VNode) => void
+type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
+export type VNodeHook = VNodeMountHook | VNodeUpdateHook
+
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
   ref?: VNodeRef
 
   // vnode hooks
-  onVnodeBeforeMount?: (vnode: VNode) => void
-  onVnodeMounted?: (vnode: VNode) => void
-  onVnodeBeforeUpdate?: (vnode: VNode, oldVNode: VNode) => void
-  onVnodeUpdated?: (vnode: VNode, oldVNode: VNode) => void
-  onVnodeBeforeUnmount?: (vnode: VNode) => void
-  onVnodeUnmounted?: (vnode: VNode) => void
+  onVnodeBeforeMount?: VNodeMountHook
+  onVnodeMounted?: VNodeMountHook
+  onVnodeBeforeUpdate?: VNodeUpdateHook
+  onVnodeUpdated?: VNodeUpdateHook
+  onVnodeBeforeUnmount?: VNodeMountHook
+  onVnodeUnmounted?: VNodeMountHook
 }
 
 type VNodeChildAtom<HostNode, HostElement> =

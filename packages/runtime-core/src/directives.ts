@@ -11,7 +11,7 @@ return withDirectives(h(comp), [
 ])
 */
 
-import { VNode } from './vnode'
+import { VNode, VNodeHook } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap, EMPTY_ARR } from '@vue/shared'
 import { warn } from './warning'
 import { ComponentInternalInstance, Data } from './component'
@@ -154,7 +154,7 @@ export function withDirectives<T extends VNode>(
 }
 
 export function invokeDirectiveHook(
-  hook: ((...args: any[]) => any) | ((...args: any[]) => any)[],
+  hook: VNodeHook | VNodeHook[],
   instance: ComponentInternalInstance | null,
   vnode: VNode,
   prevVNode: VNode | null = null
