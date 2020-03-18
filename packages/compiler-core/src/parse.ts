@@ -545,7 +545,7 @@ function parseAttribute(
   {
     const pattern = /["'<]/g
     let m: RegExpExecArray | null
-    while ((m = pattern.exec(name)) !== null) {
+    while ((m = pattern.exec(name))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
@@ -696,7 +696,7 @@ function parseAttributeValue(
     }
     const unexpectedChars = /["'<=`]/g
     let m: RegExpExecArray | null
-    while ((m = unexpectedChars.exec(match[0])) !== null) {
+    while ((m = unexpectedChars.exec(match[0]))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,

@@ -199,12 +199,12 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean
   ) => {
-    optimized = optimized || vnode.dynamicChildren !== null
+    optimized = optimized || !!vnode.dynamicChildren
     const { props, patchFlag, shapeFlag, dirs } = vnode
     // skip props & children if this is hoisted static nodes
     if (patchFlag !== PatchFlags.HOISTED) {
       // props
-      if (props !== null) {
+      if (props) {
         if (
           !optimized ||
           (patchFlag & PatchFlags.FULL_PROPS ||
@@ -215,7 +215,7 @@ export function createHydrationFunctions(
               patchProp(el, key, null, props[key])
             }
           }
-        } else if (props.onClick != null) {
+        } else if (props.onClick) {
           // Fast path for click listeners (which is most often) to avoid
           // iterating through props.
           patchProp(el, 'onClick', null, props.onClick)
@@ -223,16 +223,13 @@ export function createHydrationFunctions(
       }
       // vnode / directive hooks
       let vnodeHooks: VNodeHook | null | undefined
-      if ((vnodeHooks = props && props.onVnodeBeforeMount) != null) {
+      if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
-      if (dirs != null) {
+      if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if (
-        (vnodeHooks = props && props.onVnodeMounted) != null ||
-        dirs != null
-      ) {
+      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
@@ -242,7 +239,7 @@ export function createHydrationFunctions(
       if (
         shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
         // skip if element has innerHTML / textContent
-        !(props !== null && (props.innerHTML || props.textContent))
+        !(props && (props.innerHTML || props.textContent))
       ) {
         let next = hydrateChildren(
           el.firstChild,
@@ -291,7 +288,7 @@ export function createHydrationFunctions(
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean
   ): Node | null => {
-    optimized = optimized || vnode.dynamicChildren !== null
+    optimized = optimized || !!vnode.dynamicChildren
     const children = vnode.children as VNode[]
     const l = children.length
     let hasWarned = false
@@ -369,7 +366,7 @@ export function createHydrationFunctions(
     const target = (vnode.target = isString(targetSelector)
       ? document.querySelector(targetSelector)
       : targetSelector)
-    if (target != null && vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    if (target && vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       hydrateChildren(
         target.firstChild,
         vnode,

@@ -46,7 +46,7 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol('iterate')
 
 export function isEffect(fn: any): fn is ReactiveEffect {
-  return fn != null && fn._isEffect === true
+  return fn && fn._isEffect === true
 }
 
 export function effect<T = any>(

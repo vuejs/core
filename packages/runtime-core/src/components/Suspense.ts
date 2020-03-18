@@ -536,7 +536,7 @@ export function queueEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
-  if (suspense !== null && !suspense.isResolved) {
+  if (suspense && !suspense.isResolved) {
     if (isArray(fn)) {
       suspense.effects.push(...fn)
     } else {

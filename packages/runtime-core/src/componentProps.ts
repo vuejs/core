@@ -98,7 +98,7 @@ export function resolveProps(
   rawProps: Data | null,
   _options: ComponentPropsOptions | void
 ) {
-  const hasDeclaredProps = _options != null
+  const hasDeclaredProps = !!_options
   if (!rawProps && !hasDeclaredProps) {
     return
   }
@@ -122,7 +122,7 @@ export function resolveProps(
   // allow mutation of propsProxy (which is readonly by default)
   unlock()
 
-  if (rawProps != null) {
+  if (rawProps) {
     for (const key in rawProps) {
       const value = rawProps[key]
       // key, ref are reserved and never passed down
@@ -186,10 +186,7 @@ export function resolveProps(
   // in case of dynamic props, check if we need to delete keys from
   // the props proxy
   const { patchFlag } = instance.vnode
-  if (
-    propsProxy !== null &&
-    (patchFlag === 0 || patchFlag & PatchFlags.FULL_PROPS)
-  ) {
+  if (propsProxy && (patchFlag === 0 || patchFlag & PatchFlags.FULL_PROPS)) {
     const rawInitialProps = toRaw(propsProxy)
     for (const key in rawInitialProps) {
       if (!hasOwn(props, key)) {
@@ -250,7 +247,7 @@ function normalizePropsOptions(
         const opt = raw[key]
         const prop: NormalizedProp = (options[normalizedKey] =
           isArray(opt) || isFunction(opt) ? { type: opt } : opt)
-        if (prop != null) {
+        if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
           prop[BooleanFlags.shouldCast] = booleanIndex > -1
