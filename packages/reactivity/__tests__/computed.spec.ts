@@ -1,8 +1,18 @@
-import { computed, reactive, effect, stop, ref } from '../src'
+import {
+  computed,
+  reactive,
+  effect,
+  stop,
+  ref,
+  WritableComputedRef
+} from '../src'
+import { mockWarn } from '@vue/shared'
 
 describe('reactivity/computed', () => {
+  mockWarn()
+
   it('should return updated value', () => {
-    const value: any = reactive({})
+    const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
     expect(cValue.value).toBe(undefined)
     value.foo = 1
@@ -10,7 +20,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should compute lazily', () => {
-    const value: any = reactive({})
+    const value = reactive<{ foo?: number }>({})
     const getter = jest.fn(() => value.foo)
     const cValue = computed(getter)
 
@@ -38,7 +48,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should trigger effect', () => {
-    const value: any = reactive({})
+    const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {
@@ -50,7 +60,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should work when chained', () => {
-    const value: any = reactive({ foo: 0 })
+    const value = reactive({ foo: 0 })
     const c1 = computed(() => value.foo)
     const c2 = computed(() => c1.value + 1)
     expect(c2.value).toBe(1)
@@ -61,7 +71,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should trigger effect when chained', () => {
-    const value: any = reactive({ foo: 0 })
+    const value = reactive({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
       return c1.value + 1
@@ -84,7 +94,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should trigger effect when chained (mixed invocations)', () => {
-    const value: any = reactive({ foo: 0 })
+    const value = reactive({ foo: 0 })
     const getter1 = jest.fn(() => value.foo)
     const getter2 = jest.fn(() => {
       return c1.value + 1
@@ -108,7 +118,7 @@ describe('reactivity/computed', () => {
   })
 
   it('should no longer update when stopped', () => {
-    const value: any = reactive({})
+    const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)
     let dummy
     effect(() => {
@@ -156,5 +166,15 @@ describe('reactivity/computed', () => {
 
     plusOne.value = 0
     expect(dummy).toBe(-1)
+  })
+
+  it('should warn if trying to set a readonly computed', () => {
+    const n = ref(1)
+    const plusOne = computed(() => n.value + 1)
+    ;(plusOne as WritableComputedRef<number>).value++ // Type cast to prevent TS from preventing the error
+
+    expect(
+      'Write operation failed: computed value is readonly'
+    ).toHaveBeenWarnedLast()
   })
 })

@@ -1,12 +1,17 @@
 import { VNode } from './vnode'
-import { Data, ComponentInternalInstance } from './component'
-import { isString } from '@vue/shared'
-import { toRaw } from '@vue/reactivity'
+import { Data, ComponentInternalInstance, Component } from './component'
+import { isString, isFunction } from '@vue/shared'
+import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
+import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
-let stack: VNode[] = []
+type ComponentVNode = VNode & {
+  type: Component
+}
+
+const stack: VNode[] = []
 
 type TraceEntry = {
-  vnode: VNode
+  vnode: ComponentVNode
   recurseCount: number
 }
 
@@ -21,39 +26,41 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
+  // avoid props formatting or warn handler tracking deps that might be mutated
+  // during patch, leading to infinite recursion.
+  pauseTracking()
+
   const instance = stack.length ? stack[stack.length - 1].component : null
   const appWarnHandler = instance && instance.appContext.config.warnHandler
   const trace = getComponentTrace()
 
   if (appWarnHandler) {
-    appWarnHandler(
-      msg + args.join(''),
-      instance && instance.renderProxy,
-      formatTrace(trace).join('')
+    callWithErrorHandling(
+      appWarnHandler,
+      instance,
+      ErrorCodes.APP_WARN_HANDLER,
+      [
+        msg + args.join(''),
+        instance && instance.proxy,
+        trace
+          .map(({ vnode }) => `at <${formatComponentName(vnode)}>`)
+          .join('\n'),
+        trace
+      ]
     )
-    return
+  } else {
+    const warnArgs = [`[Vue warn]: ${msg}`, ...args]
+    if (
+      trace.length &&
+      // avoid spamming console during tests
+      !__TEST__
+    ) {
+      warnArgs.push(`\n`, ...formatTrace(trace))
+    }
+    console.warn(...warnArgs)
   }
 
-  console.warn(`[Vue warn]: ${msg}`, ...args)
-  // avoid spamming console during tests
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-    return
-  }
-  if (!trace.length) {
-    return
-  }
-  if (trace.length > 1 && console.groupCollapsed) {
-    console.groupCollapsed('at', ...formatTraceEntry(trace[0]))
-    const logs: string[] = []
-    trace.slice(1).forEach((entry, i) => {
-      if (i !== 0) logs.push('\n')
-      logs.push(...formatTraceEntry(entry, i + 1))
-    })
-    console.log(...logs)
-    console.groupEnd()
-  } else {
-    console.log(...formatTrace(trace))
-  }
+  resetTracking()
 }
 
 function getComponentTrace(): ComponentTraceStack {
@@ -65,52 +72,40 @@ function getComponentTrace(): ComponentTraceStack {
   // we can't just use the stack because it will be incomplete during updates
   // that did not start from the root. Re-construct the parent chain using
   // instance parent pointers.
-  const normlaizedStack: ComponentTraceStack = []
+  const normalizedStack: ComponentTraceStack = []
 
   while (currentVNode) {
-    const last = normlaizedStack[0]
+    const last = normalizedStack[0]
     if (last && last.vnode === currentVNode) {
       last.recurseCount++
     } else {
-      normlaizedStack.push({
-        vnode: currentVNode,
+      normalizedStack.push({
+        vnode: currentVNode as ComponentVNode,
         recurseCount: 0
       })
     }
-    const parentInstance: ComponentInternalInstance | null = (currentVNode.component as ComponentInternalInstance)
+    const parentInstance: ComponentInternalInstance | null = currentVNode.component!
       .parent
     currentVNode = parentInstance && parentInstance.vnode
   }
 
-  return normlaizedStack
+  return normalizedStack
 }
 
-function formatTrace(trace: ComponentTraceStack): string[] {
-  const logs: string[] = []
+function formatTrace(trace: ComponentTraceStack): any[] {
+  const logs: any[] = []
   trace.forEach((entry, i) => {
-    const formatted = formatTraceEntry(entry, i)
-    if (i === 0) {
-      logs.push('at', ...formatted)
-    } else {
-      logs.push('\n', ...formatted)
-    }
+    logs.push(...(i === 0 ? [] : [`\n`]), ...formatTraceEntry(entry))
   })
   return logs
 }
 
-function formatTraceEntry(
-  { vnode, recurseCount }: TraceEntry,
-  depth: number = 0
-): string[] {
-  const padding = depth === 0 ? '' : ' '.repeat(depth * 2 + 1)
+function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-  const open = padding + `<${formatComponentName(vnode)}`
+  const open = ` at <${formatComponentName(vnode)}`
   const close = `>` + postfix
-  const rootLabel =
-    (vnode.component as ComponentInternalInstance).parent == null
-      ? `(Root)`
-      : ``
+  const rootLabel = vnode.component!.parent == null ? `(Root)` : ``
   return vnode.props
     ? [open, ...formatProps(vnode.props), close, rootLabel]
     : [open + close, rootLabel]
@@ -120,27 +115,51 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
-function formatComponentName(vnode: VNode, file?: string): string {
-  const Component = vnode.type as any
-  let name = Component.displayName || Component.name
+function formatComponentName(vnode: ComponentVNode, file?: string): string {
+  const Component = vnode.type as Component
+  let name = isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name
   if (!name && file) {
     const match = file.match(/([^/\\]+)\.vue$/)
     if (match) {
       name = match[1]
     }
   }
-  return name ? classify(name) : 'AnonymousComponent'
+  return name ? classify(name) : 'Anonymous'
 }
 
-function formatProps(props: Data): string[] {
-  const res: string[] = []
-  for (const key in props) {
-    const value = props[key]
-    if (isString(value)) {
-      res.push(`${key}=${JSON.stringify(value)}`)
-    } else {
-      res.push(`${key}=`, toRaw(value) as any)
-    }
+function formatProps(props: Data): any[] {
+  const res: any[] = []
+  const keys = Object.keys(props)
+  keys.slice(0, 3).forEach(key => {
+    res.push(...formatProp(key, props[key]))
+  })
+  if (keys.length > 3) {
+    res.push(` ...`)
   }
   return res
+}
+
+function formatProp(key: string, value: unknown): any[]
+function formatProp(key: string, value: unknown, raw: true): any
+function formatProp(key: string, value: unknown, raw?: boolean): any {
+  if (isString(value)) {
+    value = JSON.stringify(value)
+    return raw ? value : [`${key}=${value}`]
+  } else if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    value == null
+  ) {
+    return raw ? value : [`${key}=${value}`]
+  } else if (isRef(value)) {
+    value = formatProp(key, toRaw(value.value), true)
+    return raw ? value : [`${key}=Ref<`, value, `>`]
+  } else if (isFunction(value)) {
+    return [`${key}=fn${value.name ? `<${value.name}>` : ``}`]
+  } else {
+    value = toRaw(value)
+    return raw ? value : [`${key}=`, value]
+  }
 }

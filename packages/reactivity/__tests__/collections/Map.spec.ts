@@ -26,6 +26,22 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(undefined)
     })
 
+    it('should observe mutations with observed value as key', () => {
+      let dummy
+      const key = reactive({})
+      const value = reactive({})
+      const map = reactive(new Map())
+      effect(() => {
+        dummy = map.get(key)
+      })
+
+      expect(dummy).toBe(undefined)
+      map.set(key, value)
+      expect(dummy).toBe(value)
+      map.delete(key)
+      expect(dummy).toBe(undefined)
+    })
+
     it('should observe size mutations', () => {
       let dummy
       const map = reactive(new Map())
@@ -58,6 +74,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -77,6 +96,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -119,6 +141,9 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(3)
       map.set('key2', 2)
       expect(dummy).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe(6)
       map.delete('key1')
       expect(dummy).toBe(2)
       map.clear()
@@ -127,25 +152,36 @@ describe('reactivity/collections', () => {
 
     it('should observe entries iteration', () => {
       let dummy
+      let dummy2
       const map = reactive(new Map())
       effect(() => {
-        dummy = 0
+        dummy = ''
+        dummy2 = 0
         // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map.entries()) {
-          key
-          dummy += num
+          dummy += key
+          dummy2 += num
         }
       })
 
-      expect(dummy).toBe(0)
+      expect(dummy).toBe('')
+      expect(dummy2).toBe(0)
       map.set('key1', 3)
-      expect(dummy).toBe(3)
+      expect(dummy).toBe('key1')
+      expect(dummy2).toBe(3)
       map.set('key2', 2)
-      expect(dummy).toBe(5)
+      expect(dummy).toBe('key1key2')
+      expect(dummy2).toBe(5)
+      // iteration should track mutation of existing entries (#709)
+      map.set('key1', 4)
+      expect(dummy).toBe('key1key2')
+      expect(dummy2).toBe(6)
       map.delete('key1')
-      expect(dummy).toBe(2)
+      expect(dummy).toBe('key2')
+      expect(dummy2).toBe(2)
       map.clear()
-      expect(dummy).toBe(0)
+      expect(dummy).toBe('')
+      expect(dummy2).toBe(0)
     })
 
     it('should be triggered by clearing', () => {
@@ -178,21 +214,24 @@ describe('reactivity/collections', () => {
 
       expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(1)
-      map.set('key', 'value')
-      expect(dummy).toBe('value')
+      map.set('key', undefined)
+      expect(dummy).toBe(undefined)
       expect(mapSpy).toHaveBeenCalledTimes(2)
       map.set('key', 'value')
       expect(dummy).toBe('value')
-      expect(mapSpy).toHaveBeenCalledTimes(2)
-      map.delete('key')
-      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(3)
+      map.set('key', 'value')
+      expect(dummy).toBe('value')
       expect(mapSpy).toHaveBeenCalledTimes(3)
       map.delete('key')
       expect(dummy).toBe(undefined)
-      expect(mapSpy).toHaveBeenCalledTimes(3)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
+      map.delete('key')
+      expect(dummy).toBe(undefined)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
       map.clear()
       expect(dummy).toBe(undefined)
-      expect(mapSpy).toHaveBeenCalledTimes(3)
+      expect(mapSpy).toHaveBeenCalledTimes(4)
     })
 
     it('should not observe raw data', () => {
@@ -247,7 +286,7 @@ describe('reactivity/collections', () => {
         })
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -262,7 +301,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(1) as any).foo++
+      map.get(1)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -280,7 +319,7 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
     })
 
@@ -298,8 +337,30 @@ describe('reactivity/collections', () => {
         }
       })
       expect(dummy).toBe(1)
-      ;(map.get(key) as any).foo++
+      map.get(key)!.foo++
       expect(dummy).toBe(2)
+    })
+
+    it('should not be trigger when the value and the old value both are NaN', () => {
+      const map = reactive(new Map([['foo', NaN]]))
+      const mapSpy = jest.fn(() => map.get('foo'))
+      effect(mapSpy)
+      map.set('foo', NaN)
+      expect(mapSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('should work with reactive keys in raw map', () => {
+      const raw = new Map()
+      const key = reactive({})
+      raw.set(key, 1)
+      const map = reactive(raw)
+
+      expect(map.has(key)).toBe(true)
+      expect(map.get(key)).toBe(1)
+
+      expect(map.delete(key)).toBe(true)
+      expect(map.has(key)).toBe(false)
+      expect(map.get(key)).toBeUndefined()
     })
   })
 })

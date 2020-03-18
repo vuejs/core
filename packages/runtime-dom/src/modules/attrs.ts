@@ -1,12 +1,6 @@
-const xlinkNS = 'http://www.w3.org/1999/xlink'
+import { isSpecialBooleanAttr } from '@vue/shared'
 
-function isXlink(name: string): boolean {
-  return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
-}
-
-function getXlinkProp(name: string): string {
-  return isXlink(name) ? name.slice(6, name.length) : ''
-}
+export const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 export function patchAttr(
   el: Element,
@@ -14,18 +8,20 @@ export function patchAttr(
   value: any,
   isSVG: boolean
 ) {
-  // isSVG short-circuits isXlink check
-  if (isSVG && isXlink(key)) {
+  if (isSVG && key.indexOf('xlink:') === 0) {
     if (value == null) {
-      el.removeAttributeNS(xlinkNS, getXlinkProp(key))
+      el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {
       el.setAttributeNS(xlinkNS, key, value)
     }
   } else {
-    if (value == null) {
+    // note we are only checking boolean attributes that don't have a
+    // correspoding dom prop of the same name here.
+    const isBoolean = isSpecialBooleanAttr(key)
+    if (value == null || (isBoolean && value === false)) {
       el.removeAttribute(key)
     } else {
-      el.setAttribute(key, value)
+      el.setAttribute(key, isBoolean ? '' : value)
     }
   }
 }

@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compile should contain standard transforms 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return (_openBlock(), _createBlock(_Fragment, null, [
+      _createVNode(\\"div\\", { textContent: text }, null, 8 /* PROPS */, [\\"textContent\\"]),
+      _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),
+      _createVNode(\\"div\\", null, \\"test\\"),
+      _createVNode(\\"div\\", { style: {\\"color\\":\\"red\\"} }, \\"red\\"),
+      _createVNode(\\"div\\", { style: {color: 'green'} }, null, 4 /* STYLE */)
+    ], 64 /* STABLE_FRAGMENT */))
+  }
+}"
+`;

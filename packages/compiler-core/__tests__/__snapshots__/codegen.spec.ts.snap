@@ -1,9 +1,40 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`compiler: codegen ArrayExpression 1`] = `
+"
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return [
+      foo,
+      bar(baz)
+    ]
+  }
+}"
+`;
+
+exports[`compiler: codegen CacheExpression 1`] = `
+"
+export function render(_ctx, _cache) {
+  return _cache[1] || (_cache[1] = foo)
+}"
+`;
+
+exports[`compiler: codegen CacheExpression w/ isVNode: true 1`] = `
+"
+export function render(_ctx, _cache) {
+  return _cache[1] || (
+    _setBlockTracking(-1),
+    _cache[1] = foo,
+    _setBlockTracking(1),
+    _cache[1]
+  )
+}"
+`;
+
 exports[`compiler: codegen ConditionalExpression 1`] = `
 "
-return function render() {
-  with (this) {
+return function render(_ctx, _cache) {
+  with (_ctx) {
     return ok
       ? foo()
       : orNot
@@ -13,56 +44,60 @@ return function render() {
 }"
 `;
 
-exports[`compiler: codegen Element (callExpression + objectExpression + arrayExpression) 1`] = `
+exports[`compiler: codegen Element (callExpression + objectExpression + TemplateChildNode[]) 1`] = `
 "
-return function render() {
-  with (this) {
-    return createVNode(\\"div\\", {
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return _createVNode(\\"div\\", {
       id: \\"foo\\",
       [prop]: bar,
       [foo + bar]: bar
     }, [
-      createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
-    ], [
-      foo,
-      createVNode(\\"p\\")
-    ])
+      _createVNode(\\"p\\", { \\"some-key\\": \\"foo\\" })
+    ], 16)
   }
 }"
 `;
 
-exports[`compiler: codegen SequenceExpression 1`] = `
+exports[`compiler: codegen assets + temps 1`] = `
 "
-return function render() {
-  with (this) {
-    return (foo, bar(baz))
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const _component_Foo = _resolveComponent(\\"Foo\\")
+    const _component_bar_baz = _resolveComponent(\\"bar-baz\\")
+    const _component_barbaz = _resolveComponent(\\"barbaz\\")
+    const _directive_my_dir_0 = _resolveDirective(\\"my_dir_0\\")
+    const _directive_my_dir_1 = _resolveDirective(\\"my_dir_1\\")
+    let _temp0, _temp1, _temp2
+
+    return null
   }
 }"
 `;
 
 exports[`compiler: codegen comment 1`] = `
 "
-return function render() {
-  with (this) {
-    return _createVNode(_Comment, 0, \\"foo\\")
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return _createCommentVNode(\\"foo\\")
   }
 }"
 `;
 
 exports[`compiler: codegen compound expression 1`] = `
 "
-return function render() {
-  with (this) {
-    return _ctx.foo + _toString(bar)
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return _ctx.foo + _toDisplayString(bar) + nested
   }
 }"
 `;
 
 exports[`compiler: codegen forNode 1`] = `
 "
-return function render() {
-  with (this) {
-    return (foo, bar)
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return (_openBlock(true), _createBlock(_Fragment, null, _renderList(), 1))
   }
 }"
 `;
@@ -70,20 +105,19 @@ return function render() {
 exports[`compiler: codegen function mode preamble 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { helperOne: _helperOne, helperTwo: _helperTwo } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, resolveDirective: _resolveDirective } = _Vue
+
     return null
   }
 }"
 `;
 
 exports[`compiler: codegen function mode preamble w/ prefixIdentifiers: true 1`] = `
-"const { helperOne, helperTwo } = Vue
+"const { createVNode: _createVNode, resolveDirective: _resolveDirective } = Vue
 
-return function render() {
-  const _ctx = this
+return function render(_ctx, _cache) {
   return null
 }"
 `;
@@ -93,8 +127,8 @@ exports[`compiler: codegen hoists 1`] = `
 const _hoisted_1 = hello
 const _hoisted_2 = { id: \\"foo\\" }
 
-return function render() {
-  with (this) {
+return function render(_ctx, _cache) {
+  with (_ctx) {
     return null
   }
 }"
@@ -102,56 +136,59 @@ return function render() {
 
 exports[`compiler: codegen ifNode 1`] = `
 "
-return function render() {
-  with (this) {
-    return (foo, bar)
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return foo
+      ? bar
+      : baz
   }
 }"
 `;
 
 exports[`compiler: codegen interpolation 1`] = `
 "
-return function render() {
-  with (this) {
-    return _toString(hello)
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    return _toDisplayString(hello)
   }
 }"
 `;
 
 exports[`compiler: codegen module mode preamble 1`] = `
-"import { helperOne, helperTwo } from \\"vue\\"
+"import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
 
-export default function render() {
-  const _ctx = this
+export function render(_ctx, _cache) {
   return null
 }"
 `;
 
-exports[`compiler: codegen prefixIdentifiers: true should inject _ctx statement 1`] = `
-"
-return function render() {
-  const _ctx = this
-  return null
-}"
-`;
+exports[`compiler: codegen module mode preamble w/ optimizeBindings: true 1`] = `
+"import { createVNode, resolveDirective } from \\"vue\\"
 
-exports[`compiler: codegen statements 1`] = `
-"
-return function render() {
-  with (this) {
-    const a = 1
-    const b = 2
-    
-    return null
-  }
+// Binding optimization for webpack code-split
+const _createVNode = createVNode, _resolveDirective = resolveDirective
+
+export function render(_ctx, _cache) {
+  return null
 }"
 `;
 
 exports[`compiler: codegen static text 1`] = `
 "
-return function render() {
-  with (this) {
+return function render(_ctx, _cache) {
+  with (_ctx) {
     return \\"hello\\"
+  }
+}"
+`;
+
+exports[`compiler: codegen temps 1`] = `
+"
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    let _temp0, _temp1, _temp2
+
+    return null
   }
 }"
 `;

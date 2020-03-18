@@ -1,0 +1,217 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compiler: transform v-model input w/ dynamic v-bind 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelDynamic: _vModelDynamic, mergeProps: _mergeProps, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", _mergeProps(obj, {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }), null, 16 /* FULL_PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelDynamic, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model input w/ dynamic v-bind 2`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _directive_bind = _resolveDirective(\\"bind\\")
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_directive_bind, val, key],
+      [_vModelDynamic, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .lazy 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { lazy: true }
+      ]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .number 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { number: true }
+      ]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model modifiers .trim 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [
+        _vModelText,
+        model,
+        void 0,
+        { trim: true }
+      ]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelText, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (checkbox) 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelCheckbox: _vModelCheckbox, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      type: \\"checkbox\\",
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelCheckbox, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (dynamic type) 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelDynamic: _vModelDynamic, resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _directive_bind = _resolveDirective(\\"bind\\")
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_directive_bind, foo, \\"type\\"],
+      [_vModelDynamic, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (radio) 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelRadio: _vModelRadio, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      type: \\"radio\\",
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelRadio, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for input (text) 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
+      type: \\"text\\",
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelText, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for select 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelSelect: _vModelSelect, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"select\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelSelect, model]
+    ])
+  }
+}"
+`;
+
+exports[`compiler: transform v-model simple expression for textarea 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    return _withDirectives((_openBlock(), _createBlock(\\"textarea\\", {
+      \\"onUpdate:modelValue\\": $event => (model = $event)
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
+      [_vModelText, model]
+    ])
+  }
+}"
+`;

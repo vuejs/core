@@ -11,9 +11,9 @@ For full exposed APIs, see `src/index.ts`. You can also run `yarn build reactivi
 The implementation of this module is inspired by the following prior art in the JavaScript ecosystem:
 
 - [Meteor Tracker](https://docs.meteor.com/api/tracker.html)
-- [nx-js/reactivity-util](https://github.com/nx-js/reactivity-util)
+- [nx-js/observer-util](https://github.com/nx-js/observer-util)
 - [salesforce/observable-membrane](https://github.com/salesforce/observable-membrane)
 
 ## Caveats
 
-- Built-in objects are not observed except for `Map`, `WeakMap`, `Set` and `WeakSet`.
+- Built-in objects are not observed except for `Array`, `Map`, `WeakMap`, `Set` and `WeakSet`.

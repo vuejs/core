@@ -22,6 +22,19 @@ describe('reactivity/collections', () => {
       expect(dummy).toBe(false)
     })
 
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const value = reactive({})
+      const set = reactive(new Set())
+      effect(() => (dummy = set.has(value)))
+
+      expect(dummy).toBe(false)
+      set.add(value)
+      expect(dummy).toBe(true)
+      set.delete(value)
+      expect(dummy).toBe(false)
+    })
+
     it('should observe for of iteration', () => {
       let dummy
       const set = reactive(new Set() as Set<number>)
@@ -102,7 +115,7 @@ describe('reactivity/collections', () => {
 
     it('should observe entries iteration', () => {
       let dummy
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         // eslint-disable-next-line no-unused-vars
@@ -196,7 +209,7 @@ describe('reactivity/collections', () => {
 
     it('should not observe raw iterations', () => {
       let dummy = 0
-      const set = reactive(new Set() as Set<number>)
+      const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
         for (let [num] of toRaw(set).entries()) {
@@ -354,6 +367,18 @@ describe('reactivity/collections', () => {
         value.foo++
       })
       expect(dummy).toBe(2)
+    })
+
+    it('should work with reactive entries in raw set', () => {
+      const raw = new Set()
+      const entry = reactive({})
+      raw.add(entry)
+      const set = reactive(raw)
+
+      expect(set.has(entry)).toBe(true)
+
+      expect(set.delete(entry)).toBe(true)
+      expect(set.has(entry)).toBe(false)
     })
   })
 })

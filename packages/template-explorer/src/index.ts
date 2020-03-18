@@ -1,69 +1,103 @@
 import * as m from 'monaco-editor'
-import { compile, CompilerError } from '@vue/compiler-dom'
-import { compilerOptions, initOptions } from './options'
-import { watch } from '@vue/runtime-dom'
+import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
+import { compile as ssrCompile } from '@vue/compiler-ssr'
+import { compilerOptions, initOptions, ssrMode } from './options'
+import { watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
+import { parse } from '@babel/parser'
 
-const self = window as any
+window._deps['@babel/parser'] = { parse }
 
-self.init = () => {
-  const monaco = (window as any).monaco as typeof m
-  const persistedContent =
+declare global {
+  interface Window {
+    monaco: typeof m
+    _deps: any
+    init: () => void
+  }
+}
+
+interface PersistedState {
+  src: string
+  ssr: boolean
+  options: CompilerOptions
+}
+
+window.init = () => {
+  const monaco = window.monaco
+  const persistedState: PersistedState = JSON.parse(
     decodeURIComponent(window.location.hash.slice(1)) ||
-    `<div>{{ foo + bar }}</div>`
+      localStorage.getItem('state') ||
+      `{}`
+  )
 
-  let lastSuccessfulCode: string = `/* See console for error */`
+  ssrMode.value = persistedState.ssr
+  Object.assign(compilerOptions, persistedState.options)
+
+  let lastSuccessfulCode: string
   let lastSuccessfulMap: SourceMapConsumer | undefined = undefined
   function compileCode(source: string): string {
     console.clear()
     try {
-      const { code, ast, map } = compile(source, {
+      const errors: CompilerError[] = []
+      const compileFn = ssrMode.value ? ssrCompile : compile
+      const start = performance.now()
+      const { code, ast, map } = compileFn(source, {
         filename: 'template.vue',
         ...compilerOptions,
         sourceMap: true,
-        onError: displayError
+        onError: err => {
+          errors.push(err)
+        }
       })
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [])
+      console.log(`Compiled in ${(performance.now() - start).toFixed(2)}ms.`)
+      monaco.editor.setModelMarkers(
+        editor.getModel()!,
+        `@vue/compiler-dom`,
+        errors.filter(e => e.loc).map(formatError)
+      )
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new self._deps['source-map'].SourceMapConsumer(
-        map
-      ) as SourceMapConsumer
-      lastSuccessfulMap.computeColumnSpans()
+      lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
+      lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
+      lastSuccessfulCode = `/* ERROR: ${
+        e.message
+      } (see console for more info) */`
       console.error(e)
     }
     return lastSuccessfulCode
   }
 
-  function displayError(err: CompilerError) {
-    const loc = err.loc
-    if (loc) {
-      monaco.editor.setModelMarkers(editor.getModel()!, `@vue/compiler-dom`, [
-        {
-          severity: monaco.MarkerSeverity.Error,
-          startLineNumber: loc.start.line,
-          startColumn: loc.start.column,
-          endLineNumber: loc.end.line,
-          endColumn: loc.end.column,
-          message: `Vue template compilation error: ${err.message}`,
-          code: String(err.code)
-        }
-      ])
+  function formatError(err: CompilerError) {
+    const loc = err.loc!
+    return {
+      severity: monaco.MarkerSeverity.Error,
+      startLineNumber: loc.start.line,
+      startColumn: loc.start.column,
+      endLineNumber: loc.end.line,
+      endColumn: loc.end.column,
+      message: `Vue template compilation error: ${err.message}`,
+      code: String(err.code)
     }
-    throw err
   }
 
   function reCompile() {
     const src = editor.getValue()
-    window.location.hash = encodeURIComponent(src)
+    // every time we re-compile, persist current state
+    const state = JSON.stringify({
+      src,
+      ssr: ssrMode.value,
+      options: compilerOptions
+    } as PersistedState)
+    localStorage.setItem('state', state)
+    window.location.hash = encodeURIComponent(state)
     const res = compileCode(src)
     if (res) {
       output.setValue(res)
     }
   }
 
-  const sharedEditorOptions = {
+  const sharedEditorOptions: m.editor.IEditorConstructionOptions = {
     theme: 'vs-dark',
     fontSize: 14,
     wordWrap: 'on',
@@ -73,30 +107,24 @@ self.init = () => {
     minimap: {
       enabled: false
     }
-  } as const
+  }
 
-  const editor = monaco.editor.create(
-    document.getElementById('source') as HTMLElement,
-    {
-      value: persistedContent,
-      language: 'html',
-      ...sharedEditorOptions
-    }
-  )
+  const editor = monaco.editor.create(document.getElementById('source')!, {
+    value: persistedState.src || `<div>Hello World!</div>`,
+    language: 'html',
+    ...sharedEditorOptions
+  })
 
   editor.getModel()!.updateOptions({
     tabSize: 2
   })
 
-  const output = monaco.editor.create(
-    document.getElementById('output') as HTMLElement,
-    {
-      value: '',
-      language: 'javascript',
-      readOnly: true,
-      ...sharedEditorOptions
-    }
-  )
+  const output = monaco.editor.create(document.getElementById('output')!, {
+    value: '',
+    language: 'javascript',
+    readOnly: true,
+    ...sharedEditorOptions
+  })
   output.getModel()!.updateOptions({
     tabSize: 2
   })
@@ -196,16 +224,19 @@ self.init = () => {
   )
 
   initOptions()
-  watch(reCompile)
+  watchEffect(reCompile)
 }
 
-function debounce<T extends Function>(fn: T, delay: number = 300): T {
-  let prevTimer: NodeJS.Timeout | null = null
+function debounce<T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number = 300
+): T {
+  let prevTimer: number | null = null
   return ((...args: any[]) => {
     if (prevTimer) {
       clearTimeout(prevTimer)
     }
-    prevTimer = setTimeout(() => {
+    prevTimer = window.setTimeout(() => {
       fn(...args)
       prevTimer = null
     }, delay)

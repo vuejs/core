@@ -9,9 +9,15 @@ import {
   lock,
   unlock,
   effect,
-  ref
+  ref,
+  shallowReadonly
 } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
+
+/**
+ * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
+ */
+type Writable<T> = { -readonly [P in keyof T]: T[P] }
 
 describe('reactivity/readonly', () => {
   mockWarn()
@@ -38,26 +44,50 @@ describe('reactivity/readonly', () => {
     })
 
     it('should not allow mutation', () => {
-      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
+      const qux = Symbol('qux')
+      const original = {
+        foo: 1,
+        bar: {
+          baz: 2
+        },
+        [qux]: 3
+      }
+      const observed: Writable<typeof original> = readonly(original)
+
       observed.foo = 2
       expect(observed.foo).toBe(1)
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       observed.bar.baz = 3
       expect(observed.bar.baz).toBe(2)
       expect(
         `Set operation on key "baz" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
+      observed[qux] = 4
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Set operation on key "Symbol(qux)" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
       delete observed.foo
       expect(observed.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
+
       delete observed.bar.baz
       expect(observed.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+
+      delete observed[qux]
+      expect(observed[qux]).toBe(3)
+      expect(
+        `Delete operation on key "Symbol(qux)" failed: target is readonly.`
       ).toHaveBeenWarnedLast()
     })
 
@@ -106,7 +136,7 @@ describe('reactivity/readonly', () => {
 
   describe('Array', () => {
     it('should make nested values readonly', () => {
-      const original: any[] = [{ foo: 1 }]
+      const original = [{ foo: 1 }]
       const observed = readonly(original)
       expect(observed).not.toBe(original)
       expect(isReactive(observed)).toBe(true)
@@ -264,7 +294,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Map) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
@@ -334,7 +364,7 @@ describe('reactivity/readonly', () => {
       })
 
       if (Collection === Set) {
-        test('should retrive readonly values on iteration', () => {
+        test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
           const observed: any = readonly(original)
           for (const value of observed) {
@@ -412,5 +442,41 @@ describe('reactivity/readonly', () => {
     expect(
       `Set operation on key "value" failed: target is readonly.`
     ).toHaveBeenWarned()
+  })
+
+  describe('shallowReadonly', () => {
+    test('should not make non-reactive properties reactive', () => {
+      const props = shallowReadonly({ n: { foo: 1 } })
+      expect(isReactive(props.n)).toBe(false)
+    })
+
+    test('should make root level properties readonly', () => {
+      const props = shallowReadonly({ n: 1 })
+      // @ts-ignore
+      props.n = 2
+      expect(props.n).toBe(1)
+      expect(
+        `Set operation on key "n" failed: target is readonly.`
+      ).toHaveBeenWarned()
+    })
+
+    // to retain 2.x behavior.
+    test('should NOT make nested properties readonly', () => {
+      const props = shallowReadonly({ n: { foo: 1 } })
+      // @ts-ignore
+      props.n.foo = 2
+      expect(props.n.foo).toBe(2)
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`
+      ).not.toHaveBeenWarned()
+    })
+
+    test('should keep reactive properties reactive', () => {
+      const props: any = shallowReadonly({ n: reactive({ foo: 1 }) })
+      unlock()
+      props.n = reactive({ foo: 2 })
+      lock()
+      expect(isReactive(props.n)).toBe(true)
+    })
   })
 })

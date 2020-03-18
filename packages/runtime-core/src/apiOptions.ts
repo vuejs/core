@@ -1,8 +1,10 @@
 import {
   ComponentInternalInstance,
   Data,
-  Component,
-  SetupContext
+  SetupContext,
+  RenderFunction,
+  SFCInternalOptions,
+  PublicAPIComponent
 } from './component'
 import {
   isFunction,
@@ -10,10 +12,11 @@ import {
   isString,
   isObject,
   isArray,
-  EMPTY_OBJ
+  EMPTY_OBJ,
+  NOOP
 } from '@vue/shared'
-import { computed } from './apiReactivity'
-import { watch, WatchOptions, CleanupRegistrator } from './apiWatch'
+import { computed } from './apiComputed'
+import { watch, WatchOptions, WatchCallback } from './apiWatch'
 import { provide, inject } from './apiInject'
 import {
   onBeforeMount,
@@ -24,37 +27,60 @@ import {
   onRenderTracked,
   onBeforeUnmount,
   onUnmounted,
-  onRenderTriggered
+  onActivated,
+  onDeactivated,
+  onRenderTriggered,
+  DebuggerHook,
+  ErrorCapturedHook
 } from './apiLifecycle'
-import { DebuggerEvent, reactive } from '@vue/reactivity'
-import { ComponentPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  reactive,
+  ComputedGetter,
+  WritableComputedOptions
+} from '@vue/reactivity'
+import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
 import { Directive } from './directives'
-import { VNodeChild } from './vnode'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
 
-interface ComponentOptionsBase<
+export interface ComponentOptionsBase<
   Props,
   RawBindings,
   D,
   C extends ComputedOptions,
   M extends MethodOptions
-> extends LegacyOptions<Props, RawBindings, D, C, M> {
+> extends LegacyOptions<Props, RawBindings, D, C, M>, SFCInternalOptions {
   setup?: (
-    this: null,
+    this: void,
     props: Props,
     ctx: SetupContext
-  ) => RawBindings | (() => VNodeChild) | void
+  ) => RawBindings | RenderFunction | void
   name?: string
-  template?: string
+  template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
   // since any type with signature will cause the whole inference to fail when
   // the return expression contains reference to `this`.
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
+  // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
+  // not user facing, so the typing is lax and for test only.
+  ssrRender?: (
+    ctx: any,
+    push: (item: any) => void,
+    parentInstance: ComponentInternalInstance
+  ) => void
+  components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
+  inheritAttrs?: boolean
+
+  // type-only differentiator to separate OptionWithoutProps from a constructor
+  // type returned by defineComponent() or FunctionalComponent
+  call?: never
+  // type-only differentiators for built-in Vnode types
+  __isFragment?: never
+  __isPortal?: never
+  __isSuspense?: never
 }
 
 export type ComponentOptionsWithoutProps<
@@ -63,9 +89,9 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
-> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M> & {
   props?: undefined
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
+} & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
 export type ComponentOptionsWithArrayProps<
   PropNames extends string = string,
@@ -73,68 +99,61 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = { [key in PropNames]?: unknown }
+  Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropNames[]
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
-export type ComponentOptionsWithProps<
-  PropsOptions = ComponentPropsOptions,
+export type ComponentOptionsWithObjectProps<
+  PropsOptions = ComponentObjectPropsOptions,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Props = ExtractPropTypes<PropsOptions>
+  Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props: PropsOptions
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps
-  | ComponentOptionsWithProps
+  | ComponentOptionsWithObjectProps
   | ComponentOptionsWithArrayProps
 
 // TODO legacy component definition also supports constructors with .options
 type LegacyComponent = ComponentOptions
 
-export interface ComputedOptions {
-  [key: string]:
-    | Function
-    | {
-        get: Function
-        set: Function
-      }
-}
+export type ComputedOptions = Record<
+  string,
+  ComputedGetter<any> | WritableComputedOptions<any>
+>
 
 export interface MethodOptions {
   [key: string]: Function
 }
 
-export type ExtracComputedReturns<T extends any> = {
+export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: Function }
     ? ReturnType<T[key]['get']>
     : ReturnType<T[key]>
 }
 
-type WatchHandler = (
-  val: any,
-  oldVal: any,
-  onCleanup: CleanupRegistrator
-) => void
+type WatchOptionItem =
+  | string
+  | WatchCallback
+  | { handler: WatchCallback } & WatchOptions
 
-type ComponentWatchOptions = Record<
-  string,
-  string | WatchHandler | { handler: WatchHandler } & WatchOptions
->
+type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
+
+type ComponentWatchOptions = Record<string, ComponentWatchOptionItem>
 
 type ComponentInjectOptions =
   | string[]
   | Record<
       string | symbol,
-      string | symbol | { from: string | symbol; default?: any }
+      string | symbol | { from: string | symbol; default?: unknown }
     >
 
-// TODO type inference for these options
 export interface LegacyOptions<
   Props,
   RawBindings,
@@ -148,10 +167,9 @@ export interface LegacyOptions<
   // Limitation: we cannot expose RawBindings on the `this` context for data
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
-  data?: D | ((this: ComponentPublicInstance<Props>) => D)
+  data?: (this: ComponentPublicInstance<Props>) => D
   computed?: C
   methods?: M
-  // TODO watch array
   watch?: ComponentWatchOptions
   provide?: Data | Function
   inject?: ComponentInjectOptions
@@ -168,12 +186,31 @@ export interface LegacyOptions<
   beforeUpdate?(): void
   updated?(): void
   activated?(): void
-  decativated?(): void
+  deactivated?(): void
   beforeUnmount?(): void
   unmounted?(): void
-  renderTracked?(e: DebuggerEvent): void
-  renderTriggered?(e: DebuggerEvent): void
-  errorCaptured?(): boolean | void
+  renderTracked?: DebuggerHook
+  renderTriggered?: DebuggerHook
+  errorCaptured?: ErrorCapturedHook
+}
+
+const enum OptionTypes {
+  PROPS = 'Props',
+  DATA = 'Data',
+  COMPUTED = 'Computed',
+  METHODS = 'Methods',
+  INJECT = 'Inject'
+}
+
+function createDuplicateChecker() {
+  const cache = Object.create(null)
+  return (type: OptionTypes, key: string) => {
+    if (cache[key]) {
+      warn(`${type} property "${key}" is already defined in ${cache[key]}.`)
+    } else {
+      cache[key] = type
+    }
+  }
 }
 
 export function applyOptions(
@@ -181,16 +218,13 @@ export function applyOptions(
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
-  const renderContext =
-    instance.renderContext === EMPTY_OBJ
-      ? (instance.renderContext = reactive({}))
-      : instance.renderContext
-  const ctx = instance.renderProxy as any
+  const ctx = instance.proxy!
   const {
     // composition
     mixins,
     extends: extendsOptions,
     // state
+    props: propsOptions,
     data: dataOptions,
     computed: computedOptions,
     methods,
@@ -205,8 +239,8 @@ export function applyOptions(
     mounted,
     beforeUpdate,
     updated,
-    // TODO activated
-    // TODO decativated
+    activated,
+    deactivated,
     beforeUnmount,
     unmounted,
     renderTracked,
@@ -214,7 +248,15 @@ export function applyOptions(
     errorCaptured
   } = options
 
+  const renderContext =
+    instance.renderContext === EMPTY_OBJ &&
+    (computedOptions || methods || watchOptions || injectOptions)
+      ? (instance.renderContext = reactive({}))
+      : instance.renderContext
+
   const globalMixins = instance.appContext.mixins
+  // call it only during dev
+  const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     callSyncHook('beforeCreate', options, ctx, globalMixins)
@@ -230,55 +272,87 @@ export function applyOptions(
     applyMixins(instance, mixins)
   }
 
+  if (__DEV__ && propsOptions) {
+    for (const key in propsOptions) {
+      checkDuplicateProperties!(OptionTypes.PROPS, key)
+    }
+  }
+
   // state options
   if (dataOptions) {
-    const data = isFunction(dataOptions) ? dataOptions.call(ctx) : dataOptions
+    if (__DEV__ && !isFunction(dataOptions)) {
+      warn(
+        `The data option must be a function. ` +
+          `Plain object usage is no longer supported.`
+      )
+    }
+    const data = dataOptions.call(ctx, ctx)
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
+      if (__DEV__) {
+        for (const key in data) {
+          checkDuplicateProperties!(OptionTypes.DATA, key)
+        }
+      }
       instance.data = reactive(data)
     } else {
       // existing data: this is a mixin or extends.
       extend(instance.data, data)
     }
   }
+
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
-      renderContext[key] = isFunction(opt)
-        ? computed(opt.bind(ctx))
-        : computed({
-            get: opt.get.bind(ctx),
-            set: opt.set.bind(ctx)
+
+      __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
+
+      if (isFunction(opt)) {
+        renderContext[key] = computed(opt.bind(ctx, ctx))
+      } else {
+        const { get, set } = opt
+        if (isFunction(get)) {
+          renderContext[key] = computed({
+            get: get.bind(ctx, ctx),
+            set: isFunction(set)
+              ? set.bind(ctx)
+              : __DEV__
+                ? () => {
+                    warn(
+                      `Computed property "${key}" was assigned to but it has no setter.`
+                    )
+                  }
+                : NOOP
           })
-    }
-  }
-  if (methods) {
-    for (const key in methods) {
-      renderContext[key] = (methods as MethodOptions)[key].bind(ctx)
-    }
-  }
-  if (watchOptions) {
-    for (const key in watchOptions) {
-      const raw = watchOptions[key]
-      const getter = () => ctx[key]
-      if (isString(raw)) {
-        const handler = renderContext[raw]
-        if (isFunction(handler)) {
-          watch(getter, handler as any)
         } else if (__DEV__) {
-          // TODO warn invalid watch handler path
+          warn(`Computed property "${key}" has no getter.`)
         }
-      } else if (isFunction(raw)) {
-        watch(getter, raw.bind(ctx))
-      } else if (isObject(raw)) {
-        // TODO 2.x compat
-        watch(getter, raw.handler.bind(ctx), raw)
-      } else if (__DEV__) {
-        // TODO warn invalid watch options
       }
     }
   }
+
+  if (methods) {
+    for (const key in methods) {
+      const methodHandler = (methods as MethodOptions)[key]
+      if (isFunction(methodHandler)) {
+        __DEV__ && checkDuplicateProperties!(OptionTypes.METHODS, key)
+        renderContext[key] = methodHandler.bind(ctx)
+      } else if (__DEV__) {
+        warn(
+          `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
+            `Did you reference the function correctly?`
+        )
+      }
+    }
+  }
+
+  if (watchOptions) {
+    for (const key in watchOptions) {
+      createWatcher(watchOptions[key], renderContext, ctx, key)
+    }
+  }
+
   if (provideOptions) {
     const provides = isFunction(provideOptions)
       ? provideOptions.call(ctx)
@@ -287,14 +361,17 @@ export function applyOptions(
       provide(key, provides[key])
     }
   }
+
   if (injectOptions) {
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
+        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
         renderContext[key] = inject(key)
       }
     } else {
       for (const key in injectOptions) {
+        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
         const opt = injectOptions[key]
         if (isObject(opt)) {
           renderContext[key] = inject(opt.from, opt.default)
@@ -329,6 +406,12 @@ export function applyOptions(
   if (updated) {
     onUpdated(updated.bind(ctx))
   }
+  if (activated) {
+    onActivated(activated.bind(ctx))
+  }
+  if (deactivated) {
+    onDeactivated(deactivated.bind(ctx))
+  }
   if (errorCaptured) {
     onErrorCaptured(errorCaptured.bind(ctx))
   }
@@ -349,7 +432,7 @@ export function applyOptions(
 function callSyncHook(
   name: 'beforeCreate' | 'created',
   options: ComponentOptions,
-  ctx: any,
+  ctx: ComponentPublicInstance,
   globalMixins: ComponentOptions[]
 ) {
   callHookFromMixins(name, globalMixins, ctx)
@@ -370,7 +453,7 @@ function callSyncHook(
 function callHookFromMixins(
   name: 'beforeCreate' | 'created',
   mixins: ComponentOptions[],
-  ctx: any
+  ctx: ComponentPublicInstance
 ) {
   for (let i = 0; i < mixins.length; i++) {
     const fn = mixins[i][name]
@@ -386,5 +469,32 @@ function applyMixins(
 ) {
   for (let i = 0; i < mixins.length; i++) {
     applyOptions(instance, mixins[i], true)
+  }
+}
+
+function createWatcher(
+  raw: ComponentWatchOptionItem,
+  renderContext: Data,
+  ctx: ComponentPublicInstance,
+  key: string
+) {
+  const getter = () => (ctx as Data)[key]
+  if (isString(raw)) {
+    const handler = renderContext[raw]
+    if (isFunction(handler)) {
+      watch(getter, handler as WatchCallback)
+    } else if (__DEV__) {
+      warn(`Invalid watch handler specified by key "${raw}"`, handler)
+    }
+  } else if (isFunction(raw)) {
+    watch(getter, raw.bind(ctx))
+  } else if (isObject(raw)) {
+    if (isArray(raw)) {
+      raw.forEach(r => createWatcher(r, renderContext, ctx, key))
+    } else {
+      watch(getter, raw.handler.bind(ctx), raw)
+    }
+  } else if (__DEV__) {
+    warn(`Invalid watch option: "${key}"`)
   }
 }
