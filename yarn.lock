@@ -287,6 +287,11 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
+"@ls-lint/ls-lint@^1.8.0":
+  version "1.8.0"
+  resolved "https://registry.yarnpkg.com/@ls-lint/ls-lint/-/ls-lint-1.8.0.tgz#508fe32d4dbdd90d61c8ea156c20af33c294a22e"
+  integrity sha512-XaItB+/qOMdCJbTuT/mT6yDlzUSClOtPx9S/dUBETUHxmcOlvdLOXoIiSvZBlpmux81qtz6pVvkmzWNK0SpojQ==
+
 "@microsoft/api-extractor-model@7.7.9":
   version "7.7.9"
   resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.7.9.tgz#9a6ded46f63b6729b1c6630f6ef4e20c1396e177"
