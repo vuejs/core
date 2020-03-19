@@ -109,7 +109,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (renderContext !== EMPTY_OBJ && hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return renderContext[key]
-      } else if (type.props != null) {
+      } else if (type.props) {
         // only cache other properties when instance has declared (this stable)
         // props
         if (hasOwn(props, key)) {
@@ -125,20 +125,20 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // public $xxx properties & user-attached properties (sink)
     const publicGetter = publicPropertiesMap[key]
     let cssModule
-    if (publicGetter != null) {
+    if (publicGetter) {
       if (__DEV__ && key === '$attrs') {
         markAttrsAccessed()
       }
       return publicGetter(target)
     } else if (
       __BUNDLER__ &&
-      (cssModule = type.__cssModules) != null &&
+      (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
     ) {
       return cssModule
     } else if (hasOwn(sink, key)) {
       return sink[key]
-    } else if (__DEV__ && currentRenderingInstance != null) {
+    } else if (__DEV__ && currentRenderingInstance) {
       warn(
         `Property ${JSON.stringify(key)} was accessed during render ` +
           `but is not defined on instance.`
@@ -152,7 +152,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       hasOwn(renderContext, key) ||
-      (type.props != null && hasOwn(type.props, key)) ||
+      (type.props && hasOwn(type.props, key)) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(sink, key)
     )

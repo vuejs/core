@@ -79,7 +79,7 @@ export function callWithAsyncErrorHandling(
 ): any[] {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
-    if (res != null && !res._isVue && isPromise(res)) {
+    if (res && !res._isVue && isPromise(res)) {
       res.catch(err => {
         handleError(err, instance, type)
       })
@@ -108,7 +108,7 @@ export function handleError(
     const errorInfo = __DEV__ ? ErrorTypeStrings[type] : type
     while (cur) {
       const errorCapturedHooks = cur.ec
-      if (errorCapturedHooks !== null) {
+      if (errorCapturedHooks) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
           if (errorCapturedHooks[i](err, exposedInstance, errorInfo)) {
             return

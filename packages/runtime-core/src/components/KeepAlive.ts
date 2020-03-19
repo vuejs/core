@@ -85,7 +85,7 @@ const KeepAliveImpl = {
       queuePostRenderEffect(() => {
         const component = vnode.component!
         component.isDeactivated = false
-        if (component.a !== null) {
+        if (component.a) {
           invokeHooks(component.a)
         }
       }, parentSuspense)
@@ -95,7 +95,7 @@ const KeepAliveImpl = {
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
-        if (component.da !== null) {
+        if (component.da) {
           invokeHooks(component.da)
         }
         component.isDeactivated = true
