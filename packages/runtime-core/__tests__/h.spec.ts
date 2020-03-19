@@ -62,12 +62,15 @@ const testH = () => {
 }
 
 describe('renderer: h', testH)
+
 describe('renderer: transformHArgs', () => {
   describe('no-op pass-through', () => {
     beforeAll(() => {
       transformHArgs((hArgs: unknown[]) => hArgs)
     })
+ 
     afterAll(resetTransformHArgs)
+ 
     testH()
   })
 
@@ -75,16 +78,16 @@ describe('renderer: transformHArgs', () => {
     beforeAll(() => {
       transformHArgs(() => ['h1', 'Hello World'])
     })
+ 
     afterAll(resetTransformHArgs)
+ 
     test('nodes become an h1 with text inside', () => {
       expect(h('div')).toMatchObject(createVNode('h1', null, 'Hello World'))
     })
 
     test('resetting transformHArgs turns things back to normal', () => {
       expect(h('div')).toMatchObject(createVNode('h1', null, 'Hello World'))
-
       resetTransformHArgs()
-
       expect(h('div')).toMatchObject(createVNode('div'))
     })
   })
@@ -95,7 +98,8 @@ describe('renderer: transformHArgs', () => {
     })
 
     const vm = createApp({
-      name: 'Root Component', // this will be the name of the component in the h1
+      // this will be the name of the component in the h1
+      name: 'Root Component',
       render() {
         return h({
           // this code will never execute,
@@ -107,7 +111,8 @@ describe('renderer: transformHArgs', () => {
       }
     })
 
-    // we need to mount everything so that the instance passed to transformHArgs isn't null
+    // we need to mount everything so that the instance passed to
+    // transformHArgs isn't null
     vm.mount('body')
 
     expect(document.body.outerHTML).toContain('<h1>Root Component</h1>')
