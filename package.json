@@ -9,8 +9,8 @@
     "build": "node scripts/build.js",
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
     "lint": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
-    "ls-lint": "npx @ls-lint/ls-lint",
-    "test": "node scripts/build.js vue -f global -d && ls-lint && jest",
+    "ls-lint": "ls-lint",
+    "test": "node scripts/build.js vue -f global -d && jest",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsd",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
@@ -23,7 +23,7 @@
     "directory": "test-dts"
   },
   "gitHooks": {
-    "pre-commit": "lint-staged",
+    "pre-commit": "ls-lint && lint-staged",
     "commit-msg": "node scripts/verifyCommit.js"
   },
   "lint-staged": {
