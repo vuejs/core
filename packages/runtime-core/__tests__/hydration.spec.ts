@@ -379,6 +379,9 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toMatch(`<span>2</span><span>3</span>`)
   })
 
+  // TODO
+  test.todo('async component')
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')

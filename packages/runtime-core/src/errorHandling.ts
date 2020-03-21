@@ -19,6 +19,7 @@ export const enum ErrorCodes {
   APP_ERROR_HANDLER,
   APP_WARN_HANDLER,
   FUNCTION_REF,
+  ASYNC_COMPONENT_LOADER,
   SCHEDULER
 }
 
@@ -49,6 +50,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
   [ErrorCodes.APP_ERROR_HANDLER]: 'app errorHandler',
   [ErrorCodes.APP_WARN_HANDLER]: 'app warnHandler',
   [ErrorCodes.FUNCTION_REF]: 'ref function',
+  [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/vue-next'

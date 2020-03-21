@@ -34,6 +34,7 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
+export { createAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -204,4 +205,8 @@ export {
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
 export { TransitionState, TransitionHooks } from './components/BaseTransition'
+export {
+  AsyncComponentOptions,
+  AsyncComponentLoader
+} from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'
