@@ -12,7 +12,8 @@ import {
   toRawType,
   PatchFlags,
   makeMap,
-  isReservedProp
+  isReservedProp,
+  EMPTY_ARR
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
@@ -216,11 +217,11 @@ function validatePropName(key: string) {
   return false
 }
 
-function normalizePropsOptions(
+export function normalizePropsOptions(
   raw: ComponentPropsOptions | void
 ): NormalizedPropsOptions {
   if (!raw) {
-    return [] as any
+    return EMPTY_ARR as any
   }
   if (normalizationMap.has(raw)) {
     return normalizationMap.get(raw)!

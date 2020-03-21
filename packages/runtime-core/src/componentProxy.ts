@@ -15,6 +15,7 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
+import { normalizePropsOptions } from './componentProps'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -75,15 +76,7 @@ const enum AccessTypes {
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get(target: ComponentInternalInstance, key: string) {
-    const {
-      renderContext,
-      data,
-      props,
-      propsProxy,
-      accessCache,
-      type,
-      sink
-    } = target
+    const { renderContext, data, propsProxy, accessCache, type, sink } = target
 
     // data / props / renderContext
     // This getter gets called for every property access on the render context
@@ -110,9 +103,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         accessCache![key] = AccessTypes.CONTEXT
         return renderContext[key]
       } else if (type.props) {
-        // only cache other properties when instance has declared (this stable)
+        // only cache other properties when instance has declared (thus stable)
         // props
-        if (hasOwn(props, key)) {
+        if (hasOwn(normalizePropsOptions(type.props)[0], key)) {
           accessCache![key] = AccessTypes.PROPS
           // return the value from propsProxy for ref unwrapping and readonly
           return propsProxy![key]
