@@ -295,20 +295,20 @@ function renderElementVNode(
   let { props, children, shapeFlag, scopeId, dirs } = vnode
   let openTag = `<${tag}`
 
-  if (dirs !== null) {
+  if (dirs) {
     props = applySSRDirectives(vnode, props, dirs)
   }
 
-  if (props !== null) {
+  if (props) {
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  if (scopeId !== null) {
+  if (scopeId) {
     openTag += ` ${scopeId}`
     const treeOwnerId = parentComponent && parentComponent.type.__scopeId
     // vnode's own scopeId and the current rendering component's scopeId is
     // different - this is a slot content node.
-    if (treeOwnerId != null && treeOwnerId !== scopeId) {
+    if (treeOwnerId && treeOwnerId !== scopeId) {
       openTag += ` ${treeOwnerId}-s`
     }
   }
@@ -316,7 +316,7 @@ function renderElementVNode(
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
     let hasChildrenOverride = false
-    if (props !== null) {
+    if (props) {
       if (props.innerHTML) {
         hasChildrenOverride = true
         push(props.innerHTML)

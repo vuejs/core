@@ -40,7 +40,7 @@ const normalizeSlot = (
   ctx: ComponentInternalInstance | null | undefined
 ): Slot =>
   withCtx((props: any) => {
-    if (__DEV__ && currentInstance != null) {
+    if (__DEV__ && currentInstance) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
           `this will not track dependencies used in the slot. ` +
@@ -80,7 +80,7 @@ export function resolveSlots(
         }
       }
     }
-  } else if (children !== null) {
+  } else if (children) {
     // non slot object children (direct value) passed to a component
     if (__DEV__ && !isKeepAlive(instance.vnode)) {
       warn(

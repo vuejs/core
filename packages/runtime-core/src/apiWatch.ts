@@ -229,7 +229,7 @@ function doWatch(
     scheduler = invoke
   } else if (flush === 'pre') {
     scheduler = job => {
-      if (!instance || instance.vnode.el != null) {
+      if (!instance || instance.isMounted) {
         queueJob(job)
       } else {
         // with 'pre' option, the first call must happen before

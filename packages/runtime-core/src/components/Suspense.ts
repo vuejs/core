@@ -329,6 +329,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         queuePostFlushCb(effects)
       }
       suspense.isResolved = true
+      suspense.effects = []
       // invoke @resolve event
       const onResolve = vnode.props && vnode.props.onResolve
       if (isFunction(onResolve)) {
@@ -535,7 +536,7 @@ export function queueEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
-  if (suspense !== null && !suspense.isResolved) {
+  if (suspense && !suspense.isResolved) {
     if (isArray(fn)) {
       suspense.effects.push(...fn)
     } else {

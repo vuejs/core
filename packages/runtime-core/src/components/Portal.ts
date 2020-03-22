@@ -44,7 +44,7 @@ export const PortalImpl = {
       const target = (n2.target = isString(targetSelector)
         ? querySelector!(targetSelector)
         : targetSelector)
-      if (target != null) {
+      if (target) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
           setElementText(target, children as string)
         } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -93,7 +93,7 @@ export const PortalImpl = {
         const nextTarget = (n2.target = isString(targetSelector)
           ? querySelector!(targetSelector)
           : targetSelector)
-        if (nextTarget != null) {
+        if (nextTarget) {
           // move content
           if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
             setElementText(target, '')
