@@ -147,6 +147,8 @@ export {
 } from '@vue/reactivity'
 export {
   // types
+  WatchEffect,
+  BaseWatchOptions,
   WatchOptions,
   WatchCallback,
   WatchSource,
