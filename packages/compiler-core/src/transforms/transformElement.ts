@@ -204,19 +204,13 @@ export function resolveComponentType(
   // 1. dynamic component
   const isProp = node.tag === 'component' && findProp(node, 'is')
   if (isProp) {
-    // static <component is="foo" />
-    if (isProp.type === NodeTypes.ATTRIBUTE) {
-      const isType = isProp.value && isProp.value.content
-      if (isType) {
-        context.helper(RESOLVE_COMPONENT)
-        context.components.add(isType)
-        return toValidAssetId(isType, `component`)
-      }
-    }
-    // dynamic <component :is="asdf" />
-    else if (isProp.exp) {
+    const exp =
+      isProp.type === NodeTypes.ATTRIBUTE
+        ? isProp.value && createSimpleExpression(isProp.value.content, true)
+        : isProp.exp
+    if (exp) {
       return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-        isProp.exp
+        exp
       ])
     }
   }

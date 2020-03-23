@@ -106,7 +106,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, ['foo'])
       expect(vnode.children).toMatchObject(['foo'])
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.ARRAY_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
       )
     })
 
@@ -114,7 +114,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, { foo: 'foo' })
       expect(vnode.children).toMatchObject({ foo: 'foo' })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
       )
     })
 
@@ -122,7 +122,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, nop)
       expect(vnode.children).toMatchObject({ default: nop })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
       )
     })
 
@@ -130,7 +130,19 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, 'foo')
       expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.TEXT_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      )
+    })
+
+    test('element with slots', () => {
+      const children = [createVNode('span', null, 'hello')]
+      const vnode = createVNode('div', null, {
+        default: () => children
+      })
+
+      expect(vnode.children).toBe(children)
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
       )
     })
   })

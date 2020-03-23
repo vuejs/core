@@ -6,11 +6,14 @@ import {
   Component,
   Directive,
   resolveDynamicComponent,
-  h
+  h,
+  serializeInner
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
 describe('resolveAssets', () => {
+  mockWarn()
+
   test('should work', () => {
     const FooBar = () => null
     const BarBaz = { mounted: () => null }
@@ -63,8 +66,6 @@ describe('resolveAssets', () => {
   })
 
   describe('warning', () => {
-    mockWarn()
-
     test('used outside render() or setup()', () => {
       resolveComponent('foo')
       expect(
@@ -127,6 +128,23 @@ describe('resolveAssets', () => {
       expect(foo).toBe(dynamicComponents.foo)
       expect(bar).toBe(dynamicComponents.bar)
       expect(baz).toBe(dynamicComponents.baz)
+    })
+
+    test('resolve dynamic component should fallback to plain element without warning', () => {
+      const Root = {
+        setup() {
+          return () => {
+            return h(resolveDynamicComponent('div') as string, null, {
+              default: () => 'hello'
+            })
+          }
+        }
+      }
+
+      const app = createApp(Root)
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+      expect(serializeInner(root)).toBe('<div>hello</div>')
     })
   })
 })

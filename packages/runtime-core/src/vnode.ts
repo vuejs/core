@@ -397,9 +397,16 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    type = ShapeFlags.SLOTS_CHILDREN
-    if (!(children as RawSlots)._) {
-      ;(children as RawSlots)._ctx = currentRenderingInstance
+    // in case <component :is="x"> resolves to native element, the vnode call
+    // will receive slots object.
+    if (vnode.shapeFlag & ShapeFlags.ELEMENT && (children as any).default) {
+      normalizeChildren(vnode, (children as any).default())
+      return
+    } else {
+      type = ShapeFlags.SLOTS_CHILDREN
+      if (!(children as RawSlots)._) {
+        ;(children as RawSlots)._ctx = currentRenderingInstance
+      }
     }
   } else if (isFunction(children)) {
     children = { default: children, _ctx: currentRenderingInstance }
