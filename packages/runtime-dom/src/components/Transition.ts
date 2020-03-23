@@ -45,7 +45,7 @@ export const TransitionPropsValidators = {
     type: Boolean,
     default: true
   },
-  duration: Object,
+  duration: [String, Number, Object],
   enterFromClass: String,
   enterActiveClass: String,
   enterToClass: String,
