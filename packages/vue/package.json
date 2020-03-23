@@ -18,6 +18,7 @@
       "esm-bundler-runtime",
       "cjs",
       "global",
+      "global-runtime",
       "esm"
     ]
   },

@@ -23,11 +23,6 @@ const outputConfigs = {
     file: resolve(`dist/${name}.esm-bundler.js`),
     format: `es`
   },
-  // main "vue" package only
-  'esm-bundler-runtime': {
-    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
-    format: `es`
-  },
   cjs: {
     file: resolve(`dist/${name}.cjs.js`),
     format: `cjs`
@@ -39,6 +34,15 @@ const outputConfigs = {
   esm: {
     file: resolve(`dist/${name}.esm.js`),
     format: `es`
+  },
+  // main "vue" package only
+  'esm-bundler-runtime': {
+    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
+    format: `es`
+  },
+  'global-runtime': {
+    file: resolve(`dist/${name}.runtime.global.js`),
+    format: 'iife'
   }
 }
 
@@ -54,7 +58,7 @@ if (process.env.NODE_ENV === 'production') {
     if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
-    if (format === 'global' || format === 'esm') {
+    if (/global/.test(format) || format === 'esm') {
       packageConfigs.push(createMinifiedConfig(format))
     }
   })
@@ -73,7 +77,7 @@ function createConfig(format, output, plugins = []) {
 
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
-  const isGlobalBuild = format === 'global'
+  const isGlobalBuild = /global/.test(format)
   const isRawESMBuild = format === 'esm'
   const isNodeBuild = format === 'cjs'
   const isBundlerESMBuild = /esm-bundler/.test(format)
@@ -102,8 +106,7 @@ function createConfig(format, output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const entryFile =
-    format === 'esm-bundler-runtime' ? `src/runtime.ts` : `src/index.ts`
+  const entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
   const external =
     isGlobalBuild || isRawESMBuild
@@ -210,7 +213,7 @@ function createMinifiedConfig(format) {
   return createConfig(
     format,
     {
-      file: resolve(`dist/${name}.${format}.prod.js`),
+      file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
       format: outputConfigs[format].format
     },
     [

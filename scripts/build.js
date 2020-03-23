@@ -148,18 +148,23 @@ function checkAllSizes(targets) {
 
 function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
-  const esmProdBuild = `${pkgDir}/dist/${target}.global.prod.js`
-  if (fs.existsSync(esmProdBuild)) {
-    const file = fs.readFileSync(esmProdBuild)
-    const minSize = (file.length / 1024).toFixed(2) + 'kb'
-    const gzipped = gzipSync(file)
-    const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-    const compressed = compress(file)
-    const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
-    console.log(
-      `${chalk.gray(
-        chalk.bold(target)
-      )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
-    )
+  checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
+  checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
+}
+
+function checkFileSize(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return
   }
+  const file = fs.readFileSync(filePath)
+  const minSize = (file.length / 1024).toFixed(2) + 'kb'
+  const gzipped = gzipSync(file)
+  const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
+  const compressed = compress(file)
+  const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
+  console.log(
+    `${chalk.gray(
+      chalk.bold(path.basename(filePath))
+    )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
+  )
 }
