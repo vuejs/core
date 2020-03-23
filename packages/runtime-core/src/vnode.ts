@@ -211,7 +211,32 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
-export function createVNode(
+let vnodeArgsTransformer:
+  | ((
+      args: Parameters<typeof _createVNode>,
+      instance: ComponentInternalInstance | null
+    ) => Parameters<typeof _createVNode>)
+  | undefined
+
+// Internal API for registering an arguments transform for createVNode
+// used for creating stubs in the test-utils
+export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
+  vnodeArgsTransformer = transformer
+}
+
+const createVNodeWithArgsTransform = (
+  ...args: Parameters<typeof _createVNode>
+): VNode => {
+  return _createVNode(
+    ...(vnodeArgsTransformer
+      ? vnodeArgsTransformer(args, currentRenderingInstance)
+      : args)
+  )
+}
+
+export const createVNode = __DEV__ ? createVNodeWithArgsTransform : _createVNode
+
+function _createVNode(
   type: VNodeTypes | ClassComponent,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,

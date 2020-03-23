@@ -7,10 +7,13 @@ import {
   Text,
   cloneVNode,
   mergeProps,
-  normalizeVNode
+  normalizeVNode,
+  transformVNodeArgs
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
+import { h } from '../src'
+import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -333,6 +336,55 @@ describe('vnode', () => {
         (vnode1 = createVNode(() => {}, null, 'text'))
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+  })
+
+  describe('transformVNodeArgs', () => {
+    afterEach(() => {
+      // reset
+      transformVNodeArgs()
+    })
+
+    test('no-op pass through', () => {
+      transformVNodeArgs(args => args)
+      const vnode = createVNode('div', { id: 'foo' }, 'hello')
+      expect(vnode).toMatchObject({
+        type: 'div',
+        props: { id: 'foo' },
+        children: 'hello',
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      })
+    })
+
+    test('direct override', () => {
+      transformVNodeArgs(() => ['div', { id: 'foo' }, 'hello'])
+      const vnode = createVNode('p')
+      expect(vnode).toMatchObject({
+        type: 'div',
+        props: { id: 'foo' },
+        children: 'hello',
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      })
+    })
+
+    test('receive component instance as 2nd arg', () => {
+      transformVNodeArgs((args, instance) => {
+        if (instance) {
+          return ['h1', null, instance.type.name]
+        } else {
+          return args
+        }
+      })
+      const App = {
+        // this will be the name of the component in the h1
+        name: 'Root Component',
+        render() {
+          return h('p') // this will be overwritten by the transform
+        }
+      }
+      const root = nodeOps.createElement('div')
+      createApp(App).mount(root)
+      expect(serializeInner(root)).toBe('<h1>Root Component</h1>')
     })
   })
 })
