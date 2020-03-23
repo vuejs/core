@@ -563,16 +563,14 @@ function baseCreateRenderer(
       }
 
       // scopeId
-      if (__BUNDLER__) {
-        if (scopeId) {
-          hostSetScopeId(el, scopeId)
-        }
-        const treeOwnerId = parentComponent && parentComponent.type.__scopeId
-        // vnode's own scopeId and the current patched component's scopeId is
-        // different - this is a slot content node.
-        if (treeOwnerId && treeOwnerId !== scopeId) {
-          hostSetScopeId(el, treeOwnerId + '-s')
-        }
+      if (scopeId) {
+        hostSetScopeId(el, scopeId)
+      }
+      const treeOwnerId = parentComponent && parentComponent.type.__scopeId
+      // vnode's own scopeId and the current patched component's scopeId is
+      // different - this is a slot content node.
+      if (treeOwnerId && treeOwnerId !== scopeId) {
+        hostSetScopeId(el, treeOwnerId + '-s')
       }
 
       // children

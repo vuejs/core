@@ -124,7 +124,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
       return publicGetter(target)
     } else if (
-      __BUNDLER__ &&
       (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
     ) {
