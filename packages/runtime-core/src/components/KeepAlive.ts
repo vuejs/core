@@ -17,7 +17,9 @@ import {
   RendererInternals,
   queuePostRenderEffect,
   invokeHooks,
-  MoveType
+  MoveType,
+  RendererElement,
+  RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 
@@ -36,7 +38,11 @@ type Keys = Set<CacheKey>
 export interface KeepAliveSink {
   renderer: RendererInternals
   parentSuspense: SuspenseBoundary | null
-  activate: (vnode: VNode, container: object, anchor: object | null) => void
+  activate: (
+    vnode: VNode,
+    container: RendererElement,
+    anchor: RendererNode | null
+  ) => void
   deactivate: (vnode: VNode) => void
 }
 

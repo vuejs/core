@@ -89,7 +89,7 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {}
-> = ComponentOptionsBase<Readonly<Props>, RawBindings, D, C, M> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M> & {
   props?: undefined
 } & ThisType<ComponentPublicInstance<{}, RawBindings, D, C, M, Readonly<Props>>>
 
@@ -116,12 +116,9 @@ export type ComponentOptionsWithObjectProps<
 } & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M>>
 
 export type ComponentOptions =
-  | ComponentOptionsWithoutProps
-  | ComponentOptionsWithObjectProps
-  | ComponentOptionsWithArrayProps
-
-// TODO legacy component definition also supports constructors with .options
-type LegacyComponent = ComponentOptions
+  | ComponentOptionsWithoutProps<any, any, any, any, any>
+  | ComponentOptionsWithObjectProps<any, any, any, any, any>
+  | ComponentOptionsWithArrayProps<any, any, any, any, any>
 
 export type ComputedOptions = Record<
   string,
@@ -167,7 +164,10 @@ export interface LegacyOptions<
   // Limitation: we cannot expose RawBindings on the `this` context for data
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
-  data?: (this: ComponentPublicInstance<Props>) => D
+  data?: (
+    this: ComponentPublicInstance<Props>,
+    vm: ComponentPublicInstance<Props>
+  ) => D
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
@@ -175,8 +175,8 @@ export interface LegacyOptions<
   inject?: ComponentInjectOptions
 
   // composition
-  mixins?: LegacyComponent[]
-  extends?: LegacyComponent
+  mixins?: ComponentOptions[]
+  extends?: ComponentOptions
 
   // lifecycle
   beforeCreate?(): void

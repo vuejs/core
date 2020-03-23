@@ -21,7 +21,7 @@ export interface ReactiveEffect<T = any> {
 export interface ReactiveEffectOptions {
   lazy?: boolean
   computed?: boolean
-  scheduler?: (run: Function) => void
+  scheduler?: (job: () => void) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void

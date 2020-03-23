@@ -11,11 +11,11 @@ import { isArray, looseEqual, looseIndexOf } from '@vue/shared'
 const getModelAssigner = (vnode: VNode): ((value: any) => void) =>
   vnode.props!['onUpdate:modelValue']
 
-function onCompositionStart(e: CompositionEvent) {
+function onCompositionStart(e: Event) {
   ;(e.target as any).composing = true
 }
 
-function onCompositionEnd(e: CompositionEvent) {
+function onCompositionEnd(e: Event) {
   const target = e.target as any
   if (target.composing) {
     target.composing = false

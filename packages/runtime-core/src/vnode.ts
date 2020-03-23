@@ -31,6 +31,7 @@ import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
 import { PortalImpl, isPortal } from './components/Portal'
 import { currentRenderingInstance } from './componentRenderUtils'
+import { RendererNode, RendererElement } from './renderer'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -81,40 +82,31 @@ export interface VNodeProps {
   onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 
-type VNodeChildAtom<HostNode, HostElement> =
-  | VNode<HostNode, HostElement>
+type VNodeChildAtom = VNode | string | number | boolean | null | void
+
+export interface VNodeArrayChildren<
+  HostNode = RendererNode,
+  HostElement = RendererElement
+> extends Array<VNodeArrayChildren | VNodeChildAtom> {}
+
+export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
+
+export type VNodeNormalizedChildren =
   | string
-  | number
-  | boolean
-  | null
-  | void
-
-export interface VNodeArrayChildren<HostNode = any, HostElement = any>
-  extends Array<
-      | VNodeArrayChildren<HostNode, HostElement>
-      | VNodeChildAtom<HostNode, HostElement>
-    > {}
-
-export type VNodeChild<HostNode = any, HostElement = any> =
-  | VNodeChildAtom<HostNode, HostElement>
-  | VNodeArrayChildren<HostNode, HostElement>
-
-export type VNodeNormalizedChildren<HostNode = any, HostElement = any> =
-  | string
-  | VNodeArrayChildren<HostNode, HostElement>
+  | VNodeArrayChildren
   | RawSlots
   | null
 
-export interface VNode<HostNode = any, HostElement = any> {
+export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   _isVNode: true
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
-  children: VNodeNormalizedChildren<HostNode, HostElement>
+  children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
-  suspense: SuspenseBoundary<HostNode, HostElement> | null
+  suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
   transition: TransitionHooks | null
 
@@ -376,7 +368,7 @@ export function createCommentVNode(
     : createVNode(Comment, null, text)
 }
 
-export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
+export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)

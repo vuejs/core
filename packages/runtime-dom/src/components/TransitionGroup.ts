@@ -52,8 +52,8 @@ const TransitionGroupImpl = {
       hasMove =
         hasMove === null
           ? (hasMove = hasCSSTransform(
-              prevChildren[0].el,
-              instance.vnode.el,
+              prevChildren[0].el as ElementWithTransition,
+              instance.vnode.el as Node,
               moveClass
             ))
           : hasMove
@@ -71,17 +71,17 @@ const TransitionGroupImpl = {
       forceReflow()
 
       movedChildren.forEach(c => {
-        const el = c.el
+        const el = c.el as ElementWithTransition
         const style = el.style
         addTransitionClass(el, moveClass)
-        style.transform = style.WebkitTransform = style.transitionDuration = ''
-        const cb = (el._moveCb = (e: TransitionEvent) => {
+        style.transform = style.webkitTransform = style.transitionDuration = ''
+        const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
           }
           if (!e || /transform$/.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
-            el._moveCb = null
+            ;(el as any)._moveCb = null
             removeTransitionClass(el, moveClass)
           }
         })
@@ -120,7 +120,7 @@ const TransitionGroupImpl = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-          positionMap.set(child, child.el.getBoundingClientRect())
+          positionMap.set(child, (child.el as Element).getBoundingClientRect())
         }
       }
 
@@ -145,16 +145,17 @@ if (__DEV__) {
 }
 
 function callPendingCbs(c: VNode) {
-  if (c.el._moveCb) {
-    c.el._moveCb()
+  const el = c.el as any
+  if (el._moveCb) {
+    el._moveCb()
   }
-  if (c.el._enterCb) {
-    c.el._enterCb()
+  if (el._enterCb) {
+    el._enterCb()
   }
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, c.el.getBoundingClientRect())
+  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -163,8 +164,8 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = c.el.style
-    s.transform = s.WebkitTransform = `translate(${dx}px,${dy}px)`
+    const s = (c.el as HTMLElement).style
+    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
     s.transitionDuration = '0s'
     return c
   }

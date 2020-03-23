@@ -19,7 +19,9 @@ function mountWithHydration(html: string, render: () => any) {
     render
   })
   return {
-    vnode: app.mount(container).$.subTree,
+    vnode: app.mount(container).$.subTree as VNode<Node, Element> & {
+      el: Element
+    },
     container
   }
 }
@@ -90,7 +92,7 @@ describe('SSR hydration', () => {
     )
 
     // event handler
-    triggerEvent('click', vnode.el.querySelector('.foo'))
+    triggerEvent('click', vnode.el.querySelector('.foo')!)
     expect(fn).toHaveBeenCalled()
 
     msg.value = 'bar'
@@ -120,7 +122,7 @@ describe('SSR hydration', () => {
     const fragment1Children = fragment1.children as VNode[]
 
     // first <span>
-    expect(fragment1Children[0].el.tagName).toBe('SPAN')
+    expect(fragment1Children[0].el!.tagName).toBe('SPAN')
     expect(fragment1Children[0].el).toBe(vnode.el.childNodes[1])
 
     // start fragment 2
@@ -129,7 +131,7 @@ describe('SSR hydration', () => {
     const fragment2Children = fragment2.children as VNode[]
 
     // second <span>
-    expect(fragment2Children[0].el.tagName).toBe('SPAN')
+    expect(fragment2Children[0].el!.tagName).toBe('SPAN')
     expect(fragment2Children[0].el).toBe(vnode.el.childNodes[3])
 
     // end fragment 2
@@ -139,7 +141,7 @@ describe('SSR hydration', () => {
     expect(fragment1.anchor).toBe(vnode.el.childNodes[5])
 
     // event handler
-    triggerEvent('click', vnode.el.querySelector('.foo'))
+    triggerEvent('click', vnode.el.querySelector('.foo')!)
     expect(fn).toHaveBeenCalled()
 
     msg.value = 'bar'

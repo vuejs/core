@@ -60,7 +60,7 @@ export function renderComponentRoot(
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
       result = normalizeVNode(
-        instance.render!.call(proxyToUse, proxyToUse, renderCache)
+        instance.render!.call(proxyToUse, proxyToUse!, renderCache)
       )
     } else {
       // functional

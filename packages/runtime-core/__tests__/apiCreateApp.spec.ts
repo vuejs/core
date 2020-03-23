@@ -10,7 +10,8 @@ import {
   withDirectives,
   Plugin,
   ref,
-  getCurrentInstance
+  getCurrentInstance,
+  defineComponent
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -18,16 +19,16 @@ describe('api: createApp', () => {
   mockWarn()
 
   test('mount', () => {
-    const Comp = {
+    const Comp = defineComponent({
       props: {
         count: {
           default: 0
         }
       },
-      setup(props: { count: number }) {
+      setup(props) {
         return () => props.count
       }
-    }
+    })
 
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
@@ -47,16 +48,16 @@ describe('api: createApp', () => {
   })
 
   test('unmount', () => {
-    const Comp = {
+    const Comp = defineComponent({
       props: {
         count: {
           default: 0
         }
       },
-      setup(props: { count: number }) {
+      setup(props) {
         return () => props.count
       }
-    }
+    })
 
     const root = nodeOps.createElement('div')
     const app = createApp(Comp)

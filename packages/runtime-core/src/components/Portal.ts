@@ -1,6 +1,11 @@
 import { ComponentInternalInstance } from '../component'
 import { SuspenseBoundary } from './Suspense'
-import { RendererInternals, MoveType } from '../renderer'
+import {
+  RendererInternals,
+  MoveType,
+  RendererElement,
+  RendererNode
+} from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags, PatchFlags } from '@vue/shared'
 import { warn } from '../warning'
@@ -16,8 +21,8 @@ export const PortalImpl = {
   process(
     n1: VNode | null,
     n2: VNode,
-    container: object,
-    anchor: object | null,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,

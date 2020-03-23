@@ -63,7 +63,7 @@ export interface ClassComponent {
   __vccOpts: ComponentOptions
 }
 
-export type Component = ComponentOptions | FunctionalComponent
+export type Component = ComponentOptions | FunctionalComponent<any>
 
 // A type used in public APIs where a component type is expected.
 // The constructor type is an artificial type returned by defineComponent().
@@ -100,7 +100,10 @@ export interface SetupContext {
 }
 
 export type RenderFunction = {
-  (): VNodeChild
+  (
+    ctx: ComponentPublicInstance,
+    cache: ComponentInternalInstance['renderCache']
+  ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
 }
 
