@@ -155,6 +155,13 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
+  test('should not observe frozen objects', () => {
+    const obj = reactive({
+      foo: Object.freeze({ a: 1 })
+    })
+    expect(isReactive(obj.foo)).toBe(false)
+  })
+
   describe('shallowReactive', () => {
     test('should not make non-reactive properties reactive', () => {
       const props = shallowReactive({ n: { foo: 1 } })
