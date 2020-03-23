@@ -234,7 +234,9 @@ const createVNodeWithArgsTransform = (
   )
 }
 
-export const createVNode = __DEV__ ? createVNodeWithArgsTransform : _createVNode
+export const createVNode = (__DEV__
+  ? createVNodeWithArgsTransform
+  : _createVNode) as typeof _createVNode
 
 function _createVNode(
   type: VNodeTypes | ClassComponent,
