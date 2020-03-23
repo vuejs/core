@@ -9,6 +9,7 @@ import {
 } from './Transition'
 import {
   Fragment,
+  Comment,
   VNode,
   warn,
   resolveTransitionHooks,
@@ -108,7 +109,7 @@ const TransitionGroupImpl = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ && child.type !== Comment) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
