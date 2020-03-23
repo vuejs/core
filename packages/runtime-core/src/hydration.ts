@@ -24,6 +24,7 @@ import {
   SuspenseBoundary,
   queueEffectWithSuspense
 } from './components/Suspense'
+import { ComponentOptions } from './apiOptions'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -154,14 +155,23 @@ export function createHydrationFunctions(
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
           const container = parentNode(node)!
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            isSVGContainer(container)
-          )
+          const hydrateComponent = () => {
+            mountComponent(
+              vnode,
+              container,
+              null,
+              parentComponent,
+              parentSuspense,
+              isSVGContainer(container)
+            )
+          }
+          // async component
+          const loadAsync = (vnode.type as ComponentOptions).__asyncLoader
+          if (loadAsync) {
+            loadAsync().then(hydrateComponent)
+          } else {
+            hydrateComponent()
+          }
           // component may be async, so in the case of fragments we cannot rely
           // on component's rendered output to determine the end of the fragment
           // instead, we do a lookahead to find the end anchor node.

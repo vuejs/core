@@ -7,7 +7,8 @@ import {
   Portal,
   createStaticVNode,
   Suspense,
-  onMounted
+  onMounted,
+  createAsyncComponent
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
@@ -381,8 +382,64 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toMatch(`<span>2</span><span>3</span>`)
   })
 
-  // TODO
-  test.todo('async component')
+  test('async component', async () => {
+    const spy = jest.fn()
+    const Comp = () =>
+      h(
+        'button',
+        {
+          onClick: spy
+        },
+        'hello!'
+      )
+
+    let serverResolve: any
+    let AsyncComp = createAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        })
+    )
+
+    const App = {
+      render() {
+        return ['hello', h(AsyncComp), 'world']
+      }
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(
+      `"<!--[-->hello<button>hello!</button>world<!--]-->"`
+    )
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = createAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        })
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // hydration not complete yet
+    triggerEvent('click', container.querySelector('button')!)
+    expect(spy).not.toHaveBeenCalled()
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // should be hydrated now
+    triggerEvent('click', container.querySelector('button')!)
+    expect(spy).toHaveBeenCalled()
+  })
 
   describe('mismatch handling', () => {
     test('text node', () => {

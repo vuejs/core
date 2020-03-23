@@ -193,8 +193,7 @@ describe('api: createAsyncComponent', () => {
     const err = new Error('errored out')
     reject!(err)
     await timeout()
-    // error handler will not be called if error component is present
-    expect(handler).not.toHaveBeenCalled()
+    expect(handler).toHaveBeenCalled()
     expect(serializeInner(root)).toBe('errored out')
 
     toggle.value = false
@@ -247,8 +246,7 @@ describe('api: createAsyncComponent', () => {
     const err = new Error('errored out')
     reject!(err)
     await timeout()
-    // error handler will not be called if error component is present
-    expect(handler).not.toHaveBeenCalled()
+    expect(handler).toHaveBeenCalled()
     expect(serializeInner(root)).toBe('errored out')
 
     toggle.value = false
@@ -327,7 +325,7 @@ describe('api: createAsyncComponent', () => {
     expect(serializeInner(root)).toBe('<!---->')
 
     await timeout(1)
-    expect(handler).not.toHaveBeenCalled()
+    expect(handler).toHaveBeenCalled()
     expect(serializeInner(root)).toBe('timed out')
 
     // if it resolved after timeout, should still work
@@ -354,6 +352,7 @@ describe('api: createAsyncComponent', () => {
       components: { Foo },
       render: () => h(Foo)
     })
+    const handler = (app.config.errorHandler = jest.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
@@ -361,6 +360,7 @@ describe('api: createAsyncComponent', () => {
 
     await timeout(16)
     expect(serializeInner(root)).toBe('timed out')
+    expect(handler).toHaveBeenCalled()
 
     resolve!(() => 'resolved')
     await timeout()
@@ -459,6 +459,32 @@ describe('api: createAsyncComponent', () => {
     expect(serializeInner(root)).toBe('resolved & resolved')
   })
 
-  // TODO
-  test.todo('suspense with error handling')
+  test('suspense with error handling', async () => {
+    let reject: (e: Error) => void
+    const Foo = createAsyncComponent(
+      () =>
+        new Promise((_resolve, _reject) => {
+          reject = _reject
+        })
+    )
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      components: { Foo },
+      render: () =>
+        h(Suspense, null, {
+          default: () => [h(Foo), ' & ', h(Foo)],
+          fallback: () => 'loading'
+        })
+    })
+
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(root)
+    expect(serializeInner(root)).toBe('loading')
+
+    reject!(new Error('no'))
+    await timeout()
+    expect(handler).toHaveBeenCalled()
+    expect(serializeInner(root)).toBe('<!----> & <!---->')
+  })
 })

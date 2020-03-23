@@ -4,7 +4,8 @@ import {
   SetupContext,
   RenderFunction,
   SFCInternalOptions,
-  PublicAPIComponent
+  PublicAPIComponent,
+  Component
 } from './component'
 import {
   isFunction,
@@ -77,6 +78,8 @@ export interface ComponentOptionsBase<
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by defineComponent() or FunctionalComponent
   call?: never
+  // marker for AsyncComponentWrapper
+  __asyncLoader?: () => Promise<Component>
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
   __isPortal?: never
