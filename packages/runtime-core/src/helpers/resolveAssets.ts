@@ -82,7 +82,6 @@ function resolveAsset(
       }
     }
     if (__DEV__ && warnMissing && !res) {
-      debugger
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
     return res
