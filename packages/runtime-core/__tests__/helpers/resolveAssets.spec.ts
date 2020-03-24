@@ -7,7 +7,8 @@ import {
   Directive,
   resolveDynamicComponent,
   h,
-  serializeInner
+  serializeInner,
+  createVNode
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -134,7 +135,7 @@ describe('resolveAssets', () => {
       const Root = {
         setup() {
           return () => {
-            return h(resolveDynamicComponent('div') as string, null, {
+            return createVNode(resolveDynamicComponent('div') as string, null, {
               default: () => 'hello'
             })
           }
