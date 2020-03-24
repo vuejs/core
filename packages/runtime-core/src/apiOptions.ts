@@ -516,9 +516,9 @@ export function resolveMergedOptions(
   const { __merged, mixins, extends: extendsOptions } = raw
   if (__merged) return __merged
   const globalMixins = instance.appContext.mixins
-  if (!globalMixins && !mixins && !extendsOptions) return raw
+  if (!globalMixins.length && !mixins && !extendsOptions) return raw
   const options = {}
-  globalMixins && globalMixins.forEach(m => mergeOptions(options, m, instance))
+  globalMixins.forEach(m => mergeOptions(options, m, instance))
   extendsOptions && mergeOptions(options, extendsOptions, instance)
   mixins && mixins.forEach(m => mergeOptions(options, m, instance))
   mergeOptions(options, raw, instance)
