@@ -9,11 +9,16 @@ import {
 import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
-  isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
-  isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
-  isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
-  isCustomElement?: (tag: string) => boolean
+  // e.g. platform native elements, e.g. <div> for browsers
+  isNativeTag?: (tag: string) => boolean
+  // e.g. native elements that can self-close, e.g. <img>, <br>, <hr>
+  isVoidTag?: (tag: string) => boolean
+  // e.g. elements that should preserve whitespace inside, e.g. <pre>
+  isPreTag?: (tag: string) => boolean
+  // platform-specific built-in components e.g. <Transition>
   isBuiltInComponent?: (tag: string) => symbol | void
+  // separate option for end users to extend the native elements list
+  isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (
     tag: string,
