@@ -11,7 +11,7 @@ import {
   TestElement,
   TestNode
 } from '@vue/runtime-test'
-import { VNodeArrayChildren } from '../../src/vnode'
+import { VNodeArrayChildren, createVNode } from '../../src/vnode'
 
 describe('renderer: portal', () => {
   test('should work', () => {
@@ -71,7 +71,7 @@ describe('renderer: portal', () => {
 
     expect(serializeInner(target)).toMatchSnapshot()
 
-    children.value = [h(Text, 'teleported')]
+    children.value = [createVNode(Text, null, 'teleported')]
     await nextTick()
 
     expect(serializeInner(target)).toMatchSnapshot()
