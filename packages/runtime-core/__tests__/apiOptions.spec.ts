@@ -570,7 +570,7 @@ describe('api: options', () => {
       mixins: [{ foo: 'mixin' }],
       extends: { foo: 'extends' },
       foo: 'local',
-      mounted() {
+      beforeCreate() {
         merged = this.$options.foo
       }
     })
