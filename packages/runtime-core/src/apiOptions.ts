@@ -14,7 +14,8 @@ import {
   isObject,
   isArray,
   EMPTY_OBJ,
-  NOOP
+  NOOP,
+  hasOwn
 } from '@vue/shared'
 import { computed } from './apiComputed'
 import { watch, WatchOptions, WatchCallback } from './apiWatch'
@@ -75,11 +76,16 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
 
+  // Internal ------------------------------------------------------------------
+
+  // marker for AsyncComponentWrapper
+  __asyncLoader?: () => Promise<Component>
+  // cache for merged $options
+  __merged?: ComponentOptions
+
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by defineComponent() or FunctionalComponent
   call?: never
-  // marker for AsyncComponentWrapper
-  __asyncLoader?: () => Promise<Component>
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
   __isPortal?: never
@@ -161,7 +167,8 @@ export interface LegacyOptions<
   C extends ComputedOptions,
   M extends MethodOptions
 > {
-  el?: any
+  // allow any custom options
+  [key: string]: any
 
   // state
   // Limitation: we cannot expose RawBindings on the `this` context for data
@@ -499,5 +506,33 @@ function createWatcher(
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`)
+  }
+}
+
+export function resolveMergedOptions(
+  instance: ComponentInternalInstance
+): ComponentOptions {
+  const raw = instance.type as ComponentOptions
+  const { __merged, mixins, extends: extendsOptions } = raw
+  if (__merged) return __merged
+  const globalMixins = instance.appContext.mixins
+  if (!globalMixins && !mixins && !extendsOptions) return raw
+  const options = {}
+  globalMixins && globalMixins.forEach(m => mergeOptions(options, m, instance))
+  extendsOptions && mergeOptions(options, extendsOptions, instance)
+  mixins && mixins.forEach(m => mergeOptions(options, m, instance))
+  mergeOptions(options, raw, instance)
+  return (raw.__merged = options)
+}
+
+function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
+  const strats = instance.appContext.config.optionMergeStrategies
+  for (const key in from) {
+    const strat = strats && strats[key]
+    if (strat) {
+      to[key] = strat(to[key], from[key], instance.proxy, key)
+    } else if (!hasOwn(to, key)) {
+      to[key] = from[key]
+    }
   }
 }

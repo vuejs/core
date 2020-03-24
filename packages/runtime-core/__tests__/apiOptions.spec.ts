@@ -8,7 +8,8 @@ import {
   nextTick,
   renderToString,
   ref,
-  defineComponent
+  defineComponent,
+  createApp
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -560,6 +561,28 @@ describe('api: options', () => {
     triggerEvent(root.children[0] as TestElement, 'click')
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1,1,3</div>`)
+  })
+
+  test('optionMergeStrategies', () => {
+    let merged: string
+    const App = defineComponent({
+      render() {},
+      mixins: [{ foo: 'mixin' }],
+      extends: { foo: 'extends' },
+      foo: 'local',
+      mounted() {
+        merged = this.$options.foo
+      }
+    })
+
+    const app = createApp(App)
+    app.mixin({
+      foo: 'global'
+    })
+    app.config.optionMergeStrategies.foo = (a, b) => (a ? `${a},` : ``) + b
+
+    app.mount(nodeOps.createElement('div'))
+    expect(merged!).toBe('global,extends,mixin,local')
   })
 
   describe('warnings', () => {

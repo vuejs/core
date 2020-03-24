@@ -36,11 +36,21 @@ export interface App<HostElement = any> {
   _context: AppContext
 }
 
+export type OptionMergeFunction = (
+  to: unknown,
+  from: unknown,
+  instance: any,
+  key: string
+) => any
+
 export interface AppConfig {
+  // @private
+  readonly isNativeTag?: (tag: string) => boolean
+
   devtools: boolean
   performance: boolean
-  readonly isNativeTag?: (tag: string) => boolean
-  isCustomElement?: (tag: string) => boolean
+  optionMergeStrategies: Record<string, OptionMergeFunction>
+  isCustomElement: (tag: string) => boolean
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -73,9 +83,10 @@ export type Plugin =
 export function createAppContext(): AppContext {
   return {
     config: {
+      isNativeTag: NO,
       devtools: true,
       performance: false,
-      isNativeTag: NO,
+      optionMergeStrategies: {},
       isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
