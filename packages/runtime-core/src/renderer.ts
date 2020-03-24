@@ -946,7 +946,9 @@ function baseCreateRenderer(
         ;(parentComponent!.sink as KeepAliveSink).activate(
           n2,
           container,
-          anchor
+          anchor,
+          isSVG,
+          optimized
         )
       } else {
         mountComponent(

@@ -41,7 +41,9 @@ export interface KeepAliveSink {
   activate: (
     vnode: VNode,
     container: RendererElement,
-    anchor: RendererNode | null
+    anchor: RendererNode | null,
+    isSVG: boolean,
+    optimized: boolean
   ) => void
   deactivate: (vnode: VNode) => void
 }
@@ -78,6 +80,7 @@ const KeepAliveImpl = {
     const sink = instance.sink as KeepAliveSink
     const {
       renderer: {
+        p: patch,
         m: move,
         um: _unmount,
         o: { createElement }
@@ -86,13 +89,24 @@ const KeepAliveImpl = {
     } = sink
     const storageContainer = createElement('div')
 
-    sink.activate = (vnode, container, anchor) => {
+    sink.activate = (vnode, container, anchor, isSVG, optimized) => {
+      const child = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
+      // in case props have changed
+      patch(
+        child.vnode,
+        vnode,
+        container,
+        anchor,
+        instance,
+        parentSuspense,
+        isSVG,
+        optimized
+      )
       queuePostRenderEffect(() => {
-        const component = vnode.component!
-        component.isDeactivated = false
-        if (component.a) {
-          invokeHooks(component.a)
+        child.isDeactivated = false
+        if (child.a) {
+          invokeHooks(child.a)
         }
       }, parentSuspense)
     }
@@ -181,7 +195,7 @@ const KeepAliveImpl = {
       }
 
       const key = vnode.key == null ? comp : vnode.key
-      const cached = cache.get(key)
+      const cachedVNode = cache.get(key)
 
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
@@ -189,11 +203,11 @@ const KeepAliveImpl = {
       }
       cache.set(key, vnode)
 
-      if (cached) {
+      if (cachedVNode) {
         // copy over mounted state
-        vnode.el = cached.el
-        vnode.anchor = cached.anchor
-        vnode.component = cached.component
+        vnode.el = cachedVNode.el
+        vnode.anchor = cachedVNode.anchor
+        vnode.component = cachedVNode.component
         if (vnode.transition) {
           // recursively update transition hooks on subTree
           setTransitionHooks(vnode, vnode.transition!)
