@@ -31,7 +31,6 @@ const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildTypes = args.t || args.types || isRelease
 const buildAllMatching = args.all || args.a
-const lean = args.lean || args.l
 const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 
 run()
@@ -81,7 +80,6 @@ async function build(target) {
         formats ? `FORMATS:${formats}` : ``,
         buildTypes ? `TYPES:true` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        lean ? `LEAN:true` : ``,
         sourceMap ? `SOURCE_MAP:true` : ``
       ]
         .filter(Boolean)

@@ -169,8 +169,8 @@ function createReplacePlugin(
         `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
-    // this is only used during tests
-    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
+    // this is only used during Vue's internal tests
+    __TEST__: false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
     // is targeting bundlers?
@@ -178,9 +178,7 @@ function createReplacePlugin(
     __GLOBAL__: isGlobalBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
-    // support options?
-    // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
+    __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true,
     ...(isProduction && isBrowserBuild
       ? {
