@@ -362,5 +362,34 @@ describe('reactivity/collections', () => {
       expect(map.has(key)).toBe(false)
       expect(map.get(key)).toBeUndefined()
     })
+
+    // #877
+    it('should not trigger key iteration when setting existing keys', () => {
+      const map = reactive(new Map())
+      const spy = jest.fn()
+
+      effect(() => {
+        const keys = []
+        for (const key of map.keys()) {
+          keys.push(key)
+        }
+        spy(keys)
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject([])
+
+      map.set('a', 0)
+      expect(spy).toHaveBeenCalledTimes(2)
+      expect(spy.mock.calls[1][0]).toMatchObject(['a'])
+
+      map.set('b', 0)
+      expect(spy).toHaveBeenCalledTimes(3)
+      expect(spy.mock.calls[2][0]).toMatchObject(['a', 'b'])
+
+      // keys didn't change, should not trigger
+      map.set('b', 1)
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
   })
 })
