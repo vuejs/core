@@ -563,28 +563,6 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>1,1,3</div>`)
   })
 
-  test('optionMergeStrategies', () => {
-    let merged: string
-    const App = defineComponent({
-      render() {},
-      mixins: [{ foo: 'mixin' }],
-      extends: { foo: 'extends' },
-      foo: 'local',
-      beforeCreate() {
-        merged = this.$options.foo
-      }
-    })
-
-    const app = createApp(App)
-    app.mixin({
-      foo: 'global'
-    })
-    app.config.optionMergeStrategies.foo = (a, b) => (a ? `${a},` : ``) + b
-
-    app.mount(nodeOps.createElement('div'))
-    expect(merged!).toBe('global,extends,mixin,local')
-  })
-
   describe('warnings', () => {
     mockWarn()
 

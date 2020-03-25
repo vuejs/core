@@ -50,6 +50,7 @@ export interface AppConfig {
   devtools: boolean
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
+  globalProperties: Record<string, any>
   isCustomElement: (tag: string) => boolean
   errorHandler?: (
     err: unknown,
@@ -86,6 +87,7 @@ export function createAppContext(): AppContext {
       isNativeTag: NO,
       devtools: true,
       performance: false,
+      globalProperties: {},
       optionMergeStrategies: {},
       isCustomElement: NO,
       errorHandler: undefined,
