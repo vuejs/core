@@ -139,6 +139,7 @@ export interface RendererInternals<
 > {
   p: PatchFn
   um: UnmountFn
+  r: RemoveFn
   m: MoveFn
   mt: MountComponentFn
   mc: MountChildrenFn
@@ -209,6 +210,8 @@ type UnmountFn = (
   parentSuspense: SuspenseBoundary | null,
   doRemove?: boolean
 ) => void
+
+type RemoveFn = (vnode: VNode) => void
 
 type UnmountChildrenFn = (
   children: VNode[],
@@ -1688,6 +1691,11 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
+      // an unmounted portal should always remove its children
+      if (shapeFlag & ShapeFlags.PORTAL) {
+        ;(vnode.type as typeof PortalImpl).remove(vnode, internals)
+      }
+
       if (doRemove) {
         remove(vnode)
       }
@@ -1702,7 +1710,7 @@ function baseCreateRenderer(
     }
   }
 
-  const remove = (vnode: VNode) => {
+  const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
     if (type === Fragment) {
       removeFragment(el!, anchor!)
@@ -1888,6 +1896,7 @@ function baseCreateRenderer(
     p: patch,
     um: unmount,
     m: move,
+    r: remove,
     mt: mountComponent,
     mc: mountChildren,
     pc: patchChildren,

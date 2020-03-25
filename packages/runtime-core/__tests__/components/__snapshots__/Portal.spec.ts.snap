@@ -1,5 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`renderer: portal should remove children when unmounted 1`] = `"<div>teleported</div>"`;
+
 exports[`renderer: portal should update children 1`] = `"<div>teleported</div>"`;
 
 exports[`renderer: portal should update children 2`] = `""`;

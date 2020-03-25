@@ -113,6 +113,20 @@ export const PortalImpl = {
         }
       }
     }
+  },
+
+  remove(
+    vnode: VNode,
+    { r: remove, o: { setElementText } }: RendererInternals
+  ) {
+    const { target, shapeFlag, children } = vnode
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      setElementText(target!, '')
+    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        remove((children as VNode[])[i])
+      }
+    }
   }
 }
 

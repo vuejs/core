@@ -76,4 +76,21 @@ describe('renderer: portal', () => {
 
     expect(serializeInner(target)).toMatchSnapshot()
   })
+
+  test('should remove children when unmounted', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    const Comp = defineComponent(() => () => [
+      h(Portal, { target }, h('div', 'teleported')),
+      h('div', 'root')
+    ])
+    render(h(Comp), root)
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+
+    render(null, root)
+    expect(serializeInner(target)).toBe('')
+  })
 })
