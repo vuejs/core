@@ -8,8 +8,7 @@ import {
   nextTick,
   renderToString,
   ref,
-  defineComponent,
-  createApp
+  defineComponent
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
