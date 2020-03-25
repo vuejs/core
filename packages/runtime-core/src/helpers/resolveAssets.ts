@@ -1,10 +1,5 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import {
-  currentInstance,
-  Component,
-  ComponentInternalInstance,
-  FunctionalComponent
-} from '../component'
+import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
 import {
   camelize,
@@ -18,8 +13,8 @@ import { warn } from '../warning'
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
 
-export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset(COMPONENTS, name)
+export function resolveComponent(name: string): Component | string | undefined {
+  return resolveAsset(COMPONENTS, name) || name
 }
 
 export function resolveDynamicComponent(
@@ -27,11 +22,7 @@ export function resolveDynamicComponent(
 ): Component | string | undefined {
   if (!component) return
   if (isString(component)) {
-    return (
-      resolveAsset(COMPONENTS, component, currentRenderingInstance, false) ||
-      // fallback to plain element
-      component
-    )
+    return resolveAsset(COMPONENTS, component, false) || component
   } else if (isFunction(component) || isObject(component)) {
     return component
   }
@@ -45,23 +36,20 @@ export function resolveDirective(name: string): Directive | undefined {
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
-  instance?: ComponentInternalInstance | null,
   warnMissing?: boolean
 ): Component | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
-  name: string,
-  instance?: ComponentInternalInstance | null
+  name: string
 ): Directive | undefined
 
 function resolveAsset(
   type: typeof COMPONENTS | typeof DIRECTIVES,
   name: string,
-  instance: ComponentInternalInstance | null = currentRenderingInstance ||
-    currentInstance,
   warnMissing = true
 ) {
+  const instance = currentRenderingInstance || currentInstance
   if (instance) {
     let camelized, capitalized
     const registry = instance[type]
