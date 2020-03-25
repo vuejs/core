@@ -13,6 +13,7 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
+import { version } from '../package.json'
 
 export interface App<HostElement = any> {
   config: AppConfig
@@ -28,6 +29,7 @@ export interface App<HostElement = any> {
   ): ComponentPublicInstance
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
+  version: String
 
   // internal. We need to expose these for the server-renderer
   _component: Component
@@ -248,7 +250,9 @@ export function createAppAPI<HostElement>(
         context.provides[key as string] = value
 
         return app
-      }
+      },
+
+      version
     }
 
     return app
