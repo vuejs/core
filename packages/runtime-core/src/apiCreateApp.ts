@@ -13,7 +13,6 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
-import { version } from '../package.json'
 
 export interface App<HostElement = any> {
   config: AppConfig
@@ -252,7 +251,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
-      version
+      version: __VERSION__
     }
 
     return app
