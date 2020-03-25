@@ -36,6 +36,9 @@
       "git add"
     ]
   },
+  "engines": {
+    "node": ">=10.0.0"
+  },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.3.9",
     "@rollup/plugin-commonjs": "^11.0.2",
