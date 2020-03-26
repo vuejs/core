@@ -8,7 +8,7 @@ import {
   createStaticVNode,
   Suspense,
   onMounted,
-  createAsyncComponent
+  defineAsyncComponent
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
@@ -394,7 +394,7 @@ describe('SSR hydration', () => {
       )
 
     let serverResolve: any
-    let AsyncComp = createAsyncComponent(
+    let AsyncComp = defineAsyncComponent(
       () =>
         new Promise(r => {
           serverResolve = r
@@ -417,7 +417,7 @@ describe('SSR hydration', () => {
 
     // hydration
     let clientResolve: any
-    AsyncComp = createAsyncComponent(
+    AsyncComp = defineAsyncComponent(
       () =>
         new Promise(r => {
           clientResolve = r
