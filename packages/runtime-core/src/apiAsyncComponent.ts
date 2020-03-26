@@ -31,7 +31,7 @@ export interface AsyncComponentOptions<T = any> {
   suspensible?: boolean
 }
 
-export function createAsyncComponent<
+export function defineAsyncComponent<
   T extends PublicAPIComponent = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   if (isFunction(source)) {

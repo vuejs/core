@@ -1,5 +1,5 @@
 import {
-  createAsyncComponent,
+  defineAsyncComponent,
   h,
   Component,
   ref,
@@ -10,10 +10,10 @@ import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
-describe('api: createAsyncComponent', () => {
+describe('api: defineAsyncComponent', () => {
   test('simple usage', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent(
+    const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
           resolve = r as any
@@ -47,7 +47,7 @@ describe('api: createAsyncComponent', () => {
 
   test('with loading component', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(r => {
           resolve = r as any
@@ -87,7 +87,7 @@ describe('api: createAsyncComponent', () => {
 
   test('with loading component + explicit delay (0)', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(r => {
           resolve = r as any
@@ -124,7 +124,7 @@ describe('api: createAsyncComponent', () => {
   test('error without error component', async () => {
     let resolve: (comp: Component) => void
     let reject: (e: Error) => void
-    const Foo = createAsyncComponent(
+    const Foo = defineAsyncComponent(
       () =>
         new Promise((_resolve, _reject) => {
           resolve = _resolve as any
@@ -169,7 +169,7 @@ describe('api: createAsyncComponent', () => {
   test('error with error component', async () => {
     let resolve: (comp: Component) => void
     let reject: (e: Error) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise((_resolve, _reject) => {
           resolve = _resolve as any
@@ -214,7 +214,7 @@ describe('api: createAsyncComponent', () => {
   test('error with error + loading components', async () => {
     let resolve: (comp: Component) => void
     let reject: (e: Error) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise((_resolve, _reject) => {
           resolve = _resolve as any
@@ -270,7 +270,7 @@ describe('api: createAsyncComponent', () => {
 
   test('timeout without error component', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -304,7 +304,7 @@ describe('api: createAsyncComponent', () => {
 
   test('timeout with error component', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -336,7 +336,7 @@ describe('api: createAsyncComponent', () => {
 
   test('timeout with error + loading components', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -369,7 +369,7 @@ describe('api: createAsyncComponent', () => {
 
   test('timeout without error component, but with loading component', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -405,7 +405,7 @@ describe('api: createAsyncComponent', () => {
 
   test('with suspense', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent(
+    const Foo = defineAsyncComponent(
       () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -432,7 +432,7 @@ describe('api: createAsyncComponent', () => {
 
   test('suspensible: false', async () => {
     let resolve: (comp: Component) => void
-    const Foo = createAsyncComponent({
+    const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
           resolve = _resolve as any
@@ -461,7 +461,7 @@ describe('api: createAsyncComponent', () => {
 
   test('suspense with error handling', async () => {
     let reject: (e: Error) => void
-    const Foo = createAsyncComponent(
+    const Foo = defineAsyncComponent(
       () =>
         new Promise((_resolve, _reject) => {
           reject = _reject
