@@ -102,7 +102,11 @@ export interface RendererOptions<
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
-  createElement(type: string, isSVG?: boolean): HostElement
+  createElement(
+    type: string,
+    isSVG?: boolean,
+    isCustomizedBuiltIn?: string
+  ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
   setText(node: HostNode, text: string): void
@@ -549,7 +553,11 @@ function baseCreateRenderer(
       // exactly the same, and we can simply do a clone here.
       el = vnode.el = hostCloneNode(vnode.el)
     } else {
-      el = vnode.el = hostCreateElement(vnode.type as string, isSVG)
+      el = vnode.el = hostCreateElement(
+        vnode.type as string,
+        isSVG,
+        props && props.is
+      )
       // props
       if (props) {
         for (const key in props) {

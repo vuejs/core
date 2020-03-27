@@ -22,8 +22,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
-  createElement: (tag, isSVG): Element =>
-    isSVG ? doc.createElementNS(svgNS, tag) : doc.createElement(tag),
+  createElement: (tag, isSVG, is): Element =>
+    isSVG
+      ? doc.createElementNS(svgNS, tag)
+      : doc.createElement(tag, is ? { is } : undefined),
 
   createText: text => doc.createTextNode(text),
 
