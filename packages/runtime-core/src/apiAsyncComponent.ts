@@ -6,7 +6,7 @@ import {
   ComponentInternalInstance,
   isInSSRComponentSetup
 } from './component'
-import { isFunction, isObject, EMPTY_OBJ } from '@vue/shared'
+import { isFunction, isObject, EMPTY_OBJ, NO } from '@vue/shared'
 import { ComponentPublicInstance } from './componentProxy'
 import { createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -24,10 +24,12 @@ export type AsyncComponentLoader<T = any> = () => Promise<
 
 export interface AsyncComponentOptions<T = any> {
   loader: AsyncComponentLoader<T>
-  loading?: PublicAPIComponent
-  error?: PublicAPIComponent
+  loadingComponent?: PublicAPIComponent
+  errorComponent?: PublicAPIComponent
   delay?: number
   timeout?: number
+  retryWhen?: (error: Error) => any
+  maxRetries?: number
   suspensible?: boolean
 }
 
@@ -39,31 +41,62 @@ export function defineAsyncComponent<
   }
 
   const {
-    suspensible = true,
     loader,
-    loading: loadingComponent,
-    error: errorComponent,
+    loadingComponent: loadingComponent,
+    errorComponent: errorComponent,
     delay = 200,
-    timeout // undefined = never times out
+    timeout, // undefined = never times out
+    retryWhen = NO,
+    maxRetries = 3,
+    suspensible = true
   } = source
 
   let pendingRequest: Promise<Component> | null = null
   let resolvedComp: Component | undefined
 
+  let retries = 0
+  const retry = (error?: unknown) => {
+    retries++
+    pendingRequest = null
+    return load()
+  }
+
   const load = (): Promise<Component> => {
+    let thisRequest: Promise<Component>
     return (
       pendingRequest ||
-      (pendingRequest = loader().then((comp: any) => {
-        // interop module default
-        if (comp.__esModule || comp[Symbol.toStringTag] === 'Module') {
-          comp = comp.default
-        }
-        if (__DEV__ && !isObject(comp) && !isFunction(comp)) {
-          warn(`Invalid async component load result: `, comp)
-        }
-        resolvedComp = comp
-        return comp
-      }))
+      (thisRequest = pendingRequest = loader()
+        .catch(err => {
+          err = err instanceof Error ? err : new Error(String(err))
+          if (retryWhen(err) && retries < maxRetries) {
+            return retry(err)
+          } else {
+            throw err
+          }
+        })
+        .then((comp: any) => {
+          if (thisRequest !== pendingRequest && pendingRequest) {
+            return pendingRequest
+          }
+          if (__DEV__ && !comp) {
+            warn(
+              `Async component loader resolved to undefined. ` +
+                `If you are using retry(), make sure to return its return value.`
+            )
+          }
+          // interop module default
+          if (
+            comp &&
+            (comp.__esModule || comp[Symbol.toStringTag] === 'Module')
+          ) {
+            comp = comp.default
+          }
+          if (__DEV__ && comp && !isObject(comp) && !isFunction(comp)) {
+            throw new Error(`Invalid async component load result: ${comp}`)
+          }
+          resolvedComp = comp
+          return comp
+        }))
     )
   }
 
@@ -100,8 +133,6 @@ export function defineAsyncComponent<
                 : null
           })
       }
-
-      // TODO hydration
 
       const loaded = ref(false)
       const error = ref()

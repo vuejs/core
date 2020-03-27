@@ -23,7 +23,6 @@ describe('api: defineAsyncComponent', () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     }).mount(root)
 
@@ -52,14 +51,13 @@ describe('api: defineAsyncComponent', () => {
         new Promise(r => {
           resolve = r as any
         }),
-      loading: () => 'loading',
+      loadingComponent: () => 'loading',
       delay: 1 // defaults to 200
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     }).mount(root)
 
@@ -92,14 +90,13 @@ describe('api: defineAsyncComponent', () => {
         new Promise(r => {
           resolve = r as any
         }),
-      loading: () => 'loading',
+      loadingComponent: () => 'loading',
       delay: 0
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     }).mount(root)
 
@@ -135,7 +132,6 @@ describe('api: defineAsyncComponent', () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     })
 
@@ -175,13 +171,12 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
           reject = _reject
         }),
-      error: (props: { error: Error }) => props.error.message
+      errorComponent: (props: { error: Error }) => props.error.message
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     })
 
@@ -220,15 +215,14 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
           reject = _reject
         }),
-      error: (props: { error: Error }) => props.error.message,
-      loading: () => 'loading',
+      errorComponent: (props: { error: Error }) => props.error.message,
+      loadingComponent: () => 'loading',
       delay: 1
     })
 
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => (toggle.value ? h(Foo) : null)
     })
 
@@ -280,7 +274,6 @@ describe('api: defineAsyncComponent', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => h(Foo)
     })
 
@@ -310,12 +303,11 @@ describe('api: defineAsyncComponent', () => {
           resolve = _resolve as any
         }),
       timeout: 1,
-      error: () => 'timed out'
+      errorComponent: () => 'timed out'
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => h(Foo)
     })
 
@@ -343,13 +335,12 @@ describe('api: defineAsyncComponent', () => {
         }),
       delay: 1,
       timeout: 16,
-      error: () => 'timed out',
-      loading: () => 'loading'
+      errorComponent: () => 'timed out',
+      loadingComponent: () => 'loading'
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => h(Foo)
     })
     const handler = (app.config.errorHandler = jest.fn())
@@ -376,12 +367,11 @@ describe('api: defineAsyncComponent', () => {
         }),
       delay: 1,
       timeout: 16,
-      loading: () => 'loading'
+      loadingComponent: () => 'loading'
     })
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () => h(Foo)
     })
     const handler = (app.config.errorHandler = jest.fn())
@@ -414,7 +404,6 @@ describe('api: defineAsyncComponent', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () =>
         h(Suspense, null, {
           default: () => [h(Foo), ' & ', h(Foo)],
@@ -442,7 +431,6 @@ describe('api: defineAsyncComponent', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () =>
         h(Suspense, null, {
           default: () => [h(Foo), ' & ', h(Foo)],
@@ -470,7 +458,6 @@ describe('api: defineAsyncComponent', () => {
 
     const root = nodeOps.createElement('div')
     const app = createApp({
-      components: { Foo },
       render: () =>
         h(Suspense, null, {
           default: () => [h(Foo), ' & ', h(Foo)],
@@ -486,5 +473,121 @@ describe('api: defineAsyncComponent', () => {
     await timeout()
     expect(handler).toHaveBeenCalled()
     expect(serializeInner(root)).toBe('<!----> & <!---->')
+  })
+
+  test('retry (success)', async () => {
+    let loaderCallCount = 0
+    let resolve: (comp: Component) => void
+    let reject: (e: Error) => void
+
+    const Foo = defineAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise((_resolve, _reject) => {
+          resolve = _resolve as any
+          reject = _reject
+        })
+      },
+      retryWhen: error => error.message.match(/foo/)
+    })
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(Foo)
+    })
+
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(root)
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(loaderCallCount).toBe(1)
+
+    const err = new Error('foo')
+    reject!(err)
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(loaderCallCount).toBe(2)
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // should render this time
+    resolve!(() => 'resolved')
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(serializeInner(root)).toBe('resolved')
+  })
+
+  test('retry (skipped)', async () => {
+    let loaderCallCount = 0
+    let reject: (e: Error) => void
+
+    const Foo = defineAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise((_resolve, _reject) => {
+          reject = _reject
+        })
+      },
+      retryWhen: error => error.message.match(/bar/)
+    })
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(Foo)
+    })
+
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(root)
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(loaderCallCount).toBe(1)
+
+    const err = new Error('foo')
+    reject!(err)
+    await timeout()
+    // should fail because retryWhen returns false
+    expect(handler).toHaveBeenCalled()
+    expect(handler.mock.calls[0][0]).toBe(err)
+    expect(loaderCallCount).toBe(1)
+    expect(serializeInner(root)).toBe('<!---->')
+  })
+
+  test('retry (fail w/ maxRetries)', async () => {
+    let loaderCallCount = 0
+    let reject: (e: Error) => void
+
+    const Foo = defineAsyncComponent({
+      loader: () => {
+        loaderCallCount++
+        return new Promise((_resolve, _reject) => {
+          reject = _reject
+        })
+      },
+      retryWhen: error => error.message.match(/foo/),
+      maxRetries: 1
+    })
+
+    const root = nodeOps.createElement('div')
+    const app = createApp({
+      render: () => h(Foo)
+    })
+
+    const handler = (app.config.errorHandler = jest.fn())
+    app.mount(root)
+    expect(serializeInner(root)).toBe('<!---->')
+    expect(loaderCallCount).toBe(1)
+
+    // first retry
+    const err = new Error('foo')
+    reject!(err)
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+    expect(loaderCallCount).toBe(2)
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // 2nd retry, should fail due to reaching maxRetries
+    reject!(err)
+    await timeout()
+    expect(handler).toHaveBeenCalled()
+    expect(handler.mock.calls[0][0]).toBe(err)
+    expect(loaderCallCount).toBe(2)
+    expect(serializeInner(root)).toBe('<!---->')
   })
 })
