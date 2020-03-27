@@ -451,9 +451,13 @@ function parseTag(
   let tagType = ElementTypes.ELEMENT
   const options = context.options
   if (!context.inPre && !options.isCustomElement(tag)) {
-    if (options.isNativeTag) {
+    const hasVIs = props.some(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
+    )
+    if (options.isNativeTag && !hasVIs) {
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else if (
+      hasVIs ||
       isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
       /^[A-Z]/.test(tag) ||

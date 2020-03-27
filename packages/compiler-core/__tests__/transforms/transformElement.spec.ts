@@ -829,6 +829,25 @@ describe('compiler: element transform', () => {
         }
       })
     })
+
+    test('v-is', () => {
+      const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `'foo'`,
+              isStatic: false
+            }
+          ]
+        },
+        // should skip v-is runtime check
+        directives: undefined
+      })
+    })
   })
 
   test('<svg> should be forced into blocks', () => {

@@ -36,7 +36,8 @@ import {
   toValidAssetId,
   findProp,
   isCoreComponent,
-  isBindKey
+  isBindKey,
+  findDir
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { isStaticNode } from './hoistStatic'
@@ -202,7 +203,8 @@ export function resolveComponentType(
   const { tag } = node
 
   // 1. dynamic component
-  const isProp = node.tag === 'component' && findProp(node, 'is')
+  const isProp =
+    node.tag === 'component' ? findProp(node, 'is') : findDir(node, 'is')
   if (isProp) {
     const exp =
       isProp.type === NodeTypes.ATTRIBUTE
@@ -340,8 +342,11 @@ export function buildProps(
       if (name === 'once') {
         continue
       }
-      // skip :is on <component>
-      if (isBind && tag === 'component' && isBindKey(arg, 'is')) {
+      // skip v-is and :is on <component>
+      if (
+        name === 'is' ||
+        (isBind && tag === 'component' && isBindKey(arg, 'is'))
+      ) {
         continue
       }
       // skip v-on in SSR compilation
