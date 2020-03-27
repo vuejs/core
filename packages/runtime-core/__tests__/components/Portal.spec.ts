@@ -3,29 +3,32 @@ import {
   serializeInner,
   render,
   h,
-  defineComponent,
   Portal,
   Text,
   ref,
-  nextTick,
-  TestElement,
-  TestNode
+  nextTick
 } from '@vue/runtime-test'
-import { VNodeArrayChildren, createVNode } from '../../src/vnode'
+import { createVNode } from '../../src/vnode'
 
 describe('renderer: portal', () => {
   test('should work', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
-    const Comp = defineComponent(() => () => [
-      h(Portal, { target }, h('div', 'teleported')),
-      h('div', 'root')
-    ])
-    render(h(Comp), root)
+    render(
+      h(() => [
+        h(Portal, { target }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
 
-    expect(serializeInner(root)).toMatchSnapshot()
-    expect(serializeInner(target)).toMatchSnapshot()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 
   test('should update target', async () => {
@@ -34,63 +37,143 @@ describe('renderer: portal', () => {
     const target = ref(targetA)
     const root = nodeOps.createElement('div')
 
-    const Comp = defineComponent(() => () => [
-      h(Portal, { target: target.value }, h('div', 'teleported')),
-      h('div', 'root')
-    ])
-    render(h(Comp), root)
+    render(
+      h(() => [
+        h(Portal, { target: target.value }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
 
-    expect(serializeInner(root)).toMatchSnapshot()
-    expect(serializeInner(targetA)).toMatchSnapshot()
-    expect(serializeInner(targetB)).toMatchSnapshot()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal--><div>root</div>"`
+    )
+    expect(serializeInner(targetA)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+    expect(serializeInner(targetB)).toMatchInlineSnapshot(`""`)
 
     target.value = targetB
     await nextTick()
 
-    expect(serializeInner(root)).toMatchSnapshot()
-    expect(serializeInner(targetA)).toMatchSnapshot()
-    expect(serializeInner(targetB)).toMatchSnapshot()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal--><div>root</div>"`
+    )
+    expect(serializeInner(targetA)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(targetB)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 
   test('should update children', async () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
-    const children = ref<VNodeArrayChildren<TestNode, TestElement>>([
-      h('div', 'teleported')
-    ])
+    const children = ref([h('div', 'teleported')])
 
-    const Comp = defineComponent(() => () =>
-      h(Portal, { target }, children.value)
+    render(h(Portal, { target }, children.value), root)
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
     )
-    render(h(Comp), root)
-
-    expect(serializeInner(target)).toMatchSnapshot()
 
     children.value = []
     await nextTick()
 
-    expect(serializeInner(target)).toMatchSnapshot()
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
 
     children.value = [createVNode(Text, null, 'teleported')]
     await nextTick()
 
-    expect(serializeInner(target)).toMatchSnapshot()
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 
   test('should remove children when unmounted', () => {
     const target = nodeOps.createElement('div')
     const root = nodeOps.createElement('div')
 
-    const Comp = defineComponent(() => () => [
-      h(Portal, { target }, h('div', 'teleported')),
-      h('div', 'root')
-    ])
-    render(h(Comp), root)
+    render(
+      h(() => [
+        h(Portal, { target }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
     )
 
     render(null, root)
     expect(serializeInner(target)).toBe('')
+  })
+
+  test('multiple portal with same target', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      h('div', [
+        h(Portal, { target }, h('div', 'one')),
+        h(Portal, { target }, 'two')
+      ]),
+      root
+    )
+
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div><!--portal--><!--portal--></div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(`"<div>one</div>two"`)
+
+    // update existing content
+    render(
+      h('div', [
+        h(Portal, { target }, [h('div', 'one'), h('div', 'two')]),
+        h(Portal, { target }, 'three')
+      ]),
+      root
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>one</div><div>two</div>three"`
+    )
+
+    // toggling
+    render(h('div', [null, h(Portal, { target }, 'three')]), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div><!----><!--portal--></div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(`"three"`)
+
+    // toggle back
+    render(
+      h('div', [
+        h(Portal, { target }, [h('div', 'one'), h('div', 'two')]),
+        h(Portal, { target }, 'three')
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div><!--portal--><!--portal--></div>"`
+    )
+    // should append
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"three<div>one</div><div>two</div>"`
+    )
+
+    // toggle the other portal
+    render(
+      h('div', [
+        h(Portal, { target }, [h('div', 'one'), h('div', 'two')]),
+        null
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div><!--portal--><!----></div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>one</div><div>two</div>"`
+    )
   })
 })

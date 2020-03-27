@@ -124,7 +124,7 @@ export const transformElement: NodeTransform = (node, context) => {
 
       const shouldBuildAsSlots =
         isComponent &&
-        // Portal is not a real component has dedicated handling in the renderer
+        // Portal is not a real component and has dedicated runtime handling
         vnodeTag !== PORTAL &&
         // explained above.
         vnodeTag !== KEEP_ALIVE
@@ -135,7 +135,7 @@ export const transformElement: NodeTransform = (node, context) => {
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
-      } else if (node.children.length === 1) {
+      } else if (node.children.length === 1 && vnodeTag !== PORTAL) {
         const child = node.children[0]
         const type = child.type
         // check for dynamic text children

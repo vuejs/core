@@ -4,10 +4,11 @@ import {
   RendererInternals,
   MoveType,
   RendererElement,
-  RendererNode
+  RendererNode,
+  RendererOptions
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { isString, ShapeFlags, PatchFlags } from '@vue/shared'
+import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 export const isPortal = (type: any): boolean => type.__isPortal
@@ -32,11 +33,11 @@ export const PortalImpl = {
       pc: patchChildren,
       pbc: patchBlockChildren,
       m: move,
-      o: { insert, querySelector, setElementText, createComment }
+      o: { insert, querySelector, createText, createComment }
     }: RendererInternals
   ) {
     const targetSelector = n2.props && n2.props.target
-    const { patchFlag, shapeFlag, children } = n2
+    const { shapeFlag, children } = n2
     if (n1 == null) {
       // insert an empty node as the placeholder for the portal
       insert((n2.el = createComment(`portal`)), container, anchor)
@@ -49,14 +50,18 @@ export const PortalImpl = {
       const target = (n2.target = isString(targetSelector)
         ? querySelector!(targetSelector)
         : targetSelector)
+      // portal content needs an anchor to support patching multiple portals
+      // appending to the same target element.
+      const portalAnchor = (n2.anchor = createText(''))
       if (target) {
-        if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-          setElementText(target, children as string)
-        } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        insert(portalAnchor, target)
+        // Portal *always* has Array children. This is enforced in both the
+        // compiler and vnode children normalization.
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
             children as VNodeArrayChildren,
             target,
-            null,
+            portalAnchor,
             parentComponent,
             parentSuspense,
             isSVG,
@@ -67,12 +72,11 @@ export const PortalImpl = {
         warn('Invalid Portal target on mount:', target, `(${typeof target})`)
       }
     } else {
-      n2.el = n1.el
       // update content
+      n2.el = n1.el
       const target = (n2.target = n1.target)!
-      if (patchFlag === PatchFlags.TEXT) {
-        setElementText(target, children as string)
-      } else if (n2.dynamicChildren) {
+      const portalAnchor = (n2.anchor = n1.anchor)!
+      if (n2.dynamicChildren) {
         // fast path when the portal happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
@@ -87,27 +91,20 @@ export const PortalImpl = {
           n1,
           n2,
           target,
-          null,
+          portalAnchor,
           parentComponent,
           parentSuspense,
           isSVG
         )
       }
+
       // target changed
       if (targetSelector !== (n1.props && n1.props.target)) {
         const nextTarget = (n2.target = isString(targetSelector)
           ? querySelector!(targetSelector)
           : targetSelector)
         if (nextTarget) {
-          // move content
-          if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-            setElementText(target, '')
-            setElementText(nextTarget, children as string)
-          } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-            for (let i = 0; i < (children as VNode[]).length; i++) {
-              move((children as VNode[])[i], nextTarget, null, MoveType.REORDER)
-            }
-          }
+          movePortal(n2, nextTarget, null, insert, move)
         } else if (__DEV__) {
           warn('Invalid Portal target on update:', target, `(${typeof target})`)
         }
@@ -117,15 +114,32 @@ export const PortalImpl = {
 
   remove(
     vnode: VNode,
-    { r: remove, o: { setElementText } }: RendererInternals
+    { r: remove, o: { remove: hostRemove } }: RendererInternals
   ) {
-    const { target, shapeFlag, children } = vnode
-    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-      setElementText(target!, '')
-    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    const { shapeFlag, children, anchor } = vnode
+    hostRemove(anchor!)
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         remove((children as VNode[])[i])
       }
+    }
+  }
+}
+
+const movePortal = (
+  vnode: VNode,
+  nextTarget: RendererElement,
+  anchor: RendererNode | null,
+  insert: RendererOptions['insert'],
+  move: RendererInternals['m']
+) => {
+  const { anchor: portalAnchor, shapeFlag, children } = vnode
+  // move content.
+  // Portal has either Array children or no children.
+  insert(portalAnchor!, nextTarget, anchor)
+  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    for (let i = 0; i < (children as VNode[]).length; i++) {
+      move((children as VNode[])[i], nextTarget, portalAnchor, MoveType.REORDER)
     }
   }
 }

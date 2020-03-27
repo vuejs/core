@@ -419,14 +419,17 @@ export function cloneIfMounted(child: VNode): VNode {
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
   let type = 0
+  const { shapeFlag } = vnode
   if (children == null) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    // in case <component :is="x"> resolves to native element, the vnode call
-    // will receive slots object.
-    if (vnode.shapeFlag & ShapeFlags.ELEMENT && (children as any).default) {
+    // Normalize slot to plain children
+    if (
+      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.PORTAL) &&
+      (children as any).default
+    ) {
       normalizeChildren(vnode, (children as any).default())
       return
     } else {
@@ -440,7 +443,13 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
     children = String(children)
-    type = ShapeFlags.TEXT_CHILDREN
+    // force portal children to array so it can be moved around
+    if (shapeFlag & ShapeFlags.PORTAL) {
+      type = ShapeFlags.ARRAY_CHILDREN
+      children = [createTextVNode(children as string)]
+    } else {
+      type = ShapeFlags.TEXT_CHILDREN
+    }
   }
   vnode.children = children as VNodeNormalizedChildren
   vnode.shapeFlag |= type

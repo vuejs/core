@@ -1839,7 +1839,7 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.anchor || vnode.el)!)
+    return hostNextSibling((vnode.type === Fragment ? vnode.anchor : vnode.el)!)
   }
 
   const setRef = (
