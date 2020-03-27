@@ -189,6 +189,8 @@ export {
 export { ComponentPublicInstance } from './componentProxy'
 export {
   Renderer,
+  RendererNode,
+  RendererElement,
   HydrationRenderer,
   RendererOptions,
   RootRenderFunction
