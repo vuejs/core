@@ -23,6 +23,9 @@ export const enum PortalMoveTypes {
   REORDER // moved in the main view
 }
 
+const isDisabled = (props: VNode['props']): boolean =>
+  props && (props.disabled || props.disabled === '')
+
 const movePortal = (
   vnode: VNode,
   container: RendererElement,
@@ -43,7 +46,7 @@ const movePortal = (
   // if this is a re-order and portal is enabled (content is in target)
   // do not move children. So the opposite is: only move children if this
   // is not a reorder, or the portal is disabled
-  if (!isReorder || (props && props.disabled)) {
+  if (!isReorder || isDisabled(props)) {
     // Portal has either Array children or no children.
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
@@ -83,7 +86,7 @@ export const PortalImpl = {
     } = internals
 
     const targetSelector = n2.props && n2.props.target
-    const disabled = n2.props && n2.props.disabled
+    const disabled = isDisabled(n2.props)
     const { shapeFlag, children } = n2
     if (n1 == null) {
       if (__DEV__ && isString(targetSelector) && !querySelector) {
@@ -140,7 +143,7 @@ export const PortalImpl = {
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
-      const wasDisabled = n1.props && n1.props.disabled
+      const wasDisabled = isDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 

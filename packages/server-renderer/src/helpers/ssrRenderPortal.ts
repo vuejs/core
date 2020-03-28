@@ -1,16 +1,31 @@
 import { ComponentInternalInstance, ssrContextKey } from 'vue'
-import { SSRContext, createBuffer, PushFn } from '../renderToString'
+import {
+  SSRContext,
+  createBuffer,
+  PushFn,
+  SSRBufferItem
+} from '../renderToString'
 
 export function ssrRenderPortal(
   parentPush: PushFn,
   contentRenderFn: (push: PushFn) => void,
   target: string,
+  disabled: boolean,
   parentComponent: ComponentInternalInstance
 ) {
-  parentPush('<!--portal-->')
-  const { getBuffer, push } = createBuffer()
-  contentRenderFn(push)
-  push(`<!---->`) // portal end anchor
+  parentPush('<!--portal start-->')
+
+  let portalContent: SSRBufferItem
+
+  if (disabled) {
+    contentRenderFn(parentPush)
+    portalContent = `<!---->`
+  } else {
+    const { getBuffer, push } = createBuffer()
+    contentRenderFn(push)
+    push(`<!---->`) // portal end anchor
+    portalContent = getBuffer()
+  }
 
   const context = parentComponent.appContext.provides[
     ssrContextKey as any
@@ -18,8 +33,10 @@ export function ssrRenderPortal(
   const portalBuffers =
     context.__portalBuffers || (context.__portalBuffers = {})
   if (portalBuffers[target]) {
-    portalBuffers[target].push(getBuffer())
+    portalBuffers[target].push(portalContent)
   } else {
-    portalBuffers[target] = [getBuffer()]
+    portalBuffers[target] = [portalContent]
   }
+
+  parentPush('<!--portal end-->')
 }

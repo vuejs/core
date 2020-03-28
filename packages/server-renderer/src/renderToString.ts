@@ -366,6 +366,7 @@ function renderPortalVNode(
   parentComponent: ComponentInternalInstance
 ) {
   const target = vnode.props && vnode.props.target
+  const disabled = vnode.props && vnode.props.disabled
   if (!target) {
     warn(`[@vue/server-renderer] Portal is missing target prop.`)
     return []
@@ -386,6 +387,7 @@ function renderPortalVNode(
       )
     },
     target,
+    disabled || disabled === '',
     parentComponent
   )
 }

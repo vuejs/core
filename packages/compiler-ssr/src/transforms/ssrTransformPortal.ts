@@ -1,11 +1,11 @@
 import {
   ComponentNode,
   findProp,
-  JSChildNode,
   NodeTypes,
   createSimpleExpression,
   createFunctionExpression,
-  createCallExpression
+  createCallExpression,
+  ExpressionNode
 } from '@vue/compiler-dom'
 import {
   SSRTransformContext,
@@ -27,12 +27,14 @@ export function ssrProcessPortal(
     return
   }
 
-  let target: JSChildNode
-  if (targetProp.type === NodeTypes.ATTRIBUTE && targetProp.value) {
-    target = createSimpleExpression(targetProp.value.content, true)
-  } else if (targetProp.type === NodeTypes.DIRECTIVE && targetProp.exp) {
-    target = targetProp.exp
+  let target: ExpressionNode | undefined
+  if (targetProp.type === NodeTypes.ATTRIBUTE) {
+    target =
+      targetProp.value && createSimpleExpression(targetProp.value.content, true)
   } else {
+    target = targetProp.exp
+  }
+  if (!target) {
     context.onError(
       createSSRCompilerError(
         SSRErrorCodes.X_SSR_NO_PORTAL_TARGET,
@@ -41,6 +43,13 @@ export function ssrProcessPortal(
     )
     return
   }
+
+  const disabledProp = findProp(node, 'disabled', false, true /* allow empty */)
+  const disabled = disabledProp
+    ? disabledProp.type === NodeTypes.ATTRIBUTE
+      ? `true`
+      : disabledProp.exp || `false`
+    : `false`
 
   const contentRenderFn = createFunctionExpression(
     [`_push`],
@@ -55,6 +64,7 @@ export function ssrProcessPortal(
       `_push`,
       contentRenderFn,
       target,
+      disabled,
       `_parent`
     ])
   )
