@@ -1606,54 +1606,61 @@ function baseCreateRenderer(
     vnode,
     container,
     anchor,
-    type,
+    moveType,
     parentSuspense = null
   ) => {
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-      move(vnode.component!.subTree, container, anchor, type)
+    const { el, type, transition, children, shapeFlag } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+      move(vnode.component!.subTree, container, anchor, moveType)
       return
     }
-    if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-      vnode.suspense!.move(container, anchor, type)
+
+    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+      vnode.suspense!.move(container, anchor, moveType)
       return
     }
-    if (vnode.type === Fragment) {
-      hostInsert(vnode.el!, container, anchor)
-      const children = vnode.children as VNode[]
-      for (let i = 0; i < children.length; i++) {
-        move(children[i], container, anchor, type)
+
+    if (shapeFlag & ShapeFlags.PORTAL) {
+      ;(type as typeof PortalImpl).move(vnode, container, anchor, internals)
+      return
+    }
+
+    if (type === Fragment) {
+      hostInsert(el!, container, anchor)
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        move((children as VNode[])[i], container, anchor, moveType)
       }
       hostInsert(vnode.anchor!, container, anchor)
-    } else {
-      // Plain element
-      const { el, transition, shapeFlag } = vnode
-      const needTransition =
-        type !== MoveType.REORDER &&
-        shapeFlag & ShapeFlags.ELEMENT &&
-        transition
-      if (needTransition) {
-        if (type === MoveType.ENTER) {
-          transition!.beforeEnter(el!)
-          hostInsert(el!, container, anchor)
-          queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
-        } else {
-          const { leave, delayLeave, afterLeave } = transition!
-          const remove = () => hostInsert(el!, container, anchor)
-          const performLeave = () => {
-            leave(el!, () => {
-              remove()
-              afterLeave && afterLeave()
-            })
-          }
-          if (delayLeave) {
-            delayLeave(el!, remove, performLeave)
-          } else {
-            performLeave()
-          }
-        }
-      } else {
+      return
+    }
+
+    // single nodes
+    const needTransition =
+      moveType !== MoveType.REORDER &&
+      shapeFlag & ShapeFlags.ELEMENT &&
+      transition
+    if (needTransition) {
+      if (moveType === MoveType.ENTER) {
+        transition!.beforeEnter(el!)
         hostInsert(el!, container, anchor)
+        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+      } else {
+        const { leave, delayLeave, afterLeave } = transition!
+        const remove = () => hostInsert(el!, container, anchor)
+        const performLeave = () => {
+          leave(el!, () => {
+            remove()
+            afterLeave && afterLeave()
+          })
+        }
+        if (delayLeave) {
+          delayLeave(el!, remove, performLeave)
+        } else {
+          performLeave()
+        }
       }
+    } else {
+      hostInsert(el!, container, anchor)
     }
   }
 
@@ -1839,7 +1846,7 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.type === Fragment ? vnode.anchor : vnode.el)!)
+    return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
   const setRef = (

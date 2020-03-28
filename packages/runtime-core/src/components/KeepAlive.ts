@@ -206,7 +206,6 @@ const KeepAliveImpl = {
       if (cachedVNode) {
         // copy over mounted state
         vnode.el = cachedVNode.el
-        vnode.anchor = cachedVNode.anchor
         vnode.component = cachedVNode.component
         if (vnode.transition) {
           // recursively update transition hooks on subTree

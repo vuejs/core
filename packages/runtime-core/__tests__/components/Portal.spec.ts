@@ -8,7 +8,7 @@ import {
   ref,
   nextTick
 } from '@vue/runtime-test'
-import { createVNode } from '../../src/vnode'
+import { createVNode, Fragment } from '../../src/vnode'
 
 describe('renderer: portal', () => {
   test('should work', () => {
@@ -24,7 +24,7 @@ describe('renderer: portal', () => {
     )
 
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--portal--><div>root</div>"`
+      `"<!--portal start--><!--portal end--><div>root</div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
@@ -46,7 +46,7 @@ describe('renderer: portal', () => {
     )
 
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--portal--><div>root</div>"`
+      `"<!--portal start--><!--portal end--><div>root</div>"`
     )
     expect(serializeInner(targetA)).toMatchInlineSnapshot(
       `"<div>teleported</div>"`
@@ -57,7 +57,7 @@ describe('renderer: portal', () => {
     await nextTick()
 
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--portal--><div>root</div>"`
+      `"<!--portal start--><!--portal end--><div>root</div>"`
     )
     expect(serializeInner(targetA)).toMatchInlineSnapshot(`""`)
     expect(serializeInner(targetB)).toMatchInlineSnapshot(
@@ -122,7 +122,7 @@ describe('renderer: portal', () => {
     )
 
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<div><!--portal--><!--portal--></div>"`
+      `"<div><!--portal start--><!--portal end--><!--portal start--><!--portal end--></div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(`"<div>one</div>two"`)
 
@@ -141,7 +141,7 @@ describe('renderer: portal', () => {
     // toggling
     render(h('div', [null, h(Portal, { target }, 'three')]), root)
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<div><!----><!--portal--></div>"`
+      `"<div><!----><!--portal start--><!--portal end--></div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(`"three"`)
 
@@ -154,7 +154,7 @@ describe('renderer: portal', () => {
       root
     )
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<div><!--portal--><!--portal--></div>"`
+      `"<div><!--portal start--><!--portal end--><!--portal start--><!--portal end--></div>"`
     )
     // should append
     expect(serializeInner(target)).toMatchInlineSnapshot(
@@ -170,10 +170,133 @@ describe('renderer: portal', () => {
       root
     )
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<div><!--portal--><!----></div>"`
+      `"<div><!--portal start--><!--portal end--><!----></div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
       `"<div>one</div><div>two</div>"`
     )
+  })
+
+  test('disabled', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    const renderWithDisabled = (disabled: boolean) => {
+      return h(Fragment, [
+        h(Portal, { target, disabled }, h('div', 'teleported')),
+        h('div', 'root')
+      ])
+    }
+
+    render(renderWithDisabled(false), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+
+    render(renderWithDisabled(true), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><div>teleported</div><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toBe(``)
+
+    // toggle back
+    render(renderWithDisabled(false), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+  })
+
+  test('moving portal while enabled', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      h(Fragment, [
+        h(Portal, { target }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+
+    render(
+      h(Fragment, [
+        h('div', 'root'),
+        h(Portal, { target }, h('div', 'teleported'))
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div>root</div><!--portal start--><!--portal end-->"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+
+    render(
+      h(Fragment, [
+        h(Portal, { target }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+  })
+
+  test('moving portal while disabled', () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+
+    render(
+      h(Fragment, [
+        h(Portal, { target, disabled: true }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><div>teleported</div><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toBe('')
+
+    render(
+      h(Fragment, [
+        h('div', 'root'),
+        h(Portal, { target, disabled: true }, h('div', 'teleported'))
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<div>root</div><!--portal start--><div>teleported</div><!--portal end-->"`
+    )
+    expect(serializeInner(target)).toBe('')
+
+    render(
+      h(Fragment, [
+        h(Portal, { target, disabled: true }, h('div', 'teleported')),
+        h('div', 'root')
+      ]),
+      root
+    )
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--portal start--><div>teleported</div><!--portal end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toBe('')
   })
 })

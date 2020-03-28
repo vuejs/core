@@ -114,6 +114,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // portal target
+  targetAnchor: HostNode | null // portal target anchor
 
   // optimization only
   shapeFlag: number
@@ -308,6 +309,7 @@ function _createVNode(
     el: null,
     anchor: null,
     target: null,
+    targetAnchor: null,
     shapeFlag,
     patchFlag,
     dynamicProps,
@@ -357,6 +359,7 @@ export function cloneVNode<T, U>(
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
+    targetAnchor: vnode.targetAnchor,
     shapeFlag: vnode.shapeFlag,
     patchFlag: vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
