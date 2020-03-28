@@ -7,7 +7,7 @@ describe('ssr compile: portal', () => {
       "const { ssrRenderPortal: _ssrRenderPortal } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
-        _ssrRenderPortal((_push) => {
+        _ssrRenderPortal(_push, (_push) => {
           _push(\`<div></div>\`)
         }, _ctx.target, _parent)
       }"

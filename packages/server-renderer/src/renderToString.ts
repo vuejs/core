@@ -32,6 +32,7 @@ import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { SSRSlots } from './helpers/ssrRenderSlot'
 import { CompilerError } from '@vue/compiler-dom'
+import { ssrRenderPortal } from './helpers/ssrRenderPortal'
 
 const {
   isVNode,
@@ -63,10 +64,7 @@ export type Props = Record<string, unknown>
 export type SSRContext = {
   [key: string]: any
   portals?: Record<string, string>
-  __portalBuffers?: Record<
-    string,
-    ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
-  >
+  __portalBuffers?: Record<string, SSRBuffer>
 }
 
 export function createBuffer() {
@@ -259,7 +257,7 @@ function renderVNode(
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent))
       } else if (shapeFlag & ShapeFlags.PORTAL) {
-        renderPortalVNode(vnode, parentComponent)
+        renderPortalVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         renderVNode(
           push,
@@ -363,6 +361,7 @@ function applySSRDirectives(
 }
 
 function renderPortalVNode(
+  push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
 ) {
@@ -377,20 +376,18 @@ function renderPortalVNode(
     )
     return []
   }
-
-  const { getBuffer, push } = createBuffer()
-  renderVNodeChildren(
+  ssrRenderPortal(
     push,
-    vnode.children as VNodeArrayChildren,
+    push => {
+      renderVNodeChildren(
+        push,
+        vnode.children as VNodeArrayChildren,
+        parentComponent
+      )
+    },
+    target,
     parentComponent
   )
-  const context = parentComponent.appContext.provides[
-    ssrContextKey as any
-  ] as SSRContext
-  const portalBuffers =
-    context.__portalBuffers || (context.__portalBuffers = {})
-
-  portalBuffers[target] = getBuffer()
 }
 
 async function resolvePortals(context: SSRContext) {
@@ -399,7 +396,9 @@ async function resolvePortals(context: SSRContext) {
     for (const key in context.__portalBuffers) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
-      context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
+      context.portals[key] = unrollBuffer(
+        await Promise.all(context.__portalBuffers[key])
+      )
     }
   }
 }

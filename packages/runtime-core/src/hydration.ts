@@ -366,6 +366,11 @@ export function createHydrationFunctions(
     }
   }
 
+  interface PortalTargetElement extends Element {
+    // last portal target
+    _lpa?: Node | null
+  }
+
   const hydratePortal = (
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
@@ -377,14 +382,17 @@ export function createHydrationFunctions(
       ? document.querySelector(targetSelector)
       : targetSelector)
     if (target && vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      hydrateChildren(
-        target.firstChild,
+      vnode.anchor = hydrateChildren(
+        // if multiple portals rendered to the same target element, we need to
+        // pick up from where the last portal finished instead of the first node
+        (target as PortalTargetElement)._lpa || target.firstChild,
         vnode,
         target,
         parentComponent,
         parentSuspense,
         optimized
       )
+      ;(target as PortalTargetElement)._lpa = nextSibling(vnode.anchor as Node)
     } else if (__DEV__) {
       warn(
         `Attempting to hydrate portal but target ${targetSelector} does not ` +

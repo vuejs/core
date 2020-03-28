@@ -52,6 +52,7 @@ export function ssrProcessPortal(
   contentRenderFn.body = processChildrenAsStatement(node.children, context)
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_PORTAL), [
+      `_push`,
       contentRenderFn,
       target,
       `_parent`
