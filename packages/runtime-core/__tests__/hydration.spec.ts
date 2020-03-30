@@ -161,20 +161,26 @@ describe('SSR hydration', () => {
     portalContainer.innerHTML = `<span>foo</span><span class="foo"></span><!---->`
     document.body.appendChild(portalContainer)
 
-    const { vnode, container } = mountWithHydration('<!--portal-->', () =>
-      h(Portal, { target: '#portal' }, [
-        h('span', msg.value),
-        h('span', { class: msg.value, onClick: fn })
-      ])
+    const { vnode, container } = mountWithHydration(
+      '<!--portal start--><!--portal end-->',
+      () =>
+        h(Portal, { target: '#portal' }, [
+          h('span', msg.value),
+          h('span', { class: msg.value, onClick: fn })
+        ])
     )
 
     expect(vnode.el).toBe(container.firstChild)
+    expect(vnode.anchor).toBe(container.lastChild)
+
+    expect(vnode.target).toBe(portalContainer)
     expect((vnode.children as VNode[])[0].el).toBe(
       portalContainer.childNodes[0]
     )
     expect((vnode.children as VNode[])[1].el).toBe(
       portalContainer.childNodes[1]
     )
+    expect(vnode.targetAnchor).toBe(portalContainer.childNodes[2])
 
     // event handler
     triggerEvent('click', portalContainer.querySelector('.foo')!)
@@ -208,7 +214,7 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     const mainHtml = await renderToString(h(Comp), ctx)
     expect(mainHtml).toMatchInlineSnapshot(
-      `"<!--[--><!--portal--><!--portal--><!--]-->"`
+      `"<!--[--><!--portal start--><!--portal end--><!--portal start--><!--portal end--><!--]-->"`
     )
 
     const portalHtml = ctx.portals!['#portal2']
@@ -224,16 +230,21 @@ describe('SSR hydration', () => {
     const portalVnode1 = (vnode.children as VNode[])[0]
     const portalVnode2 = (vnode.children as VNode[])[1]
     expect(portalVnode1.el).toBe(container.childNodes[1])
-    expect(portalVnode2.el).toBe(container.childNodes[2])
+    expect(portalVnode1.anchor).toBe(container.childNodes[2])
+    expect(portalVnode2.el).toBe(container.childNodes[3])
+    expect(portalVnode2.anchor).toBe(container.childNodes[4])
 
+    expect(portalVnode1.target).toBe(portalContainer)
     expect((portalVnode1 as any).children[0].el).toBe(
       portalContainer.childNodes[0]
     )
-    expect(portalVnode1.anchor).toBe(portalContainer.childNodes[2])
+    expect(portalVnode1.targetAnchor).toBe(portalContainer.childNodes[2])
+
+    expect(portalVnode2.target).toBe(portalContainer)
     expect((portalVnode2 as any).children[0].el).toBe(
       portalContainer.childNodes[3]
     )
-    expect(portalVnode2.anchor).toBe(portalContainer.childNodes[5])
+    expect(portalVnode2.targetAnchor).toBe(portalContainer.childNodes[5])
 
     // // event handler
     triggerEvent('click', portalContainer.querySelector('.foo')!)
@@ -246,6 +257,68 @@ describe('SSR hydration', () => {
     await nextTick()
     expect(portalContainer.innerHTML).toMatchInlineSnapshot(
       `"<span>bar</span><span class=\\"bar\\"></span><!----><span>bar2</span><span class=\\"bar2\\"></span><!---->"`
+    )
+  })
+
+  test('Portal (disabled)', async () => {
+    const msg = ref('foo')
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const Comp = () => [
+      h('div', 'foo'),
+      h(Portal, { target: '#portal3', disabled: true }, [
+        h('span', msg.value),
+        h('span', { class: msg.value, onClick: fn1 })
+      ]),
+      h('div', { class: msg.value + '2', onClick: fn2 }, 'bar')
+    ]
+
+    const portalContainer = document.createElement('div')
+    portalContainer.id = 'portal3'
+    const ctx: SSRContext = {}
+    const mainHtml = await renderToString(h(Comp), ctx)
+    expect(mainHtml).toMatchInlineSnapshot(
+      `"<!--[--><div>foo</div><!--portal start--><span>foo</span><span class=\\"foo\\"></span><!--portal end--><div class=\\"foo2\\">bar</div><!--]-->"`
+    )
+
+    const portalHtml = ctx.portals!['#portal3']
+    expect(portalHtml).toMatchInlineSnapshot(`"<!---->"`)
+
+    portalContainer.innerHTML = portalHtml
+    document.body.appendChild(portalContainer)
+
+    const { vnode, container } = mountWithHydration(mainHtml, Comp)
+    expect(vnode.el).toBe(container.firstChild)
+    const children = vnode.children as VNode[]
+
+    expect(children[0].el).toBe(container.childNodes[1])
+
+    const portalVnode = children[1]
+    expect(portalVnode.el).toBe(container.childNodes[2])
+    expect((portalVnode.children as VNode[])[0].el).toBe(
+      container.childNodes[3]
+    )
+    expect((portalVnode.children as VNode[])[1].el).toBe(
+      container.childNodes[4]
+    )
+    expect(portalVnode.anchor).toBe(container.childNodes[5])
+    expect(children[2].el).toBe(container.childNodes[6])
+
+    expect(portalVnode.target).toBe(portalContainer)
+    expect(portalVnode.targetAnchor).toBe(portalContainer.childNodes[0])
+
+    // // event handler
+    triggerEvent('click', container.querySelector('.foo')!)
+    expect(fn1).toHaveBeenCalled()
+
+    triggerEvent('click', container.querySelector('.foo2')!)
+    expect(fn2).toHaveBeenCalled()
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><div>foo</div><!--portal start--><span>bar</span><span class=\\"bar\\"></span><!--portal end--><div class=\\"bar2\\">bar</div><!--]-->"`
     )
   })
 

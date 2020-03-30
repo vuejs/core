@@ -4,64 +4,51 @@ import {
   RendererInternals,
   MoveType,
   RendererElement,
-  RendererNode
+  RendererNode,
+  RendererOptions
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
-export const isPortal = (type: any): boolean => type.__isPortal
-
 export interface PortalProps {
-  target: string | object
+  target: string | RendererElement
   disabled?: boolean
 }
 
-export const enum PortalMoveTypes {
-  TARGET_CHANGE,
-  TOGGLE, // enable / disable
-  REORDER // moved in the main view
-}
+export const isPortal = (type: any): boolean => type.__isPortal
 
-const isDisabled = (props: VNode['props']): boolean =>
+const isPortalDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
-const movePortal = (
-  vnode: VNode,
-  container: RendererElement,
-  parentAnchor: RendererNode | null,
-  { o: { insert }, m: move }: RendererInternals,
-  moveType: PortalMoveTypes = PortalMoveTypes.REORDER
-) => {
-  // move target anchor if this is a target change.
-  if (moveType === PortalMoveTypes.TARGET_CHANGE) {
-    insert(vnode.targetAnchor!, container, parentAnchor)
-  }
-  const { el, anchor, shapeFlag, children, props } = vnode
-  const isReorder = moveType === PortalMoveTypes.REORDER
-  // move main view anchor if this is a re-order.
-  if (isReorder) {
-    insert(el!, container, parentAnchor)
-  }
-  // if this is a re-order and portal is enabled (content is in target)
-  // do not move children. So the opposite is: only move children if this
-  // is not a reorder, or the portal is disabled
-  if (!isReorder || isDisabled(props)) {
-    // Portal has either Array children or no children.
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      for (let i = 0; i < (children as VNode[]).length; i++) {
-        move(
-          (children as VNode[])[i],
-          container,
-          parentAnchor,
-          MoveType.REORDER
+const resolveTarget = <T = RendererElement>(
+  props: PortalProps | null,
+  select: RendererOptions['querySelector']
+): T | null => {
+  const targetSelector = props && props.target
+  if (isString(targetSelector)) {
+    if (!select) {
+      __DEV__ &&
+        warn(
+          `Current renderer does not support string target for Portals. ` +
+            `(missing querySelector renderer option)`
         )
+      return null
+    } else {
+      const target = select(targetSelector)
+      if (!target) {
+        __DEV__ &&
+          warn(
+            `Failed to locate Portal target with selector "${targetSelector}".`
+          )
       }
+      return target as any
     }
-  }
-  // move main view anchor if this is a re-order.
-  if (isReorder) {
-    insert(anchor!, container, parentAnchor)
+  } else {
+    if (__DEV__ && !targetSelector) {
+      warn(`Invalid Portal target: ${targetSelector}`)
+    }
+    return targetSelector as any
   }
 }
 
@@ -85,16 +72,9 @@ export const PortalImpl = {
       o: { insert, querySelector, createText, createComment }
     } = internals
 
-    const targetSelector = n2.props && n2.props.target
-    const disabled = isDisabled(n2.props)
+    const disabled = isPortalDisabled(n2.props)
     const { shapeFlag, children } = n2
     if (n1 == null) {
-      if (__DEV__ && isString(targetSelector) && !querySelector) {
-        warn(
-          `Current renderer does not support string target for Portals. ` +
-            `(missing querySelector renderer option)`
-        )
-      }
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
         ? createComment('portal start')
@@ -104,11 +84,11 @@ export const PortalImpl = {
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
-      // portal content needs an anchor to support patching multiple portals
-      // appending to the same target element.
-      const target = (n2.target = isString(targetSelector)
-        ? querySelector!(targetSelector)
-        : targetSelector)
+
+      const target = (n2.target = resolveTarget(
+        n2.props as PortalProps,
+        querySelector
+      ))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
@@ -143,7 +123,7 @@ export const PortalImpl = {
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
-      const wasDisabled = isDisabled(n1.props)
+      const wasDisabled = isPortalDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
@@ -183,10 +163,11 @@ export const PortalImpl = {
         }
       } else {
         // target changed
-        if (targetSelector !== (n1.props && n1.props.target)) {
-          const nextTarget = (n2.target = isString(targetSelector)
-            ? querySelector!(targetSelector)
-            : targetSelector)
+        if ((n2.props && n2.props.target) !== (n1.props && n1.props.target)) {
+          const nextTarget = (n2.target = resolveTarget(
+            n2.props as PortalProps,
+            querySelector
+          ))
           if (nextTarget) {
             movePortal(
               n2,
@@ -230,7 +211,114 @@ export const PortalImpl = {
     }
   },
 
-  move: movePortal
+  move: movePortal,
+  hydrate: hydratePortal
+}
+
+export const enum PortalMoveTypes {
+  TARGET_CHANGE,
+  TOGGLE, // enable / disable
+  REORDER // moved in the main view
+}
+
+function movePortal(
+  vnode: VNode,
+  container: RendererElement,
+  parentAnchor: RendererNode | null,
+  { o: { insert }, m: move }: RendererInternals,
+  moveType: PortalMoveTypes = PortalMoveTypes.REORDER
+) {
+  // move target anchor if this is a target change.
+  if (moveType === PortalMoveTypes.TARGET_CHANGE) {
+    insert(vnode.targetAnchor!, container, parentAnchor)
+  }
+  const { el, anchor, shapeFlag, children, props } = vnode
+  const isReorder = moveType === PortalMoveTypes.REORDER
+  // move main view anchor if this is a re-order.
+  if (isReorder) {
+    insert(el!, container, parentAnchor)
+  }
+  // if this is a re-order and portal is enabled (content is in target)
+  // do not move children. So the opposite is: only move children if this
+  // is not a reorder, or the portal is disabled
+  if (!isReorder || isPortalDisabled(props)) {
+    // Portal has either Array children or no children.
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        move(
+          (children as VNode[])[i],
+          container,
+          parentAnchor,
+          MoveType.REORDER
+        )
+      }
+    }
+  }
+  // move main view anchor if this is a re-order.
+  if (isReorder) {
+    insert(anchor!, container, parentAnchor)
+  }
+}
+
+interface PortalTargetElement extends Element {
+  // last portal target
+  _lpa?: Node | null
+}
+
+function hydratePortal(
+  node: Node,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  optimized: boolean,
+  {
+    o: { nextSibling, parentNode, querySelector }
+  }: RendererInternals<Node, Element>,
+  hydrateChildren: (
+    node: Node | null,
+    vnode: VNode,
+    container: Element,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    optimized: boolean
+  ) => Node | null
+): Node | null {
+  const target = (vnode.target = resolveTarget<Element>(
+    vnode.props as PortalProps,
+    querySelector
+  ))
+  if (target) {
+    // if multiple portals rendered to the same target element, we need to
+    // pick up from where the last portal finished instead of the first node
+    const targetNode = (target as PortalTargetElement)._lpa || target.firstChild
+    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      if (isPortalDisabled(vnode.props)) {
+        vnode.anchor = hydrateChildren(
+          nextSibling(node),
+          vnode,
+          parentNode(node)!,
+          parentComponent,
+          parentSuspense,
+          optimized
+        )
+        vnode.targetAnchor = targetNode
+      } else {
+        vnode.anchor = nextSibling(node)
+        vnode.targetAnchor = hydrateChildren(
+          targetNode,
+          vnode,
+          target,
+          parentComponent,
+          parentSuspense,
+          optimized
+        )
+      }
+      ;(target as PortalTargetElement)._lpa = nextSibling(
+        vnode.targetAnchor as Node
+      )
+    }
+  }
+  return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
 // Force-casted public typing for h and TSX props inference
