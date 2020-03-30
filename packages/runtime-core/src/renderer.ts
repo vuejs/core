@@ -1028,7 +1028,8 @@ function baseCreateRenderer(
   ) => {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
-      parentComponent
+      parentComponent,
+      parentSuspense
     ))
 
     if (__HMR__ && instance.type.__hmrId) {

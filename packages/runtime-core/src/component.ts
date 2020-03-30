@@ -145,6 +145,7 @@ export interface ComponentInternalInstance {
   emit: Emit
 
   // suspense related
+  suspense: SuspenseBoundary | null
   asyncDep: Promise<any> | null
   asyncResolved: boolean
 
@@ -177,7 +178,8 @@ const emptyAppContext = createAppContext()
 
 export function createComponentInstance(
   vnode: VNode,
-  parent: ComponentInternalInstance | null
+  parent: ComponentInternalInstance | null,
+  suspense: SuspenseBoundary | null
 ) {
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -213,7 +215,8 @@ export function createComponentInstance(
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
 
-    // async dependency management
+    // suspense related
+    suspense,
     asyncDep: null,
     asyncResolved: false,
 
@@ -266,7 +269,6 @@ export function createComponentInstance(
 }
 
 export let currentInstance: ComponentInternalInstance | null = null
-export let currentSuspense: SuspenseBoundary | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
@@ -351,7 +353,6 @@ function setupStatefulComponent(
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
-    currentSuspense = parentSuspense
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -361,7 +362,6 @@ function setupStatefulComponent(
     )
     resetTracking()
     currentInstance = null
-    currentSuspense = null
 
     if (isPromise(setupResult)) {
       if (isSSR) {
@@ -478,10 +478,8 @@ function finishComponentSetup(
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
     currentInstance = instance
-    currentSuspense = parentSuspense
     applyOptions(instance, Component)
     currentInstance = null
-    currentSuspense = null
   }
 }
 

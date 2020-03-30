@@ -1,7 +1,6 @@
 import {
   PublicAPIComponent,
   Component,
-  currentSuspense,
   currentInstance,
   ComponentInternalInstance,
   isInSSRComponentSetup
@@ -118,7 +117,7 @@ export function defineAsyncComponent<
 
       // suspense-controlled or SSR.
       if (
-        (__FEATURE_SUSPENSE__ && suspensible && currentSuspense) ||
+        (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
         (__NODE_JS__ && isInSSRComponentSetup)
       ) {
         return load()
