@@ -363,7 +363,7 @@ function baseCreateRenderer(
       n1 = null
     }
 
-    const { type, shapeFlag } = n2
+    const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -438,6 +438,13 @@ function baseCreateRenderer(
         } else if (__DEV__) {
           warn('Invalid VNode type:', type, `(${typeof type})`)
         }
+    }
+
+    // set ref
+    if (ref != null && parentComponent) {
+      const refValue =
+        shapeFlag & ShapeFlags.STATEFUL_COMPONENT ? n2.component!.proxy : n2.el
+      setRef(ref, n1 && n1.ref, parentComponent, refValue)
     }
   }
 
@@ -517,9 +524,6 @@ function baseCreateRenderer(
       )
     } else {
       patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
-    }
-    if (n2.ref != null && parentComponent) {
-      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.el)
     }
   }
 
@@ -1004,17 +1008,6 @@ function baseCreateRenderer(
         n2.component = n1.component
         n2.el = n1.el
       }
-    }
-    if (n2.ref != null && parentComponent) {
-      if (__DEV__ && !(n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT)) {
-        pushWarningContext(n2)
-        warn(
-          `Functional components do not support "ref" because they do not ` +
-            `have instances.`
-        )
-        popWarningContext()
-      }
-      setRef(n2.ref, n1 && n1.ref, parentComponent, n2.component!.proxy)
     }
   }
 
