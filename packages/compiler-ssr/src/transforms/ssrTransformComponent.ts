@@ -11,7 +11,7 @@ import {
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
-  PORTAL,
+  TELEPORT,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -39,7 +39,7 @@ import {
   processChildren,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
-import { ssrProcessPortal } from './ssrTransformPortal'
+import { ssrProcessTeleport } from './ssrTransformTeleport'
 import {
   ssrProcessSuspense,
   ssrTransformSuspense
@@ -146,8 +146,8 @@ export function ssrProcessComponent(
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
     const component = componentTypeMap.get(node)!
-    if (component === PORTAL) {
-      return ssrProcessPortal(node, context)
+    if (component === TELEPORT) {
+      return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
       return ssrProcessSuspense(node, context)
     } else {

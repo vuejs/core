@@ -88,7 +88,7 @@ export interface ComponentOptionsBase<
   call?: never
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
-  __isPortal?: never
+  __isTeleport?: never
   __isSuspense?: never
 }
 

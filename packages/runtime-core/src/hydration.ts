@@ -18,7 +18,7 @@ import {
   SuspenseBoundary,
   queueEffectWithSuspense
 } from './components/Suspense'
-import { PortalImpl } from './components/Portal'
+import { TeleportImpl } from './components/Teleport'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -172,11 +172,11 @@ export function createHydrationFunctions(
           return isFragmentStart
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
-        } else if (shapeFlag & ShapeFlags.PORTAL) {
+        } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {
             return onMismatch()
           }
-          return (vnode.type as typeof PortalImpl).hydrate(
+          return (vnode.type as typeof TeleportImpl).hydrate(
             node,
             vnode,
             parentComponent,

@@ -11,26 +11,26 @@ import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
-export interface PortalProps {
-  target: string | RendererElement
+export interface TeleportProps {
+  to: string | RendererElement
   disabled?: boolean
 }
 
-export const isPortal = (type: any): boolean => type.__isPortal
+export const isTeleport = (type: any): boolean => type.__isTeleport
 
-const isPortalDisabled = (props: VNode['props']): boolean =>
+const isTeleportDisabled = (props: VNode['props']): boolean =>
   props && (props.disabled || props.disabled === '')
 
 const resolveTarget = <T = RendererElement>(
-  props: PortalProps | null,
+  props: TeleportProps | null,
   select: RendererOptions['querySelector']
 ): T | null => {
-  const targetSelector = props && props.target
+  const targetSelector = props && props.to
   if (isString(targetSelector)) {
     if (!select) {
       __DEV__ &&
         warn(
-          `Current renderer does not support string target for Portals. ` +
+          `Current renderer does not support string target for Teleports. ` +
             `(missing querySelector renderer option)`
         )
       return null
@@ -39,21 +39,21 @@ const resolveTarget = <T = RendererElement>(
       if (!target) {
         __DEV__ &&
           warn(
-            `Failed to locate Portal target with selector "${targetSelector}".`
+            `Failed to locate Teleport target with selector "${targetSelector}".`
           )
       }
       return target as any
     }
   } else {
     if (__DEV__ && !targetSelector) {
-      warn(`Invalid Portal target: ${targetSelector}`)
+      warn(`Invalid Teleport target: ${targetSelector}`)
     }
     return targetSelector as any
   }
 }
 
-export const PortalImpl = {
-  __isPortal: true,
+export const TeleportImpl = {
+  __isTeleport: true,
   process(
     n1: VNode | null,
     n2: VNode,
@@ -72,32 +72,32 @@ export const PortalImpl = {
       o: { insert, querySelector, createText, createComment }
     } = internals
 
-    const disabled = isPortalDisabled(n2.props)
+    const disabled = isTeleportDisabled(n2.props)
     const { shapeFlag, children } = n2
     if (n1 == null) {
       // insert anchors in the main view
       const placeholder = (n2.el = __DEV__
-        ? createComment('portal start')
+        ? createComment('teleport start')
         : createText(''))
       const mainAnchor = (n2.anchor = __DEV__
-        ? createComment('portal end')
+        ? createComment('teleport end')
         : createText(''))
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
 
       const target = (n2.target = resolveTarget(
-        n2.props as PortalProps,
+        n2.props as TeleportProps,
         querySelector
       ))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
       } else if (__DEV__) {
-        warn('Invalid Portal target on mount:', target, `(${typeof target})`)
+        warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
 
       const mount = (container: RendererElement, anchor: RendererNode) => {
-        // Portal *always* has Array children. This is enforced in both the
+        // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           mountChildren(
@@ -123,12 +123,12 @@ export const PortalImpl = {
       const mainAnchor = (n2.anchor = n1.anchor)!
       const target = (n2.target = n1.target)!
       const targetAnchor = (n2.targetAnchor = n1.targetAnchor)!
-      const wasDisabled = isPortalDisabled(n1.props)
+      const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
       if (n2.dynamicChildren) {
-        // fast path when the portal happens to be a block root
+        // fast path when the teleport happens to be a block root
         patchBlockChildren(
           n1.dynamicChildren!,
           n2.dynamicChildren,
@@ -153,45 +153,45 @@ export const PortalImpl = {
         if (!wasDisabled) {
           // enabled -> disabled
           // move into main container
-          movePortal(
+          moveTeleport(
             n2,
             container,
             mainAnchor,
             internals,
-            PortalMoveTypes.TOGGLE
+            TeleportMoveTypes.TOGGLE
           )
         }
       } else {
         // target changed
-        if ((n2.props && n2.props.target) !== (n1.props && n1.props.target)) {
+        if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
           const nextTarget = (n2.target = resolveTarget(
-            n2.props as PortalProps,
+            n2.props as TeleportProps,
             querySelector
           ))
           if (nextTarget) {
-            movePortal(
+            moveTeleport(
               n2,
               nextTarget,
               null,
               internals,
-              PortalMoveTypes.TARGET_CHANGE
+              TeleportMoveTypes.TARGET_CHANGE
             )
           } else if (__DEV__) {
             warn(
-              'Invalid Portal target on update:',
+              'Invalid Teleport target on update:',
               target,
               `(${typeof target})`
             )
           }
         } else if (wasDisabled) {
           // disabled -> enabled
-          // move into portal target
-          movePortal(
+          // move into teleport target
+          moveTeleport(
             n2,
             target,
             targetAnchor,
             internals,
-            PortalMoveTypes.TOGGLE
+            TeleportMoveTypes.TOGGLE
           )
         }
       }
@@ -211,38 +211,38 @@ export const PortalImpl = {
     }
   },
 
-  move: movePortal,
-  hydrate: hydratePortal
+  move: moveTeleport,
+  hydrate: hydrateTeleport
 }
 
-export const enum PortalMoveTypes {
+export const enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
   REORDER // moved in the main view
 }
 
-function movePortal(
+function moveTeleport(
   vnode: VNode,
   container: RendererElement,
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
-  moveType: PortalMoveTypes = PortalMoveTypes.REORDER
+  moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER
 ) {
   // move target anchor if this is a target change.
-  if (moveType === PortalMoveTypes.TARGET_CHANGE) {
+  if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
     insert(vnode.targetAnchor!, container, parentAnchor)
   }
   const { el, anchor, shapeFlag, children, props } = vnode
-  const isReorder = moveType === PortalMoveTypes.REORDER
+  const isReorder = moveType === TeleportMoveTypes.REORDER
   // move main view anchor if this is a re-order.
   if (isReorder) {
     insert(el!, container, parentAnchor)
   }
-  // if this is a re-order and portal is enabled (content is in target)
+  // if this is a re-order and teleport is enabled (content is in target)
   // do not move children. So the opposite is: only move children if this
-  // is not a reorder, or the portal is disabled
-  if (!isReorder || isPortalDisabled(props)) {
-    // Portal has either Array children or no children.
+  // is not a reorder, or the teleport is disabled
+  if (!isReorder || isTeleportDisabled(props)) {
+    // Teleport has either Array children or no children.
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move(
@@ -260,12 +260,12 @@ function movePortal(
   }
 }
 
-interface PortalTargetElement extends Element {
-  // last portal target
+interface TeleportTargetElement extends Element {
+  // last teleport target
   _lpa?: Node | null
 }
 
-function hydratePortal(
+function hydrateTeleport(
   node: Node,
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
@@ -284,15 +284,16 @@ function hydratePortal(
   ) => Node | null
 ): Node | null {
   const target = (vnode.target = resolveTarget<Element>(
-    vnode.props as PortalProps,
+    vnode.props as TeleportProps,
     querySelector
   ))
   if (target) {
-    // if multiple portals rendered to the same target element, we need to
-    // pick up from where the last portal finished instead of the first node
-    const targetNode = (target as PortalTargetElement)._lpa || target.firstChild
+    // if multiple teleports rendered to the same target element, we need to
+    // pick up from where the last teleport finished instead of the first node
+    const targetNode =
+      (target as TeleportTargetElement)._lpa || target.firstChild
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isPortalDisabled(vnode.props)) {
+      if (isTeleportDisabled(vnode.props)) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
@@ -313,7 +314,7 @@ function hydratePortal(
           optimized
         )
       }
-      ;(target as PortalTargetElement)._lpa = nextSibling(
+      ;(target as TeleportTargetElement)._lpa = nextSibling(
         vnode.targetAnchor as Node
       )
     }
@@ -322,7 +323,7 @@ function hydratePortal(
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Portal = (PortalImpl as any) as {
-  __isPortal: true
-  new (): { $props: VNodeProps & PortalProps }
+export const Teleport = (TeleportImpl as any) as {
+  __isTeleport: true
+  new (): { $props: VNodeProps & TeleportProps }
 }

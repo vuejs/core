@@ -58,7 +58,7 @@ import {
   queueEffectWithSuspense,
   SuspenseImpl
 } from './components/Suspense'
-import { PortalImpl } from './components/Portal'
+import { TeleportImpl } from './components/Teleport'
 import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
 import {
@@ -412,8 +412,8 @@ function baseCreateRenderer(
             isSVG,
             optimized
           )
-        } else if (shapeFlag & ShapeFlags.PORTAL) {
-          ;(type as typeof PortalImpl).process(
+        } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          ;(type as typeof TeleportImpl).process(
             n1,
             n2,
             container,
@@ -1207,7 +1207,7 @@ function baseCreateRenderer(
         patch(
           prevTree,
           nextTree,
-          // parent may have changed if it's in a portal
+          // parent may have changed if it's in a teleport
           hostParentNode(prevTree.el!)!,
           // anchor may have changed if it's in a fragment
           getNextHostNode(prevTree),
@@ -1653,8 +1653,8 @@ function baseCreateRenderer(
       return
     }
 
-    if (shapeFlag & ShapeFlags.PORTAL) {
-      ;(type as typeof PortalImpl).move(vnode, container, anchor, internals)
+    if (shapeFlag & ShapeFlags.TELEPORT) {
+      ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
       return
     }
 
@@ -1739,9 +1739,9 @@ function baseCreateRenderer(
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
-      // an unmounted portal should always remove its children
-      if (shapeFlag & ShapeFlags.PORTAL) {
-        ;(vnode.type as typeof PortalImpl).remove(vnode, internals)
+      // an unmounted teleport should always remove its children
+      if (shapeFlag & ShapeFlags.TELEPORT) {
+        ;(vnode.type as typeof TeleportImpl).remove(vnode, internals)
       }
 
       if (doRemove) {

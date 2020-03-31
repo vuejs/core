@@ -5,7 +5,7 @@ export const enum ShapeFlags {
   TEXT_CHILDREN = 1 << 3,
   ARRAY_CHILDREN = 1 << 4,
   SLOTS_CHILDREN = 1 << 5,
-  PORTAL = 1 << 6,
+  TELEPORT = 1 << 6,
   SUSPENSE = 1 << 7,
   COMPONENT_SHOULD_KEEP_ALIVE = 1 << 8,
   COMPONENT_KEPT_ALIVE = 1 << 9,

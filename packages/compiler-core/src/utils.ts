@@ -25,7 +25,7 @@ import {
 import { TransformContext } from './transform'
 import {
   MERGE_PROPS,
-  PORTAL,
+  TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
   BASE_TRANSITION
@@ -38,8 +38,8 @@ export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
 
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Portal')) {
-    return PORTAL
+  if (isBuiltInType(tag, 'Teleport')) {
+    return TELEPORT
   } else if (isBuiltInType(tag, 'Suspense')) {
     return SUSPENSE
   } else if (isBuiltInType(tag, 'KeepAlive')) {

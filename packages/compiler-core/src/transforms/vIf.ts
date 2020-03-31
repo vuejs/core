@@ -27,7 +27,7 @@ import {
   FRAGMENT,
   CREATE_COMMENT,
   OPEN_BLOCK,
-  PORTAL
+  TELEPORT
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -218,8 +218,8 @@ function createChildrenCodegenNode(
       // component vnodes are always tracked and its children are
       // compiled into slots so no need to make it a block
       ((firstChild as ElementNode).tagType !== ElementTypes.COMPONENT ||
-        // portal has component type but isn't always tracked
-        vnodeCall.tag === PORTAL)
+        // teleport has component type but isn't always tracked
+        vnodeCall.tag === TELEPORT)
     ) {
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)

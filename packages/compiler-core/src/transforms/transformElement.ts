@@ -28,7 +28,7 @@ import {
   RESOLVE_DYNAMIC_COMPONENT,
   MERGE_PROPS,
   TO_HANDLERS,
-  PORTAL,
+  TELEPORT,
   KEEP_ALIVE
 } from '../runtimeHelpers'
 import {
@@ -124,8 +124,8 @@ export const transformElement: NodeTransform = (node, context) => {
 
       const shouldBuildAsSlots =
         isComponent &&
-        // Portal is not a real component and has dedicated runtime handling
-        vnodeTag !== PORTAL &&
+        // Teleport is not a real component and has dedicated runtime handling
+        vnodeTag !== TELEPORT &&
         // explained above.
         vnodeTag !== KEEP_ALIVE
 
@@ -135,7 +135,7 @@ export const transformElement: NodeTransform = (node, context) => {
         if (hasDynamicSlots) {
           patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
-      } else if (node.children.length === 1 && vnodeTag !== PORTAL) {
+      } else if (node.children.length === 1 && vnodeTag !== TELEPORT) {
         const child = node.children[0]
         const type = child.type
         // check for dynamic text children
@@ -217,7 +217,7 @@ export function resolveComponentType(
     }
   }
 
-  // 2. built-in components (Portal, Transition, KeepAlive, Suspense...)
+  // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
   const builtIn = isCoreComponent(tag) || context.isBuiltInComponent(tag)
   if (builtIn) {
     // built-ins are simply fallthroughs / have special handling during ssr

@@ -12,17 +12,17 @@ import {
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
-import { SSR_RENDER_PORTAL } from '../runtimeHelpers'
+import { SSR_RENDER_TELEPORT } from '../runtimeHelpers'
 
 // Note: this is a 2nd-pass codegen transform.
-export function ssrProcessPortal(
+export function ssrProcessTeleport(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
   const targetProp = findProp(node, 'target')
   if (!targetProp) {
     context.onError(
-      createSSRCompilerError(SSRErrorCodes.X_SSR_NO_PORTAL_TARGET, node.loc)
+      createSSRCompilerError(SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET, node.loc)
     )
     return
   }
@@ -37,7 +37,7 @@ export function ssrProcessPortal(
   if (!target) {
     context.onError(
       createSSRCompilerError(
-        SSRErrorCodes.X_SSR_NO_PORTAL_TARGET,
+        SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET,
         targetProp.loc
       )
     )
@@ -60,7 +60,7 @@ export function ssrProcessPortal(
   )
   contentRenderFn.body = processChildrenAsStatement(node.children, context)
   context.pushStatement(
-    createCallExpression(context.helper(SSR_RENDER_PORTAL), [
+    createCallExpression(context.helper(SSR_RENDER_TELEPORT), [
       `_push`,
       contentRenderFn,
       target,

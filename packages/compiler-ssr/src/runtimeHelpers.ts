@@ -13,7 +13,7 @@ export const SSR_LOOSE_EQUAL = Symbol(`ssrLooseEqual`)
 export const SSR_LOOSE_CONTAIN = Symbol(`ssrLooseContain`)
 export const SSR_RENDER_DYNAMIC_MODEL = Symbol(`ssrRenderDynamicModel`)
 export const SSR_GET_DYNAMIC_MODEL_PROPS = Symbol(`ssrGetDynamicModelProps`)
-export const SSR_RENDER_PORTAL = Symbol(`ssrRenderPortal`)
+export const SSR_RENDER_TELEPORT = Symbol(`ssrRenderTeleport`)
 export const SSR_RENDER_SUSPENSE = Symbol(`ssrRenderSuspense`)
 
 export const ssrHelpers = {
@@ -30,7 +30,7 @@ export const ssrHelpers = {
   [SSR_LOOSE_CONTAIN]: `ssrLooseContain`,
   [SSR_RENDER_DYNAMIC_MODEL]: `ssrRenderDynamicModel`,
   [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`,
-  [SSR_RENDER_PORTAL]: `ssrRenderPortal`,
+  [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
   [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`
 }
 

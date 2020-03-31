@@ -6,37 +6,37 @@ import {
   SSRBufferItem
 } from '../renderToString'
 
-export function ssrRenderPortal(
+export function ssrRenderTeleport(
   parentPush: PushFn,
   contentRenderFn: (push: PushFn) => void,
   target: string,
   disabled: boolean,
   parentComponent: ComponentInternalInstance
 ) {
-  parentPush('<!--portal start-->')
+  parentPush('<!--teleport start-->')
 
-  let portalContent: SSRBufferItem
+  let teleportContent: SSRBufferItem
 
   if (disabled) {
     contentRenderFn(parentPush)
-    portalContent = `<!---->`
+    teleportContent = `<!---->`
   } else {
     const { getBuffer, push } = createBuffer()
     contentRenderFn(push)
-    push(`<!---->`) // portal end anchor
-    portalContent = getBuffer()
+    push(`<!---->`) // teleport end anchor
+    teleportContent = getBuffer()
   }
 
   const context = parentComponent.appContext.provides[
     ssrContextKey as any
   ] as SSRContext
-  const portalBuffers =
-    context.__portalBuffers || (context.__portalBuffers = {})
-  if (portalBuffers[target]) {
-    portalBuffers[target].push(portalContent)
+  const teleportBuffers =
+    context.__teleportBuffers || (context.__teleportBuffers = {})
+  if (teleportBuffers[target]) {
+    teleportBuffers[target].push(teleportContent)
   } else {
-    portalBuffers[target] = [portalContent]
+    teleportBuffers[target] = [teleportContent]
   }
 
-  parentPush('<!--portal end-->')
+  parentPush('<!--teleport end-->')
 }

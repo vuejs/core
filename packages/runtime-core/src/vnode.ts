@@ -29,7 +29,7 @@ import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
-import { PortalImpl, isPortal } from './components/Portal'
+import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 
@@ -50,7 +50,7 @@ export type VNodeTypes =
   | typeof Static
   | typeof Comment
   | typeof Fragment
-  | typeof PortalImpl
+  | typeof TeleportImpl
   | typeof SuspenseImpl
 
 export type VNodeRef =
@@ -113,8 +113,8 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   // DOM
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
-  target: HostElement | null // portal target
-  targetAnchor: HostNode | null // portal target anchor
+  target: HostElement | null // teleport target
+  targetAnchor: HostNode | null // teleport target anchor
 
   // optimization only
   shapeFlag: number
@@ -283,8 +283,8 @@ function _createVNode(
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
       ? ShapeFlags.SUSPENSE
-      : isPortal(type)
-        ? ShapeFlags.PORTAL
+      : isTeleport(type)
+        ? ShapeFlags.TELEPORT
         : isObject(type)
           ? ShapeFlags.STATEFUL_COMPONENT
           : isFunction(type)
@@ -430,7 +430,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (typeof children === 'object') {
     // Normalize slot to plain children
     if (
-      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.PORTAL) &&
+      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
       (children as any).default
     ) {
       normalizeChildren(vnode, (children as any).default())
@@ -446,8 +446,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
     children = String(children)
-    // force portal children to array so it can be moved around
-    if (shapeFlag & ShapeFlags.PORTAL) {
+    // force teleport children to array so it can be moved around
+    if (shapeFlag & ShapeFlags.TELEPORT) {
       type = ShapeFlags.ARRAY_CHILDREN
       children = [createTextVNode(children as string)]
     } else {

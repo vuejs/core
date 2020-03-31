@@ -731,5 +731,5 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>Child A</div><div>Child B</div>`)
   })
 
-  test.todo('portal inside suspense')
+  test.todo('teleport inside suspense')
 })

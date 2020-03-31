@@ -1,9 +1,9 @@
-import { createApp, h, Portal } from 'vue'
+import { createApp, h, Teleport } from 'vue'
 import { renderToString, SSRContext } from '../src/renderToString'
-import { ssrRenderPortal } from '../src/helpers/ssrRenderPortal'
+import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
 
-describe('ssrRenderPortal', () => {
-  test('portal rendering (compiled)', async () => {
+describe('ssrRenderTeleport', () => {
+  test('teleport rendering (compiled)', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(
       createApp({
@@ -11,7 +11,7 @@ describe('ssrRenderPortal', () => {
           return { msg: 'hello' }
         },
         ssrRender(_ctx, _push, _parent) {
-          ssrRenderPortal(
+          ssrRenderTeleport(
             _push,
             _push => {
               _push(`<div>content</div>`)
@@ -24,11 +24,11 @@ describe('ssrRenderPortal', () => {
       }),
       ctx
     )
-    expect(html).toBe('<!--portal start--><!--portal end-->')
-    expect(ctx.portals!['#target']).toBe(`<div>content</div><!---->`)
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe(`<div>content</div><!---->`)
   })
 
-  test('portal rendering (compiled + disabled)', async () => {
+  test('teleport rendering (compiled + disabled)', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(
       createApp({
@@ -36,7 +36,7 @@ describe('ssrRenderPortal', () => {
           return { msg: 'hello' }
         },
         ssrRender(_ctx, _push, _parent) {
-          ssrRenderPortal(
+          ssrRenderTeleport(
             _push,
             _push => {
               _push(`<div>content</div>`)
@@ -49,62 +49,66 @@ describe('ssrRenderPortal', () => {
       }),
       ctx
     )
-    expect(html).toBe('<!--portal start--><div>content</div><!--portal end-->')
-    expect(ctx.portals!['#target']).toBe(`<!---->`)
+    expect(html).toBe(
+      '<!--teleport start--><div>content</div><!--teleport end-->'
+    )
+    expect(ctx.teleports!['#target']).toBe(`<!---->`)
   })
 
-  test('portal rendering (vnode)', async () => {
+  test('teleport rendering (vnode)', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(
       h(
-        Portal,
+        Teleport,
         {
-          target: `#target`
+          to: `#target`
         },
         h('span', 'hello')
       ),
       ctx
     )
-    expect(html).toBe('<!--portal start--><!--portal end-->')
-    expect(ctx.portals!['#target']).toBe('<span>hello</span><!---->')
+    expect(html).toBe('<!--teleport start--><!--teleport end-->')
+    expect(ctx.teleports!['#target']).toBe('<span>hello</span><!---->')
   })
 
-  test('portal rendering (vnode + disabled)', async () => {
+  test('teleport rendering (vnode + disabled)', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(
       h(
-        Portal,
+        Teleport,
         {
-          target: `#target`,
+          to: `#target`,
           disabled: true
         },
         h('span', 'hello')
       ),
       ctx
     )
-    expect(html).toBe('<!--portal start--><span>hello</span><!--portal end-->')
-    expect(ctx.portals!['#target']).toBe(`<!---->`)
+    expect(html).toBe(
+      '<!--teleport start--><span>hello</span><!--teleport end-->'
+    )
+    expect(ctx.teleports!['#target']).toBe(`<!---->`)
   })
 
-  test('multiple portals with same target', async () => {
+  test('multiple teleports with same target', async () => {
     const ctx: SSRContext = {}
     const html = await renderToString(
       h('div', [
         h(
-          Portal,
+          Teleport,
           {
-            target: `#target`
+            to: `#target`
           },
           h('span', 'hello')
         ),
-        h(Portal, { target: `#target` }, 'world')
+        h(Teleport, { to: `#target` }, 'world')
       ]),
       ctx
     )
     expect(html).toBe(
-      '<div><!--portal start--><!--portal end--><!--portal start--><!--portal end--></div>'
+      '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>'
     )
-    expect(ctx.portals!['#target']).toBe(
+    expect(ctx.teleports!['#target']).toBe(
       '<span>hello</span><!---->world<!---->'
     )
   })

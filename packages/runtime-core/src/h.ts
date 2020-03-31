@@ -6,7 +6,7 @@ import {
   Fragment,
   isVNode
 } from './vnode'
-import { Portal, PortalProps } from './components/Portal'
+import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
@@ -68,7 +68,7 @@ type RawChildren =
 // fake constructor type returned from `defineComponent`
 interface Constructor<P = any> {
   __isFragment?: never
-  __isPortal?: never
+  __isTeleport?: never
   __isSuspense?: never
   new (): { $props: P }
 }
@@ -92,10 +92,10 @@ export function h(
   children?: VNodeArrayChildren
 ): VNode
 
-// portal (target prop is required)
+// teleport (target prop is required)
 export function h(
-  type: typeof Portal,
-  props: RawProps & PortalProps,
+  type: typeof Teleport,
+  props: RawProps & TeleportProps,
   children: RawChildren
 ): VNode
 
