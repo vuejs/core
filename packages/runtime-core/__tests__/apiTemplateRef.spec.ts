@@ -5,7 +5,8 @@ import {
   render,
   nextTick,
   Ref,
-  defineComponent
+  defineComponent,
+  reactive
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
@@ -199,5 +200,23 @@ describe('api: template refs', () => {
     render(h(Comp), root)
 
     expect(spy).toHaveBeenCalledWith('div')
+  })
+
+  it('should work with direct reactive property', () => {
+    const root = nodeOps.createElement('div')
+    const state = reactive({
+      refKey: null
+    })
+
+    const Comp = {
+      setup() {
+        return state
+      },
+      render() {
+        return h('div', { ref: 'refKey' })
+      }
+    }
+    render(h(Comp), root)
+    expect(state.refKey).toBe(root.children[0])
   })
 })

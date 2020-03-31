@@ -32,7 +32,8 @@ import {
   isFunction,
   PatchFlags,
   ShapeFlags,
-  NOOP
+  NOOP,
+  hasOwn
 } from '@vue/shared'
 import {
   queueJob,
@@ -45,7 +46,6 @@ import {
   stop,
   ReactiveEffectOptions,
   isRef,
-  toRaw,
   DebuggerEvent
 } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
@@ -1859,15 +1859,14 @@ function baseCreateRenderer(
     }
     const oldRef = oldRawRef && oldRawRef[1]
     const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
-    const renderContext = toRaw(owner.renderContext)
+    const renderContext = owner.renderContext
 
     // unset old ref
     if (oldRef != null && oldRef !== ref) {
       if (isString(oldRef)) {
         refs[oldRef] = null
-        const oldSetupRef = renderContext[oldRef]
-        if (isRef(oldSetupRef)) {
-          oldSetupRef.value = null
+        if (hasOwn(renderContext, oldRef)) {
+          renderContext[oldRef] = null
         }
       } else if (isRef(oldRef)) {
         oldRef.value = null
@@ -1875,11 +1874,10 @@ function baseCreateRenderer(
     }
 
     if (isString(ref)) {
-      const setupRef = renderContext[ref]
-      if (isRef(setupRef)) {
-        setupRef.value = value
-      }
       refs[ref] = value
+      if (hasOwn(renderContext, ref)) {
+        renderContext[ref] = value
+      }
     } else if (isRef(ref)) {
       ref.value = value
     } else if (isFunction(ref)) {
