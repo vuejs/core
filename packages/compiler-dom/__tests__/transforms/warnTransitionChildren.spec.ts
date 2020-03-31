@@ -1,4 +1,4 @@
-import { compile } from '../src'
+import { compile } from '../../src'
 
 describe('compiler warnings', () => {
   describe('Transition', () => {
@@ -43,23 +43,23 @@ describe('compiler warnings', () => {
       )
     })
 
-    test('warns with multiple v-for', () => {
+    test('warns with multiple v-if + v-for', () => {
       checkWarning(
         `
       <transition>
-        <div v-for="i in items" v-if="a">hey</div>
-        <div v-for="i in items" v-else>hey</div>
+        <div v-if="a" v-for="i in items">hey</div>
+        <div v-else v-for="i in items">hey</div>
       </transition>
       `,
         true
       )
     })
 
-    test('warns with template', () => {
+    test('warns with template v-if', () => {
       checkWarning(
         `
       <transition>
-        <template></template>
+        <template v-if="ok"></template>
       </transition>
       `,
         true
