@@ -63,7 +63,9 @@ export const createApp = ((...args) => {
     }
     // clear content before mounting
     container.innerHTML = ''
-    return mount(container)
+    const proxy = mount(container)
+    container.removeAttribute('v-cloak')
+    return proxy
   }
 
   return app
