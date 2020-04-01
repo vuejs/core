@@ -6,9 +6,11 @@ describe('ssr: v-for', () => {
       "const { ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -19,9 +21,11 @@ describe('ssr: v-for', () => {
       "const { ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div>foo<span>bar</span></div>\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -37,8 +41,9 @@ describe('ssr: v-for', () => {
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (row, i) => {
-          _push(\`<div>\`)
+          _push(\`<div><!--[-->\`)
           _ssrRenderList(row, (j) => {
             _push(\`<div>\${
               _ssrInterpolate(i)
@@ -46,8 +51,9 @@ describe('ssr: v-for', () => {
               _ssrInterpolate(j)
             }</div>\`)
           })
-          _push(\`</div>\`)
+          _push(\`<!--]--></div>\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -58,9 +64,11 @@ describe('ssr: v-for', () => {
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
-          _push(\`\${_ssrInterpolate(i)}\`)
+          _push(\`<!--[-->\${_ssrInterpolate(i)}<!--]-->\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -73,9 +81,11 @@ describe('ssr: v-for', () => {
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<span>\${_ssrInterpolate(i)}</span>\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -89,13 +99,15 @@ describe('ssr: v-for', () => {
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, (i) => {
-          _push(\`<span>\${
+          _push(\`<!--[--><span>\${
             _ssrInterpolate(i)
           }</span><span>\${
             _ssrInterpolate(i + 1)
-          }</span>\`)
+          }</span><!--]-->\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })
@@ -111,9 +123,11 @@ describe('ssr: v-for', () => {
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
+        _push(\`<!--[-->\`)
         _ssrRenderList(_ctx.list, ({ foo }, index) => {
           _push(\`<div>\${_ssrInterpolate(foo + _ctx.bar + index)}</div>\`)
         })
+        _push(\`<!--]-->\`)
       }"
     `)
   })

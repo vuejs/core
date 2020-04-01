@@ -4,7 +4,7 @@ import {
   RootRenderFunction,
   CreateAppFunction
 } from '@vue/runtime-core'
-import { nodeOps, TestNode, TestElement } from './nodeOps'
+import { nodeOps, TestElement } from './nodeOps'
 import { patchProp } from './patchProp'
 import { serializeInner } from './serialize'
 
@@ -13,7 +13,7 @@ const { render: baseRender, createApp: baseCreateApp } = createRenderer({
   ...nodeOps
 })
 
-export const render = baseRender as RootRenderFunction<TestNode, TestElement>
+export const render = baseRender as RootRenderFunction<TestElement>
 export const createApp = baseCreateApp as CreateAppFunction<TestElement>
 
 // convenience for one-off render validations

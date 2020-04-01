@@ -348,5 +348,48 @@ describe('reactivity/collections', () => {
       map.set('foo', NaN)
       expect(mapSpy).toHaveBeenCalledTimes(1)
     })
+
+    it('should work with reactive keys in raw map', () => {
+      const raw = new Map()
+      const key = reactive({})
+      raw.set(key, 1)
+      const map = reactive(raw)
+
+      expect(map.has(key)).toBe(true)
+      expect(map.get(key)).toBe(1)
+
+      expect(map.delete(key)).toBe(true)
+      expect(map.has(key)).toBe(false)
+      expect(map.get(key)).toBeUndefined()
+    })
+
+    // #877
+    it('should not trigger key iteration when setting existing keys', () => {
+      const map = reactive(new Map())
+      const spy = jest.fn()
+
+      effect(() => {
+        const keys = []
+        for (const key of map.keys()) {
+          keys.push(key)
+        }
+        spy(keys)
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy.mock.calls[0][0]).toMatchObject([])
+
+      map.set('a', 0)
+      expect(spy).toHaveBeenCalledTimes(2)
+      expect(spy.mock.calls[1][0]).toMatchObject(['a'])
+
+      map.set('b', 0)
+      expect(spy).toHaveBeenCalledTimes(3)
+      expect(spy.mock.calls[2][0]).toMatchObject(['a', 'b'])
+
+      // keys didn't change, should not trigger
+      map.set('b', 1)
+      expect(spy).toHaveBeenCalledTimes(3)
+    })
   })
 })

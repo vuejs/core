@@ -8,7 +8,7 @@ let tempSVGContainer: SVGElement
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    if (anchor != null) {
+    if (anchor) {
       parent.insertBefore(child, anchor)
     } else {
       parent.appendChild(child)
@@ -17,13 +17,15 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 
   remove: child => {
     const parent = child.parentNode
-    if (parent != null) {
+    if (parent) {
       parent.removeChild(child)
     }
   },
 
-  createElement: (tag, isSVG): Element =>
-    isSVG ? doc.createElementNS(svgNS, tag) : doc.createElement(tag),
+  createElement: (tag, isSVG, is): Element =>
+    isSVG
+      ? doc.createElementNS(svgNS, tag)
+      : doc.createElement(tag, is ? { is } : undefined),
 
   createText: text => doc.createTextNode(text),
 

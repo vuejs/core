@@ -317,6 +317,16 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('should not duplicate object key with same name as value', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { foo: foo } }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [`{ foo: `, { content: `_ctx.foo` }, ` }`]
+    })
+  })
+
   test('should prefix a computed object property key', () => {
     const node = parseWithExpressionTransform(
       `{{ { [foo]: bar } }}`

@@ -19,7 +19,7 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 function compileToFunction(template: string) {
   const { code } = baseCompile(template)
   const render = new Function('Vue', code)(runtimeTest) as RenderFunction
-  render.isRuntimeCompiled = true
+  render._rc = true // isRuntimeCompiled
   return render
 }
 

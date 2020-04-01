@@ -1,5 +1,5 @@
 import { toRaw, reactive, readonly } from './reactive'
-import { track, trigger, ITERATE_KEY } from './effect'
+import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { LOCKED } from './lock'
 import { isObject, capitalize, hasOwn, hasChanged } from '@vue/shared'
@@ -26,16 +26,22 @@ function get(
   wrap: typeof toReactive | typeof toReadonly
 ) {
   target = toRaw(target)
-  key = toRaw(key)
-  track(target, TrackOpTypes.GET, key)
-  return wrap(getProto(target).get.call(target, key))
+  const rawKey = toRaw(key)
+  track(target, TrackOpTypes.GET, rawKey)
+  const { has, get } = getProto(target)
+  if (has.call(target, key)) {
+    return wrap(get.call(target, key))
+  } else if (has.call(target, rawKey)) {
+    return wrap(get.call(target, rawKey))
+  }
 }
 
 function has(this: CollectionTypes, key: unknown): boolean {
   const target = toRaw(this)
-  key = toRaw(key)
-  track(target, TrackOpTypes.HAS, key)
-  return getProto(target).has.call(target, key)
+  const rawKey = toRaw(key)
+  track(target, TrackOpTypes.HAS, rawKey)
+  const has = getProto(target).has
+  return has.call(target, key) || has.call(target, rawKey)
 }
 
 function size(target: IterableCollections) {
@@ -73,13 +79,16 @@ function set(this: MapTypes, key: unknown, value: unknown) {
 }
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
-  key = toRaw(key)
   const target = toRaw(this)
-  const proto = getProto(target)
-  const hadKey = proto.has.call(target, key)
-  const oldValue = proto.get ? proto.get.call(target, key) : undefined
+  const { has, get, delete: del } = getProto(target)
+  let hadKey = has.call(target, key)
+  if (!hadKey) {
+    key = toRaw(key)
+    hadKey = has.call(target, key)
+  }
+  const oldValue = get ? get.call(target, key) : undefined
   // forward the operation before queueing reactions
-  const result = proto.delete.call(target, key)
+  const result = del.call(target, key)
   if (hadKey) {
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
@@ -125,12 +134,16 @@ function createForEach(isReadonly: boolean) {
 function createIterableMethod(method: string | symbol, isReadonly: boolean) {
   return function(this: IterableCollections, ...args: unknown[]) {
     const target = toRaw(this)
-    const isPair =
-      method === 'entries' ||
-      (method === Symbol.iterator && target instanceof Map)
+    const isMap = target instanceof Map
+    const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
+    const isKeyOnly = method === 'keys' && isMap
     const innerIterator = getProto(target)[method].apply(target, args)
     const wrap = isReadonly ? toReadonly : toReactive
-    track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+    track(
+      target,
+      TrackOpTypes.ITERATE,
+      isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
+    )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
     return {
@@ -176,8 +189,8 @@ const mutableInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
     return get(this, key, toReactive)
   },
-  get size(this: IterableCollections) {
-    return size(this)
+  get size() {
+    return size((this as unknown) as IterableCollections)
   },
   has,
   add,
@@ -191,8 +204,8 @@ const readonlyInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
     return get(this, key, toReadonly)
   },
-  get size(this: IterableCollections) {
-    return size(this)
+  get size() {
+    return size((this as unknown) as IterableCollections)
   },
   has,
   add: createReadonlyMethod(add, TriggerOpTypes.ADD),

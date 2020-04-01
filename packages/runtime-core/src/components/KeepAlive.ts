@@ -17,7 +17,9 @@ import {
   RendererInternals,
   queuePostRenderEffect,
   invokeHooks,
-  MoveType
+  MoveType,
+  RendererElement,
+  RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 
@@ -36,7 +38,13 @@ type Keys = Set<CacheKey>
 export interface KeepAliveSink {
   renderer: RendererInternals
   parentSuspense: SuspenseBoundary | null
-  activate: (vnode: VNode, container: object, anchor: object | null) => void
+  activate: (
+    vnode: VNode,
+    container: RendererElement,
+    anchor: RendererNode | null,
+    isSVG: boolean,
+    optimized: boolean
+  ) => void
   deactivate: (vnode: VNode) => void
 }
 
@@ -72,6 +80,7 @@ const KeepAliveImpl = {
     const sink = instance.sink as KeepAliveSink
     const {
       renderer: {
+        p: patch,
         m: move,
         um: _unmount,
         o: { createElement }
@@ -80,13 +89,24 @@ const KeepAliveImpl = {
     } = sink
     const storageContainer = createElement('div')
 
-    sink.activate = (vnode, container, anchor) => {
+    sink.activate = (vnode, container, anchor, isSVG, optimized) => {
+      const child = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
+      // in case props have changed
+      patch(
+        child.vnode,
+        vnode,
+        container,
+        anchor,
+        instance,
+        parentSuspense,
+        isSVG,
+        optimized
+      )
       queuePostRenderEffect(() => {
-        const component = vnode.component!
-        component.isDeactivated = false
-        if (component.a !== null) {
-          invokeHooks(component.a)
+        child.isDeactivated = false
+        if (child.a) {
+          invokeHooks(child.a)
         }
       }, parentSuspense)
     }
@@ -95,7 +115,7 @@ const KeepAliveImpl = {
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         const component = vnode.component!
-        if (component.da !== null) {
+        if (component.da) {
           invokeHooks(component.da)
         }
         component.isDeactivated = true
@@ -175,7 +195,7 @@ const KeepAliveImpl = {
       }
 
       const key = vnode.key == null ? comp : vnode.key
-      const cached = cache.get(key)
+      const cachedVNode = cache.get(key)
 
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
@@ -183,11 +203,10 @@ const KeepAliveImpl = {
       }
       cache.set(key, vnode)
 
-      if (cached) {
+      if (cachedVNode) {
         // copy over mounted state
-        vnode.el = cached.el
-        vnode.anchor = cached.anchor
-        vnode.component = cached.component
+        vnode.el = cachedVNode.el
+        vnode.component = cachedVNode.component
         if (vnode.transition) {
           // recursively update transition hooks on subTree
           setTransitionHooks(vnode, vnode.transition!)

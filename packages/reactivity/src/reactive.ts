@@ -33,7 +33,8 @@ const canObserve = (value: any): boolean => {
     !value._isVue &&
     !value._isVNode &&
     isObservableType(toRawType(value)) &&
-    !nonReactiveValues.has(value)
+    !nonReactiveValues.has(value) &&
+    !Object.isFrozen(value)
   )
 }
 

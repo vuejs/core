@@ -58,13 +58,18 @@ export interface FunctionalComponent<P = {}> extends SFCInternalOptions {
   displayName?: string
 }
 
-export type Component = ComponentOptions | FunctionalComponent
+export interface ClassComponent {
+  new (...args: any[]): ComponentPublicInstance<any, any, any, any, any>
+  __vccOpts: ComponentOptions
+}
+
+export type Component = ComponentOptions | FunctionalComponent<any>
 
 // A type used in public APIs where a component type is expected.
 // The constructor type is an artificial type returned by defineComponent().
 export type PublicAPIComponent =
   | Component
-  | { new (): ComponentPublicInstance<any, any, any, any, any> }
+  | { new (...args: any[]): ComponentPublicInstance<any, any, any, any, any> }
 
 export { ComponentOptions }
 
@@ -95,12 +100,15 @@ export interface SetupContext {
 }
 
 export type RenderFunction = {
-  (): VNodeChild
-  isRuntimeCompiled?: boolean
+  (
+    ctx: ComponentPublicInstance,
+    cache: ComponentInternalInstance['renderCache']
+  ): VNodeChild
+  _rc?: boolean // isRuntimeCompiled
 }
 
 export interface ComponentInternalInstance {
-  type: FunctionalComponent | ComponentOptions
+  type: Component
   parent: ComponentInternalInstance | null
   appContext: AppContext
   root: ComponentInternalInstance
@@ -126,7 +134,6 @@ export interface ComponentInternalInstance {
   data: Data
   props: Data
   attrs: Data
-  vnodeHooks: Data
   slots: Slots
   proxy: ComponentPublicInstance | null
   // alternative proxy used only for runtime-compiled render functions using
@@ -138,8 +145,8 @@ export interface ComponentInternalInstance {
   emit: Emit
 
   // suspense related
+  suspense: SuspenseBoundary | null
   asyncDep: Promise<any> | null
-  asyncResult: unknown
   asyncResolved: boolean
 
   // storage for any extra properties
@@ -171,7 +178,8 @@ const emptyAppContext = createAppContext()
 
 export function createComponentInstance(
   vnode: VNode,
-  parent: ComponentInternalInstance | null
+  parent: ComponentInternalInstance | null,
+  suspense: SuspenseBoundary | null
 ) {
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
@@ -200,7 +208,6 @@ export function createComponentInstance(
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
-    vnodeHooks: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
 
@@ -208,9 +215,9 @@ export function createComponentInstance(
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
 
-    // async dependency management
+    // suspense related
+    suspense,
     asyncDep: null,
-    asyncResult: null,
     asyncResolved: false,
 
     // user namespace for storing whatever the user assigns to `this`
@@ -262,7 +269,6 @@ export function createComponentInstance(
 }
 
 export let currentInstance: ComponentInternalInstance | null = null
-export let currentSuspense: SuspenseBoundary | null = null
 
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
@@ -300,7 +306,7 @@ export function setupComponent(
   // setup stateful logic
   let setupResult
   if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    setupResult = setupStatefulComponent(instance, parentSuspense)
+    setupResult = setupStatefulComponent(instance, parentSuspense, isSSR)
   }
   isInSSRComponentSetup = false
   return setupResult
@@ -308,7 +314,8 @@ export function setupComponent(
 
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
 
@@ -336,7 +343,7 @@ function setupStatefulComponent(
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = isInSSRComponentSetup
+  const propsProxy = (instance.propsProxy = isSSR
     ? instance.props
     : shallowReadonly(instance.props))
   // 3. call setup()
@@ -346,7 +353,6 @@ function setupStatefulComponent(
       setup.length > 1 ? createSetupContext(instance) : null)
 
     currentInstance = instance
-    currentSuspense = parentSuspense
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -356,13 +362,12 @@ function setupStatefulComponent(
     )
     resetTracking()
     currentInstance = null
-    currentSuspense = null
 
     if (isPromise(setupResult)) {
-      if (isInSSRComponentSetup) {
+      if (isSSR) {
         // return the promise so server-renderer can wait on it
-        return setupResult.then(resolvedResult => {
-          handleSetupResult(instance, resolvedResult, parentSuspense)
+        return setupResult.then((resolvedResult: unknown) => {
+          handleSetupResult(instance, resolvedResult, parentSuspense, isSSR)
         })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
@@ -375,17 +380,18 @@ function setupStatefulComponent(
         )
       }
     } else {
-      handleSetupResult(instance, setupResult, parentSuspense)
+      handleSetupResult(instance, setupResult, parentSuspense, isSSR)
     }
   } else {
-    finishComponentSetup(instance, parentSuspense)
+    finishComponentSetup(instance, parentSuspense, isSSR)
   }
 }
 
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
@@ -407,7 +413,7 @@ export function handleSetupResult(
       }`
     )
   }
-  finishComponentSetup(instance, parentSuspense)
+  finishComponentSetup(instance, parentSuspense, isSSR)
 }
 
 type CompileFunction = (
@@ -424,33 +430,35 @@ export function registerRuntimeCompiler(_compile: any) {
 
 function finishComponentSetup(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
+  isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
-  if (!instance.render) {
-    if (__RUNTIME_COMPILE__ && Component.template && !Component.render) {
-      // __RUNTIME_COMPILE__ ensures `compile` is provided
-      Component.render = compile!(Component.template, {
+
+  // template / render function normalization
+  if (__NODE_JS__ && isSSR) {
+    if (Component.render) {
+      instance.render = Component.render as RenderFunction
+    }
+  } else if (!instance.render) {
+    if (compile && Component.template && !Component.render) {
+      Component.render = compile(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement || NO
       })
       // mark the function as runtime compiled
-      ;(Component.render as RenderFunction).isRuntimeCompiled = true
+      ;(Component.render as RenderFunction)._rc = true
     }
 
-    if (__DEV__ && !Component.render && !Component.ssrRender) {
+    if (__DEV__ && !Component.render) {
       /* istanbul ignore if */
-      if (!__RUNTIME_COMPILE__ && Component.template) {
+      if (!compile && Component.template) {
         warn(
           `Component provides template but the build of Vue you are running ` +
             `does not support runtime template compilation. Either use the ` +
             `full build or pre-compile the template using Vue CLI.`
         )
       } else {
-        warn(
-          `Component is missing${
-            __RUNTIME_COMPILE__ ? ` template or` : ``
-          } render function.`
-        )
+        warn(`Component is missing template or render function.`)
       }
     }
 
@@ -459,7 +467,7 @@ function finishComponentSetup(
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
-    if (__RUNTIME_COMPILE__ && instance.render.isRuntimeCompiled) {
+    if (instance.render._rc) {
       instance.withProxy = new Proxy(
         instance,
         runtimeCompiledRenderProxyHandlers
@@ -470,10 +478,8 @@ function finishComponentSetup(
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
     currentInstance = instance
-    currentSuspense = parentSuspense
     applyOptions(instance, Component)
     currentInstance = null
-    currentSuspense = null
   }
 }
 
@@ -487,6 +493,9 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
       if (__DEV__) {
         markAttrsAccessed()
       }
+      // if the user pass the slots proxy to h(), normalizeChildren should not
+      // attempt to attach ctx to the object
+      if (key === '_') return 1
       return instance[type][key]
     },
     has: (instance, key) => key === SetupProxySymbol || key in instance[type],

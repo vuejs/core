@@ -184,13 +184,14 @@ export function findDir(
 export function findProp(
   node: ElementNode,
   name: string,
-  dynamicOnly: boolean = false
+  dynamicOnly: boolean = false,
+  allowEmpty: boolean = false
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (dynamicOnly) continue
-      if (p.name === name && p.value) {
+      if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
     } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {

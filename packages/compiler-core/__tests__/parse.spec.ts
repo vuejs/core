@@ -646,6 +646,55 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('v-is without `isNativeTag`', () => {
+      const ast = baseParse(
+        `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
+        {
+          isNativeTag: tag => tag === 'div'
+        }
+      )
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.COMPONENT
+      })
+
+      expect(ast.children[2]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
+    test('v-is with `isNativeTag`', () => {
+      const ast = baseParse(`<div></div><div v-is="'foo'"></div><Comp></Comp>`)
+
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.ELEMENT
+      })
+
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'div',
+        tagType: ElementTypes.COMPONENT
+      })
+
+      expect(ast.children[2]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'Comp',
+        tagType: ElementTypes.COMPONENT
+      })
+    })
+
     test('custom element', () => {
       const ast = baseParse('<div></div><comp></comp>', {
         isNativeTag: tag => tag === 'div',

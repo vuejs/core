@@ -85,7 +85,7 @@ export const onRenderTracked = createHook<DebuggerHook>(
 )
 
 export type ErrorCapturedHook = (
-  err: Error,
+  err: unknown,
   instance: ComponentPublicInstance | null,
   info: string
 ) => boolean | void

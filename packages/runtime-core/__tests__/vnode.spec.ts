@@ -7,10 +7,13 @@ import {
   Text,
   cloneVNode,
   mergeProps,
-  normalizeVNode
+  normalizeVNode,
+  transformVNodeArgs
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
+import { h } from '../src'
+import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -36,6 +39,23 @@ describe('vnode', () => {
     const vnode = createVNode('p', null)
     expect(vnode.type).toBe('p')
     expect(vnode.props).toBe(null)
+  })
+
+  test('vnode keys', () => {
+    for (const key of ['', 'a', 0, 1, NaN]) {
+      expect(createVNode('div', { key }).key).toBe(key)
+    }
+    expect(createVNode('div').key).toBe(null)
+    expect(createVNode('div', { key: undefined }).key).toBe(null)
+  })
+
+  test('create with class component', () => {
+    class Component {
+      $props: any
+      static __vccOpts = { template: '<div />' }
+    }
+    const vnode = createVNode(Component)
+    expect(vnode.type).toEqual(Component.__vccOpts)
   })
 
   describe('class normalization', () => {
@@ -89,7 +109,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, ['foo'])
       expect(vnode.children).toMatchObject(['foo'])
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.ARRAY_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
       )
     })
 
@@ -97,7 +117,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, { foo: 'foo' })
       expect(vnode.children).toMatchObject({ foo: 'foo' })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
       )
     })
 
@@ -105,7 +125,7 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, nop)
       expect(vnode.children).toMatchObject({ default: nop })
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.SLOTS_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.SLOTS_CHILDREN
       )
     })
 
@@ -113,7 +133,19 @@ describe('vnode', () => {
       const vnode = createVNode('p', null, 'foo')
       expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
-        ShapeFlags.ELEMENT + ShapeFlags.TEXT_CHILDREN
+        ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      )
+    })
+
+    test('element with slots', () => {
+      const children = [createVNode('span', null, 'hello')]
+      const vnode = createVNode('div', null, {
+        default: () => children
+      })
+
+      expect(vnode.children).toBe(children)
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
       )
     })
   })
@@ -304,6 +336,55 @@ describe('vnode', () => {
         (vnode1 = createVNode(() => {}, null, 'text'))
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+  })
+
+  describe('transformVNodeArgs', () => {
+    afterEach(() => {
+      // reset
+      transformVNodeArgs()
+    })
+
+    test('no-op pass through', () => {
+      transformVNodeArgs(args => args)
+      const vnode = createVNode('div', { id: 'foo' }, 'hello')
+      expect(vnode).toMatchObject({
+        type: 'div',
+        props: { id: 'foo' },
+        children: 'hello',
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      })
+    })
+
+    test('direct override', () => {
+      transformVNodeArgs(() => ['div', { id: 'foo' }, 'hello'])
+      const vnode = createVNode('p')
+      expect(vnode).toMatchObject({
+        type: 'div',
+        props: { id: 'foo' },
+        children: 'hello',
+        shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      })
+    })
+
+    test('receive component instance as 2nd arg', () => {
+      transformVNodeArgs((args, instance) => {
+        if (instance) {
+          return ['h1', null, instance.type.name]
+        } else {
+          return args
+        }
+      })
+      const App = {
+        // this will be the name of the component in the h1
+        name: 'Root Component',
+        render() {
+          return h('p') // this will be overwritten by the transform
+        }
+      }
+      const root = nodeOps.createElement('div')
+      createApp(App).mount(root)
+      expect(serializeInner(root)).toBe('<h1>Root Component</h1>')
     })
   })
 })

@@ -34,6 +34,7 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
+export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -74,7 +75,8 @@ export { warn } from './warning'
 export {
   handleError,
   callWithErrorHandling,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  ErrorCodes
 } from './errorHandling'
 export {
   useTransitionState,
@@ -84,6 +86,7 @@ export {
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
+export { withCtx } from './helpers/withRenderContext'
 export { withDirectives } from './directives'
 export {
   resolveComponent,
@@ -106,6 +109,9 @@ export { toDisplayString, camelize } from '@vue/shared'
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
 
+// For test-utils
+export { transformVNodeArgs } from './vnode'
+
 // SSR -------------------------------------------------------------------------
 
 import { createComponentInstance, setupComponent } from './component'
@@ -114,6 +120,7 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
+import { normalizeSuspenseChildren } from './components/Suspense'
 
 // SSR utils are only exposed in cjs builds.
 const _ssrUtils = {
@@ -122,7 +129,8 @@ const _ssrUtils = {
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 }
 
 export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
@@ -142,6 +150,8 @@ export {
 } from '@vue/reactivity'
 export {
   // types
+  WatchEffect,
+  BaseWatchOptions,
   WatchOptions,
   WatchCallback,
   WatchSource,
@@ -153,7 +163,8 @@ export {
   AppConfig,
   AppContext,
   Plugin,
-  CreateAppFunction
+  CreateAppFunction,
+  OptionMergeFunction
 } from './apiCreateApp'
 export {
   VNode,
@@ -178,6 +189,8 @@ export {
 export { ComponentPublicInstance } from './componentProxy'
 export {
   Renderer,
+  RendererNode,
+  RendererElement,
   HydrationRenderer,
   RendererOptions,
   RootRenderFunction
@@ -200,4 +213,8 @@ export {
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
 export { TransitionState, TransitionHooks } from './components/BaseTransition'
+export {
+  AsyncComponentOptions,
+  AsyncComponentLoader
+} from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'

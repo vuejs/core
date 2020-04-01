@@ -14,6 +14,7 @@ export {
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
 export { ssrRenderPortal } from './helpers/ssrRenderPortal'
+export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
 
 // v-model helpers
 export {

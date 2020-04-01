@@ -175,4 +175,18 @@ describe('component: proxy', () => {
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
   })
+
+  // #864
+  test('should not warn declared but absent props', () => {
+    const Comp = {
+      props: ['test'],
+      render(this: any) {
+        return this.test
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      `was accessed during render but is not defined`
+    ).not.toHaveBeenWarned()
+  })
 })

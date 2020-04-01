@@ -798,9 +798,18 @@ describe('compiler: element transform', () => {
   describe('dynamic component', () => {
     test('static binding', () => {
       const { node, root } = parseWithBind(`<component is="foo" />`)
-      expect(root.helpers).not.toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
-        tag: '_component_foo'
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: true
+            }
+          ]
+        }
       })
     })
 
@@ -813,11 +822,30 @@ describe('compiler: element transform', () => {
           arguments: [
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'foo'
-            },
-            '$'
+              content: 'foo',
+              isStatic: false
+            }
           ]
         }
+      })
+    })
+
+    test('v-is', () => {
+      const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `'foo'`,
+              isStatic: false
+            }
+          ]
+        },
+        // should skip v-is runtime check
+        directives: undefined
       })
     })
   })

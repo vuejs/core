@@ -18,7 +18,6 @@ import { warn } from './warning'
 // resolveComponent, resolveDirective) during render
 export let currentRenderingInstance: ComponentInternalInstance | null = null
 
-// exposed for server-renderer only
 export function setCurrentRenderingInstance(
   instance: ComponentInternalInstance | null
 ) {
@@ -46,7 +45,6 @@ export function renderComponentRoot(
     props,
     slots,
     attrs,
-    vnodeHooks,
     emit,
     renderCache
   } = instance
@@ -58,11 +56,11 @@ export function renderComponentRoot(
   }
   try {
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      // withProxy is a proxy with a diffrent `has` trap only for
+      // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
       result = normalizeVNode(
-        instance.render!.call(proxyToUse, proxyToUse, renderCache)
+        instance.render!.call(proxyToUse, proxyToUse!, renderCache)
       )
     } else {
       // functional
@@ -92,7 +90,7 @@ export function renderComponentRoot(
         result = cloneVNode(result, fallthroughAttrs)
         // If the child root node is a compiler optimized vnode, make sure it
         // force update full props to account for the merged attrs.
-        if (result.dynamicChildren !== null) {
+        if (result.dynamicChildren) {
           result.patchFlag |= PatchFlags.FULL_PROPS
         }
       } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
@@ -105,17 +103,13 @@ export function renderComponentRoot(
       }
     }
 
-    // inherit vnode hooks
-    if (vnodeHooks !== EMPTY_OBJ) {
-      result = cloneVNode(result, vnodeHooks)
-    }
     // inherit scopeId
     const parentScopeId = parent && parent.type.__scopeId
     if (parentScopeId) {
       result = cloneVNode(result, { [parentScopeId]: '' })
     }
     // inherit directives
-    if (vnode.dirs != null) {
+    if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(result)) {
         warn(
           `Runtime directive used on component with non-element root node. ` +
@@ -125,7 +119,7 @@ export function renderComponentRoot(
       result.dirs = vnode.dirs
     }
     // inherit transition data
-    if (vnode.transition != null) {
+    if (vnode.transition) {
       if (__DEV__ && !isElementRoot(result)) {
         warn(
           `Component inside <Transition> renders non-element root node ` +
@@ -191,7 +185,7 @@ export function shouldUpdateComponent(
   }
 
   // force child update on runtime directive usage on component vnode.
-  if (nextVNode.dirs != null) {
+  if (nextVNode.dirs) {
     return true
   }
 
@@ -224,18 +218,18 @@ export function shouldUpdateComponent(
   } else if (!optimized) {
     // this path is only taken by manually written render functions
     // so presence of any children leads to a forced update
-    if (prevChildren != null || nextChildren != null) {
-      if (nextChildren == null || !(nextChildren as any).$stable) {
+    if (prevChildren || nextChildren) {
+      if (!nextChildren || !(nextChildren as any).$stable) {
         return true
       }
     }
     if (prevProps === nextProps) {
       return false
     }
-    if (prevProps === null) {
-      return nextProps !== null
+    if (!prevProps) {
+      return !!nextProps
     }
-    if (nextProps === null) {
+    if (!nextProps) {
       return true
     }
     return hasPropsChanged(prevProps, nextProps)
@@ -260,7 +254,7 @@ function hasPropsChanged(prevProps: Data, nextProps: Data): boolean {
 
 export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
-  el: object // HostNode
+  el: typeof vnode.el // HostNode
 ) {
   while (parent && parent.subTree === vnode) {
     ;(vnode = parent.vnode).el = el

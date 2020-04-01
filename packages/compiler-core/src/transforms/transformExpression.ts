@@ -271,7 +271,8 @@ const isPropertyShorthand = (node: Node, parent: Node) => {
     isStaticProperty(parent) &&
     parent.value === node &&
     parent.key.type === 'Identifier' &&
-    parent.key.name === (node as Identifier).name
+    parent.key.name === (node as Identifier).name &&
+    parent.key.start === node.start
   )
 }
 
