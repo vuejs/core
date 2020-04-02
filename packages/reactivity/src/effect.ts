@@ -10,7 +10,7 @@ type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export interface ReactiveEffect<T = any> {
-  (): T
+  (...args: any[]): T
   _isEffect: true
   active: boolean
   raw: () => T
@@ -75,11 +75,26 @@ export function stop(effect: ReactiveEffect) {
 }
 
 function createReactiveEffect<T = any>(
-  fn: () => T,
+  fn: (...args: any[]) => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
   const effect = function reactiveEffect(...args: unknown[]): unknown {
-    return run(effect, fn, args)
+    if (!effect.active) {
+      return options.scheduler ? undefined : fn(...args)
+    }
+    if (!effectStack.includes(effect)) {
+      cleanup(effect)
+      try {
+        enableTracking()
+        effectStack.push(effect)
+        activeEffect = effect
+        return fn(...args)
+      } finally {
+        effectStack.pop()
+        resetTracking()
+        activeEffect = effectStack[effectStack.length - 1]
+      }
+    }
   } as ReactiveEffect
   effect._isEffect = true
   effect.active = true
@@ -87,25 +102,6 @@ function createReactiveEffect<T = any>(
   effect.deps = []
   effect.options = options
   return effect
-}
-
-function run(effect: ReactiveEffect, fn: Function, args: unknown[]): unknown {
-  if (!effect.active) {
-    return fn(...args)
-  }
-  if (!effectStack.includes(effect)) {
-    cleanup(effect)
-    try {
-      enableTracking()
-      effectStack.push(effect)
-      activeEffect = effect
-      return fn(...args)
-    } finally {
-      effectStack.pop()
-      resetTracking()
-      activeEffect = effectStack[effectStack.length - 1]
-    }
-  }
 }
 
 function cleanup(effect: ReactiveEffect) {
