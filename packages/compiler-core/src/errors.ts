@@ -76,7 +76,6 @@ export const enum ErrorCodes {
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-  X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
   X_V_SLOT_MIXED_SLOT_USAGE,
   X_V_SLOT_DUPLICATE_SLOT_NAMES,
   X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
@@ -163,13 +162,10 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
-  [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
-    `Named v-slot on component. ` +
-    `Named slots should use <template v-slot> syntax nested inside the component.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
     `Mixed v-slot usage on both the component and nested <template>.` +
-    `The default slot should also use <template> syntax when there are other ` +
-    `named slots to avoid scope ambiguity.`,
+    `When there are multiple named slots, all slots should use <template> ` +
+    `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
   [ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN]:
     `Extraneous children found when component already has explicitly named ` +
