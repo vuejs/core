@@ -8,11 +8,7 @@ There is a simple webpack-based setup with Single-File Component support availab
 
 Please note that there could still be undocumented behavior inconsistencies with 2.x. When you run into such a case, please make sure to first check if the behavior difference has already been proposed in an existing RFC. If the inconsistency is not part of an RFC, then it's likely unintended, and an issue should be opened (please make sure to use the [issue helper](https://new-issue.vuejs.org/?repo=vuejs/vue-next) when opening new issues).
 
-## Known Issues
-
-- There is currently no way to attach custom instance properties via `Vue.prototype`.
-
-- The current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet).
+In addition, the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet). The IE11 compatible build will be worked on after we have reached RC stage.
 
 ## Contribution
 
