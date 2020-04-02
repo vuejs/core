@@ -41,6 +41,7 @@ import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
+import { startMeasure, endMeasure } from './profiling'
 
 export type Data = { [key: string]: unknown }
 
@@ -108,6 +109,7 @@ export type RenderFunction = {
 }
 
 export interface ComponentInternalInstance {
+  uid: number
   type: Component
   parent: ComponentInternalInstance | null
   appContext: AppContext
@@ -176,6 +178,8 @@ export interface ComponentInternalInstance {
 
 const emptyAppContext = createAppContext()
 
+let uid = 0
+
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -185,6 +189,7 @@ export function createComponentInstance(
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
   const instance: ComponentInternalInstance = {
+    uid: uid++,
     vnode,
     parent,
     appContext,
@@ -383,7 +388,7 @@ function setupStatefulComponent(
       handleSetupResult(instance, setupResult, parentSuspense, isSSR)
     }
   } else {
-    finishComponentSetup(instance, parentSuspense, isSSR)
+    finishComponentSetup(instance, isSSR)
   }
 }
 
@@ -413,7 +418,7 @@ export function handleSetupResult(
       }`
     )
   }
-  finishComponentSetup(instance, parentSuspense, isSSR)
+  finishComponentSetup(instance, isSSR)
 }
 
 type CompileFunction = (
@@ -430,7 +435,6 @@ export function registerRuntimeCompiler(_compile: any) {
 
 function finishComponentSetup(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null,
   isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
@@ -442,9 +446,15 @@ function finishComponentSetup(
     }
   } else if (!instance.render) {
     if (compile && Component.template && !Component.render) {
+      if (__DEV__) {
+        startMeasure(instance, `compile`)
+      }
       Component.render = compile(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement || NO
       })
+      if (__DEV__ && instance.appContext.config.performance) {
+        endMeasure(instance, `compile`)
+      }
       // mark the function as runtime compiled
       ;(Component.render as RenderFunction)._rc = true
     }
@@ -528,4 +538,24 @@ export function recordInstanceBoundEffect(effect: ReactiveEffect) {
   if (currentInstance) {
     ;(currentInstance.effects || (currentInstance.effects = [])).push(effect)
   }
+}
+
+const classifyRE = /(?:^|[-_])(\w)/g
+const classify = (str: string): string =>
+  str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
+
+export function formatComponentName(
+  Component: Component,
+  file?: string
+): string {
+  let name = isFunction(Component)
+    ? Component.displayName || Component.name
+    : Component.name
+  if (!name && file) {
+    const match = file.match(/([^/\\]+)\.vue$/)
+    if (match) {
+      name = match[1]
+    }
+  }
+  return name ? classify(name) : 'Anonymous'
 }

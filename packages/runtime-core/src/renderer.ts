@@ -68,6 +68,7 @@ import {
 } from './errorHandling'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
+import { startMeasure, endMeasure } from './profiling'
 
 const __HMR__ = __BUNDLER__ && __DEV__
 
@@ -1031,6 +1032,7 @@ function baseCreateRenderer(
 
     if (__DEV__) {
       pushWarningContext(initialVNode)
+      startMeasure(instance, `mount`)
     }
 
     // inject renderer internals for keepAlive
@@ -1041,7 +1043,13 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
+    if (__DEV__) {
+      startMeasure(instance, `init`)
+    }
     setupComponent(instance, parentSuspense)
+    if (__DEV__) {
+      endMeasure(instance, `init`)
+    }
 
     // setup() is async. This component relies on async logic to be resolved
     // before proceeding
@@ -1072,6 +1080,7 @@ function baseCreateRenderer(
 
     if (__DEV__) {
       popWarningContext()
+      endMeasure(instance, `mount`)
     }
   }
 
@@ -1089,7 +1098,13 @@ function baseCreateRenderer(
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
         const { bm, m, a, parent } = instance
+        if (__DEV__) {
+          startMeasure(instance, `render`)
+        }
         const subTree = (instance.subTree = renderComponentRoot(instance))
+        if (__DEV__) {
+          endMeasure(instance, `render`)
+        }
         // beforeMount hook
         if (bm) {
           invokeHooks(bm)
@@ -1099,6 +1114,9 @@ function baseCreateRenderer(
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
         if (el && hydrateNode) {
+          if (__DEV__) {
+            startMeasure(instance, `hydrate`)
+          }
           // vnode has adopted host node - perform hydration instead of mount.
           hydrateNode(
             initialVNode.el as Node,
@@ -1106,7 +1124,13 @@ function baseCreateRenderer(
             instance,
             parentSuspense
           )
+          if (__DEV__) {
+            endMeasure(instance, `hydrate`)
+          }
         } else {
+          if (__DEV__) {
+            startMeasure(instance, `patch`)
+          }
           patch(
             null,
             subTree,
@@ -1116,6 +1140,9 @@ function baseCreateRenderer(
             parentSuspense,
             isSVG
           )
+          if (__DEV__) {
+            endMeasure(instance, `patch`)
+          }
           initialVNode.el = subTree.el
         }
         // mounted hook
@@ -1151,7 +1178,13 @@ function baseCreateRenderer(
         } else {
           next = vnode
         }
+        if (__DEV__) {
+          startMeasure(instance, `render`)
+        }
         const nextTree = renderComponentRoot(instance)
+        if (__DEV__) {
+          endMeasure(instance, `render`)
+        }
         const prevTree = instance.subTree
         instance.subTree = nextTree
         next.el = vnode.el
@@ -1168,6 +1201,9 @@ function baseCreateRenderer(
         if (instance.refs !== EMPTY_OBJ) {
           instance.refs = {}
         }
+        if (__DEV__) {
+          startMeasure(instance, `patch`)
+        }
         patch(
           prevTree,
           nextTree,
@@ -1179,6 +1215,9 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG
         )
+        if (__DEV__) {
+          endMeasure(instance, `patch`)
+        }
         next.el = nextTree.el
         if (next === null) {
           // self-triggered update. In case of HOC, update parent component
