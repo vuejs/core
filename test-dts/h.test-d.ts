@@ -5,7 +5,7 @@ import {
   defineComponent,
   ref,
   Fragment,
-  Portal,
+  Teleport,
   Suspense
 } from './index'
 
@@ -32,11 +32,11 @@ describe('h inference w/ Fragment', () => {
   expectError(h(Fragment, { key: 123 }, 'bar'))
 })
 
-describe('h inference w/ Portal', () => {
-  h(Portal, { target: '#foo' }, 'hello')
-  expectError(h(Portal))
-  expectError(h(Portal, {}))
-  expectError(h(Portal, { target: '#foo' }))
+describe('h inference w/ Teleport', () => {
+  h(Teleport, { to: '#foo' }, 'hello')
+  expectError(h(Teleport))
+  expectError(h(Teleport, {}))
+  expectError(h(Teleport, { to: '#foo' }))
 })
 
 describe('h inference w/ Suspense', () => {
