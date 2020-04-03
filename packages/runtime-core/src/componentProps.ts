@@ -14,12 +14,11 @@ import {
   makeMap,
   isReservedProp,
   EMPTY_ARR,
-  ShapeFlags,
-  isOn
+  ShapeFlags
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
-import { EmitsOptions } from './apiOptions'
+import { normalizeEmitsOptions, isEmitListener } from './componentEmits'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -147,7 +146,7 @@ export function resolveProps(
       let camelKey
       if (hasDeclaredProps && hasOwn(options, (camelKey = camelize(key)))) {
         setProp(camelKey, value)
-      } else if (!emits || !isListener(emits, key)) {
+      } else if (!emits || !isEmitListener(emits, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
@@ -279,35 +278,6 @@ export function normalizePropsOptions(
   const normalizedEntry: NormalizedPropsOptions = [normalized, needCastKeys]
   Object.defineProperty(raw, '_n', { value: normalizedEntry })
   return normalizedEntry
-}
-
-function normalizeEmitsOptions(
-  options: EmitsOptions | undefined
-): Record<string, any> | undefined {
-  if (!options) {
-    return
-  } else if (isArray(options)) {
-    if ((options as any)._n) {
-      return (options as any)._n
-    }
-    const normalized: Record<string, null> = {}
-    options.forEach(key => (normalized[key] = null))
-    Object.defineProperty(options, '_n', normalized)
-    return normalized
-  } else {
-    return options
-  }
-}
-
-function isListener(emits: Record<string, any>, key: string): boolean {
-  if (!isOn(key)) {
-    return false
-  }
-  const eventName = key.slice(2)
-  return (
-    hasOwn(emits, eventName) ||
-    hasOwn(emits, eventName[0].toLowerCase() + eventName.slice(1))
-  )
 }
 
 // use function string name to check type constructors

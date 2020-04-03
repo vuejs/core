@@ -14,25 +14,24 @@ import {
 import { ComponentPropsOptions, resolveProps } from './componentProps'
 import { Slots, resolveSlots } from './componentSlots'
 import { warn } from './warning'
-import {
-  ErrorCodes,
-  callWithErrorHandling,
-  callWithAsyncErrorHandling
-} from './errorHandling'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
-import { applyOptions, ComponentOptions, EmitsOptions } from './apiOptions'
+import { applyOptions, ComponentOptions } from './componentOptions'
+import {
+  EmitsOptions,
+  ObjectEmitsOptions,
+  EmitFn,
+  emit
+} from './componentEmits'
 import {
   EMPTY_OBJ,
   isFunction,
-  capitalize,
   NOOP,
   isObject,
   NO,
   makeMap,
   isPromise,
-  isArray,
-  hyphenate,
   ShapeFlags
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
@@ -96,29 +95,10 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-type UnionToIntersection<U> = (U extends any
-  ? (k: U) => void
-  : never) extends ((k: infer I) => void)
-  ? I
-  : never
-
-export type Emit<
-  Options = Record<string, any>,
-  Event extends keyof Options = keyof Options
-> = Options extends any[]
-  ? (event: Options[0], ...args: any[]) => unknown[]
-  : UnionToIntersection<
-      {
-        [key in Event]: Options[key] extends ((...args: infer Args) => any)
-          ? (event: key, ...args: Args) => unknown[]
-          : (event: key, ...args: any[]) => unknown[]
-      }[Event]
-    >
-
-export interface SetupContext<E = Record<string, any>> {
+export interface SetupContext<E = ObjectEmitsOptions> {
   attrs: Data
   slots: Slots
-  emit: Emit<E>
+  emit: EmitFn<E>
 }
 
 export type RenderFunction = {
@@ -165,7 +145,7 @@ export interface ComponentInternalInstance {
   propsProxy: Data | null
   setupContext: SetupContext | null
   refs: Data
-  emit: Emit
+  emit: EmitFn
 
   // suspense related
   suspense: SuspenseBoundary | null
@@ -268,29 +248,10 @@ export function createComponentInstance(
     rtg: null,
     rtc: null,
     ec: null,
-
-    emit: (event: string, ...args: any[]): any[] => {
-      const props = instance.vnode.props || EMPTY_OBJ
-      let handler = props[`on${event}`] || props[`on${capitalize(event)}`]
-      if (!handler && event.indexOf('update:') === 0) {
-        event = hyphenate(event)
-        handler = props[`on${event}`] || props[`on${capitalize(event)}`]
-      }
-      if (handler) {
-        const res = callWithAsyncErrorHandling(
-          handler,
-          instance,
-          ErrorCodes.COMPONENT_EVENT_HANDLER,
-          args
-        )
-        return isArray(res) ? res : [res]
-      } else {
-        return []
-      }
-    }
+    emit: null as any // to be set immediately
   }
-
   instance.root = parent ? parent.root : instance
+  instance.emit = emit.bind(null, instance)
   return instance
 }
 

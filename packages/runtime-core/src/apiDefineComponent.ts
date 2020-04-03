@@ -3,12 +3,12 @@ import {
   MethodOptions,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  EmitsOptions
-} from './apiOptions'
+  ComponentOptionsWithObjectProps
+} from './componentOptions'
 import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
+import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 

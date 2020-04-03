@@ -41,6 +41,7 @@ import {
   WritableComputedOptions
 } from '@vue/reactivity'
 import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
@@ -148,8 +149,6 @@ export type ComputedOptions = Record<
 export interface MethodOptions {
   [key: string]: Function
 }
-
-export type EmitsOptions = Record<string, any> | string[]
 
 export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: Function }

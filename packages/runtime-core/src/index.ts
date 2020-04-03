@@ -186,7 +186,7 @@ export {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
-} from './apiOptions'
+} from './componentOptions'
 export { ComponentPublicInstance } from './componentProxy'
 export {
   Renderer,

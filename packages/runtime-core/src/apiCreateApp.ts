@@ -4,7 +4,7 @@ import {
   validateComponentName,
   PublicAPIComponent
 } from './component'
-import { ComponentOptions } from './apiOptions'
+import { ComponentOptions } from './componentOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'

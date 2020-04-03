@@ -16,7 +16,7 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
   ComponentOptions
-} from './apiOptions'
+} from './componentOptions'
 import { ExtractPropTypes } from './componentProps'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the

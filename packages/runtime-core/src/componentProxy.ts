@@ -1,23 +1,23 @@
-import { ComponentInternalInstance, Data, Emit } from './component'
+import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
+import { ReactiveEffect, UnwrapRef } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions,
-  resolveMergedOptions,
-  EmitsOptions
-} from './apiOptions'
-import { ReactiveEffect, UnwrapRef } from '@vue/reactivity'
-import { warn } from './warning'
+  resolveMergedOptions
+} from './componentOptions'
+import { normalizePropsOptions } from './componentProps'
+import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
-import { normalizePropsOptions } from './componentProps'
+import { warn } from './warning'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -38,7 +38,7 @@ export type ComponentPublicInstance<
   $slots: Slots
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: Emit<E>
+  $emit: EmitFn<E>
   $el: any
   $options: ComponentOptionsBase<P, B, D, C, M, E>
   $forceUpdate: ReactiveEffect

@@ -6,8 +6,9 @@ const Foo = (props: { foo: number }) => props.foo
 
 // TSX
 expectType<JSX.Element>(<Foo foo={1} />)
-expectError(<Foo />)
+// expectError(<Foo />) // tsd does not catch missing type errors
 expectError(<Foo foo="bar" />)
+expectError(<Foo baz="bar" />)
 
 // Explicit signature with props + emits
 const Bar: FunctionalComponent<
@@ -35,5 +36,6 @@ expectError((Bar.emits = { baz: () => void 0 }))
 
 // TSX
 expectType<JSX.Element>(<Bar foo={1} />)
-expectError(<Bar />)
+// expectError(<Foo />) // tsd does not catch missing type errors
 expectError(<Bar foo="bar" />)
+expectError(<Foo baz="bar" />)
