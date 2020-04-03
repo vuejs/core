@@ -101,11 +101,16 @@ describe('with object props', () => {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
+      expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
+      expectType<ExpectedProps['ee']>(props.ee)
+      expectType<ExpectedProps['ff']>(props.ff)
       expectType<ExpectedProps['ccc']>(props.ccc)
       expectType<ExpectedProps['ddd']>(props.ddd)
+      expectType<ExpectedProps['eee']>(props.eee)
+      expectType<ExpectedProps['fff']>(props.fff)
 
       // props should be readonly
       expectError((props.a = 1))
@@ -113,11 +118,16 @@ describe('with object props', () => {
       // should also expose declared props on `this`
       expectType<ExpectedProps['a']>(this.a)
       expectType<ExpectedProps['b']>(this.b)
+      expectType<ExpectedProps['e']>(this.e)
       expectType<ExpectedProps['bb']>(this.bb)
       expectType<ExpectedProps['cc']>(this.cc)
       expectType<ExpectedProps['dd']>(this.dd)
+      expectType<ExpectedProps['ee']>(this.ee)
+      expectType<ExpectedProps['ff']>(this.ff)
       expectType<ExpectedProps['ccc']>(this.ccc)
       expectType<ExpectedProps['ddd']>(this.ddd)
+      expectType<ExpectedProps['eee']>(this.eee)
+      expectType<ExpectedProps['fff']>(this.fff)
 
       // props on `this` should be readonly
       expectError((this.a = 1))
@@ -140,10 +150,14 @@ describe('with object props', () => {
       a={1}
       b="b"
       bb="bb"
+      e={() => {}}
       cc={['cc']}
       dd={['dd']}
+      ee={() => 'ee'}
       ccc={['ccc']}
       ddd={['ddd']}
+      eee={() => ({ a: 'eee' })}
+      fff={(a, b) => ({ a: a > +b })}
       // should allow extraneous as attrs
       class="bar"
       // should allow key
