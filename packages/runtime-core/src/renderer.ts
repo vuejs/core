@@ -15,7 +15,6 @@ import {
 import {
   ComponentInternalInstance,
   createComponentInstance,
-  Component,
   Data,
   setupComponent
 } from './component'
@@ -1249,7 +1248,7 @@ function baseCreateRenderer(
     nextVNode.component = instance
     instance.vnode = nextVNode
     instance.next = null
-    resolveProps(instance, nextVNode.props, (nextVNode.type as Component).props)
+    resolveProps(instance, nextVNode.props)
     resolveSlots(instance, nextVNode.children)
   }
 

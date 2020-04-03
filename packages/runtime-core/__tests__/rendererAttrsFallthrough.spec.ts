@@ -8,7 +8,8 @@ import {
   onUpdated,
   defineComponent,
   openBlock,
-  createBlock
+  createBlock,
+  FunctionalComponent
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/shared'
 
@@ -427,5 +428,71 @@ describe('attribute fallthrough', () => {
     cls.value = 'barr'
     await nextTick()
     expect(root.innerHTML).toBe(`<div aria-hidden="false" class="barr"></div>`)
+  })
+
+  it('should not let listener fallthrough when declared in emits (stateful)', () => {
+    const Child = defineComponent({
+      emits: ['click'],
+      render() {
+        return h(
+          'button',
+          {
+            onClick: () => {
+              this.$emit('click', 'custom')
+            }
+          },
+          'hello'
+        )
+      }
+    })
+
+    const onClick = jest.fn()
+    const App = {
+      render() {
+        return h(Child, {
+          onClick
+        })
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(App), root)
+
+    const node = root.children[0] as HTMLElement
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledWith('custom')
+  })
+
+  it('should not let listener fallthrough when declared in emits (functional)', () => {
+    const Child: FunctionalComponent<{}, { click: any }> = (_, { emit }) => {
+      // should not be in props
+      expect((_ as any).onClick).toBeUndefined()
+      return h('button', {
+        onClick: () => {
+          emit('click', 'custom')
+        }
+      })
+    }
+    Child.emits = ['click']
+
+    const onClick = jest.fn()
+    const App = {
+      render() {
+        return h(Child, {
+          onClick
+        })
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(App), root)
+
+    const node = root.children[0] as HTMLElement
+    node.dispatchEvent(new CustomEvent('click'))
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledWith('custom')
   })
 })

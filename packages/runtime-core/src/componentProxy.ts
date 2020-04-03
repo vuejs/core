@@ -7,7 +7,8 @@ import {
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions,
-  resolveMergedOptions
+  resolveMergedOptions,
+  EmitsOptions
 } from './apiOptions'
 import { ReactiveEffect, UnwrapRef } from '@vue/reactivity'
 import { warn } from './warning'
@@ -26,6 +27,7 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  E extends EmitsOptions = {},
   PublicProps = P
 > = {
   $: ComponentInternalInstance
@@ -36,9 +38,9 @@ export type ComponentPublicInstance<
   $slots: Slots
   $root: ComponentInternalInstance | null
   $parent: ComponentInternalInstance | null
-  $emit: Emit
+  $emit: Emit<E>
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M>
+  $options: ComponentOptionsBase<P, B, D, C, M, E>
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch

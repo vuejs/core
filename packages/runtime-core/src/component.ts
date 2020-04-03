@@ -21,7 +21,7 @@ import {
 } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
-import { applyOptions, ComponentOptions } from './apiOptions'
+import { applyOptions, ComponentOptions, EmitsOptions } from './apiOptions'
 import {
   EMPTY_OBJ,
   isFunction,
@@ -52,9 +52,13 @@ export interface SFCInternalOptions {
   __hmrUpdated?: boolean
 }
 
-export interface FunctionalComponent<P = {}> extends SFCInternalOptions {
-  (props: P, ctx: SetupContext): VNodeChild
+export interface FunctionalComponent<
+  P = {},
+  E extends EmitsOptions = Record<string, any>
+> extends SFCInternalOptions {
+  (props: P, ctx: SetupContext<E>): any
   props?: ComponentPropsOptions<P>
+  emits?: E | (keyof E)[]
   inheritAttrs?: boolean
   displayName?: string
 }
@@ -92,12 +96,29 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export type Emit = (event: string, ...args: unknown[]) => any[]
+type UnionToIntersection<U> = (U extends any
+  ? (k: U) => void
+  : never) extends ((k: infer I) => void)
+  ? I
+  : never
 
-export interface SetupContext {
+export type Emit<
+  Options = Record<string, any>,
+  Event extends keyof Options = keyof Options
+> = Options extends any[]
+  ? (event: Options[0], ...args: any[]) => unknown[]
+  : UnionToIntersection<
+      {
+        [key in Event]: Options[key] extends ((...args: infer Args) => any)
+          ? (event: key, ...args: Args) => unknown[]
+          : (event: key, ...args: any[]) => unknown[]
+      }[Event]
+    >
+
+export interface SetupContext<E = Record<string, any>> {
   attrs: Data
   slots: Slots
-  emit: Emit
+  emit: Emit<E>
 }
 
 export type RenderFunction = {
@@ -248,7 +269,7 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
 
-    emit: (event, ...args): any[] => {
+    emit: (event: string, ...args: any[]): any[] => {
       const props = instance.vnode.props || EMPTY_OBJ
       let handler = props[`on${event}`] || props[`on${capitalize(event)}`]
       if (!handler && event.indexOf('update:') === 0) {
@@ -303,9 +324,8 @@ export function setupComponent(
   isSSR = false
 ) {
   isInSSRComponentSetup = isSSR
-  const propsOptions = instance.type.props
   const { props, children, shapeFlag } = instance.vnode
-  resolveProps(instance, props, propsOptions)
+  resolveProps(instance, props)
   resolveSlots(instance, children)
 
   // setup stateful logic
