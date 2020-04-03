@@ -15,7 +15,7 @@ describe('with object props', () => {
     e?: Function
     bb: string
     cc?: string[] | undefined
-    dd: string[]
+    dd: { n: 1 }
     ee?: () => string
     ff?: (a: number, b: string) => { a: boolean }
     ccc?: string[] | undefined
@@ -43,7 +43,7 @@ describe('with object props', () => {
       cc: Array as PropType<string[]>,
       // required + type casting
       dd: {
-        type: Array as PropType<string[]>,
+        type: Object as PropType<{ n: 1 }>,
         required: true
       },
       // return type
@@ -152,7 +152,7 @@ describe('with object props', () => {
       bb="bb"
       e={() => {}}
       cc={['cc']}
-      dd={['dd']}
+      dd={{ n: 1 }}
       ee={() => 'ee'}
       ccc={['ccc']}
       ddd={['ddd']}
