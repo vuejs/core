@@ -54,7 +54,8 @@ describe('api: setup context', () => {
     }
 
     const Child = defineComponent({
-      setup(props: { count: number }) {
+      props: { count: Number },
+      setup(props) {
         watchEffect(() => {
           dummy = props.count
         })

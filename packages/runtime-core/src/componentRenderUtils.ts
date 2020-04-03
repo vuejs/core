@@ -55,6 +55,7 @@ export function renderComponentRoot(
     accessedAttrs = false
   }
   try {
+    let fallthroughAttrs
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
@@ -62,6 +63,7 @@ export function renderComponentRoot(
       result = normalizeVNode(
         instance.render!.call(proxyToUse, proxyToUse!, renderCache)
       )
+      fallthroughAttrs = attrs
     } else {
       // functional
       const render = Component as FunctionalComponent
@@ -74,14 +76,14 @@ export function renderComponentRoot(
             })
           : render(props, null as any /* we know it doesn't need it */)
       )
+      fallthroughAttrs = Component.props ? attrs : getFallthroughAttrs(attrs)
     }
 
     // attr merging
-    let fallthroughAttrs
     if (
       Component.inheritAttrs !== false &&
-      attrs !== EMPTY_OBJ &&
-      (fallthroughAttrs = getFallthroughAttrs(attrs))
+      fallthroughAttrs &&
+      fallthroughAttrs !== EMPTY_OBJ
     ) {
       if (
         result.shapeFlag & ShapeFlags.ELEMENT ||
@@ -140,14 +142,7 @@ export function renderComponentRoot(
 const getFallthroughAttrs = (attrs: Data): Data | undefined => {
   let res: Data | undefined
   for (const key in attrs) {
-    if (
-      key === 'class' ||
-      key === 'style' ||
-      key === 'role' ||
-      isOn(key) ||
-      key.indexOf('aria-') === 0 ||
-      key.indexOf('data-') === 0
-    ) {
+    if (key === 'class' || key === 'style' || isOn(key)) {
       ;(res || (res = {}))[key] = attrs[key]
     }
   }

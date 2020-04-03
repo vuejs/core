@@ -8,7 +8,8 @@ import {
   createStaticVNode,
   Suspense,
   onMounted,
-  defineAsyncComponent
+  defineAsyncComponent,
+  defineComponent
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
@@ -448,8 +449,9 @@ describe('SSR hydration', () => {
     const mountedCalls: number[] = []
     const asyncDeps: Promise<any>[] = []
 
-    const AsyncChild = {
-      async setup(props: { n: number }) {
+    const AsyncChild = defineComponent({
+      props: ['n'],
+      async setup(props) {
         const count = ref(props.n)
         onMounted(() => {
           mountedCalls.push(props.n)
@@ -468,7 +470,7 @@ describe('SSR hydration', () => {
             count.value
           )
       }
-    }
+    })
 
     const done = jest.fn()
     const App = {
