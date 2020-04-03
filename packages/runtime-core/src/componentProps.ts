@@ -39,7 +39,14 @@ interface PropOptions<T = any> {
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
 
-type PropConstructor<T = any> = { new (...args: any[]): T & object } | { (): T }
+type PropConstructor<T = any> =
+  | { new (...args: any[]): T & object }
+  | { (): T }
+  | PropMethod<T>
+
+type PropMethod<T> = T extends (...args: any) => any // if is function with args
+  ? { new (): T; (): T; readonly proptotype: Function } // Create Function like contructor
+  : never
 
 type RequiredKeys<T, MakeDefaultRequired> = {
   [K in keyof T]: T[K] extends

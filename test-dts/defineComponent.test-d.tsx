@@ -12,11 +12,16 @@ describe('with object props', () => {
   interface ExpectedProps {
     a?: number | undefined
     b: string
+    e?: Function
     bb: string
     cc?: string[] | undefined
     dd: string[]
+    ee?: () => string
+    ff?: (a: number, b: string) => { a: boolean }
     ccc?: string[] | undefined
     ddd: string[]
+    eee: () => { a: string }
+    fff: (a: number, b: string) => { a: boolean }
   }
 
   type GT = string & { __brand: unknown }
@@ -29,6 +34,7 @@ describe('with object props', () => {
         type: String,
         required: true
       },
+      e: Function,
       // default value should infer type and make it non-void
       bb: {
         default: 'hello'
@@ -40,11 +46,25 @@ describe('with object props', () => {
         type: Array as PropType<string[]>,
         required: true
       },
+      // return type
+      ee: Function as PropType<() => string>,
+      // arguments + object return
+      ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
       // explicit type casting with constructor
       ccc: Array as () => string[],
       // required + contructor type casting
       ddd: {
         type: Array as () => string[],
+        required: true
+      },
+      // required + object return
+      eee: {
+        type: Function as PropType<() => { a: string }>,
+        required: true
+      },
+      // required + arguments + object return
+      fff: {
+        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
         required: true
       }
     },
@@ -52,11 +72,16 @@ describe('with object props', () => {
       // type assertion. See https://github.com/SamVerschueren/tsd
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
+      expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['bb']>(props.bb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
+      expectType<ExpectedProps['ee']>(props.ee)
+      expectType<ExpectedProps['ff']>(props.ff)
       expectType<ExpectedProps['ccc']>(props.ccc)
       expectType<ExpectedProps['ddd']>(props.ddd)
+      expectType<ExpectedProps['eee']>(props.eee)
+      expectType<ExpectedProps['fff']>(props.fff)
 
       // props should be readonly
       expectError((props.a = 1))
