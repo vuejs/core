@@ -452,7 +452,7 @@ function finishComponentSetup(
       Component.render = compile(Component.template, {
         isCustomElement: instance.appContext.config.isCustomElement || NO
       })
-      if (__DEV__ && instance.appContext.config.performance) {
+      if (__DEV__) {
         endMeasure(instance, `compile`)
       }
       // mark the function as runtime compiled
