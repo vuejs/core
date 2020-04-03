@@ -172,9 +172,9 @@ describe('with object props', () => {
 
   // wrong prop types
   expectError(
-    <MyComponent a={'wrong type'} b="foo" dd={['foo']} ddd={['foo']} />
+    <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
   )
-  expectError(<MyComponent b="foo" dd={[123]} ddd={['foo']} />)
+  expectError(<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />)
 })
 
 describe('type inference w/ optional props declaration', () => {
