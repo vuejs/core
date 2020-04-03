@@ -7,7 +7,6 @@ export function startMeasure(
   instance: ComponentInternalInstance,
   type: string
 ) {
-  if (!instance.appContext) debugger
   if (instance.appContext.config.performance && isSupported()) {
     perf.mark(`vue-${type}-${instance.uid}`)
   }
