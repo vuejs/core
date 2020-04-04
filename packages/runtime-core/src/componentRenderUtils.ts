@@ -8,7 +8,10 @@ import {
   normalizeVNode,
   createVNode,
   Comment,
-  cloneVNode
+  cloneVNode,
+  Fragment,
+  VNodeArrayChildren,
+  isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, EMPTY_OBJ, isOn } from '@vue/shared'
@@ -80,22 +83,30 @@ export function renderComponentRoot(
     }
 
     // attr merging
+    // in dev mode, comments are preserved, and it's possible for a template
+    // to have comments along side the root element which makes it a fragment
+    let root = result
+    let setRoot: ((root: VNode) => void) | undefined = undefined
+    if (__DEV__) {
+      ;[root, setRoot] = getChildRoot(result)
+    }
+
     if (
       Component.inheritAttrs !== false &&
       fallthroughAttrs &&
       fallthroughAttrs !== EMPTY_OBJ
     ) {
       if (
-        result.shapeFlag & ShapeFlags.ELEMENT ||
-        result.shapeFlag & ShapeFlags.COMPONENT
+        root.shapeFlag & ShapeFlags.ELEMENT ||
+        root.shapeFlag & ShapeFlags.COMPONENT
       ) {
-        result = cloneVNode(result, fallthroughAttrs)
+        root = cloneVNode(root, fallthroughAttrs)
         // If the child root node is a compiler optimized vnode, make sure it
         // force update full props to account for the merged attrs.
-        if (result.dynamicChildren) {
-          result.patchFlag |= PatchFlags.FULL_PROPS
+        if (root.dynamicChildren) {
+          root.patchFlag |= PatchFlags.FULL_PROPS
         }
-      } else if (__DEV__ && !accessedAttrs && result.type !== Comment) {
+      } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         warn(
           `Extraneous non-props attributes (` +
             `${Object.keys(attrs).join(', ')}) ` +
@@ -108,27 +119,33 @@ export function renderComponentRoot(
     // inherit scopeId
     const parentScopeId = parent && parent.type.__scopeId
     if (parentScopeId) {
-      result = cloneVNode(result, { [parentScopeId]: '' })
+      root = cloneVNode(root, { [parentScopeId]: '' })
     }
     // inherit directives
     if (vnode.dirs) {
-      if (__DEV__ && !isElementRoot(result)) {
+      if (__DEV__ && !isElementRoot(root)) {
         warn(
           `Runtime directive used on component with non-element root node. ` +
             `The directives will not function as intended.`
         )
       }
-      result.dirs = vnode.dirs
+      root.dirs = vnode.dirs
     }
     // inherit transition data
     if (vnode.transition) {
-      if (__DEV__ && !isElementRoot(result)) {
+      if (__DEV__ && !isElementRoot(root)) {
         warn(
           `Component inside <Transition> renders non-element root node ` +
             `that cannot be animated.`
         )
       }
-      result.transition = vnode.transition
+      root.transition = vnode.transition
+    }
+
+    if (__DEV__ && setRoot) {
+      setRoot(root)
+    } else {
+      result = root
     }
   } catch (err) {
     handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
@@ -137,6 +154,25 @@ export function renderComponentRoot(
   currentRenderingInstance = null
 
   return result
+}
+
+const getChildRoot = (
+  vnode: VNode
+): [VNode, ((root: VNode) => void) | undefined] => {
+  if (vnode.type !== Fragment) {
+    return [vnode, undefined]
+  }
+  const rawChildren = vnode.children as VNodeArrayChildren
+  const children = rawChildren.filter(child => {
+    return !(isVNode(child) && child.type === Comment)
+  })
+  if (children.length !== 1) {
+    return [vnode, undefined]
+  }
+  const childRoot = children[0]
+  const index = rawChildren.indexOf(childRoot)
+  const setRoot = (updatedRoot: VNode) => (rawChildren[index] = updatedRoot)
+  return [normalizeVNode(childRoot), setRoot]
 }
 
 const getFallthroughAttrs = (attrs: Data): Data | undefined => {

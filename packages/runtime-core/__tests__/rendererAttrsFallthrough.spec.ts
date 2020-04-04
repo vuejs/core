@@ -9,7 +9,8 @@ import {
   defineComponent,
   openBlock,
   createBlock,
-  FunctionalComponent
+  FunctionalComponent,
+  createCommentVNode
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/shared'
 
@@ -494,5 +495,36 @@ describe('attribute fallthrough', () => {
     node.dispatchEvent(new CustomEvent('click'))
     expect(onClick).toHaveBeenCalledTimes(1)
     expect(onClick).toHaveBeenCalledWith('custom')
+  })
+
+  it('should support fallthrough for fragments with single element + comments', () => {
+    const click = jest.fn()
+
+    const Hello = {
+      setup() {
+        return () => h(Child, { class: 'foo', onClick: click })
+      }
+    }
+
+    const Child = {
+      setup(props: any) {
+        return () => [
+          createCommentVNode('hello'),
+          h('button'),
+          createCommentVNode('world')
+        ]
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Hello), root)
+
+    expect(root.innerHTML).toBe(
+      `<!--hello--><button class="foo"></button><!--world-->`
+    )
+    const button = root.children[0] as HTMLElement
+    button.dispatchEvent(new CustomEvent('click'))
+    expect(click).toHaveBeenCalled()
   })
 })
