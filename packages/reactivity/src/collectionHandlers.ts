@@ -64,9 +64,13 @@ function add(this: SetTypes, value: unknown) {
 
 function set(this: MapTypes, key: unknown, value: unknown) {
   value = toRaw(value)
-  key = toRaw(key)
   const target = toRaw(this)
   const proto = getProto(target)
+  const { delete: del } = getProto(target)
+  if (key !== toRaw(key) && proto.has.call(target, key)) {
+    del.call(target, key)
+  }
+  key = toRaw(key)
   const hadKey = proto.has.call(target, key)
   const oldValue = proto.get.call(target, key)
   const result = proto.set.call(target, key, value)

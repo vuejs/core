@@ -391,5 +391,25 @@ describe('reactivity/collections', () => {
       map.set('b', 1)
       expect(spy).toHaveBeenCalledTimes(3)
     })
+    // #919
+    it('should trigger correctly with a reactive key', () => {
+      let obj = reactive({})
+      let map = new Map()
+      map.set(obj, 'init value')
+      let rmap = reactive(map)
+      let dummy
+      effect(() => {
+        dummy = rmap.get(obj)
+      })
+
+      expect(dummy).toBe('init value')
+      rmap.set(obj, 'value')
+      expect(dummy).toBe('value')
+      rmap.set(obj, 'value2')
+      expect(dummy).toBe('value2')
+      rmap.delete(obj)
+      expect(dummy).toBe(undefined)
+
+    })
   })
 })
