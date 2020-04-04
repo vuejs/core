@@ -10,14 +10,8 @@ import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent } from './component'
-import {
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptions
-} from './componentOptions'
-import { ExtractPropTypes } from './componentProps'
+import { FunctionalComponent, Component } from './component'
+import { ComponentOptions } from './componentOptions'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -108,25 +102,17 @@ export function h(
 ): VNode
 
 // functional component
-export function h(type: FunctionalComponent, children?: RawChildren): VNode
 export function h<P>(
   type: FunctionalComponent<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
-// stateful component
-export function h(type: ComponentOptions, children?: RawChildren): VNode
+// catch-all for generic component types
+export function h(type: Component, children?: RawChildren): VNode
 export function h(
-  type: ComponentOptionsWithoutProps | ComponentOptionsWithArrayProps,
+  type: ComponentOptions | FunctionalComponent<{}>,
   props?: RawProps | null,
-  children?: RawChildren | RawSlots
-): VNode
-export function h<O>(
-  type: ComponentOptionsWithObjectProps<O>,
-  props?:
-    | (RawProps & ExtractPropTypes<O>)
-    | ({} extends ExtractPropTypes<O> ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
