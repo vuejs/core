@@ -64,7 +64,8 @@ interface ParserContext {
   offset: number
   line: number
   column: number
-  inPre: boolean
+  inPre: boolean // HTML <pre> tag, preserve whitespaces
+  inVPre: boolean // v-pre, do not process directives and interpolations
 }
 
 export function baseParse(
@@ -93,7 +94,8 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    inPre: false
+    inPre: false,
+    inVPre: false
   }
 }
 
@@ -112,7 +114,7 @@ function parseChildren(
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
-      if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
+      if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
         // '{{'
         node = parseInterpolation(context, mode)
       } else if (mode === TextModes.DATA && s[0] === '<') {
@@ -187,40 +189,46 @@ function parseChildren(
   // Whitespace management for more efficient output
   // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
-  if (
-    mode !== TextModes.RAWTEXT &&
-    (!parent || !context.options.isPreTag(parent.tag))
-  ) {
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      if (node.type === NodeTypes.TEXT) {
-        if (!node.content.trim()) {
-          const prev = nodes[i - 1]
-          const next = nodes[i + 1]
-          // If:
-          // - the whitespace is the first or last node, or:
-          // - the whitespace is adjacent to a comment, or:
-          // - the whitespace is between two elements AND contains newline
-          // Then the whitespace is ignored.
-          if (
-            !prev ||
-            !next ||
-            prev.type === NodeTypes.COMMENT ||
-            next.type === NodeTypes.COMMENT ||
-            (prev.type === NodeTypes.ELEMENT &&
-              next.type === NodeTypes.ELEMENT &&
-              /[\r\n]/.test(node.content))
-          ) {
-            removedWhitespace = true
-            nodes[i] = null as any
+  if (mode !== TextModes.RAWTEXT) {
+    if (!context.inPre) {
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        if (node.type === NodeTypes.TEXT) {
+          if (!node.content.trim()) {
+            const prev = nodes[i - 1]
+            const next = nodes[i + 1]
+            // If:
+            // - the whitespace is the first or last node, or:
+            // - the whitespace is adjacent to a comment, or:
+            // - the whitespace is between two elements AND contains newline
+            // Then the whitespace is ignored.
+            if (
+              !prev ||
+              !next ||
+              prev.type === NodeTypes.COMMENT ||
+              next.type === NodeTypes.COMMENT ||
+              (prev.type === NodeTypes.ELEMENT &&
+                next.type === NodeTypes.ELEMENT &&
+                /[\r\n]/.test(node.content))
+            ) {
+              removedWhitespace = true
+              nodes[i] = null as any
+            } else {
+              // Otherwise, condensed consecutive whitespace inside the text down to
+              // a single space
+              node.content = ' '
+            }
           } else {
-            // Otherwise, condensed consecutive whitespace inside the text down to
-            // a single space
-            node.content = ' '
+            node.content = node.content.replace(/\s+/g, ' ')
           }
-        } else {
-          node.content = node.content.replace(/\s+/g, ' ')
         }
+      }
+    } else {
+      // remove leading newline per html spec
+      // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
+      const first = nodes[0]
+      if (first && first.type === NodeTypes.TEXT) {
+        first.content = first.content.replace(/^\r?\n/, '')
       }
     }
   }
@@ -347,9 +355,11 @@ function parseElement(
 
   // Start tag.
   const wasInPre = context.inPre
+  const wasInVPre = context.inVPre
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
   const isPreBoundary = context.inPre && !wasInPre
+  const isVPreBoundary = context.inVPre && !wasInVPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
@@ -380,6 +390,9 @@ function parseElement(
 
   if (isPreBoundary) {
     context.inPre = false
+  }
+  if (isVPreBoundary) {
+    context.inVPre = false
   }
   return element
 }
@@ -423,12 +436,17 @@ function parseTag(
   // Attributes.
   let props = parseAttributes(context, type)
 
+  // check <pre> tag
+  if (context.options.isPreTag(tag)) {
+    context.inPre = true
+  }
+
   // check v-pre
   if (
-    !context.inPre &&
+    !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
-    context.inPre = true
+    context.inVPre = true
     // reset context
     extend(context, cursor)
     context.source = currentSource
@@ -450,7 +468,7 @@ function parseTag(
 
   let tagType = ElementTypes.ELEMENT
   const options = context.options
-  if (!context.inPre && !options.isCustomElement(tag)) {
+  if (!context.inVPre && !options.isCustomElement(tag)) {
     const hasVIs = props.some(
       p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
     )
@@ -580,7 +598,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inPre && /^(v-|:|@|#)/.test(name)) {
+  if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
     const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
       name
     )!

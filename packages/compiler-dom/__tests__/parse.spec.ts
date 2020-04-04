@@ -116,11 +116,36 @@ describe('DOM parser', () => {
     })
 
     test('<pre> tag should preserve raw whitespace', () => {
-      const rawText = `  \na    b    \n   c`
+      const rawText = `  \na   <div>foo \n bar</div>   \n   c`
+      const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.TEXT,
+          content: `  \na   `
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo \n bar`
+            }
+          ]
+        },
+        {
+          type: NodeTypes.TEXT,
+          content: `   \n   c`
+        }
+      ])
+    })
+
+    // #908
+    test('<pre> tag should remove leading newline', () => {
+      const rawText = `\nhello`
       const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
       expect((ast.children[0] as ElementNode).children[0]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: rawText
+        content: rawText.slice(1)
       })
     })
   })
