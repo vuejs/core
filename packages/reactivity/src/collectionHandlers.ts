@@ -90,7 +90,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   // forward the operation before queueing reactions
   const result = del.call(target, key)
   if (hadKey) {
-    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+    trigger(target, TriggerOpTypes.DELETE, toRaw(key), undefined, oldValue)
   }
   return result
 }
