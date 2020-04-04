@@ -4,10 +4,12 @@ import {
   hasOwn,
   EMPTY_OBJ,
   capitalize,
-  hyphenate
+  hyphenate,
+  isFunction
 } from '@vue/shared'
 import { ComponentInternalInstance } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
+import { warn } from './warning'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -40,6 +42,29 @@ export function emit(
   ...args: any[]
 ): any[] {
   const props = instance.vnode.props || EMPTY_OBJ
+
+  if (__DEV__) {
+    const options = normalizeEmitsOptions(instance.type.emits)
+    if (options) {
+      if (!(event in options)) {
+        warn(
+          `Component emitted event "${event}" but it is not declared in the ` +
+            `emits option.`
+        )
+      } else {
+        const validator = options[event]
+        if (isFunction(validator)) {
+          const isValid = validator(...args)
+          if (!isValid) {
+            warn(
+              `Invalid event arguments: event validation failed for event "${event}".`
+            )
+          }
+        }
+      }
+    }
+  }
+
   let handler = props[`on${event}`] || props[`on${capitalize(event)}`]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
@@ -81,13 +106,13 @@ export function normalizeEmitsOptions(
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
-export function isEmitListener(
-  emits: ObjectEmitsOptions,
-  key: string
-): boolean {
+export function isEmitListener(emits: EmitsOptions, key: string): boolean {
   return (
     isOn(key) &&
-    (hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
+    (hasOwn(
+      (emits = normalizeEmitsOptions(emits) as ObjectEmitsOptions),
+      key[2].toLowerCase() + key.slice(3)
+    ) ||
       hasOwn(emits, key.slice(2)))
   )
 }

@@ -18,7 +18,7 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
-import { normalizeEmitsOptions, isEmitListener } from './componentEmits'
+import { isEmitListener } from './componentEmits'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -115,7 +115,7 @@ export function resolveProps(
   }
 
   const { 0: options, 1: needCastKeys } = normalizePropsOptions(_options)!
-  const emits = normalizeEmitsOptions(instance.type.emits)
+  const emits = instance.type.emits
   const props: Data = {}
   let attrs: Data | undefined = undefined
 

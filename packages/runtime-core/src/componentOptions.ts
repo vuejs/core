@@ -102,7 +102,7 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
   props?: undefined
@@ -116,7 +116,7 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
@@ -129,7 +129,7 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
