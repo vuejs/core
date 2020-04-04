@@ -147,7 +147,7 @@ export function parse(
           source,
           block.content,
           sourceRoot,
-          pad ? 0 : block.loc.start.line - 1
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
         )
       }
     }
