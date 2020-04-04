@@ -161,7 +161,7 @@ export function markReadonly<T>(value: T): T {
   return value
 }
 
-export function markNonReactive<T>(value: T): T {
+export function markNonReactive<T extends object>(value: T): T {
   nonReactiveValues.add(value)
   return value
 }
