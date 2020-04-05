@@ -32,7 +32,8 @@ import {
   PatchFlags,
   ShapeFlags,
   NOOP,
-  hasOwn
+  hasOwn,
+  invokeArrayFns
 } from '@vue/shared'
 import {
   queueJob,
@@ -40,13 +41,7 @@ import {
   flushPostFlushCbs,
   invalidateJob
 } from './scheduler'
-import {
-  effect,
-  stop,
-  ReactiveEffectOptions,
-  isRef,
-  DebuggerEvent
-} from '@vue/reactivity'
+import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { resolveProps } from './componentProps'
 import { resolveSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -265,14 +260,8 @@ function createDevEffectOptions(
 ): ReactiveEffectOptions {
   return {
     scheduler: queueJob,
-    onTrack: instance.rtc ? e => invokeHooks(instance.rtc!, e) : void 0,
-    onTrigger: instance.rtg ? e => invokeHooks(instance.rtg!, e) : void 0
-  }
-}
-
-export function invokeHooks(hooks: Function[], arg?: DebuggerEvent) {
-  for (let i = 0; i < hooks.length; i++) {
-    hooks[i](arg)
+    onTrack: instance.rtc ? e => invokeArrayFns(instance.rtc!, e) : void 0,
+    onTrigger: instance.rtg ? e => invokeArrayFns(instance.rtg!, e) : void 0
   }
 }
 
@@ -1106,7 +1095,7 @@ function baseCreateRenderer(
         }
         // beforeMount hook
         if (bm) {
-          invokeHooks(bm)
+          invokeArrayFns(bm)
         }
         // onVnodeBeforeMount
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
@@ -1189,7 +1178,7 @@ function baseCreateRenderer(
         next.el = vnode.el
         // beforeUpdate hook
         if (bu) {
-          invokeHooks(bu)
+          invokeArrayFns(bu)
         }
         // onVnodeBeforeUpdate
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
@@ -1812,7 +1801,7 @@ function baseCreateRenderer(
     const { bum, effects, update, subTree, um, da, isDeactivated } = instance
     // beforeUnmount hook
     if (bum) {
-      invokeHooks(bum)
+      invokeArrayFns(bum)
     }
     if (effects) {
       for (let i = 0; i < effects.length; i++) {

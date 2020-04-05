@@ -10,13 +10,18 @@ import {
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
 import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
-import { isString, isArray, ShapeFlags, remove } from '@vue/shared'
+import {
+  isString,
+  isArray,
+  ShapeFlags,
+  remove,
+  invokeArrayFns
+} from '@vue/shared'
 import { watch } from '../apiWatch'
 import { SuspenseBoundary } from './Suspense'
 import {
   RendererInternals,
   queuePostRenderEffect,
-  invokeHooks,
   MoveType,
   RendererElement,
   RendererNode
@@ -106,7 +111,7 @@ const KeepAliveImpl = {
       queuePostRenderEffect(() => {
         child.isDeactivated = false
         if (child.a) {
-          invokeHooks(child.a)
+          invokeArrayFns(child.a)
         }
       }, parentSuspense)
     }
@@ -116,7 +121,7 @@ const KeepAliveImpl = {
       queuePostRenderEffect(() => {
         const component = vnode.component!
         if (component.da) {
-          invokeHooks(component.da)
+          invokeArrayFns(component.da)
         }
         component.isDeactivated = true
       }, parentSuspense)
