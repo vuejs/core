@@ -38,9 +38,14 @@ import {
 import {
   reactive,
   ComputedGetter,
-  WritableComputedOptions
+  WritableComputedOptions,
+  ComputedRef
 } from '@vue/reactivity'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentObjectPropsOptions,
+  ExtractPropTypes,
+  normalizePropsOptions
+} from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
@@ -239,6 +244,7 @@ export function applyOptions(
   options: ComponentOptions,
   asMixin: boolean = false
 ) {
+  const proxyTarget = instance.proxyTarget
   const ctx = instance.proxy!
   const {
     // composition
@@ -277,7 +283,7 @@ export function applyOptions(
 
   const globalMixins = instance.appContext.mixins
   // call it only during dev
-  const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
+
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
     callSyncHook('beforeCreate', options, ctx, globalMixins)
@@ -293,8 +299,10 @@ export function applyOptions(
     applyMixins(instance, mixins)
   }
 
+  const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
+
   if (__DEV__ && propsOptions) {
-    for (const key in propsOptions) {
+    for (const key in normalizePropsOptions(propsOptions)[0]) {
       checkDuplicateProperties!(OptionTypes.PROPS, key)
     }
   }
@@ -314,6 +322,7 @@ export function applyOptions(
       if (__DEV__) {
         for (const key in data) {
           checkDuplicateProperties!(OptionTypes.DATA, key)
+          if (!(key in proxyTarget)) proxyTarget[key] = data[key]
         }
       }
       instance.data = reactive(data)
@@ -326,9 +335,6 @@ export function applyOptions(
   if (computedOptions) {
     for (const key in computedOptions) {
       const opt = (computedOptions as ComputedOptions)[key]
-
-      __DEV__ && checkDuplicateProperties!(OptionTypes.COMPUTED, key)
-
       if (isFunction(opt)) {
         renderContext[key] = computed(opt.bind(ctx, ctx))
       } else {
@@ -350,6 +356,15 @@ export function applyOptions(
           warn(`Computed property "${key}" has no getter.`)
         }
       }
+      if (__DEV__) {
+        checkDuplicateProperties!(OptionTypes.COMPUTED, key)
+        if (renderContext[key] && !(key in proxyTarget)) {
+          Object.defineProperty(proxyTarget, key, {
+            enumerable: true,
+            get: () => (renderContext[key] as ComputedRef).value
+          })
+        }
+      }
     }
   }
 
@@ -357,8 +372,13 @@ export function applyOptions(
     for (const key in methods) {
       const methodHandler = (methods as MethodOptions)[key]
       if (isFunction(methodHandler)) {
-        __DEV__ && checkDuplicateProperties!(OptionTypes.METHODS, key)
         renderContext[key] = methodHandler.bind(ctx)
+        if (__DEV__) {
+          checkDuplicateProperties!(OptionTypes.METHODS, key)
+          if (!(key in proxyTarget)) {
+            proxyTarget[key] = renderContext[key]
+          }
+        }
       } else if (__DEV__) {
         warn(
           `Method "${key}" has type "${typeof methodHandler}" in the component definition. ` +
@@ -387,17 +407,23 @@ export function applyOptions(
     if (isArray(injectOptions)) {
       for (let i = 0; i < injectOptions.length; i++) {
         const key = injectOptions[i]
-        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
         renderContext[key] = inject(key)
+        if (__DEV__) {
+          checkDuplicateProperties!(OptionTypes.INJECT, key)
+          proxyTarget[key] = renderContext[key]
+        }
       }
     } else {
       for (const key in injectOptions) {
-        __DEV__ && checkDuplicateProperties!(OptionTypes.INJECT, key)
         const opt = injectOptions[key]
         if (isObject(opt)) {
           renderContext[key] = inject(opt.from, opt.default)
         } else {
           renderContext[key] = inject(opt)
+        }
+        if (__DEV__) {
+          checkDuplicateProperties!(OptionTypes.INJECT, key)
+          proxyTarget[key] = renderContext[key]
         }
       }
     }

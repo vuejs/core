@@ -2,7 +2,7 @@ import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
-import { ReactiveEffect, UnwrapRef } from '@vue/reactivity'
+import { ReactiveEffect, UnwrapRef, toRaw } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
@@ -61,8 +61,8 @@ const publicPropertiesMap: Record<
   $attrs: i => i.attrs,
   $slots: i => i.slots,
   $refs: i => i.refs,
-  $parent: i => i.parent,
-  $root: i => i.root,
+  $parent: i => i.parent && i.parent.proxy,
+  $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
   $options: i => (__FEATURE_OPTIONS__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
@@ -77,8 +77,13 @@ const enum AccessTypes {
   OTHER
 }
 
+export interface ComponentPublicProxyTarget {
+  [key: string]: any
+  _: ComponentInternalInstance
+}
+
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
-  get(target: ComponentInternalInstance, key: string) {
+  get({ _: instance }: ComponentPublicProxyTarget, key: string) {
     const {
       renderContext,
       data,
@@ -87,7 +92,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       type,
       sink,
       appContext
-    } = target
+    } = instance
 
     // data / props / renderContext
     // This getter gets called for every property access on the render context
@@ -133,7 +138,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (__DEV__ && key === '$attrs') {
         markAttrsAccessed()
       }
-      return publicGetter(target)
+      return publicGetter(instance)
     } else if (hasOwn(sink, key)) {
       return sink[key]
     } else if (
@@ -154,53 +159,131 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }
   },
 
-  has(target: ComponentInternalInstance, key: string) {
-    const { data, accessCache, renderContext, type, sink } = target
+  has(
+    {
+      _: { data, accessCache, renderContext, type, sink }
+    }: ComponentPublicProxyTarget,
+    key: string
+  ) {
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       hasOwn(renderContext, key) ||
-      (type.props && hasOwn(type.props, key)) ||
+      (type.props && hasOwn(normalizePropsOptions(type.props)[0], key)) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(sink, key)
     )
   },
 
-  set(target: ComponentInternalInstance, key: string, value: any): boolean {
-    const { data, renderContext } = target
+  set(
+    { _: instance }: ComponentPublicProxyTarget,
+    key: string,
+    value: any
+  ): boolean {
+    const { data, renderContext } = instance
     if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
     } else if (hasOwn(renderContext, key)) {
       renderContext[key] = value
-    } else if (key[0] === '$' && key.slice(1) in target) {
+    } else if (key[0] === '$' && key.slice(1) in instance) {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}". ` +
             `Properties starting with $ are reserved and readonly.`,
-          target
+          instance
         )
       return false
-    } else if (key in target.props) {
+    } else if (key in instance.props) {
       __DEV__ &&
-        warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
+        warn(
+          `Attempting to mutate prop "${key}". Props are readonly.`,
+          instance
+        )
       return false
     } else {
-      target.sink[key] = value
+      instance.sink[key] = value
+      if (__DEV__) {
+        instance.proxyTarget[key] = value
+      }
     }
     return true
   }
 }
 
-export const runtimeCompiledRenderProxyHandlers = {
+export const RuntimeCompiledPublicInstanceProxyHandlers = {
   ...PublicInstanceProxyHandlers,
-  get(target: ComponentInternalInstance, key: string) {
+  get(target: ComponentPublicProxyTarget, key: string) {
     // fast path for unscopables when using `with` block
     if ((key as any) === Symbol.unscopables) {
       return
     }
     return PublicInstanceProxyHandlers.get!(target, key, target)
   },
-  has(_target: ComponentInternalInstance, key: string) {
+  has(_: ComponentPublicProxyTarget, key: string) {
     return key[0] !== '_' && !isGloballyWhitelisted(key)
   }
+}
+
+// In dev mode, the proxy target exposes the same properties as seen on `this`
+// for easier console inspection. In prod mode it will be an empty object so
+// these properties definitions can be skipped.
+export function createDevProxyTarget(instance: ComponentInternalInstance) {
+  const target: Record<string, any> = {}
+
+  // expose internal instance for proxy handlers
+  Object.defineProperty(target, `_`, {
+    get: () => instance
+  })
+
+  // expose public properties
+  Object.keys(publicPropertiesMap).forEach(key => {
+    Object.defineProperty(target, key, {
+      get: () => publicPropertiesMap[key](instance)
+    })
+  })
+
+  // expose global properties
+  const { globalProperties } = instance.appContext.config
+  Object.keys(globalProperties).forEach(key => {
+    Object.defineProperty(target, key, {
+      get: () => globalProperties[key]
+    })
+  })
+
+  return target as ComponentPublicProxyTarget
+}
+
+export function exposePropsOnDevProxyTarget(
+  instance: ComponentInternalInstance
+) {
+  const {
+    proxyTarget,
+    type: { props: propsOptions }
+  } = instance
+  if (propsOptions) {
+    Object.keys(normalizePropsOptions(propsOptions)[0]).forEach(key => {
+      Object.defineProperty(proxyTarget, key, {
+        enumerable: true,
+        get: () => instance.props[key],
+        // intercepted by the proxy so no need for implementation,
+        // but needed to prevent set errors
+        set: NOOP
+      })
+    })
+  }
+}
+
+export function exposeRenderContextOnDevProxyTarget(
+  instance: ComponentInternalInstance
+) {
+  const { proxyTarget, renderContext } = instance
+  Object.keys(toRaw(renderContext)).forEach(key => {
+    Object.defineProperty(proxyTarget, key, {
+      enumerable: true,
+      get: () => renderContext[key],
+      // intercepted by the proxy so no need for implementation,
+      // but needed to prevent set errors
+      set: NOOP
+    })
+  })
 }

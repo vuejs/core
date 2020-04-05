@@ -7,9 +7,13 @@ import {
   resetTracking
 } from '@vue/reactivity'
 import {
-  PublicInstanceProxyHandlers,
   ComponentPublicInstance,
-  runtimeCompiledRenderProxyHandlers
+  ComponentPublicProxyTarget,
+  PublicInstanceProxyHandlers,
+  RuntimeCompiledPublicInstanceProxyHandlers,
+  createDevProxyTarget,
+  exposePropsOnDevProxyTarget,
+  exposeRenderContextOnDevProxyTarget
 } from './componentProxy'
 import { ComponentPropsOptions, resolveProps } from './componentProps'
 import { Slots, resolveSlots } from './componentSlots'
@@ -139,6 +143,7 @@ export interface ComponentInternalInstance {
   attrs: Data
   slots: Slots
   proxy: ComponentPublicInstance | null
+  proxyTarget: ComponentPublicProxyTarget
   // alternative proxy used only for runtime-compiled render functions using
   // `with` block
   withProxy: ComponentPublicInstance | null
@@ -195,12 +200,13 @@ export function createComponentInstance(
     parent,
     appContext,
     type: vnode.type as Component,
-    root: null!, // set later so it can point to itself
+    root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
     update: null!, // will be set synchronously right after creation
     render: null,
     proxy: null,
+    proxyTarget: null!, // to be immediately set
     withProxy: null,
     propsProxy: null,
     setupContext: null,
@@ -249,6 +255,11 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
     emit: null as any // to be set immediately
+  }
+  if (__DEV__) {
+    instance.proxyTarget = createDevProxyTarget(instance)
+  } else {
+    instance.proxyTarget = { _: instance }
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
@@ -325,7 +336,10 @@ function setupStatefulComponent(
   // 0. create render proxy property access cache
   instance.accessCache = {}
   // 1. create public instance / render proxy
-  instance.proxy = new Proxy(instance, PublicInstanceProxyHandlers)
+  instance.proxy = new Proxy(instance.proxyTarget, PublicInstanceProxyHandlers)
+  if (__DEV__) {
+    exposePropsOnDevProxyTarget(instance)
+  }
   // 2. create props proxy
   // the propsProxy is a reactive AND readonly proxy to the actual props.
   // it will be updated in resolveProps() on updates before render
@@ -353,7 +367,7 @@ function setupStatefulComponent(
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult.then((resolvedResult: unknown) => {
-          handleSetupResult(instance, resolvedResult, parentSuspense, isSSR)
+          handleSetupResult(instance, resolvedResult, isSSR)
         })
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
@@ -366,7 +380,7 @@ function setupStatefulComponent(
         )
       }
     } else {
-      handleSetupResult(instance, setupResult, parentSuspense, isSSR)
+      handleSetupResult(instance, setupResult, isSSR)
     }
   } else {
     finishComponentSetup(instance, isSSR)
@@ -376,7 +390,6 @@ function setupStatefulComponent(
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
-  parentSuspense: SuspenseBoundary | null,
   isSSR: boolean
 ) {
   if (isFunction(setupResult)) {
@@ -392,6 +405,9 @@ export function handleSetupResult(
     // setup returned bindings.
     // assuming a render function compiled from template is present.
     instance.renderContext = reactive(setupResult)
+    if (__DEV__) {
+      exposeRenderContextOnDevProxyTarget(instance)
+    }
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
       `setup() should return an object. Received: ${
@@ -460,8 +476,8 @@ function finishComponentSetup(
     // also only allows a whitelist of globals to fallthrough.
     if (instance.render._rc) {
       instance.withProxy = new Proxy(
-        instance,
-        runtimeCompiledRenderProxyHandlers
+        instance.proxyTarget,
+        RuntimeCompiledPublicInstanceProxyHandlers
       )
     }
   }

@@ -108,8 +108,10 @@ describe('component: proxy', () => {
     expect(instanceProxy.$attrs).toBe(instance!.attrs)
     expect(instanceProxy.$slots).toBe(instance!.slots)
     expect(instanceProxy.$refs).toBe(instance!.refs)
-    expect(instanceProxy.$parent).toBe(instance!.parent)
-    expect(instanceProxy.$root).toBe(instance!.root)
+    expect(instanceProxy.$parent).toBe(
+      instance!.parent && instance!.parent.proxy
+    )
+    expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
     expect(instanceProxy.$el).toBe(instance!.vnode.el)
     expect(instanceProxy.$options).toBe(instance!.type)
@@ -174,6 +176,14 @@ describe('component: proxy', () => {
     // set non-existent (goes into sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
+
+    // dev mode ownKeys check for console inspection
+    expect(Object.keys(instanceProxy)).toMatchObject([
+      'msg',
+      'bar',
+      'foo',
+      'baz'
+    ])
   })
 
   // #864
