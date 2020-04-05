@@ -38,7 +38,10 @@ function toNumber(val: string): number | string {
   return isNaN(n) ? val : n
 }
 
-type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
+type ModelDirective<T> = ObjectDirective<T & { 
+  
+  
+  ign: AssignerFn }>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
@@ -115,8 +118,8 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
     })
   },
   beforeUpdate(el, binding, vnode) {
-    setChecked(el, binding, vnode)
     el._assign = getModelAssigner(vnode)
+    setChecked(el, binding, vnode)
   }
 }
 
