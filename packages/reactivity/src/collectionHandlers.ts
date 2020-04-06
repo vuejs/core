@@ -84,7 +84,7 @@ function set(this: MapTypes, key: unknown, value: unknown) {
     key = toRaw(key)
     hadKey = has.call(target, key)
   } else if (__DEV__) {
-    checkIdentitiyKeys(target, has, key)
+    checkIdentityKeys(target, has, key)
   }
 
   const oldValue = get.call(target, key)
@@ -105,7 +105,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
     key = toRaw(key)
     hadKey = has.call(target, key)
   } else if (__DEV__) {
-    checkIdentitiyKeys(target, has, key)
+    checkIdentityKeys(target, has, key)
   }
 
   const oldValue = get ? get.call(target, key) : undefined
@@ -274,7 +274,7 @@ export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
   get: createInstrumentationGetter(readonlyInstrumentations)
 }
 
-function checkIdentitiyKeys(
+function checkIdentityKeys(
   target: CollectionTypes,
   has: (key: unknown) => boolean,
   key: unknown
