@@ -159,22 +159,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }
   },
 
-  has(
-    {
-      _: { data, accessCache, renderContext, type, sink }
-    }: ComponentPublicProxyTarget,
-    key: string
-  ) {
-    return (
-      accessCache![key] !== undefined ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      hasOwn(renderContext, key) ||
-      (type.props && hasOwn(normalizePropsOptions(type.props)[0], key)) ||
-      hasOwn(publicPropertiesMap, key) ||
-      hasOwn(sink, key)
-    )
-  },
-
   set(
     { _: instance }: ComponentPublicProxyTarget,
     key: string,
@@ -207,6 +191,35 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
     return true
+  },
+
+  has(
+    {
+      _: { data, accessCache, renderContext, type, sink, appContext }
+    }: ComponentPublicProxyTarget,
+    key: string
+  ) {
+    return (
+      accessCache![key] !== undefined ||
+      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+      hasOwn(renderContext, key) ||
+      (type.props && hasOwn(normalizePropsOptions(type.props)[0], key)) ||
+      hasOwn(publicPropertiesMap, key) ||
+      hasOwn(sink, key) ||
+      hasOwn(appContext.config.globalProperties, key)
+    )
+  }
+}
+
+if (__DEV__ && !__TEST__) {
+  PublicInstanceProxyHandlers.ownKeys = (
+    target: ComponentPublicProxyTarget
+  ) => {
+    warn(
+      `Avoid app logic that relies on enumerating keys on a component instance. ` +
+        `The keys will be empty in production mode to avoid performance overhead.`
+    )
+    return Reflect.ownKeys(target)
   }
 }
 
@@ -232,13 +245,20 @@ export function createDevProxyTarget(instance: ComponentInternalInstance) {
 
   // expose internal instance for proxy handlers
   Object.defineProperty(target, `_`, {
+    configurable: true,
+    enumerable: false,
     get: () => instance
   })
 
   // expose public properties
   Object.keys(publicPropertiesMap).forEach(key => {
     Object.defineProperty(target, key, {
-      get: () => publicPropertiesMap[key](instance)
+      configurable: true,
+      enumerable: false,
+      get: () => publicPropertiesMap[key](instance),
+      // intercepted by the proxy so no need for implementation,
+      // but needed to prevent set errors
+      set: NOOP
     })
   })
 
@@ -246,7 +266,10 @@ export function createDevProxyTarget(instance: ComponentInternalInstance) {
   const { globalProperties } = instance.appContext.config
   Object.keys(globalProperties).forEach(key => {
     Object.defineProperty(target, key, {
-      get: () => globalProperties[key]
+      configurable: true,
+      enumerable: false,
+      get: () => globalProperties[key],
+      set: NOOP
     })
   })
 
@@ -264,9 +287,8 @@ export function exposePropsOnDevProxyTarget(
     Object.keys(normalizePropsOptions(propsOptions)[0]).forEach(key => {
       Object.defineProperty(proxyTarget, key, {
         enumerable: true,
+        configurable: true,
         get: () => instance.props[key],
-        // intercepted by the proxy so no need for implementation,
-        // but needed to prevent set errors
         set: NOOP
       })
     })
@@ -280,9 +302,8 @@ export function exposeRenderContextOnDevProxyTarget(
   Object.keys(toRaw(renderContext)).forEach(key => {
     Object.defineProperty(proxyTarget, key, {
       enumerable: true,
+      configurable: true,
       get: () => renderContext[key],
-      // intercepted by the proxy so no need for implementation,
-      // but needed to prevent set errors
       set: NOOP
     })
   })
