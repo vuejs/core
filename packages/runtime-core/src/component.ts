@@ -2,7 +2,6 @@ import { VNode, VNodeChild, isVNode } from './vnode'
 import {
   reactive,
   ReactiveEffect,
-  shallowReadonly,
   pauseTracking,
   resetTracking
 } from '@vue/reactivity'
@@ -15,7 +14,7 @@ import {
   exposePropsOnDevProxyTarget,
   exposeRenderContextOnDevProxyTarget
 } from './componentProxy'
-import { ComponentPropsOptions, resolveProps } from './componentProps'
+import { ComponentPropsOptions, initProps } from './componentProps'
 import { Slots, resolveSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
@@ -147,7 +146,6 @@ export interface ComponentInternalInstance {
   // alternative proxy used only for runtime-compiled render functions using
   // `with` block
   withProxy: ComponentPublicInstance | null
-  propsProxy: Data | null
   setupContext: SetupContext | null
   refs: Data
   emit: EmitFn
@@ -208,7 +206,6 @@ export function createComponentInstance(
     proxy: null,
     proxyTarget: null!, // to be immediately set
     withProxy: null,
-    propsProxy: null,
     setupContext: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
@@ -292,26 +289,24 @@ export let isInSSRComponentSetup = false
 
 export function setupComponent(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null,
   isSSR = false
 ) {
   isInSSRComponentSetup = isSSR
+
   const { props, children, shapeFlag } = instance.vnode
-  resolveProps(instance, props)
+  const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+  initProps(instance, props, isStateful, isSSR)
   resolveSlots(instance, children)
 
-  // setup stateful logic
-  let setupResult
-  if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-    setupResult = setupStatefulComponent(instance, parentSuspense, isSSR)
-  }
+  const setupResult = isStateful
+    ? setupStatefulComponent(instance, isSSR)
+    : undefined
   isInSSRComponentSetup = false
   return setupResult
 }
 
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
-  parentSuspense: SuspenseBoundary | null,
   isSSR: boolean
 ) {
   const Component = instance.type as ComponentOptions
@@ -340,13 +335,7 @@ function setupStatefulComponent(
   if (__DEV__) {
     exposePropsOnDevProxyTarget(instance)
   }
-  // 2. create props proxy
-  // the propsProxy is a reactive AND readonly proxy to the actual props.
-  // it will be updated in resolveProps() on updates before render
-  const propsProxy = (instance.propsProxy = isSSR
-    ? instance.props
-    : shallowReadonly(instance.props))
-  // 3. call setup()
+  // 2. call setup()
   const { setup } = Component
   if (setup) {
     const setupContext = (instance.setupContext =
@@ -358,7 +347,7 @@ function setupStatefulComponent(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
-      [propsProxy, setupContext]
+      [instance.props, setupContext]
     )
     resetTracking()
     currentInstance = null

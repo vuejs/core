@@ -5,7 +5,7 @@ import {
   ComponentInternalInstance,
   isInSSRComponentSetup
 } from './component'
-import { isFunction, isObject, EMPTY_OBJ, NO } from '@vue/shared'
+import { isFunction, isObject, NO } from '@vue/shared'
 import { ComponentPublicInstance } from './componentProxy'
 import { createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -181,11 +181,7 @@ export function defineAsyncComponent<
 
 function createInnerComp(
   comp: Component,
-  { props, slots }: ComponentInternalInstance
+  { vnode: { props, children } }: ComponentInternalInstance
 ) {
-  return createVNode(
-    comp,
-    props === EMPTY_OBJ ? null : props,
-    slots === EMPTY_OBJ ? null : slots
-  )
+  return createVNode(comp, props, children)
 }

@@ -156,7 +156,8 @@ export function createHydrationFunctions(
               null,
               parentComponent,
               parentSuspense,
-              isSVGContainer(container)
+              isSVGContainer(container),
+              optimized
             )
           }
           // async component

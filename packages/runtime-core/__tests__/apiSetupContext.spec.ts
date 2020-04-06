@@ -120,7 +120,6 @@ describe('api: setup context', () => {
       // puts everything received in attrs
       // disable implicit fallthrough
       inheritAttrs: false,
-      props: {},
       setup(props: any, { attrs }: any) {
         return () => h('div', attrs)
       }

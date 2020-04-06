@@ -57,7 +57,7 @@ const publicPropertiesMap: Record<
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
-  $props: i => i.propsProxy,
+  $props: i => i.props,
   $attrs: i => i.attrs,
   $slots: i => i.slots,
   $refs: i => i.refs,
@@ -87,7 +87,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     const {
       renderContext,
       data,
-      propsProxy,
+      props,
       accessCache,
       type,
       sink,
@@ -109,7 +109,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.CONTEXT:
             return renderContext[key]
           case AccessTypes.PROPS:
-            return propsProxy![key]
+            return props![key]
           // default: just fallthrough
         }
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -121,10 +121,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (type.props) {
         // only cache other properties when instance has declared (thus stable)
         // props
-        if (hasOwn(normalizePropsOptions(type.props)[0], key)) {
+        if (hasOwn(normalizePropsOptions(type.props)[0]!, key)) {
           accessCache![key] = AccessTypes.PROPS
           // return the value from propsProxy for ref unwrapping and readonly
-          return propsProxy![key]
+          return props![key]
         } else {
           accessCache![key] = AccessTypes.OTHER
         }
@@ -203,7 +203,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       hasOwn(renderContext, key) ||
-      (type.props && hasOwn(normalizePropsOptions(type.props)[0], key)) ||
+      (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(sink, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -284,7 +284,7 @@ export function exposePropsOnDevProxyTarget(
     type: { props: propsOptions }
   } = instance
   if (propsOptions) {
-    Object.keys(normalizePropsOptions(propsOptions)[0]).forEach(key => {
+    Object.keys(normalizePropsOptions(propsOptions)[0]!).forEach(key => {
       Object.defineProperty(proxyTarget, key, {
         enumerable: true,
         configurable: true,

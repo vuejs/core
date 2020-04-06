@@ -352,7 +352,7 @@ export function cloneVNode<T, U>(
     props: extraProps
       ? vnode.props
         ? mergeProps(vnode.props, extraProps)
-        : extraProps
+        : extend({}, extraProps)
       : vnode.props,
     key: vnode.key,
     ref: vnode.ref,

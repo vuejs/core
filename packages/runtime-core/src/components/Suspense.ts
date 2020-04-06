@@ -438,7 +438,8 @@ function createSuspenseBoundary(
             // consider the comment placeholder case.
             hydratedEl ? null : next(instance.subTree),
             suspense,
-            isSVG
+            isSVG,
+            optimized
           )
           updateHOCHostEl(instance, vnode.el)
           if (__DEV__) {

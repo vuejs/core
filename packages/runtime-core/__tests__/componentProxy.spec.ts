@@ -57,31 +57,6 @@ describe('component: proxy', () => {
     expect(instance!.renderContext.foo).toBe(2)
   })
 
-  test('propsProxy', () => {
-    let instance: ComponentInternalInstance
-    let instanceProxy: any
-    const Comp = {
-      props: {
-        foo: {
-          type: Number,
-          default: 1
-        }
-      },
-      setup() {
-        return () => null
-      },
-      mounted() {
-        instance = getCurrentInstance()!
-        instanceProxy = this
-      }
-    }
-    render(h(Comp), nodeOps.createElement('div'))
-    expect(instanceProxy.foo).toBe(1)
-    expect(instance!.propsProxy!.foo).toBe(1)
-    expect(() => (instanceProxy.foo = 2)).toThrow(TypeError)
-    expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
-  })
-
   test('should not expose non-declared props', () => {
     let instanceProxy: any
     const Comp = {
@@ -110,7 +85,7 @@ describe('component: proxy', () => {
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.$data).toBe(instance!.data)
-    expect(instanceProxy.$props).toBe(instance!.propsProxy)
+    expect(instanceProxy.$props).toBe(instance!.props)
     expect(instanceProxy.$attrs).toBe(instance!.attrs)
     expect(instanceProxy.$slots).toBe(instance!.slots)
     expect(instanceProxy.$refs).toBe(instance!.refs)

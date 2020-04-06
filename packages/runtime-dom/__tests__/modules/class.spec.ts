@@ -70,13 +70,11 @@ describe('class', () => {
 
     const childClass: ClassItem = { value: 'd' }
     const child = {
-      props: {},
       render: () => h('div', { class: ['c', childClass.value] })
     }
 
     const parentClass: ClassItem = { value: 'b' }
     const parent = {
-      props: {},
       render: () => h(child, { class: ['a', parentClass.value] })
     }
 
@@ -101,21 +99,18 @@ describe('class', () => {
 
   test('class merge between multiple nested components sharing same element', () => {
     const component1 = defineComponent({
-      props: {},
       render() {
         return this.$slots.default!()[0]
       }
     })
 
     const component2 = defineComponent({
-      props: {},
       render() {
         return this.$slots.default!()[0]
       }
     })
 
     const component3 = defineComponent({
-      props: {},
       render() {
         return h(
           'div',
