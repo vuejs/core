@@ -14,7 +14,7 @@ import {
   isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, EMPTY_OBJ, isOn } from '@vue/shared'
+import { PatchFlags, ShapeFlags, EMPTY_OBJ } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
@@ -37,7 +37,8 @@ export function markAttrsAccessed() {
 }
 
 export function renderComponentRoot(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
+  getFallthroughAttrs?: (attrs: Data) => Data | undefined
 ): VNode {
   const {
     type: Component,
@@ -79,7 +80,7 @@ export function renderComponentRoot(
             })
           : render(props, null as any /* we know it doesn't need it */)
       )
-      fallthroughAttrs = Component.props ? attrs : getFallthroughAttrs(attrs)
+      fallthroughAttrs = Component.props ? attrs : (getFallthroughAttrs && getFallthroughAttrs(attrs))
     }
 
     // attr merging
@@ -173,16 +174,6 @@ const getChildRoot = (
   const index = rawChildren.indexOf(childRoot)
   const setRoot = (updatedRoot: VNode) => (rawChildren[index] = updatedRoot)
   return [normalizeVNode(childRoot), setRoot]
-}
-
-const getFallthroughAttrs = (attrs: Data): Data | undefined => {
-  let res: Data | undefined
-  for (const key in attrs) {
-    if (key === 'class' || key === 'style' || isOn(key)) {
-      ;(res || (res = {}))[key] = attrs[key]
-    }
-  }
-  return res
 }
 
 const isElementRoot = (vnode: VNode) => {

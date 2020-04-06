@@ -117,6 +117,7 @@ export interface RendererOptions<
     anchor: HostNode | null,
     isSVG: boolean
   ): HostElement
+  getComponentFallthroughAttrs?(attrs: Data): Data | undefined
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -330,7 +331,8 @@ function baseCreateRenderer(
     nextSibling: hostNextSibling,
     setScopeId: hostSetScopeId = NOOP,
     cloneNode: hostCloneNode,
-    insertStaticContent: hostInsertStaticContent
+    insertStaticContent: hostInsertStaticContent,
+    getComponentFallthroughAttrs: hostGetComponentFallthroughAttrs
   } = options
 
   // Note: functions inside this closure should use `const xxx = () => {}`
@@ -1089,7 +1091,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        const subTree = (instance.subTree = renderComponentRoot(instance))
+        const subTree = (instance.subTree = renderComponentRoot(instance, hostGetComponentFallthroughAttrs))
         if (__DEV__) {
           endMeasure(instance, `render`)
         }
@@ -1169,7 +1171,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        const nextTree = renderComponentRoot(instance)
+        const nextTree = renderComponentRoot(instance, hostGetComponentFallthroughAttrs)
         if (__DEV__) {
           endMeasure(instance, `render`)
         }

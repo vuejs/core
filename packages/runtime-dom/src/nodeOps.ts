@@ -6,7 +6,7 @@ const svgNS = 'http://www.w3.org/2000/svg'
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement
 
-export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
+export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp' | 'getComponentFallthroughAttrs'> = {
   insert: (child, parent, anchor) => {
     if (anchor) {
       parent.insertBefore(child, anchor)
