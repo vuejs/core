@@ -13,12 +13,12 @@ import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
-import { getComponentFallthroughAttrs } from "./components/fallthroughAttrs";
+import { getFallthroughAttrs } from './fallthroughAttrs'
 
 const rendererOptions = {
   patchProp,
   ...nodeOps,
-  getComponentFallthroughAttrs
+  getFallthroughAttrs
 }
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
