@@ -33,27 +33,28 @@ function get(
 ) {
   target = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    track(target, TrackOpTypes.GET, key)
-  }
-  track(target, TrackOpTypes.GET, rawKey)
+  // If collections contains both the raw and reactive versions of the same object as keys,
+  // it's necessary to keep the `read operation` work as originally logical as it should be
+  // when user code just want to invoke value by reactive key.
   const { has, get } = getProto(target)
-  if (has.call(target, key)) {
-    return wrap(get.call(target, key))
-  } else if (has.call(target, rawKey)) {
-    return wrap(get.call(target, rawKey))
+  let hadKey = has.call(target, key)
+  if (!hadKey && key !== rawKey) {
+    key = rawKey
   }
+  track(target, TrackOpTypes.GET, key)
+  return wrap(get.call(target, key))
 }
 
 function has(this: CollectionTypes, key: unknown): boolean {
   const target = toRaw(this)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    track(target, TrackOpTypes.HAS, key)
+  let hadKey = has.call(target, key)
+  if (!hadKey) {
+    key = rawKey
+    hadKey = has.call(target, key)
   }
-  track(target, TrackOpTypes.HAS, rawKey)
-  const has = getProto(target).has
-  return has.call(target, key) || has.call(target, rawKey)
+  track(target, TrackOpTypes.HAS, key)
+  return hadKey
 }
 
 function size(target: IterableCollections) {
