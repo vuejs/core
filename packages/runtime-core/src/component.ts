@@ -504,12 +504,25 @@ const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
   }
 })
 
+const attrsProxyHandlers: ProxyHandler<Data> = {
+  get(target, key: string) {
+    if (__DEV__) {
+      markAttrsAccessed()
+    }
+    return target[key]
+  },
+  set: () => false,
+  deleteProperty: () => false
+}
+
 function createSetupContext(instance: ComponentInternalInstance): SetupContext {
   const context = {
     // attrs & slots are non-reactive, but they need to always expose
     // the latest values (instance.xxx may get replaced during updates) so we
     // need to expose them through a proxy
-    attrs: new Proxy(instance, SetupProxyHandlers.attrs),
+    attrs: __DEV__
+      ? new Proxy(instance.attrs, attrsProxyHandlers)
+      : instance.attrs,
     slots: new Proxy(instance, SetupProxyHandlers.slots),
     get emit() {
       return instance.emit

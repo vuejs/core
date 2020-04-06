@@ -13,7 +13,6 @@ import {
 import {
   ComponentInternalInstance,
   Data,
-  SetupProxySymbol,
   Component,
   ClassComponent
 } from './component'
@@ -235,6 +234,8 @@ const createVNodeWithArgsTransform = (
   )
 }
 
+export const InternalObjectSymbol = Symbol()
+
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
@@ -261,7 +262,7 @@ function _createVNode(
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
-    if (isReactive(props) || SetupProxySymbol in props) {
+    if (isReactive(props) || InternalObjectSymbol in props) {
       props = extend({}, props)
     }
     let { class: klass, style } = props

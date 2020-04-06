@@ -120,8 +120,12 @@ export const toDisplayString = (val: unknown): string => {
       : String(val)
 }
 
-export function invokeArrayFns(fns: Function[], arg?: any) {
+export const invokeArrayFns = (fns: Function[], arg?: any) => {
   for (let i = 0; i < fns.length; i++) {
     fns[i](arg)
   }
+}
+
+export const def = (obj: object, key: string | symbol, value: any) => {
+  Object.defineProperty(obj, key, { value })
 }

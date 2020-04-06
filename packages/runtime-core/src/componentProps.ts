@@ -13,11 +13,13 @@ import {
   PatchFlags,
   makeMap,
   isReservedProp,
-  EMPTY_ARR
+  EMPTY_ARR,
+  def
 } from '@vue/shared'
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
 import { isEmitListener } from './componentEmits'
+import { InternalObjectSymbol } from './vnode'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -102,6 +104,7 @@ export function initProps(
 ) {
   const props: Data = {}
   const attrs: Data = {}
+  def(attrs, InternalObjectSymbol, true)
   setFullProps(instance, rawProps, props, attrs)
   const options = instance.type.props
   // validation
@@ -310,7 +313,7 @@ export function normalizePropsOptions(
     }
   }
   const normalizedEntry: NormalizedPropsOptions = [normalized, needCastKeys]
-  Object.defineProperty(raw, '_n', { value: normalizedEntry })
+  def(raw, '_n', normalizedEntry)
   return normalizedEntry
 }
 
