@@ -51,7 +51,7 @@
 according to https://github.com/vuejs/rfcs/pull/154
 * `<portal>` has been renamed to `<teleport>`.
 
-    `target` prop is also renmaed to `to`, so the new usage will be:
+    `target` prop is also renamed to `to`, so the new usage will be:
 
     ```html
     <Teleport to="#modal-layer" :disabled="isMobile">
