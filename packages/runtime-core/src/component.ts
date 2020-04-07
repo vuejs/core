@@ -15,7 +15,7 @@ import {
   exposeRenderContextOnDevProxyTarget
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
-import { Slots, resolveSlots } from './componentSlots'
+import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
@@ -140,7 +140,7 @@ export interface ComponentInternalInstance {
   data: Data
   props: Data
   attrs: Data
-  slots: Slots
+  slots: InternalSlots
   proxy: ComponentPublicInstance | null
   proxyTarget: ComponentPublicProxyTarget
   // alternative proxy used only for runtime-compiled render functions using
@@ -296,7 +296,7 @@ export function setupComponent(
   const { props, children, shapeFlag } = instance.vnode
   const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
   initProps(instance, props, isStateful, isSSR)
-  resolveSlots(instance, children)
+  initSlots(instance, children)
 
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
@@ -479,56 +479,54 @@ function finishComponentSetup(
   }
 }
 
-// used to identify a setup context proxy
-export const SetupProxySymbol = Symbol()
-
-const SetupProxyHandlers: { [key: string]: ProxyHandler<any> } = {}
-;['attrs', 'slots'].forEach((type: string) => {
-  SetupProxyHandlers[type] = {
-    get: (instance, key) => {
-      if (__DEV__) {
-        markAttrsAccessed()
-      }
-      // if the user pass the slots proxy to h(), normalizeChildren should not
-      // attempt to attach ctx to the object
-      if (key === '_') return 1
-      return instance[type][key]
-    },
-    has: (instance, key) => key === SetupProxySymbol || key in instance[type],
-    ownKeys: instance => Reflect.ownKeys(instance[type]),
-    // this is necessary for ownKeys to work properly
-    getOwnPropertyDescriptor: (instance, key) =>
-      Reflect.getOwnPropertyDescriptor(instance[type], key),
-    set: () => false,
-    deleteProperty: () => false
+const slotsHandlers: ProxyHandler<InternalSlots> = {
+  set: () => {
+    warn(`setupContext.slots is readonly.`)
+    return false
+  },
+  deleteProperty: () => {
+    warn(`setupContext.slots is readonly.`)
+    return false
   }
-})
+}
 
-const attrsProxyHandlers: ProxyHandler<Data> = {
-  get(target, key: string) {
-    if (__DEV__) {
-      markAttrsAccessed()
-    }
+const attrHandlers: ProxyHandler<Data> = {
+  get: (target, key: string) => {
+    markAttrsAccessed()
     return target[key]
   },
-  set: () => false,
-  deleteProperty: () => false
+  set: () => {
+    warn(`setupContext.attrs is readonly.`)
+    return false
+  },
+  deleteProperty: () => {
+    warn(`setupContext.attrs is readonly.`)
+    return false
+  }
 }
 
 function createSetupContext(instance: ComponentInternalInstance): SetupContext {
-  const context = {
-    // attrs & slots are non-reactive, but they need to always expose
-    // the latest values (instance.xxx may get replaced during updates) so we
-    // need to expose them through a proxy
-    attrs: __DEV__
-      ? new Proxy(instance.attrs, attrsProxyHandlers)
-      : instance.attrs,
-    slots: new Proxy(instance, SetupProxyHandlers.slots),
-    get emit() {
-      return instance.emit
+  if (__DEV__) {
+    // We use getters in dev in case libs like test-utils overwrite instance
+    // properties (overwrites should not be done in prod)
+    return Object.freeze({
+      get attrs() {
+        return new Proxy(instance.attrs, attrHandlers)
+      },
+      get slots() {
+        return new Proxy(instance.slots, slotsHandlers)
+      },
+      get emit() {
+        return instance.emit
+      }
+    })
+  } else {
+    return {
+      attrs: instance.attrs,
+      slots: instance.slots,
+      emit: instance.emit
     }
   }
-  return __DEV__ ? Object.freeze(context) : context
 }
 
 // record effects created during a component's setup() so that they can be

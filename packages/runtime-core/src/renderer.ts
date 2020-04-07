@@ -43,7 +43,7 @@ import {
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
-import { resolveSlots } from './componentSlots'
+import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { ComponentPublicInstance } from './componentProxy'
 import { createAppAPI, CreateAppFunction } from './apiCreateApp'
@@ -1245,7 +1245,7 @@ function baseCreateRenderer(
     instance.vnode = nextVNode
     instance.next = null
     updateProps(instance, nextVNode.props, optimized)
-    resolveSlots(instance, nextVNode.children)
+    updateSlots(instance, nextVNode.children)
   }
 
   const patchChildren: PatchChildrenFn = (
