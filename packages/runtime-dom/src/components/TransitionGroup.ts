@@ -36,6 +36,12 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
+  props: {
+    ...TransitionPropsValidators,
+    tag: String,
+    moveClass: String
+  },
+
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
@@ -130,19 +136,13 @@ const TransitionGroupImpl = {
   }
 }
 
+// remove mode props as TransitionGroup doesn't support it
+delete TransitionGroupImpl.props.mode
+
 export const TransitionGroup = (TransitionGroupImpl as unknown) as {
   new (): {
     $props: TransitionGroupProps
   }
-}
-
-if (__DEV__) {
-  const props = ((TransitionGroup as any).props = {
-    ...TransitionPropsValidators,
-    tag: String,
-    moveClass: String
-  })
-  delete props.mode
 }
 
 function callPendingCbs(c: VNode) {

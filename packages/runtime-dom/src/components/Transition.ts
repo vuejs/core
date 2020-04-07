@@ -37,7 +37,7 @@ export const Transition: FunctionalComponent<TransitionProps> = (
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
-export const TransitionPropsValidators = {
+export const TransitionPropsValidators = (Transition.props = {
   ...(BaseTransition as any).props,
   name: String,
   type: String,
@@ -55,11 +55,7 @@ export const TransitionPropsValidators = {
   leaveFromClass: String,
   leaveActiveClass: String,
   leaveToClass: String
-}
-
-if (__DEV__) {
-  Transition.props = TransitionPropsValidators
-}
+})
 
 export function resolveTransitionProps({
   name = 'v',

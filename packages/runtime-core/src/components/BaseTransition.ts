@@ -1,7 +1,6 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentOptions,
   ComponentInternalInstance
 } from '../component'
 import {
@@ -100,6 +99,23 @@ export function useTransitionState(): TransitionState {
 
 const BaseTransitionImpl = {
   name: `BaseTransition`,
+
+  props: {
+    mode: String,
+    appear: Boolean,
+    persisted: Boolean,
+    // enter
+    onBeforeEnter: Function,
+    onEnter: Function,
+    onAfterEnter: Function,
+    onEnterCancelled: Function,
+    // leave
+    onBeforeLeave: Function,
+    onLeave: Function,
+    onAfterLeave: Function,
+    onLeaveCancelled: Function
+  },
+
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
@@ -198,24 +214,6 @@ const BaseTransitionImpl = {
 
       return child
     }
-  }
-}
-
-if (__DEV__) {
-  ;(BaseTransitionImpl as ComponentOptions).props = {
-    mode: String,
-    appear: Boolean,
-    persisted: Boolean,
-    // enter
-    onBeforeEnter: Function,
-    onEnter: Function,
-    onAfterEnter: Function,
-    onEnterCancelled: Function,
-    // leave
-    onBeforeLeave: Function,
-    onLeave: Function,
-    onAfterLeave: Function,
-    onLeaveCancelled: Function
   }
 }
 
