@@ -14,7 +14,7 @@ import {
   isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, EMPTY_OBJ } from '@vue/shared'
+import { PatchFlags, ShapeFlags } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
@@ -80,7 +80,9 @@ export function renderComponentRoot(
             })
           : render(props, null as any /* we know it doesn't need it */)
       )
-      fallthroughAttrs = Component.props ? attrs : (getFallthroughAttrs && getFallthroughAttrs(attrs))
+      fallthroughAttrs = Component.props
+        ? attrs
+        : getFallthroughAttrs && getFallthroughAttrs(attrs)
     }
 
     // attr merging
