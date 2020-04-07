@@ -29,13 +29,7 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
       if (isOn(key)) {
         // ignore v-model listeners
         if (key.indexOf('onUpdate:') < 0) {
-          patchEvent(
-            el,
-            key.slice(2).toLowerCase(),
-            prevValue,
-            nextValue,
-            parentComponent
-          )
+          patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (!isSVG && key in el) {
         patchDOMProp(
