@@ -215,8 +215,8 @@ export function shouldUpdateComponent(
     return true
   }
 
-  // force child update on runtime directive usage on component vnode.
-  if (nextVNode.dirs) {
+  // force child update for runtime directive or transition on component vnode.
+  if (nextVNode.dirs || nextVNode.transition) {
     return true
   }
 
