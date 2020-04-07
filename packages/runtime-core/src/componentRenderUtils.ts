@@ -95,7 +95,7 @@ export function renderComponentRoot(
     if (
       Component.inheritAttrs !== false &&
       fallthroughAttrs &&
-      fallthroughAttrs !== EMPTY_OBJ
+      Object.keys(fallthroughAttrs).length
     ) {
       if (
         root.shapeFlag & ShapeFlags.ELEMENT ||

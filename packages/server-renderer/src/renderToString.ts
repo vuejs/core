@@ -145,11 +145,7 @@ function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
-  const res = setupComponent(
-    instance,
-    null /* parentSuspense (no need to track for SSR) */,
-    true /* isSSR */
-  )
+  const res = setupComponent(instance, true /* isSSR */)
   if (isPromise(res)) {
     return res
       .catch(err => {

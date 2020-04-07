@@ -42,8 +42,8 @@ import {
   invalidateJob
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
-import { resolveProps } from './componentProps'
-import { resolveSlots } from './componentSlots'
+import { updateProps } from './componentProps'
+import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
 import { ComponentPublicInstance } from './componentProxy'
 import { createAppAPI, CreateAppFunction } from './apiCreateApp'
@@ -227,7 +227,8 @@ export type MountComponentFn = (
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  isSVG: boolean
+  isSVG: boolean,
+  optimized: boolean
 ) => void
 
 type ProcessTextOrCommentFn = (
@@ -243,7 +244,8 @@ export type SetupRenderEffectFn = (
   container: RendererElement,
   anchor: RendererNode | null,
   parentSuspense: SuspenseBoundary | null,
-  isSVG: boolean
+  isSVG: boolean,
+  optimized: boolean
 ) => void
 
 export const enum MoveType {
@@ -963,7 +965,8 @@ function baseCreateRenderer(
           anchor,
           parentComponent,
           parentSuspense,
-          isSVG
+          isSVG,
+          optimized
         )
       }
     } else {
@@ -980,7 +983,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             pushWarningContext(n2)
           }
-          updateComponentPreRender(instance, n2)
+          updateComponentPreRender(instance, n2, optimized)
           if (__DEV__) {
             popWarningContext()
           }
@@ -1008,7 +1011,8 @@ function baseCreateRenderer(
     anchor,
     parentComponent,
     parentSuspense,
-    isSVG
+    isSVG,
+    optimized
   ) => {
     const instance: ComponentInternalInstance = (initialVNode.component = createComponentInstance(
       initialVNode,
@@ -1036,7 +1040,7 @@ function baseCreateRenderer(
     if (__DEV__) {
       startMeasure(instance, `init`)
     }
-    setupComponent(instance, parentSuspense)
+    setupComponent(instance)
     if (__DEV__) {
       endMeasure(instance, `init`)
     }
@@ -1065,7 +1069,8 @@ function baseCreateRenderer(
       container,
       anchor,
       parentSuspense,
-      isSVG
+      isSVG,
+      optimized
     )
 
     if (__DEV__) {
@@ -1080,7 +1085,8 @@ function baseCreateRenderer(
     container,
     anchor,
     parentSuspense,
-    isSVG
+    isSVG,
+    optimized
   ) => {
     // create reactive effect for rendering
     instance.update = effect(function componentEffect() {
@@ -1167,7 +1173,7 @@ function baseCreateRenderer(
         }
 
         if (next) {
-          updateComponentPreRender(instance, next)
+          updateComponentPreRender(instance, next, optimized)
         } else {
           next = vnode
         }
@@ -1237,13 +1243,14 @@ function baseCreateRenderer(
 
   const updateComponentPreRender = (
     instance: ComponentInternalInstance,
-    nextVNode: VNode
+    nextVNode: VNode,
+    optimized: boolean
   ) => {
     nextVNode.component = instance
     instance.vnode = nextVNode
     instance.next = null
-    resolveProps(instance, nextVNode.props)
-    resolveSlots(instance, nextVNode.children)
+    updateProps(instance, nextVNode.props, optimized)
+    updateSlots(instance, nextVNode.children)
   }
 
   const patchChildren: PatchChildrenFn = (

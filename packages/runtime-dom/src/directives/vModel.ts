@@ -115,8 +115,8 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
     })
   },
   beforeUpdate(el, binding, vnode) {
-    setChecked(el, binding, vnode)
     el._assign = getModelAssigner(vnode)
+    setChecked(el, binding, vnode)
   }
 }
 

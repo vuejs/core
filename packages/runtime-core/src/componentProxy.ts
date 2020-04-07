@@ -57,7 +57,7 @@ const publicPropertiesMap: Record<
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
-  $props: i => i.propsProxy,
+  $props: i => i.props,
   $attrs: i => i.attrs,
   $slots: i => i.slots,
   $refs: i => i.refs,
@@ -87,7 +87,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     const {
       renderContext,
       data,
-      propsProxy,
+      props,
       accessCache,
       type,
       sink,
@@ -109,7 +109,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           case AccessTypes.CONTEXT:
             return renderContext[key]
           case AccessTypes.PROPS:
-            return propsProxy![key]
+            return props![key]
           // default: just fallthrough
         }
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -121,10 +121,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (type.props) {
         // only cache other properties when instance has declared (thus stable)
         // props
-        if (hasOwn(normalizePropsOptions(type.props)[0], key)) {
+        if (hasOwn(normalizePropsOptions(type.props)[0]!, key)) {
           accessCache![key] = AccessTypes.PROPS
           // return the value from propsProxy for ref unwrapping and readonly
-          return propsProxy![key]
+          return props![key]
         } else {
           accessCache![key] = AccessTypes.OTHER
         }
@@ -159,22 +159,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }
   },
 
-  has(
-    {
-      _: { data, accessCache, renderContext, type, sink }
-    }: ComponentPublicProxyTarget,
-    key: string
-  ) {
-    return (
-      accessCache![key] !== undefined ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      hasOwn(renderContext, key) ||
-      (type.props && hasOwn(normalizePropsOptions(type.props)[0], key)) ||
-      hasOwn(publicPropertiesMap, key) ||
-      hasOwn(sink, key)
-    )
-  },
-
   set(
     { _: instance }: ComponentPublicProxyTarget,
     key: string,
@@ -207,6 +191,35 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
     return true
+  },
+
+  has(
+    {
+      _: { data, accessCache, renderContext, type, sink, appContext }
+    }: ComponentPublicProxyTarget,
+    key: string
+  ) {
+    return (
+      accessCache![key] !== undefined ||
+      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+      hasOwn(renderContext, key) ||
+      (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
+      hasOwn(publicPropertiesMap, key) ||
+      hasOwn(sink, key) ||
+      hasOwn(appContext.config.globalProperties, key)
+    )
+  }
+}
+
+if (__DEV__ && !__TEST__) {
+  PublicInstanceProxyHandlers.ownKeys = (
+    target: ComponentPublicProxyTarget
+  ) => {
+    warn(
+      `Avoid app logic that relies on enumerating keys on a component instance. ` +
+        `The keys will be empty in production mode to avoid performance overhead.`
+    )
+    return Reflect.ownKeys(target)
   }
 }
 
@@ -232,13 +245,20 @@ export function createDevProxyTarget(instance: ComponentInternalInstance) {
 
   // expose internal instance for proxy handlers
   Object.defineProperty(target, `_`, {
+    configurable: true,
+    enumerable: false,
     get: () => instance
   })
 
   // expose public properties
   Object.keys(publicPropertiesMap).forEach(key => {
     Object.defineProperty(target, key, {
-      get: () => publicPropertiesMap[key](instance)
+      configurable: true,
+      enumerable: false,
+      get: () => publicPropertiesMap[key](instance),
+      // intercepted by the proxy so no need for implementation,
+      // but needed to prevent set errors
+      set: NOOP
     })
   })
 
@@ -246,7 +266,10 @@ export function createDevProxyTarget(instance: ComponentInternalInstance) {
   const { globalProperties } = instance.appContext.config
   Object.keys(globalProperties).forEach(key => {
     Object.defineProperty(target, key, {
-      get: () => globalProperties[key]
+      configurable: true,
+      enumerable: false,
+      get: () => globalProperties[key],
+      set: NOOP
     })
   })
 
@@ -261,12 +284,11 @@ export function exposePropsOnDevProxyTarget(
     type: { props: propsOptions }
   } = instance
   if (propsOptions) {
-    Object.keys(normalizePropsOptions(propsOptions)[0]).forEach(key => {
+    Object.keys(normalizePropsOptions(propsOptions)[0]!).forEach(key => {
       Object.defineProperty(proxyTarget, key, {
         enumerable: true,
+        configurable: true,
         get: () => instance.props[key],
-        // intercepted by the proxy so no need for implementation,
-        // but needed to prevent set errors
         set: NOOP
       })
     })
@@ -280,9 +302,8 @@ export function exposeRenderContextOnDevProxyTarget(
   Object.keys(toRaw(renderContext)).forEach(key => {
     Object.defineProperty(proxyTarget, key, {
       enumerable: true,
+      configurable: true,
       get: () => renderContext[key],
-      // intercepted by the proxy so no need for implementation,
-      // but needed to prevent set errors
       set: NOOP
     })
   })

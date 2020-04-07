@@ -5,7 +5,8 @@ import {
   EMPTY_OBJ,
   capitalize,
   hyphenate,
-  isFunction
+  isFunction,
+  def
 } from '@vue/shared'
 import { ComponentInternalInstance } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
@@ -96,7 +97,7 @@ export function normalizeEmitsOptions(
     }
     const normalized: ObjectEmitsOptions = {}
     options.forEach(key => (normalized[key] = null))
-    Object.defineProperty(options, '_n', { value: normalized })
+    def(options, '_n', normalized)
     return normalized
   } else {
     return options
