@@ -5,7 +5,7 @@ import {
   ComponentInternalInstance,
   isInSSRComponentSetup
 } from './component'
-import { isFunction, isObject, NO } from '@vue/shared'
+import { isFunction, isObject } from '@vue/shared'
 import { ComponentPublicInstance } from './componentProxy'
 import { createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -27,9 +27,13 @@ export interface AsyncComponentOptions<T = any> {
   errorComponent?: PublicAPIComponent
   delay?: number
   timeout?: number
-  retryWhen?: (error: Error) => any
-  maxRetries?: number
   suspensible?: boolean
+  onError?: (
+    error: Error,
+    retry: () => void,
+    fail: () => void,
+    attempts: number
+  ) => any
 }
 
 export function defineAsyncComponent<
@@ -45,16 +49,15 @@ export function defineAsyncComponent<
     errorComponent: errorComponent,
     delay = 200,
     timeout, // undefined = never times out
-    retryWhen = NO,
-    maxRetries = 3,
-    suspensible = true
+    suspensible = true,
+    onError: userOnError
   } = source
 
   let pendingRequest: Promise<Component> | null = null
   let resolvedComp: Component | undefined
 
   let retries = 0
-  const retry = (error?: unknown) => {
+  const retry = () => {
     retries++
     pendingRequest = null
     return load()
@@ -67,8 +70,12 @@ export function defineAsyncComponent<
       (thisRequest = pendingRequest = loader()
         .catch(err => {
           err = err instanceof Error ? err : new Error(String(err))
-          if (retryWhen(err) && retries < maxRetries) {
-            return retry(err)
+          if (userOnError) {
+            return new Promise((resolve, reject) => {
+              const userRetry = () => resolve(retry())
+              const userFail = () => reject(err)
+              userOnError(err, userRetry, userFail, retries + 1)
+            })
           } else {
             throw err
           }

@@ -488,7 +488,13 @@ describe('api: defineAsyncComponent', () => {
           reject = _reject
         })
       },
-      retryWhen: error => error.message.match(/foo/)
+      onError(error, retry, fail) {
+        if (error.message.match(/foo/)) {
+          retry()
+        } else {
+          fail()
+        }
+      }
     })
 
     const root = nodeOps.createElement('div')
@@ -526,7 +532,13 @@ describe('api: defineAsyncComponent', () => {
           reject = _reject
         })
       },
-      retryWhen: error => error.message.match(/bar/)
+      onError(error, retry, fail) {
+        if (error.message.match(/bar/)) {
+          retry()
+        } else {
+          fail()
+        }
+      }
     })
 
     const root = nodeOps.createElement('div')
@@ -549,7 +561,7 @@ describe('api: defineAsyncComponent', () => {
     expect(serializeInner(root)).toBe('<!---->')
   })
 
-  test('retry (fail w/ maxRetries)', async () => {
+  test('retry (fail w/ max retry attempts)', async () => {
     let loaderCallCount = 0
     let reject: (e: Error) => void
 
@@ -560,8 +572,13 @@ describe('api: defineAsyncComponent', () => {
           reject = _reject
         })
       },
-      retryWhen: error => error.message.match(/foo/),
-      maxRetries: 1
+      onError(error, retry, fail, attempts) {
+        if (error.message.match(/foo/) && attempts <= 1) {
+          retry()
+        } else {
+          fail()
+        }
+      }
     })
 
     const root = nodeOps.createElement('div')
