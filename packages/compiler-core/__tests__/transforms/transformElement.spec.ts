@@ -861,4 +861,17 @@ describe('compiler: element transform', () => {
       isBlock: true
     })
   })
+
+  // #938
+  test('element with dynamic keys should be forced into blocks', () => {
+    const ast = parse(`<div><div :key="foo" /></div>`)
+    transform(ast, {
+      nodeTransforms: [transformElement]
+    })
+    expect((ast as any).children[0].children[0].codegenNode).toMatchObject({
+      type: NodeTypes.VNODE_CALL,
+      tag: `"div"`,
+      isBlock: true
+    })
+  })
 })

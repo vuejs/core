@@ -77,12 +77,16 @@ export const transformElement: NodeTransform = (node, context) => {
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
 
-    // <svg> and <foreignObject> must be forced into blocks so that block
-    // updates inside get proper isSVG flag at runtime. (#639, #643)
-    // This is technically web-specific, but splitting the logic out of core
-    // leads to too much unnecessary complexity.
     let shouldUseBlock =
-      !isComponent && (tag === 'svg' || tag === 'foreignObject')
+      !isComponent &&
+      // <svg> and <foreignObject> must be forced into blocks so that block
+      // updates inside get proper isSVG flag at runtime. (#639, #643)
+      // This is technically web-specific, but splitting the logic out of core
+      // leads to too much unnecessary complexity.
+      (tag === 'svg' ||
+        tag === 'foreignObject' ||
+        // #938: elements with dynamic keys should be forced into blocks
+        findProp(node, 'key', true))
 
     // props
     if (props.length > 0) {
@@ -188,7 +192,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodePatchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
-      shouldUseBlock,
+      !!shouldUseBlock,
       false /* isForBlock */,
       node.loc
     )
