@@ -163,6 +163,7 @@ const getChildRoot = (
     return [vnode, undefined]
   }
   const rawChildren = vnode.children as VNodeArrayChildren
+  const dynamicChildren = vnode.dynamicChildren as VNodeArrayChildren
   const children = rawChildren.filter(child => {
     return !(isVNode(child) && child.type === Comment)
   })
@@ -171,7 +172,13 @@ const getChildRoot = (
   }
   const childRoot = children[0]
   const index = rawChildren.indexOf(childRoot)
-  const setRoot = (updatedRoot: VNode) => (rawChildren[index] = updatedRoot)
+  const dynamicIndex = dynamicChildren
+    ? dynamicChildren.indexOf(childRoot)
+    : null
+  const setRoot = (updatedRoot: VNode) => {
+    rawChildren[index] = updatedRoot
+    if (dynamicIndex !== null) dynamicChildren[dynamicIndex] = updatedRoot
+  }
   return [normalizeVNode(childRoot), setRoot]
 }
 
