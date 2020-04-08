@@ -1,16 +1,17 @@
 import {
-  createApp,
+  h,
+  render,
   getCurrentInstance,
   nodeOps,
-  mockWarn
+  createApp
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 import { ComponentInternalInstance } from '../src/component'
 
 describe('component: proxy', () => {
   mockWarn()
 
   test('data', () => {
-    const app = createApp()
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -27,14 +28,13 @@ describe('component: proxy', () => {
         return null
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'))
+    render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
     instanceProxy.foo = 2
     expect(instance!.data.foo).toBe(2)
   })
 
   test('renderContext', () => {
-    const app = createApp()
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -51,40 +51,27 @@ describe('component: proxy', () => {
         return null
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'))
+    render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
     instanceProxy.foo = 2
     expect(instance!.renderContext.foo).toBe(2)
   })
 
-  test('propsProxy', () => {
-    const app = createApp()
-    let instance: ComponentInternalInstance
+  test('should not expose non-declared props', () => {
     let instanceProxy: any
     const Comp = {
-      props: {
-        foo: {
-          type: Number,
-          default: 1
-        }
-      },
       setup() {
         return () => null
       },
       mounted() {
-        instance = getCurrentInstance()!
         instanceProxy = this
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'))
-    expect(instanceProxy.foo).toBe(1)
-    expect(instance!.propsProxy!.foo).toBe(1)
-    expect(() => (instanceProxy.foo = 2)).toThrow(TypeError)
-    expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
+    render(h(Comp, { count: 1 }), nodeOps.createElement('div'))
+    expect('count' in instanceProxy).toBe(false)
   })
 
   test('public properties', () => {
-    const app = createApp()
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -96,14 +83,16 @@ describe('component: proxy', () => {
         instanceProxy = this
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'))
+    render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.$data).toBe(instance!.data)
-    expect(instanceProxy.$props).toBe(instance!.propsProxy)
+    expect(instanceProxy.$props).toBe(instance!.props)
     expect(instanceProxy.$attrs).toBe(instance!.attrs)
     expect(instanceProxy.$slots).toBe(instance!.slots)
     expect(instanceProxy.$refs).toBe(instance!.refs)
-    expect(instanceProxy.$parent).toBe(instance!.parent)
-    expect(instanceProxy.$root).toBe(instance!.root)
+    expect(instanceProxy.$parent).toBe(
+      instance!.parent && instance!.parent.proxy
+    )
+    expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
     expect(instanceProxy.$el).toBe(instance!.vnode.el)
     expect(instanceProxy.$options).toBe(instance!.type)
@@ -112,7 +101,6 @@ describe('component: proxy', () => {
   })
 
   test('sink', async () => {
-    const app = createApp()
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -124,14 +112,40 @@ describe('component: proxy', () => {
         instanceProxy = this
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'))
+    render(h(Comp), nodeOps.createElement('div'))
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
     expect(instance!.sink.foo).toBe(1)
   })
 
+  test('globalProperties', () => {
+    let instance: ComponentInternalInstance
+    let instanceProxy: any
+    const Comp = {
+      setup() {
+        return () => null
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+        instanceProxy = this
+      }
+    }
+
+    const app = createApp(Comp)
+    app.config.globalProperties.foo = 1
+    app.mount(nodeOps.createElement('div'))
+
+    expect(instanceProxy.foo).toBe(1)
+
+    // set should overwrite globalProperties with local
+    instanceProxy.foo = 2
+    expect(instanceProxy.foo).toBe(2)
+    expect(instance!.sink.foo).toBe(2)
+    // should not affect global
+    expect(app.config.globalProperties.foo).toBe(1)
+  })
+
   test('has check', () => {
-    const app = createApp()
     let instanceProxy: any
     const Comp = {
       render() {},
@@ -152,7 +166,11 @@ describe('component: proxy', () => {
         instanceProxy = this
       }
     }
-    app.mount(Comp, nodeOps.createElement('div'), { msg: 'hello' })
+
+    const app = createApp(Comp, { msg: 'hello' })
+    app.config.globalProperties.global = 1
+
+    app.mount(nodeOps.createElement('div'))
 
     // props
     expect('msg' in instanceProxy).toBe(true)
@@ -162,6 +180,8 @@ describe('component: proxy', () => {
     expect('bar' in instanceProxy).toBe(true)
     // public properties
     expect('$el' in instanceProxy).toBe(true)
+    // global properties
+    expect('global' in instanceProxy).toBe(true)
 
     // non-existent
     expect('$foobar' in instanceProxy).toBe(false)
@@ -170,5 +190,28 @@ describe('component: proxy', () => {
     // set non-existent (goes into sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
+
+    // dev mode ownKeys check for console inspection
+    // should only expose own keys
+    expect(Object.keys(instanceProxy)).toMatchObject([
+      'msg',
+      'bar',
+      'foo',
+      'baz'
+    ])
+  })
+
+  // #864
+  test('should not warn declared but absent props', () => {
+    const Comp = {
+      props: ['test'],
+      render(this: any) {
+        return this.test
+      }
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      `was accessed during render but is not defined`
+    ).not.toHaveBeenWarned()
   })
 })

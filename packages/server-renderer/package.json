@@ -1,13 +1,13 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha.11",
   "description": "@vue/server-renderer",
   "main": "index.js",
+  "types": "dist/server-renderer.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/server-renderer.d.ts",
   "buildOptions": {
     "formats": [
       "cjs"
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "keywords": [
     "vue"
@@ -23,7 +23,14 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/server-renderer#readme"
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/server-renderer#readme",
+  "peerDependencies": {
+    "vue": "3.0.0-alpha.11"
+  },
+  "dependencies": {
+    "@vue/shared": "3.0.0-alpha.11",
+    "@vue/compiler-ssr": "3.0.0-alpha.11"
+  }
 }

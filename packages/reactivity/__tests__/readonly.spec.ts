@@ -12,7 +12,7 @@ import {
   ref,
   shallowReadonly
 } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 /**
  * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
@@ -469,6 +469,14 @@ describe('reactivity/readonly', () => {
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).not.toHaveBeenWarned()
+    })
+
+    test('should keep reactive properties reactive', () => {
+      const props: any = shallowReadonly({ n: reactive({ foo: 1 }) })
+      unlock()
+      props.n = reactive({ foo: 2 })
+      lock()
+      expect(isReactive(props.n)).toBe(true)
     })
   })
 })

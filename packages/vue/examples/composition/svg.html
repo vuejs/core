@@ -92,20 +92,22 @@ const Polygraph = {
 </div>
 
 <script>
-const App = {
+const globalStats = [
+  { label: 'A', value: 100 },
+  { label: 'B', value: 100 },
+  { label: 'C', value: 100 },
+  { label: 'D', value: 100 },
+  { label: 'E', value: 100 },
+  { label: 'F', value: 100 }
+]
+
+createApp({
   components: {
     Polygraph
   },
   setup() {
     const newLabel = ref('')
-    const stats = reactive([
-      { label: 'A', value: 100 },
-      { label: 'B', value: 100 },
-      { label: 'C', value: 100 },
-      { label: 'D', value: 100 },
-      { label: 'E', value: 100 },
-      { label: 'F', value: 100 }
-    ])
+    const stats = reactive(globalStats)
 
     function add(e) {
       e.preventDefault()
@@ -132,9 +134,7 @@ const App = {
       remove
     }
   }
-}
-
-createApp().mount(App, '#demo')
+}).mount('#demo')
 </script>
 
 <style>

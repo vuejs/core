@@ -5,6 +5,12 @@ import {
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 
+export interface HMRRuntime {
+  createRecord: typeof createRecord
+  rerender: typeof rerender
+  reload: typeof reload
+}
+
 // Expose the HMR runtime on the global object
 // This makes it entirely tree-shakable without polluting the exports and makes
 // it easier to be used in toolings like vue-loader
@@ -24,7 +30,7 @@ if (__BUNDLER__ && __DEV__) {
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
     reload: tryWrap(reload)
-  }
+  } as HMRRuntime
 }
 
 interface HMRRecord {
@@ -53,9 +59,13 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
   return true
 }
 
-function rerender(id: string, newRender: RenderFunction) {
-  map.get(id)!.instances.forEach(instance => {
-    instance.render = newRender
+function rerender(id: string, newRender?: RenderFunction) {
+  // Array.from creates a snapshot which avoids the set being mutated during
+  // updates
+  Array.from(map.get(id)!.instances).forEach(instance => {
+    if (newRender) {
+      instance.render = newRender
+    }
     instance.renderCache = []
     // this flag forces child components with slot content to update
     instance.renderUpdated = true
@@ -77,13 +87,19 @@ function reload(id: string, newComp: ComponentOptions) {
   // 2. Mark component dirty. This forces the renderer to replace the component
   // on patch.
   comp.__hmrUpdated = true
-  record.instances.forEach(instance => {
+  // Array.from creates a snapshot which avoids the set being mutated during
+  // updates
+  Array.from(record.instances).forEach(instance => {
     if (instance.parent) {
       // 3. Force the parent instance to re-render. This will cause all updated
       // components to be unmounted and re-mounted. Queue the update so that we
       // don't end up forcing the same parent to re-render multiple times.
       queueJob(instance.parent.update)
+    } else if (instance.appContext.reload) {
+      // root instance mounted via createApp() has a reload method
+      instance.appContext.reload()
     } else if (typeof window !== 'undefined') {
+      // root instance inside tree created via raw render(). Force reload.
       window.location.reload()
     } else {
       console.warn(

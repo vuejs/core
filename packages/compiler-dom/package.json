@@ -1,18 +1,18 @@
 {
   "name": "@vue/compiler-dom",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha.11",
   "description": "@vue/compiler-dom",
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
+  "types": "dist/compiler-dom.d.ts",
+  "unpkg": "dist/compiler-dom/global.js",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/compiler-dom.d.ts",
-  "unpkg": "dist/compiler-dom/global.js",
   "sideEffects": false,
   "buildOptions": {
-    "name": "VueDOMCompiler",
+    "name": "VueCompilerDOM",
     "formats": [
       "esm-bundler",
       "cjs",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "keywords": [
     "vue"
@@ -30,10 +30,11 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-dom#readme",
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-dom#readme",
   "dependencies": {
-    "@vue/compiler-core": "3.0.0-alpha.0"
+    "@vue/shared": "3.0.0-alpha.11",
+    "@vue/compiler-core": "3.0.0-alpha.11"
   }
 }

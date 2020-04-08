@@ -1,17 +1,21 @@
 import {
-  parse,
+  baseParse as parse,
   transform,
   CompilerOptions,
   ElementNode,
   ObjectExpression,
-  CallExpression,
-  NodeTypes
+  NodeTypes,
+  VNodeCall
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../../src/runtimeHelpers'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformExpression } from '../../../compiler-core/src/transforms/transformExpression'
-import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
+import {
+  createObjectMatcher,
+  genFlagText
+} from '../../../compiler-core/__tests__/testUtils'
+import { PatchFlags } from '@vue/shared'
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -24,8 +28,8 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
   })
   return {
     root: ast,
-    props: (((ast.children[0] as ElementNode).codegenNode as CallExpression)
-      .arguments[1] as ObjectExpression).properties
+    props: (((ast.children[0] as ElementNode).codegenNode as VNodeCall)
+      .props as ObjectExpression).properties
   }
 }
 
@@ -148,6 +152,58 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
+  test('should transform click.right', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @click.right="test"/>`)
+    expect(prop.key).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `onContextmenu`
+    })
+
+    // dynamic
+    const {
+      props: [prop2]
+    } = parseWithVOn(`<div @[event].right="test"/>`)
+    // ("on" + (event)).toLowerCase() === "onclick" ? "onContextmenu" : ("on" + (event))
+    expect(prop2.key).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `(`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `).toLowerCase() === "onclick" ? "onContextmenu" : (`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `)`
+      ]
+    })
+  })
+
+  test('should transform click.middle', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @click.middle="test"/>`)
+    expect(prop.key).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `onMouseup`
+    })
+
+    // dynamic
+    const {
+      props: [prop2]
+    } = parseWithVOn(`<div @[event].middle="test"/>`)
+    // ("on" + (event)).toLowerCase() === "onclick" ? "onMouseup" : ("on" + (event))
+    expect(prop2.key).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `(`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `).toLowerCase() === "onclick" ? "onMouseup" : (`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `)`
+      ]
+    })
+  })
+
   test('cache handler w/ modifiers', () => {
     const {
       root,
@@ -157,8 +213,11 @@ describe('compiler-dom: transform v-on', () => {
       cacheHandlers: true
     })
     expect(root.cached).toBe(1)
-    // should not treat cached handler as dynamicProp, so no flags
-    expect((root as any).children[0].codegenNode.arguments.length).toBe(2)
+    // should not treat cached handler as dynamicProp, so it should have no
+    // dynamicProps flags and only the hydration flag
+    expect((root as any).children[0].codegenNode.patchFlag).toBe(
+      genFlagText(PatchFlags.HYDRATE_EVENTS)
+    )
     expect(prop.value).toMatchObject({
       type: NodeTypes.JS_CACHE_EXPRESSION,
       index: 1,

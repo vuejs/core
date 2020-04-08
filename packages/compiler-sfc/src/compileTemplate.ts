@@ -2,9 +2,11 @@ import {
   CompilerOptions,
   CodegenResult,
   CompilerError,
-  NodeTransform
+  NodeTransform,
+  ParserOptions,
+  RootNode
 } from '@vue/compiler-core'
-import { RawSourceMap } from 'source-map'
+import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
@@ -14,7 +16,12 @@ import { transformSrcset } from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
 import consolidate from 'consolidate'
 
-export interface TemplateCompileResults {
+export interface TemplateCompiler {
+  compile(template: string, options: CompilerOptions): CodegenResult
+  parse(template: string, options: ParserOptions): RootNode
+}
+
+export interface SFCTemplateCompileResults {
   code: string
   source: string
   tips: string[]
@@ -22,13 +29,11 @@ export interface TemplateCompileResults {
   map?: RawSourceMap
 }
 
-export interface TemplateCompiler {
-  compile(template: string, options: CompilerOptions): CodegenResult
-}
-
-export interface TemplateCompileOptions {
+export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  ssr?: boolean
+  inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
   preprocessLang?: string
@@ -37,7 +42,7 @@ export interface TemplateCompileOptions {
 }
 
 function preprocess(
-  { source, filename, preprocessOptions }: TemplateCompileOptions,
+  { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
   preprocessor: any
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
@@ -59,8 +64,8 @@ function preprocess(
 }
 
 export function compileTemplate(
-  options: TemplateCompileOptions
-): TemplateCompileResults {
+  options: SFCTemplateCompileOptions
+): SFCTemplateCompileResults {
   const { preprocessLang } = options
   const preprocessor =
     preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
@@ -100,11 +105,13 @@ export function compileTemplate(
 
 function doCompileTemplate({
   filename,
+  inMap,
   source,
-  compiler = require('@vue/compiler-dom'),
+  ssr = false,
+  compiler = ssr ? require('@vue/compiler-ssr') : require('@vue/compiler-dom'),
   compilerOptions = {},
   transformAssetUrls
-}: TemplateCompileOptions): TemplateCompileResults {
+}: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
@@ -117,7 +124,7 @@ function doCompileTemplate({
     nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
-  const { code, map } = compiler.compile(source, {
+  let { code, map } = compiler.compile(source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
@@ -128,5 +135,91 @@ function doCompileTemplate({
     sourceMap: true,
     onError: e => errors.push(e)
   })
+
+  // inMap should be the map produced by ./parse.ts which is a simple line-only
+  // mapping. If it is present, we need to adjust the final map and errors to
+  // reflect the original line numbers.
+  if (inMap) {
+    if (map) {
+      map = mapLines(inMap, map)
+    }
+    if (errors.length) {
+      patchErrors(errors, source, inMap)
+    }
+  }
+
   return { code, source, errors, tips: [], map }
+}
+
+function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
+  if (!oldMap) return newMap
+  if (!newMap) return oldMap
+
+  const oldMapConsumer = new SourceMapConsumer(oldMap)
+  const newMapConsumer = new SourceMapConsumer(newMap)
+  const mergedMapGenerator = new SourceMapGenerator()
+
+  newMapConsumer.eachMapping(m => {
+    if (m.originalLine == null) {
+      return
+    }
+
+    const origPosInOldMap = oldMapConsumer.originalPositionFor({
+      line: m.originalLine,
+      column: m.originalColumn
+    })
+
+    if (origPosInOldMap.source == null) {
+      return
+    }
+
+    mergedMapGenerator.addMapping({
+      generated: {
+        line: m.generatedLine,
+        column: m.generatedColumn
+      },
+      original: {
+        line: origPosInOldMap.line, // map line
+        // use current column, since the oldMap produced by @vue/compiler-sfc
+        // does not
+        column: m.originalColumn
+      },
+      source: origPosInOldMap.source,
+      name: origPosInOldMap.name
+    })
+  })
+
+  // source-map's type definition is incomplete
+  const generator = mergedMapGenerator as any
+  ;(oldMapConsumer as any).sources.forEach((sourceFile: string) => {
+    generator._sources.add(sourceFile)
+    const sourceContent = oldMapConsumer.sourceContentFor(sourceFile)
+    if (sourceContent != null) {
+      mergedMapGenerator.setSourceContent(sourceFile, sourceContent)
+    }
+  })
+
+  generator._sourceRoot = oldMap.sourceRoot
+  generator._file = oldMap.file
+  return generator.toJSON()
+}
+
+function patchErrors(
+  errors: CompilerError[],
+  source: string,
+  inMap: RawSourceMap
+) {
+  const originalSource = inMap.sourcesContent![0]
+  const offset = originalSource.indexOf(source)
+  const lineOffset = originalSource.slice(0, offset).split(/\r?\n/).length - 1
+  errors.forEach(err => {
+    if (err.loc) {
+      err.loc.start.line += lineOffset
+      err.loc.start.offset += offset
+      if (err.loc.end !== err.loc.start) {
+        err.loc.end.line += lineOffset
+        err.loc.end.offset += offset
+      }
+    }
+  })
 }

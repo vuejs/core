@@ -3,9 +3,11 @@ import {
   ParserOptions,
   ElementNode,
   Namespaces,
-  NodeTypes
+  NodeTypes,
+  isBuiltInType
 } from '@vue/compiler-core'
 import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 
 const isRawTextContainer = /*#__PURE__*/ makeMap(
   'style,iframe,script,noscript',
@@ -22,6 +24,14 @@ export const parserOptionsMinimal: ParserOptions = {
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
   isPreTag: tag => tag === 'pre',
+
+  isBuiltInComponent: (tag: string): symbol | undefined => {
+    if (isBuiltInType(tag, `Transition`)) {
+      return TRANSITION
+    } else if (isBuiltInType(tag, `TransitionGroup`)) {
+      return TRANSITION_GROUP
+    }
+  },
 
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {

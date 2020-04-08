@@ -42,7 +42,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -65,6 +65,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -111,7 +112,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -134,6 +135,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -180,7 +182,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -203,6 +205,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -266,7 +269,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -289,6 +292,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -352,7 +356,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -375,6 +379,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -438,7 +443,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -461,6 +466,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -524,7 +530,7 @@ Object {
         },
       ],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -547,6 +553,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -593,7 +600,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -616,6 +623,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -662,7 +670,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -685,6 +693,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -731,7 +740,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -754,6 +763,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -800,7 +810,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -823,6 +833,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -869,7 +880,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -892,6 +903,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -962,7 +974,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -985,6 +997,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1031,7 +1044,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1054,6 +1067,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1100,7 +1114,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1123,6 +1137,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1169,7 +1184,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1192,6 +1207,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1313,7 +1329,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1336,6 +1352,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1388,7 +1405,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1411,6 +1428,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1463,7 +1481,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1486,6 +1504,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1532,7 +1551,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1555,6 +1574,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1601,7 +1621,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1624,6 +1644,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1676,7 +1697,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1699,6 +1720,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1769,7 +1791,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1792,6 +1814,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1838,7 +1861,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1861,6 +1884,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1907,7 +1931,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1930,6 +1954,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -1976,7 +2001,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -1999,6 +2024,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2045,7 +2071,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2068,6 +2094,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2114,7 +2141,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2137,6 +2164,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2206,6 +2234,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2275,6 +2304,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2327,7 +2357,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2350,6 +2380,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2402,7 +2433,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2425,6 +2456,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2496,7 +2528,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2519,6 +2551,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2590,7 +2623,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2613,6 +2646,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2684,7 +2718,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2707,6 +2741,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2794,7 +2829,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2817,6 +2852,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -2904,7 +2940,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -2927,6 +2963,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3014,7 +3051,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3037,6 +3074,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3124,7 +3162,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3147,6 +3185,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3234,7 +3273,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3257,6 +3296,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3344,7 +3384,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3367,6 +3407,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3454,7 +3495,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3477,6 +3518,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3564,7 +3606,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3587,6 +3629,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3633,7 +3676,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3656,6 +3699,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3701,6 +3745,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3747,7 +3792,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3770,6 +3815,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3816,7 +3862,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3839,6 +3885,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3885,7 +3932,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3908,6 +3955,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -3954,7 +4002,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -3977,6 +4025,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4023,7 +4072,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4046,6 +4095,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4110,7 +4160,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4133,6 +4183,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4179,7 +4230,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4202,6 +4253,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4265,7 +4317,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4288,6 +4340,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4375,7 +4428,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4398,6 +4451,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4469,7 +4523,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4492,6 +4546,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4563,7 +4618,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4586,6 +4641,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4614,7 +4670,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4637,6 +4693,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4683,7 +4740,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4706,6 +4763,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4752,7 +4810,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4775,6 +4833,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4821,7 +4880,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4844,6 +4903,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -4967,7 +5027,7 @@ class=\\"bar\\"></div></template>",
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -4991,6 +5051,7 @@ class=\\"bar\\"></div></template>",
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5112,7 +5173,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5135,6 +5196,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5181,7 +5243,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5204,6 +5266,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5250,7 +5313,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5273,6 +5336,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5319,7 +5383,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5342,6 +5406,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5388,7 +5453,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5411,6 +5476,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5457,7 +5523,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5480,6 +5546,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5526,7 +5593,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5549,6 +5616,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5595,7 +5663,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5618,6 +5686,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5664,7 +5733,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5687,6 +5756,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5774,7 +5844,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5797,6 +5867,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5884,7 +5955,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -5907,6 +5978,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -5994,7 +6066,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6017,6 +6089,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6104,7 +6177,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6127,6 +6200,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6214,7 +6288,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6237,6 +6311,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6324,7 +6399,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6347,6 +6422,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6434,7 +6510,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6457,6 +6533,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6544,7 +6621,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6567,6 +6644,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6638,7 +6716,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6661,6 +6739,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6748,7 +6827,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6771,6 +6850,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6817,7 +6897,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6840,6 +6920,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -6929,7 +7010,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -6952,75 +7033,7 @@ Object {
       "offset": 0,
     },
   },
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown;</template> 1`] = `
-Object {
-  "cached": 0,
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&unknown;",
-          "loc": Object {
-            "end": Object {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "&unknown;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 31,
-          "line": 1,
-          "offset": 30,
-        },
-        "source": "<template>&unknown;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": Array [],
-  "directives": Array [],
-  "helpers": Array [],
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 31,
-      "line": 1,
-      "offset": 30,
-    },
-    "source": "<template>&unknown;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7090,6 +7103,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7159,6 +7173,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7187,7 +7202,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7210,6 +7225,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7238,7 +7254,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7261,6 +7277,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7325,7 +7342,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7348,6 +7365,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7417,6 +7435,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7525,6 +7544,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7577,7 +7597,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7600,6 +7620,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7652,7 +7673,7 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
@@ -7675,6 +7696,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7720,6 +7742,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7765,6 +7788,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7828,6 +7852,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -7909,6 +7934,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -8098,6 +8124,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;
@@ -8310,6 +8337,7 @@ Object {
       "offset": 0,
     },
   },
+  "temps": 0,
   "type": 0,
 }
 `;

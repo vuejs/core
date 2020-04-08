@@ -8,7 +8,7 @@ import {
   createCompoundExpression,
   SimpleExpressionNode
 } from '../ast'
-import { capitalize } from '@vue/shared'
+import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
@@ -26,23 +26,24 @@ export interface VOnDirectiveNode extends DirectiveNode {
 }
 
 export const transformOn: DirectiveTransform = (
-  dir: VOnDirectiveNode,
+  dir,
   node,
   context,
   augmentor
 ) => {
-  const { loc, modifiers, arg } = dir
+  const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
   let eventName: ExpressionNode
   if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     if (arg.isStatic) {
-      eventName = createSimpleExpression(
-        `on${capitalize(arg.content)}`,
-        true,
-        arg.loc
-      )
+      const rawName = arg.content
+      // for @vnode-xxx event listeners, auto convert it to camelCase
+      const normalizedName = rawName.startsWith(`vnode`)
+        ? capitalize(camelize(rawName))
+        : capitalize(rawName)
+      eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
       eventName = createCompoundExpression([`"on" + (`, arg, `)`])
     }
@@ -54,16 +55,22 @@ export const transformOn: DirectiveTransform = (
   }
 
   // handler processing
-  let exp: ExpressionNode | undefined = dir.exp
+  let exp: ExpressionNode | undefined = dir.exp as
+    | SimpleExpressionNode
+    | undefined
+  if (exp && !exp.content.trim()) {
+    exp = undefined
+  }
   let isCacheable: boolean = !exp
   if (exp) {
     const isMemberExp = isMemberExpression(exp.content)
     const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+    const hasMultipleStatements = exp.content.includes(`;`)
 
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
       context.addIdentifiers(`$event`)
-      exp = processExpression(exp, context)
+      exp = processExpression(exp, context, false, hasMultipleStatements)
       context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
@@ -85,9 +92,9 @@ export const transformOn: DirectiveTransform = (
     if (isInlineStatement || (isCacheable && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `$event => (`,
-        ...(exp.type === NodeTypes.SIMPLE_EXPRESSION ? [exp] : exp.children),
-        `)`
+        `$event => ${hasMultipleStatements ? `{` : `(`}`,
+        exp,
+        hasMultipleStatements ? `}` : `)`
       ])
     }
   }
@@ -98,8 +105,7 @@ export const transformOn: DirectiveTransform = (
         eventName,
         exp || createSimpleExpression(`() => {}`, false, loc)
       )
-    ],
-    needRuntime: false
+    ]
   }
 
   // apply extended compiler augmentor

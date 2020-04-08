@@ -1,12 +1,12 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha.11",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
+  "types": "dist/compiler-sfc.d.ts",
   "files": [
     "dist"
   ],
-  "types": "dist/compiler-sfc.d.ts",
   "buildOptions": {
     "prod": false,
     "formats": [
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "keywords": [
     "vue"
@@ -23,19 +23,24 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/compiler-sfc#readme",
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
+  "peerDependencies": {
+    "vue": "3.0.0-alpha.11"
+  },
   "dependencies": {
-    "@vue/compiler-core": "3.0.0-alpha.0",
-    "@vue/compiler-dom": "3.0.0-alpha.0",
+    "@vue/shared": "3.0.0-alpha.11",
+    "@vue/compiler-core": "3.0.0-alpha.11",
+    "@vue/compiler-dom": "3.0.0-alpha.11",
+    "@vue/compiler-ssr": "3.0.0-alpha.11",
     "consolidate": "^0.15.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
     "postcss": "^7.0.21",
     "postcss-selector-parser": "^6.0.2",
-    "source-map": "^0.7.3"
+    "source-map": "^0.6.1"
   },
   "devDependencies": {
     "@types/consolidate": "^0.14.0",

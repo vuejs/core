@@ -1,6 +1,7 @@
 const args = require('minimist')(process.argv.slice(2))
 const fs = require('fs')
 const path = require('path')
+const chalk = require('chalk')
 const semver = require('semver')
 const currentVersion = require('../package.json').version
 const { prompt } = require('enquirer')
@@ -13,6 +14,8 @@ const skipBuild = args.skipBuild
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
+
+const skippedPackages = []
 
 const versionIncrements = [
   'patch',
@@ -28,7 +31,11 @@ const inc = i => semver.inc(currentVersion, i, preId)
 const bin = name => path.resolve(__dirname, '../node_modules/.bin/' + name)
 const run = (bin, args, opts = {}) =>
   execa(bin, args, { stdio: 'inherit', ...opts })
+const dryRun = (bin, args, opts = {}) =>
+  console.log(chalk.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
+const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = pkg => path.resolve(__dirname, '../packages/' + pkg)
+const step = msg => console.log(chalk.cyan(msg))
 
 async function main() {
   let targetVersion = args._[0]
@@ -69,47 +76,70 @@ async function main() {
   }
 
   // run tests before release
-  if (!skipTests) {
+  step('\nRunning tests...')
+  if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('yarn', ['test'])
+    await run('yarn', ['test', '--runInBand'])
+  } else {
+    console.log(`(skipped)`)
   }
 
   // update all package versions and inter-dependencies
+  step('\nUpdating cross dependencies...')
   updateVersions(targetVersion)
 
   // build all packages with types
-  if (!skipBuild) {
+  step('\nBuilding all packages...')
+  if (!skipBuild && !isDryRun) {
     await run('yarn', ['build', '--release'])
     // test generated dts files
+    step('\nVerifying type declarations...')
     await run(bin('tsd'))
-  }
-
-  // all good...
-  if (isDryRun) {
-    // stop here so we can inspect changes to be committed
-    // and packages built
-    console.log('Dry run finished.')
   } else {
-    // commit all changes
-    console.log('Committing changes...')
-    await run('git', ['add', '-A'])
-    await run('git', ['commit', '-m', `release: v${targetVersion}`])
-
-    // publish packages
-    const releaseTag = semver.prerelease(targetVersion)[0] || 'latest'
-    for (const pkg of packagesToPublish) {
-      await publish(pkg, releaseTag)
-    }
-
-    // push to GitHub
-    await run('git', ['tag', `v${targetVersion}`])
-    await run('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
-    await run('git', ['push'])
+    console.log(`(skipped)`)
   }
+
+  // generate changelog
+  await run(`yarn`, ['changelog'])
+
+  const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
+  if (stdout) {
+    step('\nCommitting changes...')
+    await runIfNotDry('git', ['add', '-A'])
+    await runIfNotDry('git', ['commit', '-m', `release: v${targetVersion}`])
+  } else {
+    console.log('No changes to commit.')
+  }
+
+  // publish packages
+  step('\nPublishing packages...')
+  for (const pkg of packages) {
+    await publishPackage(pkg, targetVersion, runIfNotDry)
+  }
+
+  // push to GitHub
+  step('\nPushing to GitHub...')
+  await runIfNotDry('git', ['tag', `v${targetVersion}`])
+  await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
+  await runIfNotDry('git', ['push'])
+
+  if (isDryRun) {
+    console.log(`\nDry run finished - run git diff to see package changes.`)
+  }
+
+  if (skippedPackages.length) {
+    console.log(
+      chalk.yellow(
+        `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
+          '\n- '
+        )}`
+      )
+    )
+  }
+  console.log()
 }
 
 function updateVersions(version) {
-  console.log('Updating versions...')
   // 1. update root package.json
   updatePackage(path.resolve(__dirname, '..'), version)
   // 2. update all packages
@@ -117,33 +147,72 @@ function updateVersions(version) {
 }
 
 function updatePackage(pkgRoot, version) {
-  const pkg = readPkg(pkgRoot)
+  const pkgPath = path.resolve(pkgRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.version = version
-  if (pkg.dependencies) {
-    Object.keys(pkg.dependencies).forEach(dep => {
-      if (
-        dep.startsWith('@vue') &&
-        packages.includes(dep.replace(/^@vue\//, ''))
-      ) {
-        pkg.dependencies[dep] = version
-      }
-    })
-  }
+  updateDeps(pkg, 'dependencies', version)
+  updateDeps(pkg, 'peerDependencies', version)
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
-function readPkg(pkgRoot) {
-  const pkgPath = path.resolve(pkgRoot, 'package.json')
-  return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+function updateDeps(pkg, depType, version) {
+  const deps = pkg[depType]
+  if (!deps) return
+  Object.keys(deps).forEach(dep => {
+    if (
+      dep === 'vue' ||
+      (dep.startsWith('@vue') && packages.includes(dep.replace(/^@vue\//, '')))
+    ) {
+      console.log(
+        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
+      )
+      deps[dep] = version
+    }
+  })
 }
 
-async function publish(pkgName, releaseTag) {
+async function publishPackage(pkgName, version, runIfNotDry) {
+  if (skippedPackages.includes(pkgName)) {
+    return
+  }
   const pkgRoot = getPkgRoot(pkgName)
-  const pkg = readPkg(pkgRoot)
-  if (!pkg.private) {
-    await run('npm', ['publish', '--tag', releaseTag], {
-      cwd: pkgRoot
-    })
+  const pkgPath = path.resolve(pkgRoot, 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+  if (pkg.private) {
+    return
+  }
+
+  // for now (alpha/beta phase), every package except "vue" can be published as
+  // `latest`, whereas "vue" will be published under the "next" tag.
+  const releaseTag = pkgName === 'vue' ? 'next' : null
+
+  // TODO use inferred release channel after official 3.0 release
+  // const releaseTag = semver.prerelease(version)[0] || null
+
+  step(`Publishing ${pkgName}...`)
+  try {
+    await runIfNotDry(
+      'yarn',
+      [
+        'publish',
+        '--new-version',
+        version,
+        ...(releaseTag ? ['--tag', releaseTag] : []),
+        '--access',
+        'public'
+      ],
+      {
+        cwd: pkgRoot,
+        stdio: 'pipe'
+      }
+    )
+    console.log(chalk.green(`Successfully published ${pkgName}@${version}`))
+  } catch (e) {
+    if (e.stderr.match(/previously published/)) {
+      console.log(chalk.red(`Skipping already published: ${pkgName}`))
+    } else {
+      throw e
+    }
   }
 }
 

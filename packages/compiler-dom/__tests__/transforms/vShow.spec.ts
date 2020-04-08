@@ -1,4 +1,9 @@
-import { parse, transform, generate, CompilerOptions } from '@vue/compiler-core'
+import {
+  baseParse as parse,
+  transform,
+  generate,
+  CompilerOptions
+} from '@vue/compiler-core'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformShow } from '../../src/transforms/vShow'
 import { DOMErrorCodes } from '../../src/errors'

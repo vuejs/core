@@ -1,4 +1,4 @@
-import { parse } from '../../src/parse'
+import { baseParse as parse } from '../../src/parse'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -10,18 +10,16 @@ import {
   TextNode,
   CommentNode,
   SimpleExpressionNode,
-  SequenceExpression,
   ConditionalExpression,
-  CallExpression
+  IfConditionalExpression,
+  VNodeCall,
+  ElementTypes
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
 import {
-  OPEN_BLOCK,
-  CREATE_BLOCK,
   FRAGMENT,
   MERGE_PROPS,
-  WITH_DIRECTIVES,
   RENDER_SLOT,
   CREATE_COMMENT
 } from '../../src/runtimeHelpers'
@@ -43,7 +41,9 @@ function parseWithIfTransform(
   }
   return {
     root: ast,
-    node: ast.children[returnIndex] as IfNode
+    node: ast.children[returnIndex] as IfNode & {
+      codegenNode: IfConditionalExpression
+    }
   }
 }
 
@@ -77,6 +77,22 @@ describe('compiler: v-if', () => {
       expect((node.branches[0].children[1] as TextNode).content).toBe(`hello`)
       expect(node.branches[0].children[2].type).toBe(NodeTypes.ELEMENT)
       expect((node.branches[0].children[2] as ElementNode).tag).toBe(`p`)
+    })
+
+    test('component v-if', () => {
+      const { node } = parseWithIfTransform(`<Component v-if="ok"></Component>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches.length).toBe(1)
+      expect((node.branches[0].children[0] as ElementNode).tag).toBe(
+        `Component`
+      )
+      expect((node.branches[0].children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT
+      )
+      expect(
+        ((node.branches[0].children[0] as ElementNode)!
+          .codegenNode as VNodeCall)!.isBlock
+      ).toBe(false)
     })
 
     test('v-if + v-else', () => {
@@ -266,49 +282,49 @@ describe('compiler: v-if', () => {
 
   describe('codegen', () => {
     function assertSharedCodegen(
-      node: SequenceExpression,
+      node: IfConditionalExpression,
       depth: number = 0,
       hasElse: boolean = false
     ) {
       expect(node).toMatchObject({
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: OPEN_BLOCK,
-            arguments: []
-          },
-          {
-            type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
-            test: {
-              content: `ok`
-            },
-            consequent: {
-              type: NodeTypes.JS_CALL_EXPRESSION,
-              callee: CREATE_BLOCK
-            },
-            alternate:
-              depth < 1
-                ? {
-                    type: NodeTypes.JS_CALL_EXPRESSION,
-                    callee: hasElse ? CREATE_BLOCK : CREATE_COMMENT
-                  }
-                : {
-                    type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
-                    test: {
-                      content: `orNot`
-                    },
-                    consequent: {
-                      type: NodeTypes.JS_CALL_EXPRESSION,
-                      callee: CREATE_BLOCK
-                    },
-                    alternate: {
-                      type: NodeTypes.JS_CALL_EXPRESSION,
-                      callee: hasElse ? CREATE_BLOCK : CREATE_COMMENT
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: {
+          content: `ok`
+        },
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          isBlock: true
+        },
+        alternate:
+          depth < 1
+            ? hasElse
+              ? {
+                  type: NodeTypes.VNODE_CALL,
+                  isBlock: true
+                }
+              : {
+                  type: NodeTypes.JS_CALL_EXPRESSION,
+                  callee: CREATE_COMMENT
+                }
+            : {
+                type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+                test: {
+                  content: `orNot`
+                },
+                consequent: {
+                  type: NodeTypes.VNODE_CALL,
+                  isBlock: true
+                },
+                alternate: hasElse
+                  ? {
+                      type: NodeTypes.VNODE_CALL,
+                      isBlock: true
                     }
-                  }
-          }
-        ]
+                  : {
+                      type: NodeTypes.JS_CALL_EXPRESSION,
+                      callee: CREATE_COMMENT
+                    }
+              }
       })
     }
 
@@ -318,15 +334,11 @@ describe('compiler: v-if', () => {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok"/>`)
       assertSharedCodegen(codegenNode)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        `"div"`,
-        createObjectMatcher({ key: `[0]` })
-      ])
-      const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
-        .alternate as CallExpression
-      expect(branch2).toMatchObject({
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      expect(codegenNode.alternate).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: CREATE_COMMENT
       })
@@ -339,20 +351,16 @@ describe('compiler: v-if', () => {
         node: { codegenNode }
       } = parseWithIfTransform(`<template v-if="ok"><div/>hello<p/></template>`)
       assertSharedCodegen(codegenNode)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        FRAGMENT,
-        createObjectMatcher({ key: `[0]` }),
-        [
+      expect(codegenNode.consequent).toMatchObject({
+        tag: FRAGMENT,
+        props: createObjectMatcher({ key: `[0]` }),
+        children: [
           { type: NodeTypes.ELEMENT, tag: 'div' },
           { type: NodeTypes.TEXT, content: `hello` },
           { type: NodeTypes.ELEMENT, tag: 'p' }
         ]
-      ])
-      const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
-        .alternate as CallExpression
-      expect(branch2).toMatchObject({
+      })
+      expect(codegenNode.alternate).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: CREATE_COMMENT
       })
@@ -364,10 +372,7 @@ describe('compiler: v-if', () => {
         root,
         node: { codegenNode }
       } = parseWithIfTransform(`<template v-if="ok"><slot/></template>`)
-      // assertSharedCodegen(codegenNode)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1).toMatchObject({
+      expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
         arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })]
@@ -380,10 +385,7 @@ describe('compiler: v-if', () => {
         root,
         node: { codegenNode }
       } = parseWithIfTransform(`<slot v-if="ok"></slot>`)
-      // assertSharedCodegen(codegenNode)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1).toMatchObject({
+      expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
         arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })]
@@ -397,18 +399,14 @@ describe('compiler: v-if', () => {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok"/><p v-else/>`)
       assertSharedCodegen(codegenNode, 0, true)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        `"div"`,
-        createObjectMatcher({ key: `[0]` })
-      ])
-      const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
-        .alternate as CallExpression
-      expect(branch2.arguments).toMatchObject([
-        `"p"`,
-        createObjectMatcher({ key: `[1]` })
-      ])
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      expect(codegenNode.alternate).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -418,18 +416,15 @@ describe('compiler: v-if', () => {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok"/><p v-else-if="orNot" />`)
       assertSharedCodegen(codegenNode, 1)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        `"div"`,
-        createObjectMatcher({ key: `[0]` })
-      ])
-      const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
-        .alternate as ConditionalExpression
-      expect((branch2.consequent as CallExpression).arguments).toMatchObject([
-        `"p"`,
-        createObjectMatcher({ key: `[1]` })
-      ])
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const branch2 = codegenNode.alternate as ConditionalExpression
+      expect(branch2.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -441,28 +436,25 @@ describe('compiler: v-if', () => {
         `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`
       )
       assertSharedCodegen(codegenNode, 1, true)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments).toMatchObject([
-        `"div"`,
-        createObjectMatcher({ key: `[0]` })
-      ])
-      const branch2 = (codegenNode.expressions[1] as ConditionalExpression)
-        .alternate as ConditionalExpression
-      expect((branch2.consequent as CallExpression).arguments).toMatchObject([
-        `"p"`,
-        createObjectMatcher({ key: `[1]` })
-      ])
-      expect((branch2.alternate as CallExpression).arguments).toMatchObject([
-        FRAGMENT,
-        createObjectMatcher({ key: `[2]` }),
-        [
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const branch2 = codegenNode.alternate as ConditionalExpression
+      expect(branch2.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(branch2.alternate).toMatchObject({
+        tag: FRAGMENT,
+        props: createObjectMatcher({ key: `[2]` }),
+        children: [
           {
             type: NodeTypes.TEXT,
             content: `fine`
           }
         ]
-      ])
+      })
       expect(generate(root).code).toMatchSnapshot()
     })
 
@@ -470,9 +462,8 @@ describe('compiler: v-if', () => {
       const {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok" v-bind="obj"/>`)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments[1]).toMatchObject({
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: MERGE_PROPS,
         arguments: [createObjectMatcher({ key: `[0]` }), { content: `obj` }]
@@ -483,9 +474,8 @@ describe('compiler: v-if', () => {
       const {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok" id="foo" v-bind="obj"/>`)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments[1]).toMatchObject({
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: MERGE_PROPS,
         arguments: [
@@ -502,9 +492,8 @@ describe('compiler: v-if', () => {
       const {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok" v-bind="obj" id="foo"/>`)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.arguments[1]).toMatchObject({
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.props).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: MERGE_PROPS,
         arguments: [
@@ -521,13 +510,21 @@ describe('compiler: v-if', () => {
       const {
         node: { codegenNode }
       } = parseWithIfTransform(`<div v-if="ok" v-foo />`)
-      const branch1 = (codegenNode.expressions[1] as ConditionalExpression)
-        .consequent as CallExpression
-      expect(branch1.callee).toBe(WITH_DIRECTIVES)
-      const realBranch = branch1.arguments[0] as CallExpression
-      expect(realBranch.arguments[1]).toMatchObject(
-        createObjectMatcher({ key: `[0]` })
-      )
+      const branch1 = codegenNode.consequent as VNodeCall
+      expect(branch1.directives).not.toBeUndefined()
+      expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
+    })
+
+    test('v-if with key', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithIfTransform(`<div v-if="ok" key="some-key"/>`)
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: 'some-key' })
+      })
+      expect(generate(root).code).toMatchSnapshot()
     })
 
     test.todo('with comments')

@@ -1,20 +1,21 @@
 import {
-  parse as baseParse,
-  TextModes,
   NodeTypes,
-  TextNode,
   ElementNode,
-  SourceLocation
+  SourceLocation,
+  CompilerError,
+  TextModes
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
+import { TemplateCompiler } from './compileTemplate'
 
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  compiler?: TemplateCompiler
 }
 
 export interface SFCBlock {
@@ -50,24 +51,32 @@ export interface SFCDescriptor {
   customBlocks: SFCBlock[]
 }
 
+export interface SFCParseResult {
+  descriptor: SFCDescriptor
+  errors: CompilerError[]
+}
+
 const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC = new LRUCache<string, SFCDescriptor>(SFC_CACHE_MAX_SIZE)
+const sourceToSFC = new LRUCache<string, SFCParseResult>(SFC_CACHE_MAX_SIZE)
+
 export function parse(
   source: string,
   {
     sourceMap = true,
     filename = 'component.vue',
     sourceRoot = '',
-    pad = false
+    pad = false,
+    compiler = require('@vue/compiler-dom')
   }: SFCParseOptions = {}
-): SFCDescriptor {
-  const sourceKey = source + sourceMap + filename + sourceRoot + pad
+): SFCParseResult {
+  const sourceKey =
+    source + sourceMap + filename + sourceRoot + pad + compiler.parse
   const cache = sourceToSFC.get(sourceKey)
   if (cache) {
     return cache
   }
 
-  const sfc: SFCDescriptor = {
+  const descriptor: SFCDescriptor = {
     filename,
     template: null,
     script: null,
@@ -75,69 +84,84 @@ export function parse(
     customBlocks: []
   }
 
-  const ast = baseParse(source, {
+  const errors: CompilerError[] = []
+  const ast = compiler.parse(source, {
+    // there are no components at SFC parsing level
     isNativeTag: () => true,
-    getTextMode: () => TextModes.RAWTEXT
+    // preserve all whitespaces
+    isPreTag: () => true,
+    getTextMode: (tag, _ns, parent) => {
+      // all top level elements except <template> are parsed as raw text
+      // containers
+      if (!parent && tag !== 'template') {
+        return TextModes.RAWTEXT
+      } else {
+        return TextModes.DATA
+      }
+    },
+    onError: e => {
+      errors.push(e)
+    }
   })
 
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length) {
+    if (!node.children.length && !hasSrc(node)) {
       return
     }
     switch (node.tag) {
       case 'template':
-        if (!sfc.template) {
-          sfc.template = createBlock(node, source, pad) as SFCTemplateBlock
+        if (!descriptor.template) {
+          descriptor.template = createBlock(
+            node,
+            source,
+            false
+          ) as SFCTemplateBlock
         } else {
           warnDuplicateBlock(source, filename, node)
         }
         break
       case 'script':
-        if (!sfc.script) {
-          sfc.script = createBlock(node, source, pad) as SFCScriptBlock
+        if (!descriptor.script) {
+          descriptor.script = createBlock(node, source, pad) as SFCScriptBlock
         } else {
           warnDuplicateBlock(source, filename, node)
         }
         break
       case 'style':
-        sfc.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
+        descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
         break
       default:
-        sfc.customBlocks.push(createBlock(node, source, pad))
+        descriptor.customBlocks.push(createBlock(node, source, pad))
         break
     }
   })
 
   if (sourceMap) {
-    if (sfc.script && !sfc.script.src) {
-      sfc.script.map = generateSourceMap(
-        filename,
-        source,
-        sfc.script.content,
-        sourceRoot,
-        pad
-      )
+    const genMap = (block: SFCBlock | null) => {
+      if (block && !block.src) {
+        block.map = generateSourceMap(
+          filename,
+          source,
+          block.content,
+          sourceRoot,
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
+        )
+      }
     }
-    if (sfc.styles) {
-      sfc.styles.forEach(style => {
-        if (!style.src) {
-          style.map = generateSourceMap(
-            filename,
-            source,
-            style.content,
-            sourceRoot,
-            pad
-          )
-        }
-      })
-    }
+    genMap(descriptor.template)
+    genMap(descriptor.script)
+    descriptor.styles.forEach(genMap)
   }
-  sourceToSFC.set(sourceKey, sfc)
 
-  return sfc
+  const result = {
+    descriptor,
+    errors
+  }
+  sourceToSFC.set(sourceKey, result)
+  return result
 }
 
 function warnDuplicateBlock(
@@ -164,15 +188,26 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  const text = node.children[0] as TextNode
+  let { start, end } = node.loc
+  let content = ''
+  if (node.children.length) {
+    start = node.children[0].loc.start
+    end = node.children[node.children.length - 1].loc.end
+    content = source.slice(start.offset, end.offset)
+  }
+  const loc = {
+    source: content,
+    start,
+    end
+  }
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content: text.content,
-    loc: text.loc,
+    content,
+    loc,
     attrs
   }
-  if (node.tag !== 'template' && pad) {
+  if (pad) {
     block.content = padContent(source, block, pad) + block.content
   }
   node.props.forEach(p => {
@@ -205,27 +240,19 @@ function generateSourceMap(
   source: string,
   generated: string,
   sourceRoot: string,
-  pad?: SFCParseOptions['pad']
+  lineOffset: number
 ): RawSourceMap {
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
-  let offset = 0
-  if (!pad) {
-    offset =
-      source
-        .split(generated)
-        .shift()!
-        .split(splitRE).length - 1
-  }
   map.setSourceContent(filename, source)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       map.addMapping({
         source: filename,
         original: {
-          line: index + 1 + offset,
+          line: index + 1 + lineOffset,
           column: 0
         },
         generated: {
@@ -251,4 +278,13 @@ function padContent(
     const padChar = block.type === 'script' && !block.lang ? '//\n' : '\n'
     return Array(offset).join(padChar)
   }
+}
+
+function hasSrc(node: ElementNode) {
+  return node.props.some(p => {
+    if (p.type !== NodeTypes.ATTRIBUTE) {
+      return false
+    }
+    return p.name === 'src'
+  })
 }

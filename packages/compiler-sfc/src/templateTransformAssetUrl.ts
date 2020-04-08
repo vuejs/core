@@ -1,5 +1,4 @@
 import {
-  AttributeNode,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
@@ -7,7 +6,7 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { parseUrl } from './templateUtils'
+import { isRelativeUrl, parseUrl } from './templateUtils'
 
 export interface AssetURLOptions {
   [name: string]: string[]
@@ -42,10 +41,11 @@ export const transformAssetUrl: NodeTransform = (
       if ((tag === '*' || node.tag === tag) && node.props.length) {
         const attributes = options[tag]
         attributes.forEach(item => {
-          node.props.forEach((attr: AttributeNode, index) => {
+          node.props.forEach((attr, index) => {
             if (attr.type !== NodeTypes.ATTRIBUTE) return
             if (attr.name !== item) return
             if (!attr.value) return
+            if (!isRelativeUrl(attr.value.content)) return
             const url = parseUrl(attr.value.content)
             const exp = getImportsExpressionExp(
               url.path,

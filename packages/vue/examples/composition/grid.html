@@ -93,11 +93,11 @@ const DemoGrid = {
 </div>
 <!-- App script -->
 <script>
-const App = {
+Vue.createApp({
   components: {
     DemoGrid
   },
-  data: {
+  data: () => ({
     searchQuery: '',
     gridColumns: ['name', 'power'],
     gridData: [
@@ -106,10 +106,8 @@ const App = {
       { name: 'Jackie Chan', power: 7000 },
       { name: 'Jet Li', power: 8000 }
     ]
-  }
-}
-
-Vue.createApp().mount(App, '#demo')
+  })
+}).mount('#demo')
 </script>
 
 <style>

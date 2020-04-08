@@ -8,13 +8,13 @@ import {
   nextTick,
   renderToString,
   ref,
-  createComponent,
-  mockWarn
+  defineComponent
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('api: options', () => {
   test('data', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -42,7 +42,7 @@ describe('api: options', () => {
   })
 
   test('computed', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -52,9 +52,7 @@ describe('api: options', () => {
         bar(): number {
           return this.foo + 1
         },
-        baz(): number {
-          return this.bar + 1
-        }
+        baz: (vm): number => vm.bar + 1
       },
       render() {
         return h(
@@ -78,7 +76,7 @@ describe('api: options', () => {
   })
 
   test('methods', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       data() {
         return {
           foo: 1
@@ -149,30 +147,24 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
+      expect(spy).toHaveReturnedWith(ctx)
     }
-
-    assertCall(spyA, 0, [1, undefined])
-    assertCall(spyB, 0, [2, undefined])
-    assertCall(spyC, 0, [{ qux: 3 }, undefined])
-    expect(spyA).toHaveReturnedWith(ctx)
-    expect(spyB).toHaveReturnedWith(ctx)
-    expect(spyC).toHaveReturnedWith(ctx)
 
     ctx.foo++
     await nextTick()
-    expect(spyA).toHaveBeenCalledTimes(2)
-    assertCall(spyA, 1, [2, 1])
+    expect(spyA).toHaveBeenCalledTimes(1)
+    assertCall(spyA, 0, [2, 1])
 
     ctx.bar++
     await nextTick()
-    expect(spyB).toHaveBeenCalledTimes(2)
-    assertCall(spyB, 1, [3, 2])
+    expect(spyB).toHaveBeenCalledTimes(1)
+    assertCall(spyB, 0, [3, 2])
 
     ctx.baz.qux++
     await nextTick()
-    expect(spyC).toHaveBeenCalledTimes(2)
+    expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
-    assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
+    assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
   test('watch array', async () => {
@@ -218,30 +210,24 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
+      expect(spy).toHaveReturnedWith(ctx)
     }
-
-    assertCall(spyA, 0, [1, undefined])
-    assertCall(spyB, 0, [2, undefined])
-    assertCall(spyC, 0, [{ qux: 3 }, undefined])
-    expect(spyA).toHaveReturnedWith(ctx)
-    expect(spyB).toHaveReturnedWith(ctx)
-    expect(spyC).toHaveReturnedWith(ctx)
 
     ctx.foo++
     await nextTick()
-    expect(spyA).toHaveBeenCalledTimes(2)
-    assertCall(spyA, 1, [2, 1])
+    expect(spyA).toHaveBeenCalledTimes(1)
+    assertCall(spyA, 0, [2, 1])
 
     ctx.bar++
     await nextTick()
-    expect(spyB).toHaveBeenCalledTimes(2)
-    assertCall(spyB, 1, [3, 2])
+    expect(spyB).toHaveBeenCalledTimes(1)
+    assertCall(spyB, 0, [3, 2])
 
     ctx.baz.qux++
     await nextTick()
-    expect(spyC).toHaveBeenCalledTimes(2)
+    expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
-    assertCall(spyC, 1, [{ qux: 4 }, { qux: 4 }])
+    assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
   })
 
   test('provide/inject', () => {
@@ -295,7 +281,7 @@ describe('api: options', () => {
       }
     } as any
 
-    expect(renderToString(h(Root))).toBe(`<!---->1112<!---->`)
+    expect(renderToString(h(Root))).toBe(`1112`)
   })
 
   test('lifecycle', async () => {
@@ -536,7 +522,7 @@ describe('api: options', () => {
   })
 
   test('accessing setup() state from options', async () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       setup() {
         return {
           count: ref(0)
@@ -648,9 +634,9 @@ describe('api: options', () => {
     test('data property is already declared in props', () => {
       const Comp = {
         props: { foo: Number },
-        data: {
+        data: () => ({
           foo: 1
-        },
+        }),
         render() {}
       }
 
@@ -663,9 +649,9 @@ describe('api: options', () => {
 
     test('computed property is already declared in data', () => {
       const Comp = {
-        data: {
+        data: () => ({
           foo: 1
-        },
+        }),
         computed: {
           foo() {}
         },
@@ -713,9 +699,9 @@ describe('api: options', () => {
 
     test('methods property is already declared in data', () => {
       const Comp = {
-        data: {
+        data: () => ({
           foo: 2
-        },
+        }),
         methods: {
           foo() {}
         },

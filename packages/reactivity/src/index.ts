@@ -1,7 +1,8 @@
-export { ref, isRef, toRefs, Ref, UnwrapRef } from './ref'
+export { ref, unref, shallowRef, isRef, toRefs, Ref, UnwrapRef } from './ref'
 export {
   reactive,
   isReactive,
+  shallowReactive,
   readonly,
   isReadonly,
   shallowReadonly,
@@ -20,8 +21,11 @@ export {
 export {
   effect,
   stop,
+  trigger,
+  track,
+  enableTracking,
   pauseTracking,
-  resumeTracking,
+  resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
   ReactiveEffectOptions,

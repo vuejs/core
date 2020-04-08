@@ -6,8 +6,8 @@ import {
   render,
   serializeInner,
   nextTick,
-  watch,
-  createComponent,
+  watchEffect,
+  defineComponent,
   triggerEvent,
   TestElement
 } from '@vue/runtime-test'
@@ -16,7 +16,7 @@ import {
 
 describe('api: setup context', () => {
   it('should expose return values to template render context', () => {
-    const Comp = createComponent({
+    const Comp = defineComponent({
       setup() {
         return {
           // ref should auto-unwrap
@@ -53,9 +53,10 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent({
-      setup(props: { count: number }) {
-        watch(() => {
+    const Child = defineComponent({
+      props: { count: Number },
+      setup(props) {
+        watchEffect(() => {
           dummy = props.count
         })
         return () => h('div', props.count)
@@ -82,13 +83,13 @@ describe('api: setup context', () => {
       render: () => h(Child, { count: count.value })
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         count: Number
       },
 
       setup(props) {
-        watch(() => {
+        watchEffect(() => {
           dummy = props.count
         })
         return () => h('div', props.count)
@@ -119,7 +120,6 @@ describe('api: setup context', () => {
       // puts everything received in attrs
       // disable implicit fallthrough
       inheritAttrs: false,
-      props: {},
       setup(props: any, { attrs }: any) {
         return () => h('div', attrs)
       }
@@ -177,7 +177,7 @@ describe('api: setup context', () => {
         })
     }
 
-    const Child = createComponent({
+    const Child = defineComponent({
       props: {
         count: {
           type: Number,

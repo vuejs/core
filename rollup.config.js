@@ -1,4 +1,3 @@
-import fs from 'fs'
 import path from 'path'
 import ts from 'rollup-plugin-typescript2'
 import replace from '@rollup/plugin-replace'
@@ -16,14 +15,10 @@ const resolve = p => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 
-const knownExternals = fs.readdirSync(packagesDir).filter(p => {
-  return p !== '@vue/shared'
-})
-
 // ensure TS checks only once for each build
 let hasTSChecked = false
 
-const configs = {
+const outputConfigs = {
   'esm-bundler': {
     file: resolve(`dist/${name}.esm-bundler.js`),
     format: `es`
@@ -39,6 +34,15 @@ const configs = {
   esm: {
     file: resolve(`dist/${name}.esm.js`),
     format: `es`
+  },
+  // main "vue" package only
+  'esm-bundler-runtime': {
+    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
+    format: `es`
+  },
+  'global-runtime': {
+    file: resolve(`dist/${name}.runtime.global.js`),
+    format: 'iife'
   }
 }
 
@@ -47,14 +51,14 @@ const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
 const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
   ? []
-  : packageFormats.map(format => createConfig(configs[format]))
+  : packageFormats.map(format => createConfig(format, outputConfigs[format]))
 
 if (process.env.NODE_ENV === 'production') {
   packageFormats.forEach(format => {
     if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
-    if (format === 'global' || format === 'esm') {
+    if (/global/.test(format) || format === 'esm') {
       packageConfigs.push(createMinifiedConfig(format))
     }
   })
@@ -62,24 +66,27 @@ if (process.env.NODE_ENV === 'production') {
 
 export default packageConfigs
 
-function createConfig(output, plugins = []) {
+function createConfig(format, output, plugins = []) {
+  if (!output) {
+    console.log(require('chalk').yellow(`invalid format: "${format}"`))
+    process.exit(1)
+  }
+
+  output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
 
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
-  const isGlobalBuild = /\.global(\.prod)?\.js$/.test(output.file)
-  const isBundlerESMBuild = /\.esm-bundler\.js$/.test(output.file)
-  const isRawESMBuild = /esm(\.prod)?\.js$/.test(output.file)
-  const isRuntimeCompileBuild = /vue\./.test(output.file)
+  const isGlobalBuild = /global/.test(format)
+  const isRawESMBuild = format === 'esm'
+  const isNodeBuild = format === 'cjs'
+  const isBundlerESMBuild = /esm-bundler/.test(format)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
   }
 
-  const shouldEmitDeclarations =
-    process.env.TYPES != null &&
-    process.env.NODE_ENV === 'production' &&
-    !hasTSChecked
+  const shouldEmitDeclarations = process.env.TYPES != null && !hasTSChecked
 
   const tsPlugin = ts({
     check: process.env.NODE_ENV === 'production' && !hasTSChecked,
@@ -87,6 +94,7 @@ function createConfig(output, plugins = []) {
     cacheRoot: path.resolve(__dirname, 'node_modules/.rts2_cache'),
     tsconfigOverride: {
       compilerOptions: {
+        sourceMap: output.sourcemap,
         declaration: shouldEmitDeclarations,
         declarationMap: shouldEmitDeclarations
       },
@@ -98,14 +106,28 @@ function createConfig(output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
+  const entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
+
+  const external =
+    isGlobalBuild || isRawESMBuild
+      ? []
+      : [
+          ...Object.keys(pkg.dependencies || {}),
+          ...Object.keys(pkg.peerDependencies || {})
+        ]
+
+  const nodePlugins = packageOptions.enableNonBrowserBranches
+    ? [
+        require('@rollup/plugin-node-resolve')(),
+        require('@rollup/plugin-commonjs')()
+      ]
+    : []
+
   return {
-    input: resolve(`src/index.ts`),
+    input: resolve(entryFile),
     // Global and Browser ESM builds inlines everything so that they can be
     // used alone.
-    external:
-      isGlobalBuild || isRawESMBuild
-        ? []
-        : knownExternals.concat(Object.keys(pkg.dependencies || [])),
+    external,
     plugins: [
       json({
         namedExports: false
@@ -114,10 +136,13 @@ function createConfig(output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBundlerESMBuild,
-        (isGlobalBuild || isRawESMBuild) &&
+        // isBrowserBuild?
+        (isGlobalBuild || isRawESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
-        isRuntimeCompileBuild
+        isGlobalBuild,
+        isNodeBuild
       ),
+      ...nodePlugins,
       ...plugins
     ],
     output,
@@ -133,9 +158,10 @@ function createReplacePlugin(
   isProduction,
   isBundlerESMBuild,
   isBrowserBuild,
-  isRuntimeCompileBuild
+  isGlobalBuild,
+  isNodeBuild
 ) {
-  return replace({
+  const replacements = {
     __COMMIT__: `"${process.env.COMMIT}"`,
     __VERSION__: `"${masterVersion}"`,
     __DEV__: isBundlerESMBuild
@@ -143,38 +169,58 @@ function createReplacePlugin(
         `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
-    // this is only used during tests
-    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
+    // this is only used during Vue's internal tests
+    __TEST__: false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
     // is targeting bundlers?
     __BUNDLER__: isBundlerESMBuild,
-    // support compile in browser?
-    __RUNTIME_COMPILE__: isRuntimeCompileBuild,
-    // support options?
-    // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
-    __FEATURE_SUSPENSE__: true
+    __GLOBAL__: isGlobalBuild,
+    // is targeting Node (SSR)?
+    __NODE_JS__: isNodeBuild,
+    __FEATURE_OPTIONS__: true,
+    __FEATURE_SUSPENSE__: true,
+    ...(isProduction && isBrowserBuild
+      ? {
+          'context.onError(': `/*#__PURE__*/ context.onError(`,
+          'emitError(': `/*#__PURE__*/ emitError(`,
+          'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
+          'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
+        }
+      : {})
+  }
+  // allow inline overrides like
+  //__RUNTIME_COMPILE__=true yarn build runtime-core
+  Object.keys(replacements).forEach(key => {
+    if (key in process.env) {
+      replacements[key] = process.env[key]
+    }
   })
+  return replace(replacements)
 }
 
 function createProductionConfig(format) {
-  return createConfig({
+  return createConfig(format, {
     file: resolve(`dist/${name}.${format}.prod.js`),
-    format: configs[format].format
+    format: outputConfigs[format].format
   })
 }
 
 function createMinifiedConfig(format) {
   const { terser } = require('rollup-plugin-terser')
   return createConfig(
+    format,
     {
-      file: resolve(`dist/${name}.${format}.prod.js`),
-      format: configs[format].format
+      file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
+      format: outputConfigs[format].format
     },
     [
       terser({
-        module: /^esm/.test(format)
+        module: /^esm/.test(format),
+        compress: {
+          ecma: 2015,
+          pure_getters: true
+        }
       })
     ]
   )

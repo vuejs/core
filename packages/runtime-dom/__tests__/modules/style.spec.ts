@@ -21,7 +21,7 @@ describe(`module style`, () => {
 
   it('remove if falsy value', () => {
     const el = document.createElement('div')
-    patchStyle(el, { color: 'red' }, { color: null })
+    patchStyle(el, { color: 'red' }, { color: undefined })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
   })
 

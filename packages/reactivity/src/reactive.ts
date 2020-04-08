@@ -2,13 +2,14 @@ import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
-  shallowReadonlyHandlers
+  shallowReadonlyHandlers,
+  shallowReactiveHandlers
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref } from './ref'
+import { UnwrapRef, Ref, isRef } from './ref'
 import { makeMap } from '@vue/shared'
 
 // WeakMaps that store {raw <-> observed} pairs.
@@ -32,7 +33,8 @@ const canObserve = (value: any): boolean => {
     !value._isVue &&
     !value._isVNode &&
     isObservableType(toRawType(value)) &&
-    !nonReactiveValues.has(value)
+    !nonReactiveValues.has(value) &&
+    !Object.isFrozen(value)
   )
 }
 
@@ -48,6 +50,9 @@ export function reactive(target: object) {
   // target is explicitly marked as readonly by user
   if (readonlyValues.has(target)) {
     return readonly(target)
+  }
+  if (isRef(target)) {
+    return target
   }
   return createReactiveObject(
     target,
@@ -75,9 +80,9 @@ export function readonly<T extends object>(
   )
 }
 
-// @internal
 // Return a reactive-copy of the original object, where only the root level
-// properties are readonly, and does not recursively convert returned properties.
+// properties are readonly, and does NOT unwrap refs nor recursively convert
+// returned properties.
 // This is used for creating the props proxy object for stateful components.
 export function shallowReadonly<T extends object>(
   target: T
@@ -88,6 +93,19 @@ export function shallowReadonly<T extends object>(
     readonlyToRaw,
     shallowReadonlyHandlers,
     readonlyCollectionHandlers
+  )
+}
+
+// Return a reactive-copy of the original object, where only the root level
+// properties are reactive, and does NOT unwrap refs nor recursively convert
+// returned properties.
+export function shallowReactive<T extends object>(target: T): T {
+  return createReactiveObject(
+    target,
+    rawToReactive,
+    reactiveToRaw,
+    shallowReactiveHandlers,
+    mutableCollectionHandlers
   )
 }
 
@@ -143,7 +161,7 @@ export function markReadonly<T>(value: T): T {
   return value
 }
 
-export function markNonReactive<T>(value: T): T {
+export function markNonReactive<T extends object>(value: T): T {
   nonReactiveValues.add(value)
   return value
 }

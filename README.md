@@ -1,32 +1,14 @@
 # vue-next [![CircleCI](https://circleci.com/gh/vuejs/vue-next.svg?style=svg&circle-token=fb883a2d0a73df46e80b2e79fd430959d8f2b488)](https://circleci.com/gh/vuejs/vue-next)
 
-## Status: Pre-Alpha.
+## Status: Alpha.
 
-We have achieved most of the architectural goals and new features planned for v3:
+The current codebase has reached feature parity with v2.x (except for features explicitly removed by RFCs), and has landed all the changes proposed in [merged RFCs](https://github.com/vuejs/rfcs/pulls?q=is%3Apr+is%3Amerged+label%3A3.x). We are ready to advance to beta phase once we resolve a number of pending RFCs.
 
-- Compiler
-  - [x] Modular architecture
-  - [x] "Block tree" optimization
-  - [x] More aggressive static tree hoisting
-  - [x] Source map support
-  - [x] Built-in identifier prefixing (aka "stripWith")
-  - [x] Built-in pretty-printing
-  - [x] Lean ~10kb brotli-compressed browser build after dropping source map and identifier prefixing
+There is a simple webpack-based setup with Single-File Component support available [here](https://github.com/vuejs/vue-next-webpack-preview).
 
-- Runtime
-  - [x] Significantly faster
-  - [x] Simultaneous Composition API + Options API support, **with typings**
-  - [x] Proxy-based change detection
-  - [x] Fragments
-  - [x] Portals
-  - [x] Suspense w/ `async setup()`
+Please note that there could still be undocumented behavior inconsistencies with 2.x. When you run into such a case, please make sure to first check if the behavior difference has already been proposed in an existing RFC. If the inconsistency is not part of an RFC, then it's likely unintended, and an issue should be opened (please make sure to use the [issue helper](https://new-issue.vuejs.org/?repo=vuejs/vue-next) when opening new issues).
 
-## Major TODOs:
-
-- [ ] SFC compiler
-- [ ] Server-side rendering
-
-Also note that the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet).
+In addition, the current implementation requires native ES2015+ in the runtime environment and does not support IE11 (yet). The IE11 compatible build will be worked on after we have reached RC stage.
 
 ## Contribution
 

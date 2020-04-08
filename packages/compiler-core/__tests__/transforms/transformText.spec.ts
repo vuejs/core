@@ -1,6 +1,6 @@
 import {
   CompilerOptions,
-  parse,
+  baseParse as parse,
   transform,
   NodeTypes,
   generate,

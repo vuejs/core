@@ -17,32 +17,44 @@ export interface Ref<T = any> {
   // don't want this internal field to leak into userland autocompletion -
   // a private symbol, on the other hand, achieves just that.
   [isRefSymbol]: true
-  value: UnwrapRef<T>
+  value: T
 }
 
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
+export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
   return r ? r._isRef === true : false
 }
 
-export function ref<T extends Ref>(raw: T): T
-export function ref<T>(raw: T): Ref<T>
-export function ref<T = any>(): Ref<T>
-export function ref(raw?: unknown) {
-  if (isRef(raw)) {
-    return raw
+export function ref<T>(value: T): T extends Ref ? T : Ref<UnwrapRef<T>>
+export function ref<T = any>(): Ref<T | undefined>
+export function ref(value?: unknown) {
+  return createRef(value)
+}
+
+export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T = any>(): Ref<T | undefined>
+export function shallowRef(value?: unknown) {
+  return createRef(value, true)
+}
+
+function createRef(value: unknown, shallow = false) {
+  if (isRef(value)) {
+    return value
   }
-  raw = convert(raw)
+  if (!shallow) {
+    value = convert(value)
+  }
   const r = {
     _isRef: true,
     get value() {
       track(r, TrackOpTypes.GET, 'value')
-      return raw
+      return value
     },
     set value(newVal) {
-      raw = convert(newVal)
+      value = shallow ? newVal : convert(newVal)
       trigger(
         r,
         TriggerOpTypes.SET,
@@ -52,6 +64,10 @@ export function ref(raw?: unknown) {
     }
   }
   return r
+}
+
+export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
+  return isRef(ref) ? (ref.value as any) : ref
 }
 
 export function toRefs<T extends object>(
@@ -82,27 +98,21 @@ function toProxyRef<T extends object, K extends keyof T>(
   } as any
 }
 
-// Super simple tuple checker
-type Tupple<T extends Array<any>> = T[0] extends T[1]
-  ? T[1] extends T[2] ? never : true
-  : true
+// corner case when use narrows type
+// Ex. type RelativePath = string & { __brand: unknown }
+// RelativePath extends object -> true
+type BaseTypes = string | number | boolean
 
-export type UnwrapRef<T> = T extends ComputedRef<infer V>
-  ? UnwrapRefSimple<V>
-  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
-
-type UnwrapRefSimple<T> = T extends Function | CollectionTypes
-  ? T
-  : T extends Array<infer V>
-    ? Tupple<T> extends never ? UnwrappedArray<V> : UnwrapTupple<T>
-    : T extends object ? UnwrappedObject<T> : T
-
-export type UnwrapTupple<T> = { [P in keyof T]: UnwrapRef<T[P]> } & {
-  length: number
-  [Symbol.iterator]: any
-  [Symbol.unscopables]: any
-}
-
-interface UnwrappedArray<T> extends Array<UnwrapRef<T>> {}
-
-type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> }
+// Recursively unwraps nested value bindings.
+export type UnwrapRef<T> = {
+  cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
+  ref: T extends Ref<infer V> ? UnwrapRef<V> : T
+  array: T
+  object: { [K in keyof T]: UnwrapRef<T[K]> }
+}[T extends ComputedRef<any>
+  ? 'cRef'
+  : T extends Array<any>
+    ? 'array'
+    : T extends Ref | Function | CollectionTypes | BaseTypes
+      ? 'ref' // bail out on types that shouldn't be unwrapped
+      : T extends object ? 'object' : 'ref']

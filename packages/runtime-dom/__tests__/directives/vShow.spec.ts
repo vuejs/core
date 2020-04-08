@@ -1,25 +1,24 @@
 import {
   withDirectives,
-  createComponent,
+  defineComponent,
   h,
   nextTick,
   VNode
 } from '@vue/runtime-core'
-import { createApp, vShow } from '@vue/runtime-dom'
+import { render, vShow } from '@vue/runtime-dom'
 
 const withVShow = (node: VNode, exp: any) =>
   withDirectives(node, [[vShow, exp]])
 
-let app: any, root: any
+let root: any
 
 beforeEach(() => {
-  app = createApp()
-  root = document.createElement('div') as any
+  root = document.createElement('div')
 })
 
 describe('runtime-dom: v-show directive', () => {
   test('should check show value is truthy', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },
@@ -27,7 +26,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
 
@@ -35,7 +34,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   test('should check show value is falsy', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: false }
       },
@@ -43,7 +42,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
 
@@ -51,7 +50,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   it('should update show value changed', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },
@@ -59,7 +58,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
     const data = root._vnode.component.data
@@ -100,7 +99,7 @@ describe('runtime-dom: v-show directive', () => {
   })
 
   test('should respect display value in style attribute', async () => {
-    const component = createComponent({
+    const component = defineComponent({
       data() {
         return { value: true }
       },
@@ -110,7 +109,7 @@ describe('runtime-dom: v-show directive', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
     const data = root._vnode.component.data

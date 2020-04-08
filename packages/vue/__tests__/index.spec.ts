@@ -1,5 +1,5 @@
 import { createApp } from '../src'
-import { mockWarn } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('compiler + runtime integration', () => {
   mockWarn()
@@ -14,7 +14,7 @@ describe('compiler + runtime integration', () => {
         }
       }
     }
-    createApp().mount(App, container)
+    createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
   })
 
@@ -33,7 +33,7 @@ describe('compiler + runtime integration', () => {
         }
       }
     }
-    createApp().mount(App, container)
+    createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
   })
 
@@ -51,7 +51,7 @@ describe('compiler + runtime integration', () => {
         }
       }
     }
-    createApp().mount(App, container)
+    createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
   })
 
@@ -60,9 +60,14 @@ describe('compiler + runtime integration', () => {
     const App = {
       template: `<div v-if>`
     }
-    createApp().mount(App, container)
+    createApp(App).mount(container)
     expect(
-      `Template compilation error: End tag was not found`
+      `Template compilation error: Element is missing end tag`
+    ).toHaveBeenWarned()
+    expect(
+      `
+1  |  <div v-if>
+   |  ^`.trim()
     ).toHaveBeenWarned()
     expect(`v-if/v-else-if is missing expression`).toHaveBeenWarned()
     expect(
@@ -73,26 +78,24 @@ describe('compiler + runtime integration', () => {
   })
 
   it('should support custom element', () => {
-    const app = createApp()
-    const container = document.createElement('div')
-    const App = {
+    const app = createApp({
       template: '<custom></custom>'
-    }
+    })
+    const container = document.createElement('div')
     app.config.isCustomElement = tag => tag === 'custom'
-    app.mount(App, container)
+    app.mount(container)
     expect(container.innerHTML).toBe('<custom></custom>')
   })
 
   it('should support using element innerHTML as template', () => {
-    const app = createApp()
+    const app = createApp({
+      data: () => ({
+        msg: 'hello'
+      })
+    })
     const container = document.createElement('div')
     container.innerHTML = '{{msg}}'
-    const App = {
-      data: {
-        msg: 'hello'
-      }
-    }
-    app.mount(App, container)
+    app.mount(container)
     expect(container.innerHTML).toBe('hello')
   })
 })

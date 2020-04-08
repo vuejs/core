@@ -66,21 +66,6 @@ const Polygraph = {
     AxisLabel
   }
 }
-
-// math helper...
-function valueToPoint (value, index, total) {
-  var x     = 0
-  var y     = -value * 0.8
-  var angle = Math.PI * 2 / total * index
-  var cos   = Math.cos(angle)
-  var sin   = Math.sin(angle)
-  var tx    = x * cos - y * sin + 100
-  var ty    = x * sin + y * cos + 100
-  return {
-    x: tx,
-    y: ty
-  }
-}
 </script>
 
 <!-- demo root element -->
@@ -104,21 +89,23 @@ function valueToPoint (value, index, total) {
 </div>
 
 <script>
-const App = {
+const globalStats = [
+  { label: 'A', value: 100 },
+  { label: 'B', value: 100 },
+  { label: 'C', value: 100 },
+  { label: 'D', value: 100 },
+  { label: 'E', value: 100 },
+  { label: 'F', value: 100 }
+]
+
+Vue.createApp({
   components: {
     Polygraph
   },
-  data: {
+  data: () => ({
     newLabel: '',
-    stats: [
-      { label: 'A', value: 100 },
-      { label: 'B', value: 100 },
-      { label: 'C', value: 100 },
-      { label: 'D', value: 100 },
-      { label: 'E', value: 100 },
-      { label: 'F', value: 100 }
-    ]
-  },
+    stats: globalStats
+  }),
   methods: {
     add(e) {
       e.preventDefault()
@@ -137,9 +124,7 @@ const App = {
       }
     }
   }
-}
-
-Vue.createApp().mount(App, '#demo')
+}).mount('#demo')
 </script>
 
 <style>

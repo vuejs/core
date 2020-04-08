@@ -1,6 +1,6 @@
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/directives/class.spec.js
 
-import { h, render, createComponent } from '../../src'
+import { h, render, defineComponent } from '../../src'
 
 type ClassItem = {
   value: string | object | string[]
@@ -70,13 +70,11 @@ describe('class', () => {
 
     const childClass: ClassItem = { value: 'd' }
     const child = {
-      props: {},
       render: () => h('div', { class: ['c', childClass.value] })
     }
 
     const parentClass: ClassItem = { value: 'b' }
     const parent = {
-      props: {},
       render: () => h(child, { class: ['a', parentClass.value] })
     }
 
@@ -100,29 +98,26 @@ describe('class', () => {
   })
 
   test('class merge between multiple nested components sharing same element', () => {
-    const component1 = createComponent({
-      props: {},
+    const component1 = defineComponent({
       render() {
-        return this.$slots.default()[0]
+        return this.$slots.default!()[0]
       }
     })
 
-    const component2 = createComponent({
-      props: {},
+    const component2 = defineComponent({
       render() {
-        return this.$slots.default()[0]
+        return this.$slots.default!()[0]
       }
     })
 
-    const component3 = createComponent({
-      props: {},
+    const component3 = defineComponent({
       render() {
         return h(
           'div',
           {
             class: 'staticClass'
           },
-          [this.$slots.default()]
+          [this.$slots.default!()]
         )
       }
     })

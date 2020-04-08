@@ -1,19 +1,17 @@
-import { parse } from '../src/parse'
+import { baseParse } from '../src/parse'
 import { transform, NodeTransform } from '../src/transform'
 import {
   ElementNode,
   NodeTypes,
   DirectiveNode,
-  ExpressionNode
+  ExpressionNode,
+  VNodeCall
 } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {
-  TO_STRING,
-  OPEN_BLOCK,
-  CREATE_BLOCK,
+  TO_DISPLAY_STRING,
   FRAGMENT,
   RENDER_SLOT,
-  WITH_DIRECTIVES,
   CREATE_COMMENT
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
@@ -26,7 +24,7 @@ import { PatchFlags } from '@vue/shared'
 
 describe('compiler: transform', () => {
   test('context state', () => {
-    const ast = parse(`<div>hello {{ world }}</div>`)
+    const ast = baseParse(`<div>hello {{ world }}</div>`)
 
     // manually store call arguments because context is mutable and shared
     // across calls
@@ -72,7 +70,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.replaceNode', () => {
-    const ast = parse(`<div/><span/>`)
+    const ast = baseParse(`<div/><span/>`)
     const plugin: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT && node.tag === 'div') {
         // change the node to <p>
@@ -106,7 +104,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode', () => {
-    const ast = parse(`<span/><div>hello</div><span/>`)
+    const ast = baseParse(`<span/><div>hello</div><span/>`)
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
@@ -132,7 +130,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode (prev sibling)', () => {
-    const ast = parse(`<span/><div/><span/>`)
+    const ast = baseParse(`<span/><div/><span/>`)
     const c1 = ast.children[0]
     const c2 = ast.children[2]
 
@@ -159,7 +157,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.removeNode (next sibling)', () => {
-    const ast = parse(`<span/><div/><span/>`)
+    const ast = baseParse(`<span/><div/><span/>`)
     const c1 = ast.children[0]
     const d1 = ast.children[1]
 
@@ -186,7 +184,7 @@ describe('compiler: transform', () => {
   })
 
   test('context.hoist', () => {
-    const ast = parse(`<div :id="foo"/><div :id="bar"/>`)
+    const ast = baseParse(`<div :id="foo"/><div :id="bar"/>`)
     const hoisted: ExpressionNode[] = []
     const mock: NodeTransform = (node, context) => {
       if (node.type === NodeTypes.ELEMENT) {
@@ -204,7 +202,7 @@ describe('compiler: transform', () => {
   })
 
   test('onError option', () => {
-    const ast = parse(`<div/>`)
+    const ast = baseParse(`<div/>`)
     const loc = ast.children[0].loc
     const plugin: NodeTransform = (node, context) => {
       context.onError(
@@ -225,20 +223,20 @@ describe('compiler: transform', () => {
   })
 
   test('should inject toString helper for interpolations', () => {
-    const ast = parse(`{{ foo }}`)
+    const ast = baseParse(`{{ foo }}`)
     transform(ast, {})
-    expect(ast.helpers).toContain(TO_STRING)
+    expect(ast.helpers).toContain(TO_DISPLAY_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
-    const ast = parse(`<!--foo-->`)
+    const ast = baseParse(`<!--foo-->`)
     transform(ast, {})
     expect(ast.helpers).toContain(CREATE_COMMENT)
   })
 
   describe('root codegenNode', () => {
     function transformWithCodegen(template: string) {
-      const ast = parse(template)
+      const ast = baseParse(template)
       transform(ast, {
         nodeTransforms: [
           transformIf,
@@ -251,20 +249,19 @@ describe('compiler: transform', () => {
       return ast
     }
 
-    function createBlockMatcher(args: any[]) {
+    function createBlockMatcher(
+      tag: VNodeCall['tag'],
+      props?: VNodeCall['props'],
+      children?: VNodeCall['children'],
+      patchFlag?: VNodeCall['patchFlag']
+    ) {
       return {
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: OPEN_BLOCK
-          },
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: CREATE_BLOCK,
-            arguments: args
-          }
-        ]
+        type: NodeTypes.VNODE_CALL,
+        isBlock: true,
+        tag,
+        props,
+        children,
+        patchFlag
       }
     }
 
@@ -285,7 +282,7 @@ describe('compiler: transform', () => {
 
     test('single element', () => {
       const ast = transformWithCodegen(`<div/>`)
-      expect(ast.codegenNode).toMatchObject(createBlockMatcher([`"div"`]))
+      expect(ast.codegenNode).toMatchObject(createBlockMatcher(`"div"`))
     })
 
     test('root v-if', () => {
@@ -305,22 +302,8 @@ describe('compiler: transform', () => {
     test('root element with custom directive', () => {
       const ast = transformWithCodegen(`<div v-foo/>`)
       expect(ast.codegenNode).toMatchObject({
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: OPEN_BLOCK
-          },
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            // should wrap withDirectives() around createBlock()
-            callee: WITH_DIRECTIVES,
-            arguments: [
-              { callee: CREATE_BLOCK },
-              { type: NodeTypes.JS_ARRAY_EXPRESSION }
-            ]
-          }
-        ]
+        type: NodeTypes.VNODE_CALL,
+        directives: { type: NodeTypes.JS_ARRAY_EXPRESSION }
       })
     })
 
@@ -348,15 +331,15 @@ describe('compiler: transform', () => {
     test('multiple children', () => {
       const ast = transformWithCodegen(`<div/><div/>`)
       expect(ast.codegenNode).toMatchObject(
-        createBlockMatcher([
+        createBlockMatcher(
           FRAGMENT,
-          `null`,
+          undefined,
           [
             { type: NodeTypes.ELEMENT, tag: `div` },
             { type: NodeTypes.ELEMENT, tag: `div` }
-          ],
+          ] as any,
           genFlagText(PatchFlags.STABLE_FRAGMENT)
-        ])
+        )
       )
     })
   })

@@ -7,10 +7,8 @@
     "module": "esnext",
     "moduleResolution": "node",
     "allowJs": false,
+    "strict": true,
     "noUnusedLocals": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -20,16 +18,8 @@
     "types": ["jest", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
-      "@vue/shared": ["packages/shared/src"],
-      "@vue/runtime-core": ["packages/runtime-core/src"],
-      "@vue/runtime-dom": ["packages/runtime-dom/src"],
-      "@vue/runtime-test": ["packages/runtime-test/src"],
-      "@vue/reactivity": ["packages/reactivity/src"],
-      "@vue/compiler-core": ["packages/compiler-core/src"],
-      "@vue/compiler-dom": ["packages/compiler-dom/src"],
-      "@vue/compiler-sfc": ["packages/compiler-sfc/src"],
-      "@vue/server-renderer": ["packages/server-renderer/src"],
-      "@vue/template-explorer": ["packages/template-explorer/src"]
+      "@vue/*": ["packages/*/src"],
+      "vue": ["packages/vue/src"]
     }
   },
   "include": [

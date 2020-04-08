@@ -1,5 +1,7 @@
 import puppeteer from 'puppeteer'
 
+export const E2E_TIMEOUT = 30 * 1000
+
 const puppeteerOptions = process.env.CI
   ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
   : {}
@@ -40,7 +42,7 @@ export function setupPuppeteer() {
   }
 
   async function value(selector: string) {
-    return await page.$eval(selector, (node: HTMLInputElement) => node.value)
+    return await page.$eval(selector, node => (node as HTMLInputElement).value)
   }
 
   async function html(selector: string) {
@@ -56,23 +58,32 @@ export function setupPuppeteer() {
   }
 
   async function isVisible(selector: string) {
-    const display = await page.$eval(selector, (node: HTMLElement) => {
+    const display = await page.$eval(selector, node => {
       return window.getComputedStyle(node).display
     })
     return display !== 'none'
   }
 
   async function isChecked(selector: string) {
-    return await page.$eval(selector, (node: HTMLInputElement) => node.checked)
+    return await page.$eval(
+      selector,
+      node => (node as HTMLInputElement).checked
+    )
   }
 
   async function isFocused(selector: string) {
     return await page.$eval(selector, node => node === document.activeElement)
   }
 
+  async function setValue(selector: string, value: string) {
+    const el = (await page.$(selector))!
+    await el.evaluate(node => ((node as HTMLInputElement).value = ''))
+    await el.type(value)
+  }
+
   async function enterValue(selector: string, value: string) {
     const el = (await page.$(selector))!
-    await el.evaluate((node: HTMLInputElement) => (node.value = ''))
+    await el.evaluate(node => ((node as HTMLInputElement).value = ''))
     await el.type(value)
     await el.press('Enter')
   }
@@ -80,7 +91,7 @@ export function setupPuppeteer() {
   async function clearValue(selector: string) {
     return await page.$eval(
       selector,
-      (node: HTMLInputElement) => (node.value = '')
+      node => ((node as HTMLInputElement).value = '')
     )
   }
 
@@ -96,6 +107,7 @@ export function setupPuppeteer() {
     isVisible,
     isChecked,
     isFocused,
+    setValue,
     enterValue,
     clearValue
   }
