@@ -103,16 +103,27 @@ function toProxyRef<T extends object, K extends keyof T>(
 // RelativePath extends object -> true
 type BaseTypes = string | number | boolean
 
-// Recursively unwraps nested value bindings.
-export type UnwrapRef<T> = {
-  cRef: T extends ComputedRef<infer V> ? UnwrapRef<V> : T
-  ref: T extends Ref<infer V> ? UnwrapRef<V> : T
-  array: T
-  object: { [K in keyof T]: UnwrapRef<T[K]> }
-}[T extends ComputedRef<any>
-  ? 'cRef'
-  : T extends Array<any>
-    ? 'array'
-    : T extends Ref | Function | CollectionTypes | BaseTypes
-      ? 'ref' // bail out on types that shouldn't be unwrapped
-      : T extends object ? 'object' : 'ref']
+// Super simple tuple checker
+type Tupple<T extends Array<any>> = T[0] extends T[1]
+  ? T[1] extends T[2] ? never : true
+  : true
+
+export type UnwrapRef<T> = T extends ComputedRef<infer V>
+  ? UnwrapRefSimple<V>
+  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
+
+type UnwrapRefSimple<T> = T extends Function | CollectionTypes | BaseTypes | Ref
+  ? T
+  : T extends Array<infer V>
+    ? Tupple<T> extends never ? Array<V> : UnwrapTupple<T>
+    : T extends object ? UnwrappedObject<T> : T
+
+export type UnwrapTupple<T> = { [P in keyof T]: T[P] } & {
+  length: number
+  [Symbol.iterator]: any
+  [Symbol.unscopables]: any
+}
+
+// interface UnwrappedArray<T> extends Array<T> {}
+
+type UnwrappedObject<T> = { [P in keyof T]: UnwrapRef<T[P]> }

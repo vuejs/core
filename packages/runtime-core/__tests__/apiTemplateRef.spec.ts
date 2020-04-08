@@ -4,7 +4,6 @@ import {
   h,
   render,
   nextTick,
-  Ref,
   defineComponent,
   reactive
 } from '@vue/runtime-test'
