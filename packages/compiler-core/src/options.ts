@@ -26,13 +26,7 @@ export interface ParserOptions {
     parent: ElementNode | undefined
   ) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
-
-  // Map to HTML entities. E.g., `{ "amp;": "&" }`
-  // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences?: Record<string, string>
-  // this number is based on the map above, but it should be pre-computed
-  // to avoid the cost on every parse() call.
-  maxCRNameLength?: number
+  decodeEntities?: (rawText: string, asAttr: boolean) => string
   onError?: (error: CompilerError) => void
 }
 
