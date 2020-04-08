@@ -194,7 +194,7 @@ function parseChildren(
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i]
         if (node.type === NodeTypes.TEXT) {
-          if (!node.content.trim()) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // If:
@@ -219,7 +219,7 @@ function parseChildren(
               node.content = ' '
             }
           } else {
-            node.content = node.content.replace(/\s+/g, ' ')
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
         }
       }

@@ -2,6 +2,8 @@ import { ParserOptions } from '@vue/compiler-core'
 import { parserOptionsMinimal } from './parserOptionsMinimal'
 import namedCharacterReferences from './namedChars.json'
 
+export { DOMNamespaces } from './parserOptionsMinimal'
+
 export const parserOptionsStandard: ParserOptions = {
   // extends the minimal options with more spec-compliant overrides
   ...parserOptionsMinimal,

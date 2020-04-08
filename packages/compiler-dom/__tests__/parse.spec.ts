@@ -8,9 +8,9 @@ import {
   InterpolationNode
 } from '@vue/compiler-core'
 import {
-  parserOptionsMinimal as parserOptions,
+  parserOptionsStandard as parserOptions,
   DOMNamespaces
-} from '../src/parserOptionsMinimal'
+} from '../src/parserOptionsStandard'
 
 describe('DOM parser', () => {
   describe('Text', () => {
@@ -159,6 +159,16 @@ describe('DOM parser', () => {
           ]
         }
       ])
+    })
+
+    // #945
+    test('&nbsp; should not be condensed', () => {
+      const nbsp = String.fromCharCode(160)
+      const ast = parse(`foo&nbsp;&nbsp;bar`, parserOptions)
+      expect(ast.children[0]).toMatchObject({
+        type: NodeTypes.TEXT,
+        content: `foo${nbsp}${nbsp}bar`
+      })
     })
   })
 
