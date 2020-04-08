@@ -141,12 +141,24 @@ describe('DOM parser', () => {
 
     // #908
     test('<pre> tag should remove leading newline', () => {
-      const rawText = `\nhello`
+      const rawText = `\nhello<div>\nbye</div>`
       const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
-      expect((ast.children[0] as ElementNode).children[0]).toMatchObject({
-        type: NodeTypes.TEXT,
-        content: rawText.slice(1)
-      })
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.TEXT,
+          content: `hello`
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              // should not remove the leading newline for nested elements
+              content: `\nbye`
+            }
+          ]
+        }
+      ])
     })
   })
 

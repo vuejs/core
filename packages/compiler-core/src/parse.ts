@@ -223,7 +223,7 @@ function parseChildren(
           }
         }
       }
-    } else {
+    } else if (parent && context.options.isPreTag(parent.tag)) {
       // remove leading newline per html spec
       // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
       const first = nodes[0]
