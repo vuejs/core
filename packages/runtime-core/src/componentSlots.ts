@@ -123,13 +123,18 @@ export const updateSlots = (
   let deletionComparisonTarget = EMPTY_OBJ
   if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
-      if (!(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)) {
-        // compiled AND static. this means we can skip removal of potential
-        // stale slots
+      // compiled slots.
+      if (
+        // bail on dynamic slots (v-if, v-for, reference of scope variables)
+        !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS) &&
+        // bail on HRM updates
+        !(__DEV__ && instance.parent && instance.parent.renderUpdated)
+      ) {
+        // compiled AND static.
+        // no need to update, and skip stale slots removal.
         needDeletionCheck = false
-      }
-      // HMR force update
-      if (__DEV__ && instance.parent && instance.parent.renderUpdated) {
+      } else {
+        // compiled but dynamic - update slots, but skip normalization.
         extend(slots, children as Slots)
       }
     } else {
