@@ -2,7 +2,7 @@ import { patchProp } from '../../src/patchProp'
 
 const timeout = () => new Promise(r => setTimeout(r))
 
-describe(`events`, () => {
+describe(`runtime-dom: events patching`, () => {
   it('should assign event handler', async () => {
     const el = document.createElement('div')
     const event = new Event('click')

@@ -1,7 +1,7 @@
 import { patchProp } from '../../src/patchProp'
 import { xlinkNS } from '../../src/modules/attrs'
 
-describe('attrs', () => {
+describe('runtime-dom: attrs patching', () => {
   test('xlink attributes', () => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
     patchProp(el, 'xlink:href', null, 'a', true)

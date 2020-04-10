@@ -1,7 +1,8 @@
 import { RendererOptions } from '@vue/runtime-core'
 
+export const svgNS = 'http://www.w3.org/2000/svg'
+
 const doc = (typeof document !== 'undefined' ? document : null) as Document
-const svgNS = 'http://www.w3.org/2000/svg'
 
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement

@@ -1,6 +1,6 @@
 import { patchProp } from '../../src/patchProp'
 
-describe(`module style`, () => {
+describe(`runtime-dom: style patching`, () => {
   it('string', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, 'color:red')
