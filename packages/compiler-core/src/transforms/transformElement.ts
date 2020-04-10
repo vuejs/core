@@ -289,9 +289,9 @@ export function buildProps(
       }
       if (name === 'ref') {
         hasRef = true
-      } else if (name === 'class') {
+      } else if (name === 'class' && !isComponent) {
         hasClassBinding = true
-      } else if (name === 'style') {
+      } else if (name === 'style' && !isComponent) {
         hasStyleBinding = true
       } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
         dynamicPropNames.push(name)
