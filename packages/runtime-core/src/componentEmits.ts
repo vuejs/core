@@ -28,12 +28,12 @@ export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options
 > = Options extends any[]
-  ? (event: Options[0], ...args: any[]) => unknown[]
+  ? (event: Options[0], ...args: any[]) => void
   : UnionToIntersection<
       {
         [key in Event]: Options[key] extends ((...args: infer Args) => any)
-          ? (event: key, ...args: Args) => unknown[]
-          : (event: key, ...args: any[]) => unknown[]
+          ? (event: key, ...args: Args) => void
+          : (event: key, ...args: any[]) => void
       }[Event]
     >
 
@@ -41,7 +41,7 @@ export function emit(
   instance: ComponentInternalInstance,
   event: string,
   ...args: any[]
-): any[] {
+) {
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -74,15 +74,12 @@ export function emit(
     handler = props[`on${event}`] || props[`on${capitalize(event)}`]
   }
   if (handler) {
-    const res = callWithAsyncErrorHandling(
+    callWithAsyncErrorHandling(
       handler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args
     )
-    return isArray(res) ? res : [res]
-  } else {
-    return []
   }
 }
 

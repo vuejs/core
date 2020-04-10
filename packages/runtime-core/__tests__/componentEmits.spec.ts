@@ -5,7 +5,7 @@ import { mockWarn } from '@vue/shared'
 import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
-describe('emits option', () => {
+describe('component: emit', () => {
   mockWarn()
 
   test('trigger both raw event and capitalize handlers', () => {
@@ -27,6 +27,7 @@ describe('emits option', () => {
     expect(onBar).toHaveBeenCalled()
   })
 
+  // for v-model:foo-bar usage in DOM templates
   test('trigger hyphendated events for update:xxx events', () => {
     const Foo = defineComponent({
       render() {},
@@ -47,6 +48,33 @@ describe('emits option', () => {
 
     expect(fooSpy).toHaveBeenCalled()
     expect(barSpy).toHaveBeenCalled()
+  })
+
+  test('should trigger array of listeners', async () => {
+    const Child = defineComponent({
+      setup(_, { emit }) {
+        emit('foo', 1)
+        return () => h('div')
+      }
+    })
+
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const App = {
+      setup() {
+        return () =>
+          h(Child, {
+            onFoo: [fn1, fn2]
+          })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
   })
 
   test('warning for undeclared event (array)', () => {
