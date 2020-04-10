@@ -8,23 +8,27 @@ import { isEmitListener } from '../src/componentEmits'
 describe('component: emit', () => {
   mockWarn()
 
-  test('trigger both raw event and capitalize handlers', () => {
+  test('trigger handlers', () => {
     const Foo = defineComponent({
       render() {},
       created() {
         // the `emit` function is bound on component instances
         this.$emit('foo')
         this.$emit('bar')
+        this.$emit('!baz')
       }
     })
 
     const onfoo = jest.fn()
     const onBar = jest.fn()
-    const Comp = () => h(Foo, { onfoo, onBar })
+    const onBaz = jest.fn()
+    const Comp = () => h(Foo, { onfoo, onBar, ['on!baz']: onBaz })
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(onfoo).toHaveBeenCalled()
+    expect(onfoo).not.toHaveBeenCalled()
+    // only capitalized or special chars are considerd event listeners
     expect(onBar).toHaveBeenCalled()
+    expect(onBaz).toHaveBeenCalled()
   })
 
   // for v-model:foo-bar usage in DOM templates
@@ -125,9 +129,9 @@ describe('component: emit', () => {
 
   test('isEmitListener', () => {
     expect(isEmitListener(['click'], 'onClick')).toBe(true)
-    expect(isEmitListener(['click'], 'onclick')).toBe(true)
+    expect(isEmitListener(['click'], 'onclick')).toBe(false)
     expect(isEmitListener({ click: null }, 'onClick')).toBe(true)
-    expect(isEmitListener({ click: null }, 'onclick')).toBe(true)
+    expect(isEmitListener({ click: null }, 'onclick')).toBe(false)
     expect(isEmitListener(['click'], 'onBlick')).toBe(false)
     expect(isEmitListener({ click: null }, 'onBlick')).toBe(false)
   })

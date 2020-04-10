@@ -3,8 +3,10 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn } from '@vue/shared'
+import { isOn, isString } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
+
+const nativeOnRE = /^on[a-z]/
 
 export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
   el,
@@ -31,7 +33,12 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
         if (key.indexOf('onUpdate:') < 0) {
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
-      } else if (!isSVG && key in el) {
+      } else if (
+        !isSVG &&
+        key in el &&
+        // onclick="foo" needs to be set as an attribute to work
+        !(nativeOnRE.test(key) && isString(nextValue))
+      ) {
         patchDOMProp(
           el,
           key,
