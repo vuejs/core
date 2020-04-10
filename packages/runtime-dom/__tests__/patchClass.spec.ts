@@ -1,6 +1,6 @@
-import { patchProp } from '../../src/patchProp'
-import { ElementWithTransition } from '../../src/components/Transition'
-import { svgNS } from '../../src/nodeOps'
+import { patchProp } from '../src/patchProp'
+import { ElementWithTransition } from '../src/components/Transition'
+import { svgNS } from '../src/nodeOps'
 
 describe('runtime-dom: class patching', () => {
   test('basics', () => {

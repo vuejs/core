@@ -1,4 +1,4 @@
-import { patchProp } from '../../src/patchProp'
+import { patchProp } from '../src/patchProp'
 
 const timeout = () => new Promise(r => setTimeout(r))
 
