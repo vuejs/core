@@ -1,5 +1,5 @@
 import { expectType } from 'tsd'
-import { Ref, ref, isRef, unref } from './index'
+import { Ref, ref, isRef, unref, UnwrapRef } from './index'
 
 function foo(arg: number | Ref<number>) {
   // ref coercing
@@ -20,6 +20,15 @@ function foo(arg: number | Ref<number>) {
   })
   expectType<Ref<{ foo: number }>>(nestedRef)
   expectType<{ foo: number }>(nestedRef.value)
+
+  interface IteratorFoo {
+    [Symbol.iterator]: any
+  }
+  expectType<Ref<UnwrapRef<IteratorFoo>> | Ref<null>>(
+    ref<IteratorFoo | null>(null)
+  )
+
+  expectType<Ref<HTMLElement> | Ref<null>>(ref<HTMLElement | null>(null))
 }
 
 foo(1)
