@@ -1,7 +1,7 @@
 import { expectType } from 'tsd'
 import { Ref, ref, isRef, unref } from './index'
 
-function foo(arg: number | Ref<number>) {
+function plainType(arg: number | Ref<number>) {
   // ref coercing
   const coerced = ref(arg)
   expectType<Ref<number>>(coerced)
@@ -22,4 +22,26 @@ function foo(arg: number | Ref<number>) {
   expectType<{ foo: number }>(nestedRef.value)
 }
 
-foo(1)
+plainType(1)
+
+function bailType(arg: HTMLElement | Ref<HTMLElement>) {
+  // ref coercing
+  const coerced = ref(arg)
+  expectType<Ref<HTMLElement>>(coerced)
+
+  // isRef as type guard
+  if (isRef(arg)) {
+    expectType<Ref<HTMLElement>>(arg)
+  }
+
+  // ref unwrapping
+  expectType<HTMLElement>(unref(arg))
+
+  // ref inner type should be unwrapped
+  const nestedRef = ref({ foo: ref(document.createElement('DIV')) })
+
+  expectType<Ref<{ foo: HTMLElement }>>(nestedRef)
+  expectType<{ foo: HTMLElement }>(nestedRef.value)
+}
+const el = document.createElement('DIV')
+bailType(el)
