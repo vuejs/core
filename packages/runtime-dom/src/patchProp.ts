@@ -34,11 +34,16 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (
-        (!isSVG &&
-          key in el &&
-          // onclick="foo" needs to be set as an attribute to work
-          !(nativeOnRE.test(key) && isString(nextValue))) ||
-        (isSVG && key === 'innerHTML')
+        isSVG
+          ? // most keys must be set as attribute on svg elements to work
+            // ...except innerHTML
+            key === 'innerHTML' ||
+            // or native onclick with function values
+            (key in el && nativeOnRE.test(key) && isFunction(nextValue))
+          : // for normal html elements, set as a property if it exists
+            key in el &&
+            // except native onclick with string values
+            !(nativeOnRE.test(key) && isString(nextValue))
       ) {
         patchDOMProp(
           el,
