@@ -517,7 +517,7 @@ function createSetupContext(instance: ComponentInternalInstance): SetupContext {
         return new Proxy(instance.slots, slotsHandlers)
       },
       get emit() {
-        return instance.emit
+        return (event: string, ...args: any[]) => instance.emit(event, ...args)
       }
     })
   } else {
