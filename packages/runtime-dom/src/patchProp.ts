@@ -34,10 +34,11 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (
-        !isSVG &&
-        key in el &&
-        // onclick="foo" needs to be set as an attribute to work
-        !(nativeOnRE.test(key) && isString(nextValue))
+        (!isSVG &&
+          key in el &&
+          // onclick="foo" needs to be set as an attribute to work
+          !(nativeOnRE.test(key) && isString(nextValue))) ||
+        (isSVG && key === 'innerHTML')
       ) {
         patchDOMProp(
           el,
