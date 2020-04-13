@@ -101,7 +101,7 @@ function toProxyRef<T extends object, K extends keyof T>(
 // corner case when use narrows type
 // Ex. type RelativePath = string & { __brand: unknown }
 // RelativePath extends object -> true
-type BaseTypes = string | number | boolean
+type BaseTypes = string | number | boolean | Node | Window
 
 // Super simple tuple checker
 type Tupple<T extends Array<any>> = T[0] extends T[1]

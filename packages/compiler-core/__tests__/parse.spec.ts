@@ -9,7 +9,6 @@ import {
   NodeTypes,
   Position,
   TextNode,
-  AttributeNode,
   InterpolationNode
 } from '../src/ast'
 
@@ -162,114 +161,6 @@ describe('compiler: parse', () => {
           source: 'a {{ b'
         }
       })
-    })
-
-    test('HTML entities compatibility in text (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = baseParse('&ampersand;', {
-        namedCharacterReferences: { amp: '&' },
-        onError: spy
-      })
-      const text = ast.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '&ampersand;'
-        }
-      })
-      expect(spy.mock.calls).toMatchObject([
-        [
-          {
-            code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-            loc: {
-              start: { offset: 4, line: 1, column: 5 }
-            }
-          }
-        ]
-      ])
-    })
-
-    test('HTML entities compatibility in attribute (https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state).', () => {
-      const spy = jest.fn()
-      const ast = baseParse(
-        '<div a="&ampersand;" b="&amp;ersand;" c="&amp!"></div>',
-        {
-          namedCharacterReferences: { amp: '&', 'amp;': '&' },
-          onError: spy
-        }
-      )
-      const element = ast.children[0] as ElementNode
-      const text1 = (element.props[0] as AttributeNode).value
-      const text2 = (element.props[1] as AttributeNode).value
-      const text3 = (element.props[2] as AttributeNode).value
-
-      expect(text1).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ampersand;',
-        loc: {
-          start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 20, line: 1, column: 21 },
-          source: '"&ampersand;"'
-        }
-      })
-      expect(text2).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&ersand;',
-        loc: {
-          start: { offset: 23, line: 1, column: 24 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: '"&amp;ersand;"'
-        }
-      })
-      expect(text3).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '&!',
-        loc: {
-          start: { offset: 40, line: 1, column: 41 },
-          end: { offset: 47, line: 1, column: 48 },
-          source: '"&amp!"'
-        }
-      })
-      expect(spy.mock.calls).toMatchObject([
-        [
-          {
-            code: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-            loc: {
-              start: { offset: 45, line: 1, column: 46 }
-            }
-          }
-        ]
-      ])
-    })
-
-    test('Some control character reference should be replaced.', () => {
-      const spy = jest.fn()
-      const ast = baseParse('&#x86;', { onError: spy })
-      const text = ast.children[0] as TextNode
-
-      expect(text).toStrictEqual({
-        type: NodeTypes.TEXT,
-        content: '†',
-        loc: {
-          start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: '&#x86;'
-        }
-      })
-      expect(spy.mock.calls).toMatchObject([
-        [
-          {
-            code: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
-            loc: {
-              start: { offset: 0, line: 1, column: 1 }
-            }
-          }
-        ]
-      ])
     })
   })
 
@@ -1652,12 +1543,10 @@ foo
     expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
   })
 
-  describe('namedCharacterReferences option', () => {
+  describe('decodeEntities option', () => {
     test('use the given map', () => {
       const ast: any = baseParse('&amp;&cups;', {
-        namedCharacterReferences: {
-          'cups;': '\u222A\uFE00' // UNION with serifs
-        },
+        decodeEntities: text => text.replace('&cups;', '\u222A\uFE00'),
         onError: () => {} // Ignore errors
       })
 
@@ -1756,60 +1645,6 @@ foo
           errors: []
         }
       ],
-      ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&#a;</template>',
-          errors: [
-            {
-              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#xg;</template>',
-          errors: [
-            {
-              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#99;</template>',
-          errors: []
-        },
-        {
-          code: '<template>&#xff;</template>',
-          errors: []
-        },
-        {
-          code: '<template attr="&#a;"></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        },
-        {
-          code: '<template attr="&#xg;"></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        },
-        {
-          code: '<template attr="&#99;"></template>',
-          errors: []
-        },
-        {
-          code: '<template attr="&#xff;"></template>',
-          errors: []
-        }
-      ],
       CDATA_IN_HTML_CONTENT: [
         {
           code: '<template><![CDATA[cdata]]></template>',
@@ -1823,37 +1658,6 @@ foo
         {
           code: '<template><svg><![CDATA[cdata]]></svg></template>',
           errors: []
-        }
-      ],
-      CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE: [
-        {
-          code: '<template>&#1234567;</template>',
-          errors: [
-            {
-              type: ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      CONTROL_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&#0003;</template>',
-          errors: [
-            {
-              type: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#x7F;</template>',
-          errors: [
-            {
-              type: ErrorCodes.CONTROL_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
         }
       ],
       DUPLICATE_ATTRIBUTE: [
@@ -2412,36 +2216,6 @@ foo
           ]
         }
       ],
-      MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&amp</template>',
-          options: { namedCharacterReferences: { amp: '&' } },
-          errors: [
-            {
-              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-              loc: { offset: 14, line: 1, column: 15 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#40</template>',
-          errors: [
-            {
-              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-              loc: { offset: 14, line: 1, column: 15 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#x40</template>',
-          errors: [
-            {
-              type: ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        }
-      ],
       MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
         {
           code: '<template><div id="foo"class="bar"></div></template>',
@@ -2496,48 +2270,6 @@ foo
             {
               type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
-      ],
-      NONCHARACTER_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&#xFFFE;</template>',
-          errors: [
-            {
-              type: ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template>&#x1FFFF;</template>',
-          errors: [
-            {
-              type: ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      NULL_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&#0000;</template>',
-          errors: [
-            {
-              type: ErrorCodes.NULL_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      SURROGATE_CHARACTER_REFERENCE: [
-        {
-          code: '<template>&#xD800;</template>',
-          errors: [
-            {
-              type: ErrorCodes.SURROGATE_CHARACTER_REFERENCE,
-              loc: { offset: 10, line: 1, column: 11 }
             }
           ]
         }

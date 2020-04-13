@@ -24,7 +24,8 @@ export const NOOP = () => {}
  */
 export const NO = () => false
 
-export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
+const onRE = /^on[^a-z]/
+export const isOn = (key: string) => onRE.test(key)
 
 export const extend = <T extends object, U extends object>(
   a: T,

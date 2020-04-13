@@ -30,6 +30,18 @@ type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
 
+// The default decoder only provides escapes for characters reserved as part of
+// the tempalte syntax, and is only used if the custom renderer did not provide
+// a platform-specific decoder.
+const decodeRE = /&(gt|lt|amp|apos|quot);/g
+const decodeMap: Record<string, string> = {
+  gt: '>',
+  lt: '<',
+  amp: '&',
+  apos: "'",
+  quot: '"'
+}
+
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
   getNamespace: () => Namespaces.HTML,
@@ -37,14 +49,8 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
-  namedCharacterReferences: {
-    'gt;': '>',
-    'lt;': '<',
-    'amp;': '&',
-    'apos;': "'",
-    'quot;': '"'
-  },
-  maxCRNameLength: 5,
+  decodeEntities: (rawText: string): string =>
+    rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError
 }
 
@@ -57,7 +63,7 @@ export const enum TextModes {
   ATTRIBUTE_VALUE
 }
 
-interface ParserContext {
+export interface ParserContext {
   options: MergedParserOptions
   readonly originalSource: string
   source: string
@@ -194,7 +200,7 @@ function parseChildren(
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i]
         if (node.type === NodeTypes.TEXT) {
-          if (!node.content.trim()) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // If:
@@ -219,11 +225,11 @@ function parseChildren(
               node.content = ' '
             }
           } else {
-            node.content = node.content.replace(/\s+/g, ' ')
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
         }
       }
-    } else {
+    } else if (parent && context.options.isPreTag(parent.tag)) {
       // remove leading newline per html spec
       // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
       const first = nodes[0]
@@ -812,128 +818,21 @@ function parseTextData(
   length: number,
   mode: TextModes
 ): string {
-  let rawText = context.source.slice(0, length)
+  const rawText = context.source.slice(0, length)
+  advanceBy(context, length)
   if (
     mode === TextModes.RAWTEXT ||
     mode === TextModes.CDATA ||
     rawText.indexOf('&') === -1
   ) {
-    advanceBy(context, length)
     return rawText
+  } else {
+    // DATA or RCDATA containing "&"". Entity decoding required.
+    return context.options.decodeEntities(
+      rawText,
+      mode === TextModes.ATTRIBUTE_VALUE
+    )
   }
-
-  // DATA or RCDATA containing "&"". Entity decoding required.
-  const end = context.offset + length
-  let decodedText = ''
-
-  function advance(length: number) {
-    advanceBy(context, length)
-    rawText = rawText.slice(length)
-  }
-
-  while (context.offset < end) {
-    const head = /&(?:#x?)?/i.exec(rawText)
-    if (!head || context.offset + head.index >= end) {
-      const remaining = end - context.offset
-      decodedText += rawText.slice(0, remaining)
-      advance(remaining)
-      break
-    }
-
-    // Advance to the "&".
-    decodedText += rawText.slice(0, head.index)
-    advance(head.index)
-
-    if (head[0] === '&') {
-      // Named character reference.
-      let name = ''
-      let value: string | undefined = undefined
-      if (/[0-9a-z]/i.test(rawText[1])) {
-        for (
-          let length = context.options.maxCRNameLength;
-          !value && length > 0;
-          --length
-        ) {
-          name = rawText.substr(1, length)
-          value = context.options.namedCharacterReferences[name]
-        }
-        if (value) {
-          const semi = name.endsWith(';')
-          if (
-            mode === TextModes.ATTRIBUTE_VALUE &&
-            !semi &&
-            /[=a-z0-9]/i.test(rawText[name.length + 1] || '')
-          ) {
-            decodedText += '&' + name
-            advance(1 + name.length)
-          } else {
-            decodedText += value
-            advance(1 + name.length)
-            if (!semi) {
-              emitError(
-                context,
-                ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-              )
-            }
-          }
-        } else {
-          decodedText += '&' + name
-          advance(1 + name.length)
-        }
-      } else {
-        decodedText += '&'
-        advance(1)
-      }
-    } else {
-      // Numeric character reference.
-      const hex = head[0] === '&#x'
-      const pattern = hex ? /^&#x([0-9a-f]+);?/i : /^&#([0-9]+);?/
-      const body = pattern.exec(rawText)
-      if (!body) {
-        decodedText += head[0]
-        emitError(
-          context,
-          ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
-        )
-        advance(head[0].length)
-      } else {
-        // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-        let cp = Number.parseInt(body[1], hex ? 16 : 10)
-        if (cp === 0) {
-          emitError(context, ErrorCodes.NULL_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if (cp > 0x10ffff) {
-          emitError(
-            context,
-            ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE
-          )
-          cp = 0xfffd
-        } else if (cp >= 0xd800 && cp <= 0xdfff) {
-          emitError(context, ErrorCodes.SURROGATE_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if ((cp >= 0xfdd0 && cp <= 0xfdef) || (cp & 0xfffe) === 0xfffe) {
-          emitError(context, ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE)
-        } else if (
-          (cp >= 0x01 && cp <= 0x08) ||
-          cp === 0x0b ||
-          (cp >= 0x0d && cp <= 0x1f) ||
-          (cp >= 0x7f && cp <= 0x9f)
-        ) {
-          emitError(context, ErrorCodes.CONTROL_CHARACTER_REFERENCE)
-          cp = CCR_REPLACEMENTS[cp] || cp
-        }
-        decodedText += String.fromCodePoint(cp)
-        advance(body[0].length)
-        if (!body![0].endsWith(';')) {
-          emitError(
-            context,
-            ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-          )
-        }
-      }
-    }
-  }
-  return decodedText
 }
 
 function getCursor(context: ParserContext): Position {
@@ -1051,35 +950,4 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\n\f />]/.test(source[2 + tag.length] || '>')
   )
-}
-
-// https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
-  0x80: 0x20ac,
-  0x82: 0x201a,
-  0x83: 0x0192,
-  0x84: 0x201e,
-  0x85: 0x2026,
-  0x86: 0x2020,
-  0x87: 0x2021,
-  0x88: 0x02c6,
-  0x89: 0x2030,
-  0x8a: 0x0160,
-  0x8b: 0x2039,
-  0x8c: 0x0152,
-  0x8e: 0x017d,
-  0x91: 0x2018,
-  0x92: 0x2019,
-  0x93: 0x201c,
-  0x94: 0x201d,
-  0x95: 0x2022,
-  0x96: 0x2013,
-  0x97: 0x2014,
-  0x98: 0x02dc,
-  0x99: 0x2122,
-  0x9a: 0x0161,
-  0x9b: 0x203a,
-  0x9c: 0x0153,
-  0x9e: 0x017e,
-  0x9f: 0x0178
 }

@@ -177,8 +177,15 @@ export function updateProps(
     setFullProps(instance, rawProps, props, attrs)
     // in case of dynamic props, check if we need to delete keys from
     // the props object
+    let kebabKey: string
     for (const key in rawCurrentProps) {
-      if (!rawProps || !hasOwn(rawProps, key)) {
+      if (
+        !rawProps ||
+        (!hasOwn(rawProps, key) &&
+          // it's possible the original props was passed in as kebab-case
+          // and converted to camelCase (#955)
+          ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
+      ) {
         delete props[key]
       }
     }

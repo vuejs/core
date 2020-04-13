@@ -968,38 +968,7 @@ function baseCreateRenderer(
         )
       }
     } else {
-      const instance = (n2.component = n1.component)!
-
-      if (shouldUpdateComponent(n1, n2, parentComponent, optimized)) {
-        if (
-          __FEATURE_SUSPENSE__ &&
-          instance.asyncDep &&
-          !instance.asyncResolved
-        ) {
-          // async & still pending - just update props and slots
-          // since the component's reactive effect for render isn't set-up yet
-          if (__DEV__) {
-            pushWarningContext(n2)
-          }
-          updateComponentPreRender(instance, n2, optimized)
-          if (__DEV__) {
-            popWarningContext()
-          }
-          return
-        } else {
-          // normal update
-          instance.next = n2
-          // in case the child component is also queued, remove it to avoid
-          // double updating the same child component in the same flush.
-          invalidateJob(instance.update)
-          // instance.update is the reactive effect runner.
-          instance.update()
-        }
-      } else {
-        // no update needed. just copy over properties
-        n2.component = n1.component
-        n2.el = n1.el
-      }
+      updateComponent(n1, n2, parentComponent, optimized)
     }
   }
 
@@ -1074,6 +1043,45 @@ function baseCreateRenderer(
     if (__DEV__) {
       popWarningContext()
       endMeasure(instance, `mount`)
+    }
+  }
+
+  const updateComponent = (
+    n1: VNode,
+    n2: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    optimized: boolean
+  ) => {
+    const instance = (n2.component = n1.component)!
+    if (shouldUpdateComponent(n1, n2, parentComponent, optimized)) {
+      if (
+        __FEATURE_SUSPENSE__ &&
+        instance.asyncDep &&
+        !instance.asyncResolved
+      ) {
+        // async & still pending - just update props and slots
+        // since the component's reactive effect for render isn't set-up yet
+        if (__DEV__) {
+          pushWarningContext(n2)
+        }
+        updateComponentPreRender(instance, n2, optimized)
+        if (__DEV__) {
+          popWarningContext()
+        }
+        return
+      } else {
+        // normal update
+        instance.next = n2
+        // in case the child component is also queued, remove it to avoid
+        // double updating the same child component in the same flush.
+        invalidateJob(instance.update)
+        // instance.update is the reactive effect runner.
+        instance.update()
+      }
+    } else {
+      // no update needed. just copy over properties
+      n2.component = n1.component
+      n2.el = n1.el
     }
   }
 

@@ -1,4 +1,4 @@
-import { EMPTY_OBJ, isString } from '@vue/shared'
+import { EMPTY_OBJ } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -71,16 +71,6 @@ export function patchEvent(
   nextValue: EventValueWithOptions | EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
-  // support native onxxx handlers
-  if (rawName in el) {
-    if (isString(nextValue)) {
-      el.setAttribute(rawName, nextValue)
-    } else {
-      ;(el as any)[rawName] = nextValue
-    }
-    return
-  }
-
   const name = rawName.slice(2).toLowerCase()
   const prevOptions = prevValue && 'options' in prevValue && prevValue.options
   const nextOptions = nextValue && 'options' in nextValue && nextValue.options
