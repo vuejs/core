@@ -20,7 +20,7 @@ describe('component props', () => {
     let proxy: any
 
     const Comp = defineComponent({
-      props: ['foo'],
+      props: ['fooBar'],
       render() {
         props = this.$props
         attrs = this.$attrs
@@ -29,18 +29,25 @@ describe('component props', () => {
     })
 
     const root = nodeOps.createElement('div')
-    render(h(Comp, { foo: 1, bar: 2 }), root)
-    expect(proxy.foo).toBe(1)
-    expect(props).toEqual({ foo: 1 })
+    render(h(Comp, { fooBar: 1, bar: 2 }), root)
+    expect(proxy.fooBar).toBe(1)
+    expect(props).toEqual({ fooBar: 1 })
     expect(attrs).toEqual({ bar: 2 })
 
-    render(h(Comp, { foo: 2, bar: 3, baz: 4 }), root)
-    expect(proxy.foo).toBe(2)
-    expect(props).toEqual({ foo: 2 })
+    // test passing kebab-case and resolving to camelCase
+    render(h(Comp, { 'foo-bar': 2, bar: 3, baz: 4 }), root)
+    expect(proxy.fooBar).toBe(2)
+    expect(props).toEqual({ fooBar: 2 })
+    expect(attrs).toEqual({ bar: 3, baz: 4 })
+
+    // test updating kebab-case should not delete it (#955)
+    render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4 }), root)
+    expect(proxy.fooBar).toBe(3)
+    expect(props).toEqual({ fooBar: 3 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     render(h(Comp, { qux: 5 }), root)
-    expect(proxy.foo).toBeUndefined()
+    expect(proxy.fooBar).toBeUndefined()
     expect(props).toEqual({})
     expect(attrs).toEqual({ qux: 5 })
   })
