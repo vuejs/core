@@ -45,6 +45,22 @@ describe('runtime-dom: props patching', () => {
     expect(fn).toHaveBeenCalled()
   })
 
+  // #954
+  test('(svg) innerHTML unmount prev children', () => {
+    const fn = jest.fn()
+    const comp = {
+      render: () => 'foo',
+      unmounted: fn
+    }
+    const root = document.createElement('div')
+    render(h('div', null, [h(comp)]), root)
+    expect(root.innerHTML).toBe(`<div>foo</div>`)
+
+    render(h('svg', { innerHTML: '<g></g>' }), root)
+    expect(root.innerHTML).toBe(`<svg><g></g></svg>`)
+    expect(fn).toHaveBeenCalled()
+  })
+
   test('textContent unmount prev children', () => {
     const fn = jest.fn()
     const comp = {
