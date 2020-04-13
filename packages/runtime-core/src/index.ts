@@ -2,7 +2,6 @@
 
 export const version = __VERSION__
 export {
-  effect,
   ref,
   unref,
   shallowRef,
