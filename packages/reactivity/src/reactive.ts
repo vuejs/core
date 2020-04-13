@@ -20,7 +20,6 @@ const readonlyToRaw = new WeakMap<any, any>()
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
@@ -46,10 +45,6 @@ export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (readonlyToRaw.has(target)) {
     return target
-  }
-  // target is explicitly marked as readonly by user
-  if (readonlyValues.has(target)) {
-    return readonly(target)
   }
   if (isRef(target)) {
     return target
@@ -154,11 +149,6 @@ export function isReadonly(value: unknown): boolean {
 
 export function toRaw<T>(observed: T): T {
   return reactiveToRaw.get(observed) || readonlyToRaw.get(observed) || observed
-}
-
-export function markReadonly<T>(value: T): T {
-  readonlyValues.add(value)
-  return value
 }
 
 export function markNonReactive<T extends object>(value: T): T {

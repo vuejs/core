@@ -13,7 +13,6 @@ export {
   isReadonly,
   shallowReactive,
   toRaw,
-  markReadonly,
   markNonReactive
 } from '@vue/reactivity'
 export { computed } from './apiComputed'

@@ -7,7 +7,6 @@ export {
   isReadonly,
   shallowReadonly,
   toRaw,
-  markReadonly,
   markNonReactive
 } from './reactive'
 export {

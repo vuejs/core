@@ -5,7 +5,6 @@ import {
   isReactive,
   isReadonly,
   markNonReactive,
-  markReadonly,
   lock,
   unlock,
   effect,
@@ -422,17 +421,6 @@ describe('reactivity/readonly', () => {
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
-  })
-
-  test('markReadonly', () => {
-    const obj = reactive({
-      foo: { a: 1 },
-      bar: markReadonly({ b: 2 })
-    })
-    expect(isReactive(obj.foo)).toBe(true)
-    expect(isReactive(obj.bar)).toBe(true)
-    expect(isReadonly(obj.foo)).toBe(false)
-    expect(isReadonly(obj.bar)).toBe(true)
   })
 
   test('should make ref readonly', () => {
