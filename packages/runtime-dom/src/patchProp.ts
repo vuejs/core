@@ -3,7 +3,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString } from '@vue/shared'
+import { isOn, isString, isFunction } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
