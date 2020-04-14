@@ -175,9 +175,17 @@ describe('component props', () => {
     expect(proxy.foo).toBe(2)
     expect(proxy.bar).toEqual({ a: 1 })
 
-    render(h(Comp, { foo: undefined, bar: { b: 2 } }), root)
+    render(h(Comp, { bar: { b: 2 } }), root)
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 2 })
+
+    render(h(Comp, { foo: 3, bar: { b: 3 } }), root)
+    expect(proxy.foo).toBe(3)
+    expect(proxy.bar).toEqual({ b: 3 })
+
+    render(h(Comp, { bar: { b: 4 } }), root)
+    expect(proxy.foo).toBe(1)
+    expect(proxy.bar).toEqual({ b: 4 })
   })
 
   test('optimized props updates', async () => {

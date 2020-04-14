@@ -186,7 +186,16 @@ export function updateProps(
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
-        delete props[key]
+        if (options) {
+          props[key] = resolvePropValue(
+            options,
+            rawProps || EMPTY_OBJ,
+            key,
+            undefined
+          )
+        } else {
+          delete props[key]
+        }
       }
     }
     for (const key in attrs) {
@@ -250,25 +259,24 @@ function resolvePropValue(
   key: string,
   value: unknown
 ) {
-  let opt = options[key]
-  if (opt == null) {
-    return value
-  }
-  const hasDefault = hasOwn(opt, 'default')
-  // default values
-  if (hasDefault && value === undefined) {
-    const defaultValue = opt.default
-    value = isFunction(defaultValue) ? defaultValue() : defaultValue
-  }
-  // boolean casting
-  if (opt[BooleanFlags.shouldCast]) {
-    if (!hasOwn(props, key) && !hasDefault) {
-      value = false
-    } else if (
-      opt[BooleanFlags.shouldCastTrue] &&
-      (value === '' || value === hyphenate(key))
-    ) {
-      value = true
+  const opt = options[key]
+  if (opt != null) {
+    const hasDefault = hasOwn(opt, 'default')
+    // default values
+    if (hasDefault && value === undefined) {
+      const defaultValue = opt.default
+      value = isFunction(defaultValue) ? defaultValue() : defaultValue
+    }
+    // boolean casting
+    if (opt[BooleanFlags.shouldCast]) {
+      if (!hasOwn(props, key) && !hasDefault) {
+        value = false
+      } else if (
+        opt[BooleanFlags.shouldCastTrue] &&
+        (value === '' || value === hyphenate(key))
+      ) {
+        value = true
+      }
     }
   }
   return value
