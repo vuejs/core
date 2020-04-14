@@ -36,8 +36,8 @@ export type ComponentPublicInstance<
   $attrs: Data
   $refs: Data
   $slots: Slots
-  $root: ComponentInternalInstance | null
-  $parent: ComponentInternalInstance | null
+  $root: ComponentPublicInstance | null
+  $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
   $options: ComponentOptionsBase<P, B, D, C, M, E>
