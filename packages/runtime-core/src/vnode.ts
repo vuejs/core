@@ -17,7 +17,7 @@ import {
   ClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isReactive, Ref } from '@vue/reactivity'
+import { isReactive, Ref, toRaw } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -236,7 +236,7 @@ const createVNodeWithArgsTransform = (
 
 export const InternalObjectSymbol = Symbol()
 
-export const createVNode = (__DEV__
+export const createVNode = (false
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
 
@@ -291,6 +291,22 @@ function _createVNode(
           : isFunction(type)
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
+
+  if (
+    __DEV__ &&
+    shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
+    isReactive(type)
+  ) {
+    type = toRaw(type)
+    warn(
+      `Vue received a Component which was made a reactive object. This can ` +
+        `lead to unnecessary performance overhead, and should be avoided by ` +
+        `marking the component with \`markNonReactive\` or using \`shallowRef\` ` +
+        `instead of \`ref\`.`,
+      `\nComponent that was made reactive: `,
+      type
+    )
+  }
 
   const vnode: VNode = {
     _isVNode: true,
