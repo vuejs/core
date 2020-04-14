@@ -236,7 +236,7 @@ const createVNodeWithArgsTransform = (
 
 export const InternalObjectSymbol = Symbol()
 
-export const createVNode = (false
+export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
 
