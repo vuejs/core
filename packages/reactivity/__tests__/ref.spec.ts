@@ -3,6 +3,7 @@ import {
   effect,
   reactive,
   isRef,
+  toRef,
   toRefs,
   Ref,
   isReactive
@@ -168,6 +169,34 @@ describe('reactivity/ref', () => {
     expect(isRef({ value: 0 })).toBe(false)
   })
 
+  test('toRef', () => {
+    const a = reactive({
+      x: 1
+    })
+    const x = toRef(a, 'x')
+    expect(isRef(x)).toBe(true)
+    expect(x.value).toBe(1)
+
+    // source -> proxy
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    // proxy -> source
+    x.value = 3
+    expect(a.x).toBe(3)
+
+    // reactivity
+    let dummyX
+    effect(() => {
+      dummyX = x.value
+    })
+    expect(dummyX).toBe(x.value)
+
+    // mutating source should trigger effect using the proxy refs
+    a.x = 4
+    expect(dummyX).toBe(4)
+  })
+
   test('toRefs', () => {
     const a = reactive({
       x: 1,
@@ -223,6 +252,8 @@ describe('reactivity/ref', () => {
         _trigger = trigger
       }
     }))
+
+    expect(isRef(custom)).toBe(true)
 
     let dummy
     effect(() => {

@@ -103,12 +103,12 @@ export function toRefs<T extends object>(
   }
   const ret: any = {}
   for (const key in object) {
-    ret[key] = toProxyRef(object, key)
+    ret[key] = toRef(object, key)
   }
   return ret
 }
 
-function toProxyRef<T extends object, K extends keyof T>(
+export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {

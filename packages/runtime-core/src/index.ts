@@ -6,6 +6,7 @@ export {
   unref,
   shallowRef,
   isRef,
+  toRef,
   toRefs,
   customRef,
   reactive,
