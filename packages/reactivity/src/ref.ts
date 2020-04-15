@@ -128,31 +128,13 @@ export function toRef<T extends object, K extends keyof T>(
 // RelativePath extends object -> true
 type BaseTypes = string | number | boolean | Node | Window
 
-// Super simple tuple checker
-type IsTuple<T extends Array<any>> = T[0] extends T[1]
-  ? T[1] extends T[2] ? never : true
-  : true
-
 export type UnwrapRef<T> = T extends ComputedRef<infer V>
   ? UnwrapRefSimple<V>
   : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends
-  | Function
-  | CollectionTypes
-  | BaseTypes
-  | Ref
-  | Element
+type UnwrapRefSimple<T> = T extends Function | CollectionTypes | BaseTypes | Ref
   ? T
-  : T extends Array<infer V>
-    ? IsTuple<T> extends true ? UnwrapTuple<T> : Array<V>
-    : T extends object ? UnwrappedObject<T> : T
-
-export type UnwrapTuple<T> = { [P in keyof T]: T[P] } & {
-  length: number
-  [Symbol.iterator]: any
-  [Symbol.unscopables]: any
-}
+  : T extends Array<any> ? T : T extends object ? UnwrappedObject<T> : T
 
 // Extract all known symbols from an object
 // when unwrapping Object the symbols are not `in keyof`, this should cover all the
