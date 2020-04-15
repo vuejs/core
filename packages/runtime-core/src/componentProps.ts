@@ -1,4 +1,4 @@
-import { toRaw, lock, unlock, shallowReadonly } from '@vue/reactivity'
+import { toRaw, shallowReactive } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -114,7 +114,7 @@ export function initProps(
 
   if (isStateful) {
     // stateful
-    instance.props = isSSR ? props : shallowReadonly(props)
+    instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!options) {
       // functional w/ optional props, props === attrs
@@ -132,9 +132,6 @@ export function updateProps(
   rawProps: Data | null,
   optimized: boolean
 ) {
-  // allow mutation of propsProxy (which is readonly by default)
-  unlock()
-
   const {
     props,
     attrs,
@@ -204,9 +201,6 @@ export function updateProps(
       }
     }
   }
-
-  // lock readonly
-  lock()
 
   if (__DEV__ && rawOptions && rawProps) {
     validateProps(props, rawOptions)

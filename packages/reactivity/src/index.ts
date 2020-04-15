@@ -40,5 +40,4 @@ export {
   ReactiveEffectOptions,
   DebuggerEvent
 } from './effect'
-export { lock, unlock } from './lock'
 export { TrackOpTypes, TriggerOpTypes } from './operations'

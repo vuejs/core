@@ -2,7 +2,12 @@ import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
-import { ReactiveEffect, UnwrapRef, toRaw } from '@vue/reactivity'
+import {
+  ReactiveEffect,
+  UnwrapRef,
+  toRaw,
+  shallowReadonly
+} from '@vue/reactivity'
 import {
   ExtractComputedReturns,
   ComponentOptionsBase,
@@ -57,10 +62,10 @@ const publicPropertiesMap: Record<
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
-  $props: i => i.props,
-  $attrs: i => i.attrs,
-  $slots: i => i.slots,
-  $refs: i => i.refs,
+  $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+  $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+  $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+  $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
   $parent: i => i.parent && i.parent.proxy,
   $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,

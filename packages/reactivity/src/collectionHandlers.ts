@@ -1,7 +1,6 @@
 import { toRaw, reactive, readonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { LOCKED } from './lock'
 import {
   isObject,
   capitalize,
@@ -142,7 +141,7 @@ function createForEach(isReadonly: boolean) {
     const observed = this
     const target = toRaw(observed)
     const wrap = isReadonly ? toReadonly : toReactive
-    track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
+    !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
     // important: create sure the callback is
     // 1. invoked with the reactive map as `this` and 3rd arg
     // 2. the value received should be a corresponding reactive/readonly.
@@ -161,11 +160,12 @@ function createIterableMethod(method: string | symbol, isReadonly: boolean) {
     const isKeyOnly = method === 'keys' && isMap
     const innerIterator = getProto(target)[method].apply(target, args)
     const wrap = isReadonly ? toReadonly : toReactive
-    track(
-      target,
-      TrackOpTypes.ITERATE,
-      isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
-    )
+    !isReadonly &&
+      track(
+        target,
+        TrackOpTypes.ITERATE,
+        isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
+      )
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
     return {
@@ -187,23 +187,16 @@ function createIterableMethod(method: string | symbol, isReadonly: boolean) {
   }
 }
 
-function createReadonlyMethod(
-  method: Function,
-  type: TriggerOpTypes
-): Function {
+function createReadonlyMethod(type: TriggerOpTypes): Function {
   return function(this: CollectionTypes, ...args: unknown[]) {
-    if (LOCKED) {
-      if (__DEV__) {
-        const key = args[0] ? `on key "${args[0]}" ` : ``
-        console.warn(
-          `${capitalize(type)} operation ${key}failed: target is readonly.`,
-          toRaw(this)
-        )
-      }
-      return type === TriggerOpTypes.DELETE ? false : this
-    } else {
-      return method.apply(this, args)
+    if (__DEV__) {
+      const key = args[0] ? `on key "${args[0]}" ` : ``
+      console.warn(
+        `${capitalize(type)} operation ${key}failed: target is readonly.`,
+        toRaw(this)
+      )
     }
+    return type === TriggerOpTypes.DELETE ? false : this
   }
 }
 
@@ -230,10 +223,10 @@ const readonlyInstrumentations: Record<string, Function> = {
     return size((this as unknown) as IterableCollections)
   },
   has,
-  add: createReadonlyMethod(add, TriggerOpTypes.ADD),
-  set: createReadonlyMethod(set, TriggerOpTypes.SET),
-  delete: createReadonlyMethod(deleteEntry, TriggerOpTypes.DELETE),
-  clear: createReadonlyMethod(clear, TriggerOpTypes.CLEAR),
+  add: createReadonlyMethod(TriggerOpTypes.ADD),
+  set: createReadonlyMethod(TriggerOpTypes.SET),
+  delete: createReadonlyMethod(TriggerOpTypes.DELETE),
+  clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
   forEach: createForEach(true)
 }
 

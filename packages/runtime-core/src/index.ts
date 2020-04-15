@@ -14,6 +14,7 @@ export {
   readonly,
   isReadonly,
   shallowReactive,
+  shallowReadonly,
   markNonReactive,
   toRaw
 } from '@vue/reactivity'
