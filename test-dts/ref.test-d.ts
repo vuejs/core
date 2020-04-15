@@ -1,5 +1,5 @@
 import { expectType } from 'tsd'
-import { Ref, ref, isRef, unref, UnwrapRef } from './index'
+import { Ref, ref, isRef, unref } from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -29,7 +29,9 @@ function plainType(arg: number | Ref<number>) {
   }
 
   // with symbol
-  expectType<IteratorFoo | null>(unref(ref<IteratorFoo | null>(null)))
+  expectType<Ref<IteratorFoo | null | undefined>>(
+    ref<IteratorFoo | null | undefined>()
+  )
 }
 
 plainType(1)
