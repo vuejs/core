@@ -25,7 +25,7 @@ function plainType(arg: number | Ref<number>) {
   expectType<[number, string]>(unref(ref([1, '1'])))
 
   interface IteratorFoo {
-    [Symbol.iterator]: number
+    [Symbol.iterator]: any
   }
 
   // with symbol
