@@ -17,7 +17,7 @@ import {
   ClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isReactive, Ref, toRaw } from '@vue/reactivity'
+import { isProxy, Ref, toRaw } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -234,7 +234,7 @@ const createVNodeWithArgsTransform = (
   )
 }
 
-export const InternalObjectSymbol = Symbol()
+export const InternalObjectKey = `__vInternal`
 
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
@@ -262,7 +262,7 @@ function _createVNode(
   // class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
-    if (isReactive(props) || InternalObjectSymbol in props) {
+    if (isProxy(props) || InternalObjectKey in props) {
       props = extend({}, props)
     }
     let { class: klass, style } = props
@@ -272,7 +272,7 @@ function _createVNode(
     if (isObject(style)) {
       // reactive state objects need to be cloned since they are likely to be
       // mutated
-      if (isReactive(style) && !isArray(style)) {
+      if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
       props.style = normalizeStyle(style)
@@ -292,16 +292,12 @@ function _createVNode(
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
 
-  if (
-    __DEV__ &&
-    shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
-    isReactive(type)
-  ) {
+  if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
     warn(
       `Vue received a Component which was made a reactive object. This can ` +
         `lead to unnecessary performance overhead, and should be avoided by ` +
-        `marking the component with \`markNonReactive\` or using \`shallowRef\` ` +
+        `marking the component with \`markRaw\` or using \`shallowRef\` ` +
         `instead of \`ref\`.`,
       `\nComponent that was made reactive: `,
       type
@@ -454,7 +450,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
-      if (!(children as RawSlots)._ && !(InternalObjectSymbol in children!)) {
+      if (!(children as RawSlots)._ && !(InternalObjectKey in children!)) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance

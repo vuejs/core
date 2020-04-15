@@ -6,7 +6,7 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   DebuggerEvent,
-  markNonReactive,
+  markRaw,
   ref
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
@@ -732,9 +732,9 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
-  it('markNonReactive', () => {
+  it('markRaw', () => {
     const obj = reactive({
-      foo: markNonReactive({
+      foo: markRaw({
         prop: 0
       })
     })

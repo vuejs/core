@@ -20,7 +20,7 @@ const readonlyToRaw = new WeakMap<any, any>()
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const nonReactiveValues = new WeakSet<any>()
+const rawValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
 const isObservableType = /*#__PURE__*/ makeMap(
@@ -32,7 +32,7 @@ const canObserve = (value: any): boolean => {
     !value._isVue &&
     !value._isVNode &&
     isObservableType(toRawType(value)) &&
-    !nonReactiveValues.has(value) &&
+    !rawValues.has(value) &&
     !Object.isFrozen(value)
   )
 }
@@ -132,11 +132,16 @@ function createReactiveObject(
 }
 
 export function isReactive(value: unknown): boolean {
-  return reactiveToRaw.has(value) || readonlyToRaw.has(value)
+  value = readonlyToRaw.get(value) || value
+  return reactiveToRaw.has(value)
 }
 
 export function isReadonly(value: unknown): boolean {
   return readonlyToRaw.has(value)
+}
+
+export function isProxy(value: unknown): boolean {
+  return readonlyToRaw.has(value) || reactiveToRaw.has(value)
 }
 
 export function toRaw<T>(observed: T): T {
@@ -144,7 +149,7 @@ export function toRaw<T>(observed: T): T {
   return reactiveToRaw.get(observed) || observed
 }
 
-export function markNonReactive<T extends object>(value: T): T {
-  nonReactiveValues.add(value)
+export function markRaw<T extends object>(value: T): T {
+  rawValues.add(value)
   return value
 }

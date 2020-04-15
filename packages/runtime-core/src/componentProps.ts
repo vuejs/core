@@ -19,7 +19,7 @@ import {
 import { warn } from './warning'
 import { Data, ComponentInternalInstance } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectSymbol } from './vnode'
+import { InternalObjectKey } from './vnode'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -104,7 +104,7 @@ export function initProps(
 ) {
   const props: Data = {}
   const attrs: Data = {}
-  def(attrs, InternalObjectSymbol, true)
+  def(attrs, InternalObjectKey, 1)
   setFullProps(instance, rawProps, props, attrs)
   const options = instance.type.props
   // validation

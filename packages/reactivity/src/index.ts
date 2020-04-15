@@ -11,13 +11,14 @@ export {
 } from './ref'
 export {
   reactive,
-  isReactive,
-  shallowReactive,
   readonly,
+  isReactive,
   isReadonly,
+  isProxy,
+  shallowReactive,
   shallowReadonly,
-  toRaw,
-  markNonReactive
+  markRaw,
+  toRaw
 } from './reactive'
 export {
   computed,

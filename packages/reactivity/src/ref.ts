@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject } from '@vue/shared'
-import { reactive, isReactive } from './reactive'
+import { reactive, isProxy } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
@@ -98,7 +98,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 export function toRefs<T extends object>(
   object: T
 ): { [K in keyof T]: Ref<T[K]> } {
-  if (__DEV__ && !isReactive(object)) {
+  if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = {}

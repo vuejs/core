@@ -1,4 +1,4 @@
-import { markNonReactive } from '@vue/reactivity'
+import { markRaw } from '@vue/reactivity'
 
 export const enum NodeTypes {
   TEXT = 'text',
@@ -88,7 +88,7 @@ function createElement(tag: string): TestElement {
     tag
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 
@@ -106,7 +106,7 @@ function createText(text: string): TestText {
     text
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 
@@ -124,7 +124,7 @@ function createComment(text: string): TestComment {
     text
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 

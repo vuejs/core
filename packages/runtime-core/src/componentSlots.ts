@@ -4,7 +4,7 @@ import {
   VNodeNormalizedChildren,
   normalizeVNode,
   VNodeChild,
-  InternalObjectSymbol
+  InternalObjectKey
 } from './vnode'
 import {
   isArray,
@@ -111,7 +111,7 @@ export const initSlots = (
       normalizeVNodeSlots(instance, children)
     }
   }
-  def(instance.slots, InternalObjectSymbol, true)
+  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (

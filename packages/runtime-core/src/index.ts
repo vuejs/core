@@ -2,20 +2,24 @@
 
 export const version = __VERSION__
 export {
+  // core
+  reactive,
   ref,
+  readonly,
+  // utilities
   unref,
-  shallowRef,
   isRef,
   toRef,
   toRefs,
-  customRef,
-  reactive,
+  isProxy,
   isReactive,
-  readonly,
   isReadonly,
+  // advanced
+  customRef,
+  shallowRef,
   shallowReactive,
   shallowReadonly,
-  markNonReactive,
+  markRaw,
   toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
