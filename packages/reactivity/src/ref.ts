@@ -129,7 +129,7 @@ export function toRef<T extends object, K extends keyof T>(
 type BaseTypes = string | number | boolean | Node | Window
 
 // Super simple tuple checker
-type Tupple<T extends Array<any>> = T[0] extends T[1]
+type IsTuple<T extends Array<any>> = T[0] extends T[1]
   ? T[1] extends T[2] ? never : true
   : true
 
@@ -145,10 +145,10 @@ type UnwrapRefSimple<T> = T extends
   | Element
   ? T
   : T extends Array<infer V>
-    ? Tupple<T> extends never ? Array<V> : UnwrapTupple<T>
+    ? IsTuple<T> extends true ? UnwrapTuple<T> : Array<V>
     : T extends object ? UnwrappedObject<T> : T
 
-export type UnwrapTupple<T> = { [P in keyof T]: T[P] } & {
+export type UnwrapTuple<T> = { [P in keyof T]: T[P] } & {
   length: number
   [Symbol.iterator]: any
   [Symbol.unscopables]: any
