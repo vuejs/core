@@ -78,7 +78,7 @@ describe('compiler: v-if', () => {
       expect(node.branches[0].children[2].type).toBe(NodeTypes.ELEMENT)
       expect((node.branches[0].children[2] as ElementNode).tag).toBe(`p`)
     })
-  
+
     test('component v-if', () => {
       const { node } = parseWithIfTransform(`<Component v-if="ok"></Component>`)
       expect(node.type).toBe(NodeTypes.IF)

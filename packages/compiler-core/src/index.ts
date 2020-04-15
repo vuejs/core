@@ -48,6 +48,10 @@ export {
   trackVForSlotScopes,
   trackSlotScopes
 } from './transforms/vSlot'
-export { transformElement, resolveComponentType, buildProps } from './transforms/transformElement'
+export {
+  transformElement,
+  resolveComponentType,
+  buildProps
+} from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { generateCodeFrame } from '@vue/shared'
