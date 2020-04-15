@@ -13,7 +13,6 @@ import {
   VNode,
   warn,
   resolveTransitionHooks,
-  toRaw,
   useTransitionState,
   getCurrentInstance,
   setTransitionHooks,
@@ -21,6 +20,7 @@ import {
   onUpdated,
   SetupContext
 } from '@vue/runtime-core'
+import { toRaw } from '@vue/reactivity'
 
 interface Position {
   top: number

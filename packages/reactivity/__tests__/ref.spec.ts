@@ -3,12 +3,13 @@ import {
   effect,
   reactive,
   isRef,
+  toRef,
   toRefs,
   Ref,
   isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { shallowRef, unref } from '../src/ref'
+import { shallowRef, unref, customRef } from '../src/ref'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -168,6 +169,34 @@ describe('reactivity/ref', () => {
     expect(isRef({ value: 0 })).toBe(false)
   })
 
+  test('toRef', () => {
+    const a = reactive({
+      x: 1
+    })
+    const x = toRef(a, 'x')
+    expect(isRef(x)).toBe(true)
+    expect(x.value).toBe(1)
+
+    // source -> proxy
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    // proxy -> source
+    x.value = 3
+    expect(a.x).toBe(3)
+
+    // reactivity
+    let dummyX
+    effect(() => {
+      dummyX = x.value
+    })
+    expect(dummyX).toBe(x.value)
+
+    // mutating source should trigger effect using the proxy refs
+    a.x = 4
+    expect(dummyX).toBe(4)
+  })
+
   test('toRefs', () => {
     const a = reactive({
       x: 1,
@@ -207,5 +236,36 @@ describe('reactivity/ref', () => {
     a.y = 5
     expect(dummyX).toBe(4)
     expect(dummyY).toBe(5)
+  })
+
+  test('customRef', () => {
+    let value = 1
+    let _trigger: () => void
+
+    const custom = customRef((track, trigger) => ({
+      get() {
+        track()
+        return value
+      },
+      set(newValue: number) {
+        value = newValue
+        _trigger = trigger
+      }
+    }))
+
+    expect(isRef(custom)).toBe(true)
+
+    let dummy
+    effect(() => {
+      dummy = custom.value
+    })
+    expect(dummy).toBe(1)
+
+    custom.value = 2
+    // should not trigger yet
+    expect(dummy).toBe(1)
+
+    _trigger!()
+    expect(dummy).toBe(2)
   })
 })

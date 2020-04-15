@@ -30,7 +30,7 @@
 * **compiler:** compiler options have been adjusted.
     - new option `decodeEntities` is added.
     - `namedCharacterReferences` option has been removed.
-    - `maxCRNameLength` option has been rmeoved.
+    - `maxCRNameLength` option has been removed.
 * **asyncComponent:** `retryWhen` and `maxRetries` options for
 `defineAsyncComponent` has been replaced by the more flexible `onError`
 option, per https://github.com/vuejs/rfcs/pull/148

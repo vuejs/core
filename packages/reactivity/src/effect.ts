@@ -12,6 +12,7 @@ const targetMap = new WeakMap<any, KeyToDepMap>()
 export interface ReactiveEffect<T = any> {
   (...args: any[]): T
   _isEffect: true
+  id: number
   active: boolean
   raw: () => T
   deps: Array<Dep>
@@ -21,7 +22,7 @@ export interface ReactiveEffect<T = any> {
 export interface ReactiveEffectOptions {
   lazy?: boolean
   computed?: boolean
-  scheduler?: (job: () => void) => void
+  scheduler?: (job: ReactiveEffect) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
   onStop?: () => void
@@ -74,6 +75,8 @@ export function stop(effect: ReactiveEffect) {
   }
 }
 
+let uid = 0
+
 function createReactiveEffect<T = any>(
   fn: (...args: any[]) => T,
   options: ReactiveEffectOptions
@@ -96,6 +99,7 @@ function createReactiveEffect<T = any>(
       }
     }
   } as ReactiveEffect
+  effect.id = uid++
   effect._isEffect = true
   effect.active = true
   effect.raw = fn

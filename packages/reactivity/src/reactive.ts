@@ -2,14 +2,14 @@ import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
-  shallowReadonlyHandlers,
-  shallowReactiveHandlers
+  shallowReactiveHandlers,
+  shallowReadonlyHandlers
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref, isRef } from './ref'
+import { UnwrapRef, Ref } from './ref'
 import { makeMap } from '@vue/shared'
 
 // WeakMaps that store {raw <-> observed} pairs.
@@ -20,7 +20,6 @@ const readonlyToRaw = new WeakMap<any, any>()
 
 // WeakSets for values that are marked readonly or non-reactive during
 // observable creation.
-const readonlyValues = new WeakSet<any>()
 const nonReactiveValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
@@ -47,13 +46,6 @@ export function reactive(target: object) {
   if (readonlyToRaw.has(target)) {
     return target
   }
-  // target is explicitly marked as readonly by user
-  if (readonlyValues.has(target)) {
-    return readonly(target)
-  }
-  if (isRef(target)) {
-    return target
-  }
   return createReactiveObject(
     target,
     rawToReactive,
@@ -63,14 +55,22 @@ export function reactive(target: object) {
   )
 }
 
+// Return a reactive-copy of the original object, where only the root level
+// properties are reactive, and does NOT unwrap refs nor recursively convert
+// returned properties.
+export function shallowReactive<T extends object>(target: T): T {
+  return createReactiveObject(
+    target,
+    rawToReactive,
+    reactiveToRaw,
+    shallowReactiveHandlers,
+    mutableCollectionHandlers
+  )
+}
+
 export function readonly<T extends object>(
   target: T
 ): Readonly<UnwrapNestedRefs<T>> {
-  // value is a mutable observable, retrieve its original and return
-  // a readonly version.
-  if (reactiveToRaw.has(target)) {
-    target = reactiveToRaw.get(target)
-  }
   return createReactiveObject(
     target,
     rawToReadonly,
@@ -93,19 +93,6 @@ export function shallowReadonly<T extends object>(
     readonlyToRaw,
     shallowReadonlyHandlers,
     readonlyCollectionHandlers
-  )
-}
-
-// Return a reactive-copy of the original object, where only the root level
-// properties are reactive, and does NOT unwrap refs nor recursively convert
-// returned properties.
-export function shallowReactive<T extends object>(target: T): T {
-  return createReactiveObject(
-    target,
-    rawToReactive,
-    reactiveToRaw,
-    shallowReactiveHandlers,
-    mutableCollectionHandlers
   )
 }
 
@@ -153,12 +140,8 @@ export function isReadonly(value: unknown): boolean {
 }
 
 export function toRaw<T>(observed: T): T {
-  return reactiveToRaw.get(observed) || readonlyToRaw.get(observed) || observed
-}
-
-export function markReadonly<T>(value: T): T {
-  readonlyValues.add(value)
-  return value
+  observed = readonlyToRaw.get(observed) || observed
+  return reactiveToRaw.get(observed) || observed
 }
 
 export function markNonReactive<T extends object>(value: T): T {

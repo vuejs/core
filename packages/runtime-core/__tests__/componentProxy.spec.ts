@@ -3,7 +3,8 @@ import {
   render,
   getCurrentInstance,
   nodeOps,
-  createApp
+  createApp,
+  shallowReadonly
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 import { ComponentInternalInstance } from '../src/component'
@@ -85,10 +86,10 @@ describe('component: proxy', () => {
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.$data).toBe(instance!.data)
-    expect(instanceProxy.$props).toBe(instance!.props)
-    expect(instanceProxy.$attrs).toBe(instance!.attrs)
-    expect(instanceProxy.$slots).toBe(instance!.slots)
-    expect(instanceProxy.$refs).toBe(instance!.refs)
+    expect(instanceProxy.$props).toBe(shallowReadonly(instance!.props))
+    expect(instanceProxy.$attrs).toBe(shallowReadonly(instance!.attrs))
+    expect(instanceProxy.$slots).toBe(shallowReadonly(instance!.slots))
+    expect(instanceProxy.$refs).toBe(shallowReadonly(instance!.refs))
     expect(instanceProxy.$parent).toBe(
       instance!.parent && instance!.parent.proxy
     )

@@ -70,6 +70,31 @@ export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
+export type CustomRefFactory<T> = (
+  track: () => void,
+  trigger: () => void
+) => {
+  get: () => T
+  set: (value: T) => void
+}
+
+export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
+  const { get, set } = factory(
+    () => track(r, TrackOpTypes.GET, 'value'),
+    () => trigger(r, TriggerOpTypes.SET, 'value')
+  )
+  const r = {
+    _isRef: true,
+    get value() {
+      return get()
+    },
+    set value(v) {
+      set(v)
+    }
+  }
+  return r as any
+}
+
 export function toRefs<T extends object>(
   object: T
 ): { [K in keyof T]: Ref<T[K]> } {
@@ -78,12 +103,12 @@ export function toRefs<T extends object>(
   }
   const ret: any = {}
   for (const key in object) {
-    ret[key] = toProxyRef(object, key)
+    ret[key] = toRef(object, key)
   }
   return ret
 }
 
-function toProxyRef<T extends object, K extends keyof T>(
+export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {

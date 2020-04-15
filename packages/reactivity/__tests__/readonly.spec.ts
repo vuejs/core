@@ -5,9 +5,6 @@ import {
   isReactive,
   isReadonly,
   markNonReactive,
-  markReadonly,
-  lock,
-  unlock,
   effect,
   ref,
   shallowReadonly
@@ -91,22 +88,7 @@ describe('reactivity/readonly', () => {
       ).toHaveBeenWarnedLast()
     })
 
-    it('should allow mutation when unlocked', () => {
-      const observed: any = readonly({ foo: 1, bar: { baz: 2 } })
-      unlock()
-      observed.prop = 2
-      observed.bar.qux = 3
-      delete observed.bar.baz
-      delete observed.foo
-      lock()
-      expect(observed.prop).toBe(2)
-      expect(observed.foo).toBeUndefined()
-      expect(observed.bar.qux).toBe(3)
-      expect('baz' in observed.bar).toBe(false)
-      expect(`target is readonly`).not.toHaveBeenWarned()
-    })
-
-    it('should not trigger effects when locked', () => {
+    it('should not trigger effects', () => {
       const observed: any = readonly({ a: 1 })
       let dummy
       effect(() => {
@@ -117,20 +99,6 @@ describe('reactivity/readonly', () => {
       expect(observed.a).toBe(1)
       expect(dummy).toBe(1)
       expect(`target is readonly`).toHaveBeenWarned()
-    })
-
-    it('should trigger effects when unlocked', () => {
-      const observed: any = readonly({ a: 1 })
-      let dummy
-      effect(() => {
-        dummy = observed.a
-      })
-      expect(dummy).toBe(1)
-      unlock()
-      observed.a = 2
-      lock()
-      expect(observed.a).toBe(2)
-      expect(dummy).toBe(2)
     })
   })
 
@@ -183,23 +151,7 @@ describe('reactivity/readonly', () => {
       expect(`target is readonly.`).toHaveBeenWarnedTimes(5)
     })
 
-    it('should allow mutation when unlocked', () => {
-      const observed: any = readonly([{ foo: 1, bar: { baz: 2 } }])
-      unlock()
-      observed[1] = 2
-      observed.push(3)
-      observed[0].foo = 2
-      observed[0].bar.baz = 3
-      lock()
-      expect(observed.length).toBe(3)
-      expect(observed[1]).toBe(2)
-      expect(observed[2]).toBe(3)
-      expect(observed[0].foo).toBe(2)
-      expect(observed[0].bar.baz).toBe(3)
-      expect(`target is readonly`).not.toHaveBeenWarned()
-    })
-
-    it('should not trigger effects when locked', () => {
+    it('should not trigger effects', () => {
       const observed: any = readonly([{ a: 1 }])
       let dummy
       effect(() => {
@@ -214,30 +166,6 @@ describe('reactivity/readonly', () => {
       expect(observed[0].a).toBe(1)
       expect(dummy).toBe(1)
       expect(`target is readonly`).toHaveBeenWarnedTimes(2)
-    })
-
-    it('should trigger effects when unlocked', () => {
-      const observed: any = readonly([{ a: 1 }])
-      let dummy
-      effect(() => {
-        dummy = observed[0].a
-      })
-      expect(dummy).toBe(1)
-
-      unlock()
-
-      observed[0].a = 2
-      expect(observed[0].a).toBe(2)
-      expect(dummy).toBe(2)
-
-      observed[0] = { a: 3 }
-      expect(observed[0].a).toBe(3)
-      expect(dummy).toBe(3)
-
-      observed.unshift({ a: 4 })
-      expect(observed[0].a).toBe(4)
-      expect(dummy).toBe(4)
-      lock()
     })
   })
 
@@ -274,23 +202,6 @@ describe('reactivity/readonly', () => {
         expect(
           `Set operation on key "${key}" failed: target is readonly.`
         ).toHaveBeenWarned()
-      })
-
-      test('should allow mutation & trigger effect when unlocked', () => {
-        const map = readonly(new Collection())
-        const isWeak = Collection === WeakMap
-        const key = {}
-        let dummy
-        effect(() => {
-          dummy = map.get(key) + (isWeak ? 0 : map.size)
-        })
-        expect(dummy).toBeNaN()
-        unlock()
-        map.set(key, 1)
-        lock()
-        expect(dummy).toBe(isWeak ? 1 : 2)
-        expect(map.get(key)).toBe(1)
-        expect(`target is readonly`).not.toHaveBeenWarned()
       })
 
       if (Collection === Map) {
@@ -347,22 +258,6 @@ describe('reactivity/readonly', () => {
         ).toHaveBeenWarned()
       })
 
-      test('should allow mutation & trigger effect when unlocked', () => {
-        const set = readonly(new Collection())
-        const key = {}
-        let dummy
-        effect(() => {
-          dummy = set.has(key)
-        })
-        expect(dummy).toBe(false)
-        unlock()
-        set.add(key)
-        lock()
-        expect(dummy).toBe(true)
-        expect(set.has(key)).toBe(true)
-        expect(`target is readonly`).not.toHaveBeenWarned()
-      })
-
       if (Collection === Set) {
         test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
@@ -401,6 +296,19 @@ describe('reactivity/readonly', () => {
     expect(toRaw(a)).toBe(toRaw(b))
   })
 
+  test('readonly should track and trigger if wrapping reactive original', () => {
+    const a = reactive({ n: 1 })
+    const b = readonly(a)
+    let dummy
+    effect(() => {
+      dummy = b.n
+    })
+    expect(dummy).toBe(1)
+    a.n++
+    expect(b.n).toBe(2)
+    expect(dummy).toBe(2)
+  })
+
   test('observing already observed value should return same Proxy', () => {
     const original = { foo: 1 }
     const observed = readonly(original)
@@ -422,17 +330,6 @@ describe('reactivity/readonly', () => {
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
-  })
-
-  test('markReadonly', () => {
-    const obj = reactive({
-      foo: { a: 1 },
-      bar: markReadonly({ b: 2 })
-    })
-    expect(isReactive(obj.foo)).toBe(true)
-    expect(isReactive(obj.bar)).toBe(true)
-    expect(isReadonly(obj.foo)).toBe(false)
-    expect(isReadonly(obj.bar)).toBe(true)
   })
 
   test('should make ref readonly', () => {
@@ -469,14 +366,6 @@ describe('reactivity/readonly', () => {
       expect(
         `Set operation on key "foo" failed: target is readonly.`
       ).not.toHaveBeenWarned()
-    })
-
-    test('should keep reactive properties reactive', () => {
-      const props: any = shallowReadonly({ n: reactive({ foo: 1 }) })
-      unlock()
-      props.n = reactive({ foo: 2 })
-      lock()
-      expect(isReactive(props.n)).toBe(true)
     })
   })
 })

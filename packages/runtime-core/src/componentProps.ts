@@ -1,4 +1,4 @@
-import { toRaw, lock, unlock, shallowReadonly } from '@vue/reactivity'
+import { toRaw, shallowReactive } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -114,7 +114,7 @@ export function initProps(
 
   if (isStateful) {
     // stateful
-    instance.props = isSSR ? props : shallowReadonly(props)
+    instance.props = isSSR ? props : shallowReactive(props)
   } else {
     if (!options) {
       // functional w/ optional props, props === attrs
@@ -132,9 +132,6 @@ export function updateProps(
   rawProps: Data | null,
   optimized: boolean
 ) {
-  // allow mutation of propsProxy (which is readonly by default)
-  unlock()
-
   const {
     props,
     attrs,
@@ -186,7 +183,16 @@ export function updateProps(
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
-        delete props[key]
+        if (options) {
+          props[key] = resolvePropValue(
+            options,
+            rawProps || EMPTY_OBJ,
+            key,
+            undefined
+          )
+        } else {
+          delete props[key]
+        }
       }
     }
     for (const key in attrs) {
@@ -195,9 +201,6 @@ export function updateProps(
       }
     }
   }
-
-  // lock readonly
-  lock()
 
   if (__DEV__ && rawOptions && rawProps) {
     validateProps(props, rawOptions)
@@ -250,25 +253,24 @@ function resolvePropValue(
   key: string,
   value: unknown
 ) {
-  let opt = options[key]
-  if (opt == null) {
-    return value
-  }
-  const hasDefault = hasOwn(opt, 'default')
-  // default values
-  if (hasDefault && value === undefined) {
-    const defaultValue = opt.default
-    value = isFunction(defaultValue) ? defaultValue() : defaultValue
-  }
-  // boolean casting
-  if (opt[BooleanFlags.shouldCast]) {
-    if (!hasOwn(props, key) && !hasDefault) {
-      value = false
-    } else if (
-      opt[BooleanFlags.shouldCastTrue] &&
-      (value === '' || value === hyphenate(key))
-    ) {
-      value = true
+  const opt = options[key]
+  if (opt != null) {
+    const hasDefault = hasOwn(opt, 'default')
+    // default values
+    if (hasDefault && value === undefined) {
+      const defaultValue = opt.default
+      value = isFunction(defaultValue) ? defaultValue() : defaultValue
+    }
+    // boolean casting
+    if (opt[BooleanFlags.shouldCast]) {
+      if (!hasOwn(props, key) && !hasDefault) {
+        value = false
+      } else if (
+        opt[BooleanFlags.shouldCastTrue] &&
+        (value === '' || value === hyphenate(key))
+      ) {
+        value = true
+      }
     }
   }
   return value

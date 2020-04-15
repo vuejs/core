@@ -2,20 +2,21 @@
 
 export const version = __VERSION__
 export {
-  effect,
   ref,
   unref,
   shallowRef,
   isRef,
+  toRef,
   toRefs,
+  customRef,
   reactive,
   isReactive,
   readonly,
   isReadonly,
   shallowReactive,
-  toRaw,
-  markReadonly,
-  markNonReactive
+  shallowReadonly,
+  markNonReactive,
+  toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'

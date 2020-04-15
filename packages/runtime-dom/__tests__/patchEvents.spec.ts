@@ -134,4 +134,18 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith(event)
   })
+
+  it('should support stopImmediatePropagation on multiple listeners', async () => {
+    const el = document.createElement('div')
+    const event = new Event('click')
+    const fn1 = jest.fn((e: Event) => {
+      e.stopImmediatePropagation()
+    })
+    const fn2 = jest.fn()
+    patchProp(el, 'onClick', null, [fn1, fn2])
+    el.dispatchEvent(event)
+    await timeout()
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(0)
+  })
 })

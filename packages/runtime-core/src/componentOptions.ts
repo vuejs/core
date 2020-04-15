@@ -15,7 +15,8 @@ import {
   isArray,
   EMPTY_OBJ,
   NOOP,
-  hasOwn
+  hasOwn,
+  isPromise
 } from '@vue/shared'
 import { computed } from './apiComputed'
 import { watch, WatchOptions, WatchCallback } from './apiWatch'
@@ -316,6 +317,13 @@ export function applyOptions(
       )
     }
     const data = dataOptions.call(ctx, ctx)
+    if (__DEV__ && isPromise(data)) {
+      warn(
+        `data() returned a Promise - note data() cannot be async; If you ` +
+          `intend to perform data fetching before component renders, use ` +
+          `async setup() + <Suspense>.`
+      )
+    }
     if (!isObject(data)) {
       __DEV__ && warn(`data() should return an object.`)
     } else if (instance.data === EMPTY_OBJ) {
