@@ -1,4 +1,4 @@
-import { EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ, isArray } from '@vue/shared'
 import {
   ComponentInternalInstance,
   callWithAsyncErrorHandling
@@ -130,7 +130,7 @@ function createInvoker(
     // AFTER it was attached.
     if (e.timeStamp >= invoker.lastUpdated - 1) {
       callWithAsyncErrorHandling(
-        invoker.value,
+        patchStopImmediatePropagation(e, invoker.value),
         instance,
         ErrorCodes.NATIVE_EVENT_HANDLER,
         [e]
@@ -141,4 +141,20 @@ function createInvoker(
   initialValue.invoker = invoker
   invoker.lastUpdated = getNow()
   return invoker
+}
+
+function patchStopImmediatePropagation(
+  e: Event,
+  value: EventValue
+): EventValue {
+  if (isArray(value)) {
+    const originalStop = e.stopImmediatePropagation
+    e.stopImmediatePropagation = () => {
+      originalStop.call(e)
+      ;(e as any)._stopped = true
+    }
+    return value.map(fn => (e: Event) => !(e as any)._stopped && fn(e))
+  } else {
+    return value
+  }
 }
