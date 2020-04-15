@@ -9,7 +9,7 @@ import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers
 } from './collectionHandlers'
-import { UnwrapRef, Ref, isRef } from './ref'
+import { UnwrapRef, Ref } from './ref'
 import { makeMap } from '@vue/shared'
 
 // WeakMaps that store {raw <-> observed} pairs.
@@ -44,9 +44,6 @@ export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (readonlyToRaw.has(target)) {
-    return target
-  }
-  if (isRef(target)) {
     return target
   }
   return createReactiveObject(

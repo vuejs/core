@@ -36,7 +36,8 @@ const arrayInstrumentations: Record<string, Function> = {}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
-    if (isArray(target) && hasOwn(arrayInstrumentations, key)) {
+    const targetIsArray = isArray(target)
+    if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
     const res = Reflect.get(target, key, receiver)
@@ -48,18 +49,24 @@ function createGetter(isReadonly = false, shallow = false) {
       // TODO strict mode that returns a shallow-readonly version of the value
       return res
     }
-    // ref unwrapping, only for Objects, not for Arrays.
-    if (isRef(res) && !isArray(target)) {
-      return res.value
+    if (isRef(res)) {
+      if (targetIsArray) {
+        track(target, TrackOpTypes.GET, key)
+        return res
+      } else {
+        // ref unwrapping, only for Objects, not for Arrays.
+        return res.value
+      }
+    } else {
+      track(target, TrackOpTypes.GET, key)
+      return isObject(res)
+        ? isReadonly
+          ? // need to lazy access readonly and reactive here to avoid
+            // circular dependency
+            readonly(res)
+          : reactive(res)
+        : res
     }
-    track(target, TrackOpTypes.GET, key)
-    return isObject(res)
-      ? isReadonly
-        ? // need to lazy access readonly and reactive here to avoid
-          // circular dependency
-          readonly(res)
-        : reactive(res)
-      : res
   }
 }
 
