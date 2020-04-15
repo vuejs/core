@@ -7,13 +7,14 @@ export {
   shallowRef,
   isRef,
   toRefs,
+  customRef,
   reactive,
   isReactive,
   readonly,
   isReadonly,
   shallowReactive,
-  toRaw,
-  markNonReactive
+  markNonReactive,
+  toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'

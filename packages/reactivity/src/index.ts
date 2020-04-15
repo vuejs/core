@@ -1,4 +1,13 @@
-export { ref, unref, shallowRef, isRef, toRefs, Ref, UnwrapRef } from './ref'
+export {
+  ref,
+  unref,
+  shallowRef,
+  isRef,
+  toRefs,
+  customRef,
+  Ref,
+  UnwrapRef
+} from './ref'
 export {
   reactive,
   isReactive,
