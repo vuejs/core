@@ -57,3 +57,20 @@ function bailType(arg: HTMLElement | Ref<HTMLElement>) {
 }
 const el = document.createElement('DIV')
 bailType(el)
+
+function withSymbol() {
+  const customSymbol = Symbol()
+  const obj = {
+    [Symbol.asyncIterator]: { a: 1 },
+    [Symbol.unscopables]: { b: '1' },
+    [customSymbol]: { c: [1, 2, 3] }
+  }
+
+  const objRef = ref(obj)
+
+  expectType<{ a: number }>(objRef.value[Symbol.asyncIterator])
+  expectType<{ b: string }>(objRef.value[Symbol.unscopables])
+  expectType<{ c: Array<number> }>(objRef.value[customSymbol])
+}
+
+withSymbol()
