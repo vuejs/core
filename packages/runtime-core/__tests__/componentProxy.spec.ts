@@ -35,7 +35,7 @@ describe('component: proxy', () => {
     expect(instance!.data.foo).toBe(2)
   })
 
-  test('renderContext', () => {
+  test('setupState', () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
     const Comp = {
@@ -55,7 +55,7 @@ describe('component: proxy', () => {
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
     instanceProxy.foo = 2
-    expect(instance!.renderContext.foo).toBe(2)
+    expect(instance!.setupState.foo).toBe(2)
   })
 
   test('should not expose non-declared props', () => {

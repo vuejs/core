@@ -1899,14 +1899,14 @@ function baseCreateRenderer(
     }
     const oldRef = oldRawRef && oldRawRef[1]
     const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
-    const renderContext = owner.renderContext
+    const setupState = owner.setupState
 
     // unset old ref
     if (oldRef != null && oldRef !== ref) {
       if (isString(oldRef)) {
         refs[oldRef] = null
-        if (hasOwn(renderContext, oldRef)) {
-          renderContext[oldRef] = null
+        if (hasOwn(setupState, oldRef)) {
+          setupState[oldRef] = null
         }
       } else if (isRef(oldRef)) {
         oldRef.value = null
@@ -1915,8 +1915,8 @@ function baseCreateRenderer(
 
     if (isString(ref)) {
       refs[ref] = value
-      if (hasOwn(renderContext, ref)) {
-        renderContext[ref] = value
+      if (hasOwn(setupState, ref)) {
+        setupState[ref] = value
       }
     } else if (isRef(ref)) {
       ref.value = value

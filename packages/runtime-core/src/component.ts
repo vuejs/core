@@ -13,7 +13,7 @@ import {
   RuntimeCompiledPublicInstanceProxyHandlers,
   createDevProxyTarget,
   exposePropsOnDevProxyTarget,
-  exposeRenderContextOnDevProxyTarget
+  exposeSetupStateOnDevProxyTarget
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
@@ -143,6 +143,13 @@ export interface ComponentInternalInstance {
   attrs: Data
   slots: InternalSlots
   proxy: ComponentPublicInstance | null
+  refs: Data
+  emit: EmitFn
+
+  // setup
+  setupState: Data
+  setupContext: SetupContext | null
+
   // The target object for the public instance proxy. In dev mode, we also
   // define getters for all known instance properties on it so it can be
   // properly inspected in the console. These getters are skipped in prod mode
@@ -152,9 +159,6 @@ export interface ComponentInternalInstance {
   // alternative proxy used only for runtime-compiled render functions using
   // `with` block
   withProxy: ComponentPublicInstance | null
-  setupContext: SetupContext | null
-  refs: Data
-  emit: EmitFn
 
   // suspense related
   suspense: SuspenseBoundary | null
@@ -209,19 +213,20 @@ export function createComponentInstance(
     proxy: null,
     proxyTarget: null!, // to be immediately set
     withProxy: null,
-    setupContext: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
 
-    // setup context properties
+    // state
     renderContext: EMPTY_OBJ,
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
     slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
+    setupState: EMPTY_OBJ,
+    setupContext: null,
 
     // per-instance asset storage (mutable during options resolution)
     components: Object.create(appContext.components),
@@ -392,9 +397,9 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
-    instance.renderContext = reactive(setupResult)
+    instance.setupState = reactive(setupResult)
     if (__DEV__) {
-      exposeRenderContextOnDevProxyTarget(instance)
+      exposeSetupStateOnDevProxyTarget(instance)
     }
   } else if (__DEV__ && setupResult !== undefined) {
     warn(

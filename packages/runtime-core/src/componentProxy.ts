@@ -76,9 +76,10 @@ const publicPropertiesMap: Record<
 }
 
 const enum AccessTypes {
+  SETUP,
   DATA,
-  CONTEXT,
   PROPS,
+  CONTEXT,
   OTHER
 }
 
@@ -91,6 +92,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentPublicProxyTarget, key: string) {
     const {
       renderContext,
+      setupState,
       data,
       props,
       accessCache,
@@ -109,6 +111,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       const n = accessCache![key]
       if (n !== undefined) {
         switch (n) {
+          case AccessTypes.SETUP:
+            return setupState[key]
           case AccessTypes.DATA:
             return data[key]
           case AccessTypes.CONTEXT:
@@ -117,22 +121,25 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             return props![key]
           // default: just fallthrough
         }
+      } else if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+        accessCache![key] = AccessTypes.SETUP
+        return setupState[key]
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
+      } else if (
+        // only cache other properties when instance has declared (thus stable)
+        // props
+        type.props &&
+        hasOwn(normalizePropsOptions(type.props)[0]!, key)
+      ) {
+        accessCache![key] = AccessTypes.PROPS
+        return props![key]
       } else if (renderContext !== EMPTY_OBJ && hasOwn(renderContext, key)) {
         accessCache![key] = AccessTypes.CONTEXT
         return renderContext[key]
-      } else if (type.props) {
-        // only cache other properties when instance has declared (thus stable)
-        // props
-        if (hasOwn(normalizePropsOptions(type.props)[0]!, key)) {
-          accessCache![key] = AccessTypes.PROPS
-          // return the value from propsProxy for ref unwrapping and readonly
-          return props![key]
-        } else {
-          accessCache![key] = AccessTypes.OTHER
-        }
+      } else {
+        accessCache![key] = AccessTypes.OTHER
       }
     }
 
@@ -170,9 +177,18 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     key: string,
     value: any
   ): boolean {
-    const { data, renderContext } = instance
-    if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    const { data, setupState, renderContext } = instance
+    if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+      setupState[key] = value
+    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
+    } else if (key in instance.props) {
+      __DEV__ &&
+        warn(
+          `Attempting to mutate prop "${key}". Props are readonly.`,
+          instance
+        )
+      return false
     } else if (hasOwn(renderContext, key)) {
       renderContext[key] = value
     } else if (key[0] === '$' && key.slice(1) in instance) {
@@ -180,13 +196,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         warn(
           `Attempting to mutate public property "${key}". ` +
             `Properties starting with $ are reserved and readonly.`,
-          instance
-        )
-      return false
-    } else if (key in instance.props) {
-      __DEV__ &&
-        warn(
-          `Attempting to mutate prop "${key}". Props are readonly.`,
           instance
         )
       return false
@@ -206,15 +215,24 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, accessCache, renderContext, type, proxyTarget, appContext }
+      _: {
+        data,
+        setupState,
+        accessCache,
+        renderContext,
+        type,
+        proxyTarget,
+        appContext
+      }
     }: ComponentPublicProxyTarget,
     key: string
   ) {
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      hasOwn(renderContext, key) ||
+      (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
       (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
+      hasOwn(renderContext, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(proxyTarget, key) ||
       hasOwn(appContext.config.globalProperties, key)
@@ -306,15 +324,15 @@ export function exposePropsOnDevProxyTarget(
   }
 }
 
-export function exposeRenderContextOnDevProxyTarget(
+export function exposeSetupStateOnDevProxyTarget(
   instance: ComponentInternalInstance
 ) {
-  const { proxyTarget, renderContext } = instance
-  Object.keys(toRaw(renderContext)).forEach(key => {
+  const { proxyTarget, setupState } = instance
+  Object.keys(toRaw(setupState)).forEach(key => {
     Object.defineProperty(proxyTarget, key, {
       enumerable: true,
       configurable: true,
-      get: () => renderContext[key],
+      get: () => setupState[key],
       set: NOOP
     })
   })
