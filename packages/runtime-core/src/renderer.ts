@@ -949,7 +949,7 @@ function baseCreateRenderer(
   ) => {
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        ;(parentComponent!.proxyTarget as KeepAliveContext).activate(
+        ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,
           anchor,
@@ -998,7 +998,7 @@ function baseCreateRenderer(
 
     // inject renderer internals for keepAlive
     if (isKeepAlive(initialVNode)) {
-      ;(instance.proxyTarget as KeepAliveContext).renderer = internals
+      ;(instance.ctx as KeepAliveContext).renderer = internals
     }
 
     // resolve props and slots for setup context
@@ -1719,7 +1719,7 @@ function baseCreateRenderer(
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-        ;(parentComponent!.proxyTarget as KeepAliveContext).deactivate(vnode)
+        ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
       }

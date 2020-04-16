@@ -116,7 +116,7 @@ describe('component: proxy', () => {
     render(h(Comp), nodeOps.createElement('div'))
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
-    expect(instance!.proxyTarget.foo).toBe(1)
+    expect(instance!.ctx.foo).toBe(1)
   })
 
   test('globalProperties', () => {
@@ -141,7 +141,7 @@ describe('component: proxy', () => {
     // set should overwrite globalProperties with local
     instanceProxy.foo = 2
     // expect(instanceProxy.foo).toBe(2)
-    expect(instance!.proxyTarget.foo).toBe(2)
+    expect(instance!.ctx.foo).toBe(2)
     // should not affect global
     expect(app.config.globalProperties.foo).toBe(1)
   })
@@ -177,7 +177,7 @@ describe('component: proxy', () => {
     expect('msg' in instanceProxy).toBe(true)
     // data
     expect('foo' in instanceProxy).toBe(true)
-    // renderContext
+    // ctx
     expect('bar' in instanceProxy).toBe(true)
     // public properties
     expect('$el' in instanceProxy).toBe(true)

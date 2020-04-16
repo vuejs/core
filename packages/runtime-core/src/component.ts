@@ -8,12 +8,11 @@ import {
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
-  ComponentPublicProxyTarget,
   PublicInstanceProxyHandlers,
   RuntimeCompiledPublicInstanceProxyHandlers,
-  createDevProxyTarget,
-  exposePropsOnDevProxyTarget,
-  exposeSetupStateOnDevProxyTarget
+  createRenderContext,
+  exposePropsOnRenderContext,
+  exposeSetupStateOnRenderContext
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
@@ -136,29 +135,29 @@ export interface ComponentInternalInstance {
   components: Record<string, Component>
   directives: Record<string, Directive>
 
-  // the rest are only for stateful components
-  renderContext: Data
+  // the rest are only for stateful components ---------------------------------
+
+  // main proxy that serves as the public instance (`this`)
+  proxy: ComponentPublicInstance | null
+  // alternative proxy used only for runtime-compiled render functions using
+  // `with` block
+  withProxy: ComponentPublicInstance | null
+  // This is the target for the public instance proxy. It also holds properties
+  // injected by user options (computed, methods etc.) and user-attached
+  // custom properties (via `this.x = ...`)
+  ctx: Data
+
+  // internal state
   data: Data
   props: Data
   attrs: Data
   slots: InternalSlots
-  proxy: ComponentPublicInstance | null
   refs: Data
   emit: EmitFn
 
   // setup
   setupState: Data
   setupContext: SetupContext | null
-
-  // The target object for the public instance proxy. In dev mode, we also
-  // define getters for all known instance properties on it so it can be
-  // properly inspected in the console. These getters are skipped in prod mode
-  // for performance. In addition, any user attached properties
-  // (via `this.x = ...`) are also stored on this object.
-  proxyTarget: ComponentPublicProxyTarget
-  // alternative proxy used only for runtime-compiled render functions using
-  // `with` block
-  withProxy: ComponentPublicInstance | null
 
   // suspense related
   suspense: SuspenseBoundary | null
@@ -211,7 +210,6 @@ export function createComponentInstance(
     update: null!, // will be set synchronously right after creation
     render: null,
     proxy: null,
-    proxyTarget: null!, // to be immediately set
     withProxy: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
@@ -219,7 +217,7 @@ export function createComponentInstance(
     renderCache: [],
 
     // state
-    renderContext: EMPTY_OBJ,
+    ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
     props: EMPTY_OBJ,
     attrs: EMPTY_OBJ,
@@ -258,9 +256,9 @@ export function createComponentInstance(
     emit: null as any // to be set immediately
   }
   if (__DEV__) {
-    instance.proxyTarget = createDevProxyTarget(instance)
+    instance.ctx = createRenderContext(instance)
   } else {
-    instance.proxyTarget = { _: instance }
+    instance.ctx = { _: instance }
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
@@ -335,9 +333,9 @@ function setupStatefulComponent(
   // 0. create render proxy property access cache
   instance.accessCache = {}
   // 1. create public instance / render proxy
-  instance.proxy = new Proxy(instance.proxyTarget, PublicInstanceProxyHandlers)
+  instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
-    exposePropsOnDevProxyTarget(instance)
+    exposePropsOnRenderContext(instance)
   }
   // 2. call setup()
   const { setup } = Component
@@ -399,7 +397,7 @@ export function handleSetupResult(
     // assuming a render function compiled from template is present.
     instance.setupState = reactive(setupResult)
     if (__DEV__) {
-      exposeSetupStateOnDevProxyTarget(instance)
+      exposeSetupStateOnRenderContext(instance)
     }
   } else if (__DEV__ && setupResult !== undefined) {
     warn(
@@ -469,7 +467,7 @@ function finishComponentSetup(
     // also only allows a whitelist of globals to fallthrough.
     if (instance.render._rc) {
       instance.withProxy = new Proxy(
-        instance.proxyTarget,
+        instance.ctx,
         RuntimeCompiledPublicInstanceProxyHandlers
       )
     }

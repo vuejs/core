@@ -26,7 +26,7 @@ import {
   RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentPublicProxyTarget } from '../componentProxy'
+import { ComponentRenderContext } from '../componentProxy'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -40,7 +40,7 @@ type CacheKey = string | number | Component
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
-export interface KeepAliveContext extends ComponentPublicProxyTarget {
+export interface KeepAliveContext extends ComponentRenderContext {
   renderer: RendererInternals
   activate: (
     vnode: VNode,
@@ -77,12 +77,12 @@ const KeepAliveImpl = {
     const instance = getCurrentInstance()!
     const parentSuspense = instance.suspense
 
-    // KeepAlive communicates with the instantiated renderer via the proxyTarget
-    // as a shared context where the renderer passes in its internals,
+    // KeepAlive communicates with the instantiated renderer via the
+    // ctx where the renderer passes in its internals,
     // and the KeepAlive instance exposes activate/deactivate implementations.
     // The whole point of this is to avoid importing KeepAlive directly in the
     // renderer to facilitate tree-shaking.
-    const sharedContext = instance.proxyTarget as KeepAliveContext
+    const sharedContext = instance.ctx as KeepAliveContext
     const {
       renderer: {
         p: patch,
