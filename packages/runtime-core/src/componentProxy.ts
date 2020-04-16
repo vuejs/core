@@ -95,7 +95,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       props,
       accessCache,
       type,
-      sink,
+      proxyTarget,
       appContext
     } = instance
 
@@ -136,7 +136,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
-    // public $xxx properties & user-attached properties (sink)
+    // public $xxx properties &
+    // user-attached properties (falls through to proxyTarget)
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     if (publicGetter) {
@@ -144,8 +145,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         markAttrsAccessed()
       }
       return publicGetter(instance)
-    } else if (hasOwn(sink, key)) {
-      return sink[key]
+    } else if (hasOwn(proxyTarget, key)) {
+      return proxyTarget[key]
     } else if (
       (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
@@ -190,8 +191,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         )
       return false
     } else {
-      instance.sink[key] = value
-      if (__DEV__) {
+      if (__DEV__ && key in instance.appContext.config.globalProperties) {
+        Object.defineProperty(instance.proxyTarget, key, {
+          configurable: true,
+          enumerable: true,
+          value
+        })
+      } else {
         instance.proxyTarget[key] = value
       }
     }
@@ -200,7 +206,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, accessCache, renderContext, type, sink, appContext }
+      _: { data, accessCache, renderContext, type, proxyTarget, appContext }
     }: ComponentPublicProxyTarget,
     key: string
   ) {
@@ -210,7 +216,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(renderContext, key) ||
       (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(sink, key) ||
+      hasOwn(proxyTarget, key) ||
       hasOwn(appContext.config.globalProperties, key)
     )
   }

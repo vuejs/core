@@ -143,6 +143,11 @@ export interface ComponentInternalInstance {
   attrs: Data
   slots: InternalSlots
   proxy: ComponentPublicInstance | null
+  // The target object for the public instance proxy. In dev mode, we also
+  // define getters for all known instance properties on it so it can be
+  // properly inspected in the console. These getters are skipped in prod mode
+  // for performance. In addition, any user attached properties
+  // (via `this.x = ...`) are also stored on this object.
   proxyTarget: ComponentPublicProxyTarget
   // alternative proxy used only for runtime-compiled render functions using
   // `with` block
@@ -155,9 +160,6 @@ export interface ComponentInternalInstance {
   suspense: SuspenseBoundary | null
   asyncDep: Promise<any> | null
   asyncResolved: boolean
-
-  // storage for any extra properties
-  sink: { [key: string]: any }
 
   // lifecycle
   isMounted: boolean
@@ -229,10 +231,6 @@ export function createComponentInstance(
     suspense,
     asyncDep: null,
     asyncResolved: false,
-
-    // user namespace for storing whatever the user assigns to `this`
-    // can also be used as a wildcard storage for ad-hoc injections internally
-    sink: {},
 
     // lifecycle hooks
     // not using enums here because it results in computed properties

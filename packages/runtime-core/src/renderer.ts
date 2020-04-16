@@ -53,7 +53,7 @@ import {
   SuspenseImpl
 } from './components/Suspense'
 import { TeleportImpl } from './components/Teleport'
-import { KeepAliveSink, isKeepAlive } from './components/KeepAlive'
+import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR } from './hmr'
 import {
   ErrorCodes,
@@ -949,7 +949,7 @@ function baseCreateRenderer(
   ) => {
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        ;(parentComponent!.sink as KeepAliveSink).activate(
+        ;(parentComponent!.proxyTarget as KeepAliveContext).activate(
           n2,
           container,
           anchor,
@@ -998,9 +998,7 @@ function baseCreateRenderer(
 
     // inject renderer internals for keepAlive
     if (isKeepAlive(initialVNode)) {
-      const sink = instance.sink as KeepAliveSink
-      sink.renderer = internals
-      sink.parentSuspense = parentSuspense
+      ;(instance.proxyTarget as KeepAliveContext).renderer = internals
     }
 
     // resolve props and slots for setup context
@@ -1721,7 +1719,7 @@ function baseCreateRenderer(
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
       if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-        ;(parentComponent!.sink as KeepAliveSink).deactivate(vnode)
+        ;(parentComponent!.proxyTarget as KeepAliveContext).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
       }
