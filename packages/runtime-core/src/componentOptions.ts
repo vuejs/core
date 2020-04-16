@@ -40,7 +40,8 @@ import {
   reactive,
   ComputedGetter,
   WritableComputedOptions,
-  ComputedRef
+  ComputedRef,
+  toRaw
 } from '@vue/reactivity'
 import {
   ComponentObjectPropsOptions,
@@ -276,11 +277,12 @@ export function applyOptions(
     errorCaptured
   } = options
 
-  const renderContext =
+  const renderContext = toRaw(
     instance.renderContext === EMPTY_OBJ &&
     (computedOptions || methods || watchOptions || injectOptions)
       ? (instance.renderContext = reactive({}))
       : instance.renderContext
+  )
 
   const globalMixins = instance.appContext.mixins
   // call it only during dev
@@ -355,7 +357,7 @@ export function applyOptions(
               : __DEV__
                 ? () => {
                     warn(
-                      `Computed property "${key}" was assigned to but it has no setter.`
+                      `Write operation failed: computed property "${key}" is readonly.`
                     )
                   }
                 : NOOP
@@ -369,7 +371,9 @@ export function applyOptions(
         if (renderContext[key] && !(key in proxyTarget)) {
           Object.defineProperty(proxyTarget, key, {
             enumerable: true,
-            get: () => (renderContext[key] as ComputedRef).value
+            configurable: true,
+            get: () => (renderContext[key] as ComputedRef).value,
+            set: NOOP
           })
         }
       }
