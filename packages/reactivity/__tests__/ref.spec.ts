@@ -139,6 +139,21 @@ describe('reactivity/ref', () => {
     expect(tupleRef.value[4].value).toBe(1)
   })
 
+  it('should keep symbols', () => {
+    const customSymbol = Symbol()
+    const obj = {
+      [Symbol.asyncIterator]: { a: 1 },
+      [Symbol.unscopables]: { b: '1' },
+      [customSymbol]: { c: [1, 2, 3] }
+    }
+
+    const objRef = ref(obj)
+
+    expect(objRef.value[Symbol.asyncIterator]).toBe(obj[Symbol.asyncIterator])
+    expect(objRef.value[Symbol.unscopables]).toBe(obj[Symbol.unscopables])
+    expect(objRef.value[customSymbol]).toStrictEqual(obj[customSymbol])
+  })
+
   test('unref', () => {
     expect(unref(1)).toBe(1)
     expect(unref(ref(1))).toBe(1)
