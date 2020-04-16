@@ -151,9 +151,6 @@ type SymbolExtract<T> = (T extends { [Symbol.asyncIterator]: infer V }
   (T extends { [Symbol.iterator]: infer V } ? { [Symbol.iterator]: V } : {}) &
   (T extends { [Symbol.match]: infer V } ? { [Symbol.match]: V } : {}) &
   (T extends { [Symbol.matchAll]: infer V } ? { [Symbol.matchAll]: V } : {}) &
-  (T extends { [Symbol.observable]: infer V }
-    ? { [Symbol.observable]: V }
-    : {}) &
   (T extends { [Symbol.replace]: infer V } ? { [Symbol.replace]: V } : {}) &
   (T extends { [Symbol.search]: infer V } ? { [Symbol.search]: V } : {}) &
   (T extends { [Symbol.species]: infer V } ? { [Symbol.species]: V } : {}) &
