@@ -1,3 +1,45 @@
+# [3.0.0-beta.1](https://github.com/vuejs/vue-next/compare/v3.0.0-alpha.13...v3.0.0-beta.1) (2020-04-16)
+
+
+### Bug Fixes
+
+* **reactivity:** remove Symbol.observable ([#968](https://github.com/vuejs/vue-next/issues/968)) ([4d014dc](https://github.com/vuejs/vue-next/commit/4d014dc3d361c52ac6192c063100ad8655a6e397))
+
+
+### Code Refactoring
+
+* **reactivity:** adjust APIs ([09b4202](https://github.com/vuejs/vue-next/commit/09b4202a22ae03072a8a8405511e37f65b626568))
+
+
+### Features
+
+* **runtime-core:** skip emit warn if has equivalent onXXX prop ([0709380](https://github.com/vuejs/vue-next/commit/0709380c5faf0a86c25a0564781fdb2650c9c353))
+
+
+### Performance Improvements
+
+* **runtime-core:** use raw context on component options init ([bfd6744](https://github.com/vuejs/vue-next/commit/bfd6744fb1db36a02914ef48da7116636343f313))
+
+
+### BREAKING CHANGES
+
+* **reactivity:** Reactivity APIs adjustments:
+
+- `readonly` is now non-tracking if called on plain objects.
+  `lock` and `unlock` have been removed. A `readonly` proxy can no
+  longer be directly mutated. However, it can still wrap an already
+  reactive object and track changes to the source reactive object.
+
+- `isReactive` now only returns true for proxies created by `reactive`,
+   or a `readonly` proxy that wraps a `reactive` proxy.
+
+- A new utility `isProxy` is introduced, which returns true for both
+  reactive or readonly proxies.
+
+- `markNonReactive` has been renamed to `markRaw`.
+
+
+
 # [3.0.0-alpha.13](https://github.com/vuejs/vue-next/compare/v3.0.0-alpha.12...v3.0.0-alpha.13) (2020-04-15)
 
 
