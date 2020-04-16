@@ -92,7 +92,7 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is not declared`
+      `Component emitted event "bar" but it is neither declared`
     ).toHaveBeenWarned()
   })
 
@@ -109,8 +109,24 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is not declared`
+      `Component emitted event "bar" but it is neither declared`
     ).toHaveBeenWarned()
+  })
+
+  test('should not warn if has equivalent onXXX prop', () => {
+    const Foo = defineComponent({
+      props: ['onFoo'],
+      emits: [],
+      render() {},
+      created() {
+        // @ts-ignore
+        this.$emit('foo')
+      }
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(
+      `Component emitted event "bar" but it is neither declared`
+    ).not.toHaveBeenWarned()
   })
 
   test('validator warning', () => {

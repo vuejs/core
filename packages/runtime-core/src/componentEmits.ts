@@ -11,6 +11,7 @@ import {
 import { ComponentInternalInstance } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
+import { normalizePropsOptions } from './componentProps'
 
 export type ObjectEmitsOptions = Record<
   string,
@@ -48,10 +49,13 @@ export function emit(
     const options = normalizeEmitsOptions(instance.type.emits)
     if (options) {
       if (!(event in options)) {
-        warn(
-          `Component emitted event "${event}" but it is not declared in the ` +
-            `emits option.`
-        )
+        const propsOptions = normalizePropsOptions(instance.type.props)[0]
+        if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
+          warn(
+            `Component emitted event "${event}" but it is neither declared in ` +
+              `the emits option nor as an "on${capitalize(event)}" prop.`
+          )
+        }
       } else {
         const validator = options[event]
         if (isFunction(validator)) {
