@@ -69,8 +69,8 @@ export const transformAssetUrl: NodeTransform = (
 }
 
 function getImportsExpressionExp(
-  path: string | undefined,
-  hash: string | undefined,
+  path: string | null,
+  hash: string | null,
   loc: SourceLocation,
   context: TransformContext
 ): ExpressionNode {
