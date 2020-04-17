@@ -23,7 +23,7 @@ In addition, the current implementation requires native ES2015+ in the runtime e
 | vue-class-component | Alpha [[Github][vcc-code]] [[npm][vcc-npm]] |
 | vue-cli             | Experimental support via [vue-cli-plugin-vue-next][cli] |
 | eslint-plugin-vue   | Alpha [[Github][epv-code]] [[npm][epv-npm]] |
-| vue-test-utils      | Pre-alpha [[Github][vtu-code]] [[npm][vtu-npm]] |
+| vue-test-utils      | Alpha [[Github][vtu-code]] [[npm][vtu-npm]] |
 | vue-devtools        | WIP |
 | jsx                 | WIP |
 
