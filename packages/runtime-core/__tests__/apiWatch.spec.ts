@@ -69,17 +69,6 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
-  it('watching single source: ref<string>', async () => {
-    const msg = ref<string>()
-    let dummy
-    watch(msg, (current, prevMessage) => {
-      dummy = [current, prevMessage]
-    })
-    msg.value = 'hello'
-    await nextTick()
-    expect(dummy).toMatchObject(['hello', undefined])
-  })
-
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
