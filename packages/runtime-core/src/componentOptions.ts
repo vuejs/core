@@ -51,6 +51,24 @@ import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
 
+/**
+ * Interface for declaring custom options.
+ *
+ * @example
+ * ```ts
+ * declare module '@vue/runtime-core' {
+ *   interface ComponentCustomOptions {
+ *     beforeRouteUpdate?(
+ *       to: Route,
+ *       from: Route,
+ *       next: () => void
+ *     ): void
+ *   }
+ * }
+ * ```
+ */
+export interface ComponentCustomOptions {}
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -59,7 +77,10 @@ export interface ComponentOptionsBase<
   M extends MethodOptions,
   E extends EmitsOptions,
   EE extends string = string
-> extends LegacyOptions<Props, D, C, M>, SFCInternalOptions {
+>
+  extends LegacyOptions<Props, D, C, M>,
+    SFCInternalOptions,
+    ComponentCustomOptions {
   setup?: (
     this: void,
     props: Props,

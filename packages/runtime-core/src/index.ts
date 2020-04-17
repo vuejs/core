@@ -189,8 +189,9 @@ export {
 export {
   ComponentOptions,
   ComponentOptionsWithoutProps,
-  ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
-  ComponentOptionsWithArrayProps
+  ComponentOptionsWithObjectProps,
+  ComponentOptionsWithArrayProps,
+  ComponentCustomOptions
 } from './componentOptions'
 export {
   ComponentPublicInstance,
