@@ -6,18 +6,12 @@ import {
   Fragment,
   isVNode
 } from './vnode'
-import { Portal, PortalProps } from './components/Portal'
+import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
-import { FunctionalComponent } from './component'
-import {
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptions
-} from './apiOptions'
-import { ExtractPropTypes } from './componentProps'
+import { FunctionalComponent, Component } from './component'
+import { ComponentOptions } from './componentOptions'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -68,7 +62,7 @@ type RawChildren =
 // fake constructor type returned from `defineComponent`
 interface Constructor<P = any> {
   __isFragment?: never
-  __isPortal?: never
+  __isTeleport?: never
   __isSuspense?: never
   new (): { $props: P }
 }
@@ -92,10 +86,10 @@ export function h(
   children?: VNodeArrayChildren
 ): VNode
 
-// portal (target prop is required)
+// teleport (target prop is required)
 export function h(
-  type: typeof Portal,
-  props: RawProps & PortalProps,
+  type: typeof Teleport,
+  props: RawProps & TeleportProps,
   children: RawChildren
 ): VNode
 
@@ -108,29 +102,21 @@ export function h(
 ): VNode
 
 // functional component
-export function h(type: FunctionalComponent, children?: RawChildren): VNode
 export function h<P>(
   type: FunctionalComponent<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
-// stateful component
-export function h(type: ComponentOptions, children?: RawChildren): VNode
+// catch-all for generic component types
+export function h(type: Component, children?: RawChildren): VNode
 export function h(
-  type: ComponentOptionsWithoutProps | ComponentOptionsWithArrayProps,
+  type: ComponentOptions | FunctionalComponent<{}>,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode
-export function h<O>(
-  type: ComponentOptionsWithObjectProps<O>,
-  props?:
-    | (RawProps & ExtractPropTypes<O>)
-    | ({} extends ExtractPropTypes<O> ? null : never),
-  children?: RawChildren | RawSlots
-): VNode
 
-// fake constructor type returned by `defineComponent`
+// fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,

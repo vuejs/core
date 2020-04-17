@@ -32,6 +32,7 @@ export interface SFCTemplateCompileResults {
 export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  ssr?: boolean
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
@@ -106,7 +107,8 @@ function doCompileTemplate({
   filename,
   inMap,
   source,
-  compiler = require('@vue/compiler-dom'),
+  ssr = false,
+  compiler = ssr ? require('@vue/compiler-ssr') : require('@vue/compiler-dom'),
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {

@@ -22,7 +22,8 @@ import {
   TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
-  isBindKey
+  isBindKey,
+  createSequenceExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -59,6 +60,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       // element
       // generate the template literal representing the open tag.
       const openTag: TemplateLiteral['elements'] = [`<${node.tag}`]
+      // some tags need to be pasesd to runtime for special checks
+      const needTagForRuntime =
+        node.tag === 'textarea' || node.tag.indexOf('-') > 0
 
       // v-bind="obj" or v-bind:[key] can potentially overwrite other static
       // attrs and can affect final rendering result, so when they are present
@@ -78,10 +82,12 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             // assign the merged props to a temp variable, and check whether
             // it contains value (if yes, render is as children).
             const tempId = `_temp${context.temps++}`
-            propsExp.arguments[0] = createAssignmentExpression(
-              createSimpleExpression(tempId, false),
-              props
-            )
+            propsExp.arguments = [
+              createAssignmentExpression(
+                createSimpleExpression(tempId, false),
+                props
+              )
+            ]
             const existingText = node.children[0] as TextNode | undefined
             rawChildrenMap.set(
               node,
@@ -107,19 +113,25 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
               const tempId = `_temp${context.temps++}`
               const tempExp = createSimpleExpression(tempId, false)
               propsExp.arguments = [
-                createAssignmentExpression(tempExp, props),
-                createCallExpression(context.helper(MERGE_PROPS), [
-                  tempExp,
-                  createCallExpression(
-                    context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
-                    [
-                      tempExp, // existing props
-                      vModel.exp! // model
-                    ]
-                  )
+                createSequenceExpression([
+                  createAssignmentExpression(tempExp, props),
+                  createCallExpression(context.helper(MERGE_PROPS), [
+                    tempExp,
+                    createCallExpression(
+                      context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
+                      [
+                        tempExp, // existing props
+                        vModel.exp! // model
+                      ]
+                    )
+                  ])
                 ])
               ]
             }
+          }
+
+          if (needTagForRuntime) {
+            propsExp.arguments.push(`"${node.tag}"`)
           }
 
           openTag.push(propsExp)
@@ -231,10 +243,14 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   // dynamic key attr
                   // this branch is only encountered for custom directive
                   // transforms that returns properties with dynamic keys
+                  const args: CallExpression['arguments'] = [key, value]
+                  if (needTagForRuntime) {
+                    args.push(`"${node.tag}"`)
+                  }
                   openTag.push(
                     createCallExpression(
                       context.helper(SSR_RENDER_DYNAMIC_ATTR),
-                      [key, value]
+                      args
                     )
                   )
                 }

@@ -130,7 +130,40 @@ describe('compiler: transform component slots', () => {
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
-  test('named slots', () => {
+  test('on component named slot', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp v-slot:named="{ foo }">{{ foo }}{{ bar }}</Comp>`,
+      { prefixIdentifiers: true }
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        named: {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
+          },
+          returns: [
+            {
+              type: NodeTypes.INTERPOLATION,
+              content: {
+                content: `foo`
+              }
+            },
+            {
+              type: NodeTypes.INTERPOLATION,
+              content: {
+                content: `_ctx.bar`
+              }
+            }
+          ]
+        }
+      })
+    )
+    expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  test('template named slots', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
         <template v-slot:one="{ foo }">
@@ -182,6 +215,39 @@ describe('compiler: transform component slots', () => {
               type: NodeTypes.INTERPOLATION,
               content: {
                 content: `bar`
+              }
+            }
+          ]
+        }
+      })
+    )
+    expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  test('on component dynamically named slot', () => {
+    const { root, slots } = parseWithSlots(
+      `<Comp v-slot:[named]="{ foo }">{{ foo }}{{ bar }}</Comp>`,
+      { prefixIdentifiers: true }
+    )
+    expect(slots).toMatchObject(
+      createSlotMatcher({
+        '[_ctx.named]': {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
+          params: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`{ `, { content: `foo` }, ` }`]
+          },
+          returns: [
+            {
+              type: NodeTypes.INTERPOLATION,
+              content: {
+                content: `foo`
+              }
+            },
+            {
+              type: NodeTypes.INTERPOLATION,
+              content: {
+                content: `_ctx.bar`
               }
             }
           ]
@@ -732,29 +798,6 @@ describe('compiler: transform component slots', () => {
             offset: index + 6,
             line: 1,
             column: index + 7
-          }
-        }
-      })
-    })
-
-    test('error on named slot on component', () => {
-      const onError = jest.fn()
-      const source = `<Comp v-slot:foo>foo</Comp>`
-      parseWithSlots(source, { onError })
-      const index = source.indexOf('v-slot')
-      expect(onError.mock.calls[0][0]).toMatchObject({
-        code: ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
-        loc: {
-          source: `v-slot:foo`,
-          start: {
-            offset: index,
-            line: 1,
-            column: index + 1
-          },
-          end: {
-            offset: index + 10,
-            line: 1,
-            column: index + 11
           }
         }
       })

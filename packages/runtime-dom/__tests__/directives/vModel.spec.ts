@@ -5,7 +5,8 @@ import {
   defineComponent,
   vModelDynamic,
   withDirectives,
-  VNode
+  VNode,
+  ref
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
@@ -56,6 +57,72 @@ describe('vModel', () => {
     data.value = 'bar'
     await nextTick()
     expect(input.value).toEqual('bar')
+  })
+
+  it('should work with multiple listeners', async () => {
+    const spy = jest.fn()
+    const component = defineComponent({
+      data() {
+        return { value: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              'onUpdate:modelValue': [setValue.bind(this), spy]
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')!
+    const data = root._vnode.component.data
+
+    input.value = 'foo'
+    triggerEvent('input', input)
+    await nextTick()
+    expect(data.value).toEqual('foo')
+    expect(spy).toHaveBeenCalledWith('foo')
+  })
+
+  it('should work with updated listeners', async () => {
+    const spy1 = jest.fn()
+    const spy2 = jest.fn()
+    const toggle = ref(true)
+
+    const component = defineComponent({
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              'onUpdate:modelValue': toggle.value ? spy1 : spy2
+            }),
+            'foo'
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')!
+
+    input.value = 'foo'
+    triggerEvent('input', input)
+    await nextTick()
+    expect(spy1).toHaveBeenCalledWith('foo')
+
+    // udpate listener
+    toggle.value = false
+    await nextTick()
+
+    input.value = 'bar'
+    triggerEvent('input', input)
+    await nextTick()
+    expect(spy1).not.toHaveBeenCalledWith('bar')
+    expect(spy2).toHaveBeenCalledWith('bar')
   })
 
   it('should work with textarea', async () => {

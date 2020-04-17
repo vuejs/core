@@ -1,27 +1,28 @@
-import { ComponentInternalInstance, Data, Emit } from './component'
+import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
 import {
+  ReactiveEffect,
+  UnwrapRef,
+  toRaw,
+  shallowReadonly
+} from '@vue/reactivity'
+import {
   ExtractComputedReturns,
   ComponentOptionsBase,
   ComputedOptions,
-  MethodOptions
-} from './apiOptions'
-import {
-  ReactiveEffect,
-  isRef,
-  isReactive,
-  Ref,
-  ComputedRef,
-  unref
-} from '@vue/reactivity'
-import { warn } from './warning'
+  MethodOptions,
+  resolveMergedOptions
+} from './componentOptions'
+import { normalizePropsOptions } from './componentProps'
+import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
 import {
   currentRenderingInstance,
   markAttrsAccessed
 } from './componentRenderUtils'
+import { warn } from './warning'
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
@@ -31,6 +32,7 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  E extends EmitsOptions = {},
   PublicProps = P
 > = {
   $: ComponentInternalInstance
@@ -39,25 +41,19 @@ export type ComponentPublicInstance<
   $attrs: Data
   $refs: Data
   $slots: Slots
-  $root: ComponentInternalInstance | null
-  $parent: ComponentInternalInstance | null
-  $emit: Emit
+  $root: ComponentPublicInstance | null
+  $parent: ComponentPublicInstance | null
+  $emit: EmitFn<E>
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M>
+  $options: ComponentOptionsBase<P, B, D, C, M, E>
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
 } & P &
-  UnwrapSetupBindings<B> &
+  UnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M
-
-type UnwrapSetupBindings<B> = { [K in keyof B]: UnwrapBinding<B[K]> }
-
-type UnwrapBinding<B> = B extends ComputedRef<any>
-  ? B extends ComputedRef<infer V> ? V : B
-  : B extends Ref<infer V> ? V : B
 
 const publicPropertiesMap: Record<
   string,
@@ -66,43 +62,45 @@ const publicPropertiesMap: Record<
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
-  $props: i => i.propsProxy,
-  $attrs: i => i.attrs,
-  $slots: i => i.slots,
-  $refs: i => i.refs,
-  $parent: i => i.parent,
-  $root: i => i.root,
+  $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
+  $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
+  $slots: i => (__DEV__ ? shallowReadonly(i.slots) : i.slots),
+  $refs: i => (__DEV__ ? shallowReadonly(i.refs) : i.refs),
+  $parent: i => i.parent && i.parent.proxy,
+  $root: i => i.root && i.root.proxy,
   $emit: i => i.emit,
-  $options: i => i.type,
+  $options: i => (__FEATURE_OPTIONS__ ? resolveMergedOptions(i) : i.type),
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
   $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
 }
 
 const enum AccessTypes {
+  SETUP,
   DATA,
-  CONTEXT,
   PROPS,
+  CONTEXT,
   OTHER
 }
 
+export interface ComponentRenderContext {
+  [key: string]: any
+  _: ComponentInternalInstance
+}
+
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
-  get(target: ComponentInternalInstance, key: string) {
-    // fast path for unscopables when using `with` block
-    if (__RUNTIME_COMPILE__ && (key as any) === Symbol.unscopables) {
-      return
-    }
+  get({ _: instance }: ComponentRenderContext, key: string) {
     const {
-      renderContext,
+      ctx,
+      setupState,
       data,
       props,
-      propsProxy,
       accessCache,
       type,
-      sink
-    } = target
+      appContext
+    } = instance
 
-    // data / props / renderContext
+    // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
     // is the multiple hasOwn() calls. It's much faster to do a simple property
@@ -112,50 +110,59 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       const n = accessCache![key]
       if (n !== undefined) {
         switch (n) {
+          case AccessTypes.SETUP:
+            return setupState[key]
           case AccessTypes.DATA:
             return data[key]
           case AccessTypes.CONTEXT:
-            return unref(renderContext[key])
+            return ctx[key]
           case AccessTypes.PROPS:
-            return propsProxy![key]
+            return props![key]
           // default: just fallthrough
         }
+      } else if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+        accessCache![key] = AccessTypes.SETUP
+        return setupState[key]
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
-      } else if (hasOwn(renderContext, key)) {
-        accessCache![key] = AccessTypes.CONTEXT
-        return unref(renderContext[key])
-      } else if (type.props != null) {
-        // only cache other properties when instance has declared (this stable)
+      } else if (
+        // only cache other properties when instance has declared (thus stable)
         // props
-        if (hasOwn(props, key)) {
-          accessCache![key] = AccessTypes.PROPS
-          // return the value from propsProxy for ref unwrapping and readonly
-          return propsProxy![key]
-        } else {
-          accessCache![key] = AccessTypes.OTHER
-        }
+        type.props &&
+        hasOwn(normalizePropsOptions(type.props)[0]!, key)
+      ) {
+        accessCache![key] = AccessTypes.PROPS
+        return props![key]
+      } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
+        accessCache![key] = AccessTypes.CONTEXT
+        return ctx[key]
+      } else {
+        accessCache![key] = AccessTypes.OTHER
       }
     }
 
-    // public $xxx properties & user-attached properties (sink)
     const publicGetter = publicPropertiesMap[key]
-    let cssModule
-    if (publicGetter != null) {
+    let cssModule, globalProperties
+    // public $xxx properties
+    if (publicGetter) {
       if (__DEV__ && key === '$attrs') {
         markAttrsAccessed()
       }
-      return publicGetter(target)
+      return publicGetter(instance)
     } else if (
-      __BUNDLER__ &&
-      (cssModule = type.__cssModules) != null &&
+      // css module (injected by vue-loader)
+      (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
     ) {
       return cssModule
-    } else if (hasOwn(sink, key)) {
-      return sink[key]
-    } else if (__DEV__ && currentRenderingInstance != null) {
+    } else if (
+      // global properties
+      ((globalProperties = appContext.config.globalProperties),
+      hasOwn(globalProperties, key))
+    ) {
+      return globalProperties[key]
+    } else if (__DEV__ && currentRenderingInstance) {
       warn(
         `Property ${JSON.stringify(key)} was accessed during render ` +
           `but is not defined on instance.`
@@ -163,58 +170,158 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }
   },
 
-  has(target: ComponentInternalInstance, key: string) {
-    const { data, accessCache, renderContext, type, sink } = target
-    return (
-      accessCache![key] !== undefined ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      hasOwn(renderContext, key) ||
-      (type.props != null && hasOwn(type.props, key)) ||
-      hasOwn(publicPropertiesMap, key) ||
-      hasOwn(sink, key)
-    )
-  },
-
-  set(target: ComponentInternalInstance, key: string, value: any): boolean {
-    const { data, renderContext } = target
-    if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+  set(
+    { _: instance }: ComponentRenderContext,
+    key: string,
+    value: any
+  ): boolean {
+    const { data, setupState, ctx } = instance
+    if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+      setupState[key] = value
+    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
-    } else if (hasOwn(renderContext, key)) {
-      // context is already reactive (user returned reactive object from setup())
-      // just set directly
-      if (isReactive(renderContext)) {
-        renderContext[key] = value
-      } else {
-        // handle potential ref set
-        const oldValue = renderContext[key]
-        if (isRef(oldValue) && !isRef(value)) {
-          oldValue.value = value
-        } else {
-          renderContext[key] = value
-        }
-      }
-    } else if (key[0] === '$' && key.slice(1) in target) {
+    } else if (key in instance.props) {
+      __DEV__ &&
+        warn(
+          `Attempting to mutate prop "${key}". Props are readonly.`,
+          instance
+        )
+      return false
+    }
+    if (key[0] === '$' && key.slice(1) in instance) {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}". ` +
             `Properties starting with $ are reserved and readonly.`,
-          target
+          instance
         )
       return false
-    } else if (key in target.props) {
-      __DEV__ &&
-        warn(`Attempting to mutate prop "${key}". Props are readonly.`, target)
-      return false
     } else {
-      target.sink[key] = value
+      if (__DEV__ && key in instance.appContext.config.globalProperties) {
+        Object.defineProperty(ctx, key, {
+          enumerable: true,
+          configurable: true,
+          value
+        })
+      } else {
+        ctx[key] = value
+      }
     }
     return true
+  },
+
+  has(
+    {
+      _: { data, setupState, accessCache, ctx, type, appContext }
+    }: ComponentRenderContext,
+    key: string
+  ) {
+    return (
+      accessCache![key] !== undefined ||
+      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+      (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
+      (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
+      hasOwn(ctx, key) ||
+      hasOwn(publicPropertiesMap, key) ||
+      hasOwn(appContext.config.globalProperties, key)
+    )
   }
 }
 
-export const runtimeCompiledRenderProxyHandlers = {
+if (__DEV__ && !__TEST__) {
+  PublicInstanceProxyHandlers.ownKeys = (target: ComponentRenderContext) => {
+    warn(
+      `Avoid app logic that relies on enumerating keys on a component instance. ` +
+        `The keys will be empty in production mode to avoid performance overhead.`
+    )
+    return Reflect.ownKeys(target)
+  }
+}
+
+export const RuntimeCompiledPublicInstanceProxyHandlers = {
   ...PublicInstanceProxyHandlers,
-  has(_target: ComponentInternalInstance, key: string) {
+  get(target: ComponentRenderContext, key: string) {
+    // fast path for unscopables when using `with` block
+    if ((key as any) === Symbol.unscopables) {
+      return
+    }
+    return PublicInstanceProxyHandlers.get!(target, key, target)
+  },
+  has(_: ComponentRenderContext, key: string) {
     return key[0] !== '_' && !isGloballyWhitelisted(key)
   }
+}
+
+// In dev mode, the proxy target exposes the same properties as seen on `this`
+// for easier console inspection. In prod mode it will be an empty object so
+// these properties definitions can be skipped.
+export function createRenderContext(instance: ComponentInternalInstance) {
+  const target: Record<string, any> = {}
+
+  // expose internal instance for proxy handlers
+  Object.defineProperty(target, `_`, {
+    configurable: true,
+    enumerable: false,
+    get: () => instance
+  })
+
+  // expose public properties
+  Object.keys(publicPropertiesMap).forEach(key => {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: false,
+      get: () => publicPropertiesMap[key](instance),
+      // intercepted by the proxy so no need for implementation,
+      // but needed to prevent set errors
+      set: NOOP
+    })
+  })
+
+  // expose global properties
+  const { globalProperties } = instance.appContext.config
+  Object.keys(globalProperties).forEach(key => {
+    Object.defineProperty(target, key, {
+      configurable: true,
+      enumerable: false,
+      get: () => globalProperties[key],
+      set: NOOP
+    })
+  })
+
+  return target as ComponentRenderContext
+}
+
+// dev only
+export function exposePropsOnRenderContext(
+  instance: ComponentInternalInstance
+) {
+  const {
+    ctx,
+    type: { props: propsOptions }
+  } = instance
+  if (propsOptions) {
+    Object.keys(normalizePropsOptions(propsOptions)[0]!).forEach(key => {
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => instance.props[key],
+        set: NOOP
+      })
+    })
+  }
+}
+
+// dev only
+export function exposeSetupStateOnRenderContext(
+  instance: ComponentInternalInstance
+) {
+  const { ctx, setupState } = instance
+  Object.keys(toRaw(setupState)).forEach(key => {
+    Object.defineProperty(ctx, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => setupState[key],
+      set: NOOP
+    })
+  })
 }

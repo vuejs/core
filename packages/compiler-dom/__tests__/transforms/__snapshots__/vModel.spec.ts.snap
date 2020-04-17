@@ -8,9 +8,8 @@ return function render(_ctx, _cache) {
     const { vModelDynamic: _vModelDynamic, mergeProps: _mergeProps, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", _mergeProps(obj, {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }), null, 16 /* FULL_PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }), null, 16 /* FULL_PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelDynamic, model]
     ])
   }
@@ -27,9 +26,8 @@ return function render(_ctx, _cache) {
     const _directive_bind = _resolveDirective(\\"bind\\")
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_directive_bind, val, key],
       [_vModelDynamic, model]
     ])
@@ -45,9 +43,8 @@ return function render(_ctx, _cache) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [
         _vModelText,
         model,
@@ -67,9 +64,8 @@ return function render(_ctx, _cache) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [
         _vModelText,
         model,
@@ -89,9 +85,8 @@ return function render(_ctx, _cache) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [
         _vModelText,
         model,
@@ -111,9 +106,8 @@ return function render(_ctx, _cache) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelText, model]
     ])
   }
@@ -129,9 +123,8 @@ return function render(_ctx, _cache) {
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
       type: \\"checkbox\\",
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelCheckbox, model]
     ])
   }
@@ -148,9 +141,8 @@ return function render(_ctx, _cache) {
     const _directive_bind = _resolveDirective(\\"bind\\")
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_directive_bind, foo, \\"type\\"],
       [_vModelDynamic, model]
     ])
@@ -167,9 +159,8 @@ return function render(_ctx, _cache) {
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
       type: \\"radio\\",
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelRadio, model]
     ])
   }
@@ -185,9 +176,8 @@ return function render(_ctx, _cache) {
 
     return _withDirectives((_openBlock(), _createBlock(\\"input\\", {
       type: \\"text\\",
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelText, model]
     ])
   }
@@ -202,9 +192,8 @@ return function render(_ctx, _cache) {
     const { vModelSelect: _vModelSelect, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"select\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelSelect, model]
     ])
   }
@@ -219,9 +208,8 @@ return function render(_ctx, _cache) {
     const { vModelText: _vModelText, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
     return _withDirectives((_openBlock(), _createBlock(\\"textarea\\", {
-      modelValue: model,
       \\"onUpdate:modelValue\\": $event => (model = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"])), [
+    }, null, 8 /* PROPS */, [\\"onUpdate:modelValue\\"])), [
       [_vModelText, model]
     ])
   }

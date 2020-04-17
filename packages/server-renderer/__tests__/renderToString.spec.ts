@@ -5,16 +5,11 @@ import {
   withScopeId,
   resolveComponent,
   ComponentOptions,
-  Portal,
   ref,
   defineComponent
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import {
-  renderToString,
-  renderComponent,
-  SSRContext
-} from '../src/renderToString'
+import { renderToString, renderComponent } from '../src/renderToString'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 
 mockWarn()
@@ -109,7 +104,7 @@ describe('ssr: renderToString', () => {
         await renderToString(createApp({ template: `<` }))
 
         expect(
-          '[Vue warn]: Template compilation error: Unexpected EOF in tag.\n' +
+          'Template compilation error: Unexpected EOF in tag.\n' +
             '1  |  <\n' +
             '   |   ^'
         ).toHaveBeenWarned()
@@ -262,7 +257,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<span>from slot</span>` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
 
@@ -277,7 +272,9 @@ describe('ssr: renderToString', () => {
             }
           })
         )
-      ).toBe(`<div>parent<div class="child">fallback</div></div>`)
+      ).toBe(
+        `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`
+      )
     })
 
     test('nested components with vnode slots', async () => {
@@ -321,7 +318,7 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(
         `<div>parent<div class="child">` +
-          `<span>from slot</span>` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
     })
@@ -333,13 +330,13 @@ describe('ssr: renderToString', () => {
       }
 
       const app = createApp({
+        components: { Child },
         template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
       })
-      app.component('Child', Child)
 
       expect(await renderToString(app)).toBe(
         `<div>parent<div class="child">` +
-          `<span>from slot</span>` +
+          `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
       )
     })
@@ -365,6 +362,7 @@ describe('ssr: renderToString', () => {
 
       expect(await renderToString(app)).toBe(
         `<div>parent<div class="child">` +
+          // no comment anchors because slot is used directly as element children
           `<span>from slot</span>` +
           `</div></div>`
       )
@@ -461,7 +459,9 @@ describe('ssr: renderToString', () => {
             createCommentVNode('qux')
           ])
         )
-      ).toBe(`<div>foo<span>bar</span><span>baz</span><!--qux--></div>`)
+      ).toBe(
+        `<div>foo<span>bar</span><!--[--><span>baz</span><!--]--><!--qux--></div>`
+      )
     })
 
     test('void elements', async () => {
@@ -509,21 +509,6 @@ describe('ssr: renderToString', () => {
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
     })
-  })
-
-  test('portal', async () => {
-    const ctx: SSRContext = {}
-    await renderToString(
-      h(
-        Portal,
-        {
-          target: `#target`
-        },
-        h('span', 'hello')
-      ),
-      ctx
-    )
-    expect(ctx.portals!['#target']).toBe('<span>hello</span>')
   })
 
   describe('scopeId', () => {

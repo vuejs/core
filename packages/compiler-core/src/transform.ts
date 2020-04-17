@@ -117,6 +117,7 @@ export function createTransformContext(
     directiveTransforms = {},
     transformHoist = null,
     isBuiltInComponent = NOOP,
+    expressionPlugins = [],
     scopeId = null,
     ssr = false,
     onError = defaultOnError
@@ -131,6 +132,7 @@ export function createTransformContext(
     directiveTransforms,
     transformHoist,
     isBuiltInComponent,
+    expressionPlugins,
     scopeId,
     ssr,
     onError,

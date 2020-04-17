@@ -1,7 +1,6 @@
 import {
   getCurrentInstance,
   SetupContext,
-  ComponentOptions,
   ComponentInternalInstance
 } from '../component'
 import {
@@ -17,8 +16,9 @@ import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
+import { RendererElement } from '../renderer'
 
-export interface BaseTransitionProps {
+export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
 
@@ -32,25 +32,25 @@ export interface BaseTransitionProps {
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
   // are camelized.
-  onBeforeEnter?: (el: any) => void
-  onEnter?: (el: any, done: () => void) => void
-  onAfterEnter?: (el: any) => void
-  onEnterCancelled?: (el: any) => void
+  onBeforeEnter?: (el: HostElement) => void
+  onEnter?: (el: HostElement, done: () => void) => void
+  onAfterEnter?: (el: HostElement) => void
+  onEnterCancelled?: (el: HostElement) => void
   // leave
-  onBeforeLeave?: (el: any) => void
-  onLeave?: (el: any, done: () => void) => void
-  onAfterLeave?: (el: any) => void
-  onLeaveCancelled?: (el: any) => void // only fired in persisted mode
+  onBeforeLeave?: (el: HostElement) => void
+  onLeave?: (el: HostElement, done: () => void) => void
+  onAfterLeave?: (el: HostElement) => void
+  onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
 }
 
 export interface TransitionHooks {
   persisted: boolean
-  beforeEnter(el: object): void
-  enter(el: object): void
-  leave(el: object, remove: () => void): void
+  beforeEnter(el: RendererElement): void
+  enter(el: RendererElement): void
+  leave(el: RendererElement, remove: () => void): void
   afterLeave?(): void
   delayLeave?(
-    el: object,
+    el: RendererElement,
     earlyRemove: () => void,
     delayedLeave: () => void
   ): void
@@ -99,6 +99,23 @@ export function useTransitionState(): TransitionState {
 
 const BaseTransitionImpl = {
   name: `BaseTransition`,
+
+  props: {
+    mode: String,
+    appear: Boolean,
+    persisted: Boolean,
+    // enter
+    onBeforeEnter: Function,
+    onEnter: Function,
+    onAfterEnter: Function,
+    onEnterCancelled: Function,
+    // leave
+    onBeforeLeave: Function,
+    onLeave: Function,
+    onAfterLeave: Function,
+    onLeaveCancelled: Function
+  },
+
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
@@ -200,29 +217,11 @@ const BaseTransitionImpl = {
   }
 }
 
-if (__DEV__) {
-  ;(BaseTransitionImpl as ComponentOptions).props = {
-    mode: String,
-    appear: Boolean,
-    persisted: Boolean,
-    // enter
-    onBeforeEnter: Function,
-    onEnter: Function,
-    onAfterEnter: Function,
-    onEnterCancelled: Function,
-    // leave
-    onBeforeLeave: Function,
-    onLeave: Function,
-    onAfterLeave: Function,
-    onLeaveCancelled: Function
-  }
-}
-
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
 export const BaseTransition = (BaseTransitionImpl as any) as {
   new (): {
-    $props: BaseTransitionProps
+    $props: BaseTransitionProps<any>
   }
 }
 
@@ -254,7 +253,7 @@ export function resolveTransitionHooks(
     onLeave,
     onAfterLeave,
     onLeaveCancelled
-  }: BaseTransitionProps,
+  }: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance
 ): TransitionHooks {
@@ -286,10 +285,10 @@ export function resolveTransitionHooks(
       if (
         leavingVNode &&
         isSameVNodeType(vnode, leavingVNode) &&
-        leavingVNode.el._leaveCb
+        leavingVNode.el!._leaveCb
       ) {
         // force early removal (not cancelled)
-        leavingVNode.el._leaveCb()
+        leavingVNode.el!._leaveCb()
       }
       callHook(onBeforeEnter, [el])
     },

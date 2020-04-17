@@ -2,19 +2,25 @@
 
 export const version = __VERSION__
 export {
-  ref,
-  unref,
-  shallowRef,
-  isRef,
-  toRefs,
+  // core
   reactive,
-  isReactive,
+  ref,
   readonly,
+  // utilities
+  unref,
+  isRef,
+  toRef,
+  toRefs,
+  isProxy,
+  isReactive,
   isReadonly,
+  // advanced
+  customRef,
+  shallowRef,
   shallowReactive,
-  toRaw,
-  markReadonly,
-  markNonReactive
+  shallowReadonly,
+  markRaw,
+  toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
@@ -34,6 +40,7 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
+export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -52,7 +59,7 @@ export {
 } from './vnode'
 // Internal Components
 export { Text, Comment, Fragment } from './vnode'
-export { Portal, PortalProps } from './components/Portal'
+export { Teleport, TeleportProps } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
@@ -74,7 +81,8 @@ export { warn } from './warning'
 export {
   handleError,
   callWithErrorHandling,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  ErrorCodes
 } from './errorHandling'
 export {
   useTransitionState,
@@ -84,6 +92,7 @@ export {
 
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
+export { withCtx } from './helpers/withRenderContext'
 export { withDirectives } from './directives'
 export {
   resolveComponent,
@@ -101,18 +110,13 @@ export {
   createCommentVNode,
   createStaticVNode
 } from './vnode'
-// Since @vue/shared is inlined into final builds,
-// when re-exporting from @vue/shared we need to avoid relying on their original
-// types so that the bundled d.ts does not attempt to import from it.
-import {
-  toDisplayString as _toDisplayString,
-  camelize as _camelize
-} from '@vue/shared'
-export const toDisplayString = _toDisplayString as (s: unknown) => string
-export const camelize = _camelize as (s: string) => string
+export { toDisplayString, camelize } from '@vue/shared'
 
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
+
+// For test-utils
+export { transformVNodeArgs } from './vnode'
 
 // SSR -------------------------------------------------------------------------
 
@@ -122,6 +126,7 @@ import {
   setCurrentRenderingInstance
 } from './componentRenderUtils'
 import { isVNode, normalizeVNode } from './vnode'
+import { normalizeSuspenseChildren } from './components/Suspense'
 
 // SSR utils are only exposed in cjs builds.
 const _ssrUtils = {
@@ -130,7 +135,8 @@ const _ssrUtils = {
   renderComponentRoot,
   setCurrentRenderingInstance,
   isVNode,
-  normalizeVNode
+  normalizeVNode,
+  normalizeSuspenseChildren
 }
 
 export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
@@ -150,6 +156,8 @@ export {
 } from '@vue/reactivity'
 export {
   // types
+  WatchEffect,
+  BaseWatchOptions,
   WatchOptions,
   WatchCallback,
   WatchSource,
@@ -161,7 +169,8 @@ export {
   AppConfig,
   AppContext,
   Plugin,
-  CreateAppFunction
+  CreateAppFunction,
+  OptionMergeFunction
 } from './apiCreateApp'
 export {
   VNode,
@@ -182,10 +191,12 @@ export {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
-} from './apiOptions'
+} from './componentOptions'
 export { ComponentPublicInstance } from './componentProxy'
 export {
   Renderer,
+  RendererNode,
+  RendererElement,
   HydrationRenderer,
   RendererOptions,
   RootRenderFunction
@@ -208,4 +219,8 @@ export {
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
 export { TransitionState, TransitionHooks } from './components/BaseTransition'
+export {
+  AsyncComponentOptions,
+  AsyncComponentLoader
+} from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'

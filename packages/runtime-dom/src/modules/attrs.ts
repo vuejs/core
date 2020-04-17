@@ -1,6 +1,6 @@
 import { isSpecialBooleanAttr } from '@vue/shared'
 
-const xlinkNS = 'http://www.w3.org/1999/xlink'
+export const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 export function patchAttr(
   el: Element,
@@ -10,7 +10,7 @@ export function patchAttr(
 ) {
   if (isSVG && key.indexOf('xlink:') === 0) {
     if (value == null) {
-      el.removeAttributeNS(xlinkNS, key)
+      el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {
       el.setAttributeNS(xlinkNS, key, value)
     }

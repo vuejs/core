@@ -1,10 +1,5 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import {
-  currentInstance,
-  Component,
-  ComponentInternalInstance,
-  FunctionalComponent
-} from '../component'
+import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
 import {
   camelize,
@@ -18,21 +13,16 @@ import { warn } from '../warning'
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
 
-export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset(COMPONENTS, name)
+export function resolveComponent(name: string): Component | string | undefined {
+  return resolveAsset(COMPONENTS, name) || name
 }
 
 export function resolveDynamicComponent(
-  component: unknown,
-  // Dynamic component resolution has to be called inline due to potential
-  // access to scope variables. When called inside slots it will be inside
-  // a different component's render cycle, so the owner instance must be passed
-  // in explicitly.
-  instance: ComponentInternalInstance
-): Component | undefined {
+  component: unknown
+): Component | string | undefined {
   if (!component) return
   if (isString(component)) {
-    return resolveAsset(COMPONENTS, component, instance)
+    return resolveAsset(COMPONENTS, component, false) || component
   } else if (isFunction(component) || isObject(component)) {
     return component
   }
@@ -46,21 +36,20 @@ export function resolveDirective(name: string): Directive | undefined {
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
-  instance?: ComponentInternalInstance
+  warnMissing?: boolean
 ): Component | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
-  name: string,
-  instance?: ComponentInternalInstance
+  name: string
 ): Directive | undefined
 
 function resolveAsset(
   type: typeof COMPONENTS | typeof DIRECTIVES,
   name: string,
-  instance: ComponentInternalInstance | null = currentRenderingInstance ||
-    currentInstance
+  warnMissing = true
 ) {
+  const instance = currentRenderingInstance || currentInstance
   if (instance) {
     let camelized, capitalized
     const registry = instance[type]
@@ -80,7 +69,7 @@ function resolveAsset(
         res = self
       }
     }
-    if (__DEV__ && !res) {
+    if (__DEV__ && warnMissing && !res) {
       warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
     return res

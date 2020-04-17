@@ -79,7 +79,15 @@ interface AriaAttributes {
    */
   'aria-controls'?: string
   /** Indicates the element that represents the current item within a container or set of related elements. */
-  'aria-current'?: boolean | 'false' | 'true' | 'page' | 'step' | 'location' | 'date' | 'time'
+  'aria-current'?:
+    | boolean
+    | 'false'
+    | 'true'
+    | 'page'
+    | 'step'
+    | 'location'
+    | 'date'
+    | 'time'
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
@@ -118,7 +126,15 @@ interface AriaAttributes {
    */
   'aria-grabbed'?: boolean | 'false' | 'true'
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
-  'aria-haspopup'?: boolean | 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+  'aria-haspopup'?:
+    | boolean
+    | 'false'
+    | 'true'
+    | 'menu'
+    | 'listbox'
+    | 'tree'
+    | 'grid'
+    | 'dialog'
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
@@ -228,16 +244,15 @@ interface AriaAttributes {
   'aria-valuetext'?: string
 }
 
-export interface HTMLAttributes extends AriaAttributes{
-
-  domPropsInnerHTML?: string;
+export interface HTMLAttributes extends AriaAttributes {
+  domPropsInnerHTML?: string
 
   class?: any
   style?: string | CSSProperties
 
   // Standard HTML Attributes
   accesskey?: string
-  contenteditable?: Booleanish | "inherit"
+  contenteditable?: Booleanish | 'inherit'
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
@@ -285,7 +300,15 @@ export interface HTMLAttributes extends AriaAttributes{
    * Hints at the type of data that might be entered by the user while editing the element or its contents
    * @see https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute
    */
-  inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+  inputmode?:
+    | 'none'
+    | 'text'
+    | 'tel'
+    | 'url'
+    | 'email'
+    | 'numeric'
+    | 'decimal'
+    | 'search'
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
@@ -317,8 +340,7 @@ export interface AreaHTMLAttributes extends HTMLAttributes {
   target?: string
 }
 
-export interface AudioHTMLAttributes extends MediaHTMLAttributes {
-}
+export interface AudioHTMLAttributes extends MediaHTMLAttributes {}
 
 export interface BaseHTMLAttributes extends HTMLAttributes {
   href?: string
@@ -712,8 +734,7 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
 }
 
 export interface SVGAttributes extends AriaAttributes {
-
-  domPropsInnerHTML?: string;
+  domPropsInnerHTML?: string
 
   color?: string
   height?: number | string
@@ -736,7 +757,20 @@ export interface SVGAttributes extends AriaAttributes {
   'accent-height'?: number | string
   accumulate?: 'none' | 'sum'
   additive?: 'replace' | 'sum'
-  'alignment-baseline'?: 'auto' | 'baseline' | 'before-edge' | 'text-before-edge' | 'middle' | 'central' | 'after-edge' | 'text-after-edge' | 'ideographic' | 'alphabetic' | 'hanging' | 'mathematical' | 'inherit'
+  'alignment-baseline'?:
+    | 'auto'
+    | 'baseline'
+    | 'before-edge'
+    | 'text-before-edge'
+    | 'middle'
+    | 'central'
+    | 'after-edge'
+    | 'text-after-edge'
+    | 'ideographic'
+    | 'alphabetic'
+    | 'hanging'
+    | 'mathematical'
+    | 'inherit'
   allowReorder?: 'no' | 'yes'
   alphabetic?: number | string
   amplitude?: number | string
@@ -955,13 +989,13 @@ export interface SVGAttributes extends AriaAttributes {
   x?: number | string
   xChannelSelector?: string
   'x-height'?: number | string
-  'xlinkActuate'?: string
-  'xlinkArcrole'?: string
-  'xlinkHref'?: string
-  'xlinkRole'?: string
-  'xlinkShow'?: string
-  'xlinkTitle'?: string
-  'xlinkType'?: string
+  xlinkActuate?: string
+  xlinkArcrole?: string
+  xlinkHref?: string
+  xlinkRole?: string
+  xlinkShow?: string
+  xlinkTitle?: string
+  xlinkType?: string
   y1?: number | string
   y2?: number | string
   y?: number | string

@@ -57,10 +57,24 @@ describe('ssr: element', () => {
           let _temp0
 
           _push(\`<textarea\${
-            _ssrRenderAttrs(_temp0 = _ctx.obj)
+            _ssrRenderAttrs(_temp0 = _ctx.obj, \\"textarea\\")
           }>\${
             _ssrInterpolate((\\"value\\" in _temp0) ? _temp0.value : \\"fallback\\")
           }</textarea>\`)
+        }"
+      `)
+    })
+
+    test('should pass tag to custom elements w/ dynamic v-bind', () => {
+      expect(
+        compile(`<my-foo v-bind="obj"></my-foo>`, {
+          isCustomElement: () => true
+        }).code
+      ).toMatchInlineSnapshot(`
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+
+        return function ssrRender(_ctx, _push, _parent) {
+          _push(\`<my-foo\${_ssrRenderAttrs(_ctx.obj, \\"my-foo\\")}></my-foo>\`)
         }"
       `)
     })

@@ -4,7 +4,7 @@ import {
   validateComponentName,
   PublicAPIComponent
 } from './component'
-import { ComponentOptions } from './apiOptions'
+import { ComponentOptions } from './componentOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
@@ -12,13 +12,14 @@ import { InjectionKey } from './apiInject'
 import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
+import { RootHydrateFunction } from './hydration'
 
 export interface App<HostElement = any> {
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
-  component(name: string): Component | undefined
-  component(name: string, component: Component): this
+  component(name: string): PublicAPIComponent | undefined
+  component(name: string, component: PublicAPIComponent): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(
@@ -35,13 +36,24 @@ export interface App<HostElement = any> {
   _context: AppContext
 }
 
+export type OptionMergeFunction = (
+  to: unknown,
+  from: unknown,
+  instance: any,
+  key: string
+) => any
+
 export interface AppConfig {
+  // @private
+  readonly isNativeTag?: (tag: string) => boolean
+
   devtools: boolean
   performance: boolean
-  readonly isNativeTag?: (tag: string) => boolean
-  isCustomElement?: (tag: string) => boolean
+  optionMergeStrategies: Record<string, OptionMergeFunction>
+  globalProperties: Record<string, any>
+  isCustomElement: (tag: string) => boolean
   errorHandler?: (
-    err: Error,
+    err: unknown,
     instance: ComponentPublicInstance | null,
     info: string
   ) => void
@@ -55,7 +67,7 @@ export interface AppConfig {
 export interface AppContext {
   config: AppConfig
   mixins: ComponentOptions[]
-  components: Record<string, Component>
+  components: Record<string, PublicAPIComponent>
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
   reload?: () => void // HMR only
@@ -72,9 +84,11 @@ export type Plugin =
 export function createAppContext(): AppContext {
   return {
     config: {
+      isNativeTag: NO,
       devtools: true,
       performance: false,
-      isNativeTag: NO,
+      globalProperties: {},
+      optionMergeStrategies: {},
       isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
@@ -91,11 +105,11 @@ export type CreateAppFunction<HostElement> = (
   rootProps?: Data | null
 ) => App<HostElement>
 
-export function createAppAPI<HostNode, HostElement>(
-  render: RootRenderFunction<HostNode, HostElement>,
-  hydrate?: (vnode: VNode, container: Element) => void
+export function createAppAPI<HostElement>(
+  render: RootRenderFunction,
+  hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
-  return function createApp(rootComponent: Component, rootProps = null) {
+  return function createApp(rootComponent, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
@@ -107,7 +121,7 @@ export function createAppAPI<HostNode, HostElement>(
     let isMounted = false
 
     const app: App = {
-      _component: rootComponent,
+      _component: rootComponent as Component,
       _props: rootProps,
       _container: null,
       _context: context,
@@ -168,7 +182,7 @@ export function createAppAPI<HostNode, HostElement>(
         if (__DEV__ && context.components[name]) {
           warn(`Component "${name}" has already been registered in target app.`)
         }
-        context.components[name] = component as Component
+        context.components[name] = component
         return app
       },
 
@@ -189,7 +203,7 @@ export function createAppAPI<HostNode, HostElement>(
 
       mount(rootContainer: HostElement, isHydrate?: boolean): any {
         if (!isMounted) {
-          const vnode = createVNode(rootComponent, rootProps)
+          const vnode = createVNode(rootComponent as Component, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -202,7 +216,7 @@ export function createAppAPI<HostNode, HostElement>(
           }
 
           if (isHydrate && hydrate) {
-            hydrate(vnode, rootContainer as any)
+            hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
             render(vnode, rootContainer)
           }

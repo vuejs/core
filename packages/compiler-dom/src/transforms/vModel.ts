@@ -104,5 +104,17 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     )
   }
 
+  // native vmodel doesn't need the `modelValue` props since they are also
+  // passed to the runtime as `binding.value`. removing it reduces code size.
+  baseResult.props = baseResult.props.filter(p => {
+    if (
+      p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+      p.key.content === 'modelValue'
+    ) {
+      return false
+    }
+    return true
+  })
+
   return baseResult
 }

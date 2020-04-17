@@ -627,16 +627,16 @@ describe('api: options', () => {
       render(h(Comp), root)
       instance.foo = 1
       expect(
-        'Computed property "foo" was assigned to but it has no setter.'
+        'Write operation failed: computed property "foo" is readonly'
       ).toHaveBeenWarned()
     })
 
     test('data property is already declared in props', () => {
       const Comp = {
         props: { foo: Number },
-        data: {
+        data: () => ({
           foo: 1
-        },
+        }),
         render() {}
       }
 
@@ -649,9 +649,9 @@ describe('api: options', () => {
 
     test('computed property is already declared in data', () => {
       const Comp = {
-        data: {
+        data: () => ({
           foo: 1
-        },
+        }),
         computed: {
           foo() {}
         },
@@ -699,9 +699,9 @@ describe('api: options', () => {
 
     test('methods property is already declared in data', () => {
       const Comp = {
-        data: {
+        data: () => ({
           foo: 2
-        },
+        }),
         methods: {
           foo() {}
         },
