@@ -24,7 +24,6 @@ import {
 } from './componentRenderUtils'
 import { warn } from './warning'
 
-//
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
  *
