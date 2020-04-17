@@ -528,7 +528,7 @@ function createWatcher(
   publicThis: ComponentPublicInstance,
   key: string
 ) {
-  const getter = () => (publicThis as Data)[key]
+  const getter = () => (publicThis as any)[key]
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
