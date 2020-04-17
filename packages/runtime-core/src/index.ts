@@ -192,7 +192,10 @@ export {
   ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
   ComponentOptionsWithArrayProps
 } from './componentOptions'
-export { ComponentPublicInstance } from './componentProxy'
+export {
+  ComponentPublicInstance,
+  ComponentCustomProperties
+} from './componentProxy'
 export {
   Renderer,
   RendererNode,
