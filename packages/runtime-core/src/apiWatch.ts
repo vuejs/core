@@ -288,9 +288,6 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
     return value
   }
-  if (seen.has(value)) {
-    return
-  }
   seen.add(value)
   if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
