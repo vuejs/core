@@ -1,5 +1,5 @@
 ls:
-  packages/**/{src,__tests__}:
+  packages/*/{src,__tests__}:
     .js: kebab-case
     .ts: camelCase | PascalCase
     .d.ts: camelCase

@@ -627,7 +627,7 @@ describe('api: options', () => {
       render(h(Comp), root)
       instance.foo = 1
       expect(
-        'Computed property "foo" was assigned to but it has no setter.'
+        'Write operation failed: computed property "foo" is readonly'
       ).toHaveBeenWarned()
     })
 

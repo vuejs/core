@@ -1,5 +1,5 @@
 export const FRAGMENT = Symbol(__DEV__ ? `Fragment` : ``)
-export const PORTAL = Symbol(__DEV__ ? `Portal` : ``)
+export const TELEPORT = Symbol(__DEV__ ? `Teleport` : ``)
 export const SUSPENSE = Symbol(__DEV__ ? `Suspense` : ``)
 export const KEEP_ALIVE = Symbol(__DEV__ ? `KeepAlive` : ``)
 export const BASE_TRANSITION = Symbol(__DEV__ ? `BaseTransition` : ``)
@@ -33,7 +33,7 @@ export const WITH_CTX = Symbol(__DEV__ ? `withCtx` : ``)
 // Using `any` here because TS doesn't allow symbols as index type.
 export const helperNameMap: any = {
   [FRAGMENT]: `Fragment`,
-  [PORTAL]: `Portal`,
+  [TELEPORT]: `Teleport`,
   [SUSPENSE]: `Suspense`,
   [KEEP_ALIVE]: `KeepAlive`,
   [BASE_TRANSITION]: `BaseTransition`,

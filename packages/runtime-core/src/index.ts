@@ -2,19 +2,25 @@
 
 export const version = __VERSION__
 export {
-  ref,
-  unref,
-  shallowRef,
-  isRef,
-  toRefs,
+  // core
   reactive,
-  isReactive,
+  ref,
   readonly,
+  // utilities
+  unref,
+  isRef,
+  toRef,
+  toRefs,
+  isProxy,
+  isReactive,
   isReadonly,
+  // advanced
+  customRef,
+  shallowRef,
   shallowReactive,
-  toRaw,
-  markReadonly,
-  markNonReactive
+  shallowReadonly,
+  markRaw,
+  toRaw
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'
@@ -34,7 +40,7 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
-export { createAsyncComponent } from './apiAsyncComponent'
+export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------
 
@@ -53,7 +59,7 @@ export {
 } from './vnode'
 // Internal Components
 export { Text, Comment, Fragment } from './vnode'
-export { Portal, PortalProps } from './components/Portal'
+export { Teleport, TeleportProps } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
 export { KeepAlive, KeepAliveProps } from './components/KeepAlive'
 export {
@@ -109,6 +115,9 @@ export { toDisplayString, camelize } from '@vue/shared'
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
 
+// For test-utils
+export { transformVNodeArgs } from './vnode'
+
 // SSR -------------------------------------------------------------------------
 
 import { createComponentInstance, setupComponent } from './component'
@@ -147,6 +156,8 @@ export {
 } from '@vue/reactivity'
 export {
   // types
+  WatchEffect,
+  BaseWatchOptions,
   WatchOptions,
   WatchCallback,
   WatchSource,
@@ -158,7 +169,8 @@ export {
   AppConfig,
   AppContext,
   Plugin,
-  CreateAppFunction
+  CreateAppFunction,
+  OptionMergeFunction
 } from './apiCreateApp'
 export {
   VNode,
@@ -177,12 +189,18 @@ export {
 export {
   ComponentOptions,
   ComponentOptionsWithoutProps,
-  ComponentOptionsWithObjectProps as ComponentOptionsWithProps,
-  ComponentOptionsWithArrayProps
-} from './apiOptions'
-export { ComponentPublicInstance } from './componentProxy'
+  ComponentOptionsWithObjectProps,
+  ComponentOptionsWithArrayProps,
+  ComponentCustomOptions
+} from './componentOptions'
+export {
+  ComponentPublicInstance,
+  ComponentCustomProperties
+} from './componentProxy'
 export {
   Renderer,
+  RendererNode,
+  RendererElement,
   HydrationRenderer,
   RendererOptions,
   RootRenderFunction
@@ -193,7 +211,8 @@ export {
   Prop,
   PropType,
   ComponentPropsOptions,
-  ComponentObjectPropsOptions
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
 } from './componentProps'
 export {
   Directive,

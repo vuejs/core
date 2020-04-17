@@ -24,7 +24,8 @@ export const NOOP = () => {}
  */
 export const NO = () => false
 
-export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
+const onRE = /^on[^a-z]/
+export const isOn = (key: string) => onRE.test(key)
 
 export const extend = <T extends object, U extends object>(
   a: T,
@@ -118,4 +119,14 @@ export const toDisplayString = (val: unknown): string => {
     : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
       ? JSON.stringify(val, null, 2)
       : String(val)
+}
+
+export const invokeArrayFns = (fns: Function[], arg?: any) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i](arg)
+  }
+}
+
+export const def = (obj: object, key: string | symbol, value: any) => {
+  Object.defineProperty(obj, key, { value })
 }

@@ -40,7 +40,7 @@ function ensureHydrationRenderer() {
 // use explicit type casts here to avoid import() calls in rolled-up d.ts
 export const render = ((...args) => {
   ensureRenderer().render(...args)
-}) as RootRenderFunction<Node, Element>
+}) as RootRenderFunction<Element>
 
 export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
@@ -63,7 +63,9 @@ export const createApp = ((...args) => {
     }
     // clear content before mounting
     container.innerHTML = ''
-    return mount(container)
+    const proxy = mount(container)
+    container.removeAttribute('v-cloak')
+    return proxy
   }
 
   return app

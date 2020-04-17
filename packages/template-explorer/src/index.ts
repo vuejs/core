@@ -97,7 +97,7 @@ window.init = () => {
     }
   }
 
-  const sharedEditorOptions: m.editor.IEditorConstructionOptions = {
+  const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
     theme: 'vs-dark',
     fontSize: 14,
     wordWrap: 'on',

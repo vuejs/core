@@ -292,10 +292,10 @@ exports[`compiler: hoistStatic transform should NOT hoist element with dynamic k
 
 return function render(_ctx, _cache) {
   with (_ctx) {
-    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+    const { openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
 
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", { key: foo })
+      (_openBlock(), _createBlock(\\"div\\", { key: foo }))
     ]))
   }
 }"

@@ -13,7 +13,7 @@ export function withCtx(
   return function renderFnWithContext() {
     const owner = currentRenderingInstance
     setCurrentRenderingInstance(ctx)
-    const res = fn.apply(null, arguments)
+    const res = fn.apply(null, arguments as any)
     setCurrentRenderingInstance(owner)
     return res
   }

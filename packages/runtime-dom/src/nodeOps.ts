@@ -1,7 +1,8 @@
 import { RendererOptions } from '@vue/runtime-core'
 
+export const svgNS = 'http://www.w3.org/2000/svg'
+
 const doc = (typeof document !== 'undefined' ? document : null) as Document
-const svgNS = 'http://www.w3.org/2000/svg'
 
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement
@@ -22,8 +23,10 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
-  createElement: (tag, isSVG): Element =>
-    isSVG ? doc.createElementNS(svgNS, tag) : doc.createElement(tag),
+  createElement: (tag, isSVG, is): Element =>
+    isSVG
+      ? doc.createElementNS(svgNS, tag)
+      : doc.createElement(tag, is ? { is } : undefined),
 
   createText: text => doc.createTextNode(text),
 

@@ -22,7 +22,7 @@ describe('Suspense', () => {
   })
 
   // a simple async factory for testing purposes only.
-  function createAsyncComponent<T extends ComponentOptions>(
+  function defineAsyncComponent<T extends ComponentOptions>(
     comp: T,
     delay: number = 0
   ) {
@@ -42,7 +42,7 @@ describe('Suspense', () => {
   }
 
   test('fallback content', async () => {
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       render() {
         return h('div', 'async')
       }
@@ -70,7 +70,7 @@ describe('Suspense', () => {
   test('nested async deps', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent({
+    const AsyncOuter = defineAsyncComponent({
       setup() {
         onMounted(() => {
           calls.push('outer mounted')
@@ -79,7 +79,7 @@ describe('Suspense', () => {
       }
     })
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup() {
           onMounted(() => {
@@ -118,7 +118,7 @@ describe('Suspense', () => {
   })
 
   test('onResolve', async () => {
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       render() {
         return h('div', 'async')
       }
@@ -221,8 +221,9 @@ describe('Suspense', () => {
   })
 
   test('content update before suspense resolve', async () => {
-    const Async = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const Async = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         return () => h('div', props.msg)
       }
     })
@@ -321,7 +322,7 @@ describe('Suspense', () => {
     const toggle = ref(true)
     const unmounted = jest.fn()
 
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       setup() {
         onUnmounted(unmounted)
         return () => h('div', 'async')
@@ -360,7 +361,7 @@ describe('Suspense', () => {
     const mounted = jest.fn()
     const unmounted = jest.fn()
 
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       setup() {
         onMounted(mounted)
         onUnmounted(unmounted)
@@ -400,7 +401,7 @@ describe('Suspense', () => {
   test('nested suspense (parent resolves first)', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent(
+    const AsyncOuter = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -412,7 +413,7 @@ describe('Suspense', () => {
       1
     )
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -466,7 +467,7 @@ describe('Suspense', () => {
   test('nested suspense (child resolves first)', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent(
+    const AsyncOuter = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -478,7 +479,7 @@ describe('Suspense', () => {
       10
     )
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -568,8 +569,9 @@ describe('Suspense', () => {
     const msg = ref('nested msg')
     const calls: number[] = []
 
-    const AsyncChildWithSuspense = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const AsyncChildWithSuspense = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         onMounted(() => {
           calls.push(0)
         })
@@ -581,9 +583,10 @@ describe('Suspense', () => {
       }
     })
 
-    const AsyncInsideNestedSuspense = createAsyncComponent(
+    const AsyncInsideNestedSuspense = defineAsyncComponent(
       {
-        setup(props: { msg: string }) {
+        props: { msg: String },
+        setup(props: any) {
           onMounted(() => {
             calls.push(2)
           })
@@ -593,8 +596,9 @@ describe('Suspense', () => {
       20
     )
 
-    const AsyncChildParent = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const AsyncChildParent = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         onMounted(() => {
           calls.push(1)
         })
@@ -602,9 +606,10 @@ describe('Suspense', () => {
       }
     })
 
-    const NestedAsyncChild = createAsyncComponent(
+    const NestedAsyncChild = defineAsyncComponent(
       {
-        setup(props: { msg: string }) {
+        props: { msg: String },
+        setup(props: any) {
           onMounted(() => {
             calls.push(3)
           })
@@ -692,13 +697,13 @@ describe('Suspense', () => {
   test('new async dep after resolve should cause suspense to restart', async () => {
     const toggle = ref(false)
 
-    const ChildA = createAsyncComponent({
+    const ChildA = defineAsyncComponent({
       setup() {
         return () => h('div', 'Child A')
       }
     })
 
-    const ChildB = createAsyncComponent({
+    const ChildB = defineAsyncComponent({
       setup() {
         return () => h('div', 'Child B')
       }
@@ -731,5 +736,5 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>Child A</div><div>Child B</div>`)
   })
 
-  test.todo('portal inside suspense')
+  test.todo('teleport inside suspense')
 })

@@ -4,10 +4,11 @@ import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps
-} from './apiOptions'
+} from './componentOptions'
 import { SetupContext, RenderFunction } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
+import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 
@@ -39,13 +40,15 @@ export function defineComponent<Props, RawBindings = object>(
 // (uses user defined props interface)
 // return type is for Vetur and TSX support
 export function defineComponent<
-  Props,
-  RawBindings,
-  D,
+  Props = {},
+  RawBindings = {},
+  D = {},
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
-  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M>
+  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, E, EE>
 ): {
   new (): ComponentPublicInstance<
     Props,
@@ -53,6 +56,7 @@ export function defineComponent<
     D,
     C,
     M,
+    E,
     VNodeProps & Props
   >
 }
@@ -65,12 +69,22 @@ export function defineComponent<
   RawBindings,
   D,
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
-  options: ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M>
+  options: ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    E,
+    EE
+  >
 ): {
   // array props technically doesn't place any contraints on props in TSX
-  new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M>
+  new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, E>
 }
 
 // overload 4: object format with object props declaration
@@ -82,9 +96,19 @@ export function defineComponent<
   RawBindings,
   D,
   C extends ComputedOptions = {},
-  M extends MethodOptions = {}
+  M extends MethodOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
-  options: ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M>
+  options: ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    E,
+    EE
+  >
 ): {
   new (): ComponentPublicInstance<
     ExtractPropTypes<PropsOptions>,
@@ -92,6 +116,7 @@ export function defineComponent<
     D,
     C,
     M,
+    E,
     VNodeProps & ExtractPropTypes<PropsOptions, false>
   >
 }
