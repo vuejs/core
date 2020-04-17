@@ -207,7 +207,8 @@ export {
   Prop,
   PropType,
   ComponentPropsOptions,
-  ComponentObjectPropsOptions
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
 } from './componentProps'
 export {
   Directive,
