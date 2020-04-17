@@ -30,11 +30,13 @@ describe('compiler: parse', () => {
     })
 
     test('simple text with invalid end tag', () => {
+      const onError = jest.fn()
       const ast = baseParse('some text</div>', {
-        onError: () => {}
+        onError
       })
       const text = ast.children[0] as TextNode
 
+      expect(onError).toBeCalled()
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
