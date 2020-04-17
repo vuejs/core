@@ -213,12 +213,14 @@ function patchErrors(
   const offset = originalSource.indexOf(source)
   const lineOffset = originalSource.slice(0, offset).split(/\r?\n/).length - 1
   errors.forEach(err => {
-    if (err.loc) {
-      err.loc.start.line += lineOffset
-      err.loc.start.offset += offset
-      if (err.loc.end !== err.loc.start) {
-        err.loc.end.line += lineOffset
-        err.loc.end.offset += offset
+    const loc = err.loc
+    if (loc) {
+      const { start, end } = loc
+      start.line += lineOffset
+      start.offset += offset
+      if (end !== start) {
+        end.line += lineOffset
+        end.offset += offset
       }
     }
   })
