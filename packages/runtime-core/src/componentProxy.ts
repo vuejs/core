@@ -46,7 +46,7 @@ import { warn } from './warning'
  * app.config.globalProperties.$router = router
  *
  * const vm = app.mount('#app')
- * // we cann access the router from the instance
+ * // we can access the router from the instance
  * vm.$router.push('/')
  * ```
  */
