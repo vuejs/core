@@ -6,12 +6,13 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
   const keyframes = Object.create(null)
 
   root.each(function rewriteSelectors(node) {
-    if (node.type !== 'rule') {
+    const { type, name } = node
+    if (type !== 'rule') {
       // handle media queries
-      if (node.type === 'atrule') {
-        if (node.name === 'media' || node.name === 'supports') {
+      if (type === 'atrule') {
+        if (name === 'media' || name === 'supports') {
           node.each(rewriteSelectors)
-        } else if (/-?keyframes$/.test(node.name)) {
+        } else if (/-?keyframes$/.test(name)) {
           // register keyframes
           keyframes[node.params] = node.params = node.params + '-' + id
         }
