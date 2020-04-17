@@ -69,7 +69,10 @@ export function callWithErrorHandling(
     res = args ? fn(...args) : fn()
   } catch (err) {
     // if the error handler throws error, rethrow it
-    if (type === ErrorCodes.APP_ERROR_HANDLER) {
+    if (
+      type === ErrorCodes.APP_ERROR_HANDLER ||
+      type === ErrorCodes.APP_WARN_HANDLER
+    ) {
       throw err
     } else {
       handleError(err, instance, type)
