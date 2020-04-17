@@ -117,6 +117,11 @@ describe('component: proxy', () => {
     instanceProxy.foo = 1
     expect(instanceProxy.foo).toBe(1)
     expect(instance!.ctx.foo).toBe(1)
+
+    // should also allow properties that start with $
+    const obj = (instanceProxy.$store = {})
+    expect(instanceProxy.$store).toBe(obj)
+    expect(instance!.ctx.$store).toBe(obj)
   })
 
   test('globalProperties', () => {

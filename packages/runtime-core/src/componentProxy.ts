@@ -184,6 +184,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       (cssModule = cssModule[key])
     ) {
       return cssModule
+    } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
+      // user may set custom properties to `this` that start with `$`
+      accessCache![key] = AccessTypes.CONTEXT
+      return ctx[key]
     } else if (
       // global properties
       ((globalProperties = appContext.config.globalProperties),
