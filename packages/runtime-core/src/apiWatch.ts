@@ -286,6 +286,9 @@ export function instanceWatch(
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
+    return value
+  }
+  if (seen.has(value)) {
     return
   }
   seen.add(value)
