@@ -29,7 +29,7 @@ export function stringifyStyle(
   }
   for (const key in styles) {
     const value = styles[key]
-    const normalizedKey = key.indexOf(`--`) === 0 ? key : hyphenate(key)
+    const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
     if (
       isString(value) ||
       (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
