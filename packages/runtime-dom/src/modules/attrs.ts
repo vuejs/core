@@ -8,7 +8,7 @@ export function patchAttr(
   value: any,
   isSVG: boolean
 ) {
-  if (isSVG && key.indexOf('xlink:') === 0) {
+  if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {
