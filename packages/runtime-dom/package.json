@@ -15,9 +15,9 @@
     "name": "VueRuntimeDOM",
     "formats": [
       "esm-bundler",
+      "esm-browser",
       "cjs",
-      "global",
-      "esm"
+      "global"
     ],
     "dts": [
       "jsx.d.ts"

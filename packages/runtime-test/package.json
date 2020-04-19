@@ -14,12 +14,6 @@
     "type": "git",
     "url": "git+https://github.com/vuejs/vue-next.git"
   },
-  "buildOptions": {
-    "name": "VueRuntimeTest",
-    "formats": [
-      "global"
-    ]
-  },
   "keywords": [
     "vue"
   ],

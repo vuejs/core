@@ -6,6 +6,7 @@
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
+  "jsdelivr": "dist/vue.global.js",
   "sideEffects": false,
   "files": [
     "index.js",
@@ -19,7 +20,8 @@
       "cjs",
       "global",
       "global-runtime",
-      "esm"
+      "esm-browser",
+      "esm-browser-runtime"
     ]
   },
   "repository": {

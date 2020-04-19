@@ -6,6 +6,7 @@
   "module": "dist/reactivity.esm-bundler.js",
   "types": "dist/reactivity.d.ts",
   "unpkg": "dist/reactivity.global.js",
+  "jsdelivr": "dist/reactivity.global.js",
   "files": [
     "index.js",
     "dist"
@@ -19,9 +20,9 @@
     "name": "VueReactivity",
     "formats": [
       "esm-bundler",
+      "esm-browser",
       "cjs",
-      "global",
-      "esm"
+      "global"
     ]
   },
   "keywords": [
