@@ -1,7 +1,16 @@
 import { reactive, readonly, toRaw } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { track, trigger, ITERATE_KEY } from './effect'
-import { isObject, hasOwn, isSymbol, hasChanged, isArray } from '@vue/shared'
+import { ITERATE_KEY, track, trigger } from './effect'
+import {
+  hasChanged,
+  hasOwn,
+  isArray,
+  isArrayLike,
+  isFunction,
+  isObject,
+  isSymbol,
+  TypedArray
+} from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -33,13 +42,31 @@ const arrayInstrumentations: Record<string, Function> = {}
   }
 })
 
-function createGetter(isReadonly = false, shallow = false) {
+function createGetter(
+  isReadonly = false,
+  shallow = false,
+  typedArrayOrigin?: TypedArray
+) {
   return function get(target: object, key: string | symbol, receiver: object) {
     const targetIsArray = isArray(target)
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
     const res = Reflect.get(target, key, receiver)
+    if (!targetIsArray && isArrayLike(target) && isFunction(res)) {
+      return new Proxy(res, {
+        apply(fn: Function, _: TypedArray, argArray: any[]): any {
+          const copy = [...(target as any[])]
+          const res = Reflect.apply(fn, typedArrayOrigin, argArray)
+          // TypedArray could be changed
+          for (let pos = 0; pos < typedArrayOrigin!.length; ++pos) {
+            if (copy[pos] !== typedArrayOrigin![pos])
+              trigger(target, TriggerOpTypes.SET, `${pos}`)
+          }
+          return res
+        }
+      })
+    }
 
     if (isSymbol(key) && builtInSymbols.has(key)) {
       return res
@@ -134,6 +161,13 @@ export const mutableHandlers: ProxyHandler<object> = {
   has,
   ownKeys
 }
+
+export const mutableTypedArrayHandlersFactor = (
+  origin: any
+): ProxyHandler<TypedArray> => ({
+  ...mutableHandlers,
+  get: createGetter(false, undefined, origin)
+})
 
 export const readonlyHandlers: ProxyHandler<object> = {
   get: readonlyGet,

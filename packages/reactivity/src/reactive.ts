@@ -1,6 +1,7 @@
 import { isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
+  mutableTypedArrayHandlersFactor,
   readonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
@@ -24,7 +25,10 @@ const rawValues = new WeakSet<any>()
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
 const isObservableType = /*#__PURE__*/ makeMap(
-  'Object,Array,Map,Set,WeakMap,WeakSet'
+  'Object,Array,Map,Set,WeakMap,WeakSet,Int8Array,Int16Array,Int32Array,Uint8Array,Uint16Array,Uint32Array,Uint8ClampedArray,Float32Array,Float64Array'
+)
+const isTypedArrayType = /*#__PURE__*/ makeMap(
+  'Int8Array,Int16Array,Int32Array,Uint8Array,Uint16Array,Uint32Array,Uint8ClampedArray,Float32Array,Float64Array'
 )
 
 const canObserve = (value: any): boolean => {
@@ -124,7 +128,9 @@ function createReactiveObject(
   }
   const handlers = collectionTypes.has(target.constructor)
     ? collectionHandlers
-    : baseHandlers
+    : isTypedArrayType(toRawType(target))
+      ? mutableTypedArrayHandlersFactor(target)
+      : baseHandlers
   observed = new Proxy(target, handlers)
   toProxy.set(target, observed)
   toRaw.set(observed, target)

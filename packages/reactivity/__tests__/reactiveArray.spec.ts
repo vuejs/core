@@ -18,6 +18,21 @@ describe('reactivity/reactive/Array', () => {
     expect(Object.keys(observed)).toEqual(['0'])
   })
 
+  test('should make Int32Array reactive', () => {
+    const original = new Int32Array([1, 2, 3])
+    const observed = reactive(original)
+    expect(observed).not.toBe(original)
+    expect(isReactive(observed)).toBe(true)
+    expect(isReactive(original)).toBe(false)
+    expect(isReactive(observed[0])).toBe(false)
+    // get
+    expect(observed[0]).toBe(1)
+    // has
+    expect(0 in observed).toBe(true)
+    // ownKeys
+    expect(Object.keys(observed)).toEqual(['0', '1', '2'])
+  })
+
   test('cloned reactive Array should point to observed values', () => {
     const original = [{ foo: 1 }]
     const observed = reactive(original)
@@ -46,6 +61,15 @@ describe('reactivity/reactive/Array', () => {
     expect(original[2]).toBe(value)
   })
 
+  test('observed value should proxy mutations to original (Int32Array)', () => {
+    const original = new Int32Array([1, 2, 3])
+    const observed = reactive(original)
+    // set
+    observed[0] = 2
+    expect(observed[0]).toBe(2)
+    expect(original[0]).toBe(2)
+  })
+
   test('Array identity methods should work with raw values', () => {
     const raw = {}
     const arr = reactive([{}, {}])
@@ -67,6 +91,16 @@ describe('reactivity/reactive/Array', () => {
     expect(arr.lastIndexOf(observed, 1)).toBe(-1)
   })
 
+  test('Int32Array identity methods should work with raw values', () => {
+    const arr = reactive(new Int32Array([0, 1, 2, 2]))
+    expect(arr.indexOf(0)).toBe(0)
+    expect(arr.indexOf(0, 1)).toBe(-1)
+    expect(arr.includes(0)).toBe(true)
+    expect(arr.includes(2, 4)).toBe(false)
+    expect(arr.lastIndexOf(2)).toBe(3)
+    expect(arr.lastIndexOf(2, 1)).toBe(-1)
+  })
+
   test('Array identity methods should work if raw value contains reactive objects', () => {
     const raw = []
     const obj = reactive({})
@@ -86,6 +120,21 @@ describe('reactivity/reactive/Array', () => {
     expect(index).toBe(0)
     arr.reverse()
     expect(index).toBe(1)
+  })
+
+  test('Int32Array identity methods should be reactive', () => {
+    const origin = new Int32Array([1, 2])
+    const arr = reactive(origin)
+
+    let value = -1
+    effect(() => {
+      value = arr[0]
+    })
+    expect(value).toBe(1)
+    expect(origin[0]).toBe(1)
+    arr.reverse()
+    expect(value).toBe(2)
+    expect(origin[0]).toBe(2)
   })
 
   test('delete on Array should not trigger length dependency', () => {

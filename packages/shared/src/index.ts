@@ -12,6 +12,17 @@ export * from './domAttrConfig'
 export * from './escapeHtml'
 export * from './looseEqual'
 
+export type TypedArray =
+  | Uint8Array
+  | Uint8ClampedArray
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Float32Array
+  | Float64Array
+
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
   : {}
@@ -51,6 +62,14 @@ export const hasOwn = (
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
+export const isArrayLike = (val: unknown): val is ArrayLike<any> => {
+  try {
+    ;[...(val as any)]
+    return true
+  } catch (e) {
+    return false
+  }
+}
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
