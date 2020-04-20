@@ -122,7 +122,8 @@ export function renderComponentRoot(
         for (let i = 0, l = allAttrs.length; i < l; i++) {
           const key = allAttrs[i]
           if (isOn(key)) {
-            eventAttrs.push(hyphenate(key.slice(2 /* ^on */)))
+            // remove `on`, lowercase first letter to reflect event casing accurately
+            eventAttrs.push(key[2].toLowerCase() + key.slice(3))
           } else {
             extraAttrs.push(key)
           }
