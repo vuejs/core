@@ -52,6 +52,7 @@ export interface SFCInternalOptions {
   __cssModules?: Data
   __hmrId?: string
   __hmrUpdated?: boolean
+  __file?: string
 }
 
 export interface FunctionalComponent<
@@ -540,16 +541,16 @@ const classify = (str: string): string =>
 
 export function formatComponentName(
   Component: Component,
-  file?: string
+  isRoot = false
 ): string {
   let name = isFunction(Component)
     ? Component.displayName || Component.name
     : Component.name
-  if (!name && file) {
-    const match = file.match(/([^/\\]+)\.vue$/)
+  if (!name && Component.__file) {
+    const match = Component.__file.match(/([^/\\]+)\.vue$/)
     if (match) {
       name = match[1]
     }
   }
-  return name ? classify(name) : 'Anonymous'
+  return name ? classify(name) : isRoot ? `App` : `Anonymous`
 }
