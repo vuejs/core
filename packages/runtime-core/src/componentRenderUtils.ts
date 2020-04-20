@@ -76,16 +76,19 @@ export function renderComponentRoot(
       }
       result = normalizeVNode(
         render.length > 1
-          ? render(props, {
-              get attrs() {
-                if (__DEV__ && attrs !== props) {
-                  markAttrsAccessed()
-                }
-                return attrs
-              },
-              slots,
-              emit
-            })
+          ? render(
+              props,
+              __DEV__
+                ? {
+                    get attrs() {
+                      markAttrsAccessed()
+                      return attrs
+                    },
+                    slots,
+                    emit
+                  }
+                : { attrs, slots, emit }
+            )
           : render(props, null as any /* we know it doesn't need it */)
       )
       fallthroughAttrs = Component.props ? attrs : getFallthroughAttrs(attrs)
