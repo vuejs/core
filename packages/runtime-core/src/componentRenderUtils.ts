@@ -14,7 +14,7 @@ import {
   isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isOn, hyphenate } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
@@ -70,10 +70,19 @@ export function renderComponentRoot(
     } else {
       // functional
       const render = Component as FunctionalComponent
+      // in dev, mark attrs accessed if optional props (attrs === props)
+      if (__DEV__ && attrs === props) {
+        markAttrsAccessed()
+      }
       result = normalizeVNode(
         render.length > 1
           ? render(props, {
-              attrs,
+              get attrs() {
+                if (__DEV__ && attrs !== props) {
+                  markAttrsAccessed()
+                }
+                return attrs
+              },
               slots,
               emit
             })
@@ -107,12 +116,33 @@ export function renderComponentRoot(
           root.patchFlag |= PatchFlags.FULL_PROPS
         }
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
-        warn(
-          `Extraneous non-props attributes (` +
-            `${Object.keys(attrs).join(', ')}) ` +
-            `were passed to component but could not be automatically inherited ` +
-            `because component renders fragment or text root nodes.`
-        )
+        const allAttrs = Object.keys(attrs)
+        const eventAttrs: string[] = []
+        const extraAttrs: string[] = []
+        for (let i = 0, l = allAttrs.length; i < l; i++) {
+          const key = allAttrs[i]
+          if (isOn(key)) {
+            eventAttrs.push(hyphenate(key.slice(2 /* ^on */)))
+          } else {
+            extraAttrs.push(key)
+          }
+        }
+        if (extraAttrs.length) {
+          warn(
+            `Extraneous non-props attributes (` +
+              `${extraAttrs.join(', ')}) ` +
+              `were passed to component but could not be automatically inherited ` +
+              `because component renders fragment or text root nodes.`
+          )
+        }
+        if (eventAttrs.length) {
+          warn(
+            `Extraneous non-emits event listeners (` +
+              `${eventAttrs.join(', ')}) ` +
+              `were passed to component but could not be automatically inherited ` +
+              `because component renders fragment or text root nodes.`
+          )
+        }
       }
     }
 

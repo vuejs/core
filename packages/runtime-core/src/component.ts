@@ -483,7 +483,9 @@ function finishComponentSetup(
 
 const attrHandlers: ProxyHandler<Data> = {
   get: (target, key: string) => {
-    markAttrsAccessed()
+    if (__DEV__) {
+      markAttrsAccessed()
+    }
     return target[key]
   },
   set: () => {
