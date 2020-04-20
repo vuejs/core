@@ -141,11 +141,11 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     return
   }
   let depsMap = targetMap.get(target)
-  if (depsMap === void 0) {
+  if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()))
   }
   let dep = depsMap.get(key)
-  if (dep === void 0) {
+  if (!dep) {
     depsMap.set(key, (dep = new Set()))
   }
   if (!dep.has(activeEffect)) {
@@ -171,7 +171,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
   const depsMap = targetMap.get(target)
-  if (depsMap === void 0) {
+  if (!depsMap) {
     // never been tracked
     return
   }
@@ -179,7 +179,7 @@ export function trigger(
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
-    if (effectsToAdd !== void 0) {
+    if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || !shouldTrack) {
           if (effect.options.computed) {
@@ -238,7 +238,7 @@ export function trigger(
         oldTarget
       })
     }
-    if (effect.options.scheduler !== void 0) {
+    if (effect.options.scheduler) {
       effect.options.scheduler(effect)
     } else {
       effect()
