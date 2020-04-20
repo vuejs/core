@@ -141,6 +141,7 @@ function createConfig(format, output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBundlerESMBuild,
+        isBrowserESMBuild,
         // isBrowserBuild?
         (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
@@ -162,6 +163,7 @@ function createConfig(format, output, plugins = []) {
 function createReplacePlugin(
   isProduction,
   isBundlerESMBuild,
+  isBrowserESMBuild,
   isBrowserBuild,
   isGlobalBuild,
   isNodeBuild
@@ -179,6 +181,8 @@ function createReplacePlugin(
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
     __GLOBAL__: isGlobalBuild,
+    __ESM_BUNDLER__: isBundlerESMBuild,
+    __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
     __FEATURE_OPTIONS__: true,
