@@ -156,13 +156,15 @@ describe('component props', () => {
 
   test('default value', () => {
     let proxy: any
+    const defaultFn = jest.fn(() => ({ a: 1 }))
+
     const Comp = {
       props: {
         foo: {
           default: 1
         },
         bar: {
-          default: () => ({ a: 1 })
+          default: defaultFn
         }
       },
       render() {
@@ -173,19 +175,32 @@ describe('component props', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp, { foo: 2 }), root)
     expect(proxy.foo).toBe(2)
+    const prevBar = proxy.bar
     expect(proxy.bar).toEqual({ a: 1 })
+    expect(defaultFn).toHaveBeenCalledTimes(1)
+
+    // #999: updates should not cause default factory of unchanged prop to be
+    // called again
+    render(h(Comp, { foo: 3 }), root)
+    expect(proxy.foo).toBe(3)
+    expect(proxy.bar).toEqual({ a: 1 })
+    expect(proxy.bar).toBe(prevBar)
+    expect(defaultFn).toHaveBeenCalledTimes(1)
 
     render(h(Comp, { bar: { b: 2 } }), root)
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 2 })
+    expect(defaultFn).toHaveBeenCalledTimes(1)
 
     render(h(Comp, { foo: 3, bar: { b: 3 } }), root)
     expect(proxy.foo).toBe(3)
     expect(proxy.bar).toEqual({ b: 3 })
+    expect(defaultFn).toHaveBeenCalledTimes(1)
 
     render(h(Comp, { bar: { b: 4 } }), root)
     expect(proxy.foo).toBe(1)
     expect(proxy.bar).toEqual({ b: 4 })
+    expect(defaultFn).toHaveBeenCalledTimes(1)
   })
 
   test('optimized props updates', async () => {

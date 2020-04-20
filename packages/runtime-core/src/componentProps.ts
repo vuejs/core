@@ -130,6 +130,7 @@ export function initProps(
 export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
+  rawPrevProps: Data | null,
   optimized: boolean
 ) {
   const {
@@ -184,20 +185,26 @@ export function updateProps(
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
         if (options) {
-          props[key] = resolvePropValue(
-            options,
-            rawProps || EMPTY_OBJ,
-            key,
-            undefined
-          )
+          if (rawPrevProps && rawPrevProps[kebabKey!] !== undefined) {
+            props[key] = resolvePropValue(
+              options,
+              rawProps || EMPTY_OBJ,
+              key,
+              undefined
+            )
+          }
         } else {
           delete props[key]
         }
       }
     }
-    for (const key in attrs) {
-      if (!rawProps || !hasOwn(rawProps, key)) {
-        delete attrs[key]
+    // in the case of functional component w/o props declaration, props and
+    // attrs point to the same object so it should already have been updated.
+    if (attrs !== rawCurrentProps) {
+      for (const key in attrs) {
+        if (!rawProps || !hasOwn(rawProps, key)) {
+          delete attrs[key]
+        }
       }
     }
   }
@@ -240,9 +247,15 @@ function setFullProps(
   }
 
   if (needCastKeys) {
+    const rawCurrentProps = toRaw(props)
     for (let i = 0; i < needCastKeys.length; i++) {
       const key = needCastKeys[i]
-      props[key] = resolvePropValue(options!, props, key, props[key])
+      props[key] = resolvePropValue(
+        options!,
+        rawCurrentProps,
+        key,
+        rawCurrentProps[key]
+      )
     }
   }
 }
