@@ -337,7 +337,7 @@ describe('attribute fallthrough', () => {
   it('should warn when fallthrough fails on non-single-root', () => {
     const Parent = {
       render() {
-        return h(Child, { foo: 1, class: 'parent' })
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
       }
     }
 
@@ -353,12 +353,13 @@ describe('attribute fallthrough', () => {
     render(h(Parent), root)
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
   })
 
   it('should not warn when $attrs is used during render', () => {
     const Parent = {
       render() {
-        return h(Child, { foo: 1, class: 'parent' })
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
       }
     }
 
@@ -374,13 +375,15 @@ describe('attribute fallthrough', () => {
     render(h(Parent), root)
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+
     expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
   })
 
   it('should not warn when context.attrs is used during render', () => {
     const Parent = {
       render() {
-        return h(Child, { foo: 1, class: 'parent' })
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
       }
     }
 
@@ -396,7 +399,70 @@ describe('attribute fallthrough', () => {
     render(h(Parent), root)
 
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+
     expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+  })
+
+  it('should not warn when context.attrs is used during render (functional)', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
+      }
+    }
+
+    const Child: FunctionalComponent = (_, { attrs }) => [
+      h('div'),
+      h('div', attrs)
+    ]
+
+    Child.props = ['foo']
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+  })
+
+  it('should not warn when functional component has optional props', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
+      }
+    }
+
+    const Child = (props: any) => [h('div'), h('div', { class: props.class })]
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+    expect(root.innerHTML).toBe(`<div></div><div class="parent"></div>`)
+  })
+
+  it('should warn when functional component has props and does not use attrs', () => {
+    const Parent = {
+      render() {
+        return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
+      }
+    }
+
+    const Child: FunctionalComponent = () => [h('div'), h('div')]
+
+    Child.props = ['foo']
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes`).toHaveBeenWarned()
+    expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
+    expect(root.innerHTML).toBe(`<div></div><div></div>`)
   })
 
   // #677
