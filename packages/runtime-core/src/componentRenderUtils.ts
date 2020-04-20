@@ -107,11 +107,16 @@ export function renderComponentRoot(
           root.patchFlag |= PatchFlags.FULL_PROPS
         }
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
+        const hasListeners = Object.keys(attrs).some(isOn)
         warn(
           `Extraneous non-props attributes (` +
             `${Object.keys(attrs).join(', ')}) ` +
             `were passed to component but could not be automatically inherited ` +
-            `because component renders fragment or text root nodes.`
+            `because component renders fragment or text root nodes.` +
+            (hasListeners
+              ? ` If the v-on listener is intended to be a component custom ` +
+                `event listener only, declare it using the "emits" option.`
+              : ``)
         )
       }
     }
