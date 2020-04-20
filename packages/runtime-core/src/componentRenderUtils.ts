@@ -14,7 +14,7 @@ import {
   isVNode
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn, hyphenate } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
 import { warn } from './warning'
 
 // mark the current rendering instance for asset resolution (e.g.
