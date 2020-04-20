@@ -62,14 +62,8 @@ export const hasOwn = (
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
-export const isArrayLike = (val: unknown): val is ArrayLike<any> => {
-  try {
-    ;[...(val as any)]
-    return true
-  } catch (e) {
-    return false
-  }
-}
+export const isArrayLike = (val: unknown): val is ArrayLike<any> =>
+  !!(val as any)[Symbol.iterator]
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
