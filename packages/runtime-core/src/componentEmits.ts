@@ -73,7 +73,7 @@ export function emit(
   let handler = props[`on${capitalize(event)}`]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
-  if (!handler && event.indexOf('update:') === 0) {
+  if (!handler && event.startsWith('update:')) {
     event = hyphenate(event)
     handler = props[`on${capitalize(event)}`]
   }

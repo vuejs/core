@@ -30,7 +30,7 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
     default:
       if (isOn(key)) {
         // ignore v-model listeners
-        if (key.indexOf('onUpdate:') < 0) {
+        if (!key.startsWith('onUpdate:')) {
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (
