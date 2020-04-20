@@ -208,7 +208,7 @@ export function trigger(
     })
   } else {
     // schedule runs for SET | ADD | DELETE
-    if (key) {
+    if (key !== void 0) {
       add(depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE | Map.SET
