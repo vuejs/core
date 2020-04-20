@@ -64,8 +64,6 @@ import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 
-const __HMR__ = __BUNDLER__ && __DEV__
-
 export interface Renderer<HostElement = any> {
   render: RootRenderFunction<HostElement>
   createApp: CreateAppFunction<HostElement>
@@ -660,7 +658,7 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    if (__HMR__ && parentComponent && parentComponent.renderUpdated) {
+    if (__DEV__ && parentComponent && parentComponent.renderUpdated) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
@@ -884,7 +882,7 @@ function baseCreateRenderer(
       optimized = true
     }
 
-    if (__HMR__ && parentComponent && parentComponent.renderUpdated) {
+    if (__DEV__ && parentComponent && parentComponent.renderUpdated) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
@@ -987,7 +985,7 @@ function baseCreateRenderer(
       parentSuspense
     ))
 
-    if (__HMR__ && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
     }
 
@@ -1807,7 +1805,7 @@ function baseCreateRenderer(
     parentSuspense: SuspenseBoundary | null,
     doRemove?: boolean
   ) => {
-    if (__HMR__ && instance.type.__hmrId) {
+    if (__DEV__ && instance.type.__hmrId) {
       unregisterHMR(instance)
     }
 

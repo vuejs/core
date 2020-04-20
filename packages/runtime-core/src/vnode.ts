@@ -200,7 +200,6 @@ export function isVNode(value: any): value is VNode {
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
-    __BUNDLER__ &&
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
     (n2.type as Component).__hmrUpdated

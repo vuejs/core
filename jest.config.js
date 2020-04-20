@@ -5,7 +5,6 @@ module.exports = {
     __TEST__: true,
     __VERSION__: require('./package.json').version,
     __BROWSER__: false,
-    __BUNDLER__: true,
     __RUNTIME_COMPILE__: true,
     __GLOBAL__: false,
     __NODE_JS__: true,

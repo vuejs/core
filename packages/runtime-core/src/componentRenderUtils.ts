@@ -213,7 +213,6 @@ export function shouldUpdateComponent(
   // caused the child component's slots content to have changed, we need to
   // force the child to update as well.
   if (
-    __BUNDLER__ &&
     __DEV__ &&
     (prevChildren || nextChildren) &&
     parentComponent &&

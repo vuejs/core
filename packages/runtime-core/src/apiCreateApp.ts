@@ -209,7 +209,7 @@ export function createAppAPI<HostElement>(
           vnode.appContext = context
 
           // HMR root reload
-          if (__BUNDLER__ && __DEV__) {
+          if (__DEV__) {
             context.reload = () => {
               render(cloneVNode(vnode), rootContainer)
             }

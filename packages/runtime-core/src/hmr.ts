@@ -16,7 +16,7 @@ export interface HMRRuntime {
 // it easier to be used in toolings like vue-loader
 // Note: for a component to be eligible for HMR it also needs the __hmrId option
 // to be set so that its instances can be registered / removed.
-if (__BUNDLER__ && __DEV__) {
+if (__DEV__) {
   const globalObject: any =
     typeof global !== 'undefined'
       ? global

@@ -178,8 +178,6 @@ function createReplacePlugin(
     __TEST__: false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
-    // is targeting bundlers?
-    __BUNDLER__: isBundlerESMBuild,
     __GLOBAL__: isGlobalBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
