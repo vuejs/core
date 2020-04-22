@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isObject } from '@vue/shared'
-import { reactive, isProxy } from './reactive'
+import { isObject, hasChanged } from '@vue/shared'
+import { reactive, isProxy, toRaw } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
@@ -43,13 +43,11 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-function createRef(value: unknown, shallow = false) {
-  if (isRef(value)) {
-    return value
+function createRef(rawValue: unknown, shallow = false) {
+  if (isRef(rawValue)) {
+    return rawValue
   }
-  if (!shallow) {
-    value = convert(value)
-  }
+  let value = shallow ? rawValue : convert(rawValue)
   const r = {
     _isRef: true,
     get value() {
@@ -57,13 +55,16 @@ function createRef(value: unknown, shallow = false) {
       return value
     },
     set value(newVal) {
-      value = shallow ? newVal : convert(newVal)
-      trigger(
-        r,
-        TriggerOpTypes.SET,
-        'value',
-        __DEV__ ? { newValue: newVal } : void 0
-      )
+      if (shallow || hasChanged(toRaw(newVal), rawValue)) {
+        rawValue = newVal
+        value = shallow ? newVal : convert(newVal)
+        trigger(
+          r,
+          TriggerOpTypes.SET,
+          'value',
+          __DEV__ ? { newValue: newVal } : void 0
+        )
+      }
     }
   }
   return r
