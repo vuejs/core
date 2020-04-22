@@ -43,7 +43,7 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
 }
 
-export interface TransitionHooks<HostElement = RendererElement> {
+export interface TransitionHooks<HostElement extends RendererElement = RendererElement> {
   persisted: boolean
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
