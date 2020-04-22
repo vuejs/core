@@ -77,7 +77,11 @@ function resolveAsset(
     if (__DEV__) {
       if (res) {
         // in dev, infer anonymous component's name based on registered name
-        if (type === COMPONENTS && !(res as Component).name) {
+        if (
+          type === COMPONENTS &&
+          isObject(res) &&
+          !(res as ComponentOptions).name
+        ) {
           ;(res as ComponentOptions).name = name
         }
       } else if (warnMissing) {
