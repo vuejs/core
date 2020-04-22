@@ -63,8 +63,9 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
           ;(el as any)._trueValue = nextValue
         } else if (key === 'false-value') {
           ;(el as any)._falseValue = nextValue
+        } else {
+          patchAttr(el, key, nextValue, isSVG)
         }
-        patchAttr(el, key, nextValue, isSVG)
       }
       break
   }
