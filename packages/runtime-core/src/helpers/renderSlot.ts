@@ -7,7 +7,7 @@ import {
   Fragment,
   VNode
 } from '../vnode'
-import { PatchFlags } from '@vue/shared'
+import { isFunction, PatchFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 export function renderSlot(
@@ -34,7 +34,7 @@ export function renderSlot(
     createBlock(
       Fragment,
       { key: props.key },
-      slot ? slot(props) : fallback ? fallback() : [],
+      slot ? slot(props) : fallback && isFunction(fallback) ? fallback() : [],
       slots._ ? PatchFlags.STABLE_FRAGMENT : PatchFlags.BAIL
     )
   )
