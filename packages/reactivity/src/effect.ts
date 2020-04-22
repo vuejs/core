@@ -178,7 +178,7 @@ export function trigger(
 
   const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
-  const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
+  const add = (effectsToAdd: Dep | undefined) => {
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || !shouldTrack) {
