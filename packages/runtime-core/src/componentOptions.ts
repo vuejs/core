@@ -314,6 +314,10 @@ export function applyOptions(
     applyMixins(instance, mixins)
   }
 
+  // invalidate access cache in case mixins or extends
+  // accessed fields that are defined later
+  instance.accessCache = {}
+
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
 
   if (__DEV__ && propsOptions) {
