@@ -117,7 +117,7 @@ export function parse(
           descriptor.template = createBlock(
             node,
             source,
-            pad
+            false
           ) as SFCTemplateBlock
         } else {
           warnDuplicateBlock(source, filename, node)
@@ -147,7 +147,7 @@ export function parse(
           source,
           block.content,
           sourceRoot,
-          pad ? 0 : block.loc.start.line - 1
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
         )
       }
     }
@@ -207,7 +207,7 @@ function createBlock(
     loc,
     attrs
   }
-  if (node.tag !== 'template' && pad) {
+  if (pad) {
     block.content = padContent(source, block, pad) + block.content
   }
   node.props.forEach(p => {

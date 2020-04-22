@@ -1,11 +1,9 @@
-import { h, transformHArgs, resetTransformHArgs } from '../src/h'
+import { h } from '../src/h'
 import { createVNode } from '../src/vnode'
-import { ComponentInternalInstance } from '@vue/runtime-core'
-import { createApp } from '@vue/runtime-dom'
 
 // Since h is a thin layer on top of createVNode, we are only testing its
 // own logic here. Details of vnode creation is tested in vnode.spec.ts.
-const testH = () => {
+describe('renderer: h', () => {
   test('type only', () => {
     expect(h('div')).toMatchObject(createVNode('div'))
   })
@@ -58,63 +56,5 @@ const testH = () => {
         foo: slot
       })
     )
-  })
-}
-
-describe('renderer: h', testH)
-
-describe('renderer: transformHArgs', () => {
-  describe('no-op pass-through', () => {
-    beforeAll(() => {
-      transformHArgs((hArgs: unknown[]) => hArgs)
-    })
- 
-    afterAll(resetTransformHArgs)
- 
-    testH()
-  })
-
-  describe('args is used directly, without merging', () => {
-    beforeAll(() => {
-      transformHArgs(() => ['h1', 'Hello World'])
-    })
- 
-    afterAll(resetTransformHArgs)
- 
-    test('nodes become an h1 with text inside', () => {
-      expect(h('div')).toMatchObject(createVNode('h1', null, 'Hello World'))
-    })
-
-    test('resetting transformHArgs turns things back to normal', () => {
-      expect(h('div')).toMatchObject(createVNode('h1', null, 'Hello World'))
-      resetTransformHArgs()
-      expect(h('div')).toMatchObject(createVNode('div'))
-    })
-  })
-
-  test('receives component instance as the 2nd arg', () => {
-    transformHArgs((_: unknown[], instance: ComponentInternalInstance) => {
-      return ['h1', instance.type.name] // <h1>{{ name }}</h1>
-    })
-
-    const vm = createApp({
-      // this will be the name of the component in the h1
-      name: 'Root Component',
-      render() {
-        return h({
-          // this code will never execute,
-          // because it is overridden by the transformHArgs method
-          render() {
-            return h('h2', 'Stub Text')
-          }
-        })
-      }
-    })
-
-    // we need to mount everything so that the instance passed to
-    // transformHArgs isn't null
-    vm.mount('body')
-
-    expect(document.body.outerHTML).toContain('<h1>Root Component</h1>')
   })
 })

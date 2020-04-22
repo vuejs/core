@@ -1,11 +1,12 @@
 {
   "name": "@vue/compiler-dom",
-  "version": "3.0.0-alpha.9",
+  "version": "3.0.0-beta.3",
   "description": "@vue/compiler-dom",
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
   "types": "dist/compiler-dom.d.ts",
   "unpkg": "dist/compiler-dom/global.js",
+  "jsdelivr": "dist/compiler-dom/global.js",
   "files": [
     "index.js",
     "dist"
@@ -15,9 +16,9 @@
     "name": "VueCompilerDOM",
     "formats": [
       "esm-bundler",
+      "esm-browser",
       "cjs",
-      "global",
-      "esm"
+      "global"
     ]
   },
   "repository": {
@@ -34,7 +35,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-dom#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-alpha.9",
-    "@vue/compiler-core": "3.0.0-alpha.9"
+    "@vue/shared": "3.0.0-beta.3",
+    "@vue/compiler-core": "3.0.0-beta.3"
   }
 }

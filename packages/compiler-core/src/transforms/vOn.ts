@@ -26,12 +26,12 @@ export interface VOnDirectiveNode extends DirectiveNode {
 }
 
 export const transformOn: DirectiveTransform = (
-  dir: VOnDirectiveNode,
+  dir,
   node,
   context,
   augmentor
 ) => {
-  const { loc, modifiers, arg } = dir
+  const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
     context.onError(createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc))
   }
@@ -55,7 +55,9 @@ export const transformOn: DirectiveTransform = (
   }
 
   // handler processing
-  let exp: ExpressionNode | undefined = dir.exp
+  let exp: ExpressionNode | undefined = dir.exp as
+    | SimpleExpressionNode
+    | undefined
   if (exp && !exp.content.trim()) {
     exp = undefined
   }

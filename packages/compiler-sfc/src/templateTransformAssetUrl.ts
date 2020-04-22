@@ -1,5 +1,4 @@
 import {
-  AttributeNode,
   createSimpleExpression,
   ExpressionNode,
   NodeTransform,
@@ -42,7 +41,7 @@ export const transformAssetUrl: NodeTransform = (
       if ((tag === '*' || node.tag === tag) && node.props.length) {
         const attributes = options[tag]
         attributes.forEach(item => {
-          node.props.forEach((attr: AttributeNode, index) => {
+          node.props.forEach((attr, index) => {
             if (attr.type !== NodeTypes.ATTRIBUTE) return
             if (attr.name !== item) return
             if (!attr.value) return
@@ -70,8 +69,8 @@ export const transformAssetUrl: NodeTransform = (
 }
 
 function getImportsExpressionExp(
-  path: string | undefined,
-  hash: string | undefined,
+  path: string | null,
+  hash: string | null,
   loc: SourceLocation,
   context: TransformContext
 ): ExpressionNode {

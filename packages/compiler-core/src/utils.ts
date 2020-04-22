@@ -25,7 +25,7 @@ import {
 import { TransformContext } from './transform'
 import {
   MERGE_PROPS,
-  PORTAL,
+  TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
   BASE_TRANSITION
@@ -38,8 +38,8 @@ export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
 
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Portal')) {
-    return PORTAL
+  if (isBuiltInType(tag, 'Teleport')) {
+    return TELEPORT
   } else if (isBuiltInType(tag, 'Suspense')) {
     return SUSPENSE
   } else if (isBuiltInType(tag, 'KeepAlive')) {
@@ -184,13 +184,14 @@ export function findDir(
 export function findProp(
   node: ElementNode,
   name: string,
-  dynamicOnly: boolean = false
+  dynamicOnly: boolean = false,
+  allowEmpty: boolean = false
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (dynamicOnly) continue
-      if (p.name === name && p.value) {
+      if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
     } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {

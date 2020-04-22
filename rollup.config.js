@@ -23,9 +23,8 @@ const outputConfigs = {
     file: resolve(`dist/${name}.esm-bundler.js`),
     format: `es`
   },
-  // main "vue" package only
-  'esm-bundler-runtime': {
-    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
+  'esm-browser': {
+    file: resolve(`dist/${name}.esm-browser.js`),
     format: `es`
   },
   cjs: {
@@ -36,9 +35,19 @@ const outputConfigs = {
     file: resolve(`dist/${name}.global.js`),
     format: `iife`
   },
-  esm: {
-    file: resolve(`dist/${name}.esm.js`),
+
+  // runtime-only builds, for main "vue" package only
+  'esm-bundler-runtime': {
+    file: resolve(`dist/${name}.runtime.esm-bundler.js`),
     format: `es`
+  },
+  'esm-browser-runtime': {
+    file: resolve(`dist/${name}.runtime.esm-browser.js`),
+    format: 'es'
+  },
+  'global-runtime': {
+    file: resolve(`dist/${name}.runtime.global.js`),
+    format: 'iife'
   }
 }
 
@@ -54,7 +63,7 @@ if (process.env.NODE_ENV === 'production') {
     if (format === 'cjs' && packageOptions.prod !== false) {
       packageConfigs.push(createProductionConfig(format))
     }
-    if (format === 'global' || format === 'esm') {
+    if (/^(global|esm-browser)(-runtime)?/.test(format)) {
       packageConfigs.push(createMinifiedConfig(format))
     }
   })
@@ -73,10 +82,10 @@ function createConfig(format, output, plugins = []) {
 
   const isProductionBuild =
     process.env.__DEV__ === 'false' || /\.prod\.js$/.test(output.file)
-  const isGlobalBuild = format === 'global'
-  const isRawESMBuild = format === 'esm'
-  const isNodeBuild = format === 'cjs'
   const isBundlerESMBuild = /esm-bundler/.test(format)
+  const isBrowserESMBuild = /esm-browser/.test(format)
+  const isNodeBuild = format === 'cjs'
+  const isGlobalBuild = /global/.test(format)
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -102,11 +111,10 @@ function createConfig(format, output, plugins = []) {
   // during a single build.
   hasTSChecked = true
 
-  const entryFile =
-    format === 'esm-bundler-runtime' ? `src/runtime.ts` : `src/index.ts`
+  const entryFile = /runtime$/.test(format) ? `src/runtime.ts` : `src/index.ts`
 
   const external =
-    isGlobalBuild || isRawESMBuild
+    isGlobalBuild || isBrowserESMBuild
       ? []
       : [
           ...Object.keys(pkg.dependencies || {}),
@@ -133,8 +141,9 @@ function createConfig(format, output, plugins = []) {
       createReplacePlugin(
         isProductionBuild,
         isBundlerESMBuild,
+        isBrowserESMBuild,
         // isBrowserBuild?
-        (isGlobalBuild || isRawESMBuild || isBundlerESMBuild) &&
+        (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
           !packageOptions.enableNonBrowserBranches,
         isGlobalBuild,
         isNodeBuild
@@ -154,6 +163,7 @@ function createConfig(format, output, plugins = []) {
 function createReplacePlugin(
   isProduction,
   isBundlerESMBuild,
+  isBrowserESMBuild,
   isBrowserBuild,
   isGlobalBuild,
   isNodeBuild
@@ -166,18 +176,16 @@ function createReplacePlugin(
         `(process.env.NODE_ENV !== 'production')`
       : // hard coded dev/prod builds
         !isProduction,
-    // this is only used during tests
-    __TEST__: isBundlerESMBuild ? `(process.env.NODE_ENV === 'test')` : false,
+    // this is only used during Vue's internal tests
+    __TEST__: false,
     // If the build is expected to run directly in the browser (global / esm builds)
     __BROWSER__: isBrowserBuild,
-    // is targeting bundlers?
-    __BUNDLER__: isBundlerESMBuild,
     __GLOBAL__: isGlobalBuild,
+    __ESM_BUNDLER__: isBundlerESMBuild,
+    __ESM_BROWSER__: isBrowserESMBuild,
     // is targeting Node (SSR)?
     __NODE_JS__: isNodeBuild,
-    // support options?
-    // the lean build drops options related code with buildOptions.lean: true
-    __FEATURE_OPTIONS__: !packageOptions.lean && !process.env.LEAN,
+    __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true,
     ...(isProduction && isBrowserBuild
       ? {
@@ -210,7 +218,7 @@ function createMinifiedConfig(format) {
   return createConfig(
     format,
     {
-      file: resolve(`dist/${name}.${format}.prod.js`),
+      file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
       format: outputConfigs[format].format
     },
     [

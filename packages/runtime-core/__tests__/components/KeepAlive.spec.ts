@@ -531,5 +531,32 @@ describe('KeepAlive', () => {
       await nextTick()
       expect(Foo.unmounted).not.toHaveBeenCalled()
     })
+
+    test('should update re-activated component if props have changed', async () => {
+      const Foo = (props: { n: number }) => props.n
+
+      const toggle = ref(true)
+      const n = ref(0)
+
+      const App = {
+        setup() {
+          return () =>
+            h(KeepAlive, () => (toggle.value ? h(Foo, { n: n.value }) : null))
+        }
+      }
+
+      render(h(App), root)
+      expect(serializeInner(root)).toBe(`0`)
+
+      toggle.value = false
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<!---->`)
+
+      n.value++
+      await nextTick()
+      toggle.value = true
+      await nextTick()
+      expect(serializeInner(root)).toBe(`1`)
+    })
   })
 })

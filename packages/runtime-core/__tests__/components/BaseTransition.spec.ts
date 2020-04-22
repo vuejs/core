@@ -9,7 +9,8 @@ import {
   serializeInner,
   serialize,
   VNodeProps,
-  KeepAlive
+  KeepAlive,
+  TestElement
 } from '@vue/runtime-test'
 
 function mount(
@@ -42,13 +43,13 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
       }
     }),
     onEnter: jest.fn((el, done) => {
-      cbs.doneEnter[serialize(el)] = done
+      cbs.doneEnter[serialize(el as TestElement)] = done
     }),
     onAfterEnter: jest.fn(),
     onEnterCancelled: jest.fn(),
     onBeforeLeave: jest.fn(),
     onLeave: jest.fn((el, done) => {
-      cbs.doneLeave[serialize(el)] = done
+      cbs.doneLeave[serialize(el as TestElement)] = done
     }),
     onAfterLeave: jest.fn(),
     onLeaveCancelled: jest.fn(),
@@ -64,8 +65,10 @@ function assertCalls(
   props: BaseTransitionProps,
   calls: Record<string, number>
 ) {
-  Object.keys(calls).forEach((key: keyof BaseTransitionProps) => {
-    expect(props[key]).toHaveBeenCalledTimes(calls[key])
+  Object.keys(calls).forEach(key => {
+    expect(props[key as keyof BaseTransitionProps]).toHaveBeenCalledTimes(
+      calls[key]
+    )
   })
 }
 
@@ -147,19 +150,19 @@ describe('BaseTransition', () => {
       const toggle = ref(true)
       const hooks: VNodeProps = {
         onVnodeBeforeMount(vnode) {
-          vnode.transition!.beforeEnter(vnode.el)
+          vnode.transition!.beforeEnter(vnode.el!)
         },
         onVnodeMounted(vnode) {
-          vnode.transition!.enter(vnode.el)
+          vnode.transition!.enter(vnode.el!)
         },
         onVnodeUpdated(vnode, oldVnode) {
           if (oldVnode.props!.id !== vnode.props!.id) {
             if (vnode.props!.id) {
-              vnode.transition!.beforeEnter(vnode.el)
+              vnode.transition!.beforeEnter(vnode.el!)
               state.show = true
-              vnode.transition!.enter(vnode.el)
+              vnode.transition!.enter(vnode.el!)
             } else {
-              vnode.transition!.leave(vnode.el, () => {
+              vnode.transition!.leave(vnode.el!, () => {
                 state.show = false
               })
             }

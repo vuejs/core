@@ -2,8 +2,8 @@ import { currentRenderingInstance } from '../componentRenderUtils'
 import {
   currentInstance,
   Component,
-  ComponentInternalInstance,
-  FunctionalComponent
+  FunctionalComponent,
+  ComponentOptions
 } from '../component'
 import { Directive } from '../directives'
 import {
@@ -18,16 +18,16 @@ import { warn } from '../warning'
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
 
-export function resolveComponent(name: string): Component | undefined {
-  return resolveAsset(COMPONENTS, name)
+export function resolveComponent(name: string): Component | string | undefined {
+  return resolveAsset(COMPONENTS, name) || name
 }
 
 export function resolveDynamicComponent(
   component: unknown
-): Component | undefined {
+): Component | string | undefined {
   if (!component) return
   if (isString(component)) {
-    return resolveAsset(COMPONENTS, component, currentRenderingInstance)
+    return resolveAsset(COMPONENTS, component, false) || component
   } else if (isFunction(component) || isObject(component)) {
     return component
   }
@@ -41,21 +41,20 @@ export function resolveDirective(name: string): Directive | undefined {
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
-  instance?: ComponentInternalInstance | null
+  warnMissing?: boolean
 ): Component | undefined
 // overload 2: directives
 function resolveAsset(
   type: typeof DIRECTIVES,
-  name: string,
-  instance?: ComponentInternalInstance | null
+  name: string
 ): Directive | undefined
 
 function resolveAsset(
   type: typeof COMPONENTS | typeof DIRECTIVES,
   name: string,
-  instance: ComponentInternalInstance | null = currentRenderingInstance ||
-    currentInstance
+  warnMissing = true
 ) {
+  const instance = currentRenderingInstance || currentInstance
   if (instance) {
     let camelized, capitalized
     const registry = instance[type]
@@ -75,8 +74,15 @@ function resolveAsset(
         res = self
       }
     }
-    if (__DEV__ && !res) {
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+    if (__DEV__) {
+      if (res) {
+        // in dev, infer anonymous component's name based on registered name
+        if (type === COMPONENTS && !(res as Component).name) {
+          ;(res as ComponentOptions).name = name
+        }
+      } else if (warnMissing) {
+        warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+      }
     }
     return res
   } else if (__DEV__) {

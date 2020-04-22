@@ -32,10 +32,7 @@ export function createCompilerError<T extends number>(
 export const enum ErrorCodes {
   // parse errors
   ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-  ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE,
   CDATA_IN_HTML_CONTENT,
-  CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE,
-  CONTROL_CHARACTER_REFERENCE,
   DUPLICATE_ATTRIBUTE,
   END_TAG_WITH_ATTRIBUTES,
   END_TAG_WITH_TRAILING_SOLIDUS,
@@ -49,12 +46,8 @@ export const enum ErrorCodes {
   INVALID_FIRST_CHARACTER_OF_TAG_NAME,
   MISSING_ATTRIBUTE_VALUE,
   MISSING_END_TAG_NAME,
-  MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE,
   MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
   NESTED_COMMENT,
-  NONCHARACTER_CHARACTER_REFERENCE,
-  NULL_CHARACTER_REFERENCE,
-  SURROGATE_CHARACTER_REFERENCE,
   UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
   UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
   UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
@@ -76,7 +69,6 @@ export const enum ErrorCodes {
   X_V_BIND_NO_EXPRESSION,
   X_V_ON_NO_EXPRESSION,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-  X_V_SLOT_NAMED_SLOT_ON_COMPONENT,
   X_V_SLOT_MIXED_SLOT_USAGE,
   X_V_SLOT_DUPLICATE_SLOT_NAMES,
   X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
@@ -102,14 +94,8 @@ export const enum ErrorCodes {
 export const errorMessages: { [code: number]: string } = {
   // parse errors
   [ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT]: 'Illegal comment.',
-  [ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE]:
-    'Illegal numeric character reference: invalid character.',
   [ErrorCodes.CDATA_IN_HTML_CONTENT]:
     'CDATA section is allowed only in XML context.',
-  [ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE]:
-    'Illegal numeric character reference: too big.',
-  [ErrorCodes.CONTROL_CHARACTER_REFERENCE]:
-    'Illegal numeric character reference: control character.',
   [ErrorCodes.DUPLICATE_ATTRIBUTE]: 'Duplicate attribute.',
   [ErrorCodes.END_TAG_WITH_ATTRIBUTES]: 'End tag cannot have attributes.',
   [ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS]: "Illegal '/' in tags.",
@@ -125,17 +111,9 @@ export const errorMessages: { [code: number]: string } = {
     "Illegal tag name. Use '&lt;' to print '<'.",
   [ErrorCodes.MISSING_ATTRIBUTE_VALUE]: 'Attribute value was expected.',
   [ErrorCodes.MISSING_END_TAG_NAME]: 'End tag name was expected.',
-  [ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE]:
-    'Semicolon was expected.',
   [ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES]:
     'Whitespace was expected.',
   [ErrorCodes.NESTED_COMMENT]: "Unexpected '<!--' in comment.",
-  [ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE]:
-    'Illegal numeric character reference: non character.',
-  [ErrorCodes.NULL_CHARACTER_REFERENCE]:
-    'Illegal numeric character reference: null character.',
-  [ErrorCodes.SURROGATE_CHARACTER_REFERENCE]:
-    'Illegal numeric character reference: non-pair surrogate.',
   [ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME]:
     'Attribute name cannot contain U+0022 ("), U+0027 (\'), and U+003C (<).',
   [ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE]:
@@ -163,13 +141,10 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
-  [ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT]:
-    `Named v-slot on component. ` +
-    `Named slots should use <template v-slot> syntax nested inside the component.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
     `Mixed v-slot usage on both the component and nested <template>.` +
-    `The default slot should also use <template> syntax when there are other ` +
-    `named slots to avoid scope ambiguity.`,
+    `When there are multiple named slots, all slots should use <template> ` +
+    `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
   [ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN]:
     `Extraneous children found when component already has explicitly named ` +

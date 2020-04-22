@@ -10,7 +10,8 @@ import {
   withDirectives,
   Plugin,
   ref,
-  getCurrentInstance
+  getCurrentInstance,
+  defineComponent
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -18,16 +19,16 @@ describe('api: createApp', () => {
   mockWarn()
 
   test('mount', () => {
-    const Comp = {
+    const Comp = defineComponent({
       props: {
         count: {
           default: 0
         }
       },
-      setup(props: { count: number }) {
+      setup(props) {
         return () => props.count
       }
-    }
+    })
 
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
@@ -47,16 +48,16 @@ describe('api: createApp', () => {
   })
 
   test('unmount', () => {
-    const Comp = {
+    const Comp = defineComponent({
       props: {
         count: {
           default: 0
         }
       },
-      setup(props: { count: number }) {
+      setup(props) {
         return () => props.count
       }
-    }
+    })
 
     const root = nodeOps.createElement('div')
     const app = createApp(Comp)
@@ -438,5 +439,39 @@ describe('api: createApp', () => {
         `Do not use built-in or reserved HTML elements as component id: div`
       ).toHaveBeenWarned()
     })
+  })
+
+  test('config.optionMergeStrategies', () => {
+    let merged: string
+    const App = defineComponent({
+      render() {},
+      mixins: [{ foo: 'mixin' }],
+      extends: { foo: 'extends' },
+      foo: 'local',
+      beforeCreate() {
+        merged = this.$options.foo
+      }
+    })
+
+    const app = createApp(App)
+    app.mixin({
+      foo: 'global'
+    })
+    app.config.optionMergeStrategies.foo = (a, b) => (a ? `${a},` : ``) + b
+
+    app.mount(nodeOps.createElement('div'))
+    expect(merged!).toBe('global,extends,mixin,local')
+  })
+
+  test('config.globalProperties', () => {
+    const app = createApp({
+      render() {
+        return this.foo
+      }
+    })
+    app.config.globalProperties.foo = 'hello'
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(serializeInner(root)).toBe('hello')
   })
 })

@@ -1,11 +1,11 @@
 import {
   PublicAPIComponent,
   Component,
-  currentSuspense,
   currentInstance,
-  ComponentInternalInstance
+  ComponentInternalInstance,
+  isInSSRComponentSetup
 } from './component'
-import { isFunction, isObject, EMPTY_OBJ } from '@vue/shared'
+import { isFunction, isObject } from '@vue/shared'
 import { ComponentPublicInstance } from './componentProxy'
 import { createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
@@ -23,14 +23,20 @@ export type AsyncComponentLoader<T = any> = () => Promise<
 
 export interface AsyncComponentOptions<T = any> {
   loader: AsyncComponentLoader<T>
-  loading?: PublicAPIComponent
-  error?: PublicAPIComponent
+  loadingComponent?: PublicAPIComponent
+  errorComponent?: PublicAPIComponent
   delay?: number
   timeout?: number
   suspensible?: boolean
+  onError?: (
+    error: Error,
+    retry: () => void,
+    fail: () => void,
+    attempts: number
+  ) => any
 }
 
-export function createAsyncComponent<
+export function defineAsyncComponent<
   T extends PublicAPIComponent = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   if (isFunction(source)) {
@@ -38,35 +44,70 @@ export function createAsyncComponent<
   }
 
   const {
-    suspensible = true,
     loader,
-    loading: loadingComponent,
-    error: errorComponent,
+    loadingComponent: loadingComponent,
+    errorComponent: errorComponent,
     delay = 200,
-    timeout // undefined = never times out
+    timeout, // undefined = never times out
+    suspensible = true,
+    onError: userOnError
   } = source
 
   let pendingRequest: Promise<Component> | null = null
   let resolvedComp: Component | undefined
 
+  let retries = 0
+  const retry = () => {
+    retries++
+    pendingRequest = null
+    return load()
+  }
+
   const load = (): Promise<Component> => {
+    let thisRequest: Promise<Component>
     return (
       pendingRequest ||
-      (pendingRequest = loader().then((comp: any) => {
-        // interop module default
-        if (comp.__esModule || comp[Symbol.toStringTag] === 'Module') {
-          comp = comp.default
-        }
-        if (__DEV__ && !isObject(comp) && !isFunction(comp)) {
-          warn(`Invalid async component load result: `, comp)
-        }
-        resolvedComp = comp
-        return comp
-      }))
+      (thisRequest = pendingRequest = loader()
+        .catch(err => {
+          err = err instanceof Error ? err : new Error(String(err))
+          if (userOnError) {
+            return new Promise((resolve, reject) => {
+              const userRetry = () => resolve(retry())
+              const userFail = () => reject(err)
+              userOnError(err, userRetry, userFail, retries + 1)
+            })
+          } else {
+            throw err
+          }
+        })
+        .then((comp: any) => {
+          if (thisRequest !== pendingRequest && pendingRequest) {
+            return pendingRequest
+          }
+          if (__DEV__ && !comp) {
+            warn(
+              `Async component loader resolved to undefined. ` +
+                `If you are using retry(), make sure to return its return value.`
+            )
+          }
+          // interop module default
+          if (
+            comp &&
+            (comp.__esModule || comp[Symbol.toStringTag] === 'Module')
+          ) {
+            comp = comp.default
+          }
+          if (__DEV__ && comp && !isObject(comp) && !isFunction(comp)) {
+            throw new Error(`Invalid async component load result: ${comp}`)
+          }
+          resolvedComp = comp
+          return comp
+        }))
     )
   }
 
   return defineComponent({
+    __asyncLoader: load,
     name: 'AsyncComponentWrapper',
     setup() {
       const instance = currentInstance!
@@ -76,19 +117,28 @@ export function createAsyncComponent<
         return () => createInnerComp(resolvedComp!, instance)
       }
 
-      // suspense-controlled
-      if (__FEATURE_SUSPENSE__ && suspensible && currentSuspense) {
-        return load().then(comp => {
-          return () => createInnerComp(comp, instance)
-        })
-        // TODO suspense error handling
+      const onError = (err: Error) => {
+        pendingRequest = null
+        handleError(err, instance, ErrorCodes.ASYNC_COMPONENT_LOADER)
       }
 
-      // self-controlled
-      if (__NODE_JS__) {
-        // TODO SSR
+      // suspense-controlled or SSR.
+      if (
+        (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) ||
+        (__NODE_JS__ && isInSSRComponentSetup)
+      ) {
+        return load()
+          .then(comp => {
+            return () => createInnerComp(comp, instance)
+          })
+          .catch(err => {
+            onError(err)
+            return () =>
+              errorComponent
+                ? createVNode(errorComponent as Component, { error: err })
+                : null
+          })
       }
-      // TODO hydration
 
       const loaded = ref(false)
       const error = ref()
@@ -106,11 +156,8 @@ export function createAsyncComponent<
             const err = new Error(
               `Async component timed out after ${timeout}ms.`
             )
-            if (errorComponent) {
-              error.value = err
-            } else {
-              handleError(err, instance, ErrorCodes.ASYNC_COMPONENT_LOADER)
-            }
+            onError(err)
+            error.value = err
           }
         }, timeout)
       }
@@ -120,12 +167,8 @@ export function createAsyncComponent<
           loaded.value = true
         })
         .catch(err => {
-          pendingRequest = null
-          if (errorComponent) {
-            error.value = err
-          } else {
-            handleError(err, instance, ErrorCodes.ASYNC_COMPONENT_LOADER)
-          }
+          onError(err)
+          error.value = err
         })
 
       return () => {
@@ -145,11 +188,7 @@ export function createAsyncComponent<
 
 function createInnerComp(
   comp: Component,
-  { props, slots }: ComponentInternalInstance
+  { vnode: { props, children } }: ComponentInternalInstance
 ) {
-  return createVNode(
-    comp,
-    props === EMPTY_OBJ ? null : props,
-    slots === EMPTY_OBJ ? null : slots
-  )
+  return createVNode(comp, props, children)
 }

@@ -68,14 +68,14 @@ describe('hot module replacement', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>11</div>`)
 
-    // Update text while preserving state
-    rerender(
-      parentId,
-      compileToFunction(
-        `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`
-      )
-    )
-    expect(serializeInner(root)).toBe(`<div>1!1</div>`)
+    // // Update text while preserving state
+    // rerender(
+    //   parentId,
+    //   compileToFunction(
+    //     `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`
+    //   )
+    // )
+    // expect(serializeInner(root)).toBe(`<div>1!1</div>`)
 
     // Should force child update on slot content change
     rerender(

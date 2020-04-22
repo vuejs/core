@@ -3,8 +3,10 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn } from '@vue/shared'
+import { isOn, isString, isFunction } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
+
+const nativeOnRE = /^on[a-z]/
 
 export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
   el,
@@ -28,16 +30,21 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
     default:
       if (isOn(key)) {
         // ignore v-model listeners
-        if (key.indexOf('onUpdate:') < 0) {
-          patchEvent(
-            el,
-            key.slice(2).toLowerCase(),
-            prevValue,
-            nextValue,
-            parentComponent
-          )
+        if (!key.startsWith('onUpdate:')) {
+          patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
-      } else if (!isSVG && key in el) {
+      } else if (
+        isSVG
+          ? // most keys must be set as attribute on svg elements to work
+            // ...except innerHTML
+            key === 'innerHTML' ||
+            // or native onclick with function values
+            (key in el && nativeOnRE.test(key) && isFunction(nextValue))
+          : // for normal html elements, set as a property if it exists
+            key in el &&
+            // except native onclick with string values
+            !(nativeOnRE.test(key) && isString(nextValue))
+      ) {
         patchDOMProp(
           el,
           key,

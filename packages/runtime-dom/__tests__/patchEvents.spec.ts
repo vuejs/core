@@ -1,18 +1,19 @@
-import { patchEvent } from '../../src/modules/events'
-import { nextTick } from '@vue/runtime-dom'
+import { patchProp } from '../src/patchProp'
 
-describe(`events`, () => {
+const timeout = () => new Promise(r => setTimeout(r))
+
+describe(`runtime-dom: events patching`, () => {
   it('should assign event handler', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
-    patchEvent(el, 'click', null, fn, null)
+    patchProp(el, 'onClick', null, fn)
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(fn).toHaveBeenCalledTimes(3)
   })
 
@@ -21,14 +22,14 @@ describe(`events`, () => {
     const event = new Event('click')
     const prevFn = jest.fn()
     const nextFn = jest.fn()
-    patchEvent(el, 'click', null, prevFn, null)
+    patchProp(el, 'onClick', null, prevFn)
     el.dispatchEvent(event)
-    patchEvent(el, 'click', prevFn, nextFn, null)
-    await nextTick()
+    patchProp(el, 'onClick', prevFn, nextFn)
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(prevFn).toHaveBeenCalledTimes(1)
     expect(nextFn).toHaveBeenCalledTimes(2)
   })
@@ -38,9 +39,9 @@ describe(`events`, () => {
     const event = new Event('click')
     const fn1 = jest.fn()
     const fn2 = jest.fn()
-    patchEvent(el, 'click', null, [fn1, fn2], null)
+    patchProp(el, 'onClick', null, [fn1, fn2])
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(1)
   })
@@ -49,10 +50,10 @@ describe(`events`, () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
-    patchEvent(el, 'click', null, fn, null)
-    patchEvent(el, 'click', fn, null, null)
+    patchProp(el, 'onClick', null, fn)
+    patchProp(el, 'onClick', fn, null)
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(fn).not.toHaveBeenCalled()
   })
 
@@ -66,11 +67,11 @@ describe(`events`, () => {
         once: true
       }
     }
-    patchEvent(el, 'click', null, nextValue, null)
+    patchProp(el, 'onClick', null, nextValue)
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
@@ -85,12 +86,12 @@ describe(`events`, () => {
         once: true
       }
     }
-    patchEvent(el, 'click', null, prevFn, null)
-    patchEvent(el, 'click', prevFn, nextValue, null)
+    patchProp(el, 'onClick', null, prevFn)
+    patchProp(el, 'onClick', prevFn, nextValue)
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(prevFn).not.toHaveBeenCalled()
     expect(nextFn).toHaveBeenCalledTimes(1)
   })
@@ -105,12 +106,46 @@ describe(`events`, () => {
         once: true
       }
     }
-    patchEvent(el, 'click', null, nextValue, null)
-    patchEvent(el, 'click', nextValue, null, null)
+    patchProp(el, 'onClick', null, nextValue)
+    patchProp(el, 'onClick', nextValue, null)
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     el.dispatchEvent(event)
-    await nextTick()
+    await timeout()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('should support native onclick', async () => {
+    const el = document.createElement('div')
+    const event = new Event('click')
+
+    // string should be set as attribute
+    const fn = ((window as any).__globalSpy = jest.fn())
+    patchProp(el, 'onclick', null, '__globalSpy(1)')
+    el.dispatchEvent(event)
+    await timeout()
+    delete (window as any).__globalSpy
+    expect(fn).toHaveBeenCalledWith(1)
+
+    const fn2 = jest.fn()
+    patchProp(el, 'onclick', '__globalSpy(1)', fn2)
+    el.dispatchEvent(event)
+    await timeout()
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(event)
+  })
+
+  it('should support stopImmediatePropagation on multiple listeners', async () => {
+    const el = document.createElement('div')
+    const event = new Event('click')
+    const fn1 = jest.fn((e: Event) => {
+      e.stopImmediatePropagation()
+    })
+    const fn2 = jest.fn()
+    patchProp(el, 'onClick', null, [fn1, fn2])
+    el.dispatchEvent(event)
+    await timeout()
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(0)
   })
 })

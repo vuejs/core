@@ -86,6 +86,23 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([2, 1])
   })
 
+  it('watching primitive with deep: true', async () => {
+    const count = ref(0)
+    let dummy
+    watch(
+      count,
+      (c, prevCount) => {
+        dummy = [c, prevCount]
+      },
+      {
+        deep: true
+      }
+    )
+    count.value++
+    await nextTick()
+    expect(dummy).toMatchObject([1, 0])
+  })
+
   it('watching multiple sources', async () => {
     const state = reactive({ count: 1 })
     const count = ref(1)
@@ -112,8 +129,8 @@ describe('api: watch', () => {
     let dummy
     watch([() => state.count, status] as const, (vals, oldVals) => {
       dummy = [vals, oldVals]
-      let [count] = vals
-      let [, oldStatus] = oldVals
+      const [count] = vals
+      const [, oldStatus] = oldVals
       // assert types
       count + 1
       oldStatus === true
@@ -412,7 +429,7 @@ describe('api: watch', () => {
 
   it('warn and not respect deep option when using effect', async () => {
     const arr = ref([1, [2]])
-    let spy = jest.fn()
+    const spy = jest.fn()
     watchEffect(
       () => {
         spy()

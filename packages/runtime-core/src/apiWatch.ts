@@ -20,8 +20,6 @@ import {
 import {
   currentInstance,
   ComponentInternalInstance,
-  currentSuspense,
-  Data,
   isInSSRComponentSetup,
   recordInstanceBoundEffect
 } from './component'
@@ -139,7 +137,6 @@ function doWatch(
   }
 
   const instance = currentInstance
-  const suspense = currentSuspense
 
   let getter: () => any
   if (isArray(source)) {
@@ -179,7 +176,7 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: Function
+  let cleanup: () => void
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
@@ -238,9 +235,7 @@ function doWatch(
       }
     }
   } else {
-    scheduler = job => {
-      queuePostRenderEffect(job, suspense)
-    }
+    scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
@@ -280,16 +275,18 @@ export function instanceWatch(
   cb: Function,
   options?: WatchOptions
 ): StopHandle {
-  const ctx = this.proxy as Data
-  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
-  const stop = watch(getter, cb.bind(ctx), options)
+  const publicThis = this.proxy as any
+  const getter = isString(source)
+    ? () => publicThis[source]
+    : source.bind(publicThis)
+  const stop = watch(getter, cb.bind(publicThis), options)
   onBeforeUnmount(stop, this)
   return stop
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
-    return
+    return value
   }
   seen.add(value)
   if (isArray(value)) {

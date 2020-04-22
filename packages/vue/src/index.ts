@@ -1,5 +1,6 @@
 // This entry is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
+import './devCheck'
 import { compile, CompilerOptions, CompilerError } from '@vue/compiler-dom'
 import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
@@ -72,5 +73,3 @@ registerRuntimeCompiler(compileToFunction)
 
 export { compileToFunction as compile }
 export * from '@vue/runtime-dom'
-
-import './devCheck'
