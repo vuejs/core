@@ -818,7 +818,9 @@ describe('compiler: element transform', () => {
               isStatic: true
             }
           ]
-        }
+        },
+        dynamicProps: undefined,
+        directives: undefined
       })
     })
 
@@ -835,7 +837,9 @@ describe('compiler: element transform', () => {
               isStatic: false
             }
           ]
-        }
+        },
+        dynamicProps: '["is"]',
+        directives: undefined
       })
     })
 
@@ -853,6 +857,7 @@ describe('compiler: element transform', () => {
             }
           ]
         },
+        dynamicProps: undefined,
         // should skip v-is runtime check
         directives: undefined
       })

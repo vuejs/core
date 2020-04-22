@@ -36,7 +36,6 @@ import {
   toValidAssetId,
   findProp,
   isCoreComponent,
-  isBindKey,
   findDir
 } from '../utils'
 import { buildSlots } from './vSlot'
@@ -346,11 +345,8 @@ export function buildProps(
       if (name === 'once') {
         continue
       }
-      // skip v-is and :is on <component>
-      if (
-        name === 'is' ||
-        (isBind && tag === 'component' && isBindKey(arg, 'is'))
-      ) {
+      // skip v-is on <component>
+      if (name === 'is') {
         continue
       }
       // skip v-on in SSR compilation
