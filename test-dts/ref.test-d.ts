@@ -21,6 +21,16 @@ function plainType(arg: number | Ref<number>) {
   expectType<Ref<{ foo: number }>>(nestedRef)
   expectType<{ foo: number }>(nestedRef.value)
 
+  // ref boolean
+  const falseRef = ref(false)
+  expectType<Ref<boolean>>(falseRef)
+  expectType<boolean>(falseRef.value)
+
+  // ref true
+  const trueRef = ref<true>(true)
+  expectType<Ref<true>>(trueRef)
+  expectType<true>(trueRef.value)
+
   // tuple
   expectType<[number, string]>(unref(ref([1, '1'])))
 
