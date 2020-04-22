@@ -1,4 +1,4 @@
-import { expectError } from 'tsd'
+import { expectError, expectAssignable } from 'tsd'
 import {
   describe,
   h,
@@ -130,4 +130,35 @@ describe('h support for generic component type', () => {
     h(bar, { id: 'ok' }, 'hello')
   }
   foo({})
+})
+
+// #993
+describe('describeComponent extends Component', () => {
+  // functional
+  expectAssignable<Component>(
+    defineComponent((_props: { foo?: string; bar: number }) => {})
+  )
+
+  // typed props
+  expectAssignable<Component>(defineComponent({}))
+
+  // prop arrays
+  expectAssignable<Component>(
+    defineComponent({
+      props: ['a', 'b']
+    })
+  )
+
+  // prop object
+  expectAssignable<Component>(
+    defineComponent({
+      props: {
+        foo: String,
+        bar: {
+          type: Number,
+          required: true
+        }
+      }
+    })
+  )
 })
