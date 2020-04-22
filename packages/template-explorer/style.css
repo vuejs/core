@@ -1,0 +1,92 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+#header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  box-sizing: border-box;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #333;
+  padding: 0.3em 1.6em;
+  color: #fff;
+  z-index: 1;
+}
+
+h1 {
+  font-size: 18px;
+  display: inline-block;
+  margin-right: 15px;
+}
+
+#options-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 10px;
+}
+
+#options-wrapper:hover #options {
+  display: block;
+}
+
+#options-label {
+  cursor: pointer;
+  text-align: right;
+  padding-right: 10px;
+  font-weight: bold;
+}
+
+#options {
+  display: none;
+  margin-top: 15px;
+  list-style-type: none;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  padding: 15px 30px;
+}
+
+#options li {
+  margin: 8px 0;
+}
+
+#header a {
+  font-weight: 600;
+  color: rgb(101, 163, 221);
+}
+
+#header .label {
+  font-weight: bold;
+}
+
+#header input {
+  margin-right: 6px;
+}
+
+#header label {
+  color: #999;
+}
+
+.editor {
+  position: absolute;
+  top: 60px;
+  bottom: 0;
+  box-sizing: border-box;
+}
+
+#source {
+  left: 0;
+  width: 45%;
+}
+
+#output {
+  left: 45%;
+  width: 55%;
+}
+
+.highlight {
+  background-color: rgba(46, 120, 190, 0.5);
+}

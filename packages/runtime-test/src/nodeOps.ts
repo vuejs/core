@@ -1,4 +1,4 @@
-import { markNonReactive } from '@vue/reactivity'
+import { markRaw } from '@vue/reactivity'
 
 export const enum NodeTypes {
   TEXT = 'text',
@@ -88,7 +88,7 @@ function createElement(tag: string): TestElement {
     tag
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 
@@ -106,7 +106,7 @@ function createText(text: string): TestText {
     text
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 
@@ -124,7 +124,7 @@ function createComment(text: string): TestComment {
     text
   })
   // avoid test nodes from being observed
-  markNonReactive(node)
+  markRaw(node)
   return node
 }
 
@@ -139,7 +139,7 @@ function setText(node: TestText, text: string) {
 
 function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   let refIndex
-  if (ref != null) {
+  if (ref) {
     refIndex = parent.children.indexOf(ref)
     if (refIndex === -1) {
       console.error('ref: ', ref)
@@ -168,7 +168,7 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
 
 function remove(child: TestNode, logOp: boolean = true) {
   const parent = child.parentNode
-  if (parent != null) {
+  if (parent) {
     if (logOp) {
       logNodeOp({
         type: NodeOpTypes.REMOVE,
@@ -228,6 +228,10 @@ function querySelector(): any {
   throw new Error('querySelector not supported in test renderer.')
 }
 
+function setScopeId(el: TestElement, id: string) {
+  el.props[id] = ''
+}
+
 export const nodeOps = {
   insert,
   remove,
@@ -238,5 +242,6 @@ export const nodeOps = {
   setElementText,
   parentNode,
   nextSibling,
-  querySelector
+  querySelector,
+  setScopeId
 }

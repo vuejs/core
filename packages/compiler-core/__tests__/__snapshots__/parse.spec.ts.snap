@@ -2,6 +2,7 @@
 
 exports[`compiler: parse Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!--></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -41,11 +42,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -61,13 +65,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!---></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -107,11 +112,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -127,13 +135,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors ABRUPT_CLOSING_OF_EMPTY_COMMENT <template><!----></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -173,11 +182,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -193,617 +205,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#99;"></template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 35,
-          "line": 1,
-          "offset": 34,
-        },
-        "source": "<template attr=\\"&#99;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
-        Object {
-          "loc": Object {
-            "end": Object {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "attr=\\"&#99;\\"",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "name": "attr",
-          "type": 6,
-          "value": Object {
-            "content": "c",
-            "isEmpty": false,
-            "loc": Object {
-              "end": Object {
-                "column": 23,
-                "line": 1,
-                "offset": 22,
-              },
-              "source": "\\"&#99;\\"",
-              "start": Object {
-                "column": 16,
-                "line": 1,
-                "offset": 15,
-              },
-            },
-            "type": 2,
-          },
-        },
-      ],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 35,
-      "line": 1,
-      "offset": 34,
-    },
-    "source": "<template attr=\\"&#99;\\"></template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#a;"></template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 34,
-          "line": 1,
-          "offset": 33,
-        },
-        "source": "<template attr=\\"&#a;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
-        Object {
-          "loc": Object {
-            "end": Object {
-              "column": 22,
-              "line": 1,
-              "offset": 21,
-            },
-            "source": "attr=\\"&#a;\\"",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "name": "attr",
-          "type": 6,
-          "value": Object {
-            "content": "&#a;",
-            "isEmpty": false,
-            "loc": Object {
-              "end": Object {
-                "column": 22,
-                "line": 1,
-                "offset": 21,
-              },
-              "source": "\\"&#a;\\"",
-              "start": Object {
-                "column": 16,
-                "line": 1,
-                "offset": 15,
-              },
-            },
-            "type": 2,
-          },
-        },
-      ],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 34,
-      "line": 1,
-      "offset": 33,
-    },
-    "source": "<template attr=\\"&#a;\\"></template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xff;"></template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 36,
-          "line": 1,
-          "offset": 35,
-        },
-        "source": "<template attr=\\"&#xff;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
-        Object {
-          "loc": Object {
-            "end": Object {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-            "source": "attr=\\"&#xff;\\"",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "name": "attr",
-          "type": 6,
-          "value": Object {
-            "content": "ÿ",
-            "isEmpty": false,
-            "loc": Object {
-              "end": Object {
-                "column": 24,
-                "line": 1,
-                "offset": 23,
-              },
-              "source": "\\"&#xff;\\"",
-              "start": Object {
-                "column": 16,
-                "line": 1,
-                "offset": 15,
-              },
-            },
-            "type": 2,
-          },
-        },
-      ],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 36,
-      "line": 1,
-      "offset": 35,
-    },
-    "source": "<template attr=\\"&#xff;\\"></template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template attr="&#xg;"></template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 35,
-          "line": 1,
-          "offset": 34,
-        },
-        "source": "<template attr=\\"&#xg;\\"></template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [
-        Object {
-          "loc": Object {
-            "end": Object {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "attr=\\"&#xg;\\"",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "name": "attr",
-          "type": 6,
-          "value": Object {
-            "content": "&#xg;",
-            "isEmpty": false,
-            "loc": Object {
-              "end": Object {
-                "column": 23,
-                "line": 1,
-                "offset": 22,
-              },
-              "source": "\\"&#xg;\\"",
-              "start": Object {
-                "column": 16,
-                "line": 1,
-                "offset": 15,
-              },
-            },
-            "type": 2,
-          },
-        },
-      ],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 35,
-      "line": 1,
-      "offset": 34,
-    },
-    "source": "<template attr=\\"&#xg;\\"></template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#99;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "c",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "&#99;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "<template>&#99;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 27,
-      "line": 1,
-      "offset": 26,
-    },
-    "source": "<template>&#99;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#a;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&#a;",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "&#a;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "<template>&#a;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 26,
-      "line": 1,
-      "offset": 25,
-    },
-    "source": "<template>&#a;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xff;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "ÿ",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 17,
-              "line": 1,
-              "offset": 16,
-            },
-            "source": "&#xff;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-        "source": "<template>&#xff;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 28,
-      "line": 1,
-      "offset": 27,
-    },
-    "source": "<template>&#xff;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE <template>&#xg;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&#xg;",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "&#xg;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "<template>&#xg;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 27,
-      "line": 1,
-      "offset": 26,
-    },
-    "source": "<template>&#xg;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors CDATA_IN_HTML_CONTENT <template><![CDATA[cdata]]></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -843,11 +252,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -863,13 +275,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors CDATA_IN_HTML_CONTENT <template><svg><![CDATA[cdata]]></svg></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -877,7 +290,6 @@ Object {
           "children": Array [
             Object {
               "content": "cdata",
-              "isEmpty": false,
               "loc": Object {
                 "end": Object {
                   "column": 30,
@@ -934,11 +346,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -954,214 +369,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE <template>&#1234567;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "�",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 21,
-              "line": 1,
-              "offset": 20,
-            },
-            "source": "&#1234567;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 32,
-          "line": 1,
-          "offset": 31,
-        },
-        "source": "<template>&#1234567;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 32,
-      "line": 1,
-      "offset": 31,
-    },
-    "source": "<template>&#1234567;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors CONTROL_CHARACTER_REFERENCE <template>&#0003;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "&#0003;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 29,
-          "line": 1,
-          "offset": 28,
-        },
-        "source": "<template>&#0003;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 29,
-      "line": 1,
-      "offset": 28,
-    },
-    "source": "<template>&#0003;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors CONTROL_CHARACTER_REFERENCE <template>&#x7F;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 17,
-              "line": 1,
-              "offset": 16,
-            },
-            "source": "&#x7F;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-        "source": "<template>&#x7F;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 28,
-      "line": 1,
-      "offset": 27,
-    },
-    "source": "<template>&#x7F;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors DUPLICATE_ATTRIBUTE <template><div id="" id=""></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1202,7 +417,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 21,
@@ -1237,7 +451,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -1278,11 +491,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1298,13 +514,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors END_TAG_WITH_ATTRIBUTES <template><div></div id=""></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1350,11 +567,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1370,13 +590,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors END_TAG_WITH_TRAILING_SOLIDUS <template><div></div/></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1422,11 +643,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1442,19 +666,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_BEFORE_TAG_NAME <template>< 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "<",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 12,
@@ -1489,11 +713,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1509,19 +736,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_BEFORE_TAG_NAME <template></ 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "</",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 13,
@@ -1556,11 +783,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1576,13 +806,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_CDATA <template><svg><![CDATA[ 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1628,11 +859,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1648,13 +882,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_CDATA <template><svg><![CDATA[cdata 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1662,7 +897,6 @@ Object {
           "children": Array [
             Object {
               "content": "cdata",
-              "isEmpty": false,
               "loc": Object {
                 "end": Object {
                   "column": 30,
@@ -1719,11 +953,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1739,13 +976,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_COMMENT <template><! 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1785,11 +1023,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1805,13 +1046,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_COMMENT <template><!- 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1851,11 +1093,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1871,13 +1116,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_COMMENT <template><!-- 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1917,11 +1163,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -1937,13 +1186,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_COMMENT <template><!--comment 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -1983,11 +1233,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2003,13 +1256,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_COMMENT <template><!abc 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2049,11 +1303,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2069,19 +1326,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script><!--console.log('hello') 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "<!--console.log('hello')",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 33,
@@ -2121,6 +1378,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2136,19 +1396,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT <script>console.log('hello') 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "console.log('hello')",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 29,
@@ -2188,6 +1448,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2203,13 +1466,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div  1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2255,11 +1519,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2275,13 +1542,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2327,11 +1595,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2347,13 +1618,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id  1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2418,11 +1690,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2438,13 +1713,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id = 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2509,11 +1785,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2529,13 +1808,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2600,11 +1880,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2620,13 +1903,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id="abc 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2667,7 +1951,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -2708,11 +1991,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2728,13 +2014,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id="abc" 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2775,7 +2062,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -2816,11 +2102,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2836,13 +2125,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id="abc"/ 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2883,7 +2173,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -2924,11 +2213,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -2944,13 +2236,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id='abc 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -2991,7 +2284,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -3032,11 +2324,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3052,13 +2347,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id='abc' 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3099,7 +2395,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -3140,11 +2435,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3160,13 +2458,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id='abc'/ 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3207,7 +2506,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -3248,11 +2546,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3268,13 +2569,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id=abc / 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3315,7 +2617,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 22,
@@ -3356,11 +2657,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3376,13 +2680,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors EOF_IN_TAG <template><div id=abc 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3423,7 +2728,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "abc",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 22,
@@ -3464,11 +2768,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3484,13 +2791,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INCORRECTLY_CLOSED_COMMENT <template><!--comment--!></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3530,11 +2838,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3550,13 +2861,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INCORRECTLY_OPENED_COMMENT <!DOCTYPE html> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "content": "DOCTYPE html",
@@ -3577,6 +2889,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3592,13 +2907,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INCORRECTLY_OPENED_COMMENT <template><!></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3638,11 +2954,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3658,13 +2977,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INCORRECTLY_OPENED_COMMENT <template><!-></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3704,11 +3024,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3724,13 +3047,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INCORRECTLY_OPENED_COMMENT <template><!ELEMENT br EMPTY></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3770,11 +3094,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3790,13 +3117,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template></�></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -3836,11 +3164,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3856,19 +3187,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template><�></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "<�>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 14,
@@ -3903,11 +3234,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -3923,19 +3257,21 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>{{a < b}}</template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": Object {
             "content": "a < b",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -3986,11 +3322,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4006,19 +3345,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a < b</template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "a < b",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 16,
@@ -4053,11 +3392,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4073,19 +3415,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors INVALID_FIRST_CHARACTER_OF_TAG_NAME <template>a </ b</template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "a ",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 13,
@@ -4137,11 +3479,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4157,13 +3502,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_ATTRIBUTE_VALUE <template><div id= /></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -4204,7 +3550,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "/",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 21,
@@ -4245,11 +3590,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4265,13 +3613,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_ATTRIBUTE_VALUE <template><div id= ></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -4336,11 +3685,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4356,13 +3708,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_ATTRIBUTE_VALUE <template><div id=></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -4427,11 +3780,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4447,13 +3803,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_END_TAG_NAME <template></></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [],
@@ -4475,11 +3832,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4495,214 +3855,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#40</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "(",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "&#40",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "<template>&#40</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 26,
-      "line": 1,
-      "offset": 25,
-    },
-    "source": "<template>&#40</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&#x40</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "@",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "&#x40",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "<template>&#x40</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 27,
-      "line": 1,
-      "offset": 26,
-    },
-    "source": "<template>&#x40</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE <template>&amp</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "&amp",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "<template>&amp</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 26,
-      "line": 1,
-      "offset": 25,
-    },
-    "source": "<template>&amp</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"\\x0d;\\x0a;class="bar"></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -4744,7 +3904,6 @@ class=\\"bar\\"></div>",
               "type": 6,
               "value": Object {
                 "content": "foo",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -4779,7 +3938,6 @@ class=\\"bar\\"></div>",
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 12,
@@ -4821,11 +3979,14 @@ class=\\"bar\\"></div></template>",
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4842,13 +4003,14 @@ class=\\"bar\\"></div></template>",
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors MISSING_WHITESPACE_BETWEEN_ATTRIBUTES <template><div id="foo"class="bar"></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -4889,7 +4051,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "foo",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -4924,7 +4085,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 35,
@@ -4965,11 +4125,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -4985,13 +4148,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors NESTED_COMMENT <template><!--a<!-- 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5031,11 +4195,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5051,13 +4218,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors NESTED_COMMENT <template><!--a<!--></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5097,11 +4265,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5117,13 +4288,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors NESTED_COMMENT <template><!--a<!--b<!--c--></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5163,11 +4335,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5183,13 +4358,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors NESTED_COMMENT <template><!--a<!--b--></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5229,11 +4405,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5249,281 +4428,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors NONCHARACTER_CHARACTER_REFERENCE <template>&#x1FFFF;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "🿿",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "&#x1FFFF;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 31,
-          "line": 1,
-          "offset": 30,
-        },
-        "source": "<template>&#x1FFFF;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 31,
-      "line": 1,
-      "offset": 30,
-    },
-    "source": "<template>&#x1FFFF;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors NONCHARACTER_CHARACTER_REFERENCE <template>&#xFFFE;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "￾",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 19,
-              "line": 1,
-              "offset": 18,
-            },
-            "source": "&#xFFFE;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 30,
-          "line": 1,
-          "offset": 29,
-        },
-        "source": "<template>&#xFFFE;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 30,
-      "line": 1,
-      "offset": 29,
-    },
-    "source": "<template>&#xFFFE;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors NULL_CHARACTER_REFERENCE <template>&#0000;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "�",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "&#0000;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 29,
-          "line": 1,
-          "offset": 28,
-        },
-        "source": "<template>&#0000;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 29,
-      "line": 1,
-      "offset": 28,
-    },
-    "source": "<template>&#0000;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors SURROGATE_CHARACTER_REFERENCE <template>&#xD800;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "�",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 19,
-              "line": 1,
-              "offset": 18,
-            },
-            "source": "&#xD800;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 30,
-          "line": 1,
-          "offset": 29,
-        },
-        "source": "<template>&#xD800;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 30,
-      "line": 1,
-      "offset": 29,
-    },
-    "source": "<template>&#xD800;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a"bc=''></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5564,7 +4476,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -5605,11 +4516,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5625,13 +4539,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a'bc=''></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5672,7 +4587,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -5713,11 +4627,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5733,13 +4650,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME <template><div a<bc=''></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5780,7 +4698,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "",
-                "isEmpty": true,
                 "loc": Object {
                   "end": Object {
                     "column": 23,
@@ -5821,11 +4738,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5841,13 +4761,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar"></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5888,7 +4809,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar\\"",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -5929,11 +4849,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -5949,13 +4872,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar'></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -5996,7 +4920,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar'",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6037,11 +4960,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6057,13 +4983,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar<div></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6104,7 +5031,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar<div",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -6145,11 +5071,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6165,13 +5094,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar=baz></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6212,7 +5142,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar=baz",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 27,
@@ -6253,11 +5182,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6273,13 +5205,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE <template><div foo=bar\`></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6320,7 +5253,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar\`",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6361,11 +5293,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6381,13 +5316,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6452,11 +5388,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6472,13 +5411,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME <template><div =foo=bar></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6519,7 +5459,6 @@ Object {
               "type": 6,
               "value": Object {
                 "content": "bar",
-                "isEmpty": false,
                 "loc": Object {
                   "end": Object {
                     "column": 24,
@@ -6560,11 +5499,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6580,13 +5522,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME <template><?xml?></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6626,11 +5569,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6646,13 +5592,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors UNEXPECTED_SOLIDUS_IN_TAG <template><div a/b></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6735,11 +5682,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6755,86 +5705,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse Errors UNKNOWN_NAMED_CHARACTER_REFERENCE <template>&unknown;</template> 1`] = `
-Object {
-  "children": Array [
-    Object {
-      "children": Array [
-        Object {
-          "content": "&unknown;",
-          "isEmpty": false,
-          "loc": Object {
-            "end": Object {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "&unknown;",
-            "start": Object {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": Object {
-        "end": Object {
-          "column": 31,
-          "line": 1,
-          "offset": 30,
-        },
-        "source": "<template>&unknown;</template>",
-        "start": Object {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": Array [],
-      "tag": "template",
-      "tagType": 3,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "hoists": Array [],
-  "imports": Array [],
-  "loc": Object {
-    "end": Object {
-      "column": 31,
-      "line": 1,
-      "offset": 30,
-    },
-    "source": "<template>&unknown;</template>",
-    "start": Object {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <svg><![CDATA[</div>]]></svg> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "</div>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 21,
@@ -6874,6 +5757,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6889,13 +5775,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <svg><!--</div>--></svg> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -6940,6 +5827,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -6955,13 +5845,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <template></div></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [],
@@ -6983,11 +5874,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7003,13 +5897,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <template></div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [],
@@ -7031,11 +5926,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7051,19 +5949,21 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <template>{{'</div>'}}</template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": Object {
             "content": "'</div>'",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7114,11 +6014,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7134,19 +6037,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_INVALID_END_TAG <textarea></div></textarea> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
         Object {
           "content": "</div>",
-          "isEmpty": false,
           "loc": Object {
             "end": Object {
               "column": 17,
@@ -7186,6 +6089,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7201,13 +6107,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END <div v-foo:[sef fsef] /> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [],
@@ -7231,6 +6138,7 @@ Object {
         Object {
           "arg": Object {
             "content": "se",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7290,6 +6198,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7305,13 +6216,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_END_TAG <template><div> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -7357,11 +6269,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7377,13 +6292,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_END_TAG <template><div></template> 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -7429,11 +6345,14 @@ Object {
       "ns": 0,
       "props": Array [],
       "tag": "template",
-      "tagType": 3,
+      "tagType": 0,
       "type": 1,
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7449,17 +6368,17 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_INTERPOLATION_END {{ 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "content": "{{",
-      "isEmpty": false,
       "loc": Object {
         "end": Object {
           "column": 3,
@@ -7477,6 +6396,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7492,17 +6414,17 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_INTERPOLATION_END {{ foo 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "content": "{{ foo",
-      "isEmpty": false,
       "loc": Object {
         "end": Object {
           "column": 7,
@@ -7520,6 +6442,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7535,17 +6460,19 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse Errors X_MISSING_INTERPOLATION_END {{}} 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "content": Object {
         "content": "",
+        "isConstant": false,
         "isStatic": false,
         "loc": Object {
           "end": Object {
@@ -7579,6 +6506,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7594,13 +6524,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse invalid html 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -7654,6 +6585,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7672,13 +6606,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse self closing multiple tag 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [],
@@ -7702,6 +6637,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7720,6 +6656,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7780,6 +6717,7 @@ Object {
         Object {
           "arg": Object {
             "content": "style",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -7798,6 +6736,7 @@ Object {
           },
           "exp": Object {
             "content": "{ color: 'red' }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -7838,6 +6777,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -7854,13 +6796,14 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;
 
 exports[`compiler: parse valid html 1`] = `
 Object {
+  "cached": 0,
   "children": Array [
     Object {
       "children": Array [
@@ -7886,6 +6829,7 @@ Object {
             Object {
               "arg": Object {
                 "content": "style",
+                "isConstant": true,
                 "isStatic": true,
                 "loc": Object {
                   "end": Object {
@@ -7904,6 +6848,7 @@ Object {
               },
               "exp": Object {
                 "content": "{ color: 'red' }",
+                "isConstant": false,
                 "isStatic": false,
                 "loc": Object {
                   "end": Object {
@@ -7983,6 +6928,7 @@ Object {
         Object {
           "arg": Object {
             "content": "class",
+            "isConstant": true,
             "isStatic": true,
             "loc": Object {
               "end": Object {
@@ -8001,6 +6947,7 @@ Object {
           },
           "exp": Object {
             "content": "{ some: condition }",
+            "isConstant": false,
             "isStatic": false,
             "loc": Object {
               "end": Object {
@@ -8041,6 +6988,9 @@ Object {
     },
   ],
   "codegenNode": undefined,
+  "components": Array [],
+  "directives": Array [],
+  "helpers": Array [],
   "hoists": Array [],
   "imports": Array [],
   "loc": Object {
@@ -8059,7 +7009,7 @@ Object {
       "offset": 0,
     },
   },
-  "statements": Array [],
+  "temps": 0,
   "type": 0,
 }
 `;

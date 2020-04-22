@@ -1,16 +1,13 @@
-import {
-  ErrorCodes,
-  CompilerError,
-  createCompilerError,
-  defaultOnError
-} from './errors'
+import { ParserOptions } from './options'
+import { NO, isArray, makeMap } from '@vue/shared'
+import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
   advancePositionWithMutation,
-  advancePositionWithClone
+  advancePositionWithClone,
+  isCoreComponent
 } from './utils'
 import {
-  Namespace,
   Namespaces,
   AttributeNode,
   CommentNode,
@@ -24,36 +21,36 @@ import {
   SourceLocation,
   TextNode,
   TemplateChildNode,
-  InterpolationNode
+  InterpolationNode,
+  createRoot
 } from './ast'
+import { extend } from '@vue/shared'
 
-export interface ParserOptions {
-  isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
-  getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
-  getTextMode?: (tag: string, ns: Namespace) => TextModes
-  delimiters?: [string, string] // ['{{', '}}']
-  ignoreSpaces?: boolean
+type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
+type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
+  Pick<ParserOptions, OptionalOptions>
 
-  // Map to HTML entities. E.g., `{ "amp;": "&" }`
-  // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences?: { [name: string]: string | undefined }
-
-  onError?: (error: CompilerError) => void
+// The default decoder only provides escapes for characters reserved as part of
+// the tempalte syntax, and is only used if the custom renderer did not provide
+// a platform-specific decoder.
+const decodeRE = /&(gt|lt|amp|apos|quot);/g
+const decodeMap: Record<string, string> = {
+  gt: '>',
+  lt: '<',
+  amp: '&',
+  apos: "'",
+  quot: '"'
 }
 
-export const defaultParserOptions: Required<ParserOptions> = {
+export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
-  ignoreSpaces: true,
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
-  isVoidTag: () => false,
-  namedCharacterReferences: {
-    'gt;': '>',
-    'lt;': '<',
-    'amp;': '&',
-    'apos;': "'",
-    'quot;': '"'
-  },
+  isVoidTag: NO,
+  isPreTag: NO,
+  isCustomElement: NO,
+  decodeEntities: (rawText: string): string =>
+    rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError
 }
 
@@ -66,29 +63,27 @@ export const enum TextModes {
   ATTRIBUTE_VALUE
 }
 
-interface ParserContext {
-  options: Required<ParserOptions>
+export interface ParserContext {
+  options: MergedParserOptions
   readonly originalSource: string
   source: string
   offset: number
   line: number
   column: number
-  maxCRNameLength: number
+  inPre: boolean // HTML <pre> tag, preserve whitespaces
+  inVPre: boolean // v-pre, do not process directives and interpolations
 }
 
-export function parse(content: string, options: ParserOptions = {}): RootNode {
+export function baseParse(
+  content: string,
+  options: ParserOptions = {}
+): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
-
-  return {
-    type: NodeTypes.ROOT,
-    children: parseChildren(context, TextModes.DATA, []),
-    imports: [],
-    statements: [],
-    hoists: [],
-    codegenNode: undefined,
-    loc: getSelection(context, start)
-  }
+  return createRoot(
+    parseChildren(context, TextModes.DATA, []),
+    getSelection(context, start)
+  )
 }
 
 function createParserContext(
@@ -105,10 +100,8 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    maxCRNameLength: Object.keys(
-      options.namedCharacterReferences ||
-        defaultParserOptions.namedCharacterReferences
-    ).reduce((max, name) => Math.max(max, name.length), 0)
+    inPre: false,
+    inVPre: false
   }
 }
 
@@ -122,130 +115,173 @@ function parseChildren(
   const nodes: TemplateChildNode[] = []
 
   while (!isEnd(context, mode, ancestors)) {
-    __DEV__ && assert(context.source.length > 0)
+    __TEST__ && assert(context.source.length > 0)
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
-    if (startsWith(s, context.options.delimiters[0])) {
-      // '{{'
-      node = parseInterpolation(context, mode)
-    } else if (mode === TextModes.DATA && s[0] === '<') {
-      // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
-      if (s.length === 1) {
-        emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
-      } else if (s[1] === '!') {
-        // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
-        if (startsWith(s, '<!--')) {
-          node = parseComment(context)
-        } else if (startsWith(s, '<!DOCTYPE')) {
-          // Ignore DOCTYPE by a limitation.
-          node = parseBogusComment(context)
-        } else if (startsWith(s, '<![CDATA[')) {
-          if (ns !== Namespaces.HTML) {
-            node = parseCDATA(context, ancestors)
+    if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
+      if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
+        // '{{'
+        node = parseInterpolation(context, mode)
+      } else if (mode === TextModes.DATA && s[0] === '<') {
+        // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
+        if (s.length === 1) {
+          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
+        } else if (s[1] === '!') {
+          // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
+          if (startsWith(s, '<!--')) {
+            node = parseComment(context)
+          } else if (startsWith(s, '<!DOCTYPE')) {
+            // Ignore DOCTYPE by a limitation.
+            node = parseBogusComment(context)
+          } else if (startsWith(s, '<![CDATA[')) {
+            if (ns !== Namespaces.HTML) {
+              node = parseCDATA(context, ancestors)
+            } else {
+              emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
+              node = parseBogusComment(context)
+            }
           } else {
-            emitError(context, ErrorCodes.CDATA_IN_HTML_CONTENT)
+            emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
             node = parseBogusComment(context)
           }
-        } else {
-          emitError(context, ErrorCodes.INCORRECTLY_OPENED_COMMENT)
+        } else if (s[1] === '/') {
+          // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
+          if (s.length === 2) {
+            emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
+          } else if (s[2] === '>') {
+            emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
+            advanceBy(context, 3)
+            continue
+          } else if (/[a-z]/i.test(s[2])) {
+            emitError(context, ErrorCodes.X_INVALID_END_TAG)
+            parseTag(context, TagType.End, parent)
+            continue
+          } else {
+            emitError(
+              context,
+              ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+              2
+            )
+            node = parseBogusComment(context)
+          }
+        } else if (/[a-z]/i.test(s[1])) {
+          node = parseElement(context, ancestors)
+        } else if (s[1] === '?') {
+          emitError(
+            context,
+            ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
+            1
+          )
           node = parseBogusComment(context)
-        }
-      } else if (s[1] === '/') {
-        // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
-        if (s.length === 2) {
-          emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 2)
-        } else if (s[2] === '>') {
-          emitError(context, ErrorCodes.MISSING_END_TAG_NAME, 2)
-          advanceBy(context, 3)
-          continue
-        } else if (/[a-z]/i.test(s[2])) {
-          emitError(context, ErrorCodes.X_INVALID_END_TAG)
-          parseTag(context, TagType.End, parent)
-          continue
         } else {
-          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 2)
-          node = parseBogusComment(context)
+          emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
         }
-      } else if (/[a-z]/i.test(s[1])) {
-        node = parseElement(context, ancestors)
-      } else if (s[1] === '?') {
-        emitError(
-          context,
-          ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-          1
-        )
-        node = parseBogusComment(context)
-      } else {
-        emitError(context, ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME, 1)
       }
     }
     if (!node) {
       node = parseText(context, mode)
     }
 
-    if (Array.isArray(node)) {
+    if (isArray(node)) {
       for (let i = 0; i < node.length; i++) {
-        pushNode(context, nodes, node[i])
+        pushNode(nodes, node[i])
       }
     } else {
-      pushNode(context, nodes, node)
+      pushNode(nodes, node)
     }
   }
 
-  return nodes
+  // Whitespace management for more efficient output
+  // (same as v2 whitespace: 'condense')
+  let removedWhitespace = false
+  if (mode !== TextModes.RAWTEXT) {
+    if (!context.inPre) {
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        if (node.type === NodeTypes.TEXT) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
+            const prev = nodes[i - 1]
+            const next = nodes[i + 1]
+            // If:
+            // - the whitespace is the first or last node, or:
+            // - the whitespace is adjacent to a comment, or:
+            // - the whitespace is between two elements AND contains newline
+            // Then the whitespace is ignored.
+            if (
+              !prev ||
+              !next ||
+              prev.type === NodeTypes.COMMENT ||
+              next.type === NodeTypes.COMMENT ||
+              (prev.type === NodeTypes.ELEMENT &&
+                next.type === NodeTypes.ELEMENT &&
+                /[\r\n]/.test(node.content))
+            ) {
+              removedWhitespace = true
+              nodes[i] = null as any
+            } else {
+              // Otherwise, condensed consecutive whitespace inside the text down to
+              // a single space
+              node.content = ' '
+            }
+          } else {
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+          }
+        }
+      }
+    } else if (parent && context.options.isPreTag(parent.tag)) {
+      // remove leading newline per html spec
+      // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
+      const first = nodes[0]
+      if (first && first.type === NodeTypes.TEXT) {
+        first.content = first.content.replace(/^\r?\n/, '')
+      }
+    }
+  }
+
+  return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
-function pushNode(
-  context: ParserContext,
-  nodes: TemplateChildNode[],
-  node: TemplateChildNode
-): void {
+function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
   // ignore comments in production
   /* istanbul ignore next */
   if (!__DEV__ && node.type === NodeTypes.COMMENT) {
     return
   }
-  if (
-    context.options.ignoreSpaces &&
-    node.type === NodeTypes.TEXT &&
-    node.isEmpty
-  ) {
-    return
+
+  if (node.type === NodeTypes.TEXT) {
+    const prev = last(nodes)
+    // Merge if both this and the previous node are text and those are
+    // consecutive. This happens for cases like "a < b".
+    if (
+      prev &&
+      prev.type === NodeTypes.TEXT &&
+      prev.loc.end.offset === node.loc.start.offset
+    ) {
+      prev.content += node.content
+      prev.loc.end = node.loc.end
+      prev.loc.source += node.loc.source
+      return
+    }
   }
 
-  // Merge if both this and the previous node are text and those are consecutive.
-  // This happens on "a < b" or something like.
-  const prev = last(nodes)
-  if (
-    prev &&
-    prev.type === NodeTypes.TEXT &&
-    node.type === NodeTypes.TEXT &&
-    prev.loc.end.offset === node.loc.start.offset
-  ) {
-    prev.content += node.content
-    prev.isEmpty = prev.content.trim().length === 0
-    prev.loc.end = node.loc.end
-    prev.loc.source += node.loc.source
-  } else {
-    nodes.push(node)
-  }
+  nodes.push(node)
 }
 
 function parseCDATA(
   context: ParserContext,
   ancestors: ElementNode[]
 ): TemplateChildNode[] {
-  __DEV__ &&
+  __TEST__ &&
     assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
-  __DEV__ && assert(startsWith(context.source, '<![CDATA['))
+  __TEST__ && assert(startsWith(context.source, '<![CDATA['))
 
   advanceBy(context, 9)
   const nodes = parseChildren(context, TextModes.CDATA, ancestors)
   if (context.source.length === 0) {
     emitError(context, ErrorCodes.EOF_IN_CDATA)
   } else {
-    __DEV__ && assert(startsWith(context.source, ']]>'))
+    __TEST__ && assert(startsWith(context.source, ']]>'))
     advanceBy(context, 3)
   }
 
@@ -253,7 +289,7 @@ function parseCDATA(
 }
 
 function parseComment(context: ParserContext): CommentNode {
-  __DEV__ && assert(startsWith(context.source, '<!--'))
+  __TEST__ && assert(startsWith(context.source, '<!--'))
 
   const start = getCursor(context)
   let content: string
@@ -295,7 +331,7 @@ function parseComment(context: ParserContext): CommentNode {
 }
 
 function parseBogusComment(context: ParserContext): CommentNode | undefined {
-  __DEV__ && assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
+  __TEST__ && assert(/^<(?:[\!\?]|\/[^a-z>])/i.test(context.source))
 
   const start = getCursor(context)
   const contentStart = context.source[1] === '?' ? 1 : 2
@@ -321,11 +357,15 @@ function parseElement(
   context: ParserContext,
   ancestors: ElementNode[]
 ): ElementNode | undefined {
-  __DEV__ && assert(/^<[a-z]/i.test(context.source))
+  __TEST__ && assert(/^<[a-z]/i.test(context.source))
 
   // Start tag.
+  const wasInPre = context.inPre
+  const wasInVPre = context.inVPre
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
+  const isPreBoundary = context.inPre && !wasInPre
+  const isVPreBoundary = context.inVPre && !wasInVPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
@@ -333,10 +373,7 @@ function parseElement(
 
   // Children.
   ancestors.push(element)
-  const mode = (context.options.getTextMode(
-    element.tag,
-    element.ns
-  ) as unknown) as TextModes
+  const mode = context.options.getTextMode(element.tag, element.ns, parent)
   const children = parseChildren(context, mode, ancestors)
   ancestors.pop()
 
@@ -346,7 +383,7 @@ function parseElement(
   if (startsWithEndTagOpen(context.source, element.tag)) {
     parseTag(context, TagType.End, parent)
   } else {
-    emitError(context, ErrorCodes.X_MISSING_END_TAG)
+    emitError(context, ErrorCodes.X_MISSING_END_TAG, 0, element.loc.start)
     if (context.source.length === 0 && element.tag.toLowerCase() === 'script') {
       const first = children[0]
       if (first && startsWith(first.loc.source, '<!--')) {
@@ -356,6 +393,13 @@ function parseElement(
   }
 
   element.loc = getSelection(context, element.loc.start)
+
+  if (isPreBoundary) {
+    context.inPre = false
+  }
+  if (isVPreBoundary) {
+    context.inVPre = false
+  }
   return element
 }
 
@@ -363,6 +407,10 @@ const enum TagType {
   Start,
   End
 }
+
+const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
+  `if,else,else-if,for,slot`
+)
 
 /**
  * Parse a tag (E.g. `<div id=a>`) with that type (start tag or end tag).
@@ -372,8 +420,8 @@ function parseTag(
   type: TagType,
   parent: ElementNode | undefined
 ): ElementNode {
-  __DEV__ && assert(/^<\/?[a-z]/i.test(context.source))
-  __DEV__ &&
+  __TEST__ && assert(/^<\/?[a-z]/i.test(context.source))
+  __TEST__ &&
     assert(
       type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
     )
@@ -382,18 +430,98 @@ function parseTag(
   const start = getCursor(context)
   const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source)!
   const tag = match[1]
-  const props = []
   const ns = context.options.getNamespace(tag, parent)
-
-  let tagType = ElementTypes.ELEMENT
-  if (tag === 'slot') tagType = ElementTypes.SLOT
-  else if (tag === 'template') tagType = ElementTypes.TEMPLATE
-  else if (/[A-Z-]/.test(tag)) tagType = ElementTypes.COMPONENT
 
   advanceBy(context, match[0].length)
   advanceSpaces(context)
 
+  // save current state in case we need to re-parse attributes with v-pre
+  const cursor = getCursor(context)
+  const currentSource = context.source
+
   // Attributes.
+  let props = parseAttributes(context, type)
+
+  // check <pre> tag
+  if (context.options.isPreTag(tag)) {
+    context.inPre = true
+  }
+
+  // check v-pre
+  if (
+    !context.inVPre &&
+    props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
+  ) {
+    context.inVPre = true
+    // reset context
+    extend(context, cursor)
+    context.source = currentSource
+    // re-parse attrs and filter out v-pre itself
+    props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+  }
+
+  // Tag close.
+  let isSelfClosing = false
+  if (context.source.length === 0) {
+    emitError(context, ErrorCodes.EOF_IN_TAG)
+  } else {
+    isSelfClosing = startsWith(context.source, '/>')
+    if (type === TagType.End && isSelfClosing) {
+      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
+    }
+    advanceBy(context, isSelfClosing ? 2 : 1)
+  }
+
+  let tagType = ElementTypes.ELEMENT
+  const options = context.options
+  if (!context.inVPre && !options.isCustomElement(tag)) {
+    const hasVIs = props.some(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
+    )
+    if (options.isNativeTag && !hasVIs) {
+      if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
+    } else if (
+      hasVIs ||
+      isCoreComponent(tag) ||
+      (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
+      /^[A-Z]/.test(tag) ||
+      tag === 'component'
+    ) {
+      tagType = ElementTypes.COMPONENT
+    }
+
+    if (tag === 'slot') {
+      tagType = ElementTypes.SLOT
+    } else if (
+      tag === 'template' &&
+      props.some(p => {
+        return (
+          p.type === NodeTypes.DIRECTIVE && isSpecialTemplateDirective(p.name)
+        )
+      })
+    ) {
+      tagType = ElementTypes.TEMPLATE
+    }
+  }
+
+  return {
+    type: NodeTypes.ELEMENT,
+    ns,
+    tag,
+    tagType,
+    props,
+    isSelfClosing,
+    children: [],
+    loc: getSelection(context, start),
+    codegenNode: undefined // to be created during transform phase
+  }
+}
+
+function parseAttributes(
+  context: ParserContext,
+  type: TagType
+): (AttributeNode | DirectiveNode)[] {
+  const props = []
   const attributeNames = new Set<string>()
   while (
     context.source.length > 0 &&
@@ -420,37 +548,14 @@ function parseTag(
     }
     advanceSpaces(context)
   }
-
-  // Tag close.
-  let isSelfClosing = false
-  if (context.source.length === 0) {
-    emitError(context, ErrorCodes.EOF_IN_TAG)
-  } else {
-    isSelfClosing = startsWith(context.source, '/>')
-    if (type === TagType.End && isSelfClosing) {
-      emitError(context, ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS)
-    }
-    advanceBy(context, isSelfClosing ? 2 : 1)
-  }
-
-  return {
-    type: NodeTypes.ELEMENT,
-    ns,
-    tag,
-    tagType,
-    props,
-    isSelfClosing,
-    children: [],
-    loc: getSelection(context, start),
-    codegenNode: undefined // to be created during transform phase
-  }
+  return props
 }
 
 function parseAttribute(
   context: ParserContext,
   nameSet: Set<string>
 ): AttributeNode | DirectiveNode {
-  __DEV__ && assert(/^[^\t\r\n\f />]/.test(context.source))
+  __TEST__ && assert(/^[^\t\r\n\f />]/.test(context.source))
 
   // Name.
   const start = getCursor(context)
@@ -468,7 +573,7 @@ function parseAttribute(
   {
     const pattern = /["'<]/g
     let m: RegExpExecArray | null
-    while ((m = pattern.exec(name)) !== null) {
+    while ((m = pattern.exec(name))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
@@ -499,7 +604,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (/^(v-|:|@|#)/.test(name)) {
+  if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
     const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
       name
     )!
@@ -507,7 +612,7 @@ function parseAttribute(
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
-      const startOffset = name.split(match[2], 2)!.shift()!.length
+      const startOffset = name.indexOf(match[2])
       const loc = getSelection(
         context,
         getNewPosition(context, start, startOffset),
@@ -533,6 +638,7 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content,
         isStatic,
+        isConstant: isStatic,
         loc
       }
     }
@@ -558,6 +664,9 @@ function parseAttribute(
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,
         isStatic: false,
+        // Treat as non-constant by default. This can be potentially set to
+        // true by `transformExpression` to make it eligible for hoisting.
+        isConstant: false,
         loc: value.loc
       },
       arg,
@@ -572,7 +681,6 @@ function parseAttribute(
     value: value && {
       type: NodeTypes.TEXT,
       content: value.content,
-      isEmpty: value.content.trim().length === 0,
       loc: value.loc
     },
     loc
@@ -614,9 +722,9 @@ function parseAttributeValue(
     if (!match) {
       return undefined
     }
-    let unexpectedChars = /["'<=`]/g
+    const unexpectedChars = /["'<=`]/g
     let m: RegExpExecArray | null
-    while ((m = unexpectedChars.exec(match[0])) !== null) {
+    while ((m = unexpectedChars.exec(match[0]))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
@@ -634,7 +742,7 @@ function parseInterpolation(
   mode: TextModes
 ): InterpolationNode | undefined {
   const [open, close] = context.options.delimiters
-  __DEV__ && assert(startsWith(context.source, open))
+  __TEST__ && assert(startsWith(context.source, open))
 
   const closeIndex = context.source.indexOf(close, open.length)
   if (closeIndex === -1) {
@@ -664,6 +772,8 @@ function parseInterpolation(
     content: {
       type: NodeTypes.SIMPLE_EXPRESSION,
       isStatic: false,
+      // Set `isConstant` to false by default and will decide in transformExpression
+      isConstant: false,
       content,
       loc: getSelection(context, innerStart, innerEnd)
     },
@@ -672,18 +782,22 @@ function parseInterpolation(
 }
 
 function parseText(context: ParserContext, mode: TextModes): TextNode {
-  __DEV__ && assert(context.source.length > 0)
+  __TEST__ && assert(context.source.length > 0)
 
-  const [open] = context.options.delimiters
-  const endIndex = Math.min(
-    ...[
-      context.source.indexOf('<', 1),
-      context.source.indexOf(open, 1),
-      mode === TextModes.CDATA ? context.source.indexOf(']]>') : -1,
-      context.source.length
-    ].filter(n => n !== -1)
-  )
-  __DEV__ && assert(endIndex > 0)
+  const endTokens = ['<', context.options.delimiters[0]]
+  if (mode === TextModes.CDATA) {
+    endTokens.push(']]>')
+  }
+
+  let endIndex = context.source.length
+  for (let i = 0; i < endTokens.length; i++) {
+    const index = context.source.indexOf(endTokens[i], 1)
+    if (index !== -1 && endIndex > index) {
+      endIndex = index
+    }
+  }
+
+  __TEST__ && assert(endIndex > 0)
 
   const start = getCursor(context)
   const content = parseTextData(context, endIndex, mode)
@@ -691,8 +805,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   return {
     type: NodeTypes.TEXT,
     content,
-    loc: getSelection(context, start),
-    isEmpty: !content.trim()
+    loc: getSelection(context, start)
   }
 }
 
@@ -705,122 +818,21 @@ function parseTextData(
   length: number,
   mode: TextModes
 ): string {
-  if (mode === TextModes.RAWTEXT || mode === TextModes.CDATA) {
-    const text = context.source.slice(0, length)
-    advanceBy(context, length)
-    return text
+  const rawText = context.source.slice(0, length)
+  advanceBy(context, length)
+  if (
+    mode === TextModes.RAWTEXT ||
+    mode === TextModes.CDATA ||
+    rawText.indexOf('&') === -1
+  ) {
+    return rawText
+  } else {
+    // DATA or RCDATA containing "&"". Entity decoding required.
+    return context.options.decodeEntities(
+      rawText,
+      mode === TextModes.ATTRIBUTE_VALUE
+    )
   }
-
-  // DATA or RCDATA. Entity decoding required.
-  const end = context.offset + length
-  let text: string = ''
-
-  while (context.offset < end) {
-    const head = /&(?:#x?)?/i.exec(context.source)
-    if (!head || context.offset + head.index >= end) {
-      const remaining = end - context.offset
-      text += context.source.slice(0, remaining)
-      advanceBy(context, remaining)
-      break
-    }
-
-    // Advance to the "&".
-    text += context.source.slice(0, head.index)
-    advanceBy(context, head.index)
-
-    if (head[0] === '&') {
-      // Named character reference.
-      let name = '',
-        value: string | undefined = undefined
-      if (/[0-9a-z]/i.test(context.source[1])) {
-        for (
-          let length = context.maxCRNameLength;
-          !value && length > 0;
-          --length
-        ) {
-          name = context.source.substr(1, length)
-          value = context.options.namedCharacterReferences[name]
-        }
-        if (value) {
-          const semi = name.endsWith(';')
-          if (
-            mode === TextModes.ATTRIBUTE_VALUE &&
-            !semi &&
-            /[=a-z0-9]/i.test(context.source[1 + name.length] || '')
-          ) {
-            text += '&'
-            text += name
-            advanceBy(context, 1 + name.length)
-          } else {
-            text += value
-            advanceBy(context, 1 + name.length)
-            if (!semi) {
-              emitError(
-                context,
-                ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-              )
-            }
-          }
-        } else {
-          emitError(context, ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE)
-          text += '&'
-          text += name
-          advanceBy(context, 1 + name.length)
-        }
-      } else {
-        text += '&'
-        advanceBy(context, 1)
-      }
-    } else {
-      // Numeric character reference.
-      const hex = head[0] === '&#x'
-      const pattern = hex ? /^&#x([0-9a-f]+);?/i : /^&#([0-9]+);?/
-      const body = pattern.exec(context.source)
-      if (!body) {
-        text += head[0]
-        emitError(
-          context,
-          ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
-        )
-        advanceBy(context, head[0].length)
-      } else {
-        // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-        let cp = Number.parseInt(body[1], hex ? 16 : 10)
-        if (cp === 0) {
-          emitError(context, ErrorCodes.NULL_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if (cp > 0x10ffff) {
-          emitError(
-            context,
-            ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE
-          )
-          cp = 0xfffd
-        } else if (cp >= 0xd800 && cp <= 0xdfff) {
-          emitError(context, ErrorCodes.SURROGATE_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if ((cp >= 0xfdd0 && cp <= 0xfdef) || (cp & 0xfffe) === 0xfffe) {
-          emitError(context, ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE)
-        } else if (
-          (cp >= 0x01 && cp <= 0x08) ||
-          cp === 0x0b ||
-          (cp >= 0x0d && cp <= 0x1f) ||
-          (cp >= 0x7f && cp <= 0x9f)
-        ) {
-          emitError(context, ErrorCodes.CONTROL_CHARACTER_REFERENCE)
-          cp = CCR_REPLACEMENTS[cp] || cp
-        }
-        text += String.fromCodePoint(cp)
-        advanceBy(context, body[0].length)
-        if (!body![0].endsWith(';')) {
-          emitError(
-            context,
-            ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-          )
-        }
-      }
-    }
-  }
-  return text
 }
 
 function getCursor(context: ParserContext): Position {
@@ -851,7 +863,7 @@ function startsWith(source: string, searchString: string): boolean {
 
 function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   const { source } = context
-  __DEV__ && assert(numberOfCharacters <= source.length)
+  __TEST__ && assert(numberOfCharacters <= source.length)
   advancePositionWithMutation(context, source, numberOfCharacters)
   context.source = source.slice(numberOfCharacters)
 }
@@ -878,9 +890,9 @@ function getNewPosition(
 function emitError(
   context: ParserContext,
   code: ErrorCodes,
-  offset?: number
+  offset?: number,
+  loc: Position = getCursor(context)
 ): void {
-  const loc = getCursor(context)
   if (offset) {
     loc.offset += offset
     loc.column += offset
@@ -938,35 +950,4 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\n\f />]/.test(source[2 + tag.length] || '>')
   )
-}
-
-// https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
-  0x80: 0x20ac,
-  0x82: 0x201a,
-  0x83: 0x0192,
-  0x84: 0x201e,
-  0x85: 0x2026,
-  0x86: 0x2020,
-  0x87: 0x2021,
-  0x88: 0x02c6,
-  0x89: 0x2030,
-  0x8a: 0x0160,
-  0x8b: 0x2039,
-  0x8c: 0x0152,
-  0x8e: 0x017d,
-  0x91: 0x2018,
-  0x92: 0x2019,
-  0x93: 0x201c,
-  0x94: 0x201d,
-  0x95: 0x2022,
-  0x96: 0x2013,
-  0x97: 0x2014,
-  0x98: 0x02dc,
-  0x99: 0x2122,
-  0x9a: 0x0161,
-  0x9b: 0x203a,
-  0x9c: 0x0153,
-  0x9e: 0x017e,
-  0x9f: 0x0178
 }

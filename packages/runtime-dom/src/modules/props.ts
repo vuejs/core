@@ -1,3 +1,7 @@
+// __UNSAFE__
+// Reason: potentially setting innerHTML.
+// This can come from explicit usage of v-html or innerHTML as a prop in render
+// functions. The user is reponsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
   key: string,
@@ -10,8 +14,24 @@ export function patchDOMProp(
   parentSuspense: any,
   unmountChildren: any
 ) {
-  if ((key === 'innerHTML' || key === 'textContent') && prevChildren != null) {
-    unmountChildren(prevChildren, parentComponent, parentSuspense)
+  if (key === 'innerHTML' || key === 'textContent') {
+    if (prevChildren) {
+      unmountChildren(prevChildren, parentComponent, parentSuspense)
+    }
+    el[key] = value == null ? '' : value
+    return
   }
-  el[key] = value == null ? '' : value
+  if (key === 'value' && el.tagName !== 'PROGRESS') {
+    // store value as _value as well since
+    // non-string values will be stringified.
+    el._value = value
+    el.value = value == null ? '' : value
+    return
+  }
+  if (value === '' && typeof el[key] === 'boolean') {
+    // e.g. <select multiple> compiles to { multiple: '' }
+    el[key] = true
+  } else {
+    el[key] = value == null ? '' : value
+  }
 }

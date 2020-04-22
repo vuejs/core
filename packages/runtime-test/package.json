@@ -1,21 +1,18 @@
 {
   "name": "@vue/runtime-test",
-  "version": "3.0.0-alpha.1",
+  "version": "3.0.0-beta.3",
   "description": "@vue/runtime-test",
+  "private": true,
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
+  "types": "dist/runtime-test.d.ts",
   "files": [
     "index.js",
     "dist"
   ],
-  "types": "dist/runtime-test.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
-  },
-  "buildOptions": {
-    "name": "VueTestRuntime",
-    "formats": ["esm", "cjs", "global"]
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "keywords": [
     "vue"
@@ -23,10 +20,11 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/runtime-test#readme",
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-test#readme",
   "dependencies": {
-    "@vue/runtime-core": "3.0.0-alpha.1"
+    "@vue/shared": "3.0.0-beta.3",
+    "@vue/runtime-core": "3.0.0-beta.3"
   }
 }

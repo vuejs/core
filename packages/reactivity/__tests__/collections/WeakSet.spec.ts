@@ -3,16 +3,29 @@ import { reactive, isReactive, effect, toRaw } from '../../src'
 describe('reactivity/collections', () => {
   describe('WeakSet', () => {
     it('instanceof', () => {
-      const original = new Set()
+      const original = new WeakSet()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof Set).toBe(true)
-      expect(observed instanceof Set).toBe(true)
+      expect(original instanceof WeakSet).toBe(true)
+      expect(observed instanceof WeakSet).toBe(true)
     })
 
     it('should observe mutations', () => {
       let dummy
       const value = {}
+      const set = reactive(new WeakSet())
+      effect(() => (dummy = set.has(value)))
+
+      expect(dummy).toBe(false)
+      set.add(value)
+      expect(dummy).toBe(true)
+      set.delete(value)
+      expect(dummy).toBe(false)
+    })
+
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const value = reactive({})
       const set = reactive(new WeakSet())
       effect(() => (dummy = set.has(value)))
 

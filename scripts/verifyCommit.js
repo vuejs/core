@@ -6,7 +6,7 @@ const msg = require('fs')
   .readFileSync(msgPath, 'utf-8')
   .trim()
 
-const commitRE = /^(revert: )?(feat|fix|docs|dx|style|refactor|perf|test|workflow|build|ci|chore|types|wip)(\(.+\))?: .{1,50}/
+const commitRE = /^(revert: )?(feat|fix|docs|dx|style|refactor|perf|test|workflow|build|ci|chore|types|wip|release)(\(.+\))?: .{1,50}/
 
 if (!commitRE.test(msg)) {
   console.log()
@@ -21,12 +21,7 @@ if (!commitRE.test(msg)) {
       `    ${chalk.green(
         `fix(v-model): handle events on blur (close #28)`
       )}\n\n` +
-      chalk.red(`  See .github/COMMIT_CONVENTION.md for more details.\n`) +
-      chalk.red(
-        `  You can also use ${chalk.cyan(
-          `npm run commit`
-        )} to interactively generate a commit message.\n`
-      )
+      chalk.red(`  See .github/commit-convention.md for more details.\n`)
   )
   process.exit(1)
 }
