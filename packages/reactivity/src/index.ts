@@ -6,6 +6,7 @@ export {
   toRef,
   toRefs,
   customRef,
+  triggerRef,
   Ref,
   UnwrapRef
 } from './ref'

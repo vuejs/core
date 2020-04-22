@@ -16,6 +16,7 @@ export {
   isReadonly,
   // advanced
   customRef,
+  triggerRef,
   shallowRef,
   shallowReactive,
   shallowReadonly,
