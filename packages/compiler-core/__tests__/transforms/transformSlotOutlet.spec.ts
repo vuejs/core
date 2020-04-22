@@ -217,6 +217,7 @@ describe('compiler: transform <slot> outlets', () => {
         `"default"`,
         `{}`,
         {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: [],
           returns: [
             {
@@ -239,6 +240,7 @@ describe('compiler: transform <slot> outlets', () => {
         `"foo"`,
         `{}`,
         {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: [],
           returns: [
             {
@@ -275,6 +277,7 @@ describe('compiler: transform <slot> outlets', () => {
           ]
         },
         {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: [],
           returns: [
             {
@@ -311,6 +314,7 @@ describe('compiler: transform <slot> outlets', () => {
           ]
         },
         {
+          type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: [],
           returns: [
             {
