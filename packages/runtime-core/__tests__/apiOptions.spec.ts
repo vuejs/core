@@ -490,6 +490,70 @@ describe('api: options', () => {
     ])
   })
 
+  // #1016
+  test('multiple mixins with identitcal key usage do not cause `instance.accesCache` collision', () => {
+    const calls: string[] = []
+    const mixinA = {
+      data() {
+        // contrived example, access key declared later
+        // but should not cause cache issues
+        ;(this as any).b
+        return { a: 1 }
+      },
+      created(this: any) {
+        calls.push('mixinA created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('mixinA mounted')
+      }
+    }
+    const mixinB = {
+      data() {
+        return { b: 2 }
+      },
+      created(this: any) {
+        calls.push('mixinB created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('mixinB mounted')
+      }
+    }
+    const Comp = {
+      mixins: [mixinA, mixinB],
+      data() {
+        return { c: 3 }
+      },
+      created(this: any) {
+        calls.push('comp created')
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
+      },
+      mounted() {
+        calls.push('comp mounted')
+      },
+      render(this: any) {
+        return `${this.a}${this.b}${this.c}`
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(calls).toEqual([
+      'mixinA created',
+      'mixinB created',
+      'comp created',
+      'mixinA mounted',
+      'mixinB mounted',
+      'comp mounted'
+    ])
+  })
+
   test('extends', () => {
     const calls: string[] = []
     const Base = {
@@ -519,6 +583,122 @@ describe('api: options', () => {
 
     expect(renderToString(h(Comp))).toBe(`12`)
     expect(calls).toEqual(['base', 'comp'])
+  })
+
+  // #1016
+  test('extends with identitcal key usage do not cause `instance.accesCache` collision', () => {
+    const calls: string[] = []
+    const Base = {
+      data() {
+        ;(this as any).b
+        return { a: 1 }
+      },
+      mounted() {
+        calls.push('base')
+      }
+    }
+    const Comp = {
+      extends: Base,
+      data() {
+        return { b: 2 }
+      },
+      mounted() {
+        calls.push('comp')
+      },
+      render(this: any) {
+        return `${this.a}${this.b}`
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`12`)
+    expect(calls).toEqual(['base', 'comp'])
+  })
+
+  // #1016
+  test('mixin with watcher before mixin with watched data does not cause `instance.accesCache` collision', () => {
+    const calls: string[] = []
+    const Mixin1 = {
+      data() {
+        return { a: 1 }
+      },
+      mounted() {
+        calls.push('mixin 1')
+      }
+    }
+    const Mixin2 = {
+      watch: {
+        b() {}
+      },
+      mounted() {
+        calls.push('mixin 2')
+      }
+    }
+    const Mixin3 = {
+      data() {
+        return { b: 3 }
+      },
+      mounted() {
+        calls.push('mixin 3')
+      }
+    }
+    const Comp = {
+      mixins: [Mixin1, Mixin2, Mixin3],
+      mounted() {
+        calls.push('comp')
+      },
+      render(this: any) {
+        return `${this.a}${this.b}`
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`13`)
+    expect(calls).toEqual(['mixin 1', 'mixin 2', 'mixin 3', 'comp'])
+  })
+
+  // #1016
+  test('mixin with watcher on computed before mixin with data dep does not cause computed to have incorrect initial value', () => {
+    const calls: string[] = []
+    const Mixin1 = {
+      data() {
+        return { a: 1 }
+      },
+      mounted() {
+        calls.push('mixin 1')
+      }
+    }
+    const Mixin2 = {
+      watch: {
+        compB() {}
+      },
+      computed: {
+        compB() {
+          return (this as any).b
+        }
+      },
+      mounted() {
+        calls.push('mixin 2')
+      }
+    }
+    const Mixin3 = {
+      data() {
+        return { b: 3 }
+      },
+      mounted() {
+        calls.push('mixin 3')
+      }
+    }
+    const Comp = {
+      mixins: [Mixin1, Mixin2, Mixin3],
+      mounted() {
+        calls.push('comp')
+      },
+      render(this: any) {
+        return `${this.a}, ${this.b}, ${this.compB}`
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`1, 3, 3`)
+    expect(calls).toEqual(['mixin 1', 'mixin 2', 'mixin 3', 'comp'])
   })
 
   test('accessing setup() state from options', async () => {
@@ -887,6 +1067,61 @@ describe('api: options', () => {
       expect(
         `Inject property "a" is already defined in Methods.`
       ).toHaveBeenWarned()
+    })
+
+    // related to #1016, watch causes immediate access of a field, caching value too early in computed
+    test('inject property remains accessible in watched computed', () => {
+      const Comp = {
+        data() {
+          return { a: 1 }
+        },
+        provide() {
+          return { c: this.a }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        computed: {
+          a() {
+            return (this as any).b
+          }
+        },
+        watch: { a() {} },
+        inject: { b: { from: 'c' } },
+        render() {
+          return this.a
+        }
+      } as any
+
+      expect(renderToString(h(Comp))).toBe(`1`)
+    })
+
+    // Vue 2.X behavior
+    test('inject property is accessible from data', () => {
+      const Comp = {
+        data() {
+          return { a: 1 }
+        },
+        provide() {
+          return { c: this.a }
+        },
+        render() {
+          return [h(ChildA)]
+        }
+      } as any
+      const ChildA = {
+        data() {
+          return { a: (this as any).b }
+        },
+        inject: { b: { from: 'c' } },
+        render() {
+          return this.a
+        }
+      } as any
+
+      expect(renderToString(h(Comp))).toBe(`1`)
     })
   })
 })

@@ -316,6 +316,7 @@ export function applyOptions(
 
   // invalidate access cache in case mixins or extends
   // accessed fields that are defined later
+  // accesses during final options apply will still be cached
   instance.accessCache = {}
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
@@ -323,6 +324,25 @@ export function applyOptions(
   if (__DEV__ && propsOptions) {
     for (const key in normalizePropsOptions(propsOptions)[0]) {
       checkDuplicateProperties!(OptionTypes.PROPS, key)
+    }
+  }
+
+  // make inject available in data, check duplicate in dev after other options added
+  if (injectOptions) {
+    if (isArray(injectOptions)) {
+      for (let i = 0; i < injectOptions.length; i++) {
+        const key = injectOptions[i]
+        ctx[key] = inject(key)
+      }
+    } else {
+      for (const key in injectOptions) {
+        const opt = injectOptions[key]
+        if (isObject(opt)) {
+          ctx[key] = inject(opt.from, opt.default)
+        } else {
+          ctx[key] = inject(opt)
+        }
+      }
     }
   }
 
@@ -385,14 +405,24 @@ export function applyOptions(
                 )
               }
             : NOOP
-      const c = computed({
+      let c = computed({
         get,
         set
       })
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
-        get: () => c.value,
+        get: () => {
+          const current = c.value
+          // if computed value is undefined, it won't update in the future
+          // which would mean computed mixins can't depend on data from later mixins
+          return current === undefined
+            ? (c = computed({
+                get,
+                set
+              })).value
+            : current
+        },
         set: v => (c.value = v)
       })
       if (__DEV__) {
@@ -418,6 +448,20 @@ export function applyOptions(
     }
   }
 
+  // in dev only, check duplicate inject keys last
+  if (__DEV__ && injectOptions) {
+    if (isArray(injectOptions)) {
+      for (let i = 0; i < injectOptions.length; i++) {
+        const key = injectOptions[i]
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
+    } else {
+      for (const key in injectOptions) {
+        checkDuplicateProperties!(OptionTypes.INJECT, key)
+      }
+    }
+  }
+
   if (watchOptions) {
     for (const key in watchOptions) {
       createWatcher(watchOptions[key], ctx, publicThis, key)
@@ -430,30 +474,6 @@ export function applyOptions(
       : provideOptions
     for (const key in provides) {
       provide(key, provides[key])
-    }
-  }
-
-  if (injectOptions) {
-    if (isArray(injectOptions)) {
-      for (let i = 0; i < injectOptions.length; i++) {
-        const key = injectOptions[i]
-        ctx[key] = inject(key)
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
-    } else {
-      for (const key in injectOptions) {
-        const opt = injectOptions[key]
-        if (isObject(opt)) {
-          ctx[key] = inject(opt.from, opt.default)
-        } else {
-          ctx[key] = inject(opt)
-        }
-        if (__DEV__) {
-          checkDuplicateProperties!(OptionTypes.INJECT, key)
-        }
-      }
     }
   }
 
