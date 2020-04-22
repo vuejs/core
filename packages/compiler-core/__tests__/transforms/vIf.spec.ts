@@ -92,7 +92,7 @@ describe('compiler: v-if', () => {
       expect(
         ((node.branches[0].children[0] as ElementNode)!
           .codegenNode as VNodeCall)!.isBlock
-      ).toBe(false)
+      ).toBe(true)
     })
 
     test('v-if + v-else', () => {

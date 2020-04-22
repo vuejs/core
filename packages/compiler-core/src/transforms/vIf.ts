@@ -26,8 +26,7 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   CREATE_COMMENT,
-  OPEN_BLOCK,
-  TELEPORT
+  OPEN_BLOCK
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
@@ -213,14 +212,7 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (
-      vnodeCall.type === NodeTypes.VNODE_CALL &&
-      // component vnodes are always tracked and its children are
-      // compiled into slots so no need to make it a block
-      ((firstChild as ElementNode).tagType !== ElementTypes.COMPONENT ||
-        // teleport has component type but isn't always tracked
-        vnodeCall.tag === TELEPORT)
-    ) {
+    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
       helper(CREATE_BLOCK)
