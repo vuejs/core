@@ -809,6 +809,7 @@ describe('compiler: element transform', () => {
       const { node, root } = parseWithBind(`<component is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
+        isBlock: true,
         tag: {
           callee: RESOLVE_DYNAMIC_COMPONENT,
           arguments: [
@@ -826,6 +827,7 @@ describe('compiler: element transform', () => {
       const { node, root } = parseWithBind(`<component :is="foo" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
       expect(node).toMatchObject({
+        isBlock: true,
         tag: {
           callee: RESOLVE_DYNAMIC_COMPONENT,
           arguments: [
