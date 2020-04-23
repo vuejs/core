@@ -3,7 +3,7 @@
     "version": "3.0.0-beta.3",
     "description": "JSX typings for vue",
     "sideEffects": false,
-    "files": ["*.d.ts"],
+    "files": ["index.d.ts"],
     "repository": {
       "type": "git",
       "url": "git+https://github.com/vuejs/vue-next.git"
