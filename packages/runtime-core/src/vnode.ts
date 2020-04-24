@@ -31,6 +31,7 @@ import { currentScopeId } from './helpers/scopeId'
 import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
+import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -254,15 +255,15 @@ export const createVNode = (__DEV__
   : _createVNode) as typeof _createVNode
 
 function _createVNode(
-  type: VNodeTypes | ClassComponent,
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null,
   isBlockNode = false
 ): VNode {
-  if (!type) {
-    if (__DEV__) {
+  if (!type || type === NULL_DYNAMIC_COMPONENT) {
+    if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment

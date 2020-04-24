@@ -8,7 +8,9 @@ import {
   resolveDynamicComponent,
   h,
   serializeInner,
-  createVNode
+  createVNode,
+  Comment,
+  VNode
 } from '@vue/runtime-test'
 import { mockWarn } from '@vue/shared'
 
@@ -102,6 +104,7 @@ describe('resolveAssets', () => {
         baz: { render: () => 'baz' }
       }
       let foo, bar, baz // dynamic components
+      let dynamicVNode: VNode
 
       const Child = {
         render(this: any) {
@@ -115,6 +118,7 @@ describe('resolveAssets', () => {
           return () => {
             foo = resolveDynamicComponent('foo') // <component is="foo"/>
             bar = resolveDynamicComponent(dynamicComponents.bar) // <component :is="bar"/>, function
+            dynamicVNode = createVNode(resolveDynamicComponent(null)) // <component :is="null"/>
             return h(Child, () => {
               // check inside child slots
               baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
@@ -129,6 +133,8 @@ describe('resolveAssets', () => {
       expect(foo).toBe(dynamicComponents.foo)
       expect(bar).toBe(dynamicComponents.bar)
       expect(baz).toBe(dynamicComponents.baz)
+      // should allow explicit falsy type to remove the component
+      expect(dynamicVNode!.type).toBe(Comment)
     })
 
     test('resolve dynamic component should fallback to plain element without warning', () => {
