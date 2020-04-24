@@ -1,4 +1,3 @@
-// const postcss = require('postcss')
 import postcss, { ProcessOptions, LazyResult, Result, ResultMap } from 'postcss'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
@@ -19,6 +18,7 @@ export interface SFCStyleCompileOptions {
   trim?: boolean
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
+  preprocessCustomRequire?: (id: string) => any
   postcssOptions?: any
   postcssPlugins?: any[]
 }
@@ -137,8 +137,13 @@ function preprocess(
   options: SFCStyleCompileOptions,
   preprocessor: StylePreprocessor
 ): StylePreprocessorResults {
-  return preprocessor.render(options.source, options.map, {
-    filename: options.filename,
-    ...options.preprocessOptions
-  })
+  return preprocessor.render(
+    options.source,
+    options.map,
+    {
+      filename: options.filename,
+      ...options.preprocessOptions
+    },
+    options.preprocessCustomRequire
+  )
 }
