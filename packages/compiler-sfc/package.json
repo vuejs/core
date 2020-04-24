@@ -30,15 +30,16 @@
     "vue": "3.0.0-beta.3"
   },
   "dependencies": {
-    "@vue/shared": "3.0.0-beta.3",
     "@vue/compiler-core": "3.0.0-beta.3",
     "@vue/compiler-dom": "3.0.0-beta.3",
     "@vue/compiler-ssr": "3.0.0-beta.3",
+    "@vue/shared": "3.0.0-beta.3",
     "consolidate": "^0.15.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
-    "postcss": "^7.0.21",
+    "postcss": "^7.0.27",
+    "postcss-modules": "^2.0.0",
     "postcss-selector-parser": "^6.0.2",
     "source-map": "^0.6.1"
   },
