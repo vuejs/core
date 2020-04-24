@@ -67,6 +67,11 @@ interface Constructor<P = any> {
   new (): { $props: P }
 }
 
+// Excludes Component type from returned `defineComponent`
+type NotDefinedComponent<T extends Component> = T extends Constructor
+  ? never
+  : T
+
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
 
@@ -110,8 +115,10 @@ export function h<P>(
 
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
-export function h(
-  type: ComponentOptions | FunctionalComponent<{}>,
+
+// exclude `defineComponent`
+export function h<Options extends ComponentOptions | FunctionalComponent<{}>>(
+  type: NotDefinedComponent<Options>,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode
