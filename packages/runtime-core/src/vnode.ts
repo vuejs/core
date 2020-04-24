@@ -312,9 +312,9 @@ function _createVNode(
     _isVNode: true,
     type,
     props,
-    key: props && props.key !== undefined ? props.key : null,
+    key: props && props.key != null ? props.key : null,
     ref:
-      props && props.ref !== undefined
+      props && props.ref != null
         ? [currentRenderingInstance!, props.ref]
         : null,
     scopeId: currentScopeId,
@@ -362,18 +362,24 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps
 ): VNode<T, U> {
+  const props = (extraProps
+    ? vnode.props
+      ? mergeProps(vnode.props, extraProps)
+      : extend({}, extraProps)
+    : vnode.props) as any
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
     _isVNode: true,
     type: vnode.type,
-    props: extraProps
-      ? vnode.props
-        ? mergeProps(vnode.props, extraProps)
-        : extend({}, extraProps)
-      : vnode.props,
-    key: vnode.key,
-    ref: vnode.ref,
+    props,
+    key: props && props.key != null ? props.key : null,
+    ref:
+      props && props.ref != null
+        ? isArray(props.ref)
+          ? props.ref
+          : [currentRenderingInstance!, props.ref]
+        : null,
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,

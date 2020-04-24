@@ -198,6 +198,24 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+
+    // #1041 should use reoslved key/ref
+    expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
+    expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
+    expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
+
+    // ref normalizes to [currentRenderingInstance, ref]
+    expect(cloneVNode(createVNode('div', { ref: 'foo' })).ref).toEqual([
+      null,
+      'foo'
+    ])
+    expect(
+      cloneVNode(createVNode('div', { ref: 'foo' }), { ref: 'bar' }).ref
+    ).toEqual([null, 'bar'])
+    expect(cloneVNode(createVNode('div'), { ref: 'bar' }).ref).toEqual([
+      null,
+      'bar'
+    ])
   })
 
   describe('mergeProps', () => {
