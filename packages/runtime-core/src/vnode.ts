@@ -239,6 +239,16 @@ const createVNodeWithArgsTransform = (
 
 export const InternalObjectKey = `__vInternal`
 
+const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
+  key != null ? key : null
+
+const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
+  (ref != null
+    ? isArray(ref)
+      ? ref
+      : [currentRenderingInstance!, ref]
+    : null) as any
+
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
@@ -312,11 +322,8 @@ function _createVNode(
     _isVNode: true,
     type,
     props,
-    key: props && props.key != null ? props.key : null,
-    ref:
-      props && props.ref != null
-        ? [currentRenderingInstance!, props.ref]
-        : null,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     children: null,
     component: null,
@@ -373,13 +380,8 @@ export function cloneVNode<T, U>(
     _isVNode: true,
     type: vnode.type,
     props,
-    key: props && props.key != null ? props.key : null,
-    ref:
-      props && props.ref != null
-        ? isArray(props.ref)
-          ? props.ref
-          : [currentRenderingInstance!, props.ref]
-        : null,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
