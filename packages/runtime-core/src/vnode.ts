@@ -177,10 +177,14 @@ export function createBlock(
   patchFlag?: number,
   dynamicProps?: string[]
 ): VNode {
-  // avoid a block with patchFlag tracking itself
-  shouldTrack--
-  const vnode = createVNode(type, props, children, patchFlag, dynamicProps)
-  shouldTrack++
+  const vnode = createVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    true /* isBlock: prevent a block from tracking itself */
+  )
   // save current block children on the block vnode
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // close block
@@ -244,7 +248,8 @@ function _createVNode(
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
-  dynamicProps: string[] | null = null
+  dynamicProps: string[] | null = null,
+  isBlockNode = false
 ): VNode {
   if (!type) {
     if (__DEV__) {
@@ -337,6 +342,7 @@ function _createVNode(
   // the next vnode so that it can be properly unmounted later.
   if (
     shouldTrack > 0 &&
+    !isBlockNode &&
     currentBlock &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.

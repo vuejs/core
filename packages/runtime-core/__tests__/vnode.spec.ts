@@ -337,6 +337,27 @@ describe('vnode', () => {
       ]))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
+
+    // #1039
+    // <component :is="foo">{{ bar }}</component>
+    // - content is compiled as slot
+    // - dynamic component reoslves to plain element, but as a block
+    // - block creation disables its own tracking, accidentally causing the
+    //   slot content (called during the block node creation) to be missed
+    test('element block should track normalized slot children', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, {
+        default: () => {
+          return [
+            hoist,
+            (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
+          ]
+        }
+      }))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
   })
 
   describe('transformVNodeArgs', () => {
