@@ -20,6 +20,8 @@ export interface Ref<T = any> {
   value: T
 }
 
+export type ToRefs<T = any> = { [K in keyof T]: Ref<T[K]> }
+
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
@@ -108,9 +110,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return r as any
 }
 
-export function toRefs<T extends object>(
-  object: T
-): { [K in keyof T]: Ref<T[K]> } {
+export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }

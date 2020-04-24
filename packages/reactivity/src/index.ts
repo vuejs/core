@@ -8,7 +8,8 @@ export {
   customRef,
   triggerRef,
   Ref,
-  UnwrapRef
+  UnwrapRef,
+  ToRefs
 } from './ref'
 export {
   reactive,
