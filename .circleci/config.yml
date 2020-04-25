@@ -45,6 +45,15 @@ jobs:
       - *save_cache
       - run: yarn test-dts
 
+  test-declaration:
+    <<: *defaults
+    steps:
+      - checkout
+      - *restore_cache
+      - *install_deps
+      - *save_cache
+      - run: yarn test-declaration
+
   check-size:
     <<: *defaults
     steps:
@@ -60,4 +69,5 @@ workflows:
     jobs:
       - test
       - test-dts
+      - test-declarations
       - check-size
