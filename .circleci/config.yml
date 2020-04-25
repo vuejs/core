@@ -69,5 +69,5 @@ workflows:
     jobs:
       - test
       - test-dts
-      - test-declarations
+      - test-declaration
       - check-size
