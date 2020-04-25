@@ -12,6 +12,7 @@
     "ls-lint": "ls-lint",
     "test": "node scripts/build.js vue -f global -d && jest",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsd",
+    "test-declaration": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsc -p ./test-declarations/tsconfig.declaration.json",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
