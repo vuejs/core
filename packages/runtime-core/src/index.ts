@@ -190,6 +190,7 @@ export {
 } from './component'
 export {
   ComponentOptions,
+  ComponentOptionsBase,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithArrayProps,
