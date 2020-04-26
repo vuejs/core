@@ -94,20 +94,24 @@ export function doCompileStyle(
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {
-    if (options.isAsync) {
-      plugins.push(
-        require('postcss-modules')({
-          ...modulesOptions,
-          getJSON: (cssFileName: string, json: Record<string, string>) => {
-            cssModules = json
-          }
-        })
-      )
-    } else {
+    if (__GLOBAL__ || __ESM_BROWSER__) {
       throw new Error(
-        '`modules` option can only be used with compileStyleAsync().'
+        '[@vue/compiler-sfc] `modules` option is not supported in the browser build.'
       )
     }
+    if (!options.isAsync) {
+      throw new Error(
+        '[@vue/compiler-sfc] `modules` option can only be used with compileStyleAsync().'
+      )
+    }
+    plugins.push(
+      require('postcss-modules')({
+        ...modulesOptions,
+        getJSON: (_cssFileName: string, json: Record<string, string>) => {
+          cssModules = json
+        }
+      })
+    )
   }
 
   const postCSSOptions: ProcessOptions = {
@@ -172,6 +176,14 @@ function preprocess(
   options: SFCStyleCompileOptions,
   preprocessor: StylePreprocessor
 ): StylePreprocessorResults {
+  if ((__ESM_BROWSER__ || __GLOBAL__) && !options.preprocessCustomRequire) {
+    throw new Error(
+      `[@vue/compiler-sfc] Style preprocessing in the browser build must ` +
+        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
+        `version of the preprocessor.`
+    )
+  }
+
   return preprocessor.render(
     options.source,
     options.map,

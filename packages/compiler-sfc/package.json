@@ -8,10 +8,14 @@
     "dist"
   ],
   "buildOptions": {
-    "prod": false,
+    "name": "VueCompilerSFC",
     "formats": [
-      "cjs"
-    ]
+      "cjs",
+      "global",
+      "esm-browser"
+    ],
+    "prod": false,
+    "enableNonBrowserBranches": true
   },
   "repository": {
     "type": "git",

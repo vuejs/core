@@ -40,6 +40,7 @@
     "node": ">=10.0.0"
   },
   "devDependencies": {
+    "@ls-lint/ls-lint": "^1.8.0",
     "@microsoft/api-extractor": "^7.3.9",
     "@rollup/plugin-commonjs": "^11.0.2",
     "@rollup/plugin-json": "^4.0.0",
@@ -62,6 +63,8 @@
     "prettier": "~1.14.0",
     "puppeteer": "^2.0.0",
     "rollup": "^2.2.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.4.0",
     "rollup-plugin-terser": "^5.3.0",
     "rollup-plugin-typescript2": "^0.27.0",
     "semver": "^6.3.0",
@@ -69,7 +72,6 @@
     "ts-jest": "^25.2.1",
     "tsd": "^0.11.0",
     "typescript": "^3.8.3",
-    "yorkie": "^2.0.0",
-    "@ls-lint/ls-lint": "^1.8.0"
+    "yorkie": "^2.0.0"
   }
 }
