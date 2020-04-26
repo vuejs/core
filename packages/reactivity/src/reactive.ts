@@ -30,6 +30,7 @@ const isObservableType = /*#__PURE__*/ makeMap(
 const canObserve = (value: any): boolean => {
   return (
     !value._isVNode &&
+    !value._notReactive &&
     isObservableType(toRawType(value)) &&
     !rawValues.has(value) &&
     !Object.isFrozen(value)
