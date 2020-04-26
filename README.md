@@ -19,7 +19,7 @@ In addition, the current implementation requires native ES2015+ in the runtime e
 | Project | Status |
 |---------|--------|
 | vue-router          | Alpha [[Proposed RFCs][router-rfcs]] [[GitHub][router-code]] [[npm][router-npm]] |
-| vuex                | Alpha, with same API [[GitHub][vuex-code]] [[npm][vuex-npm]] |
+| vuex                | Beta, with same API [[GitHub][vuex-code]] [[npm][vuex-npm]] |
 | vue-class-component | Alpha [[Github][vcc-code]] [[npm][vcc-npm]] |
 | vue-cli             | Experimental support via [vue-cli-plugin-vue-next][cli] |
 | eslint-plugin-vue   | Alpha [[Github][epv-code]] [[npm][epv-npm]] |
