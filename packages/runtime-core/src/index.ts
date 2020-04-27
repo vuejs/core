@@ -159,11 +159,11 @@ export {
 export {
   // types
   WatchEffect,
-  BaseWatchOptions,
   WatchOptions,
+  WatchOptionsBase,
   WatchCallback,
   WatchSource,
-  StopHandle
+  WatchStopHandle
 } from './apiWatch'
 export { InjectionKey } from './apiInject'
 export {
