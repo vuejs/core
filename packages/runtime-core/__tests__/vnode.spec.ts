@@ -137,6 +137,12 @@ describe('vnode', () => {
       )
     })
 
+    test('boolean', () => {
+      const vnode = createVNode('p', null, false)
+      expect(vnode.children).toBe(null)
+      expect(vnode.shapeFlag).toBe(ShapeFlags.ELEMENT)
+    })
+
     test('element with slots', () => {
       const children = [createVNode('span', null, 'hello')]
       const vnode = createVNode('div', null, {

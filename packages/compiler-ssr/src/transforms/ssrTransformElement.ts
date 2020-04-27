@@ -28,6 +28,7 @@ import {
 import {
   escapeHtml,
   isBooleanAttr,
+  isString,
   isSSRSafeAttrName,
   NO,
   propsToAttrMap
@@ -313,9 +314,7 @@ function removeStaticBinding(
   tag: TemplateLiteral['elements'],
   binding: string
 ) {
-  const i = tag.findIndex(
-    e => typeof e === 'string' && e.startsWith(` ${binding}=`)
-  )
+  const i = tag.findIndex(e => isString(e) && e.startsWith(` ${binding}=`))
   if (i > -1) {
     tag.splice(i, 1)
   }

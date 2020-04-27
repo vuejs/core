@@ -1,3 +1,5 @@
+import { isBoolean } from '@vue/shared'
+
 // __UNSAFE__
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
@@ -28,7 +30,7 @@ export function patchDOMProp(
     el.value = value == null ? '' : value
     return
   }
-  if (value === '' && typeof el[key] === 'boolean') {
+  if (value === '' && isBoolean(el[key])) {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
   } else {

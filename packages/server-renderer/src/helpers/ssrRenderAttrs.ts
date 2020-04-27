@@ -4,6 +4,8 @@ import {
   normalizeStyle,
   propsToAttrMap,
   isString,
+  isNumber,
+  isBoolean,
   isOn,
   isSSRSafeAttrName,
   isBooleanAttr,
@@ -75,8 +77,7 @@ function isRenderableValue(value: unknown): boolean {
   if (value == null) {
     return false
   }
-  const type = typeof value
-  return type === 'string' || type === 'number' || type === 'boolean'
+  return isString(value) || isNumber(value) || isBoolean(value)
 }
 
 export function ssrRenderClass(raw: unknown): string {

@@ -1,4 +1,4 @@
-import { isArray, isString, isObject, hyphenate } from './'
+import { isArray, isNumber, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
 export function normalizeStyle(
@@ -32,7 +32,7 @@ export function stringifyStyle(
     const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
     if (
       isString(value) ||
-      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
+      (isNumber(value) && isNoUnitNumericStyleProp(normalizedKey))
     ) {
       // only render valid values
       ret += `${normalizedKey}:${value};`

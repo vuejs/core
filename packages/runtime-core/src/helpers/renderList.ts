@@ -1,5 +1,5 @@
 import { VNodeChild } from '../vnode'
-import { isArray, isString, isObject } from '@vue/shared'
+import { isArray, isNumber, isString, isObject } from '@vue/shared'
 
 // v-for string
 export function renderList(
@@ -46,7 +46,7 @@ export function renderList(
     for (let i = 0, l = source.length; i < l; i++) {
       ret[i] = renderItem(source[i], i)
     }
-  } else if (typeof source === 'number') {
+  } else if (isNumber(source)) {
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
       ret[i] = renderItem(i + 1, i)

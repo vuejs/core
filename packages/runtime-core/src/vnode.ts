@@ -2,6 +2,7 @@ import {
   isArray,
   isFunction,
   isString,
+  isBoolean,
   isObject,
   EMPTY_ARR,
   extend,
@@ -426,7 +427,7 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if (child == null || typeof child === 'boolean') {
+  if (child == null || isBoolean(child)) {
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {
@@ -450,7 +451,7 @@ export function cloneIfMounted(child: VNode): VNode {
 export function normalizeChildren(vnode: VNode, children: unknown) {
   let type = 0
   const { shapeFlag } = vnode
-  if (children == null) {
+  if (children == null || isBoolean(children)) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN

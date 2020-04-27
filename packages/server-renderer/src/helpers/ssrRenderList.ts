@@ -1,4 +1,4 @@
-import { isArray, isString, isObject } from '@vue/shared'
+import { isArray, isNumber, isString, isObject } from '@vue/shared'
 
 export function ssrRenderList(
   source: unknown,
@@ -8,7 +8,7 @@ export function ssrRenderList(
     for (let i = 0, l = source.length; i < l; i++) {
       renderItem(source[i], i)
     }
-  } else if (typeof source === 'number') {
+  } else if (isNumber(source)) {
     for (let i = 0; i < source; i++) {
       renderItem(i + 1, i)
     }
