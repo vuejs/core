@@ -193,7 +193,8 @@ export {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithArrayProps,
-  ComponentCustomOptions
+  ComponentCustomOptions,
+  ComponentOptionsBase
 } from './componentOptions'
 export {
   ComponentPublicInstance,
