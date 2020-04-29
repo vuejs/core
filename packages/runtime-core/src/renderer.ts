@@ -1705,6 +1705,7 @@ function baseCreateRenderer(
   ) => {
     const { props, ref, children, dynamicChildren, shapeFlag, dirs } = vnode
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    const shouldKeepAlive = shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     let vnodeHook: VNodeHook | undefined | null
 
     // unset ref
@@ -1712,12 +1713,12 @@ function baseCreateRenderer(
       setRef(ref, null, parentComponent, null)
     }
 
-    if ((vnodeHook = props && props.onVnodeBeforeUnmount)) {
+    if ((vnodeHook = props && props.onVnodeBeforeUnmount) && !shouldKeepAlive) {
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      if (shouldKeepAlive) {
         ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
@@ -1749,7 +1750,10 @@ function baseCreateRenderer(
       }
     }
 
-    if ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) {
+    if (
+      ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) &&
+      !shouldKeepAlive
+    ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&

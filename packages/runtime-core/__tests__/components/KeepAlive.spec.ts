@@ -7,7 +7,14 @@ import {
   KeepAlive,
   serializeInner,
   nextTick,
-  ComponentOptions
+  ComponentOptions,
+  markRaw,
+  inject,
+  defineComponent,
+  ComponentPublicInstance,
+  Ref,
+  cloneVNode,
+  provide
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -558,5 +565,102 @@ describe('KeepAlive', () => {
       await nextTick()
       expect(serializeInner(root)).toBe(`1`)
     })
+  })
+
+  it('should do router view', async () => {
+    const Foo = markRaw({
+      name: 'Foo',
+      template: `
+    <div>This is Foo</div>
+  `
+    })
+
+    const Bar = markRaw({
+      name: 'Bar',
+      template: `
+    <div>This is Bar</div>
+  `
+    })
+
+    const spyMounted = jest.fn()
+    const spyUnmounted = jest.fn()
+
+    const RouterView = defineComponent({
+      setup(props, { slots }) {
+        const Component = inject<Ref<ComponentPublicInstance>>('component')
+        const refView = ref()
+
+        let componentProps = {
+          ref: refView,
+          onVnodeMounted() {
+            spyMounted()
+            console.log('mounted ref', refView.value)
+          },
+          onVnodeUnmounted() {
+            spyUnmounted()
+            console.log('unmounted ref', refView.value)
+          }
+        }
+
+        return () => {
+          const child: any = slots.default!({
+            Component: Component!.value
+          })[0]
+
+          const innerChild = child.children[0] as any
+
+          child.children[0] = cloneVNode(innerChild, componentProps)
+          console.log('render')
+
+          return child
+        }
+      }
+    })
+
+    let toggle: () => void = () => {}
+
+    const App = defineComponent({
+      //   template: `  <router-view v-slot="{ Component }">
+      //   <keep-alive>
+      //     <component :is="Component" />
+      //   </keep-alive>
+      // </router-view>`,
+      setup() {
+        const component = ref(Foo)
+
+        provide('component', component)
+
+        toggle = () => {
+          component.value = component.value === Foo ? Bar : Foo
+        }
+
+        return {
+          component,
+          toggle
+        }
+        // return () => {
+        //   return h(RouterView, null, h(KeepAlive, null, h(component.value)))
+        // }
+      },
+      render() {
+        return h(RouterView, null, {
+          default: ({ Component }: any) => h(KeepAlive, null, [h(Component)])
+        })
+      },
+      components: {
+        RouterView
+      }
+    })
+
+    render(h(App), root)
+    await nextTick()
+    expect(spyMounted).toHaveBeenCalledTimes(1)
+    expect(spyUnmounted).toHaveBeenCalledTimes(0)
+
+    toggle()
+    await nextTick()
+
+    expect(spyMounted).toHaveBeenCalledTimes(2)
+    expect(spyUnmounted).toHaveBeenCalledTimes(0)
   })
 })
