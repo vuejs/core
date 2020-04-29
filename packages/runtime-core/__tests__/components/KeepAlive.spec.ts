@@ -14,9 +14,7 @@ import {
   ComponentPublicInstance,
   Ref,
   cloneVNode,
-  provide,
-  VNode,
-  VNodeNormalizedChildren
+  provide
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
