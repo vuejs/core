@@ -39,7 +39,7 @@ export {
   onErrorCaptured
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
-export { nextTick } from './scheduler'
+export { nextTick, queuePostFlushCb } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
