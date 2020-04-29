@@ -14,7 +14,9 @@ import {
   ComponentPublicInstance,
   Ref,
   cloneVNode,
-  provide
+  provide,
+  VNode,
+  VNodeNormalizedChildren
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -567,26 +569,25 @@ describe('KeepAlive', () => {
     })
   })
 
-  it('should do router view', async () => {
+  it('should not call onVnodeUnmounted', async () => {
     const Foo = markRaw({
       name: 'Foo',
-      template: `
-    <div>This is Foo</div>
-  `
+      render() {
+        return h('Foo')
+      }
     })
-
     const Bar = markRaw({
       name: 'Bar',
-      template: `
-    <div>This is Bar</div>
-  `
+      render() {
+        return h('Bar')
+      }
     })
 
     const spyMounted = jest.fn()
     const spyUnmounted = jest.fn()
 
     const RouterView = defineComponent({
-      setup(props, { slots }) {
+      setup(_, { slots }) {
         const Component = inject<Ref<ComponentPublicInstance>>('component')
         const refView = ref()
 
@@ -594,11 +595,9 @@ describe('KeepAlive', () => {
           ref: refView,
           onVnodeMounted() {
             spyMounted()
-            console.log('mounted ref', refView.value)
           },
           onVnodeUnmounted() {
             spyUnmounted()
-            console.log('unmounted ref', refView.value)
           }
         }
 
@@ -607,11 +606,8 @@ describe('KeepAlive', () => {
             Component: Component!.value
           })[0]
 
-          const innerChild = child.children[0] as any
-
+          const innerChild = child.children[0]
           child.children[0] = cloneVNode(innerChild, componentProps)
-          console.log('render')
-
           return child
         }
       }
@@ -620,11 +616,6 @@ describe('KeepAlive', () => {
     let toggle: () => void = () => {}
 
     const App = defineComponent({
-      //   template: `  <router-view v-slot="{ Component }">
-      //   <keep-alive>
-      //     <component :is="Component" />
-      //   </keep-alive>
-      // </router-view>`,
       setup() {
         const component = ref(Foo)
 
@@ -633,22 +624,15 @@ describe('KeepAlive', () => {
         toggle = () => {
           component.value = component.value === Foo ? Bar : Foo
         }
-
         return {
           component,
           toggle
         }
-        // return () => {
-        //   return h(RouterView, null, h(KeepAlive, null, h(component.value)))
-        // }
       },
       render() {
         return h(RouterView, null, {
           default: ({ Component }: any) => h(KeepAlive, null, [h(Component)])
         })
-      },
-      components: {
-        RouterView
       }
     })
 
@@ -662,5 +646,13 @@ describe('KeepAlive', () => {
 
     expect(spyMounted).toHaveBeenCalledTimes(2)
     expect(spyUnmounted).toHaveBeenCalledTimes(0)
+
+    toggle()
+    await nextTick()
+    render(null, root)
+    await nextTick()
+
+    expect(spyMounted).toHaveBeenCalledTimes(2)
+    expect(spyUnmounted).toHaveBeenCalledTimes(2)
   })
 })
