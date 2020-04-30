@@ -155,15 +155,21 @@ export function openBlock(disableTracking = false) {
 // incremented/decremented by nested usage of v-once (see below)
 let shouldTrack = 1
 
-// Block tracking sometimes needs to be disabled, for example during the
-// creation of a tree that needs to be cached by v-once. The compiler generates
-// code like this:
-//   _cache[1] || (
-//     setBlockTracking(-1),
-//     _cache[1] = createVNode(...),
-//     setBlockTracking(1),
-//     _cache[1]
-//   )
+/**
+ * Block tracking sometimes needs to be disabled, for example during the
+ * creation of a tree that needs to be cached by v-once. The compiler generates
+ * code like this:
+ *
+ * ``` js
+ * _cache[1] || (
+ *   setBlockTracking(-1),
+ *   _cache[1] = createVNode(...),
+ *   setBlockTracking(1),
+ *   _cache[1]
+ * )
+ * ```
+ * @internal
+ */
 export function setBlockTracking(value: number) {
   shouldTrack += value
 }
@@ -222,8 +228,11 @@ let vnodeArgsTransformer:
     ) => Parameters<typeof _createVNode>)
   | undefined
 
-// Internal API for registering an arguments transform for createVNode
-// used for creating stubs in the test-utils
+/**
+ * Internal API for registering an arguments transform for createVNode
+ * used for creating stubs in the test-utils
+ * @internal
+ */
 export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
   vnodeArgsTransformer = transformer
 }
@@ -406,14 +415,23 @@ export function cloneVNode<T, U>(
   }
 }
 
+/**
+ * @internal
+ */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
+/**
+ * @internal
+ */
 export function createStaticVNode(content: string): VNode {
   return createVNode(Static, null, content)
 }
 
+/**
+ * @internal
+ */
 export function createCommentVNode(
   text: string = '',
   // when used as the v-else branch, the comment node must be created as a

@@ -89,6 +89,9 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 }
 
 const camelizeRE = /-(\w)/g
+/**
+ * @internal
+ */
 export const camelize = cacheStringFunction(
   (str: string): string => {
     return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
@@ -112,7 +115,10 @@ export const capitalize = cacheStringFunction(
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
 
-// for converting {{ interpolation }} values to displayed strings.
+/**
+ * For converting {{ interpolation }} values to displayed strings.
+ * @internal
+ */
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''

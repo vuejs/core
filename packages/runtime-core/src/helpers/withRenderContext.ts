@@ -5,6 +5,10 @@ import {
 } from '../componentRenderUtils'
 import { ComponentInternalInstance } from '../component'
 
+/**
+ * Wrap a slot function to memoize current rendering instance
+ * @internal
+ */
 export function withCtx(
   fn: Slot,
   ctx: ComponentInternalInstance | null = currentRenderingInstance

@@ -1,7 +1,10 @@
 import { isObject } from '@vue/shared'
 import { warn } from '../warning'
 
-// For prefixing keys in v-on="obj" with "on"
+/**
+ * For prefixing keys in v-on="obj" with "on"
+ * @internal
+ */
 export function toHandlers(obj: Record<string, any>): Record<string, any> {
   const ret: Record<string, any> = {}
   if (__DEV__ && !isObject(obj)) {

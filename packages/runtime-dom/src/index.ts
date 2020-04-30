@@ -109,7 +109,14 @@ function normalizeContainer(container: Element | string): Element | null {
   return container
 }
 
-// DOM-only runtime directive helpers
+// DOM-only components
+export { Transition, TransitionProps } from './components/Transition'
+export {
+  TransitionGroup,
+  TransitionGroupProps
+} from './components/TransitionGroup'
+
+// **Internal** DOM-only runtime directive helpers
 export {
   vModelText,
   vModelCheckbox,
@@ -119,13 +126,6 @@ export {
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'
-
-// DOM-only components
-export { Transition, TransitionProps } from './components/Transition'
-export {
-  TransitionGroup,
-  TransitionGroupProps
-} from './components/TransitionGroup'
 
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
