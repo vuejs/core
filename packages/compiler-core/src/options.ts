@@ -1,14 +1,24 @@
-import { ElementNode, Namespace } from './ast'
+import { ElementNode, Namespace, JSChildNode, PlainElementNode } from './ast'
 import { TextModes } from './parse'
 import { CompilerError } from './errors'
-import { NodeTransform, DirectiveTransform } from './transform'
+import {
+  NodeTransform,
+  DirectiveTransform,
+  TransformContext
+} from './transform'
+import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
-  isVoidTag?: (tag: string) => boolean // e.g. img, br, hr
-  isNativeTag?: (tag: string) => boolean // e.g. loading-indicator in weex
-  isPreTag?: (tag: string) => boolean // e.g. <pre> where whitespace is intact
-  isCustomElement?: (tag: string) => boolean
+  // e.g. platform native elements, e.g. <div> for browsers
+  isNativeTag?: (tag: string) => boolean
+  // e.g. native elements that can self-close, e.g. <img>, <br>, <hr>
+  isVoidTag?: (tag: string) => boolean
+  // e.g. elements that should preserve whitespace inside, e.g. <pre>
+  isPreTag?: (tag: string) => boolean
+  // platform-specific built-in components e.g. <Transition>
   isBuiltInComponent?: (tag: string) => symbol | void
+  // separate option for end users to extend the native elements list
+  isCustomElement?: (tag: string) => boolean
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
   getTextMode?: (
     tag: string,
@@ -16,22 +26,25 @@ export interface ParserOptions {
     parent: ElementNode | undefined
   ) => TextModes
   delimiters?: [string, string] // ['{{', '}}']
-
-  // Map to HTML entities. E.g., `{ "amp;": "&" }`
-  // The full set is https://html.spec.whatwg.org/multipage/named-characters.html#named-character-references
-  namedCharacterReferences?: Record<string, string>
-  // this number is based on the map above, but it should be pre-computed
-  // to avoid the cost on every parse() call.
-  maxCRNameLength?: number
-
+  decodeEntities?: (rawText: string, asAttr: boolean) => string
   onError?: (error: CompilerError) => void
 }
 
+export type HoistTransform = (
+  node: PlainElementNode,
+  context: TransformContext
+) => JSChildNode
+
 export interface TransformOptions {
   nodeTransforms?: NodeTransform[]
-  directiveTransforms?: { [name: string]: DirectiveTransform }
+  directiveTransforms?: Record<string, DirectiveTransform | undefined>
+  // an optional hook to transform a node being hoisted.
+  // used by compiler-dom to turn hoisted nodes into stringified HTML vnodes.
+  transformHoist?: HoistTransform | null
   isBuiltInComponent?: (tag: string) => symbol | void
   // Transform expressions like {{ foo }} to `_ctx.foo`.
+  // If this option is false, the generated code will be wrapped in a
+  // `with (this) { ... }` block.
   // - This is force-enabled in module mode, since modules are by default strict
   //   and cannot use `with`
   // - Default: mode === 'module'
@@ -48,6 +61,12 @@ export interface TransformOptions {
   //   analysis to determine if a handler is safe to cache.
   // - Default: false
   cacheHandlers?: boolean
+  // a list of parser plugins to enable for @babel/parser
+  // https://babeljs.io/docs/en/next/babel-parser#plugins
+  expressionPlugins?: ParserPlugin[]
+  // SFC scoped styles ID
+  scopeId?: string | null
+  ssr?: boolean
   onError?: (error: CompilerError) => void
 }
 
@@ -59,13 +78,6 @@ export interface CodegenOptions {
   //   `new Function(code)()` to generate a render function at runtime.
   // - Default: 'function'
   mode?: 'module' | 'function'
-  // Prefix suitable identifiers with _ctx.
-  // If this option is false, the generated code will be wrapped in a
-  // `with (this) { ... }` block.
-  // - This is force-enabled in module mode, since modules are by default strict
-  //   and cannot use `with`
-  // - Default: mode === 'module'
-  prefixIdentifiers?: boolean
   // Generate source map?
   // - Default: false
   sourceMap?: boolean
@@ -74,6 +86,16 @@ export interface CodegenOptions {
   filename?: string
   // SFC scoped styles ID
   scopeId?: string | null
+  // we need to know about this to generate proper preambles
+  prefixIdentifiers?: boolean
+  // option to optimize helper import bindings via variable assignment
+  // (only used for webpack code-split)
+  optimizeBindings?: boolean
+  // for specifying where to import helpers
+  runtimeModuleName?: string
+  runtimeGlobalName?: string
+  // generate ssr-specific code?
+  ssr?: boolean
 }
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions

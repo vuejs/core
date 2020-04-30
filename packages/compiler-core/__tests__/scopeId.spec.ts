@@ -4,6 +4,8 @@ import {
   PUSH_SCOPE_ID,
   POP_SCOPE_ID
 } from '../src/runtimeHelpers'
+import { PatchFlags } from '@vue/shared'
+import { genFlagText } from './testUtils'
 
 describe('scopeId compiler support', () => {
   test('should only work in module mode', () => {
@@ -18,8 +20,8 @@ describe('scopeId compiler support', () => {
       scopeId: 'test'
     })
     expect(ast.helpers).toContain(WITH_SCOPE_ID)
-    expect(code).toMatch(`const withId = withScopeId("test")`)
-    expect(code).toMatch(`export const render = withId(function render() {`)
+    expect(code).toMatch(`const _withId = _withScopeId("test")`)
+    expect(code).toMatch(`export const render = _withId(function render(`)
     expect(code).toMatchSnapshot()
   })
 
@@ -28,7 +30,7 @@ describe('scopeId compiler support', () => {
       mode: 'module',
       scopeId: 'test'
     })
-    expect(code).toMatch(`default: withId(() => [`)
+    expect(code).toMatch(`default: _withId(() => [`)
     expect(code).toMatchSnapshot()
   })
 
@@ -44,8 +46,8 @@ describe('scopeId compiler support', () => {
         scopeId: 'test'
       }
     )
-    expect(code).toMatch(`foo: withId(({ msg }) => [`)
-    expect(code).toMatch(`bar: withId(() => [`)
+    expect(code).toMatch(`foo: _withId(({ msg }) => [`)
+    expect(code).toMatch(`bar: _withId(() => [`)
     expect(code).toMatchSnapshot()
   })
 
@@ -61,14 +63,14 @@ describe('scopeId compiler support', () => {
         scopeId: 'test'
       }
     )
-    expect(code).toMatch(/name: "foo",\s+fn: withId\(/)
-    expect(code).toMatch(/name: i,\s+fn: withId\(/)
+    expect(code).toMatch(/name: "foo",\s+fn: _withId\(/)
+    expect(code).toMatch(/name: i,\s+fn: _withId\(/)
     expect(code).toMatchSnapshot()
   })
 
   test('should push scopeId for hoisted nodes', () => {
     const { ast, code } = baseCompile(
-      `<div><div>hello</div><div>world</div></div>`,
+      `<div><div>hello</div>{{ foo }}<div>world</div></div>`,
       {
         mode: 'module',
         scopeId: 'test',
@@ -80,10 +82,14 @@ describe('scopeId compiler support', () => {
     expect(ast.hoists.length).toBe(2)
     expect(code).toMatch(
       [
-        `pushScopeId("test")`,
-        `const _hoisted_1 = createVNode("div", null, "hello")`,
-        `const _hoisted_2 = createVNode("div", null, "world")`,
-        `popScopeId()`
+        `_pushScopeId("test")`,
+        `const _hoisted_1 = _createVNode("div", null, "hello", ${genFlagText(
+          PatchFlags.HOISTED
+        )})`,
+        `const _hoisted_2 = _createVNode("div", null, "world", ${genFlagText(
+          PatchFlags.HOISTED
+        )})`,
+        `_popScopeId()`
       ].join('\n')
     )
     expect(code).toMatchSnapshot()

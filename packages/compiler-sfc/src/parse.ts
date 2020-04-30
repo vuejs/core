@@ -6,9 +6,9 @@ import {
   TextModes
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
-import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
+import * as CompilerDOM from '@vue/compiler-dom'
 
 export interface SFCParseOptions {
   filename?: string
@@ -57,7 +57,13 @@ export interface SFCParseResult {
 }
 
 const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC = new LRUCache<string, SFCParseResult>(SFC_CACHE_MAX_SIZE)
+const sourceToSFC =
+  __GLOBAL__ || __ESM_BROWSER__
+    ? new Map<string, SFCParseResult>()
+    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
+        string,
+        SFCParseResult
+      >)
 
 export function parse(
   source: string,
@@ -66,7 +72,7 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = require('@vue/compiler-dom')
+    compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -108,7 +114,7 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length) {
+    if (!node.children.length && !hasSrc(node)) {
       return
     }
     switch (node.tag) {
@@ -117,7 +123,7 @@ export function parse(
           descriptor.template = createBlock(
             node,
             source,
-            pad
+            false
           ) as SFCTemplateBlock
         } else {
           warnDuplicateBlock(source, filename, node)
@@ -147,7 +153,7 @@ export function parse(
           source,
           block.content,
           sourceRoot,
-          pad ? 0 : block.loc.start.line - 1
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
         )
       }
     }
@@ -188,9 +194,13 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  const start = node.children[0].loc.start
-  const end = node.children[node.children.length - 1].loc.end
-  const content = source.slice(start.offset, end.offset)
+  let { start, end } = node.loc
+  let content = ''
+  if (node.children.length) {
+    start = node.children[0].loc.start
+    end = node.children[node.children.length - 1].loc.end
+    content = source.slice(start.offset, end.offset)
+  }
   const loc = {
     source: content,
     start,
@@ -203,7 +213,7 @@ function createBlock(
     loc,
     attrs
   }
-  if (node.tag !== 'template' && pad) {
+  if (pad) {
     block.content = padContent(source, block, pad) + block.content
   }
   node.props.forEach(p => {
@@ -274,4 +284,13 @@ function padContent(
     const padChar = block.type === 'script' && !block.lang ? '//\n' : '\n'
     return Array(offset).join(padChar)
   }
+}
+
+function hasSrc(node: ElementNode) {
+  return node.props.some(p => {
+    if (p.type !== NodeTypes.ATTRIBUTE) {
+      return false
+    }
+    return p.name === 'src'
+  })
 }

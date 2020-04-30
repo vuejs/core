@@ -2,14 +2,14 @@
 
 exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" })
+const _hoisted_1 = _createVNode(\\"div\\", { key: \\"foo\\" }, null, -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -19,17 +19,17 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist nested static tree 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"p\\", null, [
   _createVNode(\\"span\\"),
   _createVNode(\\"span\\")
-])
+], -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -39,16 +39,16 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist nested static tree with comments 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = Vue
+const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
 const _hoisted_1 = _createVNode(\\"div\\", null, [
   _createCommentVNode(\\"comment\\")
-])
+], -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { createCommentVNode: _createCommentVNode, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createCommentVNode: _createCommentVNode, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -58,15 +58,15 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\")
-const _hoisted_2 = _createVNode(\\"div\\")
+const _hoisted_1 = _createVNode(\\"span\\", null, null, -1 /* HOISTED */)
+const _hoisted_2 = _createVNode(\\"div\\", null, null, -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1,
       _hoisted_2
@@ -77,14 +77,14 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist simple element 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\")
+const _hoisted_1 = _createVNode(\\"span\\", { class: \\"inline\\" }, \\"hello\\", -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -94,18 +94,18 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with directives 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, withDirectives: _withDirectives, resolveDirective: _resolveDirective, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveDirective: _resolveDirective, createVNode: _createVNode, withDirectives: _withDirectives, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     const _directive_foo = _resolveDirective(\\"foo\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _withDirectives(_createVNode(\\"div\\", _hoisted_1, null, 32 /* NEED_PATCH */), [
+      _withDirectives(_createVNode(\\"div\\", _hoisted_1, null, 512 /* NEED_PATCH */), [
         [_directive_foo]
       ])
     ]))
@@ -115,16 +115,16 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with dynamic text children 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
-return function render() {
-  with (this) {
-    const { toString: _toString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", _hoisted_1, _toString(hello), 1 /* TEXT */)
+      _createVNode(\\"div\\", _hoisted_1, _toDisplayString(hello), 1 /* TEXT */)
     ]))
   }
 }"
@@ -132,16 +132,16 @@ return function render() {
 
 exports[`compiler: hoistStatic transform hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
 
-return function render() {
-  with (this) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", _hoisted_1, [
         _createVNode(_component_Comp)
@@ -153,16 +153,16 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist class with static object value 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { class: { foo: true } }
 
-return function render() {
-  with (this) {
-    const { toString: _toString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"span\\", _hoisted_1, _toString(_ctx.bar), 1 /* TEXT */)
+      _createVNode(\\"span\\", _hoisted_1, _toDisplayString(_ctx.bar), 1 /* TEXT */)
     ]))
   }
 }"
@@ -170,19 +170,14 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static interpolation 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", null, [
-  \\"foo \\",
-  _toString(1),
-  \\" \\",
-  _toString(true)
-])
+const _hoisted_1 = _createVNode(\\"span\\", null, \\"foo \\" + _toDisplayString(1) + \\" \\" + _toDisplayString(true), -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { toString: _toString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -192,14 +187,14 @@ return function render() {
 
 exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static prop value 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
-const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toString(1))
+const _hoisted_1 = _createVNode(\\"span\\", { foo: 0 }, _toDisplayString(1), -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { toString: _toString, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _hoisted_1
     ]))
@@ -208,14 +203,12 @@ return function render() {
 `;
 
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers 1`] = `
-"import { createVNode, createBlock, openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
-export function render() {
-  const _ctx = this
-  const _cache = _ctx.$cache
-  return (openBlock(), createBlock(\\"div\\", null, [
-    createVNode(\\"div\\", null, [
-      createVNode(\\"div\\", {
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(\\"div\\", null, [
+    _createVNode(\\"div\\", null, [
+      _createVNode(\\"div\\", {
         onClick: _cache[1] || (_cache[1] = $event => (_ctx.foo($event)))
       })
     ])
@@ -226,14 +219,14 @@ export function render() {
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (2) 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+      (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
-          _createVNode(\\"span\\", null, _toString(o + 'foo'), 1 /* TEXT */)
+          _createVNode(\\"span\\", null, _toDisplayString(o + 'foo'), 1 /* TEXT */)
         ]))
       }), 256 /* UNKEYED_FRAGMENT */))
     ]))
@@ -244,15 +237,17 @@ return function render() {
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (v-slot) 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { toString: _toString, resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(_component_Comp, null, {
-      default: ({ foo }) => [_toString(_ctx.foo)],
-      _compiled: true
+      default: _withCtx(({ foo }) => [
+        _createTextVNode(_toDisplayString(_ctx.foo), 1 /* TEXT */)
+      ]),
+      _: 1
     }))
   }
 }"
@@ -261,14 +256,14 @@ return function render() {
 exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, toString: _toString, createVNode: _createVNode } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(false), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
+      (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (o) => {
         return (_openBlock(), _createBlock(\\"p\\", null, [
-          _createVNode(\\"span\\", null, _toString(o), 1 /* TEXT */)
+          _createVNode(\\"span\\", null, _toDisplayString(o), 1 /* TEXT */)
         ]))
       }), 256 /* UNKEYED_FRAGMENT */))
     ]))
@@ -279,12 +274,12 @@ return function render() {
 exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { resolveComponent: _resolveComponent, createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveComponent: _resolveComponent, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     const _component_Comp = _resolveComponent(\\"Comp\\")
-    
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(_component_Comp)
     ]))
@@ -295,12 +290,12 @@ return function render() {
 exports[`compiler: hoistStatic transform should NOT hoist element with dynamic key 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", { key: foo })
+      (_openBlock(), _createBlock(\\"div\\", { key: foo }))
     ]))
   }
 }"
@@ -309,10 +304,10 @@ return function render() {
 exports[`compiler: hoistStatic transform should NOT hoist element with dynamic props 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
       _createVNode(\\"div\\", { id: foo }, null, 8 /* PROPS */, [\\"id\\"])
     ]))
@@ -323,12 +318,12 @@ return function render() {
 exports[`compiler: hoistStatic transform should NOT hoist element with dynamic ref 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      _createVNode(\\"div\\", { ref: foo }, null, 32 /* NEED_PATCH */)
+      _createVNode(\\"div\\", { ref: foo }, null, 512 /* NEED_PATCH */)
     ]))
   }
 }"
@@ -337,10 +332,10 @@ return function render() {
 exports[`compiler: hoistStatic transform should NOT hoist root node 1`] = `
 "const _Vue = Vue
 
-return function render() {
-  with (this) {
-    const { createVNode: _createVNode, createBlock: _createBlock, openBlock: _openBlock } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\"))
   }
 }"
@@ -348,17 +343,17 @@ return function render() {
 
 exports[`compiler: hoistStatic transform should hoist v-for children if static 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode } = Vue
+const { createVNode: _createVNode } = _Vue
 
 const _hoisted_1 = { id: \\"foo\\" }
-const _hoisted_2 = _createVNode(\\"span\\")
+const _hoisted_2 = _createVNode(\\"span\\", null, null, -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { renderList: _renderList, openBlock: _openBlock, createBlock: _createBlock, Fragment: _Fragment, createVNode: _createVNode } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(false), _createBlock(_Fragment, null, _renderList(list, (i) => {
+      (_openBlock(true), _createBlock(_Fragment, null, _renderList(list, (i) => {
         return (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
           _hoisted_2
         ]))
@@ -370,24 +365,24 @@ return function render() {
 
 exports[`compiler: hoistStatic transform should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
-const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = Vue
+const { createVNode: _createVNode, createCommentVNode: _createCommentVNode } = _Vue
 
 const _hoisted_1 = {
   key: 0,
   id: \\"foo\\"
 }
-const _hoisted_2 = _createVNode(\\"span\\")
+const _hoisted_2 = _createVNode(\\"span\\", null, null, -1 /* HOISTED */)
 
-return function render() {
-  with (this) {
-    const { openBlock: _openBlock, createVNode: _createVNode, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
-    
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = _Vue
+
     return (_openBlock(), _createBlock(\\"div\\", null, [
-      (_openBlock(), ok
-        ? _createBlock(\\"div\\", _hoisted_1, [
+      ok
+        ? (_openBlock(), _createBlock(\\"div\\", _hoisted_1, [
             _hoisted_2
-          ])
-        : _createCommentVNode(\\"v-if\\", true))
+          ]))
+        : _createCommentVNode(\\"v-if\\", true)
     ]))
   }
 }"

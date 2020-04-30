@@ -10,10 +10,10 @@
 <script>
 const delay = window.location.hash === '#test' ? 16 : 300
 
-const App = {
-  data: {
+Vue.createApp({
+  data: () => ({
     input: '# hello'
-  },
+  }),
   computed: {
     compiledMarkdown() {
       return marked(this.input, { sanitize: true })
@@ -24,9 +24,7 @@ const App = {
       this.input = e.target.value
     }, delay)
   }
-}
-
-Vue.createApp().mount(App, '#editor')
+}).mount('#editor')
 </script>
 
 <style>

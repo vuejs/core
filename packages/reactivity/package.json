@@ -1,11 +1,12 @@
 {
   "name": "@vue/reactivity",
-  "version": "3.0.0-alpha.2",
+  "version": "3.0.0-beta.4",
   "description": "@vue/reactivity",
   "main": "index.js",
   "module": "dist/reactivity.esm-bundler.js",
   "types": "dist/reactivity.d.ts",
   "unpkg": "dist/reactivity.global.js",
+  "jsdelivr": "dist/reactivity.global.js",
   "files": [
     "index.js",
     "dist"
@@ -13,15 +14,15 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "buildOptions": {
     "name": "VueReactivity",
     "formats": [
       "esm-bundler",
+      "esm-browser",
       "cjs",
-      "global",
-      "esm"
+      "global"
     ]
   },
   "keywords": [
@@ -30,7 +31,10 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/reactivity#readme"
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/reactivity#readme",
+  "dependencies": {
+    "@vue/shared": "3.0.0-beta.4"
+  }
 }

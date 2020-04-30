@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`compiler sfc: transform srcset transform srcset 1`] = `
-"import { createVNode, createBlock, Fragment, openBlock } from \\"vue\\"
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 import _imports_0 from './logo.png'
 
 
@@ -12,37 +12,49 @@ const _hoisted_4 = _imports_0 + ', ' + _imports_0 + '2x'
 const _hoisted_5 = _imports_0 + '2x, ' + _imports_0
 const _hoisted_6 = _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
+const _hoisted_8 = \\"/logo.png\\" + ', ' + _imports_0 + '2x'
 
-export function render() {
-  const _ctx = this
-  return (openBlock(), createBlock(Fragment, null, [
-    createVNode(\\"img\\", {
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_1
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_2
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_3
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_4
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_5
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_6
     }),
-    createVNode(\\"img\\", {
+    _createVNode(\\"img\\", {
       src: \\"./logo.png\\",
       srcset: _hoisted_7
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"/logo.png\\",
+      srcset: \\"/logo.png, /logo.png 2x\\"
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"https://example.com/logo.png\\",
+      srcset: \\"https://example.com/logo.png, https://example.com/logo.png 2x\\"
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"/logo.png\\",
+      srcset: _hoisted_8
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"

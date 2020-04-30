@@ -1,5 +1,9 @@
 # @vue/runtime-test
 
+This is for Vue's own internal tests only - it ensures logic tested using this package is DOM-agnostic, and it runs faster than JSDOM.
+
+It can also be used as a reference for implementing a custom renderer.
+
 ``` js
 import { h, render, nodeOps, dumpOps } from '@vue/runtime-test'
 

@@ -16,7 +16,7 @@ export interface HMRRuntime {
 // it easier to be used in toolings like vue-loader
 // Note: for a component to be eligible for HMR it also needs the __hmrId option
 // to be set so that its instances can be registered / removed.
-if (__BUNDLER__ && __DEV__) {
+if (__DEV__) {
   const globalObject: any =
     typeof global !== 'undefined'
       ? global
@@ -41,7 +41,13 @@ interface HMRRecord {
 const map: Map<string, HMRRecord> = new Map()
 
 export function registerHMR(instance: ComponentInternalInstance) {
-  map.get(instance.type.__hmrId!)!.instances.add(instance)
+  const id = instance.type.__hmrId!
+  let record = map.get(id)
+  if (!record) {
+    createRecord(id, instance.type as ComponentOptions)
+    record = map.get(id)!
+  }
+  record.instances.add(instance)
 }
 
 export function unregisterHMR(instance: ComponentInternalInstance) {
@@ -60,9 +66,11 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
 }
 
 function rerender(id: string, newRender?: RenderFunction) {
+  const record = map.get(id)
+  if (!record) return
   // Array.from creates a snapshot which avoids the set being mutated during
   // updates
-  Array.from(map.get(id)!.instances).forEach(instance => {
+  Array.from(record.instances).forEach(instance => {
     if (newRender) {
       instance.render = newRender
     }
@@ -75,7 +83,8 @@ function rerender(id: string, newRender?: RenderFunction) {
 }
 
 function reload(id: string, newComp: ComponentOptions) {
-  const record = map.get(id)!
+  const record = map.get(id)
+  if (!record) return
   // 1. Update existing comp definition to match new one
   const comp = record.comp
   Object.assign(comp, newComp)

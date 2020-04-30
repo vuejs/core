@@ -1,17 +1,18 @@
 import {
   ComputedOptions,
   MethodOptions,
-  LegacyComponent,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps
-} from './apiOptions'
-import { SetupContext, RenderFunction } from './component'
+  ComponentOptionsWithObjectProps,
+  IComponentOptions
+} from './componentOptions'
+import { SetupContext, RenderFunction, FunctionalComponent } from './component'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
 } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
+import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 
@@ -34,32 +35,63 @@ export function defineComponent<Props, RawBindings = object>(
     {},
     {},
     {},
-    LegacyComponent,
+    {},
+    {},
+    {},
     // public props
     VNodeProps & Props
   >
->
+> &
+  FunctionalComponent<Props>
 
+// overload 2: object format with no props
+// (uses user defined props interface)
+// return type is for Vetur and TSX support
 export function defineComponent<
-  Props,
-  RawBindings,
-  D,
+  Props = {},
+  RawBindings = {},
+  D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin = LegacyComponent
+  Mixin extends IComponentOptions = {},
+  Extends extends IComponentOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
-  options: ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin>
-): ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, Mixin> &
-  ComponentPublicInstanceConstructor<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      VNodeProps & Props
-    >
+  options: ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >
+): ComponentPublicInstanceConstructor<
+  CreateComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    VNodeProps & Props
+  >
+> &
+  ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
   >
 
 // overload 3: object format with array props declaration
@@ -71,7 +103,10 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin = LegacyComponent
+  Mixin extends IComponentOptions = {},
+  Extends extends IComponentOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -79,20 +114,35 @@ export function defineComponent<
     D,
     C,
     M,
-    Mixin
+    Mixin,
+    Extends,
+    E,
+    EE
   >
-): ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, Mixin> &
-  ComponentPublicInstanceConstructor<
-    // array props technically doesn't place any contraints on props in TSX before,
-    // but now we can export array props in TSX
-    CreateComponentPublicInstance<
-      Readonly<{ [key in PropNames]?: any }>,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin
-    >
+): ComponentPublicInstanceConstructor<
+  // array props technically doesn't place any contraints on props in TSX before,
+  // but now we can export array props in TSX
+  CreateComponentPublicInstance<
+    Readonly<{ [key in PropNames]?: any }>,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E
+  >
+> &
+  ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
   >
 
 // overload 4: object format with object props declaration
@@ -105,7 +155,10 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin = LegacyComponent
+  Mixin extends IComponentOptions = {},
+  Extends extends IComponentOptions = {},
+  E extends EmitsOptions = Record<string, any>,
+  EE extends string = string
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -113,19 +166,34 @@ export function defineComponent<
     D,
     C,
     M,
-    Mixin
+    Mixin,
+    Extends,
+    E,
+    EE
   >
-): ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M, Mixin> &
-  ComponentPublicInstanceConstructor<
-    CreateComponentPublicInstance<
-      ExtractPropTypes<PropsOptions>,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      VNodeProps & ExtractPropTypes<PropsOptions, false>
-    >
+): ComponentPublicInstanceConstructor<
+  CreateComponentPublicInstance<
+    ExtractPropTypes<PropsOptions>,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    VNodeProps & ExtractPropTypes<PropsOptions, false>
+  >
+> &
+  ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
   >
 
 // implementation, close to no-op

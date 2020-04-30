@@ -9,20 +9,28 @@ import {
   createArrayExpression,
   createCompoundExpression,
   createInterpolation,
-  createSequenceExpression,
   createCallExpression,
   createConditionalExpression,
-  IfCodegenNode,
   ForCodegenNode,
-  createCacheExpression
+  createCacheExpression,
+  createTemplateLiteral,
+  createBlockStatement,
+  createIfStatement,
+  createAssignmentExpression,
+  IfConditionalExpression,
+  createVNodeCall,
+  VNodeCall,
+  DirectiveArguments
 } from '../src'
 import {
   CREATE_VNODE,
-  TO_STRING,
+  TO_DISPLAY_STRING,
   RESOLVE_DIRECTIVE,
   helperNameMap,
   RESOLVE_COMPONENT,
-  CREATE_COMMENT
+  CREATE_COMMENT,
+  FRAGMENT,
+  RENDER_LIST
 } from '../src/runtimeHelpers'
 import { createElementWithCodegen } from './testUtils'
 import { PatchFlags } from '@vue/shared'
@@ -37,6 +45,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     imports: [],
     hoists: [],
     cached: 0,
+    temps: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
     ...options
@@ -50,9 +59,31 @@ describe('compiler: codegen', () => {
     })
     const { code } = generate(root, { mode: 'module' })
     expect(code).toMatch(
+      `import { ${helperNameMap[CREATE_VNODE]} as _${
+        helperNameMap[CREATE_VNODE]
+      }, ${helperNameMap[RESOLVE_DIRECTIVE]} as _${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      } } from "vue"`
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('module mode preamble w/ optimizeBindings: true', () => {
+    const root = createRoot({
+      helpers: [CREATE_VNODE, RESOLVE_DIRECTIVE]
+    })
+    const { code } = generate(root, { mode: 'module', optimizeBindings: true })
+    expect(code).toMatch(
       `import { ${helperNameMap[CREATE_VNODE]}, ${
         helperNameMap[RESOLVE_DIRECTIVE]
       } } from "vue"`
+    )
+    expect(code).toMatch(
+      `const _${helperNameMap[CREATE_VNODE]} = ${
+        helperNameMap[CREATE_VNODE]
+      }, _${helperNameMap[RESOLVE_DIRECTIVE]} = ${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      }`
     )
     expect(code).toMatchSnapshot()
   })
@@ -83,17 +114,20 @@ describe('compiler: codegen', () => {
     })
     expect(code).not.toMatch(`const _Vue = Vue`)
     expect(code).toMatch(
-      `const { ${helperNameMap[CREATE_VNODE]}, ${
+      `const { ${helperNameMap[CREATE_VNODE]}: _${
+        helperNameMap[CREATE_VNODE]
+      }, ${helperNameMap[RESOLVE_DIRECTIVE]}: _${
         helperNameMap[RESOLVE_DIRECTIVE]
       } } = Vue`
     )
     expect(code).toMatchSnapshot()
   })
 
-  test('assets', () => {
+  test('assets + temps', () => {
     const root = createRoot({
       components: [`Foo`, `bar-baz`, `barbaz`],
-      directives: [`my_dir`]
+      directives: [`my_dir_0`, `my_dir_1`],
+      temps: 3
     })
     const { code } = generate(root, { mode: 'function' })
     expect(code).toMatch(
@@ -110,10 +144,16 @@ describe('compiler: codegen', () => {
       }("barbaz")\n`
     )
     expect(code).toMatch(
-      `const _directive_my_dir = _${
+      `const _directive_my_dir_0 = _${
         helperNameMap[RESOLVE_DIRECTIVE]
-      }("my_dir")\n`
+      }("my_dir_0")\n`
     )
+    expect(code).toMatch(
+      `const _directive_my_dir_1 = _${
+        helperNameMap[RESOLVE_DIRECTIVE]
+      }("my_dir_1")\n`
+    )
+    expect(code).toMatch(`let _temp0, _temp1, _temp2`)
     expect(code).toMatchSnapshot()
   })
 
@@ -138,9 +178,12 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('prefixIdentifiers: true should inject _ctx statement', () => {
-    const { code } = generate(createRoot(), { prefixIdentifiers: true })
-    expect(code).toMatch(`const _ctx = this\n`)
+  test('temps', () => {
+    const root = createRoot({
+      temps: 3
+    })
+    const { code } = generate(root)
+    expect(code).toMatch(`let _temp0, _temp1, _temp2`)
     expect(code).toMatchSnapshot()
   })
 
@@ -164,7 +207,7 @@ describe('compiler: codegen', () => {
         codegenNode: createInterpolation(`hello`, locStub)
       })
     )
-    expect(code).toMatch(`return _${helperNameMap[TO_STRING]}(hello)`)
+    expect(code).toMatch(`return _${helperNameMap[TO_DISPLAY_STRING]}(hello)`)
     expect(code).toMatchSnapshot()
   })
 
@@ -193,11 +236,15 @@ describe('compiler: codegen', () => {
             type: NodeTypes.INTERPOLATION,
             loc: locStub,
             content: createSimpleExpression(`bar`, false, locStub)
-          }
+          },
+          // nested compound
+          createCompoundExpression([` + `, `nested`])
         ])
       })
     )
-    expect(code).toMatch(`return _ctx.foo + _${helperNameMap[TO_STRING]}(bar)`)
+    expect(code).toMatch(
+      `return _ctx.foo + _${helperNameMap[TO_DISPLAY_STRING]}(bar) + nested`
+    )
     expect(code).toMatchSnapshot()
   })
 
@@ -208,14 +255,15 @@ describe('compiler: codegen', () => {
           type: NodeTypes.IF,
           loc: locStub,
           branches: [],
-          codegenNode: createSequenceExpression([
+          codegenNode: createConditionalExpression(
             createSimpleExpression('foo', false),
-            createSimpleExpression('bar', false)
-          ]) as IfCodegenNode
+            createSimpleExpression('bar', false),
+            createSimpleExpression('baz', false)
+          ) as IfConditionalExpression
         }
       })
     )
-    expect(code).toMatch(`return (foo, bar)`)
+    expect(code).toMatch(/return foo\s+\? bar\s+: baz/)
     expect(code).toMatchSnapshot()
   })
 
@@ -230,21 +278,30 @@ describe('compiler: codegen', () => {
           keyAlias: undefined,
           objectIndexAlias: undefined,
           children: [],
-          codegenNode: createSequenceExpression([
-            createSimpleExpression('foo', false),
-            createSimpleExpression('bar', false)
-          ]) as ForCodegenNode
+          parseResult: {} as any,
+          codegenNode: {
+            type: NodeTypes.VNODE_CALL,
+            tag: FRAGMENT,
+            isBlock: true,
+            isForBlock: true,
+            props: undefined,
+            children: createCallExpression(RENDER_LIST),
+            patchFlag: '1',
+            dynamicProps: undefined,
+            directives: undefined,
+            loc: locStub
+          } as ForCodegenNode
         }
       })
     )
-    expect(code).toMatch(`return (foo, bar)`)
+    expect(code).toMatch(`openBlock(true)`)
     expect(code).toMatchSnapshot()
   })
 
   test('Element (callExpression + objectExpression + TemplateChildNode[])', () => {
     const { code } = generate(
       createRoot({
-        codegenNode: createElementWithCodegen([
+        codegenNode: createElementWithCodegen(
           // string
           `"div"`,
           // ObjectExpression
@@ -275,7 +332,7 @@ describe('compiler: codegen', () => {
           ),
           // ChildNode[]
           [
-            createElementWithCodegen([
+            createElementWithCodegen(
               `"p"`,
               createObjectExpression(
                 [
@@ -287,11 +344,11 @@ describe('compiler: codegen', () => {
                 ],
                 locStub
               )
-            ])
+            )
           ],
           // flag
           PatchFlags.FULL_PROPS + ''
-        ])
+        )
       })
     )
     expect(code).toMatch(`
@@ -318,19 +375,6 @@ describe('compiler: codegen', () => {
       foo,
       bar(baz)
     ]`)
-    expect(code).toMatchSnapshot()
-  })
-
-  test('SequenceExpression', () => {
-    const { code } = generate(
-      createRoot({
-        codegenNode: createSequenceExpression([
-          createSimpleExpression(`foo`, false),
-          createCallExpression(`bar`, [`baz`])
-        ])
-      })
-    )
-    expect(code).toMatch(`return (foo, bar(baz))`)
     expect(code).toMatchSnapshot()
   })
 
@@ -372,7 +416,6 @@ describe('compiler: codegen', () => {
         prefixIdentifiers: true
       }
     )
-    expect(code).toMatch(`const _cache = _ctx.$cache`)
     expect(code).toMatch(`_cache[1] || (_cache[1] = foo)`)
     expect(code).toMatchSnapshot()
   })
@@ -392,17 +435,309 @@ describe('compiler: codegen', () => {
         prefixIdentifiers: true
       }
     )
-    expect(code).toMatch(`const _cache = _ctx.$cache`)
     expect(code).toMatch(
       `
   _cache[1] || (
-    setBlockTracking(-1),
+    _setBlockTracking(-1),
     _cache[1] = foo,
-    setBlockTracking(1),
+    _setBlockTracking(1),
     _cache[1]
   )
     `.trim()
     )
     expect(code).toMatchSnapshot()
+  })
+
+  test('TemplateLiteral', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createCallExpression(`_push`, [
+          createTemplateLiteral([
+            `foo`,
+            createCallExpression(`_renderAttr`, ['id', 'foo']),
+            `bar`
+          ])
+        ])
+      }),
+      { ssr: true, mode: 'module' }
+    )
+    expect(code).toMatchInlineSnapshot(`
+      "
+      export function ssrRender(_ctx, _push, _parent) {
+        _push(\`foo\${_renderAttr(id, foo)}bar\`)
+      }"
+    `)
+  })
+
+  describe('IfStatement', () => {
+    test('if', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`ok`)])
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            ok()
+          }
+        }"
+      `)
+    })
+
+    test('if/else', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createBlockStatement([createCallExpression('bar')])
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else {
+            bar()
+          }
+        }"
+      `)
+    })
+
+    test('if/else-if', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createIfStatement(
+                createSimpleExpression('bar', false),
+                createBlockStatement([createCallExpression(`bar`)])
+              )
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else if (bar) {
+            bar()
+          }
+        }"
+      `)
+    })
+
+    test('if/else-if/else', () => {
+      const { code } = generate(
+        createRoot({
+          codegenNode: createBlockStatement([
+            createIfStatement(
+              createSimpleExpression('foo', false),
+              createBlockStatement([createCallExpression(`foo`)]),
+              createIfStatement(
+                createSimpleExpression('bar', false),
+                createBlockStatement([createCallExpression(`bar`)]),
+                createBlockStatement([createCallExpression('baz')])
+              )
+            )
+          ])
+        }),
+        { ssr: true, mode: 'module' }
+      )
+      expect(code).toMatchInlineSnapshot(`
+        "
+        export function ssrRender(_ctx, _push, _parent) {
+          if (foo) {
+            foo()
+          } else if (bar) {
+            bar()
+          } else {
+            baz()
+          }
+        }"
+      `)
+    })
+  })
+
+  test('AssignmentExpression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: createAssignmentExpression(
+          createSimpleExpression(`foo`, false),
+          createSimpleExpression(`bar`, false)
+        )
+      })
+    )
+    expect(code).toMatchInlineSnapshot(`
+      "
+      return function render(_ctx, _cache) {
+        with (_ctx) {
+          return foo = bar
+        }
+      }"
+    `)
+  })
+
+  describe('VNodeCall', () => {
+    function genCode(node: VNodeCall) {
+      return generate(
+        createRoot({
+          codegenNode: node
+        })
+      ).code.match(/with \(_ctx\) \{\s+([^]+)\s+\}\s+\}$/)![1]
+    }
+
+    const mockProps = createObjectExpression([
+      createObjectProperty(`foo`, createSimpleExpression(`bar`, true))
+    ])
+    const mockChildren = createCompoundExpression(['children'])
+    const mockDirs = createArrayExpression([
+      createArrayExpression([`foo`, createSimpleExpression(`bar`, false)])
+    ]) as DirectiveArguments
+
+    test('tag only', () => {
+      expect(genCode(createVNodeCall(null, `"div"`))).toMatchInlineSnapshot(`
+              "return _createVNode(\\"div\\")
+               "
+          `)
+      expect(genCode(createVNodeCall(null, FRAGMENT))).toMatchInlineSnapshot(`
+              "return _createVNode(_Fragment)
+               "
+          `)
+    })
+
+    test('with props', () => {
+      expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
+        .toMatchInlineSnapshot(`
+              "return _createVNode(\\"div\\", { foo: \\"bar\\" })
+               "
+          `)
+    })
+
+    test('with children, no props', () => {
+      expect(genCode(createVNodeCall(null, `"div"`, undefined, mockChildren)))
+        .toMatchInlineSnapshot(`
+        "return _createVNode(\\"div\\", null, children)
+         "
+      `)
+    })
+
+    test('with children + props', () => {
+      expect(genCode(createVNodeCall(null, `"div"`, mockProps, mockChildren)))
+        .toMatchInlineSnapshot(`
+        "return _createVNode(\\"div\\", { foo: \\"bar\\" }, children)
+         "
+      `)
+    })
+
+    test('with patchFlag and no children/props', () => {
+      expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
+        .toMatchInlineSnapshot(`
+        "return _createVNode(\\"div\\", null, null, 1)
+         "
+      `)
+    })
+
+    test('as block', () => {
+      expect(
+        genCode(
+          createVNodeCall(
+            null,
+            `"div"`,
+            mockProps,
+            mockChildren,
+            undefined,
+            undefined,
+            undefined,
+            true
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        "return (_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+         "
+      `)
+    })
+
+    test('as for block', () => {
+      expect(
+        genCode(
+          createVNodeCall(
+            null,
+            `"div"`,
+            mockProps,
+            mockChildren,
+            undefined,
+            undefined,
+            undefined,
+            true,
+            true
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        "return (_openBlock(true), _createBlock(\\"div\\", { foo: \\"bar\\" }, children))
+         "
+      `)
+    })
+
+    test('with directives', () => {
+      expect(
+        genCode(
+          createVNodeCall(
+            null,
+            `"div"`,
+            mockProps,
+            mockChildren,
+            undefined,
+            undefined,
+            mockDirs
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        "return _withDirectives(_createVNode(\\"div\\", { foo: \\"bar\\" }, children), [
+              [foo, bar]
+            ])
+         "
+      `)
+    })
+
+    test('block + directives', () => {
+      expect(
+        genCode(
+          createVNodeCall(
+            null,
+            `"div"`,
+            mockProps,
+            mockChildren,
+            undefined,
+            undefined,
+            mockDirs,
+            true
+          )
+        )
+      ).toMatchInlineSnapshot(`
+        "return _withDirectives((_openBlock(), _createBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
+              [foo, bar]
+            ])
+         "
+      `)
+    })
   })
 })

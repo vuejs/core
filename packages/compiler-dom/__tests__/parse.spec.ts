@@ -5,12 +5,10 @@ import {
   TextNode,
   ErrorCodes,
   ElementTypes,
-  InterpolationNode
+  InterpolationNode,
+  AttributeNode
 } from '@vue/compiler-core'
-import {
-  parserOptionsMinimal as parserOptions,
-  DOMNamespaces
-} from '../src/parserOptionsMinimal'
+import { parserOptions, DOMNamespaces } from '../src/parserOptions'
 
 describe('DOM parser', () => {
   describe('Text', () => {
@@ -47,6 +45,22 @@ describe('DOM parser', () => {
           source: '&amp;'
         }
       })
+    })
+
+    test('textarea support interpolation', () => {
+      const ast = parse('<textarea><div>{{ foo }}</textarea>', parserOptions)
+      const element = ast.children[0] as ElementNode
+      expect(element.children).toMatchObject([
+        { type: NodeTypes.TEXT, content: `<div>` },
+        {
+          type: NodeTypes.INTERPOLATION,
+          content: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `foo`,
+            isStatic: false
+          }
+        }
+      ])
     })
 
     test('style handles comments/elements as just a text', () => {
@@ -100,11 +114,129 @@ describe('DOM parser', () => {
     })
 
     test('<pre> tag should preserve raw whitespace', () => {
-      const rawText = `  \na    b    \n   c`
+      const rawText = `  \na   <div>foo \n bar</div>   \n   c`
       const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
-      expect((ast.children[0] as ElementNode).children[0]).toMatchObject({
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.TEXT,
+          content: `  \na   `
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              content: `foo \n bar`
+            }
+          ]
+        },
+        {
+          type: NodeTypes.TEXT,
+          content: `   \n   c`
+        }
+      ])
+    })
+
+    // #908
+    test('<pre> tag should remove leading newline', () => {
+      const rawText = `\nhello<div>\nbye</div>`
+      const ast = parse(`<pre>${rawText}</pre>`, parserOptions)
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.TEXT,
+          content: `hello`
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            {
+              type: NodeTypes.TEXT,
+              // should not remove the leading newline for nested elements
+              content: `\nbye`
+            }
+          ]
+        }
+      ])
+    })
+
+    // #945
+    test('&nbsp; should not be condensed', () => {
+      const nbsp = String.fromCharCode(160)
+      const ast = parse(`foo&nbsp;&nbsp;bar`, parserOptions)
+      expect(ast.children[0]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: rawText
+        content: `foo${nbsp}${nbsp}bar`
+      })
+    })
+
+    // https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
+    test('HTML entities compatibility in text', () => {
+      const ast = parse('&ampersand;', parserOptions)
+      const text = ast.children[0] as TextNode
+
+      expect(text).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '&ersand;',
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 11, line: 1, column: 12 },
+          source: '&ampersand;'
+        }
+      })
+    })
+
+    // https://html.spec.whatwg.org/multipage/parsing.html#named-character-reference-state
+    test('HTML entities compatibility in attribute', () => {
+      const ast = parse(
+        '<div a="&ampersand;" b="&amp;ersand;" c="&amp!"></div>',
+        parserOptions
+      )
+      const element = ast.children[0] as ElementNode
+      const text1 = (element.props[0] as AttributeNode).value
+      const text2 = (element.props[1] as AttributeNode).value
+      const text3 = (element.props[2] as AttributeNode).value
+
+      expect(text1).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '&ampersand;',
+        loc: {
+          start: { offset: 7, line: 1, column: 8 },
+          end: { offset: 20, line: 1, column: 21 },
+          source: '"&ampersand;"'
+        }
+      })
+      expect(text2).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '&ersand;',
+        loc: {
+          start: { offset: 23, line: 1, column: 24 },
+          end: { offset: 37, line: 1, column: 38 },
+          source: '"&amp;ersand;"'
+        }
+      })
+      expect(text3).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '&!',
+        loc: {
+          start: { offset: 40, line: 1, column: 41 },
+          end: { offset: 47, line: 1, column: 48 },
+          source: '"&amp!"'
+        }
+      })
+    })
+
+    test('Some control character reference should be replaced.', () => {
+      const ast = parse('&#x86;', parserOptions)
+      const text = ast.children[0] as TextNode
+
+      expect(text).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '†',
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 6, line: 1, column: 7 },
+          source: '&#x86;'
+        }
       })
     })
   })

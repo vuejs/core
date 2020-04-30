@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray } from '@vue/shared'
+import { NO, isArray, makeMap } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -21,13 +21,26 @@ import {
   SourceLocation,
   TextNode,
   TemplateChildNode,
-  InterpolationNode
+  InterpolationNode,
+  createRoot
 } from './ast'
 import { extend } from '@vue/shared'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
+
+// The default decoder only provides escapes for characters reserved as part of
+// the tempalte syntax, and is only used if the custom renderer did not provide
+// a platform-specific decoder.
+const decodeRE = /&(gt|lt|amp|apos|quot);/g
+const decodeMap: Record<string, string> = {
+  gt: '>',
+  lt: '<',
+  amp: '&',
+  apos: "'",
+  quot: '"'
+}
 
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
@@ -36,14 +49,8 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
-  namedCharacterReferences: {
-    'gt;': '>',
-    'lt;': '<',
-    'amp;': '&',
-    'apos;': "'",
-    'quot;': '"'
-  },
-  maxCRNameLength: 5,
+  decodeEntities: (rawText: string): string =>
+    rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError
 }
 
@@ -56,14 +63,15 @@ export const enum TextModes {
   ATTRIBUTE_VALUE
 }
 
-interface ParserContext {
+export interface ParserContext {
   options: MergedParserOptions
   readonly originalSource: string
   source: string
   offset: number
   line: number
   column: number
-  inPre: boolean
+  inPre: boolean // HTML <pre> tag, preserve whitespaces
+  inVPre: boolean // v-pre, do not process directives and interpolations
 }
 
 export function baseParse(
@@ -72,19 +80,10 @@ export function baseParse(
 ): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
-
-  return {
-    type: NodeTypes.ROOT,
-    children: parseChildren(context, TextModes.DATA, []),
-    helpers: [],
-    components: [],
-    directives: [],
-    hoists: [],
-    imports: [],
-    cached: 0,
-    codegenNode: undefined,
-    loc: getSelection(context, start)
-  }
+  return createRoot(
+    parseChildren(context, TextModes.DATA, []),
+    getSelection(context, start)
+  )
 }
 
 function createParserContext(
@@ -101,7 +100,8 @@ function createParserContext(
     offset: 0,
     originalSource: content,
     source: content,
-    inPre: false
+    inPre: false,
+    inVPre: false
   }
 }
 
@@ -119,11 +119,11 @@ function parseChildren(
     const s = context.source
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
-    if (mode === TextModes.DATA) {
-      if (!context.inPre && startsWith(s, context.options.delimiters[0])) {
+    if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
+      if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
         // '{{'
         node = parseInterpolation(context, mode)
-      } else if (s[0] === '<') {
+      } else if (mode === TextModes.DATA && s[0] === '<') {
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
         if (s.length === 1) {
           emitError(context, ErrorCodes.EOF_BEFORE_TAG_NAME, 1)
@@ -195,40 +195,46 @@ function parseChildren(
   // Whitespace management for more efficient output
   // (same as v2 whitespace: 'condense')
   let removedWhitespace = false
-  if (
-    mode !== TextModes.RAWTEXT &&
-    (!parent || !context.options.isPreTag(parent.tag))
-  ) {
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      if (node.type === NodeTypes.TEXT) {
-        if (!node.content.trim()) {
-          const prev = nodes[i - 1]
-          const next = nodes[i + 1]
-          // If:
-          // - the whitespace is the first or last node, or:
-          // - the whitespace is adjacent to a comment, or:
-          // - the whitespace is between two elements AND contains newline
-          // Then the whitespace is ignored.
-          if (
-            !prev ||
-            !next ||
-            prev.type === NodeTypes.COMMENT ||
-            next.type === NodeTypes.COMMENT ||
-            (prev.type === NodeTypes.ELEMENT &&
-              next.type === NodeTypes.ELEMENT &&
-              /[\r\n]/.test(node.content))
-          ) {
-            removedWhitespace = true
-            nodes[i] = null as any
+  if (mode !== TextModes.RAWTEXT) {
+    if (!context.inPre) {
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        if (node.type === NodeTypes.TEXT) {
+          if (!/[^\t\r\n\f ]/.test(node.content)) {
+            const prev = nodes[i - 1]
+            const next = nodes[i + 1]
+            // If:
+            // - the whitespace is the first or last node, or:
+            // - the whitespace is adjacent to a comment, or:
+            // - the whitespace is between two elements AND contains newline
+            // Then the whitespace is ignored.
+            if (
+              !prev ||
+              !next ||
+              prev.type === NodeTypes.COMMENT ||
+              next.type === NodeTypes.COMMENT ||
+              (prev.type === NodeTypes.ELEMENT &&
+                next.type === NodeTypes.ELEMENT &&
+                /[\r\n]/.test(node.content))
+            ) {
+              removedWhitespace = true
+              nodes[i] = null as any
+            } else {
+              // Otherwise, condensed consecutive whitespace inside the text down to
+              // a single space
+              node.content = ' '
+            }
           } else {
-            // Otherwise, condensed consecutive whitespace inside the text down to
-            // a single space
-            node.content = ' '
+            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
-        } else {
-          node.content = node.content.replace(/\s+/g, ' ')
         }
+      }
+    } else if (parent && context.options.isPreTag(parent.tag)) {
+      // remove leading newline per html spec
+      // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
+      const first = nodes[0]
+      if (first && first.type === NodeTypes.TEXT) {
+        first.content = first.content.replace(/^\r?\n/, '')
       }
     }
   }
@@ -355,9 +361,11 @@ function parseElement(
 
   // Start tag.
   const wasInPre = context.inPre
+  const wasInVPre = context.inVPre
   const parent = last(ancestors)
   const element = parseTag(context, TagType.Start, parent)
   const isPreBoundary = context.inPre && !wasInPre
+  const isVPreBoundary = context.inVPre && !wasInVPre
 
   if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
     return element
@@ -389,6 +397,9 @@ function parseElement(
   if (isPreBoundary) {
     context.inPre = false
   }
+  if (isVPreBoundary) {
+    context.inVPre = false
+  }
   return element
 }
 
@@ -396,6 +407,10 @@ const enum TagType {
   Start,
   End
 }
+
+const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
+  `if,else,else-if,for,slot`
+)
 
 /**
  * Parse a tag (E.g. `<div id=a>`) with that type (start tag or end tag).
@@ -427,12 +442,17 @@ function parseTag(
   // Attributes.
   let props = parseAttributes(context, type)
 
+  // check <pre> tag
+  if (context.options.isPreTag(tag)) {
+    context.inPre = true
+  }
+
   // check v-pre
   if (
-    !context.inPre &&
+    !context.inVPre &&
     props.some(p => p.type === NodeTypes.DIRECTIVE && p.name === 'pre')
   ) {
-    context.inPre = true
+    context.inVPre = true
     // reset context
     extend(context, cursor)
     context.source = currentSource
@@ -454,20 +474,32 @@ function parseTag(
 
   let tagType = ElementTypes.ELEMENT
   const options = context.options
-  if (!context.inPre && !options.isCustomElement(tag)) {
-    if (options.isNativeTag) {
+  if (!context.inVPre && !options.isCustomElement(tag)) {
+    const hasVIs = props.some(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'is'
+    )
+    if (options.isNativeTag && !hasVIs) {
       if (!options.isNativeTag(tag)) tagType = ElementTypes.COMPONENT
     } else if (
+      hasVIs ||
       isCoreComponent(tag) ||
       (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
-      /^[A-Z]/.test(tag)
+      /^[A-Z]/.test(tag) ||
+      tag === 'component'
     ) {
       tagType = ElementTypes.COMPONENT
     }
 
     if (tag === 'slot') {
       tagType = ElementTypes.SLOT
-    } else if (tag === 'template') {
+    } else if (
+      tag === 'template' &&
+      props.some(p => {
+        return (
+          p.type === NodeTypes.DIRECTIVE && isSpecialTemplateDirective(p.name)
+        )
+      })
+    ) {
       tagType = ElementTypes.TEMPLATE
     }
   }
@@ -541,7 +573,7 @@ function parseAttribute(
   {
     const pattern = /["'<]/g
     let m: RegExpExecArray | null
-    while ((m = pattern.exec(name)) !== null) {
+    while ((m = pattern.exec(name))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
@@ -572,7 +604,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inPre && /^(v-|:|@|#)/.test(name)) {
+  if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
     const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
       name
     )!
@@ -690,9 +722,9 @@ function parseAttributeValue(
     if (!match) {
       return undefined
     }
-    let unexpectedChars = /["'<=`]/g
+    const unexpectedChars = /["'<=`]/g
     let m: RegExpExecArray | null
-    while ((m = unexpectedChars.exec(match[0])) !== null) {
+    while ((m = unexpectedChars.exec(match[0]))) {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
@@ -786,129 +818,21 @@ function parseTextData(
   length: number,
   mode: TextModes
 ): string {
-  let rawText = context.source.slice(0, length)
+  const rawText = context.source.slice(0, length)
+  advanceBy(context, length)
   if (
     mode === TextModes.RAWTEXT ||
     mode === TextModes.CDATA ||
     rawText.indexOf('&') === -1
   ) {
-    advanceBy(context, length)
     return rawText
+  } else {
+    // DATA or RCDATA containing "&"". Entity decoding required.
+    return context.options.decodeEntities(
+      rawText,
+      mode === TextModes.ATTRIBUTE_VALUE
+    )
   }
-
-  // DATA or RCDATA containing "&"". Entity decoding required.
-  const end = context.offset + length
-  let decodedText = ''
-
-  function advance(length: number) {
-    advanceBy(context, length)
-    rawText = rawText.slice(length)
-  }
-
-  while (context.offset < end) {
-    const head = /&(?:#x?)?/i.exec(rawText)
-    if (!head || context.offset + head.index >= end) {
-      const remaining = end - context.offset
-      decodedText += rawText.slice(0, remaining)
-      advance(remaining)
-      break
-    }
-
-    // Advance to the "&".
-    decodedText += rawText.slice(0, head.index)
-    advance(head.index)
-
-    if (head[0] === '&') {
-      // Named character reference.
-      let name = '',
-        value: string | undefined = undefined
-      if (/[0-9a-z]/i.test(rawText[1])) {
-        for (
-          let length = context.options.maxCRNameLength;
-          !value && length > 0;
-          --length
-        ) {
-          name = rawText.substr(1, length)
-          value = context.options.namedCharacterReferences[name]
-        }
-        if (value) {
-          const semi = name.endsWith(';')
-          if (
-            mode === TextModes.ATTRIBUTE_VALUE &&
-            !semi &&
-            /[=a-z0-9]/i.test(rawText[1 + name.length] || '')
-          ) {
-            decodedText += '&' + name
-            advance(1 + name.length)
-          } else {
-            decodedText += value
-            advance(1 + name.length)
-            if (!semi) {
-              emitError(
-                context,
-                ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-              )
-            }
-          }
-        } else {
-          emitError(context, ErrorCodes.UNKNOWN_NAMED_CHARACTER_REFERENCE)
-          decodedText += '&' + name
-          advance(1 + name.length)
-        }
-      } else {
-        decodedText += '&'
-        advance(1)
-      }
-    } else {
-      // Numeric character reference.
-      const hex = head[0] === '&#x'
-      const pattern = hex ? /^&#x([0-9a-f]+);?/i : /^&#([0-9]+);?/
-      const body = pattern.exec(rawText)
-      if (!body) {
-        decodedText += head[0]
-        emitError(
-          context,
-          ErrorCodes.ABSENCE_OF_DIGITS_IN_NUMERIC_CHARACTER_REFERENCE
-        )
-        advance(head[0].length)
-      } else {
-        // https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-        let cp = Number.parseInt(body[1], hex ? 16 : 10)
-        if (cp === 0) {
-          emitError(context, ErrorCodes.NULL_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if (cp > 0x10ffff) {
-          emitError(
-            context,
-            ErrorCodes.CHARACTER_REFERENCE_OUTSIDE_UNICODE_RANGE
-          )
-          cp = 0xfffd
-        } else if (cp >= 0xd800 && cp <= 0xdfff) {
-          emitError(context, ErrorCodes.SURROGATE_CHARACTER_REFERENCE)
-          cp = 0xfffd
-        } else if ((cp >= 0xfdd0 && cp <= 0xfdef) || (cp & 0xfffe) === 0xfffe) {
-          emitError(context, ErrorCodes.NONCHARACTER_CHARACTER_REFERENCE)
-        } else if (
-          (cp >= 0x01 && cp <= 0x08) ||
-          cp === 0x0b ||
-          (cp >= 0x0d && cp <= 0x1f) ||
-          (cp >= 0x7f && cp <= 0x9f)
-        ) {
-          emitError(context, ErrorCodes.CONTROL_CHARACTER_REFERENCE)
-          cp = CCR_REPLACEMENTS[cp] || cp
-        }
-        decodedText += String.fromCodePoint(cp)
-        advance(body[0].length)
-        if (!body![0].endsWith(';')) {
-          emitError(
-            context,
-            ErrorCodes.MISSING_SEMICOLON_AFTER_CHARACTER_REFERENCE
-          )
-        }
-      }
-    }
-  }
-  return decodedText
 }
 
 function getCursor(context: ParserContext): Position {
@@ -1026,35 +950,4 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
     /[\t\n\f />]/.test(source[2 + tag.length] || '>')
   )
-}
-
-// https://html.spec.whatwg.org/multipage/parsing.html#numeric-character-reference-end-state
-const CCR_REPLACEMENTS: { [key: number]: number | undefined } = {
-  0x80: 0x20ac,
-  0x82: 0x201a,
-  0x83: 0x0192,
-  0x84: 0x201e,
-  0x85: 0x2026,
-  0x86: 0x2020,
-  0x87: 0x2021,
-  0x88: 0x02c6,
-  0x89: 0x2030,
-  0x8a: 0x0160,
-  0x8b: 0x2039,
-  0x8c: 0x0152,
-  0x8e: 0x017d,
-  0x91: 0x2018,
-  0x92: 0x2019,
-  0x93: 0x201c,
-  0x94: 0x201d,
-  0x95: 0x2022,
-  0x96: 0x2013,
-  0x97: 0x2014,
-  0x98: 0x02dc,
-  0x99: 0x2122,
-  0x9a: 0x0161,
-  0x9b: 0x203a,
-  0x9c: 0x0153,
-  0x9e: 0x017e,
-  0x9f: 0x0178
 }

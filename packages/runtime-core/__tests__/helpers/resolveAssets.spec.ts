@@ -1,5 +1,4 @@
 import {
-  mockWarn,
   createApp,
   nodeOps,
   resolveComponent,
@@ -7,19 +6,25 @@ import {
   Component,
   Directive,
   resolveDynamicComponent,
-  getCurrentInstance
+  h,
+  serializeInner,
+  createVNode,
+  Comment,
+  VNode
 } from '@vue/runtime-test'
+import { mockWarn } from '@vue/shared'
 
 describe('resolveAssets', () => {
+  mockWarn()
+
   test('should work', () => {
-    const app = createApp()
     const FooBar = () => null
     const BarBaz = { mounted: () => null }
 
-    let component1: Component
-    let component2: Component
-    let component3: Component
-    let component4: Component
+    let component1: Component | string
+    let component2: Component | string
+    let component3: Component | string
+    let component4: Component | string
     let directive1: Directive
     let directive2: Directive
     let directive3: Directive
@@ -49,8 +54,9 @@ describe('resolveAssets', () => {
       }
     }
 
+    const app = createApp(Root)
     const root = nodeOps.createElement('div')
-    app.mount(Root, root)
+    app.mount(root)
     expect(component1!).toBe(FooBar)
     expect(component2!).toBe(FooBar)
     expect(component3!).toBe(FooBar)
@@ -63,8 +69,6 @@ describe('resolveAssets', () => {
   })
 
   describe('warning', () => {
-    mockWarn()
-
     test('used outside render() or setup()', () => {
       resolveComponent('foo')
       expect(
@@ -78,7 +82,6 @@ describe('resolveAssets', () => {
     })
 
     test('not exist', () => {
-      const app = createApp()
       const Root = {
         setup() {
           resolveComponent('foo')
@@ -87,36 +90,68 @@ describe('resolveAssets', () => {
         }
       }
 
+      const app = createApp(Root)
       const root = nodeOps.createElement('div')
-      app.mount(Root, root)
+      app.mount(root)
       expect('Failed to resolve component: foo').toHaveBeenWarned()
       expect('Failed to resolve directive: bar').toHaveBeenWarned()
     })
 
     test('resolve dynamic component', () => {
-      const app = createApp()
       const dynamicComponents = {
         foo: () => 'foo',
         bar: () => 'bar',
         baz: { render: () => 'baz' }
       }
       let foo, bar, baz // dynamic components
+      let dynamicVNode: VNode
+
+      const Child = {
+        render(this: any) {
+          return this.$slots.default()
+        }
+      }
+
       const Root = {
         components: { foo: dynamicComponents.foo },
         setup() {
-          const instance = getCurrentInstance()!
           return () => {
-            foo = resolveDynamicComponent('foo', instance) // <component is="foo"/>
-            bar = resolveDynamicComponent(dynamicComponents.bar, instance) // <component :is="bar"/>, function
-            baz = resolveDynamicComponent(dynamicComponents.baz, instance) // <component :is="baz"/>, object
+            foo = resolveDynamicComponent('foo') // <component is="foo"/>
+            bar = resolveDynamicComponent(dynamicComponents.bar) // <component :is="bar"/>, function
+            dynamicVNode = createVNode(resolveDynamicComponent(null)) // <component :is="null"/>
+            return h(Child, () => {
+              // check inside child slots
+              baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
+            })
           }
         }
       }
+
+      const app = createApp(Root)
       const root = nodeOps.createElement('div')
-      app.mount(Root, root)
+      app.mount(root)
       expect(foo).toBe(dynamicComponents.foo)
       expect(bar).toBe(dynamicComponents.bar)
       expect(baz).toBe(dynamicComponents.baz)
+      // should allow explicit falsy type to remove the component
+      expect(dynamicVNode!.type).toBe(Comment)
+    })
+
+    test('resolve dynamic component should fallback to plain element without warning', () => {
+      const Root = {
+        setup() {
+          return () => {
+            return createVNode(resolveDynamicComponent('div') as string, null, {
+              default: () => 'hello'
+            })
+          }
+        }
+      }
+
+      const app = createApp(Root)
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+      expect(serializeInner(root)).toBe('<div>hello</div>')
     })
   })
 })

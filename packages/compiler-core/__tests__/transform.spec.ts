@@ -4,16 +4,14 @@ import {
   ElementNode,
   NodeTypes,
   DirectiveNode,
-  ExpressionNode
+  ExpressionNode,
+  VNodeCall
 } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {
-  TO_STRING,
-  OPEN_BLOCK,
-  CREATE_BLOCK,
+  TO_DISPLAY_STRING,
   FRAGMENT,
   RENDER_SLOT,
-  WITH_DIRECTIVES,
   CREATE_COMMENT
 } from '../src/runtimeHelpers'
 import { transformIf } from '../src/transforms/vIf'
@@ -227,7 +225,7 @@ describe('compiler: transform', () => {
   test('should inject toString helper for interpolations', () => {
     const ast = baseParse(`{{ foo }}`)
     transform(ast, {})
-    expect(ast.helpers).toContain(TO_STRING)
+    expect(ast.helpers).toContain(TO_DISPLAY_STRING)
   })
 
   test('should inject createVNode and Comment for comments', () => {
@@ -251,20 +249,19 @@ describe('compiler: transform', () => {
       return ast
     }
 
-    function createBlockMatcher(args: any[]) {
+    function createBlockMatcher(
+      tag: VNodeCall['tag'],
+      props?: VNodeCall['props'],
+      children?: VNodeCall['children'],
+      patchFlag?: VNodeCall['patchFlag']
+    ) {
       return {
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: OPEN_BLOCK
-          },
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: CREATE_BLOCK,
-            arguments: args
-          }
-        ]
+        type: NodeTypes.VNODE_CALL,
+        isBlock: true,
+        tag,
+        props,
+        children,
+        patchFlag
       }
     }
 
@@ -285,7 +282,7 @@ describe('compiler: transform', () => {
 
     test('single element', () => {
       const ast = transformWithCodegen(`<div/>`)
-      expect(ast.codegenNode).toMatchObject(createBlockMatcher([`"div"`]))
+      expect(ast.codegenNode).toMatchObject(createBlockMatcher(`"div"`))
     })
 
     test('root v-if', () => {
@@ -305,22 +302,8 @@ describe('compiler: transform', () => {
     test('root element with custom directive', () => {
       const ast = transformWithCodegen(`<div v-foo/>`)
       expect(ast.codegenNode).toMatchObject({
-        type: NodeTypes.JS_SEQUENCE_EXPRESSION,
-        expressions: [
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            callee: OPEN_BLOCK
-          },
-          {
-            type: NodeTypes.JS_CALL_EXPRESSION,
-            // should wrap withDirectives() around createBlock()
-            callee: WITH_DIRECTIVES,
-            arguments: [
-              { callee: CREATE_BLOCK },
-              { type: NodeTypes.JS_ARRAY_EXPRESSION }
-            ]
-          }
-        ]
+        type: NodeTypes.VNODE_CALL,
+        directives: { type: NodeTypes.JS_ARRAY_EXPRESSION }
       })
     })
 
@@ -348,15 +331,15 @@ describe('compiler: transform', () => {
     test('multiple children', () => {
       const ast = transformWithCodegen(`<div/><div/>`)
       expect(ast.codegenNode).toMatchObject(
-        createBlockMatcher([
+        createBlockMatcher(
           FRAGMENT,
-          `null`,
+          undefined,
           [
             { type: NodeTypes.ELEMENT, tag: `div` },
             { type: NodeTypes.ELEMENT, tag: `div` }
-          ],
+          ] as any,
           genFlagText(PatchFlags.STABLE_FRAGMENT)
-        ])
+        )
       )
     })
   })

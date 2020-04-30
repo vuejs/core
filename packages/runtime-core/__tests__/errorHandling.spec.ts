@@ -7,10 +7,11 @@ import {
   watch,
   ref,
   nextTick,
-  mockWarn,
-  defineComponent
+  defineComponent,
+  watchEffect
 } from '@vue/runtime-test'
 import { setErrorRecovery } from '../src/errorHandling'
+import { mockWarn } from '@vue/shared'
 
 describe('error handling', () => {
   mockWarn()
@@ -241,7 +242,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'ref function')
   })
 
-  test('in watch (simple usage)', () => {
+  test('in effect', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -257,7 +258,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
-        watch(() => {
+        watchEffect(() => {
           throw err
         })
         return () => null
@@ -298,7 +299,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher getter')
   })
 
-  test('in watch callback', () => {
+  test('in watch callback', async () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -312,10 +313,11 @@ describe('error handling', () => {
       }
     }
 
+    const count = ref(0)
     const Child = {
       setup() {
         watch(
-          () => 1,
+          () => count.value,
           () => {
             throw err
           }
@@ -325,10 +327,13 @@ describe('error handling', () => {
     }
 
     render(h(Comp), nodeOps.createElement('div'))
+
+    count.value++
+    await nextTick()
     expect(fn).toHaveBeenCalledWith(err, 'watcher callback')
   })
 
-  test('in watch cleanup', async () => {
+  test('in effect cleanup', async () => {
     const err = new Error('foo')
     const count = ref(0)
     const fn = jest.fn()
@@ -345,7 +350,7 @@ describe('error handling', () => {
 
     const Child = {
       setup() {
-        watch(onCleanup => {
+        watchEffect(onCleanup => {
           count.value
           onCleanup(() => {
             throw err
@@ -362,7 +367,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'watcher cleanup function')
   })
 
-  test('in component event handler', () => {
+  test('in component event handler via emit', () => {
     const err = new Error('foo')
     const fn = jest.fn()
 
@@ -389,6 +394,81 @@ describe('error handling', () => {
     }
 
     render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
+  })
+
+  test('in component event handler via emit (async)', async () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () =>
+          h(Child, {
+            async onFoo() {
+              throw err
+            }
+          })
+      }
+    }
+
+    const Child = {
+      props: ['onFoo'],
+      setup(props: any, { emit }: any) {
+        emit('foo')
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    await nextTick()
+    expect(fn).toHaveBeenCalledWith(err, 'component event handler')
+  })
+
+  test('in component event handler via emit (async + array)', async () => {
+    const err = new Error('foo')
+    const fn = jest.fn()
+
+    const res: Promise<any>[] = []
+    const createAsyncHandler = (p: Promise<any>) => () => {
+      res.push(p)
+      return p
+    }
+
+    const Comp = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return true
+        })
+        return () =>
+          h(Child, {
+            onFoo: [
+              createAsyncHandler(Promise.reject(err)),
+              createAsyncHandler(Promise.resolve(1))
+            ]
+          })
+      }
+    }
+
+    const Child = {
+      setup(props: any, { emit }: any) {
+        emit('foo')
+        return () => null
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    try {
+      await Promise.all(res)
+    } catch (e) {
+      expect(e).toBe(err)
+    }
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 

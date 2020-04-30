@@ -5,16 +5,15 @@ import {
   nextTick,
   VNode
 } from '@vue/runtime-core'
-import { createApp, vShow } from '@vue/runtime-dom'
+import { render, vShow } from '@vue/runtime-dom'
 
 const withVShow = (node: VNode, exp: any) =>
   withDirectives(node, [[vShow, exp]])
 
-let app: any, root: any
+let root: any
 
 beforeEach(() => {
-  app = createApp()
-  root = document.createElement('div') as any
+  root = document.createElement('div')
 })
 
 describe('runtime-dom: v-show directive', () => {
@@ -27,7 +26,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
 
@@ -43,7 +42,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
 
@@ -59,7 +58,7 @@ describe('runtime-dom: v-show directive', () => {
         return [withVShow(h('div'), this.value)]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
     const data = root._vnode.component.data
@@ -110,7 +109,7 @@ describe('runtime-dom: v-show directive', () => {
         ]
       }
     })
-    app.mount(component, root)
+    render(h(component), root)
 
     const $div = root.querySelector('div')
     const data = root._vnode.component.data
