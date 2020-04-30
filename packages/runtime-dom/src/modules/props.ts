@@ -31,7 +31,21 @@ export function patchDOMProp(
   if (value === '' && typeof el[key] === 'boolean') {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
-  } else {
+  } else if (isStringAttribute(el.tagName, key)) {
     el[key] = value == null ? '' : value
+  } else {
+    el[key] = value
+  }
+}
+
+function isStringAttribute(tagName: any, key: string) {
+  try {
+    // some dom properties accept '' but not other strings, e.g. <video>.volume
+    document.createElement(tagName)[key] = 'test string'
+    return true
+  } catch (e) {
+    if (e.name !== 'TypeError') throw e
+
+    return false
   }
 }
