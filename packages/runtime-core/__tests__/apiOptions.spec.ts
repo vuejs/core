@@ -426,25 +426,23 @@ describe('api: options', () => {
 
   test('mixins', () => {
     const calls: string[] = []
-    const mixinA = defineComponent({
+    const mixinA = {
       data() {
         return {
           a: 1
         }
       },
-      created() {
+      created(this: any) {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
-        // should not visit other props/data... in one mixin
-        // ????? only test current mixin props/data
-        // expect(this.b).toBe(2)
-        // expect(this.c).toBe(3)
+        expect(this.b).toBe(2)
+        expect(this.c).toBe(3)
       },
       mounted() {
         calls.push('mixinA mounted')
       }
-    })
-    const mixinB = defineComponent({
+    }
+    const mixinB = {
       props: {
         bP: {
           type: String
@@ -455,38 +453,42 @@ describe('api: options', () => {
           b: 2
         }
       },
-      created() {
+      created(this: any) {
         calls.push('mixinB created')
-        // expect(this.a).toBe(1)
+        expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
-        // expect(this.c).toBe(3)
+        expect(this.c).toBe(3)
       },
       mounted() {
         calls.push('mixinB mounted')
       }
-    })
-    const mixinC = defineComponent({
+    }
+    const mixinC = {
       props: ['cP1', 'cP2'],
       data() {
         return {
           c: 3
         }
       },
-      created() {
+      created(this: any) {
         calls.push('mixinC created')
-        // expect(this.a).toBe(1)
-        // expect(this.b).toBe(2)
-        // expect(this.bP).toBeUndefined()
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
+        expect(this.bP).toBeUndefined()
         expect(this.c).toBe(3)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
         calls.push('mixinC mounted')
       }
-    })
+    }
     const Comp = defineComponent({
-      mixins: [mixinA, mixinB, mixinC],
+      mixins: [
+        defineComponent(mixinA),
+        defineComponent(mixinB),
+        defineComponent(mixinC)
+      ],
       data() {
         return {
           z: 4
@@ -523,7 +525,7 @@ describe('api: options', () => {
 
   test('extends', () => {
     const calls: string[] = []
-    const Base = defineComponent({
+    const Base = {
       data() {
         return {
           a: 1
@@ -532,12 +534,14 @@ describe('api: options', () => {
       methods: {
         sayA() {}
       },
-      mounted() {
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
         calls.push('base')
       }
-    })
+    }
     const Comp = defineComponent({
-      extends: Base,
+      extends: defineComponent(Base),
       data() {
         return {
           b: 2
@@ -557,7 +561,7 @@ describe('api: options', () => {
 
   test('extends with mixins', () => {
     const calls: string[] = []
-    const Base = defineComponent({
+    const Base = {
       data() {
         return {
           a: 1
@@ -566,23 +570,29 @@ describe('api: options', () => {
       methods: {
         sayA() {}
       },
-      mounted() {
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBeTruthy()
+        expect(this.c).toBe(2)
         calls.push('base')
       }
-    })
-    const Base2 = defineComponent({
+    }
+    const Base2 = {
       data() {
         return {
           b: true
         }
       },
-      mounted() {
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBeTruthy()
+        expect(this.c).toBe(2)
         calls.push('base2')
       }
-    })
+    }
     const Comp = defineComponent({
-      extends: Base,
-      mixins: [Base2],
+      extends: defineComponent(Base),
+      mixins: [defineComponent(Base2)],
       data() {
         return {
           c: 2
