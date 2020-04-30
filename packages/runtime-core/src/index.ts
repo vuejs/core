@@ -39,7 +39,7 @@ export {
   onErrorCaptured
 } from './apiLifecycle'
 export { provide, inject } from './apiInject'
-export { nextTick, queuePostFlushCb } from './scheduler'
+export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
@@ -78,6 +78,7 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 // For custom renderers
 export { createRenderer, createHydrationRenderer } from './renderer'
+export { queuePostFlushCb } from './scheduler'
 export { warn } from './warning'
 export {
   handleError,
