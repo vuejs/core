@@ -75,4 +75,37 @@ describe('runtime-dom: props patching', () => {
     expect(root.innerHTML).toBe(`<div>bar</div>`)
     expect(fn).toHaveBeenCalled()
   })
+
+  // #1049
+  test('set domProps where string is not accepted', () => {
+    const realCreateElement = document.createElement.bind(document)
+    const spyCreateElement = jest
+      .spyOn(document, 'createElement')
+      .mockImplementation(tagName => {
+        const el = realCreateElement(tagName)
+        let srcObject: any = undefined
+        Object.defineProperty(el, 'srcObject', {
+          enumerable: true,
+          set(v) {
+            if (typeof v === 'string') {
+              throw new TypeError(
+                `Failed to set the 'srcObject' property on 'HTMLMediaElement'`
+              )
+            }
+            srcObject = v
+          },
+          get() {
+            return srcObject
+          }
+        })
+        return el
+      })
+
+    const el = document.createElement('video')
+
+    patchProp(el, 'srcObject', undefined, null)
+
+    expect(el.srcObject).toBeNull()
+    spyCreateElement.mockRestore()
+  })
 })

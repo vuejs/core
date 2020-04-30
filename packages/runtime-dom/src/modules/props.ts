@@ -32,6 +32,11 @@ export function patchDOMProp(
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
   } else {
-    el[key] = value == null ? '' : value
+    try {
+      el[key] = value == null ? '' : value
+    } catch (e) {
+      if (e.name !== 'TypeError') throw e
+      el[key] = value
+    }
   }
 }
