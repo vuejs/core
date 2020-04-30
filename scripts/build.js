@@ -101,12 +101,12 @@ async function build(target) {
     const extractorConfig = ExtractorConfig.loadFileAndPrepare(
       extractorConfigPath
     )
-    const result = Extractor.invoke(extractorConfig, {
+    const extractorResult = Extractor.invoke(extractorConfig, {
       localBuild: true,
       showVerboseMessages: true
     })
 
-    if (result.succeeded) {
+    if (extractorResult.succeeded) {
       // concat additional d.ts to rolled-up dts (mostly for JSX)
       if (pkg.buildOptions && pkg.buildOptions.dts) {
         const dtsPath = path.resolve(pkgDir, pkg.types)
