@@ -89,8 +89,8 @@ function getComponentTrace(): ComponentTraceStack {
         recurseCount: 0
       })
     }
-    const parentInstance: ComponentInternalInstance | null = currentVNode.component!
-      .parent
+    const parentInstance: ComponentInternalInstance | null =
+      currentVNode.component && currentVNode.component.parent
     currentVNode = parentInstance && parentInstance.vnode
   }
 
@@ -108,7 +108,7 @@ function formatTrace(trace: ComponentTraceStack): any[] {
 function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-  const isRoot = vnode.component!.parent == null
+  const isRoot = vnode.component ? vnode.component.parent == null : false
   const open = ` at <${formatComponentName(vnode.type, isRoot)}`
   const close = `>` + postfix
   return vnode.props
