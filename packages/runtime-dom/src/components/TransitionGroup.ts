@@ -132,17 +132,17 @@ const TransitionGroupImpl = {
 }
 
 function getTransitionRawChildren(children: VNode[]): VNode[] {
-  let array: VNode[] = []
-  for (const child of children) {
-    const { type, children } = child
+  let ret: VNode[] = []
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
     // handle fragment children case, e.g. v-for
-    if (type === Fragment) {
-      array = array.concat(getTransitionRawChildren(children as VNode[]))
+    if (child.type === Fragment) {
+      ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
     } else {
-      array.push(child)
+      ret.push(child)
     }
   }
-  return array
+  return ret
 }
 
 // remove mode props as TransitionGroup doesn't support it
