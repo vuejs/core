@@ -477,6 +477,89 @@ describe('with extends', () => {
   expectError(<MyComponent aP1={3} />)
 })
 
+describe('extends with mixins', () => {
+  const Mixin = defineComponent({
+    props: {
+      mP1: {
+        type: String,
+        default: 'mP1'
+      },
+      mP2: Boolean
+    },
+    data() {
+      return {
+        a: 1
+      }
+    }
+  })
+  const Base = defineComponent({
+    props: {
+      p1: Boolean,
+      p2: {
+        type: Number,
+        default: 2
+      }
+    },
+    data() {
+      return {
+        b: 2
+      }
+    },
+    computed: {
+      c(): number {
+        return this.p2 + this.b
+      }
+    }
+  })
+  const MyComponent = defineComponent({
+    extends: Base,
+    mixins: [Mixin],
+    props: {
+      // required should make property non-void
+      z: {
+        type: String,
+        required: true
+      }
+    },
+    render() {
+      const props = this.$props
+      // props
+      expectType<boolean | undefined>(props.p1)
+      expectType<number>(props.p2)
+      expectType<string>(props.z)
+      expectType<string>(props.mP1)
+      expectType<boolean | undefined>(props.mP2)
+
+      const data = this.$data
+      expectType<number>(data.a)
+      expectType<number>(data.b)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<number>(this.b)
+      expectType<boolean | undefined>(this.p1)
+      expectType<number>(this.p2)
+      expectType<string>(this.mP1)
+      expectType<boolean | undefined>(this.mP2)
+
+      // setup context properties should be mutable
+      this.a = 5
+
+      return null
+    }
+  })
+
+  // Test TSX
+  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 p1 p2={1} z={'z'} />)
+
+  // missing required props
+  expectError(<MyComponent />)
+
+  // wrong prop types
+  expectError(<MyComponent p2={'wrong type'} z={'z'} />)
+  expectError(<MyComponent mP1={3} />)
+})
+
 describe('compatibility w/ createApp', () => {
   const comp = defineComponent({})
   createApp(comp).mount('#hello')
