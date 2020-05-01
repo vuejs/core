@@ -7,6 +7,7 @@ import {
   createVNode,
   Text,
   Comment,
+  Static,
   Fragment,
   ssrUtils,
   Slots,
@@ -229,6 +230,9 @@ function ssrCompile(
   return (compileCache[template] = Function('require', code)(require))
 }
 
+// https://www.w3.org/TR/html52/syntax.html#comments
+const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
+
 function renderVNode(
   push: PushFn,
   vnode: VNode,
@@ -237,10 +241,17 @@ function renderVNode(
   const { type, shapeFlag, children } = vnode
   switch (type) {
     case Text:
-      push(children as string)
+      push(escapeHtml(children as string))
       break
     case Comment:
-      push(children ? `<!--${children}-->` : `<!---->`)
+      push(
+        children
+          ? `<!--${(children as string).replace(commentStripRE, '')}-->`
+          : `<!---->`
+      )
+      break
+    case Static:
+      push(children as string)
       break
     case Fragment:
       push(`<!--[-->`) // open

@@ -6,7 +6,9 @@ import {
   resolveComponent,
   ComponentOptions,
   ref,
-  defineComponent
+  defineComponent,
+  createTextVNode,
+  createStaticVNode
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToString, renderComponent } from '../src/renderToString'
@@ -508,6 +510,33 @@ describe('ssr: renderToString', () => {
           )
         )
       ).toBe(`<textarea>${escapeHtml(`<span>hello</span>`)}</textarea>`)
+    })
+  })
+
+  describe('raw vnode types', () => {
+    test('Text', async () => {
+      expect(await renderToString(createTextVNode('hello <div>'))).toBe(
+        `hello &lt;div&gt;`
+      )
+    })
+
+    test('Comment', async () => {
+      // https://www.w3.org/TR/html52/syntax.html#comments
+      expect(
+        await renderToString(
+          h('div', [
+            createCommentVNode('>foo'),
+            createCommentVNode('->foo'),
+            createCommentVNode('<!--foo-->'),
+            createCommentVNode('--!>foo<!-')
+          ])
+        )
+      ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+    })
+
+    test('Static', async () => {
+      const content = `<div id="ok">hello<span>world</span></div>`
+      expect(await renderToString(createStaticVNode(content))).toBe(content)
     })
   })
 
