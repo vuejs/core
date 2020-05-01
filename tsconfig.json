@@ -19,8 +19,7 @@
     "rootDir": ".",
     "paths": {
       "@vue/*": ["packages/*/src"],
-      "vue": ["packages/vue/src"],
-      "@vue/reavitity": ["packages/reactivity/src/index.ts"]
+      "vue": ["packages/vue/src"]
     }
   },
   "include": [
