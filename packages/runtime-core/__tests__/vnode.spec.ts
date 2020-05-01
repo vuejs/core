@@ -199,7 +199,7 @@ describe('vnode', () => {
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
 
-    // #1041 should use reoslved key/ref
+    // #1041 should use resolved key/ref
     expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
     expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
     expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
@@ -359,7 +359,7 @@ describe('vnode', () => {
     // #1039
     // <component :is="foo">{{ bar }}</component>
     // - content is compiled as slot
-    // - dynamic component reoslves to plain element, but as a block
+    // - dynamic component resolves to plain element, but as a block
     // - block creation disables its own tracking, accidentally causing the
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {
