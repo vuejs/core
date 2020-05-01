@@ -118,12 +118,7 @@ export const toDisplayString = (val: unknown): string => {
   if (isArray(val) || (isPlainObject(val) && val.toString === objectToString)) {
     return JSON.stringify(val, null, 2)
   }
-  if (
-    val instanceof Map ||
-    val instanceof Set ||
-    val instanceof WeakMap ||
-    val instanceof WeakSet
-  ) {
+  if (val instanceof Map || val instanceof Set) {
     return JSON.stringify(
       val,
       function replacer(key, value) {
