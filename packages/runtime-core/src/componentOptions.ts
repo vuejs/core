@@ -417,12 +417,14 @@ export function applyOptions(
       for (const key in rawData) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
         // expose data on ctx during dev
-        Object.defineProperty(ctx, key, {
-          configurable: true,
-          enumerable: true,
-          get: () => rawData[key],
-          set: NOOP
-        })
+        if (key[0] !== '$' && key[0] !== '_') {
+          Object.defineProperty(ctx, key, {
+            configurable: true,
+            enumerable: true,
+            get: () => rawData[key],
+            set: NOOP
+          })
+        }
       }
     }
   }

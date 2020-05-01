@@ -195,10 +195,19 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       return globalProperties[key]
     } else if (__DEV__ && currentRenderingInstance) {
-      warn(
-        `Property ${JSON.stringify(key)} was accessed during render ` +
-          `but is not defined on instance.`
-      )
+      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} must be accessed via $data because it starts with a reserved ` +
+            `character and is not proxied on the render context.`
+        )
+      } else {
+        warn(
+          `Property ${JSON.stringify(key)} was accessed during render ` +
+            `but is not defined on instance.`
+        )
+      }
     }
   },
 
@@ -280,7 +289,15 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = {
     return PublicInstanceProxyHandlers.get!(target, key, target)
   },
   has(_: ComponentRenderContext, key: string) {
-    return key[0] !== '_' && !isGloballyWhitelisted(key)
+    const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+    if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
+      warn(
+        `Property ${JSON.stringify(
+          key
+        )} should not start with _ which is a reserved prefix for Vue internals.`
+      )
+    }
+    return has
   }
 }
 
