@@ -121,7 +121,7 @@ describe('reactivity/reactive/Array', () => {
       expect(isRef(raw[1])).toBe(true)
     })
 
-    test('read + indentity', () => {
+    test('read + identity', () => {
       const ref = original[1]
       expect(ref).toBe(toRaw(original)[1])
       expect(original.indexOf(ref)).toBe(1)

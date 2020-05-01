@@ -62,7 +62,7 @@ describe('scheduler', () => {
       const calls: string[] = []
       const job1 = () => {
         calls.push('job1')
-        // job2 will be excuted after job1 at the same tick
+        // job2 will be executed after job1 at the same tick
         queueJob(job2)
       }
       const job2 = () => {
@@ -123,7 +123,7 @@ describe('scheduler', () => {
       const calls: string[] = []
       const cb1 = () => {
         calls.push('cb1')
-        // cb2 will be excuted after cb1 at the same tick
+        // cb2 will be executed after cb1 at the same tick
         queuePostFlushCb(cb2)
       }
       const cb2 = () => {

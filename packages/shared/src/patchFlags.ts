@@ -68,7 +68,7 @@ export const enum PatchFlags {
 
   // Special flags are negative integers. They are never matched against using
   // bitwise operators (bitwise matching should only happen in branches where
-  // patchFlag > 0), and are mutually exclusive. When checking for a speical
+  // patchFlag > 0), and are mutually exclusive. When checking for a special
   // flag, simply check patchFlag === FLAG.
 
   // Indicates a hoisted static vnode. This is a hint for hydration to skip

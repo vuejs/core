@@ -432,7 +432,7 @@ function createSuspenseBoundary(
           handleSetupResult(instance, asyncSetupResult, false)
           if (hydratedEl) {
             // vnode may have been replaced if an update happened before the
-            // async dep is reoslved.
+            // async dep is resolved.
             vnode.el = hydratedEl
           }
           setupRenderEffect(

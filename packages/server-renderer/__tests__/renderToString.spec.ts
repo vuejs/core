@@ -370,7 +370,7 @@ describe('ssr: renderToString', () => {
 
     test('async components', async () => {
       const Child = {
-        // should wait for resovled render context from setup()
+        // should wait for resolved render context from setup()
         async setup() {
           return {
             msg: 'hello'

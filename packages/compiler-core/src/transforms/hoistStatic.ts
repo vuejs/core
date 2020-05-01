@@ -19,7 +19,7 @@ export function hoistStatic(root: RootNode, context: TransformContext) {
     root.children,
     context,
     new Map(),
-    // Root node is unfortuantely non-hoistable due to potential parent
+    // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
     isSingleElementRoot(root, root.children[0])
   )
