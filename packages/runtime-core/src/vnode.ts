@@ -381,6 +381,7 @@ function _createVNode(
     patchFlag !== PatchFlags.HYDRATE_EVENTS &&
     (patchFlag > 0 ||
       shapeFlag & ShapeFlags.SUSPENSE ||
+      shapeFlag & ShapeFlags.TELEPORT ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
   ) {
