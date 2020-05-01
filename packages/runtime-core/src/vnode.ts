@@ -412,7 +412,15 @@ export function cloneVNode<T, U>(
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     shapeFlag: vnode.shapeFlag,
-    patchFlag: vnode.patchFlag,
+    // if the vnode is cloned with extra props, we can no longer assume its
+    // existing patch flag to be reliable and need to bail out of optimized mode.
+    // however we don't want block nodes to de-opt their children, so if the
+    // vnode is a block node, we only add the FULL_PROPS flag to it.
+    patchFlag: extraProps
+      ? vnode.dynamicChildren
+        ? vnode.patchFlag | PatchFlags.FULL_PROPS
+        : PatchFlags.BAIL
+      : vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,

@@ -354,6 +354,11 @@ function baseCreateRenderer(
       n1 = null
     }
 
+    if (n2.patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      n2.dynamicChildren = null
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -1280,9 +1285,6 @@ function baseCreateRenderer(
     const c2 = n2.children
 
     const { patchFlag, shapeFlag } = n2
-    if (patchFlag === PatchFlags.BAIL) {
-      optimized = false
-    }
     // fast path
     if (patchFlag > 0) {
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {

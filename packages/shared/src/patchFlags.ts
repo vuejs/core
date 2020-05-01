@@ -76,9 +76,10 @@ export const enum PatchFlags {
   HOISTED = -1,
 
   // A special flag that indicates that the diffing algorithm should bail out
-  // of optimized mode. This is only on block fragments created by renderSlot()
+  // of optimized mode. For example, on block fragments created by renderSlot()
   // when encountering non-compiler generated slots (i.e. manually written
   // render functions, which should always be fully diffed)
+  // OR manually cloneVNodes
   BAIL = -2
 }
 
