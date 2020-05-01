@@ -139,13 +139,37 @@ export function toRef<T extends object, K extends keyof T>(
 // corner case when use narrows type
 // Ex. type RelativePath = string & { __brand: unknown }
 // RelativePath extends object -> true
-type BaseTypes = string | number | boolean | Node | Window
+type BaseTypes = string | number | boolean
+
+/**
+ * This is a special exported interface for other packages to declare
+ * additional types that should bail out for ref unwrapping. For example
+ * \@vue/runtime-dom can declare it like so in its d.ts:
+ *
+ * ``` ts
+ * declare module '@vue/reactivity' {
+ *   export interface RefUnwrapBailTypes {
+ *     runtimeDOMBailTypes: Node | Window
+ *   }
+ * }
+ * ```
+ *
+ * Note that api-extractor somehow refuses to include `decalre module`
+ * augmentations in its generated d.ts, so we have to manually append them
+ * to the final generated d.ts in our build process.
+ */
+export interface RefUnwrapBailTypes {}
 
 export type UnwrapRef<T> = T extends ComputedRef<infer V>
   ? UnwrapRefSimple<V>
   : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends Function | CollectionTypes | BaseTypes | Ref
+type UnwrapRefSimple<T> = T extends
+  | Function
+  | CollectionTypes
+  | BaseTypes
+  | Ref
+  | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
   : T extends Array<any> ? T : T extends object ? UnwrappedObject<T> : T
 

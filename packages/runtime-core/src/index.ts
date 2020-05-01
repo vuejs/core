@@ -87,6 +87,23 @@ export {
 
 // Types -----------------------------------------------------------------------
 
+import { VNode } from './vnode'
+import { ComponentInternalInstance } from './component'
+
+// Augment Ref unwrap bail types.
+// Note: if updating this, also update `types/refBail.d.ts`.
+declare module '@vue/reactivity' {
+  export interface RefUnwrapBailTypes {
+    runtimeCoreBailTypes:
+      | VNode
+      | {
+          // directly bailing on ComponentPublicInstance results in recursion
+          // so we use this as a bail hint
+          $: ComponentInternalInstance
+        }
+  }
+}
+
 export {
   ReactiveEffect,
   ReactiveEffectOptions,

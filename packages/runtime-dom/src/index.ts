@@ -14,6 +14,13 @@ import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
 
+declare module '@vue/reactivity' {
+  export interface RefUnwrapBailTypes {
+    // Note: if updating this, also update `types/refBail.d.ts`.
+    runtimeDOMBailTypes: Node | Window
+  }
+}
+
 const rendererOptions = {
   patchProp,
   ...nodeOps

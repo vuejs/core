@@ -18,9 +18,6 @@
       "esm-browser",
       "cjs",
       "global"
-    ],
-    "dts": [
-      "jsx.d.ts"
     ]
   },
   "repository": {
