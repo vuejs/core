@@ -201,7 +201,7 @@ export function generate(
 
   // enter render function
   if (genScopeId && !ssr) {
-    push(`const render = _withId(`)
+    push(`const render = /*#__PURE__*/ _withId(`)
   }
   if (!ssr) {
     push(`function render(_ctx, _cache) {`)
@@ -400,7 +400,7 @@ function genModulePreamble(
   }
 
   if (genScopeId) {
-    push(`const _withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    push(`const _withId = /*#__PURE__*/ ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
     newline()
   }
 
@@ -445,6 +445,13 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
 
   hoists.forEach((exp, i) => {
     push(`const _hoisted_${i + 1} = `)
+    // make hosit function calls tree-shakable
+    if (
+      exp.type === NodeTypes.VNODE_CALL ||
+      exp.type === NodeTypes.JS_CALL_EXPRESSION
+    ) {
+      push(`/*#__PURE__*/ `)
+    }
     genNode(exp, context)
     newline()
   })
