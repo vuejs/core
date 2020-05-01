@@ -112,7 +112,7 @@ describe('hot module replacement', () => {
   test('reload', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test3-child'
-    const unmoutSpy = jest.fn()
+    const unmountSpy = jest.fn()
     const mountSpy = jest.fn()
 
     const Child: ComponentOptions = {
@@ -120,7 +120,7 @@ describe('hot module replacement', () => {
       data() {
         return { count: 0 }
       },
-      unmounted: unmoutSpy,
+      unmounted: unmountSpy,
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
     }
     createRecord(childId, Child)
@@ -142,7 +142,7 @@ describe('hot module replacement', () => {
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>`)
-    expect(unmoutSpy).toHaveBeenCalledTimes(1)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 })

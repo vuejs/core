@@ -260,15 +260,15 @@ describe('vnode', () => {
     })
 
     test('handlers', () => {
-      let clickHander1 = function() {}
-      let clickHander2 = function() {}
-      let focusHander2 = function() {}
+      let clickHandler1 = function() {}
+      let clickHandler2 = function() {}
+      let focusHandler2 = function() {}
 
-      let props1: Data = { onClick: clickHander1 }
-      let props2: Data = { onClick: clickHander2, onFocus: focusHander2 }
+      let props1: Data = { onClick: clickHandler1 }
+      let props2: Data = { onClick: clickHandler2, onFocus: focusHandler2 }
       expect(mergeProps(props1, props2)).toMatchObject({
-        onClick: [clickHander1, clickHander2],
-        onFocus: focusHander2
+        onClick: [clickHandler1, clickHandler2],
+        onFocus: focusHandler2
       })
     })
 
