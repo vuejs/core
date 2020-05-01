@@ -114,11 +114,38 @@ export const hasChanged = (value: any, oldValue: any): boolean =>
 
 // For converting {{ interpolation }} values to displayed strings.
 export const toDisplayString = (val: unknown): string => {
-  return val == null
-    ? ''
-    : isArray(val) || (isPlainObject(val) && val.toString === objectToString)
-      ? JSON.stringify(val, null, 2)
-      : String(val)
+  if (val == null) return ''
+  if (isArray(val) || (isPlainObject(val) && val.toString === objectToString)) {
+    return JSON.stringify(val, null, 2)
+  }
+  if (
+    val instanceof Map ||
+    val instanceof Set ||
+    val instanceof WeakMap ||
+    val instanceof WeakSet
+  ) {
+    return JSON.stringify(
+      val,
+      function replacer(key, value) {
+        const originalObject = this[key]
+        if (originalObject instanceof Map) {
+          return {
+            dataType: 'Map',
+            value: Array.from(originalObject.entries())
+          }
+        }
+        if (originalObject instanceof Set) {
+          return {
+            dataType: 'Set',
+            value: Array.from(originalObject.values())
+          }
+        }
+        return value
+      },
+      2
+    )
+  }
+  return String(val)
 }
 
 export const invokeArrayFns = (fns: Function[], arg?: any) => {
