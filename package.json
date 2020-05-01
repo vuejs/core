@@ -71,7 +71,7 @@
     "serve": "^11.3.0",
     "ts-jest": "^25.2.1",
     "tsd": "^0.11.0",
-    "typescript": "^3.8.3",
+    "typescript": "^3.9.1-rc",
     "yorkie": "^2.0.0"
   }
 }
