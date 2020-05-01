@@ -47,11 +47,28 @@ import { startMeasure, endMeasure } from './profiling'
 
 export type Data = { [key: string]: unknown }
 
+// Note: can't mark this whole interface internal because some public interfaces
+// extend it.
 export interface SFCInternalOptions {
+  /**
+   * @internal
+   */
   __scopeId?: string
+  /**
+   * @internal
+   */
   __cssModules?: Data
+  /**
+   * @internal
+   */
   __hmrId?: string
+  /**
+   * @internal
+   */
   __hmrUpdated?: boolean
+  /**
+   * This one should be exposed so that devtools can make use of it
+   */
   __file?: string
 }
 
@@ -59,6 +76,7 @@ export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions = Record<string, any>
 > extends SFCInternalOptions {
+  // use of any here is intentional so it can be a valid JSX Element constructor
   (props: P, ctx: SetupContext<E>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
@@ -105,7 +123,10 @@ export interface SetupContext<E = ObjectEmitsOptions> {
   emit: EmitFn<E>
 }
 
-export type RenderFunction = {
+/**
+ * @internal
+ */
+export type InternalRenderFunction = {
   (
     ctx: ComponentPublicInstance,
     cache: ComponentInternalInstance['renderCache']
@@ -113,39 +134,89 @@ export type RenderFunction = {
   _rc?: boolean // isRuntimeCompiled
 }
 
+/**
+ * We expose a subset of properties on the internal instance as they are
+ * useful for advanced external libraries and tools.
+ */
 export interface ComponentInternalInstance {
   uid: number
   type: Component
   parent: ComponentInternalInstance | null
-  appContext: AppContext
   root: ComponentInternalInstance
+  appContext: AppContext
+  /**
+   * Vnode representing this component in its parent's vdom tree
+   */
   vnode: VNode
+  /**
+   * The pending new vnode from parent updates
+   * @internal
+   */
   next: VNode | null
+  /**
+   * Root vnode of this component's own vdom tree
+   */
   subTree: VNode
+  /**
+   * The reactive effect for rendering and patching the component. Callable.
+   */
   update: ReactiveEffect
-  render: RenderFunction | null
-  effects: ReactiveEffect[] | null
+  /**
+   * The render function that returns vdom tree.
+   * @internal
+   */
+  render: InternalRenderFunction | null
+  /**
+   * Object containing values this component provides for its descendents
+   * @internal
+   */
   provides: Data
-  // cache for proxy access type to avoid hasOwnProperty calls
+  /**
+   * Tracking reactive effects (e.g. watchers) associated with this component
+   * so that they can be automatically stopped on component unmount
+   * @internal
+   */
+  effects: ReactiveEffect[] | null
+  /**
+   * cache for proxy access type to avoid hasOwnProperty calls
+   * @internal
+   */
   accessCache: Data | null
-  // cache for render function values that rely on _ctx but won't need updates
-  // after initialized (e.g. inline handlers)
+  /**
+   * cache for render function values that rely on _ctx but won't need updates
+   * after initialized (e.g. inline handlers)
+   * @internal
+   */
   renderCache: (Function | VNode)[]
 
-  // assets for fast resolution
+  /**
+   * Asset hashes that prototypally inherits app-level asset hashes for fast
+   * resolution
+   * @internal
+   */
   components: Record<string, Component>
+  /**
+   * @internal
+   */
   directives: Record<string, Directive>
 
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
   proxy: ComponentPublicInstance | null
-  // alternative proxy used only for runtime-compiled render functions using
-  // `with` block
+
+  /**
+   * alternative proxy used only for runtime-compiled render functions using
+   * `with` block
+   * @internal
+   */
   withProxy: ComponentPublicInstance | null
-  // This is the target for the public instance proxy. It also holds properties
-  // injected by user options (computed, methods etc.) and user-attached
-  // custom properties (via `this.x = ...`)
+  /**
+   * This is the target for the public instance proxy. It also holds properties
+   * injected by user options (computed, methods etc.) and user-attached
+   * custom properties (via `this.x = ...`)
+   * @internal
+   */
   ctx: Data
 
   // internal state
@@ -156,34 +227,91 @@ export interface ComponentInternalInstance {
   refs: Data
   emit: EmitFn
 
-  // setup
+  /**
+   * setup related
+   * @internal
+   */
   setupState: Data
+  /**
+   * @internal
+   */
   setupContext: SetupContext | null
 
-  // suspense related
+  /**
+   * suspense related
+   * @internal
+   */
   suspense: SuspenseBoundary | null
+  /**
+   * @internal
+   */
   asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
   asyncResolved: boolean
 
   // lifecycle
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
+  /**
+   * @internal
+   */
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.CREATED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.MOUNTED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.UPDATED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.UNMOUNTED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.ACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.DEACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
 
-  // hmr marker (dev only)
+  /**
+   * hmr marker (dev only)
+   * @internal
+   */
   renderUpdated?: boolean
 }
 
@@ -386,7 +514,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    instance.render = setupResult as RenderFunction
+    instance.render = setupResult as InternalRenderFunction
   } else if (isObject(setupResult)) {
     if (__DEV__ && isVNode(setupResult)) {
       warn(
@@ -413,7 +541,7 @@ export function handleSetupResult(
 type CompileFunction = (
   template: string | object,
   options?: CompilerOptions
-) => RenderFunction
+) => InternalRenderFunction
 
 let compile: CompileFunction | undefined
 
@@ -435,7 +563,7 @@ function finishComponentSetup(
   // template / render function normalization
   if (__NODE_JS__ && isSSR) {
     if (Component.render) {
-      instance.render = Component.render as RenderFunction
+      instance.render = Component.render as InternalRenderFunction
     }
   } else if (!instance.render) {
     if (compile && Component.template && !Component.render) {
@@ -449,7 +577,7 @@ function finishComponentSetup(
         endMeasure(instance, `compile`)
       }
       // mark the function as runtime compiled
-      ;(Component.render as RenderFunction)._rc = true
+      ;(Component.render as InternalRenderFunction)._rc = true
     }
 
     if (__DEV__ && !Component.render) {
@@ -471,7 +599,7 @@ function finishComponentSetup(
       }
     }
 
-    instance.render = (Component.render || NOOP) as RenderFunction
+    instance.render = (Component.render || NOOP) as InternalRenderFunction
 
     // for runtime-compiled render functions using `with` blocks, the render
     // proxy used needs a different `has` handler which is more performant and

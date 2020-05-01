@@ -1,6 +1,6 @@
 import { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
-import { ComponentOptions, RenderFunction } from '../src/component'
+import { ComponentOptions, InternalRenderFunction } from '../src/component'
 import {
   render,
   nodeOps,
@@ -18,7 +18,9 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 
 function compileToFunction(template: string) {
   const { code } = baseCompile(template)
-  const render = new Function('Vue', code)(runtimeTest) as RenderFunction
+  const render = new Function('Vue', code)(
+    runtimeTest
+  ) as InternalRenderFunction
   render._rc = true // isRuntimeCompiled
   return render
 }

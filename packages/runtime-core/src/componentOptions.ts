@@ -2,7 +2,6 @@ import {
   ComponentInternalInstance,
   Data,
   SetupContext,
-  RenderFunction,
   SFCInternalOptions,
   PublicAPIComponent,
   Component
@@ -51,6 +50,7 @@ import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
 import { ComponentPublicInstance } from './componentProxy'
 import { warn } from './warning'
+import { VNodeChild } from './vnode'
 
 /**
  * Interface for declaring custom options.
@@ -69,6 +69,8 @@ import { warn } from './warning'
  * ```
  */
 export interface ComponentCustomOptions {}
+
+export type RenderFunction = () => VNodeChild
 
 export interface ComponentOptionsBase<
   Props,
@@ -95,13 +97,6 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
-  // not user facing, so the typing is lax and for test only.
-  ssrRender?: (
-    ctx: any,
-    push: (item: any) => void,
-    parentInstance: ComponentInternalInstance
-  ) => void
   components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
@@ -109,10 +104,33 @@ export interface ComponentOptionsBase<
 
   // Internal ------------------------------------------------------------------
 
-  // marker for AsyncComponentWrapper
+  /**
+   * SSR only. This is produced by compiler-ssr and attached in compiler-sfc
+   * not user facing, so the typing is lax and for test only.
+   *
+   * @internal
+   */
+  ssrRender?: (
+    ctx: any,
+    push: (item: any) => void,
+    parentInstance: ComponentInternalInstance
+  ) => void
+
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
   __asyncLoader?: () => Promise<Component>
-  // cache for merged $options
+  /**
+   * cache for merged $options
+   * @internal
+   */
   __merged?: ComponentOptions
+
+  // Type differentiators ------------------------------------------------------
+
+  // Note these are internal but need to be exposed in d.ts for type inference
+  // to work!
 
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by defineComponent() or FunctionalComponent

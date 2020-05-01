@@ -1,7 +1,7 @@
 import {
   ComponentInternalInstance,
   ComponentOptions,
-  RenderFunction
+  InternalRenderFunction
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 
@@ -65,14 +65,14 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
   return true
 }
 
-function rerender(id: string, newRender?: RenderFunction) {
+function rerender(id: string, newRender?: Function) {
   const record = map.get(id)
   if (!record) return
   // Array.from creates a snapshot which avoids the set being mutated during
   // updates
   Array.from(record.instances).forEach(instance => {
     if (newRender) {
-      instance.render = newRender
+      instance.render = newRender as InternalRenderFunction
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update

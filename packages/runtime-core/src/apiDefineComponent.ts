@@ -3,9 +3,10 @@ import {
   MethodOptions,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps
+  ComponentOptionsWithObjectProps,
+  RenderFunction
 } from './componentOptions'
-import { SetupContext, RenderFunction, FunctionalComponent } from './component'
+import { SetupContext, FunctionalComponent } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'

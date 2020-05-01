@@ -82,12 +82,17 @@ export interface VNodeProps {
   onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 
-type VNodeChildAtom = VNode | string | number | boolean | null | void
+type VNodeChildAtom =
+  | VNode
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | void
 
-export interface VNodeArrayChildren<
-  HostNode = RendererNode,
-  HostElement = RendererElement
-> extends Array<VNodeArrayChildren | VNodeChildAtom> {}
+export interface VNodeArrayChildren
+  extends Array<VNodeArrayChildren | VNodeChildAtom> {}
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
@@ -134,17 +139,22 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
 const blockStack: (VNode[] | null)[] = []
 let currentBlock: VNode[] | null = null
 
-// Open a block.
-// This must be called before `createBlock`. It cannot be part of `createBlock`
-// because the children of the block are evaluated before `createBlock` itself
-// is called. The generated code typically looks like this:
-//
-//   function render() {
-//     return (openBlock(),createBlock('div', null, [...]))
-//   }
-//
-// disableTracking is true when creating a fragment block, since a fragment
-// always diffs its children.
+/**
+ * Open a block.
+ * This must be called before `createBlock`. It cannot be part of `createBlock`
+ * because the children of the block are evaluated before `createBlock` itself
+ * is called. The generated code typically looks like this:
+ *
+ * ```js
+ * function render() {
+ *   return (openBlock(),createBlock('div', null, [...]))
+ * }
+ * ```
+ * disableTracking is true when creating a fragment block, since a fragment
+ * always diffs its children.
+ *
+ * @internal
+ */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
@@ -168,15 +178,20 @@ let shouldTrack = 1
  *   _cache[1]
  * )
  * ```
+ *
  * @internal
  */
 export function setBlockTracking(value: number) {
   shouldTrack += value
 }
 
-// Create a block root vnode. Takes the same exact arguments as `createVNode`.
-// A block root keeps track of dynamic nodes within the block in the
-// `dynamicChildren` array.
+/**
+ * Create a block root vnode. Takes the same exact arguments as `createVNode`.
+ * A block root keeps track of dynamic nodes within the block in the
+ * `dynamicChildren` array.
+ *
+ * @internal
+ */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
   props?: { [key: string]: any } | null,
