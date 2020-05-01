@@ -3,7 +3,7 @@ import { compile } from '../src'
 describe('ssr: components', () => {
   test('basic', () => {
     expect(compile(`<foo id="a" :prop="b" />`).code).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
+      "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
@@ -20,7 +20,7 @@ describe('ssr: components', () => {
   test('dynamic component', () => {
     expect(compile(`<component is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx } = require(\\"vue\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
@@ -30,7 +30,7 @@ describe('ssr: components', () => {
 
     expect(compile(`<component :is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent, withCtx: _withCtx } = require(\\"vue\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent) {
@@ -285,7 +285,7 @@ describe('ssr: components', () => {
 
       expect(compile(`<keep-alive><foo/></keep-alive>`).code)
         .toMatchInlineSnapshot(`
-        "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
+        "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
         return function ssrRender(_ctx, _push, _parent) {

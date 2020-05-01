@@ -14,6 +14,8 @@ import {
 } from './templateTransformAssetUrl'
 import { transformSrcset } from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
+import * as CompilerDOM from '@vue/compiler-dom'
+import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
 
 export interface TemplateCompiler {
@@ -38,6 +40,7 @@ export interface SFCTemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
+  preprocessCustomRequire?: (id: string) => any
   transformAssetUrls?: AssetURLOptions | boolean
 }
 
@@ -66,9 +69,25 @@ function preprocess(
 export function compileTemplate(
   options: SFCTemplateCompileOptions
 ): SFCTemplateCompileResults {
-  const { preprocessLang } = options
-  const preprocessor =
-    preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
+  const { preprocessLang, preprocessCustomRequire } = options
+
+  if (
+    (__ESM_BROWSER__ || __GLOBAL__) &&
+    preprocessLang &&
+    !preprocessCustomRequire
+  ) {
+    throw new Error(
+      `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
+        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
+        `version of the preprocessor in the shape of { render(): string }.`
+    )
+  }
+
+  const preprocessor = preprocessLang
+    ? preprocessCustomRequire
+      ? preprocessCustomRequire(preprocessLang)
+      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+    : false
   if (preprocessor) {
     try {
       return doCompileTemplate({
@@ -108,7 +127,7 @@ function doCompileTemplate({
   inMap,
   source,
   ssr = false,
-  compiler = ssr ? require('@vue/compiler-ssr') : require('@vue/compiler-dom'),
+  compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {

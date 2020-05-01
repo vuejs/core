@@ -42,7 +42,7 @@ export interface DebuggerEventExtraInfo {
 }
 
 const effectStack: ReactiveEffect[] = []
-export let activeEffect: ReactiveEffect | undefined
+let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')

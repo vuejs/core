@@ -6,9 +6,9 @@ import {
   TextModes
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
-import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
+import * as CompilerDOM from '@vue/compiler-dom'
 
 export interface SFCParseOptions {
   filename?: string
@@ -57,7 +57,13 @@ export interface SFCParseResult {
 }
 
 const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC = new LRUCache<string, SFCParseResult>(SFC_CACHE_MAX_SIZE)
+const sourceToSFC =
+  __GLOBAL__ || __ESM_BROWSER__
+    ? new Map<string, SFCParseResult>()
+    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
+        string,
+        SFCParseResult
+      >)
 
 export function parse(
   source: string,
@@ -66,7 +72,7 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = require('@vue/compiler-dom')
+    compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =

@@ -1,31 +1,46 @@
 import { VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
 
-// v-for string
+/**
+ * v-for string
+ * @internal
+ */
 export function renderList(
   source: string,
   renderItem: (value: string, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for number
+/**
+ * v-for number
+ * @internal
+ */
 export function renderList(
   source: number,
   renderItem: (value: number, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for array
+/**
+ * v-for array
+ * @internal
+ */
 export function renderList<T>(
   source: T[],
   renderItem: (value: T, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for iterable
+/**
+ * v-for iterable
+ * @internal
+ */
 export function renderList<T>(
   source: Iterable<T>,
   renderItem: (value: T, index: number) => VNodeChild
 ): VNodeChild[]
 
-// v-for object
+/**
+ * v-for object
+ * @internal
+ */
 export function renderList<T>(
   source: T,
   renderItem: <K extends keyof T>(

@@ -31,7 +31,6 @@ import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
-  loadDep,
   toValidAssetId
 } from './utils'
 import { isString, isArray, isSymbol } from '@vue/shared'
@@ -167,7 +166,7 @@ function createCodegenContext(
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
-    context.map = new (loadDep('source-map')).SourceMapGenerator()
+    context.map = new SourceMapGenerator()
     context.map!.setSourceContent(filename, context.source)
   }
 

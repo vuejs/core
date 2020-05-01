@@ -102,8 +102,8 @@ export function createHydrationFunctions(
           __DEV__ &&
             warn(
               `Hydration text mismatch:` +
-                `\n- Client: ${JSON.stringify(vnode.children)}`,
-              `\n- Server: ${JSON.stringify((node as Text).data)}`
+                `\n- Client: ${JSON.stringify((node as Text).data)}` +
+                `\n- Server: ${JSON.stringify(vnode.children)}`
             )
           ;(node as Text).data = vnode.children as string
         }

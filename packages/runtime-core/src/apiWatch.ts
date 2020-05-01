@@ -54,26 +54,26 @@ type MapOldSources<T, Immediate> = {
 
 type InvalidateCbRegistrator = (cb: () => void) => void
 
-export interface BaseWatchOptions {
+export interface WatchOptionsBase {
   flush?: 'pre' | 'post' | 'sync'
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
-export interface WatchOptions<Immediate = boolean> extends BaseWatchOptions {
+export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
   deep?: boolean
 }
 
-export type StopHandle = () => void
+export type WatchStopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: BaseWatchOptions
-): StopHandle {
+  options?: WatchOptionsBase
+): WatchStopHandle {
   return doWatch(effect, null, options)
 }
 
@@ -85,7 +85,7 @@ export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
-): StopHandle
+): WatchStopHandle
 
 // overload #2: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
@@ -98,14 +98,14 @@ export function watch<
   sources: T,
   cb: WatchCallback<MapSources<T>, MapOldSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
-): StopHandle
+): WatchStopHandle
 
 // implementation
 export function watch<T = any>(
   source: WatchSource<T> | WatchSource<T>[],
   cb: WatchCallback<T>,
   options?: WatchOptions
-): StopHandle {
+): WatchStopHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -120,7 +120,7 @@ function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
-): StopHandle {
+): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -274,7 +274,7 @@ export function instanceWatch(
   source: string | Function,
   cb: Function,
   options?: WatchOptions
-): StopHandle {
+): WatchStopHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)
     ? () => publicThis[source]

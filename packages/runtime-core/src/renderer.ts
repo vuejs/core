@@ -115,6 +115,7 @@ export interface RendererOptions<
     anchor: HostNode | null,
     isSVG: boolean
   ): HostElement
+  setStaticContent?(node: HostElement, content: string): void
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -330,7 +331,8 @@ function baseCreateRenderer(
     nextSibling: hostNextSibling,
     setScopeId: hostSetScopeId = NOOP,
     cloneNode: hostCloneNode,
-    insertStaticContent: hostInsertStaticContent
+    insertStaticContent: hostInsertStaticContent,
+    setStaticContent: hostSetStaticContent
   } = options
 
   // Note: functions inside this closure should use `const xxx = () => {}`
@@ -363,7 +365,13 @@ function baseCreateRenderer(
       case Static:
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, isSVG)
-        } // static nodes are noop on patch
+        } else if (__DEV__) {
+          // static nodes are only patched during dev for HMR
+          n2.el = n1.el
+          if (n2.children !== n1.children) {
+            hostSetStaticContent!(n2.el!, n2.children as string)
+          }
+        }
         break
       case Fragment:
         processFragment(
@@ -1705,6 +1713,7 @@ function baseCreateRenderer(
   ) => {
     const { props, ref, children, dynamicChildren, shapeFlag, dirs } = vnode
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    const shouldKeepAlive = shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     let vnodeHook: VNodeHook | undefined | null
 
     // unset ref
@@ -1712,12 +1721,12 @@ function baseCreateRenderer(
       setRef(ref, null, parentComponent, null)
     }
 
-    if ((vnodeHook = props && props.onVnodeBeforeUnmount)) {
+    if ((vnodeHook = props && props.onVnodeBeforeUnmount) && !shouldKeepAlive) {
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      if (shouldKeepAlive) {
         ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       } else {
         unmountComponent(vnode.component!, parentSuspense, doRemove)
@@ -1749,7 +1758,10 @@ function baseCreateRenderer(
       }
     }
 
-    if ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) {
+    if (
+      ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) &&
+      !shouldKeepAlive
+    ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&

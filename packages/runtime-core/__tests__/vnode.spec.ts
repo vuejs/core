@@ -198,6 +198,24 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+
+    // #1041 should use reoslved key/ref
+    expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
+    expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
+    expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
+
+    // ref normalizes to [currentRenderingInstance, ref]
+    expect(cloneVNode(createVNode('div', { ref: 'foo' })).ref).toEqual([
+      null,
+      'foo'
+    ])
+    expect(
+      cloneVNode(createVNode('div', { ref: 'foo' }), { ref: 'bar' }).ref
+    ).toEqual([null, 'bar'])
+    expect(cloneVNode(createVNode('div'), { ref: 'bar' }).ref).toEqual([
+      null,
+      'bar'
+    ])
   })
 
   describe('mergeProps', () => {
@@ -335,6 +353,27 @@ describe('vnode', () => {
         hoist,
         (vnode1 = createVNode(() => {}, null, 'text'))
       ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    // #1039
+    // <component :is="foo">{{ bar }}</component>
+    // - content is compiled as slot
+    // - dynamic component reoslves to plain element, but as a block
+    // - block creation disables its own tracking, accidentally causing the
+    //   slot content (called during the block node creation) to be missed
+    test('element block should track normalized slot children', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, {
+        default: () => {
+          return [
+            hoist,
+            (vnode1 = createVNode('div', null, 'text', PatchFlags.TEXT))
+          ]
+        }
+      }))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
   })

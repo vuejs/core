@@ -7,15 +7,24 @@ import { withCtx } from './withRenderContext'
 export let currentScopeId: string | null = null
 const scopeIdStack: string[] = []
 
+/**
+ * @internal
+ */
 export function pushScopeId(id: string) {
   scopeIdStack.push((currentScopeId = id))
 }
 
+/**
+ * @internal
+ */
 export function popScopeId() {
   scopeIdStack.pop()
   currentScopeId = scopeIdStack[scopeIdStack.length - 1] || null
 }
 
+/**
+ * @internal
+ */
 export function withScopeId(id: string): <T extends Function>(fn: T) => T {
   return ((fn: Function) =>
     withCtx(function(this: any) {

@@ -31,6 +31,7 @@ import { currentScopeId } from './helpers/scopeId'
 import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
+import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -154,15 +155,21 @@ export function openBlock(disableTracking = false) {
 // incremented/decremented by nested usage of v-once (see below)
 let shouldTrack = 1
 
-// Block tracking sometimes needs to be disabled, for example during the
-// creation of a tree that needs to be cached by v-once. The compiler generates
-// code like this:
-//   _cache[1] || (
-//     setBlockTracking(-1),
-//     _cache[1] = createVNode(...),
-//     setBlockTracking(1),
-//     _cache[1]
-//   )
+/**
+ * Block tracking sometimes needs to be disabled, for example during the
+ * creation of a tree that needs to be cached by v-once. The compiler generates
+ * code like this:
+ *
+ * ``` js
+ * _cache[1] || (
+ *   setBlockTracking(-1),
+ *   _cache[1] = createVNode(...),
+ *   setBlockTracking(1),
+ *   _cache[1]
+ * )
+ * ```
+ * @internal
+ */
 export function setBlockTracking(value: number) {
   shouldTrack += value
 }
@@ -177,10 +184,14 @@ export function createBlock(
   patchFlag?: number,
   dynamicProps?: string[]
 ): VNode {
-  // avoid a block with patchFlag tracking itself
-  shouldTrack--
-  const vnode = createVNode(type, props, children, patchFlag, dynamicProps)
-  shouldTrack++
+  const vnode = createVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    true /* isBlock: prevent a block from tracking itself */
+  )
   // save current block children on the block vnode
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // close block
@@ -217,8 +228,11 @@ let vnodeArgsTransformer:
     ) => Parameters<typeof _createVNode>)
   | undefined
 
-// Internal API for registering an arguments transform for createVNode
-// used for creating stubs in the test-utils
+/**
+ * Internal API for registering an arguments transform for createVNode
+ * used for creating stubs in the test-utils
+ * @internal
+ */
 export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
   vnodeArgsTransformer = transformer
 }
@@ -235,19 +249,30 @@ const createVNodeWithArgsTransform = (
 
 export const InternalObjectKey = `__vInternal`
 
+const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
+  key != null ? key : null
+
+const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
+  (ref != null
+    ? isArray(ref)
+      ? ref
+      : [currentRenderingInstance!, ref]
+    : null) as any
+
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
 
 function _createVNode(
-  type: VNodeTypes | ClassComponent,
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
-  dynamicProps: string[] | null = null
+  dynamicProps: string[] | null = null,
+  isBlockNode = false
 ): VNode {
-  if (!type) {
-    if (__DEV__) {
+  if (!type || type === NULL_DYNAMIC_COMPONENT) {
+    if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment
@@ -307,11 +332,8 @@ function _createVNode(
     _isVNode: true,
     type,
     props,
-    key: props && props.key !== undefined ? props.key : null,
-    ref:
-      props && props.ref !== undefined
-        ? [currentRenderingInstance!, props.ref]
-        : null,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     children: null,
     component: null,
@@ -337,6 +359,7 @@ function _createVNode(
   // the next vnode so that it can be properly unmounted later.
   if (
     shouldTrack > 0 &&
+    !isBlockNode &&
     currentBlock &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
@@ -356,18 +379,19 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps
 ): VNode<T, U> {
+  const props = (extraProps
+    ? vnode.props
+      ? mergeProps(vnode.props, extraProps)
+      : extend({}, extraProps)
+    : vnode.props) as any
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
     _isVNode: true,
     type: vnode.type,
-    props: extraProps
-      ? vnode.props
-        ? mergeProps(vnode.props, extraProps)
-        : extend({}, extraProps)
-      : vnode.props,
-    key: vnode.key,
-    ref: vnode.ref,
+    props,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
@@ -391,14 +415,23 @@ export function cloneVNode<T, U>(
   }
 }
 
+/**
+ * @internal
+ */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
+/**
+ * @internal
+ */
 export function createStaticVNode(content: string): VNode {
   return createVNode(Static, null, content)
 }
 
+/**
+ * @internal
+ */
 export function createCommentVNode(
   text: string = '',
   // when used as the v-else branch, the comment node must be created as a

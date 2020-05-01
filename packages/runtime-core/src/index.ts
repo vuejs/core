@@ -16,6 +16,7 @@ export {
   isReadonly,
   // advanced
   customRef,
+  triggerRef,
   shallowRef,
   shallowReactive,
   shallowReadonly,
@@ -73,10 +74,10 @@ export { useCSSModule } from './helpers/useCssModule'
 // SSR context
 export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
-// Internal API ----------------------------------------------------------------
+// Custom Renderer API ---------------------------------------------------------
 
-// For custom renderers
 export { createRenderer, createHydrationRenderer } from './renderer'
+export { queuePostFlushCb } from './scheduler'
 export { warn } from './warning'
 export {
   handleError,
@@ -90,57 +91,6 @@ export {
   setTransitionHooks
 } from './components/BaseTransition'
 
-// For compiler generated code
-// should sync with '@vue/compiler-core/src/runtimeConstants.ts'
-export { withCtx } from './helpers/withRenderContext'
-export { withDirectives } from './directives'
-export {
-  resolveComponent,
-  resolveDirective,
-  resolveDynamicComponent
-} from './helpers/resolveAssets'
-export { renderList } from './helpers/renderList'
-export { toHandlers } from './helpers/toHandlers'
-export { renderSlot } from './helpers/renderSlot'
-export { createSlots } from './helpers/createSlots'
-export { pushScopeId, popScopeId, withScopeId } from './helpers/scopeId'
-export {
-  setBlockTracking,
-  createTextVNode,
-  createCommentVNode,
-  createStaticVNode
-} from './vnode'
-export { toDisplayString, camelize } from '@vue/shared'
-
-// For integration with runtime compiler
-export { registerRuntimeCompiler } from './component'
-
-// For test-utils
-export { transformVNodeArgs } from './vnode'
-
-// SSR -------------------------------------------------------------------------
-
-import { createComponentInstance, setupComponent } from './component'
-import {
-  renderComponentRoot,
-  setCurrentRenderingInstance
-} from './componentRenderUtils'
-import { isVNode, normalizeVNode } from './vnode'
-import { normalizeSuspenseChildren } from './components/Suspense'
-
-// SSR utils are only exposed in cjs builds.
-const _ssrUtils = {
-  createComponentInstance,
-  setupComponent,
-  renderComponentRoot,
-  setCurrentRenderingInstance,
-  isVNode,
-  normalizeVNode,
-  normalizeSuspenseChildren
-}
-
-export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils
-
 // Types -----------------------------------------------------------------------
 
 export {
@@ -152,16 +102,17 @@ export {
   Ref,
   ComputedRef,
   UnwrapRef,
-  WritableComputedOptions
+  WritableComputedOptions,
+  ToRefs
 } from '@vue/reactivity'
 export {
   // types
   WatchEffect,
-  BaseWatchOptions,
   WatchOptions,
+  WatchOptionsBase,
   WatchCallback,
   WatchSource,
-  StopHandle
+  WatchStopHandle
 } from './apiWatch'
 export { InjectionKey } from './apiInject'
 export {
@@ -191,7 +142,8 @@ export {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithArrayProps,
-  ComponentCustomOptions
+  ComponentCustomOptions,
+  ComponentOptionsBase
 } from './componentOptions'
 export {
   ComponentPublicInstance,
@@ -229,3 +181,63 @@ export {
   AsyncComponentLoader
 } from './apiAsyncComponent'
 export { HMRRuntime } from './hmr'
+
+// Internal API ----------------------------------------------------------------
+
+// **IMPORTANT** Internal APIs may change without notice between versions and
+// user code should avoid relying on them.
+
+// For compiler generated code
+// should sync with '@vue/compiler-core/src/runtimeConstants.ts'
+export { withCtx } from './helpers/withRenderContext'
+export { withDirectives } from './directives'
+export {
+  resolveComponent,
+  resolveDirective,
+  resolveDynamicComponent
+} from './helpers/resolveAssets'
+export { renderList } from './helpers/renderList'
+export { toHandlers } from './helpers/toHandlers'
+export { renderSlot } from './helpers/renderSlot'
+export { createSlots } from './helpers/createSlots'
+export { pushScopeId, popScopeId, withScopeId } from './helpers/scopeId'
+export {
+  setBlockTracking,
+  createTextVNode,
+  createCommentVNode,
+  createStaticVNode
+} from './vnode'
+export { toDisplayString, camelize } from '@vue/shared'
+// For integration with runtime compiler
+export { registerRuntimeCompiler } from './component'
+// For test-utils
+export { transformVNodeArgs } from './vnode'
+
+// SSR -------------------------------------------------------------------------
+
+// **IMPORTANT** These APIs are exposed solely for @vue/server-renderer and may
+// change without notice between versions. User code should never rely on them.
+
+import { createComponentInstance, setupComponent } from './component'
+import {
+  renderComponentRoot,
+  setCurrentRenderingInstance
+} from './componentRenderUtils'
+import { isVNode, normalizeVNode } from './vnode'
+import { normalizeSuspenseChildren } from './components/Suspense'
+
+const _ssrUtils = {
+  createComponentInstance,
+  setupComponent,
+  renderComponentRoot,
+  setCurrentRenderingInstance,
+  isVNode,
+  normalizeVNode,
+  normalizeSuspenseChildren
+}
+
+/**
+ * SSR utils for \@vue/server-renderer. Only exposed in cjs builds.
+ * @internal
+ */
+export const ssrUtils = (__NODE_JS__ ? _ssrUtils : null) as typeof _ssrUtils

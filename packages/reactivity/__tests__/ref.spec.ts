@@ -9,7 +9,7 @@ import {
   isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { shallowRef, unref, customRef } from '../src/ref'
+import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -22,11 +22,19 @@ describe('reactivity/ref', () => {
   it('should be reactive', () => {
     const a = ref(1)
     let dummy
+    let calls = 0
     effect(() => {
+      calls++
       dummy = a.value
     })
+    expect(calls).toBe(1)
     expect(dummy).toBe(1)
     a.value = 2
+    expect(calls).toBe(2)
+    expect(dummy).toBe(2)
+    // same value should not trigger
+    a.value = 2
+    expect(calls).toBe(2)
     expect(dummy).toBe(2)
   })
 
@@ -171,6 +179,22 @@ describe('reactivity/ref', () => {
 
     sref.value = { a: 2 }
     expect(isReactive(sref.value)).toBe(false)
+    expect(dummy).toBe(2)
+  })
+
+  test('shallowRef force trigger', () => {
+    const sref = shallowRef({ a: 1 })
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value.a = 2
+    expect(dummy).toBe(1) // should not trigger yet
+
+    // force trigger
+    triggerRef(sref)
     expect(dummy).toBe(2)
   })
 

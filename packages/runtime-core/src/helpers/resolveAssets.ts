@@ -6,33 +6,38 @@ import {
   ComponentOptions
 } from '../component'
 import { Directive } from '../directives'
-import {
-  camelize,
-  capitalize,
-  isString,
-  isObject,
-  isFunction
-} from '@vue/shared'
+import { camelize, capitalize, isString, isObject } from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
 
+/**
+ * @internal
+ */
 export function resolveComponent(name: string): Component | string | undefined {
   return resolveAsset(COMPONENTS, name) || name
 }
 
+export const NULL_DYNAMIC_COMPONENT = Symbol()
+
+/**
+ * @internal
+ */
 export function resolveDynamicComponent(
   component: unknown
-): Component | string | undefined {
-  if (!component) return
+): Component | string | typeof NULL_DYNAMIC_COMPONENT {
   if (isString(component)) {
     return resolveAsset(COMPONENTS, component, false) || component
-  } else if (isFunction(component) || isObject(component)) {
-    return component
+  } else {
+    // invalid types will fallthrough to createVNode and raise warning
+    return (component as any) || NULL_DYNAMIC_COMPONENT
   }
 }
 
+/**
+ * @internal
+ */
 export function resolveDirective(name: string): Directive | undefined {
   return resolveAsset(DIRECTIVES, name)
 }
@@ -77,7 +82,11 @@ function resolveAsset(
     if (__DEV__) {
       if (res) {
         // in dev, infer anonymous component's name based on registered name
-        if (type === COMPONENTS && !(res as Component).name) {
+        if (
+          type === COMPONENTS &&
+          isObject(res) &&
+          !(res as ComponentOptions).name
+        ) {
           ;(res as ComponentOptions).name = name
         }
       } else if (warnMissing) {
