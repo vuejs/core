@@ -1856,9 +1856,9 @@ function baseCreateRenderer(
     ) {
       queuePostRenderEffect(da, parentSuspense)
     }
-    queuePostFlushCb(() => {
+    queuePostRenderEffect(() => {
       instance.isUnmounted = true
-    })
+    }, parentSuspense)
 
     // A component with async dep inside a pending suspense is unmounted before
     // its async dep resolves. This should remove the dep from the suspense, and
