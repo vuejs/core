@@ -207,7 +207,20 @@ export {
   createCommentVNode,
   createStaticVNode
 } from './vnode'
-export { toDisplayString, camelize } from '@vue/shared'
+
+// a bit of ceremony to mark these internal only here because we need to include
+// them in @vue/shared's typings
+import { toDisplayString, camelize } from '@vue/shared'
+/**
+ * @internal
+ */
+const _toDisplayString = toDisplayString
+/**
+ * @internal
+ */
+const _camelize = camelize
+export { _toDisplayString as toDisplayString, _camelize as camelize }
+
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'
 // For test-utils
