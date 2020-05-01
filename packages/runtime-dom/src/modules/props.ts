@@ -31,7 +31,10 @@ export function patchDOMProp(
   if (value === '' && typeof el[key] === 'boolean') {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
+  } else if (value == null && typeof el[key] === 'string') {
+    // e.g. <div :id="null">
+    el[key] = ''
   } else {
-    el[key] = value == null ? '' : value
+    el[key] = value
   }
 }
