@@ -7,7 +7,7 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'id', null, 'foo')
     expect(el.id).toBe('foo')
     patchProp(el, 'id', null, null)
-    expect(el.id).toBe('')
+    expect(el.id).toBe('null')
   })
 
   test('value', () => {
@@ -28,6 +28,16 @@ describe('runtime-dom: props patching', () => {
     expect(el.multiple).toBe(true)
     patchProp(el, 'multiple', null, null)
     expect(el.multiple).toBe(false)
+  })
+
+  // #1049
+  test('object prop', () => {
+    const el = document.createElement('video')
+    const object = {}
+    const set = jest.fn()
+    Object.defineProperty(el, 'srcObject', { enumerable: true, set })
+    patchProp(el, 'srcObject', null, object)
+    expect(set).toHaveBeenCalledWith(object)
   })
 
   test('innerHTML unmount prev children', () => {

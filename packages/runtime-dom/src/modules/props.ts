@@ -32,6 +32,6 @@ export function patchDOMProp(
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
   } else {
-    el[key] = value == null ? '' : value
+    el[key] = value
   }
 }
