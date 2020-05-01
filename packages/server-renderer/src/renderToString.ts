@@ -27,7 +27,8 @@ import {
   isVoidTag,
   escapeHtml,
   NO,
-  generateCodeFrame
+  generateCodeFrame,
+  escapeHtmlComment
 } from '@vue/shared'
 import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
@@ -230,9 +231,6 @@ function ssrCompile(
   return (compileCache[template] = Function('require', code)(require))
 }
 
-// https://www.w3.org/TR/html52/syntax.html#comments
-const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
-
 function renderVNode(
   push: PushFn,
   vnode: VNode,
@@ -245,9 +243,7 @@ function renderVNode(
       break
     case Comment:
       push(
-        children
-          ? `<!--${(children as string).replace(commentStripRE, '')}-->`
-          : `<!---->`
+        children ? `<!--${escapeHtmlComment(children as string)}-->` : `<!---->`
       )
       break
     case Static:
