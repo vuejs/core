@@ -194,7 +194,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(globalProperties, key))
     ) {
       return globalProperties[key]
-    } else if (__DEV__ && currentRenderingInstance) {
+    } else if (
+      __DEV__ &&
+      currentRenderingInstance &&
+      // #1091 avoid isRef/isVNode checks on component instance leading to
+      // infinite warning loop
+      key !== '_isRef' &&
+      key !== '_isVNode'
+    ) {
       if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
         warn(
           `Property ${JSON.stringify(
