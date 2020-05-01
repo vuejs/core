@@ -1,7 +1,10 @@
 import { patchProp } from '../src/patchProp'
 import { render, h } from '../src'
+import { mockWarn } from '@vue/shared'
 
 describe('runtime-dom: props patching', () => {
+  mockWarn()
+
   test('basic', () => {
     const el = document.createElement('div')
     patchProp(el, 'id', null, 'foo')
@@ -91,5 +94,17 @@ describe('runtime-dom: props patching', () => {
     expect(el.srcObject).not.toBe(fakeObject)
     patchProp(el, 'srcObject', null, null)
     expect(el.srcObject).toBe(intiialValue)
+  })
+
+  test('catch and warn prop set TypeError', () => {
+    const el = document.createElement('div')
+    Object.defineProperty(el, 'someProp', {
+      set() {
+        throw new TypeError('Invalid type')
+      }
+    })
+    patchProp(el, 'someProp', null, 'foo')
+
+    expect(`Failed setting prop "someProp" on <div>`).toHaveBeenWarnedLast()
   })
 })
