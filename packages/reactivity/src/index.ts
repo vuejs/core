@@ -9,7 +9,8 @@ export {
   triggerRef,
   Ref,
   UnwrapRef,
-  ToRefs
+  ToRefs,
+  RefUnwrapBailTypes
 } from './ref'
 export {
   reactive,

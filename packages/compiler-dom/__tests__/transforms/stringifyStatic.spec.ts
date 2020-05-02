@@ -75,7 +75,7 @@ describe('stringify static html', () => {
     })
   })
 
-  test('serliazing constant bindings', () => {
+  test('serializing constant bindings', () => {
     const { ast } = compileWithStringify(
       `<div><div :style="{ color: 'red' }">${repeat(
         `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,

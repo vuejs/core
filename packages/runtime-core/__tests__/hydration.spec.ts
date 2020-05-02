@@ -653,7 +653,7 @@ describe('SSR hydration', () => {
       // fragment ends early and attempts to hydrate the extra <div>bar</div>
       // as 2nd fragment child.
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
-      // exccesive children removal
+      // excessive children removal
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })

@@ -1,3 +1,6 @@
+// Note: this file is auto concatenated to the end of the bundled d.ts during
+// build.
+
 import { Ref, ComponentPublicInstance } from '@vue/runtime-core'
 
 // This code is based on react definition in DefinitelyTyped published under the MIT license.

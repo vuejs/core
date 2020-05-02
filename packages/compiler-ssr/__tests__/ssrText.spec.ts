@@ -6,6 +6,12 @@ describe('ssr: text', () => {
     expect(getCompiledString(`foo`)).toMatchInlineSnapshot(`"\`foo\`"`)
   })
 
+  test('comments', () => {
+    expect(getCompiledString(`<!--bar-->`)).toMatchInlineSnapshot(
+      `"\`<!--bar-->\`"`
+    )
+  })
+
   test('static text escape', () => {
     expect(getCompiledString(`&lt;foo&gt;`)).toMatchInlineSnapshot(
       `"\`&lt;foo&gt;\`"`

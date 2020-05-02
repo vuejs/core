@@ -3,9 +3,10 @@ import {
   MethodOptions,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps
+  ComponentOptionsWithObjectProps,
+  RenderFunction
 } from './componentOptions'
-import { SetupContext, RenderFunction, FunctionalComponent } from './component'
+import { SetupContext, FunctionalComponent } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
@@ -14,7 +15,7 @@ import { VNodeProps } from './vnode'
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
-// options (provided as the argument). The returned value has artifical types
+// options (provided as the argument). The returned value has artificial types
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function
@@ -83,7 +84,7 @@ export function defineComponent<
     EE
   >
 ): {
-  // array props technically doesn't place any contraints on props in TSX
+  // array props technically doesn't place any constraints on props in TSX
   new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, E>
 } & ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, E, EE>
 

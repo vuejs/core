@@ -61,7 +61,7 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` foo="false"`) // non boolean should render `false` as is
   })
 
-  test('ingore non-renderable values', () => {
+  test('ignore non-renderable values', () => {
     expect(
       ssrRenderAttrs({
         foo: {},

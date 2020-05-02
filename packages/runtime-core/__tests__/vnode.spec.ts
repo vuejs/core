@@ -199,7 +199,7 @@ describe('vnode', () => {
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
 
-    // #1041 should use reoslved key/ref
+    // #1041 should use resolved key/ref
     expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
     expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
     expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
@@ -260,15 +260,15 @@ describe('vnode', () => {
     })
 
     test('handlers', () => {
-      let clickHander1 = function() {}
-      let clickHander2 = function() {}
-      let focusHander2 = function() {}
+      let clickHandler1 = function() {}
+      let clickHandler2 = function() {}
+      let focusHandler2 = function() {}
 
-      let props1: Data = { onClick: clickHander1 }
-      let props2: Data = { onClick: clickHander2, onFocus: focusHander2 }
+      let props1: Data = { onClick: clickHandler1 }
+      let props2: Data = { onClick: clickHandler2, onFocus: focusHandler2 }
       expect(mergeProps(props1, props2)).toMatchObject({
-        onClick: [clickHander1, clickHander2],
-        onFocus: focusHander2
+        onClick: [clickHandler1, clickHandler2],
+        onFocus: focusHandler2
       })
     })
 
@@ -359,7 +359,7 @@ describe('vnode', () => {
     // #1039
     // <component :is="foo">{{ bar }}</component>
     // - content is compiled as slot
-    // - dynamic component reoslves to plain element, but as a block
+    // - dynamic component resolves to plain element, but as a block
     // - block creation disables its own tracking, accidentally causing the
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {

@@ -16,7 +16,7 @@ export function patchAttr(
     }
   } else {
     // note we are only checking boolean attributes that don't have a
-    // correspoding dom prop of the same name here.
+    // corresponding dom prop of the same name here.
     const isBoolean = isSpecialBooleanAttr(key)
     if (value == null || (isBoolean && value === false)) {
       el.removeAttribute(key)
