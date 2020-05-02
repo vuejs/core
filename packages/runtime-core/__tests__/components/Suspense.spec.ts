@@ -221,6 +221,57 @@ describe('Suspense', () => {
     ])
   })
 
+  // #1059
+  test('mounted/updated hooks & fallback component', async () => {
+    const deps: Promise<any>[] = []
+    const calls: string[] = []
+    const toggle = ref(true)
+
+    const Async = {
+      async setup() {
+        const p = new Promise(r => setTimeout(r, 1))
+        // extra tick needed for Node 12+
+        deps.push(p.then(() => Promise.resolve()))
+
+        await p
+        return () => h('div', 'async')
+      }
+    }
+
+    const Fallback = {
+      setup() {
+        onMounted(() => {
+          calls.push('mounted')
+        })
+
+        onUnmounted(() => {
+          calls.push('unmounted')
+        })
+        return () => h('div', 'fallback')
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: toggle.value ? h(Async) : null,
+            fallback: h(Fallback)
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([`mounted`])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>async</div>`)
+    expect(calls).toEqual([`mounted`, `unmounted`])
+  })
+
   test('content update before suspense resolve', async () => {
     const Async = defineAsyncComponent({
       props: { msg: String },
@@ -316,7 +367,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
     // should discard effects (except for immediate ones)
-    expect(calls).toEqual(['immediate effect'])
+    expect(calls).toEqual(['immediate effect', 'watch callback', 'unmounted'])
   })
 
   test('unmount suspense after resolve', async () => {

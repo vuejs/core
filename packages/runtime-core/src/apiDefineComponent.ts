@@ -4,9 +4,10 @@ import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
-  IComponentOptions
+  IComponentOptions,
+  RenderFunction
 } from './componentOptions'
-import { SetupContext, RenderFunction, FunctionalComponent } from './component'
+import { SetupContext, FunctionalComponent } from './component'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
@@ -18,7 +19,7 @@ import { VNodeProps } from './vnode'
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
-// options (provided as the argument). The returned value has artifical types
+// options (provided as the argument). The returned value has artificial types
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function

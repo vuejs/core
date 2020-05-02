@@ -1,6 +1,6 @@
 import { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
-import { ComponentOptions, RenderFunction } from '../src/component'
+import { ComponentOptions, InternalRenderFunction } from '../src/component'
 import {
   render,
   nodeOps,
@@ -18,7 +18,9 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 
 function compileToFunction(template: string) {
   const { code } = baseCompile(template)
-  const render = new Function('Vue', code)(runtimeTest) as RenderFunction
+  const render = new Function('Vue', code)(
+    runtimeTest
+  ) as InternalRenderFunction
   render._rc = true // isRuntimeCompiled
   return render
 }
@@ -112,7 +114,7 @@ describe('hot module replacement', () => {
   test('reload', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test3-child'
-    const unmoutSpy = jest.fn()
+    const unmountSpy = jest.fn()
     const mountSpy = jest.fn()
 
     const Child: ComponentOptions = {
@@ -120,7 +122,7 @@ describe('hot module replacement', () => {
       data() {
         return { count: 0 }
       },
-      unmounted: unmoutSpy,
+      unmounted: unmountSpy,
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`)
     }
     createRecord(childId, Child)
@@ -142,7 +144,7 @@ describe('hot module replacement', () => {
     })
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div>`)
-    expect(unmoutSpy).toHaveBeenCalledTimes(1)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 })

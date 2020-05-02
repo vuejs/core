@@ -114,7 +114,7 @@ describe('vModel', () => {
     await nextTick()
     expect(spy1).toHaveBeenCalledWith('foo')
 
-    // udpate listener
+    // update listener
     toggle.value = false
     await nextTick()
 

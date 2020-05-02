@@ -112,7 +112,7 @@ export const capitalize = cacheStringFunction(
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
 
-// for converting {{ interpolation }} values to displayed strings.
+// For converting {{ interpolation }} values to displayed strings.
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''

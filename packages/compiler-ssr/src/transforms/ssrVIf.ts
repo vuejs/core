@@ -20,7 +20,7 @@ export const ssrTransformIf = createStructuralDirectiveTransform(
   processIf
 )
 
-// This is called during the 2nd transform pass to construct the SSR-sepcific
+// This is called during the 2nd transform pass to construct the SSR-specific
 // codegen nodes.
 export function ssrProcessIf(node: IfNode, context: SSRTransformContext) {
   const [rootBranch] = node.branches

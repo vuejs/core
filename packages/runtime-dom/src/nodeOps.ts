@@ -69,3 +69,12 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     return node
   }
 }
+
+if (__DEV__) {
+  // __UNSAFE__
+  // Reason: innerHTML.
+  // same as `insertStaticContent`, but this is also dev only (for HMR).
+  nodeOps.setStaticContent = (el, content) => {
+    el.innerHTML = content
+  }
+}

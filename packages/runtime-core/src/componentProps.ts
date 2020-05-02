@@ -48,7 +48,7 @@ type PropConstructor<T = any> =
   | PropMethod<T>
 
 type PropMethod<T> = T extends (...args: any) => any // if is function with args
-  ? { new (): T; (): T; readonly proptotype: Function } // Create Function like contructor
+  ? { new (): T; (): T; readonly proptotype: Function } // Create Function like constructor
   : never
 
 type RequiredKeys<T, MakeDefaultRequired> = {

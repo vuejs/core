@@ -664,7 +664,7 @@ describe('BaseTransition', () => {
       expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
       assertCalledWithEl(props.onAfterEnter, falseSerialized)
 
-      // toggele again
+      // toggle again
       toggle.value = true
       await nextTick()
       expect(serializeInner(root)).toBe(`${falseSerialized}<!---->`)
@@ -740,7 +740,7 @@ describe('BaseTransition', () => {
       await nextTick()
       // expected behavior: the previous true branch is preserved,
       // and a placeholder is injected for the replacement.
-      // the leaving node is repalced with the replace node (of the same branch)
+      // the leaving node is replaced with the replace node (of the same branch)
       // when it finishes leaving
       expect(serializeInner(root)).toBe(`${trueSerialized}<!---->`)
       // enter hooks should never be called (for neither branch)

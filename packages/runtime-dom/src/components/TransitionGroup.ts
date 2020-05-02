@@ -101,12 +101,7 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      children = slots.default ? slots.default() : []
-
-      // handle fragment children case, e.g. v-for
-      if (children.length === 1 && children[0].type === Fragment) {
-        children = children[0].children as VNode[]
-      }
+      children = getTransitionRawChildren(slots.default ? slots.default() : [])
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
@@ -134,6 +129,20 @@ const TransitionGroupImpl = {
       return createVNode(tag, null, children)
     }
   }
+}
+
+function getTransitionRawChildren(children: VNode[]): VNode[] {
+  let ret: VNode[] = []
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    // handle fragment children case, e.g. v-for
+    if (child.type === Fragment) {
+      ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
+    } else {
+      ret.push(child)
+    }
+  }
+  return ret
 }
 
 // remove mode props as TransitionGroup doesn't support it
