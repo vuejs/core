@@ -2,6 +2,7 @@ import { isObject, isArray } from './'
 
 export function looseEqual(a: any, b: any): boolean {
   if (a === b) return true
+  if(typeof a !==  typeof b) return false
   const isObjectA = isObject(a)
   const isObjectB = isObject(b)
   if (isObjectA && isObjectB) {
