@@ -1,3 +1,4 @@
+import path from 'path'
 import {
   createSimpleExpression,
   ExpressionNode,
@@ -12,54 +13,97 @@ export interface AssetURLOptions {
   [name: string]: string[]
 }
 
-const defaultOptions: AssetURLOptions = {
-  video: ['src', 'poster'],
-  source: ['src'],
-  img: ['src'],
-  image: ['xlink:href', 'href'],
-  use: ['xlink:href', 'href']
+export interface NormlaizedAssetURLOptions {
+  base?: string | null
+  tags?: AssetURLOptions
+}
+
+const defaultAssetUrlOptions: Required<NormlaizedAssetURLOptions> = {
+  base: null,
+  tags: {
+    video: ['src', 'poster'],
+    source: ['src'],
+    img: ['src'],
+    image: ['xlink:href', 'href'],
+    use: ['xlink:href', 'href']
+  }
 }
 
 export const createAssetUrlTransformWithOptions = (
-  options: AssetURLOptions
+  options: NormlaizedAssetURLOptions
 ): NodeTransform => {
   const mergedOptions = {
-    ...defaultOptions,
+    ...defaultAssetUrlOptions,
     ...options
   }
   return (node, context) =>
     (transformAssetUrl as Function)(node, context, mergedOptions)
 }
 
+/**
+ * A `@vue/compiler-core` plugin that transforms relative asset urls into
+ * either imports or absolute urls.
+ *
+ * ``` js
+ * // Before
+ * createVNode('img', { src: './logo.png' })
+ *
+ * // After
+ * import _imports_0 from './logo.png'
+ * createVNode('img', { src: _imports_0 })
+ * ```
+ */
 export const transformAssetUrl: NodeTransform = (
   node,
   context,
-  options: AssetURLOptions = defaultOptions
+  options: NormlaizedAssetURLOptions = defaultAssetUrlOptions
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
-    for (const tag in options) {
+    const tags = options.tags || defaultAssetUrlOptions.tags
+    for (const tag in tags) {
       if ((tag === '*' || node.tag === tag) && node.props.length) {
-        const attributes = options[tag]
-        attributes.forEach(item => {
+        const attributes = tags[tag]
+        attributes.forEach(name => {
           node.props.forEach((attr, index) => {
-            if (attr.type !== NodeTypes.ATTRIBUTE) return
-            if (attr.name !== item) return
-            if (!attr.value) return
-            if (!isRelativeUrl(attr.value.content)) return
+            if (
+              attr.type !== NodeTypes.ATTRIBUTE ||
+              attr.name !== name ||
+              !attr.value ||
+              !isRelativeUrl(attr.value.content)
+            ) {
+              return
+            }
             const url = parseUrl(attr.value.content)
-            const exp = getImportsExpressionExp(
-              url.path,
-              url.hash,
-              attr.loc,
-              context
-            )
-            node.props[index] = {
-              type: NodeTypes.DIRECTIVE,
-              name: 'bind',
-              arg: createSimpleExpression(item, true, attr.loc),
-              exp,
-              modifiers: [],
-              loc: attr.loc
+            if (options.base) {
+              // explicit base - directly rewrite the url into absolute url
+              // does not apply to url that starts with `@` since they are
+              // aliases
+              if (attr.value.content[0] !== '@') {
+                // when packaged in the browser, path will be using the posix-
+                // only version provided by rollup-plugin-node-builtins.
+                attr.value.content = (path.posix || path).join(
+                  options.base,
+                  url.path + (url.hash || '')
+                )
+              }
+            } else {
+              // otherwise, transform the url into an import.
+              // this assumes a bundler will resolve the import into the correct
+              // absolute url (e.g. webpack file-loader)
+              const exp = getImportsExpressionExp(
+                url.path,
+                url.hash,
+                attr.loc,
+                context
+              )
+              node.props[index] = {
+                type: NodeTypes.DIRECTIVE,
+                name: 'bind',
+                arg: createSimpleExpression(name, true, attr.loc),
+                exp,
+                modifiers: [],
+                loc: attr.loc
+              }
             }
           })
         })
