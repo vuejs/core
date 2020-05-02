@@ -12,12 +12,6 @@ import {
 import { UnwrapRef, Ref } from './ref'
 import { makeMap } from '@vue/shared'
 
-// WeakMaps that store {raw <-> observed} pairs.
-// const rawToReactive = new WeakMap<any, any>()
-// const reactiveToRaw = new WeakMap<any, any>()
-// const rawToReadonly = new WeakMap<any, any>()
-// const readonlyToRaw = new WeakMap<any, any>()
-
 export const enum ReactiveFlags {
   skip = '__v_skip',
   isReactive = '__v_isReactive',
