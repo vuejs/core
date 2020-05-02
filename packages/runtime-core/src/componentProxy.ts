@@ -6,7 +6,8 @@ import {
   ReactiveEffect,
   UnwrapRef,
   toRaw,
-  shallowReadonly
+  shallowReadonly,
+  ReactiveFlags
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -128,6 +129,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
+    // let @vue/reatvitiy know it should never observe Vue public instances.
+    if (key === ReactiveFlags.skip) {
+      return true
+    }
+
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
@@ -197,10 +203,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
-      // #1091 avoid isRef/isVNode checks on component instance leading to
-      // infinite warning loop
-      key !== '_isRef' &&
-      key !== '_isVNode'
+      // #1091 avoid internal isRef/isVNode checks on component instance leading
+      // to infinite warning loop
+      key.indexOf('__v') !== 0
     ) {
       if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
         warn(

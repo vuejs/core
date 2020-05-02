@@ -5,18 +5,11 @@ import { reactive, isProxy, toRaw } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
-const isRefSymbol = Symbol()
-
 export interface Ref<T = any> {
-  // This field is necessary to allow TS to differentiate a Ref from a plain
-  // object that happens to have a "value" field.
-  // However, checking a symbol on an arbitrary object is much slower than
-  // checking a plain property, so we use a _isRef plain property for isRef()
-  // check in the actual implementation.
-  // The reason for not just declaring _isRef in the interface is because we
-  // don't want this internal field to leak into userland autocompletion -
-  // a private symbol, on the other hand, achieves just that.
-  [isRefSymbol]: true
+  /**
+   * @internal
+   */
+  __v_isRef: true
   value: T
 }
 
@@ -27,7 +20,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r._isRef === true : false
+  return r ? r.__v_isRef === true : false
 }
 
 export function ref<T extends object>(
@@ -51,7 +44,7 @@ function createRef(rawValue: unknown, shallow = false) {
   }
   let value = shallow ? rawValue : convert(rawValue)
   const r = {
-    _isRef: true,
+    __v_isRef: true,
     get value() {
       track(r, TrackOpTypes.GET, 'value')
       return value
@@ -99,7 +92,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
     () => trigger(r, TriggerOpTypes.SET, 'value')
   )
   const r = {
-    _isRef: true,
+    __v_isRef: true,
     get value() {
       return get()
     },
@@ -126,7 +119,7 @@ export function toRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   return {
-    _isRef: true,
+    __v_isRef: true,
     get value(): any {
       return object[key]
     },
