@@ -1,4 +1,4 @@
-import { isObject, toRawType, def } from '@vue/shared'
+import { isObject, toRawType, def, hasOwn } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -116,18 +116,19 @@ function createReactiveObject(
     return target
   }
   // target already has corresponding Proxy
-  let observed = isReadonly ? target.__v_readonly : target.__v_reactive
-  if (observed !== void 0) {
-    return observed
+  if (
+    hasOwn(target, isReadonly ? ReactiveFlags.readonly : ReactiveFlags.reactive)
+  ) {
+    return isReadonly ? target.__v_readonly : target.__v_reactive
   }
   // only a whitelist of value types can be observed.
   if (!canObserve(target)) {
     return target
   }
-  const handlers = collectionTypes.has(target.constructor)
-    ? collectionHandlers
-    : baseHandlers
-  observed = new Proxy(target, handlers)
+  const observed = new Proxy(
+    target,
+    collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
+  )
   def(
     target,
     isReadonly ? ReactiveFlags.readonly : ReactiveFlags.reactive,
