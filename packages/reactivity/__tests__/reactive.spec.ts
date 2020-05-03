@@ -26,6 +26,20 @@ describe('reactivity/reactive', () => {
     expect(Object.keys(observed)).toEqual(['foo'])
   })
 
+  test('proto', () => {
+    const obj = {}
+    const reactiveObj = reactive(obj)
+    expect(isReactive(reactiveObj)).toBe(true)
+    // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
+    // @ts-ignore
+    const prototype = reactiveObj['__proto__']
+    const otherObj = { data: ['a'] }
+    expect(isReactive(otherObj)).toBe(false)
+    const reactiveOther = reactive(otherObj)
+    expect(isReactive(reactiveOther)).toBe(true)
+    expect(reactiveOther.data[0]).toBe('a')
+  })
+
   test('nested reactives', () => {
     const original = {
       nested: {
