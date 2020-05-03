@@ -110,7 +110,7 @@ const TransitionGroupImpl = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-        } else if (__DEV__ && child.type !== Comment) {
+        } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
@@ -138,7 +138,9 @@ function getTransitionRawChildren(children: VNode[]): VNode[] {
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
-    } else {
+    }
+    // comment should be skip, e.g. v-if
+    if (child.type !== Comment) {
       ret.push(child)
     }
   }
