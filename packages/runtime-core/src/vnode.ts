@@ -82,12 +82,17 @@ export interface VNodeProps {
   onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 
-type VNodeChildAtom = VNode | string | number | boolean | null | void
+type VNodeChildAtom =
+  | VNode
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | void
 
-export interface VNodeArrayChildren<
-  HostNode = RendererNode,
-  HostElement = RendererElement
-> extends Array<VNodeArrayChildren | VNodeChildAtom> {}
+export interface VNodeArrayChildren
+  extends Array<VNodeArrayChildren | VNodeChildAtom> {}
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
@@ -98,7 +103,14 @@ export type VNodeNormalizedChildren =
   | null
 
 export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
-  _isVNode: true
+  /**
+   * @internal
+   */
+  __v_isVNode: true
+  /**
+   * @internal
+   */
+  __v_skip: true
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
@@ -134,17 +146,22 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
 const blockStack: (VNode[] | null)[] = []
 let currentBlock: VNode[] | null = null
 
-// Open a block.
-// This must be called before `createBlock`. It cannot be part of `createBlock`
-// because the children of the block are evaluated before `createBlock` itself
-// is called. The generated code typically looks like this:
-//
-//   function render() {
-//     return (openBlock(),createBlock('div', null, [...]))
-//   }
-//
-// disableTracking is true when creating a fragment block, since a fragment
-// always diffs its children.
+/**
+ * Open a block.
+ * This must be called before `createBlock`. It cannot be part of `createBlock`
+ * because the children of the block are evaluated before `createBlock` itself
+ * is called. The generated code typically looks like this:
+ *
+ * ```js
+ * function render() {
+ *   return (openBlock(),createBlock('div', null, [...]))
+ * }
+ * ```
+ * disableTracking is true when creating a fragment block, since a fragment
+ * always diffs its children.
+ *
+ * @internal
+ */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
@@ -168,15 +185,20 @@ let shouldTrack = 1
  *   _cache[1]
  * )
  * ```
+ *
  * @internal
  */
 export function setBlockTracking(value: number) {
   shouldTrack += value
 }
 
-// Create a block root vnode. Takes the same exact arguments as `createVNode`.
-// A block root keeps track of dynamic nodes within the block in the
-// `dynamicChildren` array.
+/**
+ * Create a block root vnode. Takes the same exact arguments as `createVNode`.
+ * A block root keeps track of dynamic nodes within the block in the
+ * `dynamicChildren` array.
+ *
+ * @internal
+ */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
   props?: { [key: string]: any } | null,
@@ -206,7 +228,7 @@ export function createBlock(
 }
 
 export function isVNode(value: any): value is VNode {
-  return value ? value._isVNode === true : false
+  return value ? value.__v_isVNode === true : false
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
@@ -329,7 +351,8 @@ function _createVNode(
   }
 
   const vnode: VNode = {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -366,6 +389,7 @@ function _createVNode(
     patchFlag !== PatchFlags.HYDRATE_EVENTS &&
     (patchFlag > 0 ||
       shapeFlag & ShapeFlags.SUSPENSE ||
+      shapeFlag & ShapeFlags.TELEPORT ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
   ) {
@@ -387,7 +411,8 @@ export function cloneVNode<T, U>(
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type: vnode.type,
     props,
     key: props && normalizeKey(props),
@@ -397,7 +422,15 @@ export function cloneVNode<T, U>(
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
     shapeFlag: vnode.shapeFlag,
-    patchFlag: vnode.patchFlag,
+    // if the vnode is cloned with extra props, we can no longer assume its
+    // existing patch flag to be reliable and need to bail out of optimized mode.
+    // however we don't want block nodes to de-opt their children, so if the
+    // vnode is a block node, we only add the FULL_PROPS flag to it.
+    patchFlag: extraProps
+      ? vnode.dynamicChildren
+        ? vnode.patchFlag | PatchFlags.FULL_PROPS
+        : PatchFlags.BAIL
+      : vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,

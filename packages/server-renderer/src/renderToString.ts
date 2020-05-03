@@ -7,6 +7,7 @@ import {
   createVNode,
   Text,
   Comment,
+  Static,
   Fragment,
   ssrUtils,
   Slots,
@@ -26,7 +27,8 @@ import {
   isVoidTag,
   escapeHtml,
   NO,
-  generateCodeFrame
+  generateCodeFrame,
+  escapeHtmlComment
 } from '@vue/shared'
 import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
@@ -237,10 +239,15 @@ function renderVNode(
   const { type, shapeFlag, children } = vnode
   switch (type) {
     case Text:
-      push(children as string)
+      push(escapeHtml(children as string))
       break
     case Comment:
-      push(children ? `<!--${children}-->` : `<!---->`)
+      push(
+        children ? `<!--${escapeHtmlComment(children as string)}-->` : `<!---->`
+      )
+      break
+    case Static:
+      push(children as string)
       break
     case Fragment:
       push(`<!--[-->`) // open

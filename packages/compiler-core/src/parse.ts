@@ -31,7 +31,7 @@ type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
 
 // The default decoder only provides escapes for characters reserved as part of
-// the tempalte syntax, and is only used if the custom renderer did not provide
+// the template syntax, and is only used if the custom renderer did not provide
 // a platform-specific decoder.
 const decodeRE = /&(gt|lt|amp|apos|quot);/g
 const decodeMap: Record<string, string> = {
@@ -56,9 +56,9 @@ export const defaultParserOptions: MergedParserOptions = {
 
 export const enum TextModes {
   //          | Elements | Entities | End sign              | Inside of
-  DATA, //    | ✔       | ✔       | End tags of ancestors |
-  RCDATA, //  | ✘       | ✔       | End tag of the parent | <textarea>
-  RAWTEXT, // | ✘       | ✘       | End tag of the parent | <style>,<script>
+  DATA, //    | ✔        | ✔        | End tags of ancestors |
+  RCDATA, //  | ✘        | ✔        | End tag of the parent | <textarea>
+  RAWTEXT, // | ✘        | ✘        | End tag of the parent | <style>,<script>
   CDATA,
   ATTRIBUTE_VALUE
 }

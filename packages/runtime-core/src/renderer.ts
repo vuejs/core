@@ -354,6 +354,11 @@ function baseCreateRenderer(
       n1 = null
     }
 
+    if (n2.patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      n2.dynamicChildren = null
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -913,7 +918,11 @@ function baseCreateRenderer(
         optimized
       )
     } else {
-      if (patchFlag & PatchFlags.STABLE_FRAGMENT && dynamicChildren) {
+      if (
+        patchFlag > 0 &&
+        patchFlag & PatchFlags.STABLE_FRAGMENT &&
+        dynamicChildren
+      ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.
         patchBlockChildren(
@@ -1276,9 +1285,6 @@ function baseCreateRenderer(
     const c2 = n2.children
 
     const { patchFlag, shapeFlag } = n2
-    if (patchFlag === PatchFlags.BAIL) {
-      optimized = false
-    }
     // fast path
     if (patchFlag > 0) {
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
@@ -1850,9 +1856,9 @@ function baseCreateRenderer(
     ) {
       queuePostRenderEffect(da, parentSuspense)
     }
-    queuePostFlushCb(() => {
+    queuePostRenderEffect(() => {
       instance.isUnmounted = true
-    })
+    }, parentSuspense)
 
     // A component with async dep inside a pending suspense is unmounted before
     // its async dep resolves. This should remove the dep from the suspense, and

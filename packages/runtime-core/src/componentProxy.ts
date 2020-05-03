@@ -6,7 +6,8 @@ import {
   ReactiveEffect,
   UnwrapRef,
   toRaw,
-  shallowReadonly
+  shallowReadonly,
+  ReactiveFlags
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -128,6 +129,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
+    // let @vue/reatvitiy know it should never observe Vue public instances.
+    if (key === ReactiveFlags.skip) {
+      return true
+    }
+
     // data / props / ctx
     // This getter gets called for every property access on the render context
     // during render and is a major hotspot. The most expensive part of this
@@ -194,11 +200,26 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(globalProperties, key))
     ) {
       return globalProperties[key]
-    } else if (__DEV__ && currentRenderingInstance) {
-      warn(
-        `Property ${JSON.stringify(key)} was accessed during render ` +
-          `but is not defined on instance.`
-      )
+    } else if (
+      __DEV__ &&
+      currentRenderingInstance &&
+      // #1091 avoid internal isRef/isVNode checks on component instance leading
+      // to infinite warning loop
+      key.indexOf('__v') !== 0
+    ) {
+      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} must be accessed via $data because it starts with a reserved ` +
+            `character and is not proxied on the render context.`
+        )
+      } else {
+        warn(
+          `Property ${JSON.stringify(key)} was accessed during render ` +
+            `but is not defined on instance.`
+        )
+      }
     }
   },
 
@@ -280,7 +301,15 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = {
     return PublicInstanceProxyHandlers.get!(target, key, target)
   },
   has(_: ComponentRenderContext, key: string) {
-    return key[0] !== '_' && !isGloballyWhitelisted(key)
+    const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+    if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
+      warn(
+        `Property ${JSON.stringify(
+          key
+        )} should not start with _ which is a reserved prefix for Vue internals.`
+      )
+    }
+    return has
   }
 }
 
