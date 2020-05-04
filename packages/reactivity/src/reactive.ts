@@ -111,7 +111,7 @@ function createReactiveObject(
     return target
   }
   // target is already a Proxy, return it.
-  // excpetion: calling readonly() on a reactive object
+  // exception: calling readonly() on a reactive object
   if (target.__v_raw && !(isReadonly && target.__v_isReactive)) {
     return target
   }
