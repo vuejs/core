@@ -1,15 +1,20 @@
 import { generate, baseParse, transform } from '@vue/compiler-core'
 import {
   transformAssetUrl,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLOptions,
+  normalizeOptions
 } from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 
-function compileWithAssetUrls(template: string) {
+function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
   const ast = baseParse(template)
+  const t = options
+    ? createAssetUrlTransformWithOptions(normalizeOptions(options))
+    : transformAssetUrl
   transform(ast, {
-    nodeTransforms: [transformAssetUrl, transformElement],
+    nodeTransforms: [t, transformElement],
     directiveTransforms: {
       bind: transformBind
     }
@@ -51,24 +56,25 @@ describe('compiler sfc: transform asset url', () => {
   })
 
   test('with explicit base', () => {
-    const ast = baseParse(
+    const { code } = compileWithAssetUrls(
       `<img src="./bar.png"></img>` + // -> /foo/bar.png
       `<img src="~bar.png"></img>` + // -> /foo/bar.png
       `<img src="bar.png"></img>` + // -> bar.png (untouched)
-        `<img src="@theme/bar.png"></img>` // -> @theme/bar.png (untouched)
-    )
-    transform(ast, {
-      nodeTransforms: [
-        createAssetUrlTransformWithOptions({
-          base: '/foo'
-        }),
-        transformElement
-      ],
-      directiveTransforms: {
-        bind: transformBind
+        `<img src="@theme/bar.png"></img>`, // -> @theme/bar.png (untouched)
+      {
+        base: '/foo'
       }
-    })
-    const { code } = generate(ast, { mode: 'module' })
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with includeAbsolute: true', () => {
+    const { code } = compileWithAssetUrls(
+      `<img src="./bar.png"></img>` + `<img src="/bar.png"></img>`,
+      {
+        includeAbsolute: true
+      }
+    )
     expect(code).toMatchSnapshot()
   })
 })
