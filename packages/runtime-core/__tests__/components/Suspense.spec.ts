@@ -9,8 +9,10 @@ import {
   nextTick,
   onMounted,
   watch,
+  watchEffect,
   onUnmounted,
-  onErrorCaptured
+  onErrorCaptured,
+  Component
 } from '@vue/runtime-test'
 
 describe('Suspense', () => {
@@ -21,7 +23,7 @@ describe('Suspense', () => {
   })
 
   // a simple async factory for testing purposes only.
-  function createAsyncComponent<T extends ComponentOptions>(
+  function defineAsyncComponent<T extends ComponentOptions>(
     comp: T,
     delay: number = 0
   ) {
@@ -29,7 +31,7 @@ describe('Suspense', () => {
       setup(props: any, { slots }: any) {
         const p = new Promise(resolve => {
           setTimeout(() => {
-            resolve(() => h(comp, props, slots))
+            resolve(() => h<Component>(comp, props, slots))
           }, delay)
         })
         // in Node 12, due to timer/nextTick mechanism change, we have to wait
@@ -41,7 +43,7 @@ describe('Suspense', () => {
   }
 
   test('fallback content', async () => {
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       render() {
         return h('div', 'async')
       }
@@ -69,7 +71,7 @@ describe('Suspense', () => {
   test('nested async deps', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent({
+    const AsyncOuter = defineAsyncComponent({
       setup() {
         onMounted(() => {
           calls.push('outer mounted')
@@ -78,7 +80,7 @@ describe('Suspense', () => {
       }
     })
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup() {
           onMounted(() => {
@@ -117,7 +119,7 @@ describe('Suspense', () => {
   })
 
   test('onResolve', async () => {
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       render() {
         return h('div', 'async')
       }
@@ -163,9 +165,15 @@ describe('Suspense', () => {
         // extra tick needed for Node 12+
         deps.push(p.then(() => Promise.resolve()))
 
-        watch(() => {
+        watchEffect(() => {
+          calls.push('immediate effect')
+        })
+
+        const count = ref(0)
+        watch(count, v => {
           calls.push('watch callback')
         })
+        count.value++ // trigger the watcher now
 
         onMounted(() => {
           calls.push('mounted')
@@ -193,23 +201,81 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual([])
+    expect(calls).toEqual([`immediate effect`])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>async</div>`)
-    expect(calls).toEqual([`watch callback`, `mounted`])
+    expect(calls).toEqual([`immediate effect`, `watch callback`, `mounted`])
 
     // effects inside an already resolved suspense should happen at normal timing
     toggle.value = false
     await nextTick()
+    await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    expect(calls).toEqual([`watch callback`, `mounted`, 'unmounted'])
+    expect(calls).toEqual([
+      `immediate effect`,
+      `watch callback`,
+      `mounted`,
+      'unmounted'
+    ])
+  })
+
+  // #1059
+  test('mounted/updated hooks & fallback component', async () => {
+    const deps: Promise<any>[] = []
+    const calls: string[] = []
+    const toggle = ref(true)
+
+    const Async = {
+      async setup() {
+        const p = new Promise(r => setTimeout(r, 1))
+        // extra tick needed for Node 12+
+        deps.push(p.then(() => Promise.resolve()))
+
+        await p
+        return () => h('div', 'async')
+      }
+    }
+
+    const Fallback = {
+      setup() {
+        onMounted(() => {
+          calls.push('mounted')
+        })
+
+        onUnmounted(() => {
+          calls.push('unmounted')
+        })
+        return () => h('div', 'fallback')
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: toggle.value ? h(Async) : null,
+            fallback: h(Fallback)
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(calls).toEqual([`mounted`])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>async</div>`)
+    expect(calls).toEqual([`mounted`, `unmounted`])
   })
 
   test('content update before suspense resolve', async () => {
-    const Async = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const Async = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         return () => h('div', props.msg)
       }
     })
@@ -253,9 +319,15 @@ describe('Suspense', () => {
         const p = new Promise(r => setTimeout(r, 1))
         deps.push(p)
 
-        watch(() => {
+        watchEffect(() => {
+          calls.push('immediate effect')
+        })
+
+        const count = ref(0)
+        watch(count, () => {
           calls.push('watch callback')
         })
+        count.value++ // trigger the watcher now
 
         onMounted(() => {
           calls.push('mounted')
@@ -283,7 +355,7 @@ describe('Suspense', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serializeInner(root)).toBe(`<div>fallback</div>`)
-    expect(calls).toEqual([])
+    expect(calls).toEqual(['immediate effect'])
 
     // remove the async dep before it's resolved
     toggle.value = false
@@ -294,15 +366,15 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
-    // should discard effects
-    expect(calls).toEqual([])
+    // should discard effects (except for immediate ones)
+    expect(calls).toEqual(['immediate effect', 'watch callback', 'unmounted'])
   })
 
   test('unmount suspense after resolve', async () => {
     const toggle = ref(true)
     const unmounted = jest.fn()
 
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       setup() {
         onUnmounted(unmounted)
         return () => h('div', 'async')
@@ -341,7 +413,7 @@ describe('Suspense', () => {
     const mounted = jest.fn()
     const unmounted = jest.fn()
 
-    const Async = createAsyncComponent({
+    const Async = defineAsyncComponent({
       setup() {
         onMounted(mounted)
         onUnmounted(unmounted)
@@ -381,7 +453,7 @@ describe('Suspense', () => {
   test('nested suspense (parent resolves first)', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent(
+    const AsyncOuter = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -393,7 +465,7 @@ describe('Suspense', () => {
       1
     )
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -432,14 +504,14 @@ describe('Suspense', () => {
     await deps[0]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>fallback inner</div><!---->`
+      `<div>async outer</div><div>fallback inner</div>`
     )
     expect(calls).toEqual([`outer mounted`])
 
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>async inner</div><!---->`
+      `<div>async outer</div><div>async inner</div>`
     )
     expect(calls).toEqual([`outer mounted`, `inner mounted`])
   })
@@ -447,7 +519,7 @@ describe('Suspense', () => {
   test('nested suspense (child resolves first)', async () => {
     const calls: string[] = []
 
-    const AsyncOuter = createAsyncComponent(
+    const AsyncOuter = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -459,7 +531,7 @@ describe('Suspense', () => {
       10
     )
 
-    const AsyncInner = createAsyncComponent(
+    const AsyncInner = defineAsyncComponent(
       {
         setup: () => {
           onMounted(() => {
@@ -503,7 +575,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>async outer</div><div>async inner</div><!---->`
+      `<div>async outer</div><div>async inner</div>`
     )
     expect(calls).toEqual([`inner mounted`, `outer mounted`])
   })
@@ -517,15 +589,18 @@ describe('Suspense', () => {
 
     const Comp = {
       setup() {
-        const error = ref<Error | null>(null)
-        onErrorCaptured(e => {
-          error.value = e
+        const errorMessage = ref<string | null>(null)
+        onErrorCaptured(err => {
+          errorMessage.value =
+            err instanceof Error
+              ? err.message
+              : `A non-Error value thrown: ${err}`
           return true
         })
 
         return () =>
-          error.value
-            ? h('div', error.value.message)
+          errorMessage.value
+            ? h('div', errorMessage.value)
             : h(Suspense, null, {
                 default: h(Async),
                 fallback: h('div', 'fallback')
@@ -546,8 +621,9 @@ describe('Suspense', () => {
     const msg = ref('nested msg')
     const calls: number[] = []
 
-    const AsyncChildWithSuspense = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const AsyncChildWithSuspense = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         onMounted(() => {
           calls.push(0)
         })
@@ -559,9 +635,10 @@ describe('Suspense', () => {
       }
     })
 
-    const AsyncInsideNestedSuspense = createAsyncComponent(
+    const AsyncInsideNestedSuspense = defineAsyncComponent(
       {
-        setup(props: { msg: string }) {
+        props: { msg: String },
+        setup(props: any) {
           onMounted(() => {
             calls.push(2)
           })
@@ -571,8 +648,9 @@ describe('Suspense', () => {
       20
     )
 
-    const AsyncChildParent = createAsyncComponent({
-      setup(props: { msg: string }) {
+    const AsyncChildParent = defineAsyncComponent({
+      props: { msg: String },
+      setup(props: any) {
         onMounted(() => {
           calls.push(1)
         })
@@ -580,9 +658,10 @@ describe('Suspense', () => {
       }
     })
 
-    const NestedAsyncChild = createAsyncComponent(
+    const NestedAsyncChild = defineAsyncComponent(
       {
-        setup(props: { msg: string }) {
+        props: { msg: String },
+        setup(props: any) {
           onMounted(() => {
             calls.push(3)
           })
@@ -644,7 +723,7 @@ describe('Suspense', () => {
     await deps[3]
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested fallback</div><div>root async</div><!---->`
+      `<div>nested fallback</div><div>root async</div>`
     )
     expect(calls).toEqual([0, 1, 3])
 
@@ -655,7 +734,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested changed</div><div>root async</div><!---->`
+      `<div>nested changed</div><div>root async</div>`
     )
     expect(calls).toEqual([0, 1, 3, 2])
 
@@ -663,20 +742,20 @@ describe('Suspense', () => {
     msg.value = 'nested changed again'
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!----><div>nested changed again</div><div>root async</div><!---->`
+      `<div>nested changed again</div><div>root async</div>`
     )
   })
 
   test('new async dep after resolve should cause suspense to restart', async () => {
     const toggle = ref(false)
 
-    const ChildA = createAsyncComponent({
+    const ChildA = defineAsyncComponent({
       setup() {
         return () => h('div', 'Child A')
       }
     })
 
-    const ChildB = createAsyncComponent({
+    const ChildB = defineAsyncComponent({
       setup() {
         return () => h('div', 'Child B')
       }
@@ -698,7 +777,7 @@ describe('Suspense', () => {
 
     await deps[0]
     await nextTick()
-    expect(serializeInner(root)).toBe(`<!----><div>Child A</div><!----><!---->`)
+    expect(serializeInner(root)).toBe(`<div>Child A</div><!---->`)
 
     toggle.value = true
     await nextTick()
@@ -706,10 +785,8 @@ describe('Suspense', () => {
 
     await deps[1]
     await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<!----><div>Child A</div><div>Child B</div><!---->`
-    )
+    expect(serializeInner(root)).toBe(`<div>Child A</div><div>Child B</div>`)
   })
 
-  test.todo('portal inside suspense')
+  test.todo('teleport inside suspense')
 })

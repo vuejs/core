@@ -22,24 +22,25 @@ import {
   InterpolationNode,
   VNodeCall
 } from './ast'
-import { parse } from 'acorn'
-import { walk } from 'estree-walker'
 import { TransformContext } from './transform'
 import {
   MERGE_PROPS,
-  PORTAL,
+  TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
   BASE_TRANSITION
 } from './runtimeHelpers'
-import { isString, isFunction, isObject, hyphenate } from '@vue/shared'
+import { isString, isObject, hyphenate } from '@vue/shared'
+import { parse } from '@babel/parser'
+import { walk } from 'estree-walker'
+import { Node } from '@babel/types'
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
 
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Portal')) {
-    return PORTAL
+  if (isBuiltInType(tag, 'Teleport')) {
+    return TELEPORT
   } else if (isBuiltInType(tag, 'Suspense')) {
     return SUSPENSE
   } else if (isBuiltInType(tag, 'KeepAlive')) {
@@ -49,38 +50,33 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-// cache node requires
-// lazy require dependencies so that they don't end up in rollup's dep graph
-// and thus can be tree-shaken in browser builds.
-let _parse: typeof parse
-let _walk: typeof walk
-
-export function loadDep(name: string) {
-  if (!__BROWSER__ && typeof process !== 'undefined' && isFunction(require)) {
-    return require(name)
+export const parseJS: typeof parse = (code, options) => {
+  if (__BROWSER__) {
+    assert(
+      !__BROWSER__,
+      `Expression AST analysis can only be performed in non-browser builds.`
+    )
+    return null as any
   } else {
-    // This is only used when we are building a dev-only build of the compiler
-    // which runs in the browser but also uses Node deps.
-    return (window as any)._deps[name]
+    return parse(code, options)
   }
 }
 
-export const parseJS: typeof parse = (code, options) => {
-  assert(
-    !__BROWSER__,
-    `Expression AST analysis can only be performed in non-browser builds.`
-  )
-  const parse = _parse || (_parse = loadDep('acorn').parse)
-  return parse(code, options)
+interface Walker {
+  enter?(node: Node, parent: Node): void
+  leave?(node: Node): void
 }
 
-export const walkJS: typeof walk = (ast, walker) => {
-  assert(
-    !__BROWSER__,
-    `Expression AST analysis can only be performed in non-browser builds.`
-  )
-  const walk = _walk || (_walk = loadDep('estree-walker').walk)
-  return walk(ast, walker)
+export const walkJS = (ast: Node, walker: Walker) => {
+  if (__BROWSER__) {
+    assert(
+      !__BROWSER__,
+      `Expression AST analysis can only be performed in non-browser builds.`
+    )
+    return null as any
+  } else {
+    return (walk as any)(ast, walker)
+  }
 }
 
 const nonIdentifierRE = /^\d|[^\$\w]/
@@ -177,13 +173,14 @@ export function findDir(
 export function findProp(
   node: ElementNode,
   name: string,
-  dynamicOnly: boolean = false
+  dynamicOnly: boolean = false,
+  allowEmpty: boolean = false
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
       if (dynamicOnly) continue
-      if (p.name === name && p.value) {
+      if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
     } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {

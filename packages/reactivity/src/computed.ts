@@ -1,17 +1,17 @@
 import { effect, ReactiveEffect, trigger, track } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
-import { Ref, UnwrapRef } from './ref'
+import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
-  readonly value: UnwrapRef<T>
+  readonly value: T
 }
 
 export interface WritableComputedRef<T> extends Ref<T> {
   readonly effect: ReactiveEffect<T>
 }
 
-export type ComputedGetter<T> = () => T
+export type ComputedGetter<T> = (ctx?: any) => T
 export type ComputedSetter<T> = (v: T) => void
 
 export interface WritableComputedOptions<T> {
@@ -57,7 +57,7 @@ export function computed<T>(
     }
   })
   computed = {
-    _isRef: true,
+    __v_isRef: true,
     // expose effect so computed can be stopped
     effect: runner,
     get value() {

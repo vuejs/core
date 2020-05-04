@@ -23,14 +23,14 @@ import {
   IfStatement,
   AssignmentExpression,
   ReturnStatement,
-  VNodeCall
+  VNodeCall,
+  SequenceExpression
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
-  loadDep,
   toValidAssetId
 } from './utils'
 import { isString, isArray, isSymbol } from '@vue/shared'
@@ -49,9 +49,12 @@ import {
   WITH_DIRECTIVES,
   CREATE_BLOCK,
   OPEN_BLOCK,
-  CREATE_STATIC
+  CREATE_STATIC,
+  WITH_CTX
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
+
+const PURE_ANNOTATION = `/*#__PURE__*/`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -68,6 +71,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   column: number
   offset: number
   indentLevel: number
+  pure: boolean
   map?: SourceMapGenerator
   helper(key: symbol): string
   push(code: string, node?: CodegenNode): void
@@ -106,6 +110,7 @@ function createCodegenContext(
     line: 1,
     offset: 0,
     indentLevel: 0,
+    pure: false,
     map: undefined,
     helper(key) {
       return `_${helperNameMap[key]}`
@@ -165,7 +170,7 @@ function createCodegenContext(
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
-    context.map = new (loadDep('source-map')).SourceMapGenerator()
+    context.map = new SourceMapGenerator()
     context.map!.setSourceContent(filename, context.source)
   }
 
@@ -200,7 +205,7 @@ export function generate(
 
   // enter render function
   if (genScopeId && !ssr) {
-    push(`const render = _withId(`)
+    push(`const render = ${PURE_ANNOTATION}_withId(`)
   }
   if (!ssr) {
     push(`function render(_ctx, _cache) {`)
@@ -399,7 +404,9 @@ function genModulePreamble(
   }
 
   if (genScopeId) {
-    push(`const _withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    push(
+      `const _withId = ${PURE_ANNOTATION}${helper(WITH_SCOPE_ID)}("${scopeId}")`
+    )
     newline()
   }
 
@@ -431,6 +438,7 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   if (!hoists.length) {
     return
   }
+  context.pure = true
   const { push, newline, helper, scopeId, mode } = context
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
@@ -452,6 +460,7 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
     push(`${helper(POP_SCOPE_ID)}()`)
     newline()
   }
+  context.pure = false
 }
 
 function genImports(importsOptions: ImportItem[], context: CodegenContext) {
@@ -592,6 +601,9 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.JS_ASSIGNMENT_EXPRESSION:
       !__BROWSER__ && genAssignmentExpression(node, context)
       break
+    case NodeTypes.JS_SEQUENCE_EXPRESSION:
+      !__BROWSER__ && genSequenceExpression(node, context)
+      break
     case NodeTypes.JS_RETURN_STATEMENT:
       !__BROWSER__ && genReturnStatement(node, context)
       break
@@ -623,7 +635,8 @@ function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
 }
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
-  const { push, helper } = context
+  const { push, helper, pure } = context
+  if (pure) push(PURE_ANNOTATION)
   push(`${helper(TO_DISPLAY_STRING)}(`)
   genNode(node.content, context)
   push(`)`)
@@ -665,13 +678,16 @@ function genExpressionAsPropertyKey(
 
 function genComment(node: CommentNode, context: CodegenContext) {
   if (__DEV__) {
-    const { push, helper } = context
+    const { push, helper, pure } = context
+    if (pure) {
+      push(PURE_ANNOTATION)
+    }
     push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
   }
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
-  const { push, helper } = context
+  const { push, helper, pure } = context
   const {
     tag,
     props,
@@ -687,6 +703,9 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   }
   if (isBlock) {
     push(`(${helper(OPEN_BLOCK)}(${isForBlock ? `true` : ``}), `)
+  }
+  if (pure) {
+    push(PURE_ANNOTATION)
   }
   push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
   genNodeList(
@@ -714,12 +733,14 @@ function genNullableArgs(args: any[]): CallExpression['arguments'] {
 
 // JavaScript
 function genCallExpression(node: CallExpression, context: CodegenContext) {
-  const callee = isString(node.callee)
-    ? node.callee
-    : context.helper(node.callee)
-  context.push(callee + `(`, node)
+  const { push, helper, pure } = context
+  const callee = isString(node.callee) ? node.callee : helper(node.callee)
+  if (pure) {
+    push(PURE_ANNOTATION)
+  }
+  push(callee + `(`, node)
   genNodeList(node.arguments, context)
-  context.push(`)`)
+  push(`)`)
 }
 
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
@@ -768,6 +789,8 @@ function genFunctionExpression(
 
   if (genScopeId) {
     push(`_withId(`)
+  } else if (isSlot) {
+    push(`_${helperNameMap[WITH_CTX]}(`)
   }
   push(`(`, node)
   if (isArray(params)) {
@@ -796,7 +819,7 @@ function genFunctionExpression(
     deindent()
     push(`}`)
   }
-  if (genScopeId) {
+  if (genScopeId || isSlot) {
     push(`)`)
   }
 }
@@ -909,6 +932,15 @@ function genAssignmentExpression(
   genNode(node.left, context)
   context.push(` = `)
   genNode(node.right, context)
+}
+
+function genSequenceExpression(
+  node: SequenceExpression,
+  context: CodegenContext
+) {
+  context.push(`(`)
+  genNodeList(node.expressions, context)
+  context.push(`)`)
 }
 
 function genReturnStatement(

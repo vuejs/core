@@ -2,7 +2,7 @@ import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
-import { watch } from '@vue/runtime-dom'
+import { watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
 
 declare global {
@@ -54,7 +54,7 @@ window.init = () => {
       )
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
+      lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
       lastSuccessfulCode = `/* ERROR: ${
@@ -94,7 +94,7 @@ window.init = () => {
     }
   }
 
-  const sharedEditorOptions: m.editor.IEditorConstructionOptions = {
+  const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
     theme: 'vs-dark',
     fontSize: 14,
     wordWrap: 'on',
@@ -221,7 +221,7 @@ window.init = () => {
   )
 
   initOptions()
-  watch(reCompile)
+  watchEffect(reCompile)
 }
 
 function debounce<T extends (...args: any[]) => any>(

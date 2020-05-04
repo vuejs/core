@@ -1,11 +1,12 @@
 {
   "name": "vue",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-beta.7",
   "description": "vue",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
+  "jsdelivr": "dist/vue.global.js",
   "sideEffects": false,
   "files": [
     "index.js",
@@ -18,12 +19,14 @@
       "esm-bundler-runtime",
       "cjs",
       "global",
-      "esm"
+      "global-runtime",
+      "esm-browser",
+      "esm-browser-runtime"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/vue.git"
+    "url": "git+https://github.com/vuejs/vue-next.git"
   },
   "keywords": [
     "vue"
@@ -31,12 +34,13 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/vue/issues"
+    "url": "https://github.com/vuejs/vue-next/issues"
   },
-  "homepage": "https://github.com/vuejs/vue/tree/dev/packages/vue#readme",
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/vue#readme",
   "dependencies": {
-    "@vue/compiler-dom": "3.0.0-alpha.4",
-    "@vue/runtime-dom": "3.0.0-alpha.4"
+    "@vue/shared": "3.0.0-beta.7",
+    "@vue/compiler-dom": "3.0.0-beta.7",
+    "@vue/runtime-dom": "3.0.0-beta.7"
   },
   "devDependencies": {
     "lodash": "^4.17.15",

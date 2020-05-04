@@ -14,7 +14,10 @@ import {
   isString,
   isSymbol,
   escapeHtml,
-  toDisplayString
+  toDisplayString,
+  normalizeClass,
+  normalizeStyle,
+  stringifyStyle
 } from '@vue/shared'
 
 // Turn eligible hoisted static trees into stringied static nodes, e.g.
@@ -84,8 +87,15 @@ function stringifyElement(
       }
     } else if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
       // constant v-bind, e.g. :foo="1"
+      let evaluated = evaluateConstant(p.exp as SimpleExpressionNode)
+      const arg = p.arg && (p.arg as SimpleExpressionNode).content
+      if (arg === 'class') {
+        evaluated = normalizeClass(evaluated)
+      } else if (arg === 'style') {
+        evaluated = stringifyStyle(normalizeStyle(evaluated))
+      }
       res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
-        evaluateConstant(p.exp as ExpressionNode)
+        evaluated
       )}"`
     }
   }
@@ -151,7 +161,7 @@ function evaluateConstant(exp: ExpressionNode): string {
       if (c.type === NodeTypes.TEXT) {
         res += c.content
       } else if (c.type === NodeTypes.INTERPOLATION) {
-        res += evaluateConstant(c.content)
+        res += toDisplayString(evaluateConstant(c.content))
       } else {
         res += evaluateConstant(c)
       }

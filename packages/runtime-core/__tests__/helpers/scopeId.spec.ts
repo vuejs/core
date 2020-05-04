@@ -17,6 +17,27 @@ describe('scopeId runtime support', () => {
     expect(serializeInner(root)).toBe(`<div parent><div parent></div></div>`)
   })
 
+  test('should attach scopeId to components in parent component', () => {
+    const Child = {
+      __scopeId: 'child',
+      render: withChildId(() => {
+        return h('div')
+      })
+    }
+    const App = {
+      __scopeId: 'parent',
+      render: withParentId(() => {
+        return h('div', [h(Child)])
+      })
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div parent><div parent child></div></div>`
+    )
+  })
+
   test('should work on slots', () => {
     const Child = {
       __scopeId: 'child',
@@ -41,7 +62,7 @@ describe('scopeId runtime support', () => {
     // - scopeId from parent
     // - slotted scopeId (with `-s` postfix) from child (the tree owner)
     expect(serializeInner(root)).toBe(
-      `<div child><div parent child-s></div></div>`
+      `<div parent child><div parent child-s></div></div>`
     )
   })
 })

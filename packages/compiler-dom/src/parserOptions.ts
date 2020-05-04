@@ -8,6 +8,8 @@ import {
 } from '@vue/compiler-core'
 import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
+import { decodeHtml } from './decodeHtml'
+import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
 const isRawTextContainer = /*#__PURE__*/ makeMap(
   'style,iframe,script,noscript',
@@ -20,10 +22,11 @@ export const enum DOMNamespaces {
   MATH_ML
 }
 
-export const parserOptionsMinimal: ParserOptions = {
+export const parserOptions: ParserOptions = {
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
   isPreTag: tag => tag === 'pre',
+  decodeEntities: __BROWSER__ ? decodeHtmlBrowser : decodeHtml,
 
   isBuiltInComponent: (tag: string): symbol | undefined => {
     if (isBuiltInType(tag, `Transition`)) {

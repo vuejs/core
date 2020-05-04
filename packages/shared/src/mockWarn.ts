@@ -8,7 +8,9 @@ declare global {
   }
 }
 
-export function mockWarn() {
+export const mockError = () => mockWarn(true)
+
+export function mockWarn(asError = false) {
   expect.extend({
     toHaveBeenWarned(received: string) {
       asserted.add(received)
@@ -79,7 +81,7 @@ export function mockWarn() {
 
   beforeEach(() => {
     asserted.clear()
-    warn = jest.spyOn(console, 'warn')
+    warn = jest.spyOn(console, asError ? 'error' : 'warn')
     warn.mockImplementation(() => {})
   })
 

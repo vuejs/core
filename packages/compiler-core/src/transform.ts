@@ -117,6 +117,7 @@ export function createTransformContext(
     directiveTransforms = {},
     transformHoist = null,
     isBuiltInComponent = NOOP,
+    expressionPlugins = [],
     scopeId = null,
     ssr = false,
     onError = defaultOnError
@@ -131,6 +132,7 @@ export function createTransformContext(
     directiveTransforms,
     transformHoist,
     isBuiltInComponent,
+    expressionPlugins,
     scopeId,
     ssr,
     onError,
@@ -161,10 +163,7 @@ export function createTransformContext(
       return name
     },
     helperString(name) {
-      return (
-        (context.prefixIdentifiers ? `` : `_`) +
-        helperNameMap[context.helper(name)]
-      )
+      return `_${helperNameMap[context.helper(name)]}`
     },
     replaceNode(node) {
       /* istanbul ignore if */

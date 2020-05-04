@@ -11,9 +11,7 @@ import {
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
-  PORTAL,
-  SUSPENSE,
-  TRANSITION_GROUP,
+  TELEPORT,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -31,7 +29,9 @@ import {
   createTransformContext,
   traverseNode,
   ExpressionNode,
-  TemplateNode
+  TemplateNode,
+  SUSPENSE,
+  TRANSITION_GROUP
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
 import {
@@ -39,6 +39,11 @@ import {
   processChildren,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
+import { ssrProcessTeleport } from './ssrTransformTeleport'
+import {
+  ssrProcessSuspense,
+  ssrTransformSuspense
+} from './ssrTransformSuspense'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
@@ -55,6 +60,12 @@ interface WIPSlotEntry {
 
 const componentTypeMap = new WeakMap<ComponentNode, symbol>()
 
+// ssr component transform is done in two phases:
+// In phase 1. we use `buildSlot` to analyze the children of the component into
+// WIP slot functions (it must be done in phase 1 because `buildSlot` relies on
+// the core transform context).
+// In phase 2. we convert the WIP slots from phase 1 into ssr-specific codegen
+// nodes.
 export const ssrTransformComponent: NodeTransform = (node, context) => {
   if (
     node.type !== NodeTypes.ELEMENT ||
@@ -66,6 +77,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   const component = resolveComponentType(node, context, true /* ssr */)
   if (isSymbol(component)) {
     componentTypeMap.set(node, component)
+    if (component === SUSPENSE) {
+      return ssrTransformSuspense(node, context)
+    }
     return // built-in component: fallthrough
   }
 
@@ -79,10 +93,15 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   const clonedNode = clone(node)
 
   return function ssrPostTransformComponent() {
-    buildSlots(clonedNode, context, (props, children) => {
-      vnodeBranches.push(createVNodeSlotBranch(props, children, context))
-      return createFunctionExpression(undefined)
-    })
+    // Using the cloned node, build the normal VNode-based branches (for
+    // fallback in case the child is render-fn based). Store them in an array
+    // for later use.
+    if (clonedNode.children.length) {
+      buildSlots(clonedNode, context, (props, children) => {
+        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+        return createFunctionExpression(undefined)
+      })
+    }
 
     const props =
       node.props.length > 0
@@ -105,9 +124,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       wipEntries.push({
         fn,
         children,
-        // build the children using normal vnode-based transforms
-        // TODO fixme: `children` here has already been mutated at this point
-        // so the sub-transform runs into errors :/
+        // also collect the corresponding vnode branch built earlier
         vnodeBranch: vnodeBranches[wipEntries.length]
       })
       return fn
@@ -130,17 +147,15 @@ export function ssrProcessComponent(
 ) {
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
-    // just render its children.
     const component = componentTypeMap.get(node)!
-
-    if (component === PORTAL) {
-      // TODO
-      return
+    if (component === TELEPORT) {
+      return ssrProcessTeleport(node, context)
+    } else if (component === SUSPENSE) {
+      return ssrProcessSuspense(node, context)
+    } else {
+      // real fall-through (e.g. KeepAlive): just render its children.
+      processChildren(node.children, context, component === TRANSITION_GROUP)
     }
-
-    const needFragmentWrapper =
-      component === SUSPENSE || component === TRANSITION_GROUP
-    processChildren(node.children, context, needFragmentWrapper)
   } else {
     // finish up slot function expressions from the 1st pass.
     const wipEntries = wipMap.get(node) || []
@@ -230,6 +245,9 @@ function subTransform(
 ) {
   const childRoot = createRoot([node])
   const childContext = createTransformContext(childRoot, options)
+  // this sub transform is for vnode fallback branch so it should be handled
+  // like normal render functions
+  childContext.ssr = false
   // inherit parent scope analysis state
   childContext.scopes = { ...parentContext.scopes }
   childContext.identifiers = { ...parentContext.identifiers }

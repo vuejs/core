@@ -17,12 +17,11 @@ export const transformStyle: NodeTransform = (node, context) => {
     node.props.forEach((p, i) => {
       if (p.type === NodeTypes.ATTRIBUTE && p.name === 'style' && p.value) {
         // replace p with an expression node
-        const exp = context.hoist(parseInlineCSS(p.value.content, p.loc))
         node.props[i] = {
           type: NodeTypes.DIRECTIVE,
           name: `bind`,
           arg: createSimpleExpression(`style`, true, p.loc),
-          exp,
+          exp: parseInlineCSS(p.value.content, p.loc),
           modifiers: [],
           loc: p.loc
         }
@@ -45,5 +44,5 @@ function parseInlineCSS(
       tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())
     }
   })
-  return createSimpleExpression(JSON.stringify(res), false, loc)
+  return createSimpleExpression(JSON.stringify(res), false, loc, true)
 }

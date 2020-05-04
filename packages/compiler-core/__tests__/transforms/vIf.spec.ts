@@ -12,7 +12,8 @@ import {
   SimpleExpressionNode,
   ConditionalExpression,
   IfConditionalExpression,
-  VNodeCall
+  VNodeCall,
+  ElementTypes
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
 import { CompilerOptions, generate } from '../../src'
@@ -76,6 +77,22 @@ describe('compiler: v-if', () => {
       expect((node.branches[0].children[1] as TextNode).content).toBe(`hello`)
       expect(node.branches[0].children[2].type).toBe(NodeTypes.ELEMENT)
       expect((node.branches[0].children[2] as ElementNode).tag).toBe(`p`)
+    })
+
+    test('component v-if', () => {
+      const { node } = parseWithIfTransform(`<Component v-if="ok"></Component>`)
+      expect(node.type).toBe(NodeTypes.IF)
+      expect(node.branches.length).toBe(1)
+      expect((node.branches[0].children[0] as ElementNode).tag).toBe(
+        `Component`
+      )
+      expect((node.branches[0].children[0] as ElementNode).tagType).toBe(
+        ElementTypes.COMPONENT
+      )
+      expect(
+        ((node.branches[0].children[0] as ElementNode)!
+          .codegenNode as VNodeCall)!.isBlock
+      ).toBe(false)
     })
 
     test('v-if + v-else', () => {

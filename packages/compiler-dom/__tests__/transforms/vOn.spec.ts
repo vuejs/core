@@ -152,6 +152,58 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
+  test('should transform click.right', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @click.right="test"/>`)
+    expect(prop.key).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `onContextmenu`
+    })
+
+    // dynamic
+    const {
+      props: [prop2]
+    } = parseWithVOn(`<div @[event].right="test"/>`)
+    // ("on" + (event)).toLowerCase() === "onclick" ? "onContextmenu" : ("on" + (event))
+    expect(prop2.key).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `(`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `).toLowerCase() === "onclick" ? "onContextmenu" : (`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `)`
+      ]
+    })
+  })
+
+  test('should transform click.middle', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @click.middle="test"/>`)
+    expect(prop.key).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `onMouseup`
+    })
+
+    // dynamic
+    const {
+      props: [prop2]
+    } = parseWithVOn(`<div @[event].middle="test"/>`)
+    // ("on" + (event)).toLowerCase() === "onclick" ? "onMouseup" : ("on" + (event))
+    expect(prop2.key).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `(`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `).toLowerCase() === "onclick" ? "onMouseup" : (`,
+        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        `)`
+      ]
+    })
+  })
+
   test('cache handler w/ modifiers', () => {
     const {
       root,

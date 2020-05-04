@@ -26,9 +26,11 @@ import {
   CREATE_BLOCK,
   FRAGMENT,
   CREATE_COMMENT,
-  OPEN_BLOCK
+  OPEN_BLOCK,
+  TELEPORT
 } from '../runtimeHelpers'
 import { injectProp } from '../utils'
+import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -197,7 +199,9 @@ function createChildrenCodegenNode(
         helper(FRAGMENT),
         createObjectExpression([keyProperty]),
         children,
-        undefined,
+        `${PatchFlags.STABLE_FRAGMENT} /* ${
+          PatchFlagNames[PatchFlags.STABLE_FRAGMENT]
+        } */`,
         undefined,
         undefined,
         true,
@@ -209,7 +213,14 @@ function createChildrenCodegenNode(
     const vnodeCall = (firstChild as ElementNode)
       .codegenNode as BlockCodegenNode
     // Change createVNode to createBlock.
-    if (vnodeCall.type === NodeTypes.VNODE_CALL) {
+    if (
+      vnodeCall.type === NodeTypes.VNODE_CALL &&
+      // component vnodes are always tracked and its children are
+      // compiled into slots so no need to make it a block
+      ((firstChild as ElementNode).tagType !== ElementTypes.COMPONENT ||
+        // teleport has component type but isn't always tracked
+        vnodeCall.tag === TELEPORT)
+    ) {
       vnodeCall.isBlock = true
       helper(OPEN_BLOCK)
       helper(CREATE_BLOCK)

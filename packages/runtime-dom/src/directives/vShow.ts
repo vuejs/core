@@ -5,6 +5,9 @@ interface VShowElement extends HTMLElement {
   _vod: string
 }
 
+/**
+ * @internal
+ */
 export const vShow: ObjectDirective<VShowElement> = {
   beforeMount(el, { value }, { transition }) {
     el._vod = el.style.display === 'none' ? '' : el.style.display
@@ -37,6 +40,14 @@ export const vShow: ObjectDirective<VShowElement> = {
   },
   beforeUnmount(el) {
     setDisplay(el, true)
+  }
+}
+
+if (__NODE_JS__) {
+  vShow.getSSRProps = ({ value }) => {
+    if (!value) {
+      return { style: { display: 'none' } }
+    }
   }
 }
 

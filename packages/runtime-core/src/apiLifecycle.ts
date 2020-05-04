@@ -9,7 +9,7 @@ import { ComponentPublicInstance } from './componentProxy'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { capitalize } from '@vue/shared'
-import { pauseTracking, resumeTracking, DebuggerEvent } from '@vue/reactivity'
+import { pauseTracking, resetTracking, DebuggerEvent } from '@vue/reactivity'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -39,7 +39,7 @@ export function injectHook(
         setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
         setCurrentInstance(null)
-        resumeTracking()
+        resetTracking()
         return res
       })
     if (prepend) {
@@ -85,7 +85,7 @@ export const onRenderTracked = createHook<DebuggerHook>(
 )
 
 export type ErrorCapturedHook = (
-  err: Error,
+  err: unknown,
   instance: ComponentPublicInstance | null,
   info: string
 ) => boolean | void

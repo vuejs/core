@@ -6,8 +6,9 @@ export function isRelativeUrl(url: string): boolean {
   return firstChar === '.' || firstChar === '~' || firstChar === '@'
 }
 
-// We need an extra transform context API for injecting arbitrary import
-// statements.
+/**
+ * Parses string url into URL object.
+ */
 export function parseUrl(url: string): UrlWithStringQuery {
   const firstChar = url.charAt(0)
   if (firstChar === '~') {

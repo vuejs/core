@@ -1,14 +1,15 @@
 import { RendererOptions } from '@vue/runtime-core'
 
+export const svgNS = 'http://www.w3.org/2000/svg'
+
 const doc = (typeof document !== 'undefined' ? document : null) as Document
-const svgNS = 'http://www.w3.org/2000/svg'
 
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    if (anchor != null) {
+    if (anchor) {
       parent.insertBefore(child, anchor)
     } else {
       parent.appendChild(child)
@@ -17,13 +18,15 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 
   remove: child => {
     const parent = child.parentNode
-    if (parent != null) {
+    if (parent) {
       parent.removeChild(child)
     }
   },
 
-  createElement: (tag, isSVG): Element =>
-    isSVG ? doc.createElementNS(svgNS, tag) : doc.createElement(tag),
+  createElement: (tag, isSVG, is): Element =>
+    isSVG
+      ? doc.createElementNS(svgNS, tag)
+      : doc.createElement(tag, is ? { is } : undefined),
 
   createText: text => doc.createTextNode(text),
 
@@ -64,5 +67,14 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     const node = temp.children[0]
     nodeOps.insert(node, parent, anchor)
     return node
+  }
+}
+
+if (__DEV__) {
+  // __UNSAFE__
+  // Reason: innerHTML.
+  // same as `insertStaticContent`, but this is also dev only (for HMR).
+  nodeOps.setStaticContent = (el, content) => {
+    el.innerHTML = content
   }
 }

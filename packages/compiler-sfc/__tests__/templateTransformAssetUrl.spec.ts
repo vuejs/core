@@ -1,5 +1,8 @@
 import { generate, baseParse, transform } from '@vue/compiler-core'
-import { transformAssetUrl } from '../src/templateTransformAssetUrl'
+import {
+  transformAssetUrl,
+  createAssetUrlTransformWithOptions
+} from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 
@@ -45,5 +48,27 @@ describe('compiler sfc: transform asset url', () => {
     const result = compileWithAssetUrls('<use href="~"></use>')
 
     expect(result.code).toMatchSnapshot()
+  })
+
+  test('with explicit base', () => {
+    const ast = baseParse(
+      `<img src="./bar.png"></img>` + // -> /foo/bar.png
+      `<img src="~bar.png"></img>` + // -> /foo/bar.png
+      `<img src="bar.png"></img>` + // -> bar.png (untouched)
+        `<img src="@theme/bar.png"></img>` // -> @theme/bar.png (untouched)
+    )
+    transform(ast, {
+      nodeTransforms: [
+        createAssetUrlTransformWithOptions({
+          base: '/foo'
+        }),
+        transformElement
+      ],
+      directiveTransforms: {
+        bind: transformBind
+      }
+    })
+    const { code } = generate(ast, { mode: 'module' })
+    expect(code).toMatchSnapshot()
   })
 })

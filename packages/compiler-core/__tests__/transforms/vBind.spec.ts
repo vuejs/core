@@ -137,7 +137,7 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         children: [
-          `${helperNameMap[CAMELIZE]}(`,
+          `_${helperNameMap[CAMELIZE]}(`,
           { content: `_ctx.foo` },
           `(`,
           { content: `_ctx.bar` },

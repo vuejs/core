@@ -19,7 +19,7 @@ export const ssrTransformFor = createStructuralDirectiveTransform(
   processFor
 )
 
-// This is called during the 2nd transform pass to construct the SSR-sepcific
+// This is called during the 2nd transform pass to construct the SSR-specific
 // codegen nodes.
 export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
   const needFragmentWrapper =
@@ -32,14 +32,13 @@ export function ssrProcessFor(node: ForNode, context: SSRTransformContext) {
     context,
     needFragmentWrapper
   )
-
   // v-for always renders a fragment
-  context.pushStringPart(`<!---->`)
+  context.pushStringPart(`<!--[-->`)
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_LIST), [
       node.source,
       renderLoop
     ])
   )
-  context.pushStringPart(`<!---->`)
+  context.pushStringPart(`<!--]-->`)
 }

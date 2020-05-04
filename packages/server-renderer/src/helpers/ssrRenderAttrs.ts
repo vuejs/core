@@ -1,11 +1,9 @@
-import { escapeHtml } from '@vue/shared'
+import { escapeHtml, stringifyStyle } from '@vue/shared'
 import {
   normalizeClass,
   normalizeStyle,
   propsToAttrMap,
-  hyphenate,
   isString,
-  isNoUnitNumericStyleProp,
   isOn,
   isSSRSafeAttrName,
   isBooleanAttr,
@@ -55,7 +53,7 @@ export function ssrRenderDynamicAttr(
   if (isBooleanAttr(attrKey)) {
     return value === false ? `` : ` ${attrKey}`
   } else if (isSSRSafeAttrName(attrKey)) {
-    return ` ${attrKey}="${escapeHtml(value)}"`
+    return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`
   } else {
     console.warn(
       `[@vue/server-renderer] Skipped rendering unsafe attribute name: ${attrKey}`
@@ -93,17 +91,5 @@ export function ssrRenderStyle(raw: unknown): string {
     return escapeHtml(raw)
   }
   const styles = normalizeStyle(raw)
-  let ret = ''
-  for (const key in styles) {
-    const value = styles[key]
-    const normalizedKey = key.indexOf(`--`) === 0 ? key : hyphenate(key)
-    if (
-      isString(value) ||
-      (typeof value === 'number' && isNoUnitNumericStyleProp(normalizedKey))
-    ) {
-      // only render valid values
-      ret += `${normalizedKey}:${value};`
-    }
-  }
-  return escapeHtml(ret)
+  return escapeHtml(stringifyStyle(styles))
 }
