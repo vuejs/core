@@ -49,7 +49,7 @@
 
 ### BREAKING CHANGES
 
-* **types:** Internal APIs are now excluded from type decalrations.
+* **types:** Internal APIs are now excluded from type declarations.
 
 
 
