@@ -39,7 +39,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.isReadonly) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (key === ReactiveFlags.raw || key === '__proto__') {
       return target
     }
 
