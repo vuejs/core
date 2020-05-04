@@ -103,6 +103,19 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
+  it('directly watching reactive object (with automatic deep: true)', async () => {
+    const src = reactive({
+      count: 0
+    })
+    let dummy
+    watch(src, ({ count }) => {
+      dummy = count
+    })
+    src.count++
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
   it('watching multiple sources', async () => {
     const state = reactive({ count: 1 })
     const count = ref(1)
@@ -140,6 +153,12 @@ describe('api: watch', () => {
     status.value = true
     await nextTick()
     expect(dummy).toMatchObject([[2, true], [1, false]])
+  })
+
+  it('warn invalid watch source', () => {
+    // @ts-ignore
+    watch(1, () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
   })
 
   it('stopping the watcher (effect)', async () => {
