@@ -187,12 +187,13 @@ function doWatch(
     }
   } else {
     getter = NOOP
-    warn(
-      `Invalid watch source: `,
-      source,
-      `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`
-    )
+    __DEV__ &&
+      warn(
+        `Invalid watch source: `,
+        source,
+        `A watch source can only be a getter/effect function, a ref, ` +
+          `a reactive object, or an array of these types.`
+      )
   }
 
   if (cb && deep) {
