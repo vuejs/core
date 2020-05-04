@@ -137,7 +137,7 @@ describe('reactivity/reactive', () => {
       }
     }
     const r = reactive(o)
-    expect(r.value.b).toMatchObject(o)
+    expect(r).toMatchObject(o)
   })
 
   test('non-observable values', () => {
