@@ -5,7 +5,7 @@ import { reactive, isProxy, toRaw } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
-const RefSymbol = Symbol()
+declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   /**
