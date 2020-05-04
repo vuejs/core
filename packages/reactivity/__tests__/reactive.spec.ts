@@ -129,6 +129,17 @@ describe('reactivity/reactive', () => {
     expect(typeof obj.b).toBe(`number`)
   })
 
+  it('should not unwrap interface with `value` property', () => {
+    const o = {
+      a: 1,
+      value: {
+        b: 2
+      }
+    }
+    const r = reactive(o)
+    expect(r.value.b).toMatchObject(o)
+  })
+
   test('non-observable values', () => {
     const assertValue = (value: any) => {
       reactive(value)

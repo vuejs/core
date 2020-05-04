@@ -5,11 +5,23 @@ import { reactive, isProxy, toRaw } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
+declare const isRefSymbol: unique symbol
 export interface Ref<T = any> {
+  // This field is necessary to allow TS to differentiate a Ref from a plain
+  // object that happens to have a "value" field.
+  // However, checking a symbol on an arbitrary object is much slower than
+  // checking a plain property, so we use a __v_isRef plain property for isRef()
+  // check in the actual implementation.
+  // The reason for not just declaring __v_isRef in the interface is because we
+  // don't want this internal field to leak into userland autocompletion -
+  // a private symbol, on the other hand, achieves just that.
+  [isRefSymbol]: true
+
   /**
    * @internal
    */
   __v_isRef: true
+
   value: T
 }
 

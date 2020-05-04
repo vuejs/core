@@ -42,6 +42,9 @@ function plainType(arg: number | Ref<number>) {
   expectType<Ref<IteratorFoo | null | undefined>>(
     ref<IteratorFoo | null | undefined>()
   )
+
+  // with value
+  expect<Ref<{ value: { a: number } }>>(ref({ value: { a: 1 } }))
 }
 
 plainType(1)
