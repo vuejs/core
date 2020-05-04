@@ -152,7 +152,7 @@ function doWatch(
   } else if (cb) {
     // getter with cb
     getter = () =>
-      callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+      callWithErrorHandling(cb, instance, ErrorCodes.WATCH_GETTER)
   } else {
     // no cb -> simple effect
     getter = () => {
