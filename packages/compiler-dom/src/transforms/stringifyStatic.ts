@@ -47,12 +47,30 @@ export const enum StringifyThresholds {
 function shouldOptimize(node: ElementNode): boolean {
   let bindingThreshold = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
   let nodeThreshold = StringifyThresholds.NODE_COUNT
+  let bail = false
 
   // TODO: check for cases where using innerHTML will result in different
   // output compared to imperative node insertions.
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode) {
+    // some transforms, e.g. `transformAssetUrls` in `@vue/compiler-sfc` may
+    // convert static attributes into a v-bind with a constnat expresion.
+    // Such constant bindings are eligible for hoisting but not for static
+    // stringification because they cannot be pre-evaluated.
+    for (let i = 0; i < node.props.length; i++) {
+      const p = node.props[i]
+      if (
+        p.type === NodeTypes.DIRECTIVE &&
+        p.name === 'bind' &&
+        p.exp &&
+        p.exp.type !== NodeTypes.COMPOUND_EXPRESSION &&
+        p.exp.isRuntimeConstant
+      ) {
+        bail = true
+        return false
+      }
+    }
     for (let i = 0; i < node.children.length; i++) {
       if (--nodeThreshold === 0) {
         return true
@@ -64,6 +82,9 @@ function shouldOptimize(node: ElementNode): boolean {
         }
         if (walk(child)) {
           return true
+        }
+        if (bail) {
+          return false
         }
       }
     }

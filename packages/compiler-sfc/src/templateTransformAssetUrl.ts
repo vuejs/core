@@ -126,11 +126,14 @@ function getImportsExpressionExp(
     }
     const name = `_imports_${importsArray.length}`
     const exp = createSimpleExpression(name, false, loc, true)
+    exp.isRuntimeConstant = true
     context.imports.add({ exp, path })
     if (hash && path) {
-      return context.hoist(
+      const ret = context.hoist(
         createSimpleExpression(`${name} + '${hash}'`, false, loc, true)
       )
+      ret.isRuntimeConstant = true
+      return ret
     } else {
       return exp
     }

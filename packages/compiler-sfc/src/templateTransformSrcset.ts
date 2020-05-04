@@ -86,11 +86,14 @@ export const transformSrcset: NodeTransform = (node, context) => {
             }
           })
 
+          const hoisted = context.hoist(compoundExpression)
+          hoisted.isRuntimeConstant = true
+
           node.props[index] = {
             type: NodeTypes.DIRECTIVE,
             name: 'bind',
             arg: createSimpleExpression('srcset', true, attr.loc),
-            exp: context.hoist(compoundExpression),
+            exp: hoisted,
             modifiers: [],
             loc: attr.loc
           }

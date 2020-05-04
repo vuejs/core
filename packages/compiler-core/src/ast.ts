@@ -195,6 +195,9 @@ export interface SimpleExpressionNode extends Node {
   // an expression parsed as the params of a function will track
   // the identifiers declared inside the function body.
   identifiers?: string[]
+  // some expressions (e.g. transformAssetUrls import identifiers) are constant,
+  // but cannot be stringified because they must be first evaluated at runtime.
+  isRuntimeConstant?: boolean
 }
 
 export interface InterpolationNode extends Node {
