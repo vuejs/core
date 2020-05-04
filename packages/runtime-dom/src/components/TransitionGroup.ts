@@ -140,8 +140,8 @@ function getTransitionRawChildren(children: VNode[]): VNode[] {
     if (child.type === Fragment) {
       ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
     }
-    // comment should be skip, e.g. v-if
-    if (child.type !== Comment) {
+    // comment placeholders should be skipped, e.g. v-if
+    else if (child.type !== Comment) {
       ret.push(child)
     }
   }
