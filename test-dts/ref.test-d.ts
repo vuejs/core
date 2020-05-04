@@ -1,5 +1,5 @@
 import { expectType } from 'tsd'
-import { Ref, ref, isRef, unref } from './index'
+import { Ref, ref, isRef, unref, reactive } from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -84,3 +84,12 @@ function withSymbol() {
 }
 
 withSymbol()
+
+const state = reactive({
+  foo: {
+    value: 1,
+    label: 'bar'
+  }
+})
+
+expectType<string>(state.foo.label)

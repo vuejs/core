@@ -5,11 +5,15 @@ import { reactive, isProxy, toRaw } from './reactive'
 import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
+const RefSymbol = Symbol()
+
 export interface Ref<T = any> {
   /**
-   * @internal
+   * Type differentiator only.
+   * We need this to be in public d.ts but don't want it to show up in IDE
+   * autocomplete, so we use a private Symbol instead.
    */
-  __v_isRef: true
+  [RefSymbol]: true
   value: T
 }
 
