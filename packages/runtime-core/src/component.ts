@@ -89,17 +89,7 @@ export interface ClassComponent {
   __vccOpts: ComponentOptions
 }
 
-// Allow typescript deferenciate DefineComponent from other interfaces
-declare const DefineComponentSymbol: unique symbol
-export interface DefineComponent {
-  [DefineComponentSymbol]: true
-  [key: string]: any
-}
-
-export type Component =
-  | ComponentOptions
-  | FunctionalComponent<any>
-  | DefineComponent
+export type Component = ComponentOptions | FunctionalComponent<any>
 
 // A type used in public APIs where a component type is expected.
 // The constructor type is an artificial type returned by defineComponent().

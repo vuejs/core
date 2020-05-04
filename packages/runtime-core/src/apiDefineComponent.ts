@@ -6,7 +6,7 @@ import {
   ComponentOptionsWithObjectProps,
   RenderFunction
 } from './componentOptions'
-import { SetupContext, FunctionalComponent, DefineComponent } from './component'
+import { SetupContext, FunctionalComponent } from './component'
 import { ComponentPublicInstance } from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
@@ -60,7 +60,7 @@ export function defineComponent<
     E,
     VNodeProps & Props
   >
-} & DefineComponent //& ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, E, EE>
+} & ComponentOptionsWithoutProps<Props, RawBindings, D, C, M, E, EE>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -86,7 +86,7 @@ export function defineComponent<
 ): {
   // array props technically doesn't place any constraints on props in TSX
   new (): ComponentPublicInstance<VNodeProps, RawBindings, D, C, M, E>
-} & DefineComponent //& ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, E, EE>
+} & ComponentOptionsWithArrayProps<PropNames, RawBindings, D, C, M, E, EE>
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
@@ -120,7 +120,7 @@ export function defineComponent<
     E,
     VNodeProps & ExtractPropTypes<PropsOptions, false>
   >
-} & DefineComponent //& ComponentOptionsBase<PropsOptions, RawBindings, D, C, M, E, EE>
+} & ComponentOptionsWithObjectProps<PropsOptions, RawBindings, D, C, M, E, EE>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
