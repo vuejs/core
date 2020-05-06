@@ -415,15 +415,15 @@ describe('reactivity/collections', () => {
     
     it('thisArg', () => {
       const raw = new Set([ 'value' ])
-      const proxy = reactive(proxy)
-      const that = {}
+      const proxy = reactive(raw)
+      const thisArg = {}
       let count = 0
       set.forEach(function (value, _, set) {
         ++count
-        expect(this).toBe(that)
+        expect(this).toBe(thisArg)
         expect(value).toBe('value')
         expect(set).toBe(proxy)
-      }, that)
+      }, thisArg)
       expect(count).toBe(1)
     })
   })
