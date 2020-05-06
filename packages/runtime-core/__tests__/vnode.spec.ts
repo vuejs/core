@@ -258,7 +258,8 @@ describe('vnode', () => {
         }
       })
     })
-    test('style', () => {
+
+    test('style w/ strings', () => {
       let props1: Data = {
         style: 'width:100px;right:10;top:10'
       }
@@ -281,8 +282,8 @@ describe('vnode', () => {
           width: '300px',
           height: '300px',
           fontSize: 30,
-          right: 10,
-          top: 10
+          right: '10',
+          top: '10'
         }
       })
     })
