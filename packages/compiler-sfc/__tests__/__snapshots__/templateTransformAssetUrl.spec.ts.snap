@@ -59,7 +59,8 @@ import _imports_1 from '/bar.png'
 export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_Fragment, null, [
     _createVNode(\\"img\\", { src: _imports_0 }),
-    _createVNode(\\"img\\", { src: _imports_1 })
+    _createVNode(\\"img\\", { src: _imports_1 }),
+    _createVNode(\\"img\\", { src: \\"https://foo.bar/baz.png\\" })
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;

@@ -70,7 +70,9 @@ describe('compiler sfc: transform asset url', () => {
 
   test('with includeAbsolute: true', () => {
     const { code } = compileWithAssetUrls(
-      `<img src="./bar.png"></img>` + `<img src="/bar.png"></img>`,
+      `<img src="./bar.png"/>` +
+        `<img src="/bar.png"/>` +
+        `<img src="https://foo.bar/baz.png"/>`,
       {
         includeAbsolute: true
       }
