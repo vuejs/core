@@ -9,7 +9,7 @@ import {
   markRaw,
   ref
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { ITERATE_KEY, untracked } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -791,5 +791,37 @@ describe('reactivity/effect', () => {
     expect(count.value).toBe(1)
     count.value = 10
     expect(count.value).toBe(11)
+  })
+
+  describe('untracked', () => {
+    test('should prevent tracking', () => {
+      const a = ref(1)
+      const b = ref(5)
+      let calls = 0
+      let dummy = 0
+      effect(() => {
+        calls++
+        dummy = 0
+        untracked(() => {
+          dummy += b.value
+        })
+        dummy += a.value
+      })
+
+      expect(calls).toBe(1)
+      expect(dummy).toBe(6)
+      // a should be tracked.
+      a.value = 2
+      expect(calls).toBe(2)
+      expect(dummy).toBe(7)
+      // b should not be tracked.
+      b.value = 10
+      expect(calls).toBe(2)
+      expect(dummy).toBe(7)
+      // newly set value to b should be used when a changes.
+      a.value = 3
+      expect(calls).toBe(3)
+      expect(dummy).toBe(13)
+    })
   })
 })

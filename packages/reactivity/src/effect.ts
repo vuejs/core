@@ -162,6 +162,12 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+export function untracked(cb: () => void): void {
+  pauseTracking()
+  cb()
+  resetTracking()
+}
+
 export function trigger(
   target: object,
   type: TriggerOpTypes,
