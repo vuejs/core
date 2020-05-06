@@ -85,6 +85,39 @@ function withSymbol() {
 
 withSymbol()
 
+function generics<TGeneric extends { a: 1 }>() {
+  ;(function unknownGeneric<T>(v: T) {
+    const r = ref(v)
+    expectType<any>(r.value) // T in this case can be anything
+  })
+  ;(function stringGeneric<T extends string>(v: T) {
+    const r = ref(v)
+    expectType<string>(r.value)
+  })
+  ;(function assignedGeneric<T = TGeneric>(v: T) {
+    const r = ref(v)
+    expectType<any>(r.value) // T in this case can be anything
+  })
+  ;(function extendsGeneric<T extends TGeneric>(v: T) {
+    const r = ref(v)
+    expectType<{ a: 1 }>(r.value) // this will infer the actual type instead of being generic
+  })
+  ;(function functionGeneric<T extends (a: number, b: string) => number>(v: T) {
+    const r = ref(v)
+    expectType<(a: number, b: string) => number>(r.value) // this will infer the actual type instead of being generic
+  })
+  ;(function arrayGeneric<T extends Array<number>>(v: T) {
+    const r = ref(v)
+    expectType<Array<number>>(r.value)
+  })
+  ;(function tupleGeneric<T extends [number, string]>(v: T) {
+    const r = ref(v)
+    expectType<[number, string]>(r.value)
+  })
+}
+
+generics()
+
 const state = reactive({
   foo: {
     value: 1,

@@ -27,10 +27,23 @@ export function isRef(r: any): r is Ref {
   return r ? r.__v_isRef === true : false
 }
 
+// explicit `boolean` otherwise it will return
+// `Ref<true> | Ref<false>` instead of `Ref<boolean>`
+export function ref(value: boolean): Ref<boolean>
+// handles normal object
 export function ref<T extends object>(
   value: T
 ): T extends Ref ? T : Ref<UnwrapRef<T>>
-export function ref<T>(value: T): Ref<UnwrapRef<T>>
+
+// handles ref object
+export function ref<T extends Ref>(value: T): T
+
+// handles unknown and some odd types
+export function ref<T extends unknown | object>(
+  value: T
+): T extends Ref ? T : Ref<UnwrapRef<T>>
+
+// export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
   return createRef(value)
