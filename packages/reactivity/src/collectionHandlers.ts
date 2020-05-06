@@ -146,9 +146,9 @@ function createForEach(isReadonly: boolean) {
     // 1. invoked with the reactive map as `this` and 3rd arg
     // 2. the value received should be a corresponding reactive/readonly.
     function wrappedCallback(value: unknown, key: unknown) {
-      return callback.call(observed, wrap(value), wrap(key), observed)
+      return callback.call(thisArg, wrap(value), wrap(key), observed)
     }
-    return getProto(target).forEach.call(target, wrappedCallback, thisArg)
+    return getProto(target).forEach.call(target, wrappedCallback)
   }
 }
 
