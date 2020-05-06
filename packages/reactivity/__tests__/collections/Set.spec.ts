@@ -418,7 +418,7 @@ describe('reactivity/collections', () => {
       const proxy = reactive(raw)
       const thisArg = {}
       let count = 0
-      set.forEach(function (value, _, set) {
+      proxy.forEach(function (value, _, set) {
         ++count
         expect(this).toBe(thisArg)
         expect(value).toBe('value')
