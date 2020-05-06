@@ -39,7 +39,7 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.isReadonly) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw || key === '__proto__') {
+    } else if (key === ReactiveFlags.raw) {
       return target
     }
 
@@ -49,7 +49,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
     const res = Reflect.get(target, key, receiver)
 
-    if (isSymbol(key) && builtInSymbols.has(key)) {
+    if (isSymbol(key) && builtInSymbols.has(key) || key === '__proto__') {
       return res
     }
 
