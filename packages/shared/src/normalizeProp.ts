@@ -7,7 +7,8 @@ export function normalizeStyle(
   if (isArray(value)) {
     const res: Record<string, string | number> = {}
     for (let i = 0; i < value.length; i++) {
-      const normalized = normalizeStyle(value[i])
+      const styles = isString(value[i]) ? strStyleToObj(value[i]) : value[i]
+      const normalized = normalizeStyle(styles)
       if (normalized) {
         for (const key in normalized) {
           res[key] = normalized[key]
@@ -18,6 +19,18 @@ export function normalizeStyle(
   } else if (isObject(value)) {
     return value
   }
+}
+
+function strStyleToObj(style: string) {
+  const ret: Record<string, string | number> = {}
+  style
+    .replace(/\s*/g, '')
+    .split(';')
+    .forEach((item: string) => {
+      const [key, val] = item.split(':')
+      ret[key] = isNaN(Number(val)) ? val : Number(val)
+    })
+  return ret
 }
 
 export function stringifyStyle(
