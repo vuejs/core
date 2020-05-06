@@ -40,8 +40,23 @@ export interface SFCTemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
+  /**
+   * In some cases, compiler-sfc may not be inside the project root (e.g. when
+   * linked or globally installed). In such cases a custom `require` can be
+   * passed to correctly resolve the preprocessors.
+   */
   preprocessCustomRequire?: (id: string) => any
+  /**
+   * Configure what tags/attributes to trasnform into relative asset url imports
+   * in the form of `{ [tag: string]: string[] }`, or disable the transform with
+   * `false`.
+   */
   transformAssetUrls?: AssetURLOptions | boolean
+  /**
+   * If base is provided, instead of transforming relative asset urls into
+   * imports, they will be directly rewritten to absolute urls.
+   */
+  transformAssetUrlsBase?: string
 }
 
 function preprocess(
@@ -129,18 +144,24 @@ function doCompileTemplate({
   ssr = false,
   compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
-  transformAssetUrls
+  transformAssetUrls,
+  transformAssetUrlsBase
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
-  if (isObject(transformAssetUrls)) {
-    nodeTransforms = [
-      createAssetUrlTransformWithOptions(transformAssetUrls),
-      transformSrcset
-    ]
-  } else if (transformAssetUrls !== false) {
-    nodeTransforms = [transformAssetUrl, transformSrcset]
+  if (transformAssetUrls !== false) {
+    if (transformAssetUrlsBase || isObject(transformAssetUrls)) {
+      nodeTransforms = [
+        createAssetUrlTransformWithOptions({
+          base: transformAssetUrlsBase,
+          tags: isObject(transformAssetUrls) ? transformAssetUrls : undefined
+        }),
+        transformSrcset
+      ]
+    } else {
+      nodeTransforms = [transformAssetUrl, transformSrcset]
+    }
   }
 
   let { code, map } = compiler.compile(source, {

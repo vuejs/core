@@ -4,8 +4,7 @@ import {
   ReactiveEffect,
   pauseTracking,
   resetTracking,
-  shallowReadonly,
-  markRaw
+  shallowReadonly
 } from '@vue/reactivity'
 import {
   CreateComponentPublicInstance,
@@ -473,7 +472,7 @@ function setupStatefulComponent(
   instance.accessCache = {}
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
-  instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
+  instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }

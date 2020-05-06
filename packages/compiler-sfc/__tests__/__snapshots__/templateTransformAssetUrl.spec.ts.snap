@@ -36,3 +36,16 @@ export function render(_ctx, _cache) {
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
+
+exports[`compiler sfc: transform asset url with explicit base 1`] = `
+"import { createVNode as _createVNode, Fragment as _Fragment, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createBlock(_Fragment, null, [
+    _createVNode(\\"img\\", { src: \\"/foo/bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"/foo/bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"bar.png\\" }),
+    _createVNode(\\"img\\", { src: \\"@theme/bar.png\\" })
+  ], 64 /* STABLE_FRAGMENT */))
+}"
+`;

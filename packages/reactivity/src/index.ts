@@ -21,7 +21,8 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  ReactiveFlags
 } from './reactive'
 export {
   computed,

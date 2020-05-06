@@ -12,7 +12,7 @@ import {
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h } from '../src'
+import { h, reactive, isReactive } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 
 describe('vnode', () => {
@@ -424,6 +424,13 @@ describe('vnode', () => {
       const root = nodeOps.createElement('div')
       createApp(App).mount(root)
       expect(serializeInner(root)).toBe('<h1>Root Component</h1>')
+    })
+
+    test('should not be observable', () => {
+      const a = createVNode('div')
+      const b = reactive(a)
+      expect(b).toBe(a)
+      expect(isReactive(b)).toBe(false)
     })
   })
 })

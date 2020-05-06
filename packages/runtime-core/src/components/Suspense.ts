@@ -244,7 +244,7 @@ function createSuspenseBoundary(
   /* istanbul ignore if */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
-    console[console.info ? 'info' : 'log'](
+    console[(console as any).info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`
     )
   }

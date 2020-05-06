@@ -103,7 +103,14 @@ export type VNodeNormalizedChildren =
   | null
 
 export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
-  _isVNode: true
+  /**
+   * @internal
+   */
+  __v_isVNode: true
+  /**
+   * @internal
+   */
+  __v_skip: true
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
@@ -221,7 +228,7 @@ export function createBlock(
 }
 
 export function isVNode(value: any): value is VNode {
-  return value ? value._isVNode === true : false
+  return value ? value.__v_isVNode === true : false
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
@@ -344,7 +351,8 @@ function _createVNode(
   }
 
   const vnode: VNode = {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -403,7 +411,8 @@ export function cloneVNode<T, U>(
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type: vnode.type,
     props,
     key: props && normalizeKey(props),

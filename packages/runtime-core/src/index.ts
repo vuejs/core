@@ -63,6 +63,8 @@ export {
   BaseTransition,
   BaseTransitionProps
 } from './components/BaseTransition'
+// For using custom directives
+export { withDirectives } from './directives'
 // SFC CSS Modules
 export { useCSSModule } from './helpers/useCssModule'
 // SSR context
@@ -202,7 +204,6 @@ export { HMRRuntime } from './hmr'
 // For compiler generated code
 // should sync with '@vue/compiler-core/src/runtimeConstants.ts'
 export { withCtx } from './helpers/withRenderContext'
-export { withDirectives } from './directives'
 export {
   resolveComponent,
   resolveDirective,
