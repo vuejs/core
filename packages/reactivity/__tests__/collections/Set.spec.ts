@@ -412,5 +412,19 @@ describe('reactivity/collections', () => {
         `Reactive Set contains both the raw and reactive`
       ).toHaveBeenWarned()
     })
+    
+    it('thisArg', () => {
+      const raw = new Set([ 'value' ])
+      const proxy = reactive(proxy)
+      const that = {}
+      let count = 0
+      set.forEach(function (value, _, set) {
+        ++count
+        expect(this).toBe(that)
+        expect(value).toBe('value')
+        expect(set).toBe(proxy)
+      }, that)
+      expect(count).toBe(1)
+    })
   })
 })
