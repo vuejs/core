@@ -258,17 +258,19 @@ function generateSourceMap(
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
-        map.addMapping({
-          source: filename,
-          original: {
-            line: originalLine,
-            column: i
-          },
-          generated: {
-            line: generatedLine,
-            column: i
-          }
-        })
+        if (!/\s/.test(line[i])) {
+          map.addMapping({
+            source: filename,
+            original: {
+              line: originalLine,
+              column: i
+            },
+            generated: {
+              line: generatedLine,
+              column: i
+            }
+          })
+        }
       }
     }
   })
