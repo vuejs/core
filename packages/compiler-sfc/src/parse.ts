@@ -96,10 +96,20 @@ export function parse(
     isNativeTag: () => true,
     // preserve all whitespaces
     isPreTag: () => true,
-    getTextMode: ({ tag }, parent) => {
+    getTextMode: ({ tag, props }, parent) => {
       // all top level elements except <template> are parsed as raw text
       // containers
-      if (!parent && tag !== 'template') {
+      if (
+        (!parent && tag !== 'template') ||
+        // <template lang="xxx"> should also be treated as raw text
+        props.some(
+          p =>
+            p.type === NodeTypes.ATTRIBUTE &&
+            p.name === 'lang' &&
+            p.value &&
+            p.value.content !== 'html'
+        )
+      ) {
         return TextModes.RAWTEXT
       } else {
         return TextModes.DATA
