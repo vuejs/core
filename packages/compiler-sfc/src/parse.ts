@@ -96,7 +96,7 @@ export function parse(
     isNativeTag: () => true,
     // preserve all whitespaces
     isPreTag: () => true,
-    getTextMode: (tag, _ns, parent) => {
+    getTextMode: ({ tag }, parent) => {
       // all top level elements except <template> are parsed as raw text
       // containers
       if (!parent && tag !== 'template') {
