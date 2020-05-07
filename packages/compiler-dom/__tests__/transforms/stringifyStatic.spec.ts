@@ -168,4 +168,29 @@ describe('stringify static html', () => {
       type: NodeTypes.VNODE_CALL
     })
   })
+
+  // #1128
+  test('should bail on non attribute bindings', () => {
+    const { ast } = compileWithStringify(
+      `<div><div><input indeterminate>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+
+    const { ast: ast2 } = compileWithStringify(
+      `<div><div><input :indeterminate="true">${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`
+    )
+    expect(ast2.hoists.length).toBe(1)
+    expect(ast2.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
 })

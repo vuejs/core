@@ -1,3 +1,6 @@
+/**
+ * This module is Node-only.
+ */
 import {
   NodeTypes,
   ElementNode,
@@ -13,6 +16,7 @@ import {
   isVoidTag,
   isString,
   isSymbol,
+  isKnownAttr,
   escapeHtml,
   toDisplayString,
   normalizeClass,
@@ -38,6 +42,11 @@ export const enum StringifyThresholds {
   NODE_COUNT = 20
 }
 
+const dataAriaRE = /^(data|aria)-/
+const isStringifiableAttr = (name: string) => {
+  return isKnownAttr(name) || dataAriaRE.test(name)
+}
+
 // Opt-in heuristics based on:
 // 1. number of elements with attributes > 5.
 // 2. OR: number of total nodes > 20
@@ -47,28 +56,44 @@ export const enum StringifyThresholds {
 function shouldOptimize(node: ElementNode): boolean {
   let bindingThreshold = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
   let nodeThreshold = StringifyThresholds.NODE_COUNT
-  let bail = false
+
+  let bailed = false
+  const bail = () => {
+    bailed = true
+    return false
+  }
 
   // TODO: check for cases where using innerHTML will result in different
   // output compared to imperative node insertions.
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
   function walk(node: ElementNode) {
-    // some transforms, e.g. `transformAssetUrls` in `@vue/compiler-sfc` may
-    // convert static attributes into a v-bind with a constnat expresion.
-    // Such constant bindings are eligible for hoisting but not for static
-    // stringification because they cannot be pre-evaluated.
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
-      if (
-        p.type === NodeTypes.DIRECTIVE &&
-        p.name === 'bind' &&
-        p.exp &&
-        p.exp.type !== NodeTypes.COMPOUND_EXPRESSION &&
-        p.exp.isRuntimeConstant
-      ) {
-        bail = true
-        return false
+      // bail on non-attr bindings
+      if (p.type === NodeTypes.ATTRIBUTE && !isStringifiableAttr(p.name)) {
+        return bail()
+      }
+      if (p.type === NodeTypes.DIRECTIVE && p.name === 'bind') {
+        // bail on non-attr bindings
+        if (
+          p.arg &&
+          (p.arg.type === NodeTypes.COMPOUND_EXPRESSION ||
+            (p.arg.isStatic && !isStringifiableAttr(p.arg.content)))
+        ) {
+          return bail()
+        }
+        // some transforms, e.g. `transformAssetUrls` in `@vue/compiler-sfc` may
+        // convert static attributes into a v-bind with a constnat expresion.
+        // Such constant bindings are eligible for hoisting but not for static
+        // stringification because they cannot be pre-evaluated.
+        if (
+          p.exp &&
+          (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
+            p.exp.isRuntimeConstant)
+        ) {
+          return bail()
+        }
       }
     }
     for (let i = 0; i < node.children.length; i++) {
@@ -83,7 +108,7 @@ function shouldOptimize(node: ElementNode): boolean {
         if (walk(child)) {
           return true
         }
-        if (bail) {
+        if (bailed) {
           return false
         }
       }
