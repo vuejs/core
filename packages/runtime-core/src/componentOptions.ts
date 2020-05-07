@@ -81,8 +81,8 @@ export interface ComponentOptionsBase<
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
-  Mixin extends IComponentOptions,
-  Extends extends IComponentOptions,
+  Mixin extends ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string
 >
@@ -152,8 +152,8 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = IComponentOptions,
-  Extends extends IComponentOptions = IComponentOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
@@ -178,8 +178,8 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = IComponentOptions,
-  Extends extends IComponentOptions = IComponentOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
@@ -204,8 +204,8 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = IComponentOptions,
-  Extends extends IComponentOptions = IComponentOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
@@ -229,18 +229,17 @@ export type ComponentOptions =
   | ComponentOptionsWithObjectProps<any, any, any, any, any>
   | ComponentOptionsWithArrayProps<any, any, any, any, any>
 
-// IComponentOptionsXXX is used to resolve circularly references
-export interface IComponentOptionsWithoutProps
-  extends ComponentOptionsWithoutProps {}
-export interface IComponentOptionsWithObjectProps
-  extends ComponentOptionsWithObjectProps {}
-export interface IComponentOptionsWithArrayProps
-  extends ComponentOptionsWithArrayProps {}
-
-export type IComponentOptions =
-  | IComponentOptionsWithoutProps
-  | IComponentOptionsWithObjectProps
-  | IComponentOptionsWithArrayProps
+export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
 
 export type ComputedOptions = Record<
   string,
@@ -278,8 +277,8 @@ export interface LegacyOptions<
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
-  Mixin extends IComponentOptions,
-  Extends extends IComponentOptions
+  Mixin extends ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin
 > {
   // allow any custom options
   [key: string]: any

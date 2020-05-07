@@ -459,36 +459,33 @@ describe('api: options', () => {
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
         expect(this.c).toBe(3)
+        expect(this.cP1).toBeUndefined()
       },
       mounted() {
         calls.push('mixinB mounted')
       }
     }
-    const mixinC = {
+    const mixinC = defineComponent({
       props: ['cP1', 'cP2'],
       data() {
         return {
           c: 3
         }
       },
-      created(this: any) {
+      created() {
         calls.push('mixinC created')
-        expect(this.a).toBe(1)
-        expect(this.b).toBe(2)
-        expect(this.bP).toBeUndefined()
         expect(this.c).toBe(3)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
         calls.push('mixinC mounted')
       }
-    }
+    })
     const Comp = defineComponent({
-      mixins: [
-        defineComponent(mixinA),
-        defineComponent(mixinB),
-        defineComponent(mixinC)
-      ],
+      props: {
+        aaa: String
+      },
+      mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
       data() {
         return {
           z: 4

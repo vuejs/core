@@ -14,10 +14,7 @@ import {
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions,
-  IComponentOptions,
-  IComponentOptionsWithoutProps,
-  IComponentOptionsWithArrayProps,
-  IComponentOptionsWithObjectProps,
+  ComponentOptionsMixin,
   OptionTypesType,
   OptionTypesKeys,
   resolveMergedOptions
@@ -59,8 +56,8 @@ import { UnionToIntersection } from './helpers/typeUtils'
  */
 export interface ComponentCustomProperties {}
 
-type IsLegacyComponent<T> = T extends IComponentOptions
-  ? IComponentOptions extends T ? true : false
+type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
+  ? ComponentOptionsMixin extends T ? true : false
   : false
 
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
@@ -78,30 +75,12 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
       IntersectionMixin<Extends>
   : never
 
-const enum OptionsPropsTypes {
-  WITHOUT = 'OptionsWithoutPropsType',
-  ARRAY = 'OptionsWithArrayPropsType',
-  OBJECT = 'OptionsWithObjectPropsType'
-}
+// ExtractMixin(map type) is used to resolve circularly references
+type ExtractMixin<T> = {
+  Mixin: MixinToOptionTypes<T>
+}[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
-// MixinMapToOptionTypes is used to resolve circularly references
-type MixinMapToOptionTypes<T> = {
-  [OptionsPropsTypes.ARRAY]: MixinToOptionTypes<T>
-  [OptionsPropsTypes.OBJECT]: MixinToOptionTypes<T>
-  [OptionsPropsTypes.WITHOUT]: MixinToOptionTypes<T>
-}[T extends IComponentOptionsWithArrayProps
-  ? OptionsPropsTypes.ARRAY
-  : T extends IComponentOptionsWithObjectProps
-    ? OptionsPropsTypes.OBJECT
-    : T extends IComponentOptionsWithoutProps
-      ? OptionsPropsTypes.WITHOUT
-      : never]
-
-type ExtractMixin<T> = T extends IComponentOptions
-  ? MixinMapToOptionTypes<T>
-  : never
-
-type IntersectionMixin<T> = IsLegacyComponent<T> extends true
+type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
   ? OptionTypesType<{}, {}, {}, {}, {}>
   : UnionToIntersection<ExtractMixin<T>>
 
@@ -118,8 +97,8 @@ export type CreateComponentPublicInstance<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = IComponentOptions,
-  Extends extends IComponentOptions = IComponentOptions,
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   PublicProps = P,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -140,7 +119,6 @@ export type CreateComponentPublicInstance<
   PublicProps,
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
 >
-
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<

@@ -4,7 +4,7 @@ import {
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
-  IComponentOptions,
+  ComponentOptionsMixin,
   RenderFunction
 } from './componentOptions'
 import { SetupContext, FunctionalComponent } from './component'
@@ -54,8 +54,8 @@ export function defineComponent<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = {},
-  Extends extends IComponentOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string
 >(
@@ -104,8 +104,8 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = {},
-  Extends extends IComponentOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string
 >(
@@ -156,8 +156,8 @@ export function defineComponent<
   D,
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Mixin extends IComponentOptions = {},
-  Extends extends IComponentOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string
 >(
