@@ -253,7 +253,8 @@ let vnodeArgsTransformer:
 /**
  * Internal API for registering an arguments transform for createVNode
  * used for creating stubs in the test-utils
- * @internal
+ * It is *internal* but needs to be exposed for test-utils to pick up proper
+ * typings
  */
 export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
   vnodeArgsTransformer = transformer

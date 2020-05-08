@@ -1,3 +1,4 @@
+import path from 'path'
 import {
   createCompoundExpression,
   createSimpleExpression,
@@ -5,7 +6,11 @@ import {
   NodeTypes,
   SimpleExpressionNode
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl } from './templateUtils'
+import { isRelativeUrl, parseUrl, isExternalUrl } from './templateUtils'
+import {
+  AssetURLOptions,
+  defaultAssetUrlOptions
+} from './templateTransformAssetUrl'
 
 const srcsetTags = ['img', 'source']
 
@@ -17,13 +22,23 @@ interface ImageCandidate {
 // http://w3c.github.io/html/semantics-embedded-content.html#ref-for-image-candidate-string-5
 const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
 
-export const transformSrcset: NodeTransform = (node, context) => {
+export const createSrcsetTransformWithOptions = (
+  options: Required<AssetURLOptions>
+): NodeTransform => {
+  return (node, context) =>
+    (transformSrcset as Function)(node, context, options)
+}
+
+export const transformSrcset: NodeTransform = (
+  node,
+  context,
+  options: Required<AssetURLOptions> = defaultAssetUrlOptions
+) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (srcsetTags.includes(node.tag) && node.props.length) {
       node.props.forEach((attr, index) => {
         if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
-          // same logic as in transform-require.js
           const value = attr.value.content
 
           const imageCandidates: ImageCandidate[] = value.split(',').map(s => {
@@ -37,11 +52,34 @@ export const transformSrcset: NodeTransform = (node, context) => {
           })
 
           // When srcset does not contain any relative URLs, skip transforming
-          if (!imageCandidates.some(({ url }) => isRelativeUrl(url))) return
+          if (
+            !options.includeAbsolute &&
+            !imageCandidates.some(({ url }) => isRelativeUrl(url))
+          ) {
+            return
+          }
+
+          if (options.base) {
+            const base = options.base
+            const set: string[] = []
+            imageCandidates.forEach(({ url, descriptor }, index) => {
+              descriptor = descriptor ? ` ${descriptor}` : ``
+              if (isRelativeUrl(url)) {
+                set.push((path.posix || path).join(base, url) + descriptor)
+              } else {
+                set.push(url + descriptor)
+              }
+            })
+            attr.value.content = set.join(', ')
+            return
+          }
 
           const compoundExpression = createCompoundExpression([], attr.loc)
           imageCandidates.forEach(({ url, descriptor }, index) => {
-            if (isRelativeUrl(url)) {
+            if (
+              !isExternalUrl(url) &&
+              (options.includeAbsolute || isRelativeUrl(url))
+            ) {
               const { path } = parseUrl(url)
               let exp: SimpleExpressionNode
               if (path) {
@@ -86,11 +124,14 @@ export const transformSrcset: NodeTransform = (node, context) => {
             }
           })
 
+          const hoisted = context.hoist(compoundExpression)
+          hoisted.isRuntimeConstant = true
+
           node.props[index] = {
             type: NodeTypes.DIRECTIVE,
             name: 'bind',
             arg: createSimpleExpression('srcset', true, attr.loc),
-            exp: context.hoist(compoundExpression),
+            exp: hoisted,
             modifiers: [],
             loc: attr.loc
           }

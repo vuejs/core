@@ -54,15 +54,27 @@ test('transform asset url options', () => {
   // Object option
   const { code: code1 } = compileTemplate({
     ...input,
-    transformAssetUrls: { foo: ['bar'] }
+    transformAssetUrls: {
+      tags: { foo: ['bar'] }
+    }
   })
   expect(code1).toMatch(`import _imports_0 from 'baz'\n`)
-  // false option
+
+  // legacy object option (direct tags config)
   const { code: code2 } = compileTemplate({
+    ...input,
+    transformAssetUrls: {
+      foo: ['bar']
+    }
+  })
+  expect(code2).toMatch(`import _imports_0 from 'baz'\n`)
+
+  // false option
+  const { code: code3 } = compileTemplate({
     ...input,
     transformAssetUrls: false
   })
-  expect(code2).not.toMatch(`import _imports_0 from 'baz'\n`)
+  expect(code3).not.toMatch(`import _imports_0 from 'baz'\n`)
 })
 
 test('source map', () => {

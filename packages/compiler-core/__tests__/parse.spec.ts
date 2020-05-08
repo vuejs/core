@@ -2515,7 +2515,7 @@ foo
                   }
                   return ns
                 },
-                getTextMode: tag => {
+                getTextMode: ({ tag }) => {
                   if (tag === 'textarea') {
                     return TextModes.RCDATA
                   }

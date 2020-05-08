@@ -1,11 +1,12 @@
-import { expectError, expectType } from 'tsd'
 import {
   describe,
   defineComponent,
   PropType,
   ref,
   reactive,
-  createApp
+  createApp,
+  expectError,
+  expectType
 } from './index'
 
 describe('with object props', () => {
@@ -89,7 +90,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
 
-      // props should be readonly
+      // @ts-expect-error props should be readonly
       expectError((props.a = 1))
 
       // setup context
@@ -119,7 +120,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
 
-      // props should be readonly
+      // @ts-expect-error props should be readonly
       expectError((props.a = 1))
 
       // should also expose declared props on `this`
@@ -137,7 +138,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(this.fff)
       expectType<ExpectedProps['hhh']>(this.hhh)
 
-      // props on `this` should be readonly
+      // @ts-expect-error props on `this` should be readonly
       expectError((this.a = 1))
 
       // assert setup context unwrapping
@@ -176,13 +177,14 @@ describe('with object props', () => {
     />
   )
 
-  // missing required props
+  // @ts-expect-error missing required props
   expectError(<MyComponent />)
 
-  // wrong prop types
+  // @ts-expect-error wrong prop types
   expectError(
     <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
   )
+  // @ts-expect-error
   expectError(<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />)
 })
 
@@ -220,7 +222,7 @@ describe('type inference w/ array props declaration', () => {
   const MyComponent = defineComponent({
     props: ['a', 'b'],
     setup(props) {
-      // props should be readonly
+      // @ts-expect-error props should be readonly
       expectError((props.a = 1))
       expectType<any>(props.a)
       expectType<any>(props.b)
@@ -231,6 +233,7 @@ describe('type inference w/ array props declaration', () => {
     render() {
       expectType<any>(this.$props.a)
       expectType<any>(this.$props.b)
+      // @ts-expect-error
       expectError((this.$props.a = 1))
       expectType<any>(this.a)
       expectType<any>(this.b)
@@ -607,19 +610,29 @@ describe('emits', () => {
     setup(props, { emit }) {
       emit('click', 1)
       emit('input', 'foo')
+      //  @ts-expect-error
       expectError(emit('nope'))
+      //  @ts-expect-error
       expectError(emit('click'))
+      //  @ts-expect-error
       expectError(emit('click', 'foo'))
+      //  @ts-expect-error
       expectError(emit('input'))
+      //  @ts-expect-error
       expectError(emit('input', 1))
     },
     created() {
       this.$emit('click', 1)
       this.$emit('input', 'foo')
+      //  @ts-expect-error
       expectError(this.$emit('nope'))
+      //  @ts-expect-error
       expectError(this.$emit('click'))
+      //  @ts-expect-error
       expectError(this.$emit('click', 'foo'))
+      //  @ts-expect-error
       expectError(this.$emit('input'))
+      //  @ts-expect-error
       expectError(this.$emit('input', 1))
     }
   })
@@ -631,12 +644,14 @@ describe('emits', () => {
       emit('foo')
       emit('foo', 123)
       emit('bar')
+      //  @ts-expect-error
       expectError(emit('nope'))
     },
     created() {
       this.$emit('foo')
       this.$emit('foo', 123)
       this.$emit('bar')
+      //  @ts-expect-error
       expectError(this.$emit('nope'))
     }
   })

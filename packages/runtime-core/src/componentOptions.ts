@@ -272,7 +272,7 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-export interface LegacyOptions<
+interface LegacyOptions<
   Props,
   D,
   C extends ComputedOptions,

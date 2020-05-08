@@ -101,7 +101,8 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      children = getTransitionRawChildren(slots.default ? slots.default() : [])
+      const slotChildren = slots.default ? slots.default() : []
+      children = getTransitionRawChildren(slotChildren)
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
@@ -110,7 +111,7 @@ const TransitionGroupImpl = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-        } else if (__DEV__ && child.type !== Comment) {
+        } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
@@ -126,7 +127,7 @@ const TransitionGroupImpl = {
         }
       }
 
-      return createVNode(tag, null, children)
+      return createVNode(tag, null, slotChildren)
     }
   }
 }
@@ -138,7 +139,9 @@ function getTransitionRawChildren(children: VNode[]): VNode[] {
     // handle fragment children case, e.g. v-for
     if (child.type === Fragment) {
       ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
-    } else {
+    }
+    // comment placeholders should be skipped, e.g. v-if
+    else if (child.type !== Comment) {
       ret.push(child)
     }
   }

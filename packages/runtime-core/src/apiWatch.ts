@@ -4,7 +4,8 @@ import {
   isRef,
   Ref,
   ComputedRef,
-  ReactiveEffectOptions
+  ReactiveEffectOptions,
+  isReactive
 } from '@vue/reactivity'
 import { queueJob } from './scheduler'
 import {
@@ -80,14 +81,7 @@ export function watchEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-// overload #1: single source + cb
-export function watch<T, Immediate extends Readonly<boolean> = false>(
-  source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
-  options?: WatchOptions<Immediate>
-): WatchStopHandle
-
-// overload #2: array of multiple sources + cb
+// overload #1: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
@@ -97,6 +91,23 @@ export function watch<
 >(
   sources: T,
   cb: WatchCallback<MapSources<T>, MapOldSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
+
+// overload #2: single source + cb
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
+
+// overload #3: watching reactive object w/ cb
+export function watch<
+  T extends object,
+  Immediate extends Readonly<boolean> = false
+>(
+  source: T,
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
 
@@ -149,26 +160,40 @@ function doWatch(
       )
   } else if (isRef(source)) {
     getter = () => source.value
-  } else if (cb) {
-    // getter with cb
-    getter = () =>
-      callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
-  } else {
-    // no cb -> simple effect
-    getter = () => {
-      if (instance && instance.isUnmounted) {
-        return
+  } else if (isReactive(source)) {
+    getter = () => source
+    deep = true
+  } else if (isFunction(source)) {
+    if (cb) {
+      // getter with cb
+      getter = () =>
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+    } else {
+      // no cb -> simple effect
+      getter = () => {
+        if (instance && instance.isUnmounted) {
+          return
+        }
+        if (cleanup) {
+          cleanup()
+        }
+        return callWithErrorHandling(
+          source,
+          instance,
+          ErrorCodes.WATCH_CALLBACK,
+          [onInvalidate]
+        )
       }
-      if (cleanup) {
-        cleanup()
-      }
-      return callWithErrorHandling(
-        source,
-        instance,
-        ErrorCodes.WATCH_CALLBACK,
-        [onInvalidate]
-      )
     }
+  } else {
+    getter = NOOP
+    __DEV__ &&
+      warn(
+        `Invalid watch source: `,
+        source,
+        `A watch source can only be a getter/effect function, a ref, ` +
+          `a reactive object, or an array of these types.`
+      )
   }
 
   if (cb && deep) {
