@@ -10,9 +10,14 @@ import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLTagConfig,
+  normalizeOptions
 } from './templateTransformAssetUrl'
-import { transformSrcset } from './templateTransformSrcset'
+import {
+  transformSrcset,
+  createSrcsetTransformWithOptions
+} from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
@@ -47,16 +52,10 @@ export interface SFCTemplateCompileOptions {
    */
   preprocessCustomRequire?: (id: string) => any
   /**
-   * Configure what tags/attributes to trasnform into relative asset url imports
-   * in the form of `{ [tag: string]: string[] }`, or disable the transform with
-   * `false`.
+   * Configure what tags/attributes to trasnform into asset url imports,
+   * or disable the transform altogether with `false`.
    */
-  transformAssetUrls?: AssetURLOptions | boolean
-  /**
-   * If base is provided, instead of transforming relative asset urls into
-   * imports, they will be directly rewritten to absolute urls.
-   */
-  transformAssetUrlsBase?: string
+  transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
 }
 
 function preprocess(
@@ -144,24 +143,19 @@ function doCompileTemplate({
   ssr = false,
   compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
-  transformAssetUrls,
-  transformAssetUrlsBase
+  transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
 
   let nodeTransforms: NodeTransform[] = []
-  if (transformAssetUrls !== false) {
-    if (transformAssetUrlsBase || isObject(transformAssetUrls)) {
-      nodeTransforms = [
-        createAssetUrlTransformWithOptions({
-          base: transformAssetUrlsBase,
-          tags: isObject(transformAssetUrls) ? transformAssetUrls : undefined
-        }),
-        transformSrcset
-      ]
-    } else {
-      nodeTransforms = [transformAssetUrl, transformSrcset]
-    }
+  if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
+    nodeTransforms = [
+      createAssetUrlTransformWithOptions(assetOptions),
+      createSrcsetTransformWithOptions(assetOptions)
+    ]
+  } else if (transformAssetUrls !== false) {
+    nodeTransforms = [transformAssetUrl, transformSrcset]
   }
 
   let { code, map } = compiler.compile(source, {

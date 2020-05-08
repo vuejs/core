@@ -259,6 +259,35 @@ describe('vnode', () => {
       })
     })
 
+    test('style w/ strings', () => {
+      let props1: Data = {
+        style: 'width:100px;right:10;top:10'
+      }
+      let props2: Data = {
+        style: [
+          {
+            color: 'blue',
+            width: '200px'
+          },
+          {
+            width: '300px',
+            height: '300px',
+            fontSize: 30
+          }
+        ]
+      }
+      expect(mergeProps(props1, props2)).toMatchObject({
+        style: {
+          color: 'blue',
+          width: '300px',
+          height: '300px',
+          fontSize: 30,
+          right: '10',
+          top: '10'
+        }
+      })
+    })
+
     test('handlers', () => {
       let clickHandler1 = function() {}
       let clickHandler2 = function() {}
