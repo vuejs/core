@@ -241,6 +241,7 @@ describe('type inference w/ array props declaration', () => {
     }
   })
   expectType<JSX.Element>(<MyComponent a={[1, 2]} b="b" />)
+  // @ts-expect-error
   expectError(<MyComponent other="other" />)
 })
 
@@ -389,13 +390,17 @@ describe('with mixins', () => {
       expectType<string>(this.dC2)
 
       // props should be readonly
+      // @ts-expect-error
       expectError((this.aP1 = 'new'))
+      // @ts-expect-error
       expectError((this.z = 1))
 
       // props on `this` should be readonly
+      // @ts-expect-error
       expectError((this.bP1 = 1))
 
       // string value can not assigned to number type value
+      // @ts-expect-error
       expectError((this.c = '1'))
 
       // setup context properties should be mutable
@@ -411,10 +416,13 @@ describe('with mixins', () => {
   )
 
   // missing required props
+  // @ts-expect-error
   expectError(<MyComponent />)
 
   // wrong prop types
+  // @ts-expect-error
   expectError(<MyComponent aP1="ap" aP2={'wrong type'} bP1="b" z={'z'} />)
+  // @ts-expect-error
   expectError(<MyComponent aP1={1} bP2={[1]} />)
 })
 
@@ -473,10 +481,13 @@ describe('with extends', () => {
   expectType<JSX.Element>(<MyComponent aP2={3} aP1 z={'z'} />)
 
   // missing required props
+  // @ts-expect-error
   expectError(<MyComponent />)
 
   // wrong prop types
+  // @ts-expect-error
   expectError(<MyComponent aP2={'wrong type'} z={'z'} />)
+  // @ts-expect-error
   expectError(<MyComponent aP1={3} />)
 })
 
@@ -556,10 +567,13 @@ describe('extends with mixins', () => {
   expectType<JSX.Element>(<MyComponent mP1="p1" mP2 p1 p2={1} z={'z'} />)
 
   // missing required props
+  // @ts-expect-error
   expectError(<MyComponent />)
 
   // wrong prop types
+  // @ts-expect-error
   expectError(<MyComponent p2={'wrong type'} z={'z'} />)
+  // @ts-expect-error
   expectError(<MyComponent mP1={3} />)
 })
 
