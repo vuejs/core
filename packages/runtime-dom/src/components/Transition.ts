@@ -3,9 +3,9 @@ import {
   BaseTransitionProps,
   h,
   warn,
+  FunctionalComponent,
   getCurrentInstance,
-  callWithAsyncErrorHandling,
-  FunctionalComponent
+  callWithAsyncErrorHandling
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
