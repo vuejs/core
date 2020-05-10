@@ -3,7 +3,6 @@ import {
   isFunction,
   isString,
   isObject,
-  EMPTY_ARR,
   extend,
   normalizeClass,
   normalizeStyle,
@@ -215,7 +214,7 @@ export function createBlock(
     true /* isBlock: prevent a block from tracking itself */
   )
   // save current block children on the block vnode
-  vnode.dynamicChildren = currentBlock || EMPTY_ARR
+  vnode.dynamicChildren = currentBlock
   // close block
   blockStack.pop()
   currentBlock = blockStack[blockStack.length - 1] || null
