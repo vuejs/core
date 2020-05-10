@@ -21,7 +21,8 @@ export {
   shallowReactive,
   shallowReadonly,
   markRaw,
-  toRaw
+  toRaw,
+  untracked
 } from '@vue/reactivity'
 export { computed } from './apiComputed'
 export { watch, watchEffect } from './apiWatch'

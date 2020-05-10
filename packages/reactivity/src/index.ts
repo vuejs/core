@@ -37,6 +37,7 @@ export {
   stop,
   trigger,
   track,
+  untracked,
   enableTracking,
   pauseTracking,
   resetTracking,
