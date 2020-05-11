@@ -1270,6 +1270,9 @@ function baseCreateRenderer(
     nextVNode: VNode,
     optimized: boolean
   ) => {
+    if (__DEV__ && instance.type.__hmrId) {
+      optimized = false
+    }
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
