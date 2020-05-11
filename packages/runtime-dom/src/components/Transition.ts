@@ -77,6 +77,7 @@ export function resolveTransitionProps({
     return baseProps
   }
 
+  const originEnterClass = [enterFromClass, enterActiveClass, enterToClass]
   const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
@@ -84,7 +85,7 @@ export function resolveTransitionProps({
   const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
 
   // is appearing
-  if (appear && !getCurrentInstance()!.isMounted) {
+  if (appear && !instance.isMounted) {
     enterFromClass = appearFromClass
     enterActiveClass = appearActiveClass
     enterToClass = appearToClass
@@ -96,6 +97,10 @@ export function resolveTransitionProps({
     removeTransitionClass(el, enterToClass)
     removeTransitionClass(el, enterActiveClass)
     done && done()
+    // reset enter class
+    if (appear) {
+      ;[enterFromClass, enterActiveClass, enterToClass] = originEnterClass
+    }
   }
 
   const finishLeave: Hook = (el, done) => {
