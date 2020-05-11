@@ -1984,7 +1984,12 @@ function baseCreateRenderer(
       for (let i = 0; i < ch1.length; i++) {
         const c1 = ch1[i]
         const c2 = ch2[i]
-        if (isVNode(c1) && isVNode(c2) && !c2.dynamicChildren) {
+        if (
+          isVNode(c1) &&
+          isVNode(c2) &&
+          c2.shapeFlag & ShapeFlags.ELEMENT &&
+          !c2.dynamicChildren
+        ) {
           if (c2.patchFlag <= 0) {
             c2.el = c1.el
           }
