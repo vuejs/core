@@ -1725,7 +1725,16 @@ function baseCreateRenderer(
     parentSuspense,
     doRemove = false
   ) => {
-    const { props, ref, children, dynamicChildren, shapeFlag, dirs } = vnode
+    const {
+      type,
+      props,
+      ref,
+      children,
+      dynamicChildren,
+      shapeFlag,
+      patchFlag,
+      dirs
+    } = vnode
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
     const shouldKeepAlive = shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     let vnodeHook: VNodeHook | undefined | null
@@ -1755,7 +1764,12 @@ function baseCreateRenderer(
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
       }
 
-      if (dynamicChildren) {
+      if (
+        dynamicChildren &&
+        // #1153: fast path should not be taken for non-stable (v-for) fragments
+        (type !== Fragment ||
+          (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
+      ) {
         // fast path for block nodes: only need to unmount dynamic children.
         unmountChildren(dynamicChildren, parentComponent, parentSuspense)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
