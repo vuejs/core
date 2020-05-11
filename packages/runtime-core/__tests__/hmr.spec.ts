@@ -193,8 +193,8 @@ describe('hot module replacement', () => {
   // #1157 - component should force full props update when HMR is active
   test('force update child component w/ static props', () => {
     const root = nodeOps.createElement('div')
-    const parentId = 'test2-parent'
-    const childId = 'test2-child'
+    const parentId = 'test-force-props-parent'
+    const childId = 'test-force-props-child'
 
     const Child: ComponentOptions = {
       __hmrId: childId,
