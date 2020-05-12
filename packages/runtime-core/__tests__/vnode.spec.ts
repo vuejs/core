@@ -405,6 +405,36 @@ describe('vnode', () => {
       }))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
     })
+
+    test('with keyed or unkeyed fragment', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        (vnode1 = (openBlock(true),
+        createBlock(Fragment, null, [
+          hoist,
+          /*vnode2*/ createVNode(() => {}, null, 'text')
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+      expect(vnode1.dynamicChildren).toStrictEqual([])
+    })
+
+    test('with stable fragment', () => {
+      const hoist = createVNode('div')
+      let vnode1, vnode2
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        (vnode1 = (openBlock(),
+        createBlock(Fragment, null, [
+          hoist,
+          (vnode2 = createVNode(() => {}, null, 'text'))
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+      expect(vnode1.dynamicChildren).toStrictEqual([vnode2])
+    })
   })
 
   describe('transformVNodeArgs', () => {
