@@ -29,7 +29,6 @@ describe('reactivity/reactive', () => {
   test('proto', () => {
     const obj = {}
     const reactiveObj = reactive(obj)
-    expect(isReactive(reactiveObj)).toBe(true)
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
     // @ts-ignore
     const prototype = reactiveObj['__proto__']
