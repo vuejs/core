@@ -171,8 +171,8 @@ describe('with object props', () => {
   // @ts-expect-error missing required props
   expectError(<MyComponent />)
 
-  // @ts-expect-error wrong prop types
   expectError(
+    // @ts-expect-error wrong prop types
     <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
   )
   // @ts-expect-error
