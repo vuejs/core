@@ -54,7 +54,8 @@ describe('api: setup context', () => {
     }
 
     const Child = defineComponent({
-      setup(props: { count: number }) {
+      props: { count: Number },
+      setup(props) {
         watchEffect(() => {
           dummy = props.count
         })
@@ -119,7 +120,6 @@ describe('api: setup context', () => {
       // puts everything received in attrs
       // disable implicit fallthrough
       inheritAttrs: false,
-      props: {},
       setup(props: any, { attrs }: any) {
         return () => h('div', attrs)
       }

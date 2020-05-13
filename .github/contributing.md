@@ -74,30 +74,18 @@ yarn build runtime --all
 
 By default, each package will be built in multiple distribution formats as specified in the `buildOptions.formats` field in its `package.json`. These can be overwritten via the `-f` flag. The following formats are supported:
 
-- **`global`**:
+- **`global`**
+- **`esm-bundler`**
+- **`esm-browser`**
+- **`cjs`**
 
-  - For direct use via `<script>` in the browser. The global variable exposed is specified via the `buildOptions.name` field in a package's `package.json`.
-  - Note: global builds are not [UMD](https://github.com/umdjs/umd) builds. Instead they are built as [IIFEs](https://developer.mozilla.org/en-US/docs/Glossary/IIFE).
+Additional formats that only apply to the main `vue` package:
 
-- **`esm-bundler`**:
+- **`global-runtime`**
+- **`esm-bundler-runtime`**
+- **`esm-browser-runtime`**
 
-  - Leaves prod/dev branches with `process.env.NODE_ENV` guards (to be replaced by bundler)
-  - Does not ship a minified build (to be done together with the rest of the code after bundling)
-  - For use with bundlers like `webpack`, `rollup` and `parcel`.
-  - Imports dependencies (e.g. `@vue/runtime-core`, `@vue/runtime-compiler`)
-    - Imported dependencies are also `esm-bundler` builds and will in turn import their dependencies (e.g. `@vue/runtime-core` imports `@vue/reactivity`)
-    - This means you **can** install/import these deps without ending up with different instances of these dependencies
-
-- **`esm`**:
-
-  - For usage via native ES modules imports (in browser via `<script type="module">`, or via Node.js native ES modules support in the future)
-  - Inlines all dependencies - i.e. it's a single ES module with no imports from other files
-    - This means you **must** import everything from this file and this file only to ensure you are getting the same instance of code.
-  - Hard-coded prod/dev branches, and the prod build is pre-minified (you will have to use different paths/aliases for dev/prod)
-
-- **`cjs`**:
-  - For use in Node.js server-side rendering via `require()`.
-  - The dev/prod files are pre-built, but are dynamically required based on `process.env.NODE_ENV` in `index.js`, which is the default entry when you do `require('vue')`.
+More details about each of these formats can be found in the [`vue` package README](https://github.com/vuejs/vue-next/blob/master/packages/vue/README.md#which-dist-file-to-use) and the [Rollup config file](https://github.com/vuejs/vue-next/blob/master/rollup.config.js).
 
 For example, to build `runtime-core` with the global build only:
 
@@ -108,7 +96,7 @@ yarn build runtime-core -f global
 Multiple formats can be specified as a comma-separated list:
 
 ```bash
-yarn build runtime-core -f esm,cjs
+yarn build runtime-core -f esm-browser,cjs
 ```
 
 #### Build with Source Maps
@@ -140,9 +128,13 @@ $ yarn dev
 
 - The `dev` script also supports the `-s` flag for generating source maps, but it will make rebuilds slower.
 
+### `yarn dev-compiler`
+
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/vue-next/tree/master/packages/template-explorer) at `http://localhost:5000`. This is extremely useful when working on the compiler.
+
 ### `yarn test`
 
-The `yarn test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
+The `test` script simply calls the `jest` binary, so all [Jest CLI Options](https://jestjs.io/docs/en/cli) can be used. Some examples:
 
 ```bash
 # run all tests
@@ -234,7 +226,7 @@ There are some rules to follow when importing across package boundaries:
 
 - Compiler packages should not import items from the runtime, and vice versa. If something needs to be shared between the compiler-side and runtime-side, it should be extracted into `@vue/shared` instead.
 
-- If a package (A) has a non-type import from another package (B), package (B) should be listed as a dependency in the `package.json` of package (A). This is because the packages are externalized in the ESM-bundler/CJS builds and type declaration files, so the dependency packages must be actually installed as a dependency when consumed from package registries.
+- If a package (A) has a non-type import, or re-exports a type from another package (B), then (B) should be listed as a dependency in (A)'s `package.json`. This is because the packages are externalized in the ESM-bundler/CJS builds and type declaration files, so the dependency packages must be actually installed as a dependency when consumed from package registries.
 
 ## Contributing Tests
 
@@ -245,6 +237,8 @@ Unit tests are collocated with the code being tested in each package, inside dir
 - If testing platform agnostic behavior or asserting low-level virtual DOM operations, use `@vue/runtime-test`.
 
 - Only use platform-specific runtimes if the test is asserting platform-specific behavior.
+
+Test coverage is continuously deployed at https://vue-next-coverage.netlify.app/. PRs that improve test coverage are welcome, but in general the test coverage should be used as a guidance for finding API use cases that are not covered by tests. We don't recommend adding tests that only improve coverage but not actually test a meaning use case.
 
 ### Testing Type Definition Correctness
 

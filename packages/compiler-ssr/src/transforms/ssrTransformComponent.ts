@@ -11,7 +11,7 @@ import {
   buildSlots,
   FunctionExpression,
   TemplateChildNode,
-  PORTAL,
+  TELEPORT,
   createIfStatement,
   createSimpleExpression,
   getBaseTransformPreset,
@@ -39,7 +39,7 @@ import {
   processChildren,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
-import { ssrProcessPortal } from './ssrTransformPortal'
+import { ssrProcessTeleport } from './ssrTransformTeleport'
 import {
   ssrProcessSuspense,
   ssrTransformSuspense
@@ -96,10 +96,12 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // Using the cloned node, build the normal VNode-based branches (for
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
-    buildSlots(clonedNode, context, (props, children) => {
-      vnodeBranches.push(createVNodeSlotBranch(props, children, context))
-      return createFunctionExpression(undefined)
-    })
+    if (clonedNode.children.length) {
+      buildSlots(clonedNode, context, (props, children) => {
+        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+        return createFunctionExpression(undefined)
+      })
+    }
 
     const props =
       node.props.length > 0
@@ -146,8 +148,8 @@ export function ssrProcessComponent(
   if (!node.ssrCodegenNode) {
     // this is a built-in component that fell-through.
     const component = componentTypeMap.get(node)!
-    if (component === PORTAL) {
-      return ssrProcessPortal(node, context)
+    if (component === TELEPORT) {
+      return ssrProcessTeleport(node, context)
     } else if (component === SUSPENSE) {
       return ssrProcessSuspense(node, context)
     } else {

@@ -4,7 +4,8 @@ import {
   isRef,
   Ref,
   ComputedRef,
-  ReactiveEffectOptions
+  ReactiveEffectOptions,
+  isReactive
 } from '@vue/reactivity'
 import { queueJob } from './scheduler'
 import {
@@ -20,8 +21,6 @@ import {
 import {
   currentInstance,
   ComponentInternalInstance,
-  currentSuspense,
-  Data,
   isInSSRComponentSetup,
   recordInstanceBoundEffect
 } from './component'
@@ -56,40 +55,33 @@ type MapOldSources<T, Immediate> = {
 
 type InvalidateCbRegistrator = (cb: () => void) => void
 
-export interface BaseWatchOptions {
+export interface WatchOptionsBase {
   flush?: 'pre' | 'post' | 'sync'
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
 
-export interface WatchOptions<Immediate = boolean> extends BaseWatchOptions {
+export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
   deep?: boolean
 }
 
-export type StopHandle = () => void
+export type WatchStopHandle = () => void
 
 const invoke = (fn: Function) => fn()
 
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: BaseWatchOptions
-): StopHandle {
+  options?: WatchOptionsBase
+): WatchStopHandle {
   return doWatch(effect, null, options)
 }
 
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-// overload #1: single source + cb
-export function watch<T, Immediate extends Readonly<boolean> = false>(
-  source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
-  options?: WatchOptions<Immediate>
-): StopHandle
-
-// overload #2: array of multiple sources + cb
+// overload #1: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
@@ -100,14 +92,31 @@ export function watch<
   sources: T,
   cb: WatchCallback<MapSources<T>, MapOldSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
-): StopHandle
+): WatchStopHandle
+
+// overload #2: single source + cb
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
+
+// overload #3: watching reactive object w/ cb
+export function watch<
+  T extends object,
+  Immediate extends Readonly<boolean> = false
+>(
+  source: T,
+  cb: WatchCallback<T, Immediate extends true ? (T | undefined) : T>,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle
 
 // implementation
 export function watch<T = any>(
   source: WatchSource<T> | WatchSource<T>[],
   cb: WatchCallback<T>,
   options?: WatchOptions
-): StopHandle {
+): WatchStopHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -122,7 +131,7 @@ function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
-): StopHandle {
+): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -139,7 +148,6 @@ function doWatch(
   }
 
   const instance = currentInstance
-  const suspense = currentSuspense
 
   let getter: () => any
   if (isArray(source)) {
@@ -152,26 +160,40 @@ function doWatch(
       )
   } else if (isRef(source)) {
     getter = () => source.value
-  } else if (cb) {
-    // getter with cb
-    getter = () =>
-      callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
-  } else {
-    // no cb -> simple effect
-    getter = () => {
-      if (instance && instance.isUnmounted) {
-        return
+  } else if (isReactive(source)) {
+    getter = () => source
+    deep = true
+  } else if (isFunction(source)) {
+    if (cb) {
+      // getter with cb
+      getter = () =>
+        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+    } else {
+      // no cb -> simple effect
+      getter = () => {
+        if (instance && instance.isUnmounted) {
+          return
+        }
+        if (cleanup) {
+          cleanup()
+        }
+        return callWithErrorHandling(
+          source,
+          instance,
+          ErrorCodes.WATCH_CALLBACK,
+          [onInvalidate]
+        )
       }
-      if (cleanup) {
-        cleanup()
-      }
-      return callWithErrorHandling(
-        source,
-        instance,
-        ErrorCodes.WATCH_CALLBACK,
-        [onInvalidate]
-      )
     }
+  } else {
+    getter = NOOP
+    __DEV__ &&
+      warn(
+        `Invalid watch source: `,
+        source,
+        `A watch source can only be a getter/effect function, a ref, ` +
+          `a reactive object, or an array of these types.`
+      )
   }
 
   if (cb && deep) {
@@ -179,7 +201,7 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: Function
+  let cleanup: () => void
   const onInvalidate: InvalidateCbRegistrator = (fn: () => void) => {
     cleanup = runner.options.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
@@ -229,7 +251,7 @@ function doWatch(
     scheduler = invoke
   } else if (flush === 'pre') {
     scheduler = job => {
-      if (!instance || instance.vnode.el != null) {
+      if (!instance || instance.isMounted) {
         queueJob(job)
       } else {
         // with 'pre' option, the first call must happen before
@@ -238,9 +260,7 @@ function doWatch(
       }
     }
   } else {
-    scheduler = job => {
-      queuePostRenderEffect(job, suspense)
-    }
+    scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
@@ -279,17 +299,19 @@ export function instanceWatch(
   source: string | Function,
   cb: Function,
   options?: WatchOptions
-): StopHandle {
-  const ctx = this.proxy as Data
-  const getter = isString(source) ? () => ctx[source] : source.bind(ctx)
-  const stop = watch(getter, cb.bind(ctx), options)
+): WatchStopHandle {
+  const publicThis = this.proxy as any
+  const getter = isString(source)
+    ? () => publicThis[source]
+    : source.bind(publicThis)
+  const stop = watch(getter, cb.bind(publicThis), options)
   onBeforeUnmount(stop, this)
   return stop
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {
   if (!isObject(value) || seen.has(value)) {
-    return
+    return value
   }
   seen.add(value)
   if (isArray(value)) {

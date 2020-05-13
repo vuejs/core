@@ -7,6 +7,7 @@ import {
   createVNode,
   Text,
   Comment,
+  Static,
   Fragment,
   ssrUtils,
   Slots,
@@ -26,12 +27,14 @@ import {
   isVoidTag,
   escapeHtml,
   NO,
-  generateCodeFrame
+  generateCodeFrame,
+  escapeHtmlComment
 } from '@vue/shared'
 import { compile } from '@vue/compiler-ssr'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { SSRSlots } from './helpers/ssrRenderSlot'
 import { CompilerError } from '@vue/compiler-dom'
+import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
   isVNode,
@@ -62,11 +65,8 @@ export type Props = Record<string, unknown>
 
 export type SSRContext = {
   [key: string]: any
-  portals?: Record<string, string>
-  __portalBuffers?: Record<
-    string,
-    ResolvedSSRBuffer | Promise<ResolvedSSRBuffer>
-  >
+  teleports?: Record<string, string>
+  __teleportBuffers?: Record<string, SSRBuffer>
 }
 
 export function createBuffer() {
@@ -125,7 +125,7 @@ export async function renderToString(
   input.provide(ssrContextKey, context)
   const buffer = await renderComponentVNode(vnode)
 
-  await resolvePortals(context)
+  await resolveTeleports(context)
 
   return unrollBuffer(buffer)
 }
@@ -146,12 +146,8 @@ function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null
 ): ResolvedSSRBuffer | Promise<ResolvedSSRBuffer> {
-  const instance = createComponentInstance(vnode, parentComponent)
-  const res = setupComponent(
-    instance,
-    null /* parentSuspense (no need to track for SSR) */,
-    true /* isSSR */
-  )
+  const instance = createComponentInstance(vnode, parentComponent, null)
+  const res = setupComponent(instance, true /* isSSR */)
   if (isPromise(res)) {
     return res
       .catch(err => {
@@ -243,10 +239,15 @@ function renderVNode(
   const { type, shapeFlag, children } = vnode
   switch (type) {
     case Text:
-      push(children as string)
+      push(escapeHtml(children as string))
       break
     case Comment:
-      push(children ? `<!--${children}-->` : `<!---->`)
+      push(
+        children ? `<!--${escapeHtmlComment(children as string)}-->` : `<!---->`
+      )
+      break
+    case Static:
+      push(children as string)
       break
     case Fragment:
       push(`<!--[-->`) // open
@@ -258,8 +259,8 @@ function renderVNode(
         renderElementVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(renderComponentVNode(vnode, parentComponent))
-      } else if (shapeFlag & ShapeFlags.PORTAL) {
-        renderPortalVNode(vnode, parentComponent)
+      } else if (shapeFlag & ShapeFlags.TELEPORT) {
+        renderTeleportVNode(push, vnode, parentComponent)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         renderVNode(
           push,
@@ -295,20 +296,20 @@ function renderElementVNode(
   let { props, children, shapeFlag, scopeId, dirs } = vnode
   let openTag = `<${tag}`
 
-  if (dirs !== null) {
+  if (dirs) {
     props = applySSRDirectives(vnode, props, dirs)
   }
 
-  if (props !== null) {
+  if (props) {
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  if (scopeId !== null) {
+  if (scopeId) {
     openTag += ` ${scopeId}`
     const treeOwnerId = parentComponent && parentComponent.type.__scopeId
     // vnode's own scopeId and the current rendering component's scopeId is
     // different - this is a slot content node.
-    if (treeOwnerId != null && treeOwnerId !== scopeId) {
+    if (treeOwnerId && treeOwnerId !== scopeId) {
       openTag += ` ${treeOwnerId}-s`
     }
   }
@@ -316,7 +317,7 @@ function renderElementVNode(
   push(openTag + `>`)
   if (!isVoidTag(tag)) {
     let hasChildrenOverride = false
-    if (props !== null) {
+    if (props) {
       if (props.innerHTML) {
         hasChildrenOverride = true
         push(props.innerHTML)
@@ -362,44 +363,47 @@ function applySSRDirectives(
   return mergeProps(rawProps || {}, ...toMerge)
 }
 
-function renderPortalVNode(
+function renderTeleportVNode(
+  push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
 ) {
-  const target = vnode.props && vnode.props.target
+  const target = vnode.props && vnode.props.to
+  const disabled = vnode.props && vnode.props.disabled
   if (!target) {
-    warn(`[@vue/server-renderer] Portal is missing target prop.`)
+    warn(`[@vue/server-renderer] Teleport is missing target prop.`)
     return []
   }
   if (!isString(target)) {
     warn(
-      `[@vue/server-renderer] Portal target must be a query selector string.`
+      `[@vue/server-renderer] Teleport target must be a query selector string.`
     )
     return []
   }
-
-  const { getBuffer, push } = createBuffer()
-  renderVNodeChildren(
+  ssrRenderTeleport(
     push,
-    vnode.children as VNodeArrayChildren,
+    push => {
+      renderVNodeChildren(
+        push,
+        vnode.children as VNodeArrayChildren,
+        parentComponent
+      )
+    },
+    target,
+    disabled || disabled === '',
     parentComponent
   )
-  const context = parentComponent.appContext.provides[
-    ssrContextKey as any
-  ] as SSRContext
-  const portalBuffers =
-    context.__portalBuffers || (context.__portalBuffers = {})
-
-  portalBuffers[target] = getBuffer()
 }
 
-async function resolvePortals(context: SSRContext) {
-  if (context.__portalBuffers) {
-    context.portals = context.portals || {}
-    for (const key in context.__portalBuffers) {
+async function resolveTeleports(context: SSRContext) {
+  if (context.__teleportBuffers) {
+    context.teleports = context.teleports || {}
+    for (const key in context.__teleportBuffers) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
-      context.portals[key] = unrollBuffer(await context.__portalBuffers[key])
+      context.teleports[key] = unrollBuffer(
+        await Promise.all(context.__teleportBuffers[key])
+      )
     }
   }
 }

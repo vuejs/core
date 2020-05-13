@@ -6,15 +6,8 @@
 <div id="source" class="editor"></div>
 <div id="output" class="editor"></div>
 
-<script src="https://unpkg.com/estree-walker@0.8.1/dist/estree-walker.umd.js"></script>
-<script src="https://unpkg.com/source-map@0.6.1/dist/source-map.js"></script>
 <script src="https://unpkg.com/monaco-editor@0.20.0/min/vs/loader.js"></script>
 <script>
-window._deps = {
-  'estree-walker': estreeWalker,
-  'source-map': sourceMap
-}
-
 require.config({
   paths: {
     'vs': 'https://unpkg.com/monaco-editor@0.20.0/min/vs'

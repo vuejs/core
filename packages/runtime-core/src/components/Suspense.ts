@@ -2,7 +2,13 @@ import { VNode, normalizeVNode, VNodeChild, VNodeProps } from '../vnode'
 import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals, MoveType, SetupRenderEffectFn } from '../renderer'
+import {
+  RendererInternals,
+  MoveType,
+  SetupRenderEffectFn,
+  RendererNode,
+  RendererElement
+} from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { pushWarningContext, popWarningContext } from '../warning'
@@ -27,8 +33,8 @@ export const SuspenseImpl = {
   process(
     n1: VNode | null,
     n2: VNode,
-    container: object,
-    anchor: object | null,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
@@ -73,8 +79,8 @@ export const Suspense = ((__FEATURE_SUSPENSE__
 
 function mountSuspense(
   n2: VNode,
-  container: object,
-  anchor: object | null,
+  container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
@@ -132,8 +138,8 @@ function mountSuspense(
 function patchSuspense(
   n1: VNode,
   n2: VNode,
-  container: object,
-  anchor: object | null,
+  container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
   optimized: boolean,
@@ -190,21 +196,17 @@ function patchSuspense(
   suspense.fallbackTree = fallback
 }
 
-export interface SuspenseBoundary<
-  HostNode = any,
-  HostElement = any,
-  HostVNode = VNode<HostNode, HostElement>
-> {
-  vnode: HostVNode
-  parent: SuspenseBoundary<HostNode, HostElement> | null
+export interface SuspenseBoundary {
+  vnode: VNode
+  parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean
   optimized: boolean
-  container: HostElement
-  hiddenContainer: HostElement
-  anchor: HostNode | null
-  subTree: HostVNode
-  fallbackTree: HostVNode
+  container: RendererElement
+  hiddenContainer: RendererElement
+  anchor: RendererNode | null
+  subTree: VNode
+  fallbackTree: VNode
   deps: number
   isHydrating: boolean
   isResolved: boolean
@@ -212,30 +214,41 @@ export interface SuspenseBoundary<
   effects: Function[]
   resolve(): void
   recede(): void
-  move(container: HostElement, anchor: HostNode | null, type: MoveType): void
-  next(): HostNode | null
+  move(
+    container: RendererElement,
+    anchor: RendererNode | null,
+    type: MoveType
+  ): void
+  next(): RendererNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: SetupRenderEffectFn<HostNode, HostElement>
+    setupRenderEffect: SetupRenderEffectFn
   ): void
-  unmount(
-    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-    doRemove?: boolean
-  ): void
+  unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
 
-function createSuspenseBoundary<HostNode, HostElement>(
-  vnode: VNode<HostNode, HostElement>,
-  parent: SuspenseBoundary<HostNode, HostElement> | null,
+let hasWarned = false
+
+function createSuspenseBoundary(
+  vnode: VNode,
+  parent: SuspenseBoundary | null,
   parentComponent: ComponentInternalInstance | null,
-  container: HostElement,
-  hiddenContainer: HostElement,
-  anchor: HostNode | null,
+  container: RendererElement,
+  hiddenContainer: RendererElement,
+  anchor: RendererNode | null,
   isSVG: boolean,
   optimized: boolean,
-  rendererInternals: RendererInternals<HostNode, HostElement>,
+  rendererInternals: RendererInternals,
   isHydrating = false
-): SuspenseBoundary<HostNode, HostElement> {
+): SuspenseBoundary {
+  /* istanbul ignore if */
+  if (__DEV__ && !__TEST__ && !hasWarned) {
+    hasWarned = true
+    console[console.info ? 'info' : 'log'](
+      `<Suspense> is an experimental feature and its API will likely change.`
+    )
+  }
+
   const {
     p: patch,
     m: move,
@@ -250,7 +263,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
       : suspense.fallbackTree
 
   const { content, fallback } = normalizeSuspenseChildren(vnode)
-  const suspense: SuspenseBoundary<HostNode, HostElement> = {
+  const suspense: SuspenseBoundary = {
     vnode,
     parent,
     parentComponent,
@@ -329,6 +342,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         queuePostFlushCb(effects)
       }
       suspense.isResolved = true
+      suspense.effects = []
       // invoke @resolve event
       const onResolve = vnode.props && vnode.props.onResolve
       if (isFunction(onResolve)) {
@@ -415,10 +429,10 @@ function createSuspenseBoundary<HostNode, HostElement>(
           if (__DEV__) {
             pushWarningContext(vnode)
           }
-          handleSetupResult(instance, asyncSetupResult, suspense, false)
+          handleSetupResult(instance, asyncSetupResult, false)
           if (hydratedEl) {
             // vnode may have been replaced if an update happened before the
-            // async dep is reoslved.
+            // async dep is resolved.
             vnode.el = hydratedEl
           }
           setupRenderEffect(
@@ -429,12 +443,13 @@ function createSuspenseBoundary<HostNode, HostElement>(
             // placeholder.
             hydratedEl
               ? parentNode(hydratedEl)!
-              : parentNode(instance.subTree.el)!,
+              : parentNode(instance.subTree.el!)!,
             // anchor will not be used if this is hydration, so only need to
             // consider the comment placeholder case.
             hydratedEl ? null : next(instance.subTree),
             suspense,
-            isSVG
+            isSVG,
+            optimized
           )
           updateHOCHostEl(instance, vnode.el)
           if (__DEV__) {
@@ -483,7 +498,7 @@ function hydrateSuspense(
     vnode,
     parentSuspense,
     parentComponent,
-    node.parentNode,
+    node.parentNode!,
     document.createElement('div'),
     null,
     isSVG,
@@ -535,7 +550,7 @@ export function queueEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
-  if (suspense !== null && !suspense.isResolved) {
+  if (suspense && !suspense.isResolved) {
     if (isArray(fn)) {
       suspense.effects.push(...fn)
     } else {

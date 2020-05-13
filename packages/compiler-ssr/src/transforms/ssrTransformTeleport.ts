@@ -1,46 +1,55 @@
 import {
   ComponentNode,
   findProp,
-  JSChildNode,
   NodeTypes,
   createSimpleExpression,
   createFunctionExpression,
-  createCallExpression
+  createCallExpression,
+  ExpressionNode
 } from '@vue/compiler-dom'
 import {
   SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
-import { SSR_RENDER_PORTAL } from '../runtimeHelpers'
+import { SSR_RENDER_TELEPORT } from '../runtimeHelpers'
 
 // Note: this is a 2nd-pass codegen transform.
-export function ssrProcessPortal(
+export function ssrProcessTeleport(
   node: ComponentNode,
   context: SSRTransformContext
 ) {
   const targetProp = findProp(node, 'target')
   if (!targetProp) {
     context.onError(
-      createSSRCompilerError(SSRErrorCodes.X_SSR_NO_PORTAL_TARGET, node.loc)
+      createSSRCompilerError(SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET, node.loc)
     )
     return
   }
 
-  let target: JSChildNode
-  if (targetProp.type === NodeTypes.ATTRIBUTE && targetProp.value) {
-    target = createSimpleExpression(targetProp.value.content, true)
-  } else if (targetProp.type === NodeTypes.DIRECTIVE && targetProp.exp) {
-    target = targetProp.exp
+  let target: ExpressionNode | undefined
+  if (targetProp.type === NodeTypes.ATTRIBUTE) {
+    target =
+      targetProp.value && createSimpleExpression(targetProp.value.content, true)
   } else {
+    target = targetProp.exp
+  }
+  if (!target) {
     context.onError(
       createSSRCompilerError(
-        SSRErrorCodes.X_SSR_NO_PORTAL_TARGET,
+        SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET,
         targetProp.loc
       )
     )
     return
   }
+
+  const disabledProp = findProp(node, 'disabled', false, true /* allow empty */)
+  const disabled = disabledProp
+    ? disabledProp.type === NodeTypes.ATTRIBUTE
+      ? `true`
+      : disabledProp.exp || `false`
+    : `false`
 
   const contentRenderFn = createFunctionExpression(
     [`_push`],
@@ -51,9 +60,11 @@ export function ssrProcessPortal(
   )
   contentRenderFn.body = processChildrenAsStatement(node.children, context)
   context.pushStatement(
-    createCallExpression(context.helper(SSR_RENDER_PORTAL), [
+    createCallExpression(context.helper(SSR_RENDER_TELEPORT), [
+      `_push`,
       contentRenderFn,
       target,
+      disabled,
       `_parent`
     ])
   )

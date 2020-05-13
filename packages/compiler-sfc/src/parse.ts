@@ -6,9 +6,9 @@ import {
   TextModes
 } from '@vue/compiler-core'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
-import LRUCache from 'lru-cache'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
+import * as CompilerDOM from '@vue/compiler-dom'
 
 export interface SFCParseOptions {
   filename?: string
@@ -57,7 +57,13 @@ export interface SFCParseResult {
 }
 
 const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC = new LRUCache<string, SFCParseResult>(SFC_CACHE_MAX_SIZE)
+const sourceToSFC =
+  __GLOBAL__ || __ESM_BROWSER__
+    ? new Map<string, SFCParseResult>()
+    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
+        string,
+        SFCParseResult
+      >)
 
 export function parse(
   source: string,
@@ -66,7 +72,7 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = require('@vue/compiler-dom')
+    compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -90,10 +96,20 @@ export function parse(
     isNativeTag: () => true,
     // preserve all whitespaces
     isPreTag: () => true,
-    getTextMode: (tag, _ns, parent) => {
+    getTextMode: ({ tag, props }, parent) => {
       // all top level elements except <template> are parsed as raw text
       // containers
-      if (!parent && tag !== 'template') {
+      if (
+        (!parent && tag !== 'template') ||
+        // <template lang="xxx"> should also be treated as raw text
+        props.some(
+          p =>
+            p.type === NodeTypes.ATTRIBUTE &&
+            p.name === 'lang' &&
+            p.value &&
+            p.value.content !== 'html'
+        )
+      ) {
         return TextModes.RAWTEXT
       } else {
         return TextModes.DATA
@@ -117,7 +133,7 @@ export function parse(
           descriptor.template = createBlock(
             node,
             source,
-            pad
+            false
           ) as SFCTemplateBlock
         } else {
           warnDuplicateBlock(source, filename, node)
@@ -147,7 +163,7 @@ export function parse(
           source,
           block.content,
           sourceRoot,
-          pad ? 0 : block.loc.start.line - 1
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
         )
       }
     }
@@ -207,7 +223,7 @@ function createBlock(
     loc,
     attrs
   }
-  if (node.tag !== 'template' && pad) {
+  if (pad) {
     block.content = padContent(source, block, pad) + block.content
   }
   node.props.forEach(p => {
@@ -249,17 +265,23 @@ function generateSourceMap(
   map.setSourceContent(filename, source)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
-      map.addMapping({
-        source: filename,
-        original: {
-          line: index + 1 + lineOffset,
-          column: 0
-        },
-        generated: {
-          line: index + 1,
-          column: 0
+      const originalLine = index + 1 + lineOffset
+      const generatedLine = index + 1
+      for (let i = 0; i < line.length; i++) {
+        if (!/\s/.test(line[i])) {
+          map.addMapping({
+            source: filename,
+            original: {
+              line: originalLine,
+              column: i
+            },
+            generated: {
+              line: generatedLine,
+              column: i
+            }
+          })
         }
-      })
+      }
     }
   })
   return JSON.parse(map.toString())

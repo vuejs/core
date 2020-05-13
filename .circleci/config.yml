@@ -33,6 +33,7 @@ jobs:
       - *restore_cache
       - *install_deps
       - *save_cache
+      - run: yarn ls-lint
       - run: yarn test --ci --runInBand
 
   test-dts:

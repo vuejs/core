@@ -4,9 +4,6 @@ import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
 import { watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
-import { parse } from '@babel/parser'
-
-window._deps['@babel/parser'] = { parse }
 
 declare global {
   interface Window {
@@ -57,7 +54,7 @@ window.init = () => {
       )
       console.log(`AST: `, ast)
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      lastSuccessfulMap = new window._deps['source-map'].SourceMapConsumer(map)
+      lastSuccessfulMap = new SourceMapConsumer(map!)
       lastSuccessfulMap!.computeColumnSpans()
     } catch (e) {
       lastSuccessfulCode = `/* ERROR: ${
@@ -97,7 +94,7 @@ window.init = () => {
     }
   }
 
-  const sharedEditorOptions: m.editor.IEditorConstructionOptions = {
+  const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
     theme: 'vs-dark',
     fontSize: 14,
     wordWrap: 'on',

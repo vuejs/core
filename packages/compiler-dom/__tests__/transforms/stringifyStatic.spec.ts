@@ -1,4 +1,9 @@
-import { compile, NodeTypes, CREATE_STATIC } from '../../src'
+import {
+  compile,
+  NodeTypes,
+  CREATE_STATIC,
+  createSimpleExpression
+} from '../../src'
 import {
   stringifyStatic,
   StringifyThresholds
@@ -75,7 +80,7 @@ describe('stringify static html', () => {
     })
   })
 
-  test('serliazing constant bindings', () => {
+  test('serializing constant bindings', () => {
     const { ast } = compileWithStringify(
       `<div><div :style="{ color: 'red' }">${repeat(
         `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,
@@ -119,6 +124,73 @@ describe('stringify static html', () => {
           )}</div>`
         )
       ]
+    })
+  })
+
+  test('should bail on runtime constant v-bind bindings', () => {
+    const { ast } = compile(
+      `<div><div><img src="./foo" />${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`,
+      {
+        hoistStatic: true,
+        prefixIdentifiers: true,
+        transformHoist: stringifyStatic,
+        nodeTransforms: [
+          node => {
+            if (node.type === NodeTypes.ELEMENT && node.tag === 'img') {
+              const exp = createSimpleExpression(
+                '_imports_0_',
+                false,
+                node.loc,
+                true
+              )
+              exp.isRuntimeConstant = true
+              node.props[0] = {
+                type: NodeTypes.DIRECTIVE,
+                name: 'bind',
+                arg: createSimpleExpression('src', true),
+                exp,
+                modifiers: [],
+                loc: node.loc
+              }
+            }
+          }
+        ]
+      }
+    )
+    // the expression and the tree are still hoistable
+    expect(ast.hoists.length).toBe(1)
+    // ...but the hoisted tree should not be stringified
+    expect(ast.hoists[0]).toMatchObject({
+      // if it's stringified it will be NodeTypes.CALL_EXPRESSION
+      type: NodeTypes.VNODE_CALL
+    })
+  })
+
+  // #1128
+  test('should bail on non attribute bindings', () => {
+    const { ast } = compileWithStringify(
+      `<div><div><input indeterminate>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+
+    const { ast: ast2 } = compileWithStringify(
+      `<div><div><input :indeterminate="true">${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`
+    )
+    expect(ast2.hoists.length).toBe(1)
+    expect(ast2.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
 })

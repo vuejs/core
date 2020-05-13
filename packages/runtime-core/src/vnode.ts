@@ -13,12 +13,11 @@ import {
 import {
   ComponentInternalInstance,
   Data,
-  SetupProxySymbol,
   Component,
   ClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isReactive, Ref } from '@vue/reactivity'
+import { isProxy, Ref, toRaw } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   SuspenseImpl,
@@ -29,8 +28,10 @@ import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
 import { currentScopeId } from './helpers/scopeId'
-import { PortalImpl, isPortal } from './components/Portal'
+import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
+import { RendererNode, RendererElement } from './renderer'
+import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -49,7 +50,7 @@ export type VNodeTypes =
   | typeof Static
   | typeof Comment
   | typeof Fragment
-  | typeof PortalImpl
+  | typeof TeleportImpl
   | typeof SuspenseImpl
 
 export type VNodeRef =
@@ -59,61 +60,73 @@ export type VNodeRef =
 
 export type VNodeNormalizedRef = [ComponentInternalInstance, VNodeRef]
 
+type VNodeMountHook = (vnode: VNode) => void
+type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
+export type VNodeHook =
+  | VNodeMountHook
+  | VNodeUpdateHook
+  | VNodeMountHook[]
+  | VNodeUpdateHook[]
+
 export interface VNodeProps {
   [key: string]: any
   key?: string | number
   ref?: VNodeRef
 
   // vnode hooks
-  onVnodeBeforeMount?: (vnode: VNode) => void
-  onVnodeMounted?: (vnode: VNode) => void
-  onVnodeBeforeUpdate?: (vnode: VNode, oldVNode: VNode) => void
-  onVnodeUpdated?: (vnode: VNode, oldVNode: VNode) => void
-  onVnodeBeforeUnmount?: (vnode: VNode) => void
-  onVnodeUnmounted?: (vnode: VNode) => void
+  onVnodeBeforeMount?: VNodeMountHook | VNodeMountHook[]
+  onVnodeMounted?: VNodeMountHook | VNodeMountHook[]
+  onVnodeBeforeUpdate?: VNodeUpdateHook | VNodeUpdateHook[]
+  onVnodeUpdated?: VNodeUpdateHook | VNodeUpdateHook[]
+  onVnodeBeforeUnmount?: VNodeMountHook | VNodeMountHook[]
+  onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 
-type VNodeChildAtom<HostNode, HostElement> =
-  | VNode<HostNode, HostElement>
+type VNodeChildAtom =
+  | VNode
   | string
   | number
   | boolean
   | null
+  | undefined
   | void
 
-export interface VNodeArrayChildren<HostNode = any, HostElement = any>
-  extends Array<
-      | VNodeArrayChildren<HostNode, HostElement>
-      | VNodeChildAtom<HostNode, HostElement>
-    > {}
+export interface VNodeArrayChildren
+  extends Array<VNodeArrayChildren | VNodeChildAtom> {}
 
-export type VNodeChild<HostNode = any, HostElement = any> =
-  | VNodeChildAtom<HostNode, HostElement>
-  | VNodeArrayChildren<HostNode, HostElement>
+export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
-export type VNodeNormalizedChildren<HostNode = any, HostElement = any> =
+export type VNodeNormalizedChildren =
   | string
-  | VNodeArrayChildren<HostNode, HostElement>
+  | VNodeArrayChildren
   | RawSlots
   | null
 
-export interface VNode<HostNode = any, HostElement = any> {
-  _isVNode: true
+export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
+  /**
+   * @internal
+   */
+  __v_isVNode: true
+  /**
+   * @internal
+   */
+  __v_skip: true
   type: VNodeTypes
   props: VNodeProps | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
-  children: VNodeNormalizedChildren<HostNode, HostElement>
+  children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
-  suspense: SuspenseBoundary<HostNode, HostElement> | null
+  suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
   transition: TransitionHooks | null
 
   // DOM
   el: HostNode | null
   anchor: HostNode | null // fragment anchor
-  target: HostElement | null // portal target
+  target: HostElement | null // teleport target
+  targetAnchor: HostNode | null // teleport target anchor
 
   // optimization only
   shapeFlag: number
@@ -133,17 +146,22 @@ export interface VNode<HostNode = any, HostElement = any> {
 const blockStack: (VNode[] | null)[] = []
 let currentBlock: VNode[] | null = null
 
-// Open a block.
-// This must be called before `createBlock`. It cannot be part of `createBlock`
-// because the children of the block are evaluated before `createBlock` itself
-// is called. The generated code typically looks like this:
-//
-//   function render() {
-//     return (openBlock(),createBlock('div', null, [...]))
-//   }
-//
-// disableTracking is true when creating a fragment block, since a fragment
-// always diffs its children.
+/**
+ * Open a block.
+ * This must be called before `createBlock`. It cannot be part of `createBlock`
+ * because the children of the block are evaluated before `createBlock` itself
+ * is called. The generated code typically looks like this:
+ *
+ * ```js
+ * function render() {
+ *   return (openBlock(),createBlock('div', null, [...]))
+ * }
+ * ```
+ * disableTracking is true when creating a fragment block, since a fragment
+ * always diffs its children.
+ *
+ * @internal
+ */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
 }
@@ -154,22 +172,33 @@ export function openBlock(disableTracking = false) {
 // incremented/decremented by nested usage of v-once (see below)
 let shouldTrack = 1
 
-// Block tracking sometimes needs to be disabled, for example during the
-// creation of a tree that needs to be cached by v-once. The compiler generates
-// code like this:
-//   _cache[1] || (
-//     setBlockTracking(-1),
-//     _cache[1] = createVNode(...),
-//     setBlockTracking(1),
-//     _cache[1]
-//   )
+/**
+ * Block tracking sometimes needs to be disabled, for example during the
+ * creation of a tree that needs to be cached by v-once. The compiler generates
+ * code like this:
+ *
+ * ``` js
+ * _cache[1] || (
+ *   setBlockTracking(-1),
+ *   _cache[1] = createVNode(...),
+ *   setBlockTracking(1),
+ *   _cache[1]
+ * )
+ * ```
+ *
+ * @internal
+ */
 export function setBlockTracking(value: number) {
   shouldTrack += value
 }
 
-// Create a block root vnode. Takes the same exact arguments as `createVNode`.
-// A block root keeps track of dynamic nodes within the block in the
-// `dynamicChildren` array.
+/**
+ * Create a block root vnode. Takes the same exact arguments as `createVNode`.
+ * A block root keeps track of dynamic nodes within the block in the
+ * `dynamicChildren` array.
+ *
+ * @internal
+ */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
   props?: { [key: string]: any } | null,
@@ -177,10 +206,14 @@ export function createBlock(
   patchFlag?: number,
   dynamicProps?: string[]
 ): VNode {
-  // avoid a block with patchFlag tracking itself
-  shouldTrack--
-  const vnode = createVNode(type, props, children, patchFlag, dynamicProps)
-  shouldTrack++
+  const vnode = createVNode(
+    type,
+    props,
+    children,
+    patchFlag,
+    dynamicProps,
+    true /* isBlock: prevent a block from tracking itself */
+  )
   // save current block children on the block vnode
   vnode.dynamicChildren = currentBlock || EMPTY_ARR
   // close block
@@ -188,19 +221,18 @@ export function createBlock(
   currentBlock = blockStack[blockStack.length - 1] || null
   // a block is always going to be patched, so track it as a child of its
   // parent block
-  if (currentBlock !== null) {
+  if (currentBlock) {
     currentBlock.push(vnode)
   }
   return vnode
 }
 
 export function isVNode(value: any): value is VNode {
-  return value ? value._isVNode === true : false
+  return value ? value.__v_isVNode === true : false
 }
 
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
-    __BUNDLER__ &&
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
     (n2.type as Component).__hmrUpdated
@@ -211,15 +243,59 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 
-export function createVNode(
-  type: VNodeTypes | ClassComponent,
+let vnodeArgsTransformer:
+  | ((
+      args: Parameters<typeof _createVNode>,
+      instance: ComponentInternalInstance | null
+    ) => Parameters<typeof _createVNode>)
+  | undefined
+
+/**
+ * Internal API for registering an arguments transform for createVNode
+ * used for creating stubs in the test-utils
+ * It is *internal* but needs to be exposed for test-utils to pick up proper
+ * typings
+ */
+export function transformVNodeArgs(transformer?: typeof vnodeArgsTransformer) {
+  vnodeArgsTransformer = transformer
+}
+
+const createVNodeWithArgsTransform = (
+  ...args: Parameters<typeof _createVNode>
+): VNode => {
+  return _createVNode(
+    ...(vnodeArgsTransformer
+      ? vnodeArgsTransformer(args, currentRenderingInstance)
+      : args)
+  )
+}
+
+export const InternalObjectKey = `__vInternal`
+
+const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
+  key != null ? key : null
+
+const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
+  (ref != null
+    ? isArray(ref)
+      ? ref
+      : [currentRenderingInstance!, ref]
+    : null) as any
+
+export const createVNode = (__DEV__
+  ? createVNodeWithArgsTransform
+  : _createVNode) as typeof _createVNode
+
+function _createVNode(
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
-  dynamicProps: string[] | null = null
+  dynamicProps: string[] | null = null,
+  isBlockNode = false
 ): VNode {
-  if (!type) {
-    if (__DEV__) {
+  if (!type || type === NULL_DYNAMIC_COMPONENT) {
+    if (__DEV__ && !type) {
       warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment
@@ -231,19 +307,19 @@ export function createVNode(
   }
 
   // class & style normalization.
-  if (props !== null) {
+  if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
-    if (isReactive(props) || SetupProxySymbol in props) {
+    if (isProxy(props) || InternalObjectKey in props) {
       props = extend({}, props)
     }
     let { class: klass, style } = props
-    if (klass != null && !isString(klass)) {
+    if (klass && !isString(klass)) {
       props.class = normalizeClass(klass)
     }
     if (isObject(style)) {
       // reactive state objects need to be cloned since they are likely to be
       // mutated
-      if (isReactive(style) && !isArray(style)) {
+      if (isProxy(style) && !isArray(style)) {
         style = extend({}, style)
       }
       props.style = normalizeStyle(style)
@@ -255,23 +331,33 @@ export function createVNode(
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
       ? ShapeFlags.SUSPENSE
-      : isPortal(type)
-        ? ShapeFlags.PORTAL
+      : isTeleport(type)
+        ? ShapeFlags.TELEPORT
         : isObject(type)
           ? ShapeFlags.STATEFUL_COMPONENT
           : isFunction(type)
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
 
+  if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
+    type = toRaw(type)
+    warn(
+      `Vue received a Component which was made a reactive object. This can ` +
+        `lead to unnecessary performance overhead, and should be avoided by ` +
+        `marking the component with \`markRaw\` or using \`shallowRef\` ` +
+        `instead of \`ref\`.`,
+      `\nComponent that was made reactive: `,
+      type
+    )
+  }
+
   const vnode: VNode = {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type,
     props,
-    key: props !== null && props.key !== undefined ? props.key : null,
-    ref:
-      props !== null && props.ref !== undefined
-        ? [currentRenderingInstance!, props.ref]
-        : null,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: currentScopeId,
     children: null,
     component: null,
@@ -281,6 +367,7 @@ export function createVNode(
     el: null,
     anchor: null,
     target: null,
+    targetAnchor: null,
     shapeFlag,
     patchFlag,
     dynamicProps,
@@ -296,12 +383,14 @@ export function createVNode(
   // the next vnode so that it can be properly unmounted later.
   if (
     shouldTrack > 0 &&
-    currentBlock !== null &&
+    !isBlockNode &&
+    currentBlock &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
     patchFlag !== PatchFlags.HYDRATE_EVENTS &&
     (patchFlag > 0 ||
       shapeFlag & ShapeFlags.SUSPENSE ||
+      shapeFlag & ShapeFlags.TELEPORT ||
       shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
       shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
   ) {
@@ -315,23 +404,34 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps
 ): VNode<T, U> {
+  const props = (extraProps
+    ? vnode.props
+      ? mergeProps(vnode.props, extraProps)
+      : extend({}, extraProps)
+    : vnode.props) as any
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
-    _isVNode: true,
+    __v_isVNode: true,
+    __v_skip: true,
     type: vnode.type,
-    props: extraProps
-      ? vnode.props
-        ? mergeProps(vnode.props, extraProps)
-        : extraProps
-      : vnode.props,
-    key: vnode.key,
-    ref: vnode.ref,
+    props,
+    key: props && normalizeKey(props),
+    ref: props && normalizeRef(props),
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
+    targetAnchor: vnode.targetAnchor,
     shapeFlag: vnode.shapeFlag,
-    patchFlag: vnode.patchFlag,
+    // if the vnode is cloned with extra props, we can no longer assume its
+    // existing patch flag to be reliable and need to bail out of optimized mode.
+    // however we don't want block nodes to de-opt their children, so if the
+    // vnode is a block node, we only add the FULL_PROPS flag to it.
+    patchFlag: extraProps
+      ? vnode.dynamicChildren
+        ? vnode.patchFlag | PatchFlags.FULL_PROPS
+        : PatchFlags.BAIL
+      : vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -349,14 +449,23 @@ export function cloneVNode<T, U>(
   }
 }
 
+/**
+ * @internal
+ */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
+/**
+ * @internal
+ */
 export function createStaticVNode(content: string): VNode {
   return createVNode(Static, null, content)
 }
 
+/**
+ * @internal
+ */
 export function createCommentVNode(
   text: string = '',
   // when used as the v-else branch, the comment node must be created as a
@@ -368,7 +477,7 @@ export function createCommentVNode(
     : createVNode(Comment, null, text)
 }
 
-export function normalizeVNode<T, U>(child: VNodeChild<T, U>): VNode<T, U> {
+export function normalizeVNode(child: VNodeChild): VNode {
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)
@@ -392,21 +501,39 @@ export function cloneIfMounted(child: VNode): VNode {
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
   let type = 0
+  const { shapeFlag } = vnode
   if (children == null) {
     children = null
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    type = ShapeFlags.SLOTS_CHILDREN
-    if (!(children as RawSlots)._) {
-      ;(children as RawSlots)._ctx = currentRenderingInstance
+    // Normalize slot to plain children
+    if (
+      (shapeFlag & ShapeFlags.ELEMENT || shapeFlag & ShapeFlags.TELEPORT) &&
+      (children as any).default
+    ) {
+      normalizeChildren(vnode, (children as any).default())
+      return
+    } else {
+      type = ShapeFlags.SLOTS_CHILDREN
+      if (!(children as RawSlots)._ && !(InternalObjectKey in children!)) {
+        // if slots are not normalized, attach context instance
+        // (compiled / normalized slots already have context)
+        ;(children as RawSlots)._ctx = currentRenderingInstance
+      }
     }
   } else if (isFunction(children)) {
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
     children = String(children)
-    type = ShapeFlags.TEXT_CHILDREN
+    // force teleport children to array so it can be moved around
+    if (shapeFlag & ShapeFlags.TELEPORT) {
+      type = ShapeFlags.ARRAY_CHILDREN
+      children = [createTextVNode(children as string)]
+    } else {
+      type = ShapeFlags.TEXT_CHILDREN
+    }
   }
   vnode.children = children as VNodeNormalizedChildren
   vnode.shapeFlag |= type

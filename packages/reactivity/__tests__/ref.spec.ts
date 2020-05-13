@@ -3,12 +3,13 @@ import {
   effect,
   reactive,
   isRef,
+  toRef,
   toRefs,
   Ref,
   isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { shallowRef, unref } from '../src/ref'
+import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -21,11 +22,19 @@ describe('reactivity/ref', () => {
   it('should be reactive', () => {
     const a = ref(1)
     let dummy
+    let calls = 0
     effect(() => {
+      calls++
       dummy = a.value
     })
+    expect(calls).toBe(1)
     expect(dummy).toBe(1)
     a.value = 2
+    expect(calls).toBe(2)
+    expect(dummy).toBe(2)
+    // same value should not trigger
+    a.value = 2
+    expect(calls).toBe(2)
     expect(dummy).toBe(2)
   })
 
@@ -138,6 +147,21 @@ describe('reactivity/ref', () => {
     expect(tupleRef.value[4].value).toBe(1)
   })
 
+  it('should keep symbols', () => {
+    const customSymbol = Symbol()
+    const obj = {
+      [Symbol.asyncIterator]: { a: 1 },
+      [Symbol.unscopables]: { b: '1' },
+      [customSymbol]: { c: [1, 2, 3] }
+    }
+
+    const objRef = ref(obj)
+
+    expect(objRef.value[Symbol.asyncIterator]).toBe(obj[Symbol.asyncIterator])
+    expect(objRef.value[Symbol.unscopables]).toBe(obj[Symbol.unscopables])
+    expect(objRef.value[customSymbol]).toStrictEqual(obj[customSymbol])
+  })
+
   test('unref', () => {
     expect(unref(1)).toBe(1)
     expect(unref(ref(1))).toBe(1)
@@ -158,6 +182,22 @@ describe('reactivity/ref', () => {
     expect(dummy).toBe(2)
   })
 
+  test('shallowRef force trigger', () => {
+    const sref = shallowRef({ a: 1 })
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value.a = 2
+    expect(dummy).toBe(1) // should not trigger yet
+
+    // force trigger
+    triggerRef(sref)
+    expect(dummy).toBe(2)
+  })
+
   test('isRef', () => {
     expect(isRef(ref(1))).toBe(true)
     expect(isRef(computed(() => 1))).toBe(true)
@@ -166,6 +206,34 @@ describe('reactivity/ref', () => {
     expect(isRef(1)).toBe(false)
     // an object that looks like a ref isn't necessarily a ref
     expect(isRef({ value: 0 })).toBe(false)
+  })
+
+  test('toRef', () => {
+    const a = reactive({
+      x: 1
+    })
+    const x = toRef(a, 'x')
+    expect(isRef(x)).toBe(true)
+    expect(x.value).toBe(1)
+
+    // source -> proxy
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    // proxy -> source
+    x.value = 3
+    expect(a.x).toBe(3)
+
+    // reactivity
+    let dummyX
+    effect(() => {
+      dummyX = x.value
+    })
+    expect(dummyX).toBe(x.value)
+
+    // mutating source should trigger effect using the proxy refs
+    a.x = 4
+    expect(dummyX).toBe(4)
   })
 
   test('toRefs', () => {
@@ -207,5 +275,36 @@ describe('reactivity/ref', () => {
     a.y = 5
     expect(dummyX).toBe(4)
     expect(dummyY).toBe(5)
+  })
+
+  test('customRef', () => {
+    let value = 1
+    let _trigger: () => void
+
+    const custom = customRef((track, trigger) => ({
+      get() {
+        track()
+        return value
+      },
+      set(newValue: number) {
+        value = newValue
+        _trigger = trigger
+      }
+    }))
+
+    expect(isRef(custom)).toBe(true)
+
+    let dummy
+    effect(() => {
+      dummy = custom.value
+    })
+    expect(dummy).toBe(1)
+
+    custom.value = 2
+    // should not trigger yet
+    expect(dummy).toBe(1)
+
+    _trigger!()
+    expect(dummy).toBe(2)
   })
 })

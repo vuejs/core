@@ -416,27 +416,28 @@ describe('error handling', () => {
       }
     }
 
-    let res: any
     const Child = {
+      props: ['onFoo'],
       setup(props: any, { emit }: any) {
-        res = emit('foo')
+        emit('foo')
         return () => null
       }
     }
 
     render(h(Comp), nodeOps.createElement('div'))
-
-    try {
-      await Promise.all(res)
-    } catch (e) {
-      expect(e).toBe(err)
-    }
+    await nextTick()
     expect(fn).toHaveBeenCalledWith(err, 'component event handler')
   })
 
   test('in component event handler via emit (async + array)', async () => {
     const err = new Error('foo')
     const fn = jest.fn()
+
+    const res: Promise<any>[] = []
+    const createAsyncHandler = (p: Promise<any>) => () => {
+      res.push(p)
+      return p
+    }
 
     const Comp = {
       setup() {
@@ -446,15 +447,17 @@ describe('error handling', () => {
         })
         return () =>
           h(Child, {
-            onFoo: [() => Promise.reject(err), () => Promise.resolve(1)]
+            onFoo: [
+              createAsyncHandler(Promise.reject(err)),
+              createAsyncHandler(Promise.resolve(1))
+            ]
           })
       }
     }
 
-    let res: any
     const Child = {
       setup(props: any, { emit }: any) {
-        res = emit('foo')
+        emit('foo')
         return () => null
       }
     }

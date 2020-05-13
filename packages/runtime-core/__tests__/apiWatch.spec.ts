@@ -86,6 +86,36 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([2, 1])
   })
 
+  it('watching primitive with deep: true', async () => {
+    const count = ref(0)
+    let dummy
+    watch(
+      count,
+      (c, prevCount) => {
+        dummy = [c, prevCount]
+      },
+      {
+        deep: true
+      }
+    )
+    count.value++
+    await nextTick()
+    expect(dummy).toMatchObject([1, 0])
+  })
+
+  it('directly watching reactive object (with automatic deep: true)', async () => {
+    const src = reactive({
+      count: 0
+    })
+    let dummy
+    watch(src, ({ count }) => {
+      dummy = count
+    })
+    src.count++
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
   it('watching multiple sources', async () => {
     const state = reactive({ count: 1 })
     const count = ref(1)
@@ -112,8 +142,8 @@ describe('api: watch', () => {
     let dummy
     watch([() => state.count, status] as const, (vals, oldVals) => {
       dummy = [vals, oldVals]
-      let [count] = vals
-      let [, oldStatus] = oldVals
+      const [count] = vals
+      const [, oldStatus] = oldVals
       // assert types
       count + 1
       oldStatus === true
@@ -123,6 +153,12 @@ describe('api: watch', () => {
     status.value = true
     await nextTick()
     expect(dummy).toMatchObject([[2, true], [1, false]])
+  })
+
+  it('warn invalid watch source', () => {
+    // @ts-ignore
+    watch(1, () => {})
+    expect(`Invalid watch source`).toHaveBeenWarned()
   })
 
   it('stopping the watcher (effect)', async () => {
@@ -412,7 +448,7 @@ describe('api: watch', () => {
 
   it('warn and not respect deep option when using effect', async () => {
     const arr = ref([1, [2]])
-    let spy = jest.fn()
+    const spy = jest.fn()
     watchEffect(
       () => {
         spy()

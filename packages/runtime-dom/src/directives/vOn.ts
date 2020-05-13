@@ -6,7 +6,7 @@ type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
 const modifierGuards: Record<
   string,
-  (e: Event, modifiers?: string[]) => void | boolean
+  (e: Event, modifiers: string[]) => void | boolean
 > = {
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
@@ -18,10 +18,13 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as MouseEvent).button !== 0,
   middle: e => 'button' in e && (e as MouseEvent).button !== 1,
   right: e => 'button' in e && (e as MouseEvent).button !== 2,
-  exact: (e, modifiers: string[]) =>
+  exact: (e, modifiers) =>
     systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
+/**
+ * @internal
+ */
 export const withModifiers = (fn: Function, modifiers: string[]) => {
   return (event: Event) => {
     for (let i = 0; i < modifiers.length; i++) {
@@ -44,6 +47,9 @@ const keyNames: Record<string, string | string[]> = {
   delete: 'backspace'
 }
 
+/**
+ * @internal
+ */
 export const withKeys = (fn: Function, modifiers: string[]) => {
   return (event: KeyboardEvent) => {
     if (!('key' in event)) return

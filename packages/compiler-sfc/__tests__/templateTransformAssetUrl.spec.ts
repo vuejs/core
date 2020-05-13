@@ -1,12 +1,20 @@
 import { generate, baseParse, transform } from '@vue/compiler-core'
-import { transformAssetUrl } from '../src/templateTransformAssetUrl'
+import {
+  transformAssetUrl,
+  createAssetUrlTransformWithOptions,
+  AssetURLOptions,
+  normalizeOptions
+} from '../src/templateTransformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 
-function compileWithAssetUrls(template: string) {
+function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
   const ast = baseParse(template)
+  const t = options
+    ? createAssetUrlTransformWithOptions(normalizeOptions(options))
+    : transformAssetUrl
   transform(ast, {
-    nodeTransforms: [transformAssetUrl, transformElement],
+    nodeTransforms: [t, transformElement],
     directiveTransforms: {
       bind: transformBind
     }
@@ -45,5 +53,30 @@ describe('compiler sfc: transform asset url', () => {
     const result = compileWithAssetUrls('<use href="~"></use>')
 
     expect(result.code).toMatchSnapshot()
+  })
+
+  test('with explicit base', () => {
+    const { code } = compileWithAssetUrls(
+      `<img src="./bar.png"></img>` + // -> /foo/bar.png
+      `<img src="~bar.png"></img>` + // -> /foo/bar.png
+      `<img src="bar.png"></img>` + // -> bar.png (untouched)
+        `<img src="@theme/bar.png"></img>`, // -> @theme/bar.png (untouched)
+      {
+        base: '/foo'
+      }
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('with includeAbsolute: true', () => {
+    const { code } = compileWithAssetUrls(
+      `<img src="./bar.png"/>` +
+        `<img src="/bar.png"/>` +
+        `<img src="https://foo.bar/baz.png"/>`,
+      {
+        includeAbsolute: true
+      }
+    )
+    expect(code).toMatchSnapshot()
   })
 })

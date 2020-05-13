@@ -7,10 +7,8 @@
     "module": "esnext",
     "moduleResolution": "node",
     "allowJs": false,
+    "strict": true,
     "noUnusedLocals": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -26,8 +24,8 @@
   },
   "include": [
     "packages/global.d.ts",
-    "packages/runtime-dom/jsx.d.ts",
     "packages/*/src",
+    "packages/runtime-dom/types/jsx.d.ts",
     "packages/*/__tests__",
     "test-dts"
   ]
