@@ -32,16 +32,29 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
   // are camelized.
-  onBeforeEnter?: (el: HostElement) => void
-  onEnter?: (el: HostElement, done: () => void) => void
-  onAfterEnter?: (el: HostElement) => void
-  onEnterCancelled?: (el: HostElement) => void
+  onBeforeEnter?: TransitionOtherHook<HostElement>
+  onEnter?: TransitionActiveHook<HostElement>
+  onAfterEnter?: TransitionOtherHook<HostElement>
+  onEnterCancelled?: TransitionOtherHook<HostElement>
   // leave
-  onBeforeLeave?: (el: HostElement) => void
-  onLeave?: (el: HostElement, done: () => void) => void
-  onAfterLeave?: (el: HostElement) => void
-  onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
+  onBeforeLeave?: TransitionOtherHook<HostElement>
+  onLeave?: TransitionActiveHook<HostElement>
+  onAfterLeave?: TransitionOtherHook<HostElement>
+  onLeaveCancelled?: TransitionOtherHook<HostElement> // only fired in persisted mode
+  // appear
+  onBeforeAppear?: TransitionOtherHook<HostElement>
+  onAppear?: TransitionActiveHook<HostElement>
+  onAfterAppear?: TransitionOtherHook<HostElement>
+  onAppearCancelled?: TransitionOtherHook<HostElement>
 }
+
+export type TransitionActiveHook<HostElement = RendererElement> = (
+  el: HostElement,
+  done: () => void
+) => void | undefined
+export type TransitionOtherHook<HostElement = RendererElement> = (
+  el: HostElement
+) => void | undefined
 
 export interface TransitionHooks {
   persisted: boolean
@@ -57,8 +70,8 @@ export interface TransitionHooks {
   delayedLeave?(): void
 }
 
-type TransitionHookCaller = (
-  hook: ((el: any) => void) | undefined,
+export type TransitionHookCaller<HostElement = RendererElement> = (
+  hook?: TransitionOtherHook<HostElement> | TransitionActiveHook<HostElement>,
   args?: any[]
 ) => void
 
@@ -260,16 +273,6 @@ export function resolveTransitionHooks(
   const key = String(vnode.key)
   const leavingVNodesCache = getLeavingNodesForType(state, vnode)
 
-  const callHook: TransitionHookCaller = (hook, args) => {
-    hook &&
-      callWithAsyncErrorHandling(
-        hook,
-        instance,
-        ErrorCodes.TRANSITION_HOOK,
-        args
-      )
-  }
-
   const hooks: TransitionHooks = {
     persisted,
     beforeEnter(el: TransitionElement) {
@@ -290,7 +293,7 @@ export function resolveTransitionHooks(
         // force early removal (not cancelled)
         leavingVNode.el!._leaveCb()
       }
-      callHook(onBeforeEnter, [el])
+      onBeforeEnter && onBeforeEnter(el)
     },
 
     enter(el: TransitionElement) {
@@ -302,9 +305,9 @@ export function resolveTransitionHooks(
         if (called) return
         called = true
         if (cancelled) {
-          callHook(onEnterCancelled, [el])
+          onEnterCancelled && onEnterCancelled(el)
         } else {
-          callHook(onAfterEnter, [el])
+          onAfterEnter && onAfterEnter(el)
         }
         if (hooks.delayedLeave) {
           hooks.delayedLeave()
@@ -326,16 +329,16 @@ export function resolveTransitionHooks(
       if (state.isUnmounting) {
         return remove()
       }
-      callHook(onBeforeLeave, [el])
+      onBeforeLeave && onBeforeLeave(el)
       let called = false
       const afterLeave = (el._leaveCb = (cancelled?) => {
         if (called) return
         called = true
         remove()
         if (cancelled) {
-          callHook(onLeaveCancelled, [el])
+          onLeaveCancelled && onLeaveCancelled(el)
         } else {
-          callHook(onAfterLeave, [el])
+          onAfterLeave && onAfterLeave(el)
         }
         el._leaveCb = undefined
         if (leavingVNodesCache[key] === vnode) {
