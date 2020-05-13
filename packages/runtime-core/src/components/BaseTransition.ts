@@ -126,7 +126,12 @@ const BaseTransitionImpl = {
     onBeforeLeave: Function,
     onLeave: Function,
     onAfterLeave: Function,
-    onLeaveCancelled: Function
+    onLeaveCancelled: Function,
+    // appear
+    onBeforeAppear: Function,
+    onAppear: Function,
+    onAfterAppear: Function,
+    onAppearCancelled: Function
   },
 
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
