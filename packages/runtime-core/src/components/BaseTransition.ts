@@ -13,7 +13,6 @@ import {
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
-import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
@@ -69,11 +68,6 @@ export interface TransitionHooks {
   ): void
   delayedLeave?(): void
 }
-
-export type TransitionHookCaller<HostElement = RendererElement> = (
-  hook?: TransitionOtherHook<HostElement> | TransitionActiveHook<HostElement>,
-  args?: any[]
-) => void
 
 export type PendingCallback = (cancelled?: boolean) => void
 

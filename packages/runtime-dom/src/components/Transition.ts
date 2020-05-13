@@ -5,15 +5,13 @@ import {
   warn,
   FunctionalComponent,
   getCurrentInstance,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  RendererElement,
+  TransitionActiveHook,
+  TransitionOtherHook
 } from '@vue/runtime-core'
 import { isObject } from '@vue/shared'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
-import {
-  TransitionActiveHook,
-  TransitionHookCaller,
-  TransitionOtherHook
-} from '@vue/runtime-core/src/components/BaseTransition'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -34,6 +32,11 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveActiveClass?: string
   leaveToClass?: string
 }
+
+export type TransitionHookCaller<HostElement = RendererElement> = (
+  hook?: TransitionOtherHook<HostElement> | TransitionActiveHook<HostElement>,
+  args?: any[]
+) => void
 
 // DOM Transition is a higher-order-component based on the platform-agnostic
 // base Transition component, with DOM-specific logic.

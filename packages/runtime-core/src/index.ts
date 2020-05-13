@@ -196,7 +196,12 @@ export {
   DirectiveArguments
 } from './directives'
 export { SuspenseBoundary } from './components/Suspense'
-export { TransitionState, TransitionHooks } from './components/BaseTransition'
+export {
+  TransitionState,
+  TransitionHooks,
+  TransitionActiveHook,
+  TransitionOtherHook
+} from './components/BaseTransition'
 export {
   AsyncComponentOptions,
   AsyncComponentLoader
