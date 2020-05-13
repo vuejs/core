@@ -205,7 +205,6 @@ export function resolveTransitionProps({
       })
     },
     onAfterLeave(el) {
-      finishEnter(el)
       callHook(onAfterLeave, [el])
     },
     onEnterCancelled(el) {
