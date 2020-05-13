@@ -3,8 +3,8 @@
 <script>
   Vue.createApp({
     template: `
-      <div id="test"><transition><div v-if="toggle" class="test"></div></transition></div>
-      <button @click="click"></button>
+      <div id="test"><transition><div v-if="toggle" class="test">content</div></transition></div>
+      <button @click="click">button</button>
     `,
     setup:() => {
       const toggle = Vue.ref(true)
