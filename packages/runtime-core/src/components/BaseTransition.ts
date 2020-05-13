@@ -51,10 +51,10 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
 export type TransitionActiveHook<HostElement = RendererElement> = (
   el: HostElement,
   done: () => void
-) => void | undefined
+) => void
 export type TransitionOtherHook<HostElement = RendererElement> = (
   el: HostElement
-) => void | undefined
+) => void
 
 export interface TransitionHooks {
   persisted: boolean
