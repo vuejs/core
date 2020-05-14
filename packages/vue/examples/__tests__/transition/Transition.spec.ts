@@ -530,7 +530,7 @@ describe('e2e: Transition', () => {
         await page().exposeFunction('afterEnterSpy', afterEnterSpy)
         await page().exposeFunction('afterAppearSpy', afterAppearSpy)
 
-        await page().evaluate(async () => {
+        const appearClass = await page().evaluate(async () => {
           const {
             beforeAppearSpy,
             onAppearSpy,
@@ -584,9 +584,12 @@ describe('e2e: Transition', () => {
               }
             }
           }).mount('#app')
+          return Promise.resolve().then(() => {
+            return document.querySelector('.test')!.className.split(/\s+/g)
+          })
         })
         // appear fixme spy called
-        expect(await classList('.test')).toStrictEqual([
+        expect(appearClass).toStrictEqual([
           'test',
           'test-appear-active',
           'test-appear-from'
@@ -1305,7 +1308,7 @@ describe('e2e: Transition', () => {
     test(
       'transition on appear with v-show',
       async () => {
-        await page().evaluate(async () => {
+        const appearClass = await page().evaluate(async () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
@@ -1326,9 +1329,12 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
+          return Promise.resolve().then(() => {
+            return document.querySelector('.test')!.className.split(/\s+/g)
+          })
         })
         // appear
-        expect(await classList('.test')).toStrictEqual([
+        expect(appearClass).toStrictEqual([
           'test',
           'test-appear-active',
           'test-appear-from'
