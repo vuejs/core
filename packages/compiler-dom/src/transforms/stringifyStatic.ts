@@ -13,7 +13,8 @@ import {
   ExpressionNode,
   ElementTypes,
   PlainElementNode,
-  JSChildNode
+  JSChildNode,
+  TextCallNode
 } from '@vue/compiler-core'
 import {
   isVoidTag,
@@ -32,13 +33,15 @@ export const enum StringifyThresholds {
   NODE_COUNT = 20
 }
 
+type StringiableNode = PlainElementNode | TextCallNode
+
 // Turn eligible hoisted static trees into stringied static nodes, e.g.
 //   const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
 // This is only performed in non-in-browser compilations.
 export const stringifyStatic: HoistTransform = (children, context) => {
   let nc = 0 // current node count
   let ec = 0 // current element with binding count
-  const currentChunk: PlainElementNode[] = []
+  const currentChunk: StringiableNode[] = []
 
   const stringifyCurrentChunk = (currentIndex: number): number => {
     if (
@@ -48,7 +51,7 @@ export const stringifyStatic: HoistTransform = (children, context) => {
       // combine all currently eligible nodes into a single static vnode call
       const staticCall = createCallExpression(context.helper(CREATE_STATIC), [
         JSON.stringify(
-          currentChunk.map(node => stringifyElement(node, context)).join('')
+          currentChunk.map(node => stringifyNode(node, context)).join('')
         ),
         // the 2nd argument indicates the number of DOM nodes this static vnode
         // will insert / hydrate
@@ -77,8 +80,8 @@ export const stringifyStatic: HoistTransform = (children, context) => {
     const child = children[i]
     const hoisted = getHoistedNode(child)
     if (hoisted) {
-      // presence of hoisted means child must be a plain element Node
-      const node = child as PlainElementNode
+      // presence of hoisted means child must be a stringifiable node
+      const node = child as StringiableNode
       const result = analyzeNode(node)
       if (result) {
         // node is stringifiable, record state
@@ -102,8 +105,8 @@ export const stringifyStatic: HoistTransform = (children, context) => {
 }
 
 const getHoistedNode = (node: TemplateChildNode) =>
-  node.type === NodeTypes.ELEMENT &&
-  node.tagType === ElementTypes.ELEMENT &&
+  ((node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.ELEMENT) ||
+    node.type == NodeTypes.TEXT_CALL) &&
   node.codegenNode &&
   node.codegenNode.type === NodeTypes.SIMPLE_EXPRESSION &&
   node.codegenNode.hoisted
@@ -114,7 +117,7 @@ const isStringifiableAttr = (name: string) => {
 }
 
 const replaceHoist = (
-  node: PlainElementNode,
+  node: StringiableNode,
   replacement: JSChildNode | null,
   context: TransformContext
 ) => {
@@ -125,11 +128,15 @@ const replaceHoist = (
 /**
  * for a hoisted node, analyze it and return:
  * - false: bailed (contains runtime constant)
- * - [x, y] where
- *   - x is the number of nodes inside
- *   - y is the number of element with bindings inside
+ * - [nc, ec] where
+ *   - nc is the number of nodes inside
+ *   - ec is the number of element with bindings inside
  */
-function analyzeNode(node: PlainElementNode): [number, number] | false {
+function analyzeNode(node: StringiableNode): [number, number] | false {
+  if (node.type === NodeTypes.TEXT_CALL) {
+    return [1, 0]
+  }
+
   let nc = 1 // node count
   let ec = node.props.length > 0 ? 1 : 0 // element w/ binding count
   let bailed = false
@@ -196,6 +203,35 @@ function analyzeNode(node: PlainElementNode): [number, number] | false {
   return walk(node) ? [nc, ec] : false
 }
 
+function stringifyNode(
+  node: string | TemplateChildNode,
+  context: TransformContext
+): string {
+  if (isString(node)) {
+    return node
+  }
+  if (isSymbol(node)) {
+    return ``
+  }
+  switch (node.type) {
+    case NodeTypes.ELEMENT:
+      return stringifyElement(node, context)
+    case NodeTypes.TEXT:
+      return escapeHtml(node.content)
+    case NodeTypes.COMMENT:
+      return `<!--${escapeHtml(node.content)}-->`
+    case NodeTypes.INTERPOLATION:
+      return escapeHtml(toDisplayString(evaluateConstant(node.content)))
+    case NodeTypes.COMPOUND_EXPRESSION:
+      return escapeHtml(evaluateConstant(node))
+    case NodeTypes.TEXT_CALL:
+      return stringifyNode(node.content, context)
+    default:
+      // static trees will not contain if/for nodes
+      return ''
+  }
+}
+
 function stringifyElement(
   node: ElementNode,
   context: TransformContext
@@ -233,35 +269,6 @@ function stringifyElement(
     res += `</${node.tag}>`
   }
   return res
-}
-
-function stringifyNode(
-  node: string | TemplateChildNode,
-  context: TransformContext
-): string {
-  if (isString(node)) {
-    return node
-  }
-  if (isSymbol(node)) {
-    return ``
-  }
-  switch (node.type) {
-    case NodeTypes.ELEMENT:
-      return stringifyElement(node, context)
-    case NodeTypes.TEXT:
-      return escapeHtml(node.content)
-    case NodeTypes.COMMENT:
-      return `<!--${escapeHtml(node.content)}-->`
-    case NodeTypes.INTERPOLATION:
-      return escapeHtml(toDisplayString(evaluateConstant(node.content)))
-    case NodeTypes.COMPOUND_EXPRESSION:
-      return escapeHtml(evaluateConstant(node))
-    case NodeTypes.TEXT_CALL:
-      return stringifyNode(node.content, context)
-    default:
-      // static trees will not contain if/for nodes
-      return ''
-  }
 }
 
 // __UNSAFE__
