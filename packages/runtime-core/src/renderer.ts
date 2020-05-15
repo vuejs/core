@@ -485,26 +485,14 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     isSVG: boolean
   ) => {
-    if (n2.el && hostCloneNode !== undefined) {
-      // static node was already mounted (and reused), or adopted
-      // server-rendered node during hydration (in this case its children can be
-      // stripped by SSR optimizations). Clone the dom nodes instead.
-      let cur: RendererElement | null = n2.el
-      while (cur && cur !== n2.anchor) {
-        hostInsert(hostCloneNode(cur), container, anchor)
-        cur = hostNextSibling(cur)
-      }
-      hostInsert(hostCloneNode(n2.anchor!), container, anchor)
-    } else {
-      // static nodes are only present when used with compiler-dom/runtime-dom
-      // which guarantees presence of hostInsertStaticContent.
-      ;[n2.el, n2.anchor] = hostInsertStaticContent!(
-        n2.children as string,
-        container,
-        anchor,
-        isSVG
-      )
-    }
+    // static nodes are only present when used with compiler-dom/runtime-dom
+    // which guarantees presence of hostInsertStaticContent.
+    ;[n2.el, n2.anchor] = hostInsertStaticContent!(
+      n2.children as string,
+      container,
+      anchor,
+      isSVG
+    )
   }
 
   /**
