@@ -426,10 +426,18 @@ describe('api: options', () => {
 
   test('mixins', () => {
     const calls: string[] = []
+    const watchCalls: string[] = []
     const mixinA = {
       data() {
         return {
-          a: 1
+          a: 1,
+          d: 1,
+          f: 1
+        }
+      },
+      watch: {
+        f: function(val: number, oldVal: number) {
+          watchCalls.push(`mixinA ${val} ${oldVal}`)
         }
       },
       created(this: any) {
@@ -445,7 +453,14 @@ describe('api: options', () => {
     const mixinB = {
       data() {
         return {
-          b: 2
+          b: 2,
+          d: 2,
+          f: 2
+        }
+      },
+      watch: {
+        f: function(val: number, oldVal: number) {
+          watchCalls.push(`mixinB ${val} ${oldVal}`)
         }
       },
       created(this: any) {
@@ -462,7 +477,14 @@ describe('api: options', () => {
       mixins: [mixinA, mixinB],
       data() {
         return {
-          c: 3
+          c: 3,
+          d: 3,
+          f: 3
+        }
+      },
+      watch: {
+        f: function(val: number, oldVal: number) {
+          watchCalls.push(`comp ${val} ${oldVal}`)
         }
       },
       created(this: any) {
@@ -470,16 +492,18 @@ describe('api: options', () => {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.c).toBe(3)
+        expect(this.d).toBe(3)
+        this.f = 4
       },
       mounted() {
         calls.push('comp mounted')
       },
       render(this: any) {
-        return `${this.a}${this.b}${this.c}`
+        return `${this.a}${this.b}${this.c}${this.d}`
       }
     }
 
-    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(renderToString(h(Comp))).toBe(`1233`)
     expect(calls).toEqual([
       'mixinA created',
       'mixinB created',
@@ -488,6 +512,7 @@ describe('api: options', () => {
       'mixinB mounted',
       'comp mounted'
     ])
+    expect(watchCalls).toEqual(['mixinA 4 3', 'mixinB 4 3', 'comp 4 3'])
   })
 
   test('extends', () => {

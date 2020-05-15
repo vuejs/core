@@ -394,6 +394,12 @@ export function applyOptions(
     }
   }
 
+  if (!asMixin) {
+    if (deferredData.length) {
+      deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
+    }
+  }
+
   if (dataOptions) {
     if (__DEV__ && !isFunction(dataOptions)) {
       warn(
@@ -408,23 +414,19 @@ export function applyOptions(
       resolveData(instance, dataOptions, publicThis)
     }
   }
-  if (!asMixin) {
-    if (deferredData.length) {
-      deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
-    }
-    if (__DEV__) {
-      const rawData = toRaw(instance.data)
-      for (const key in rawData) {
-        checkDuplicateProperties!(OptionTypes.DATA, key)
-        // expose data on ctx during dev
-        if (key[0] !== '$' && key[0] !== '_') {
-          Object.defineProperty(ctx, key, {
-            configurable: true,
-            enumerable: true,
-            get: () => rawData[key],
-            set: NOOP
-          })
-        }
+
+  if (__DEV__) {
+    const rawData = toRaw(instance.data)
+    for (const key in rawData) {
+      checkDuplicateProperties!(OptionTypes.DATA, key)
+      // expose data on ctx during dev
+      if (key[0] !== '$' && key[0] !== '_') {
+        Object.defineProperty(ctx, key, {
+          configurable: true,
+          enumerable: true,
+          get: () => rawData[key],
+          set: NOOP
+        })
       }
     }
   }
@@ -466,15 +468,18 @@ export function applyOptions(
     }
   }
 
-  if (watchOptions) {
-    deferredWatch.push(watchOptions)
-  }
   if (!asMixin && deferredWatch.length) {
-    deferredWatch.forEach(watchOptions => {
-      for (const key in watchOptions) {
-        createWatcher(watchOptions[key], ctx, publicThis, key)
-      }
-    })
+    deferredWatch.forEach(watchOptions =>
+      resolveWatch(ctx, watchOptions, publicThis)
+    )
+  }
+
+  if (watchOptions) {
+    if (asMixin) {
+      deferredWatch.push(watchOptions)
+    } else {
+      resolveWatch(ctx, watchOptions, publicThis)
+    }
   }
 
   if (provideOptions) {
@@ -575,6 +580,16 @@ function applyMixins(
 ) {
   for (let i = 0; i < mixins.length; i++) {
     applyOptions(instance, mixins[i], deferredData, deferredWatch, true)
+  }
+}
+
+function resolveWatch(
+  ctx: Data,
+  watchOptions: ComponentWatchOptions,
+  publicThis: ComponentPublicInstance
+) {
+  for (const key in watchOptions) {
+    createWatcher(watchOptions[key], ctx, publicThis, key)
   }
 }
 
