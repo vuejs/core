@@ -8,11 +8,9 @@ import {
   ComponentNode,
   TemplateNode,
   ElementNode,
-  PlainElementCodegenNode,
-  CodegenNodeWithDirective
+  VNodeCall
 } from '../ast'
 import { TransformContext } from '../transform'
-import { WITH_DIRECTIVES } from '../runtimeHelpers'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
 import { isSlotOutlet, findProp } from '../utils'
 
@@ -21,6 +19,8 @@ export function hoistStatic(root: RootNode, context: TransformContext) {
     root.children,
     context,
     new Map(),
+    // Root node is unfortunately non-hoistable due to potential parent
+    // fallthrough attributes.
     isSingleElementRoot(root, root.children[0])
   )
 }
@@ -45,20 +45,25 @@ function walk(
 ) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    // only plain elements are eligible for hoisting.
+    // only plain elements & text calls are eligible for hoisting.
     if (
       child.type === NodeTypes.ELEMENT &&
       child.tagType === ElementTypes.ELEMENT
     ) {
       if (!doNotHoistNode && isStaticNode(child, resultCache)) {
         // whole tree is static
-        child.codegenNode = context.hoist(child.codegenNode!)
+        ;(child.codegenNode as VNodeCall).patchFlag =
+          PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
+        const hoisted = context.transformHoist
+          ? context.transformHoist(child, context)
+          : child.codegenNode!
+        child.codegenNode = context.hoist(hoisted)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
         // hoisting.
         const codegenNode = child.codegenNode!
-        if (codegenNode.type === NodeTypes.JS_CALL_EXPRESSION) {
+        if (codegenNode.type === NodeTypes.VNODE_CALL) {
           const flag = getPatchFlag(codegenNode)
           if (
             (!flag ||
@@ -68,13 +73,20 @@ function walk(
             !hasCachedProps(child)
           ) {
             const props = getNodeProps(child)
-            if (props && props !== `null`) {
-              getVNodeCall(codegenNode).arguments[1] = context.hoist(props)
+            if (props) {
+              codegenNode.props = context.hoist(props)
             }
           }
         }
       }
+    } else if (
+      child.type === NodeTypes.TEXT_CALL &&
+      isStaticNode(child.content, resultCache)
+    ) {
+      child.codegenNode = context.hoist(child.codegenNode)
     }
+
+    // walk further
     if (child.type === NodeTypes.ELEMENT) {
       walk(child.children, context, resultCache)
     } else if (child.type === NodeTypes.FOR) {
@@ -104,7 +116,7 @@ export function isStaticNode(
         return cached
       }
       const codegenNode = node.codegenNode!
-      if (codegenNode.type !== NodeTypes.JS_CALL_EXPRESSION) {
+      if (codegenNode.type !== NodeTypes.VNODE_CALL) {
         return false
       }
       const flag = getPatchFlag(codegenNode)
@@ -115,6 +127,12 @@ export function isStaticNode(
             resultCache.set(node, false)
             return false
           }
+        }
+        // only svg/foreignObject could be block here, however if they are static
+        // then they don't need to be blocks since there will be no nested
+        // updates.
+        if (codegenNode.isBlock) {
+          codegenNode.isBlock = false
         }
         resultCache.set(node, true)
         return true
@@ -127,6 +145,7 @@ export function isStaticNode(
       return true
     case NodeTypes.IF:
     case NodeTypes.FOR:
+    case NodeTypes.IF_BRANCH:
       return false
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:
@@ -157,14 +176,20 @@ function hasCachedProps(node: PlainElementNode): boolean {
     return false
   }
   const props = getNodeProps(node)
-  if (
-    props &&
-    props !== 'null' &&
-    props.type === NodeTypes.JS_OBJECT_EXPRESSION
-  ) {
+  if (props && props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
     const { properties } = props
     for (let i = 0; i < properties.length; i++) {
-      if (properties[i].value.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      const val = properties[i].value
+      if (val.type === NodeTypes.JS_CACHE_EXPRESSION) {
+        return true
+      }
+      // merged event handlers
+      if (
+        val.type === NodeTypes.JS_ARRAY_EXPRESSION &&
+        val.elements.some(
+          e => !isString(e) && e.type === NodeTypes.JS_CACHE_EXPRESSION
+        )
+      ) {
         return true
       }
     }
@@ -174,30 +199,12 @@ function hasCachedProps(node: PlainElementNode): boolean {
 
 function getNodeProps(node: PlainElementNode) {
   const codegenNode = node.codegenNode!
-  if (codegenNode.type === NodeTypes.JS_CALL_EXPRESSION) {
-    return getVNodeArgAt(
-      codegenNode,
-      1
-    ) as PlainElementCodegenNode['arguments'][1]
+  if (codegenNode.type === NodeTypes.VNODE_CALL) {
+    return codegenNode.props
   }
 }
 
-type NonCachedCodegenNode =
-  | PlainElementCodegenNode
-  | CodegenNodeWithDirective<PlainElementCodegenNode>
-
-function getVNodeArgAt(
-  node: NonCachedCodegenNode,
-  index: number
-): PlainElementCodegenNode['arguments'][number] {
-  return getVNodeCall(node).arguments[index]
-}
-
-function getVNodeCall(node: NonCachedCodegenNode) {
-  return node.callee === WITH_DIRECTIVES ? node.arguments[0] : node
-}
-
-function getPatchFlag(node: NonCachedCodegenNode): number | undefined {
-  const flag = getVNodeArgAt(node, 3) as string
+function getPatchFlag(node: VNodeCall): number | undefined {
+  const flag = node.patchFlag
   return flag ? parseInt(flag, 10) : undefined
 }

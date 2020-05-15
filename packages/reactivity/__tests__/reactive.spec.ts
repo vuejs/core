@@ -1,6 +1,12 @@
 import { ref, isRef } from '../src/ref'
-import { reactive, isReactive, toRaw, markNonReactive } from '../src/reactive'
-import { mockWarn } from '@vue/runtime-test'
+import {
+  reactive,
+  isReactive,
+  toRaw,
+  markRaw,
+  shallowReactive
+} from '../src/reactive'
+import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
@@ -20,28 +26,18 @@ describe('reactivity/reactive', () => {
     expect(Object.keys(observed)).toEqual(['foo'])
   })
 
-  test('Array', () => {
-    const original = [{ foo: 1 }]
-    const observed = reactive(original)
-    expect(observed).not.toBe(original)
-    expect(isReactive(observed)).toBe(true)
-    expect(isReactive(original)).toBe(false)
-    expect(isReactive(observed[0])).toBe(true)
-    // get
-    expect(observed[0].foo).toBe(1)
-    // has
-    expect(0 in observed).toBe(true)
-    // ownKeys
-    expect(Object.keys(observed)).toEqual(['0'])
-  })
-
-  test('cloned reactive Array should point to observed values', () => {
-    const original = [{ foo: 1 }]
-    const observed = reactive(original)
-    const clone = observed.slice()
-    expect(isReactive(clone[0])).toBe(true)
-    expect(clone[0]).not.toBe(original[0])
-    expect(clone[0]).toBe(observed[0])
+  test('proto', () => {
+    const obj = {}
+    const reactiveObj = reactive(obj)
+    expect(isReactive(reactiveObj)).toBe(true)
+    // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
+    // @ts-ignore
+    const prototype = reactiveObj['__proto__']
+    const otherObj = { data: ['a'] }
+    expect(isReactive(otherObj)).toBe(false)
+    const reactiveOther = reactive(otherObj)
+    expect(isReactive(reactiveOther)).toBe(true)
+    expect(reactiveOther.data[0]).toBe('a')
   })
 
   test('nested reactives', () => {
@@ -68,25 +64,6 @@ describe('reactivity/reactive', () => {
     delete observed.foo
     expect('foo' in observed).toBe(false)
     expect('foo' in original).toBe(false)
-  })
-
-  test('observed value should proxy mutations to original (Array)', () => {
-    const original: any[] = [{ foo: 1 }, { bar: 2 }]
-    const observed = reactive(original)
-    // set
-    const value = { baz: 3 }
-    const reactiveValue = reactive(value)
-    observed[0] = value
-    expect(observed[0]).toBe(reactiveValue)
-    expect(original[0]).toBe(value)
-    // delete
-    delete observed[0]
-    expect(observed[0]).toBeUndefined()
-    expect(original[0]).toBeUndefined()
-    // mutating methods
-    observed.push(value)
-    expect(observed[2]).toBe(reactiveValue)
-    expect(original[2]).toBe(value)
   })
 
   test('setting a property with an unobserved value should wrap with reactive', () => {
@@ -183,12 +160,32 @@ describe('reactivity/reactive', () => {
     expect(reactive(d)).toBe(d)
   })
 
-  test('markNonReactive', () => {
+  test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
-      bar: markNonReactive({ b: 2 })
+      bar: markRaw({ b: 2 })
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
+  })
+
+  test('should not observe frozen objects', () => {
+    const obj = reactive({
+      foo: Object.freeze({ a: 1 })
+    })
+    expect(isReactive(obj.foo)).toBe(false)
+  })
+
+  describe('shallowReactive', () => {
+    test('should not make non-reactive properties reactive', () => {
+      const props = shallowReactive({ n: { foo: 1 } })
+      expect(isReactive(props.n)).toBe(false)
+    })
+
+    test('should keep reactive properties reactive', () => {
+      const props: any = shallowReactive({ n: reactive({ foo: 1 }) })
+      props.n = reactive({ foo: 2 })
+      expect(isReactive(props.n)).toBe(true)
+    })
   })
 })

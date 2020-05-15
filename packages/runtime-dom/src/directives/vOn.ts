@@ -1,10 +1,12 @@
+import { hyphenate } from '@vue/shared'
+
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta']
 
 type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
 const modifierGuards: Record<
   string,
-  (e: Event, modifiers?: string[]) => void | boolean
+  (e: Event, modifiers: string[]) => void | boolean
 > = {
   stop: e => e.stopPropagation(),
   prevent: e => e.preventDefault(),
@@ -16,10 +18,13 @@ const modifierGuards: Record<
   left: e => 'button' in e && (e as MouseEvent).button !== 0,
   middle: e => 'button' in e && (e as MouseEvent).button !== 1,
   right: e => 'button' in e && (e as MouseEvent).button !== 2,
-  exact: (e, modifiers: string[]) =>
+  exact: (e, modifiers) =>
     systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
 }
 
+/**
+ * @internal
+ */
 export const withModifiers = (fn: Function, modifiers: string[]) => {
   return (event: Event) => {
     for (let i = 0; i < modifiers.length; i++) {
@@ -35,17 +40,20 @@ export const withModifiers = (fn: Function, modifiers: string[]) => {
 const keyNames: Record<string, string | string[]> = {
   esc: 'escape',
   space: ' ',
-  up: 'arrowup',
-  left: 'arrowleft',
-  right: 'arrowright',
-  down: 'arrowdown',
+  up: 'arrow-up',
+  left: 'arrow-left',
+  right: 'arrow-right',
+  down: 'arrow-down',
   delete: 'backspace'
 }
 
+/**
+ * @internal
+ */
 export const withKeys = (fn: Function, modifiers: string[]) => {
   return (event: KeyboardEvent) => {
     if (!('key' in event)) return
-    const eventKey = event.key.toLowerCase()
+    const eventKey = hyphenate(event.key)
     if (
       // None of the provided key modifiers match the current event key
       !modifiers.some(k => k === eventKey || keyNames[k] === eventKey)

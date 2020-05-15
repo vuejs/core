@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`source map 1`] = `
+Object {
+  "mappings": ";;;wBACE,aAA8B;IAAzB,aAAmB,4BAAbA,WAAM",
+  "names": Array [
+    "render",
+  ],
+  "sources": Array [
+    "example.vue",
+  ],
+  "sourcesContent": Array [
+    "
+  <div><p>{{ render }}</p></div>
+",
+  ],
+  "version": 3,
+}
+`;
+
+exports[`template errors 1`] = `
+Array [
+  [SyntaxError: Error parsing JavaScript expression: Unexpected token (1:3)],
+  [SyntaxError: v-bind is missing expression.],
+  [SyntaxError: v-model can only be used on <input>, <textarea> and <select> elements.],
+]
+`;

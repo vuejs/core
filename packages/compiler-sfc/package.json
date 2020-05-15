@@ -1,0 +1,55 @@
+{
+  "name": "@vue/compiler-sfc",
+  "version": "3.0.0-beta.12",
+  "description": "@vue/compiler-sfc",
+  "main": "dist/compiler-sfc.cjs.js",
+  "types": "dist/compiler-sfc.d.ts",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "name": "VueCompilerSFC",
+    "formats": [
+      "cjs",
+      "global",
+      "esm-browser"
+    ],
+    "prod": false,
+    "enableNonBrowserBranches": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue-next.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue-next/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/compiler-sfc#readme",
+  "peerDependencies": {
+    "vue": "3.0.0-beta.12"
+  },
+  "dependencies": {
+    "@vue/compiler-core": "3.0.0-beta.12",
+    "@vue/compiler-dom": "3.0.0-beta.12",
+    "@vue/compiler-ssr": "3.0.0-beta.12",
+    "@vue/shared": "3.0.0-beta.12",
+    "consolidate": "^0.15.1",
+    "hash-sum": "^2.0.0",
+    "lru-cache": "^5.1.1",
+    "merge-source-map": "^1.1.0",
+    "postcss": "^7.0.27",
+    "postcss-modules": "^2.0.0",
+    "postcss-selector-parser": "^6.0.2",
+    "source-map": "^0.6.1"
+  },
+  "devDependencies": {
+    "@types/consolidate": "^0.14.0",
+    "@types/lru-cache": "^5.1.0",
+    "pug": "^2.0.4"
+  }
+}

@@ -1,81 +1,36 @@
-import { NodeTransform } from '../transform'
+import { NodeTransform, TransformContext } from '../transform'
 import {
   NodeTypes,
   CallExpression,
   createCallExpression,
-  ExpressionNode
+  ExpressionNode,
+  SlotOutletNode,
+  createFunctionExpression
 } from '../ast'
-import { isSlotOutlet } from '../utils'
-import { buildProps } from './transformElement'
+import { isSlotOutlet, findProp } from '../utils'
+import { buildProps, PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
-    const { props, children, loc } = node
-    const $slots = context.prefixIdentifiers ? `_ctx.$slots` : `$slots`
-    let slotName: string | ExpressionNode = `"default"`
+    const { children, loc } = node
+    const { slotName, slotProps } = processSlotOutlet(node, context)
 
-    // check for <slot name="xxx" OR :name="xxx" />
-    let nameIndex: number = -1
-    for (let i = 0; i < props.length; i++) {
-      const prop = props[i]
-      if (prop.type === NodeTypes.ATTRIBUTE) {
-        if (prop.name === `name` && prop.value) {
-          // static name="xxx"
-          slotName = JSON.stringify(prop.value.content)
-          nameIndex = i
-          break
-        }
-      } else if (prop.name === `bind`) {
-        const { arg, exp } = prop
-        if (
-          arg &&
-          exp &&
-          arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-          arg.isStatic &&
-          arg.content === `name`
-        ) {
-          // dynamic :name="xxx"
-          slotName = exp
-          nameIndex = i
-          break
-        }
-      }
-    }
+    const slotArgs: CallExpression['arguments'] = [
+      context.prefixIdentifiers ? `_ctx.$slots` : `$slots`,
+      slotName
+    ]
 
-    const slotArgs: CallExpression['arguments'] = [$slots, slotName]
-    const propsWithoutName =
-      nameIndex > -1
-        ? props.slice(0, nameIndex).concat(props.slice(nameIndex + 1))
-        : props
-    let hasProps = propsWithoutName.length > 0
-    if (hasProps) {
-      const { props: propsExpression, directives } = buildProps(
-        node,
-        context,
-        propsWithoutName
-      )
-      if (directives.length) {
-        context.onError(
-          createCompilerError(
-            ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-            directives[0].loc
-          )
-        )
-      }
-      if (propsExpression) {
-        slotArgs.push(propsExpression)
-      } else {
-        hasProps = false
-      }
+    if (slotProps) {
+      slotArgs.push(slotProps)
     }
 
     if (children.length) {
-      if (!hasProps) {
+      if (!slotProps) {
         slotArgs.push(`{}`)
       }
-      slotArgs.push(children)
+      slotArgs.push(createFunctionExpression([], children, false, false, loc))
     }
 
     node.codegenNode = createCallExpression(
@@ -83,5 +38,51 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       slotArgs,
       loc
     )
+  }
+}
+
+interface SlotOutletProcessResult {
+  slotName: string | ExpressionNode
+  slotProps: PropsExpression | undefined
+}
+
+export function processSlotOutlet(
+  node: SlotOutletNode,
+  context: TransformContext
+): SlotOutletProcessResult {
+  let slotName: string | ExpressionNode = `"default"`
+  let slotProps: PropsExpression | undefined = undefined
+
+  // check for <slot name="xxx" OR :name="xxx" />
+  const name = findProp(node, 'name')
+  if (name) {
+    if (name.type === NodeTypes.ATTRIBUTE && name.value) {
+      // static name
+      slotName = JSON.stringify(name.value.content)
+    } else if (name.type === NodeTypes.DIRECTIVE && name.exp) {
+      // dynamic name
+      slotName = name.exp
+    }
+  }
+
+  const propsWithoutName = name
+    ? node.props.filter(p => p !== name)
+    : node.props
+  if (propsWithoutName.length > 0) {
+    const { props, directives } = buildProps(node, context, propsWithoutName)
+    slotProps = props
+    if (directives.length) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+          directives[0].loc
+        )
+      )
+    }
+  }
+
+  return {
+    slotName,
+    slotProps
   }
 }

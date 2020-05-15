@@ -12,9 +12,9 @@ import {
   NodeOpTypes,
   nextTick,
   serialize,
-  triggerEvent,
-  mockWarn
+  triggerEvent
 } from '../src'
+import { mockWarn } from '@vue/shared'
 
 describe('test renderer', () => {
   mockWarn()
@@ -126,7 +126,8 @@ describe('test renderer', () => {
         return h(
           'div',
           {
-            id: 'test'
+            id: 'test',
+            boolean: ''
           },
           [h('span', 'foo'), 'hello']
         )
@@ -135,12 +136,12 @@ describe('test renderer', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serialize(root)).toEqual(
-      `<div><div id="test"><span>foo</span>hello</div></div>`
+      `<div><div id="test" boolean><span>foo</span>hello</div></div>`
     )
     // indented output
     expect(serialize(root, 2)).toEqual(
       `<div>
-  <div id="test">
+  <div id="test" boolean>
     <span>
       foo
     </span>

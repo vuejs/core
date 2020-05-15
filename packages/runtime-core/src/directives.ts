@@ -14,7 +14,7 @@ return withDirectives(h(comp), [
 import { VNode } from './vnode'
 import { isFunction, EMPTY_OBJ, makeMap } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance } from './component'
+import { ComponentInternalInstance, Data } from './component'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentProxy'
@@ -25,31 +25,42 @@ export interface DirectiveBinding {
   oldValue: any
   arg?: string
   modifiers: DirectiveModifiers
+  dir: ObjectDirective
 }
 
-export type DirectiveHook<T = any> = (
+export type DirectiveHook<T = any, Prev = VNode<any, T> | null> = (
   el: T,
   binding: DirectiveBinding,
   vnode: VNode<any, T>,
-  prevVNode: VNode<any, T> | null
+  prevVNode: Prev
 ) => void
 
+export type SSRDirectiveHook = (
+  binding: DirectiveBinding,
+  vnode: VNode
+) => Data | undefined
+
 export interface ObjectDirective<T = any> {
-  beforeMount?: DirectiveHook<T>
-  mounted?: DirectiveHook<T>
-  beforeUpdate?: DirectiveHook<T>
-  updated?: DirectiveHook<T>
-  beforeUnmount?: DirectiveHook<T>
-  unmounted?: DirectiveHook<T>
+  beforeMount?: DirectiveHook<T, null>
+  mounted?: DirectiveHook<T, null>
+  beforeUpdate?: DirectiveHook<T, VNode<any, T>>
+  updated?: DirectiveHook<T, VNode<any, T>>
+  beforeUnmount?: DirectiveHook<T, null>
+  unmounted?: DirectiveHook<T, null>
+  getSSRProps?: SSRDirectiveHook
 }
 
 export type FunctionDirective<T = any> = DirectiveHook<T>
 
 export type Directive<T = any> = ObjectDirective<T> | FunctionDirective<T>
 
-type DirectiveModifiers = Record<string, boolean>
+export type DirectiveModifiers = Record<string, boolean>
 
-const valueCache = new WeakMap<Directive, WeakMap<any, any>>()
+export type VNodeDirectiveData = [
+  unknown,
+  string | undefined,
+  DirectiveModifiers
+]
 
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
@@ -61,57 +72,6 @@ export function validateDirectiveName(name: string) {
   }
 }
 
-function applyDirective(
-  props: Record<any, any>,
-  instance: ComponentInternalInstance,
-  directive: Directive,
-  value?: unknown,
-  arg?: string,
-  modifiers: DirectiveModifiers = EMPTY_OBJ
-) {
-  let valueCacheForDir = valueCache.get(directive)!
-  if (!valueCacheForDir) {
-    valueCacheForDir = new WeakMap<VNode, any>()
-    valueCache.set(directive, valueCacheForDir)
-  }
-
-  if (isFunction(directive)) {
-    directive = {
-      mounted: directive,
-      updated: directive
-    } as ObjectDirective
-  }
-
-  for (const key in directive) {
-    const hook = directive[key as keyof ObjectDirective]!
-    const hookKey = `onVnode` + key[0].toUpperCase() + key.slice(1)
-    const vnodeHook = (vnode: VNode, prevVNode: VNode | null) => {
-      let oldValue
-      if (prevVNode != null) {
-        oldValue = valueCacheForDir.get(prevVNode)
-        valueCacheForDir.delete(prevVNode)
-      }
-      valueCacheForDir.set(vnode, value)
-      hook(
-        vnode.el,
-        {
-          instance: instance.renderProxy,
-          value,
-          oldValue,
-          arg,
-          modifiers
-        },
-        vnode,
-        prevVNode
-      )
-    }
-    const existing = props[hookKey]
-    props[hookKey] = existing
-      ? [].concat(existing, vnodeHook as any)
-      : vnodeHook
-  }
-}
-
 // Directive, value, argument, modifiers
 export type DirectiveArguments = Array<
   | [Directive]
@@ -120,28 +80,61 @@ export type DirectiveArguments = Array<
   | [Directive, any, string, DirectiveModifiers]
 >
 
-export function withDirectives(vnode: VNode, directives: DirectiveArguments) {
-  const instance = currentRenderingInstance
-  if (instance !== null) {
-    vnode.props = vnode.props || {}
-    for (let i = 0; i < directives.length; i++) {
-      const [dir, value, arg, modifiers] = directives[i]
-      applyDirective(vnode.props, instance, dir, value, arg, modifiers)
+/**
+ * Adds directives to a VNode.
+ */
+export function withDirectives<T extends VNode>(
+  vnode: T,
+  directives: DirectiveArguments
+): T {
+  const internalInstance = currentRenderingInstance
+  if (internalInstance === null) {
+    __DEV__ && warn(`withDirectives can only be used inside render functions.`)
+    return vnode
+  }
+  const instance = internalInstance.proxy
+  const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
+  for (let i = 0; i < directives.length; i++) {
+    let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
+    if (isFunction(dir)) {
+      dir = {
+        mounted: dir,
+        updated: dir
+      } as ObjectDirective
     }
-  } else if (__DEV__) {
-    warn(`withDirectives can only be used inside render functions.`)
+    bindings.push({
+      dir,
+      instance,
+      value,
+      oldValue: void 0,
+      arg,
+      modifiers
+    })
   }
   return vnode
 }
 
 export function invokeDirectiveHook(
-  hook: Function | Function[],
-  instance: ComponentInternalInstance | null,
   vnode: VNode,
-  prevVNode: VNode | null = null
+  prevVNode: VNode | null,
+  instance: ComponentInternalInstance | null,
+  name: keyof ObjectDirective
 ) {
-  callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
-    vnode,
-    prevVNode
-  ])
+  const bindings = vnode.dirs!
+  const oldBindings = prevVNode && prevVNode.dirs!
+  for (let i = 0; i < bindings.length; i++) {
+    const binding = bindings[i]
+    if (oldBindings) {
+      binding.oldValue = oldBindings[i].value
+    }
+    const hook = binding.dir[name] as DirectiveHook | undefined
+    if (hook) {
+      callWithAsyncErrorHandling(hook, instance, ErrorCodes.DIRECTIVE_HOOK, [
+        vnode.el,
+        binding,
+        vnode,
+        prevVNode
+      ])
+    }
+  }
 }

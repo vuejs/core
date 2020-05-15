@@ -24,7 +24,6 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
         createSimpleExpression(`textContent`, true, loc),
         exp || createSimpleExpression('', true)
       )
-    ],
-    needRuntime: false
+    ]
   }
 }

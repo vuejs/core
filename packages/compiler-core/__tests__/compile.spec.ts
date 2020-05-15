@@ -44,7 +44,7 @@ describe('compiler: integration tests', () => {
     return res
   }
 
-  test('function mode', async () => {
+  test('function mode', () => {
     const { code, map } = compile(source, {
       sourceMap: true,
       filename: `foo.vue`
@@ -54,7 +54,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = await new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as RawSourceMap)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`))
@@ -109,7 +109,7 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `value + index`))
   })
 
-  test('function mode w/ prefixIdentifiers: true', async () => {
+  test('function mode w/ prefixIdentifiers: true', () => {
     const { code, map } = compile(source, {
       sourceMap: true,
       filename: `foo.vue`,
@@ -120,7 +120,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = await new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as RawSourceMap)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`))
@@ -184,7 +184,7 @@ describe('compiler: integration tests', () => {
     ).toMatchObject(getPositionInCode(source, `value + index`))
   })
 
-  test('module mode', async () => {
+  test('module mode', () => {
     const { code, map } = compile(source, {
       mode: 'module',
       sourceMap: true,
@@ -195,7 +195,7 @@ describe('compiler: integration tests', () => {
     expect(map!.sources).toEqual([`foo.vue`])
     expect(map!.sourcesContent).toEqual([source])
 
-    const consumer = await new SourceMapConsumer(map as RawSourceMap)
+    const consumer = new SourceMapConsumer(map as RawSourceMap)
 
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `id`))

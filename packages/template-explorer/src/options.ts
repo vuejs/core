@@ -1,95 +1,169 @@
-import { h, reactive, createApp } from '@vue/runtime-dom'
+import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
+
+export const ssrMode = ref(false)
 
 export const compilerOptions: CompilerOptions = reactive({
   mode: 'module',
   prefixIdentifiers: false,
+  optimizeBindings: false,
   hoistStatic: false,
-  cacheHandlers: false
+  cacheHandlers: false,
+  scopeId: null
 })
 
 const App = {
   setup() {
-    return () => [
-      h('h1', `Vue 3 Template Explorer`),
-      h(
-        'a',
-        {
-          href: `https://github.com/vuejs/vue-next/tree/${__COMMIT__}`,
-          target: `_blank`
-        },
-        `@${__COMMIT__}`
-      ),
-      h('div', { id: 'options' }, [
-        // mode selection
-        h('span', { class: 'options-group' }, [
-          h('span', { class: 'label' }, 'Mode:'),
-          h('input', {
-            type: 'radio',
-            id: 'mode-module',
-            name: 'mode',
-            checked: compilerOptions.mode === 'module',
-            onChange() {
-              compilerOptions.mode = 'module'
-            }
-          }),
-          h('label', { for: 'mode-module' }, 'module'),
-          h('input', {
-            type: 'radio',
-            id: 'mode-function',
-            name: 'mode',
-            checked: compilerOptions.mode === 'function',
-            onChange() {
-              compilerOptions.mode = 'function'
-            }
-          }),
-          h('label', { for: 'mode-function' }, 'function')
-        ]),
+    return () => {
+      const isSSR = ssrMode.value
+      const isModule = compilerOptions.mode === 'module'
+      const usePrefix =
+        compilerOptions.prefixIdentifiers || compilerOptions.mode === 'module'
 
-        // toggle prefixIdentifiers
-        h('input', {
-          type: 'checkbox',
-          id: 'prefix',
-          disabled: compilerOptions.mode === 'module',
-          checked:
-            compilerOptions.prefixIdentifiers ||
-            compilerOptions.mode === 'module',
-          onChange(e: Event) {
-            compilerOptions.prefixIdentifiers =
-              (<HTMLInputElement>e.target).checked ||
-              compilerOptions.mode === 'module'
-          }
-        }),
-        h('label', { for: 'prefix' }, 'prefixIdentifiers'),
+      return [
+        h('h1', `Vue 3 Template Explorer`),
+        h(
+          'a',
+          {
+            href: `https://github.com/vuejs/vue-next/tree/${__COMMIT__}`,
+            target: `_blank`
+          },
+          `@${__COMMIT__}`
+        ),
+        ' | ',
+        h(
+          'a',
+          {
+            href:
+              'https://app.netlify.com/sites/vue-next-template-explorer/deploys',
+            target: `_blank`
+          },
+          'History'
+        ),
 
-        // toggle hoistStatic
-        h('input', {
-          type: 'checkbox',
-          id: 'hoist',
-          checked: compilerOptions.hoistStatic,
-          onChange(e: Event) {
-            compilerOptions.hoistStatic = (<HTMLInputElement>e.target).checked
-          }
-        }),
-        h('label', { for: 'hoist' }, 'hoistStatic'),
+        h('div', { id: 'options-wrapper' }, [
+          h('div', { id: 'options-label' }, 'Options ↘'),
+          h('ul', { id: 'options' }, [
+            // mode selection
+            h('li', { id: 'mode' }, [
+              h('span', { class: 'label' }, 'Mode: '),
+              h('input', {
+                type: 'radio',
+                id: 'mode-module',
+                name: 'mode',
+                checked: isModule,
+                onChange() {
+                  compilerOptions.mode = 'module'
+                }
+              }),
+              h('label', { for: 'mode-module' }, 'module'),
+              ' ',
+              h('input', {
+                type: 'radio',
+                id: 'mode-function',
+                name: 'mode',
+                checked: !isModule,
+                onChange() {
+                  compilerOptions.mode = 'function'
+                }
+              }),
+              h('label', { for: 'mode-function' }, 'function')
+            ]),
 
-        // toggle cacheHandlers
-        h('input', {
-          type: 'checkbox',
-          id: 'cache',
-          checked:
-            compilerOptions.cacheHandlers && compilerOptions.prefixIdentifiers,
-          disabled: !compilerOptions.prefixIdentifiers,
-          onChange(e: Event) {
-            compilerOptions.cacheHandlers = (<HTMLInputElement>e.target).checked
-          }
-        }),
-        h('label', { for: 'cache' }, 'cacheHandlers')
-      ])
-    ]
+            // SSR
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'ssr',
+                name: 'ssr',
+                checked: ssrMode.value,
+                onChange(e: Event) {
+                  ssrMode.value = (e.target as HTMLInputElement).checked
+                }
+              }),
+              h('label', { for: 'ssr' }, 'SSR')
+            ]),
+
+            // toggle prefixIdentifiers
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'prefix',
+                disabled: isModule || isSSR,
+                checked: usePrefix || isSSR,
+                onChange(e: Event) {
+                  compilerOptions.prefixIdentifiers =
+                    (e.target as HTMLInputElement).checked || isModule
+                }
+              }),
+              h('label', { for: 'prefix' }, 'prefixIdentifiers')
+            ]),
+
+            // toggle hoistStatic
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'hoist',
+                checked: compilerOptions.hoistStatic && !isSSR,
+                disabled: isSSR,
+                onChange(e: Event) {
+                  compilerOptions.hoistStatic = (e.target as HTMLInputElement).checked
+                }
+              }),
+              h('label', { for: 'hoist' }, 'hoistStatic')
+            ]),
+
+            // toggle cacheHandlers
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'cache',
+                checked: usePrefix && compilerOptions.cacheHandlers && !isSSR,
+                disabled: !usePrefix || isSSR,
+                onChange(e: Event) {
+                  compilerOptions.cacheHandlers = (e.target as HTMLInputElement).checked
+                }
+              }),
+              h('label', { for: 'cache' }, 'cacheHandlers')
+            ]),
+
+            // toggle scopeId
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'scope-id',
+                disabled: !isModule,
+                checked: isModule && compilerOptions.scopeId,
+                onChange(e: Event) {
+                  compilerOptions.scopeId =
+                    isModule && (e.target as HTMLInputElement).checked
+                      ? 'scope-id'
+                      : null
+                }
+              }),
+              h('label', { for: 'scope-id' }, 'scopeId')
+            ]),
+
+            // toggle optimizeBindings
+            h('li', [
+              h('input', {
+                type: 'checkbox',
+                id: 'optimize-bindings',
+                disabled: !isModule || isSSR,
+                checked: isModule && !isSSR && compilerOptions.optimizeBindings,
+                onChange(e: Event) {
+                  compilerOptions.optimizeBindings = (e.target as HTMLInputElement).checked
+                }
+              }),
+              h('label', { for: 'optimize-bindings' }, 'optimizeBindings')
+            ])
+          ])
+        ])
+      ]
+    }
   }
 }
 
 export function initOptions() {
-  createApp().mount(App, document.getElementById('header')!)
+  createApp(App).mount(document.getElementById('header')!)
 }
