@@ -79,6 +79,22 @@ export function resolveTransitionProps({
   leaveFromClass = `${name}-leave-from`,
   leaveActiveClass = `${name}-leave-active`,
   leaveToClass = `${name}-leave-to`,
+  appear,
+  onBeforeEnter,
+  onEnter,
+  onAfterEnter,
+  onEnterCancelled,
+
+  onBeforeLeave,
+  onLeave,
+  onAfterLeave,
+
+  onLeaveCancelled,
+  onBeforeAppear = onBeforeEnter,
+  onAppear = onEnter,
+  onAfterAppear = onAfterEnter,
+  onAppearCancelled = onEnterCancelled,
+
   ...baseProps
 }: TransitionProps): BaseTransitionProps<Element> {
   if (!css) {
@@ -89,21 +105,7 @@ export function resolveTransitionProps({
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
-  let {
-    appear,
-    onBeforeEnter,
-    onAfterEnter,
-    onBeforeLeave,
-    onAfterLeave,
-    onEnter,
-    onLeave,
-    onEnterCancelled,
-    onLeaveCancelled,
-    onAfterAppear,
-    onAppear,
-    onAppearCancelled,
-    onBeforeAppear
-  } = baseProps
+
   // is appearing
   const originEnterClass = [enterFromClass, enterActiveClass, enterToClass]
   const originEnterHook: any[] = [
@@ -119,10 +121,10 @@ export function resolveTransitionProps({
       appearToClass
     ]
     ;[onBeforeEnter, onEnter, onBeforeEnter, onEnterCancelled] = [
-      onBeforeAppear || onBeforeEnter,
-      onAppear || onEnter,
-      onAfterAppear || onAfterEnter,
-      onAppearCancelled || onEnterCancelled
+      onBeforeAppear,
+      onAppear,
+      onAfterAppear,
+      onAppearCancelled
     ]
   }
 
