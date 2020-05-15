@@ -10,7 +10,11 @@ import {
   createCallExpression,
   HoistTransform,
   CREATE_STATIC,
-  ExpressionNode
+  ExpressionNode,
+  ElementTypes,
+  PlainElementNode,
+  JSChildNode,
+  createSimpleExpression
 } from '@vue/compiler-core'
 import {
   isVoidTag,
@@ -24,41 +28,113 @@ import {
   stringifyStyle
 } from '@vue/shared'
 
-// Turn eligible hoisted static trees into stringied static nodes, e.g.
-//   const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
-// This is only performed in non-in-browser compilations.
-export const stringifyStatic: HoistTransform = (node, context) => {
-  if (shouldOptimize(node)) {
-    return createCallExpression(context.helper(CREATE_STATIC), [
-      JSON.stringify(stringifyElement(node, context))
-    ])
-  } else {
-    return node.codegenNode!
-  }
-}
-
 export const enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
   NODE_COUNT = 20
 }
+
+// Turn eligible hoisted static trees into stringied static nodes, e.g.
+//   const _hoisted_1 = createStaticVNode(`<div class="foo">bar</div>`)
+// This is only performed in non-in-browser compilations.
+export const stringifyStatic: HoistTransform = (children, context) => {
+  let nc = 0 // current node count
+  let ec = 0 // current element with binding count
+  const currentEligibleNodes: PlainElementNode[] = []
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    const hoisted = getHoistedNode(child)
+    if (hoisted) {
+      // presence of hoisted means child must be a plain element Node
+      const node = child as PlainElementNode
+      const result = analyzeNode(node)
+      if (result) {
+        // node is stringifiable, record state
+        nc += result[0]
+        ec += result[1]
+        currentEligibleNodes.push(node)
+        continue
+      }
+    }
+
+    // we only reach here if we ran into a node that is not stringifiable
+    // check if currently analyzed nodes meet criteria for stringification.
+    if (
+      nc >= StringifyThresholds.NODE_COUNT ||
+      ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    ) {
+      // combine all currently eligible nodes into a single static vnode call
+      const staticCall = createCallExpression(context.helper(CREATE_STATIC), [
+        JSON.stringify(
+          currentEligibleNodes
+            .map(node => stringifyElement(node, context))
+            .join('')
+        ),
+        // the 2nd argument indicates the number of DOM nodes this static vnode
+        // will insert / hydrate
+        String(currentEligibleNodes.length)
+      ])
+      // replace the first node's hoisted expression with the static vnode call
+      replaceHoist(currentEligibleNodes[0], staticCall, context)
+
+      const n = currentEligibleNodes.length
+      if (n > 1) {
+        for (let j = 1; j < n; j++) {
+          // for the merged nodes, set their hoisted expression to null
+          replaceHoist(
+            currentEligibleNodes[j],
+            createSimpleExpression(`null`, false),
+            context
+          )
+        }
+        // also remove merged nodes from children
+        const deleteCount = n - 1
+        children.splice(i - n + 1, deleteCount)
+        // adjust iteration index
+        i -= deleteCount
+      }
+    }
+
+    // reset state
+    nc = 0
+    ec = 0
+    currentEligibleNodes.length = 0
+  }
+}
+
+const getHoistedNode = (node: TemplateChildNode) =>
+  node.type === NodeTypes.ELEMENT &&
+  node.tagType === ElementTypes.ELEMENT &&
+  node.codegenNode &&
+  node.codegenNode.type === NodeTypes.SIMPLE_EXPRESSION &&
+  node.codegenNode.hoisted
 
 const dataAriaRE = /^(data|aria)-/
 const isStringifiableAttr = (name: string) => {
   return isKnownAttr(name) || dataAriaRE.test(name)
 }
 
-// Opt-in heuristics based on:
-// 1. number of elements with attributes > 5.
-// 2. OR: number of total nodes > 20
-// For some simple trees, the performance can actually be worse.
-// it is only worth it when the tree is complex enough
-// (e.g. big piece of static content)
-function shouldOptimize(node: ElementNode): boolean {
-  let bindingThreshold = StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-  let nodeThreshold = StringifyThresholds.NODE_COUNT
+const replaceHoist = (
+  node: PlainElementNode,
+  replacement: JSChildNode,
+  context: TransformContext
+) => {
+  const hoistToReplace = (node.codegenNode as SimpleExpressionNode).hoisted!
+  context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
+}
 
+/**
+ * for a hoisted node, analyze it and return:
+ * - false: bailed (contains runtime constant)
+ * - [x, y] where
+ *   - x is the number of nodes inside
+ *   - y is the number of element with bindings inside
+ */
+function analyzeNode(node: PlainElementNode): [number, number] | false {
+  let nc = 1 // node count
+  let ec = node.props.length > 0 ? 1 : 0 // element w/ binding count
   let bailed = false
-  const bail = () => {
+  const bail = (): false => {
     bailed = true
     return false
   }
@@ -67,7 +143,7 @@ function shouldOptimize(node: ElementNode): boolean {
   // output compared to imperative node insertions.
   // probably only need to check for most common case
   // i.e. non-phrasing-content tags inside `<p>`
-  function walk(node: ElementNode) {
+  function walk(node: ElementNode): boolean {
     for (let i = 0; i < node.props.length; i++) {
       const p = node.props[i]
       // bail on non-attr bindings
@@ -97,26 +173,28 @@ function shouldOptimize(node: ElementNode): boolean {
       }
     }
     for (let i = 0; i < node.children.length; i++) {
-      if (--nodeThreshold === 0) {
+      nc++
+      if (nc >= StringifyThresholds.NODE_COUNT) {
         return true
       }
       const child = node.children[i]
       if (child.type === NodeTypes.ELEMENT) {
-        if (child.props.length > 0 && --bindingThreshold === 0) {
-          return true
+        if (child.props.length > 0) {
+          ec++
+          if (ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT) {
+            return true
+          }
         }
-        if (walk(child)) {
-          return true
-        }
+        walk(child)
         if (bailed) {
           return false
         }
       }
     }
-    return false
+    return true
   }
 
-  return walk(node)
+  return walk(node) ? [nc, ec] : false
 }
 
 function stringifyElement(

@@ -54,10 +54,7 @@ function walk(
         // whole tree is static
         ;(child.codegenNode as VNodeCall).patchFlag =
           PatchFlags.HOISTED + (__DEV__ ? ` /* HOISTED */` : ``)
-        const hoisted = context.transformHoist
-          ? context.transformHoist(child, context)
-          : child.codegenNode!
-        child.codegenNode = context.hoist(hoisted)
+        child.codegenNode = context.hoist(child.codegenNode!)
         continue
       } else {
         // node may contain dynamic children, but its props may be eligible for
@@ -99,6 +96,10 @@ function walk(
         walk(branchChildren, context, resultCache, branchChildren.length === 1)
       }
     }
+  }
+
+  if (context.transformHoist) {
+    context.transformHoist(children, context)
   }
 }
 

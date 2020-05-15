@@ -1,4 +1,4 @@
-import { ElementNode, Namespace, JSChildNode, PlainElementNode } from './ast'
+import { ElementNode, Namespace, TemplateChildNode } from './ast'
 import { TextModes } from './parse'
 import { CompilerError } from './errors'
 import {
@@ -52,9 +52,9 @@ export interface ParserOptions {
 }
 
 export type HoistTransform = (
-  node: PlainElementNode,
+  children: TemplateChildNode[],
   context: TransformContext
-) => JSChildNode
+) => void
 
 export interface TransformOptions {
   /**

@@ -230,12 +230,14 @@ export function createTransformContext(
     },
     hoist(exp) {
       context.hoists.push(exp)
-      return createSimpleExpression(
+      const identifier = createSimpleExpression(
         `_hoisted_${context.hoists.length}`,
         false,
         exp.loc,
         true
       )
+      identifier.hoisted = exp
+      return identifier
     },
     cache(exp, isVNode = false) {
       return createCacheExpression(++context.cached, exp, isVNode)

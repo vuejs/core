@@ -195,6 +195,11 @@ export interface SimpleExpressionNode extends Node {
   isStatic: boolean
   isConstant: boolean
   /**
+   * Indicates this is an identifier for a hoist vnode call and points to the
+   * hoisted node.
+   */
+  hoisted?: JSChildNode
+  /**
    * an expression parsed as the params of a function will track
    * the identifiers declared inside the function body.
    */
