@@ -84,17 +84,14 @@ export function resolveTransitionProps({
   onEnter,
   onAfterEnter,
   onEnterCancelled,
-
   onBeforeLeave,
   onLeave,
   onAfterLeave,
-
   onLeaveCancelled,
   onBeforeAppear = onBeforeEnter,
   onAppear = onEnter,
   onAfterAppear = onAfterEnter,
   onAppearCancelled = onEnterCancelled,
-
   ...baseProps
 }: TransitionProps): BaseTransitionProps<Element> {
   if (!css) {
