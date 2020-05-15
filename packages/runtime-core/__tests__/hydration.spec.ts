@@ -56,10 +56,31 @@ describe('SSR hydration', () => {
   test('static', () => {
     const html = '<div><span>hello</span></div>'
     const { vnode, container } = mountWithHydration(html, () =>
-      createStaticVNode(html)
+      createStaticVNode('', 1)
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.el.outerHTML).toBe(html)
+    expect(vnode.anchor).toBe(container.firstChild)
+    expect(vnode.children).toBe(html)
+  })
+
+  test('static (multiple elements)', () => {
+    const staticContent = '<div></div><span>hello</span>'
+    const html = `<div><div>hi</div>` + staticContent + `<div>ho</div></div>`
+
+    const n1 = h('div', 'hi')
+    const s = createStaticVNode('', 2)
+    const n2 = h('div', 'ho')
+
+    const { container } = mountWithHydration(html, () => h('div', [n1, s, n2]))
+
+    const div = container.firstChild!
+
+    expect(n1.el).toBe(div.firstChild)
+    expect(n2.el).toBe(div.lastChild)
+    expect(s.el).toBe(div.childNodes[1])
+    expect(s.anchor).toBe(div.childNodes[2])
+    expect(s.children).toBe(staticContent)
   })
 
   test('element with text children', async () => {
