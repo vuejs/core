@@ -183,7 +183,9 @@ export interface DirectiveNode extends Node {
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
   modifiers: string[]
-  // optional property to cache the expression parse result for v-for
+  /**
+   * optional property to cache the expression parse result for v-for
+   */
   parseResult?: ForParseResult
 }
 
@@ -192,11 +194,15 @@ export interface SimpleExpressionNode extends Node {
   content: string
   isStatic: boolean
   isConstant: boolean
-  // an expression parsed as the params of a function will track
-  // the identifiers declared inside the function body.
+  /**
+   * an expression parsed as the params of a function will track
+   * the identifiers declared inside the function body.
+   */
   identifiers?: string[]
-  // some expressions (e.g. transformAssetUrls import identifiers) are constant,
-  // but cannot be stringified because they must be first evaluated at runtime.
+  /**
+   * some expressions (e.g. transformAssetUrls import identifiers) are constant,
+   * but cannot be stringified because they must be first evaluated at runtime.
+   */
   isRuntimeConstant?: boolean
 }
 
@@ -214,8 +220,11 @@ export interface CompoundExpressionNode extends Node {
     | TextNode
     | string
     | symbol)[]
-  // an expression parsed as the params of a function will track
-  // the identifiers declared inside the function body.
+
+  /**
+   * an expression parsed as the params of a function will track
+   * the identifiers declared inside the function body.
+   */
   identifiers?: string[]
 }
 
@@ -322,7 +331,10 @@ export interface FunctionExpression extends Node {
   returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
   body?: BlockStatement | IfStatement
   newline: boolean
-  // so that codegen knows it needs to generate ScopeId wrapper
+  /**
+   * This flag is for codegen to determine whether it needs to generate the
+   * withScopeId() wrapper
+   */
   isSlot: boolean
 }
 
