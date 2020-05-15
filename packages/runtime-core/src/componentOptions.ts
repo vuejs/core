@@ -578,6 +578,15 @@ function applyMixins(
   }
 }
 
+const mergeData = <T extends object, U extends object>(a: T, b: U): T & U => {
+  for (const key in b) {
+    if (!(key in a)) {
+      ;(a as any)[key] = b[key]
+    }
+  }
+  return a as any
+}
+
 function resolveData(
   instance: ComponentInternalInstance,
   dataFn: DataFn,
@@ -597,7 +606,7 @@ function resolveData(
     instance.data = reactive(data)
   } else {
     // existing data: this is a mixin or extends.
-    extend(instance.data, data)
+    mergeData(instance.data, data)
   }
 }
 

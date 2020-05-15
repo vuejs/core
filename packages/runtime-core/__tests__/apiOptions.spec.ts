@@ -607,6 +607,31 @@ describe('api: options', () => {
     expect(watchSpy.mock.calls[0].slice(0, 2)).toEqual(['hello', 'mixin3'])
   })
 
+  // #1187
+  test('same data exist in mixins and Comp', () => {
+    const mixinA = {
+      data() {
+        return {
+          a: 1
+        }
+      }
+    }
+
+    const Comp = {
+      mixins: [mixinA],
+      data() {
+        return {
+          a: 3
+        }
+      },
+      render(this: any) {
+        return `${this.a}`
+      }
+    }
+
+    expect(renderToString(h(Comp))).toBe(`3`)
+  })
+
   describe('warnings', () => {
     mockWarn()
 
