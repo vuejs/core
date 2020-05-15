@@ -118,16 +118,17 @@ export function createHydrationFunctions(
           return onMismatch()
         }
         // determine anchor, adopt content
-        let content = ''
         let cur = node
+        // if the static vnode has its content stripped during build,
+        // adopt it from the server-rendered HTML.
+        const needToAdoptContent = !(vnode.children as string).length
         for (let i = 0; i < vnode.staticCount; i++) {
-          content += (cur as Element).outerHTML
+          if (needToAdoptContent) vnode.children += (cur as Element).outerHTML
           if (i === vnode.staticCount - 1) {
             vnode.anchor = cur
           }
           cur = nextSibling(cur)!
         }
-        vnode.children = content
         return cur
       case Fragment:
         if (!isFragmentStart) {
