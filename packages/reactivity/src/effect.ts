@@ -136,6 +136,7 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+// Q-1 跟踪函数,在对象每一次get的时候都要调用,还不明白干什么用的
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return

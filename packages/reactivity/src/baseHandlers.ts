@@ -35,6 +35,7 @@ const arrayInstrumentations: Record<string, Function> = {}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
+    // Q-1: ReactiveFlags这个枚举的isReactive/isReadonly/raw有什么用？
     if (key === ReactiveFlags.isReactive) {
       return !isReadonly
     } else if (key === ReactiveFlags.isReadonly) {
@@ -43,13 +44,14 @@ function createGetter(isReadonly = false, shallow = false) {
       return target
     }
 
+    // N-1: 判断是否为数组
     const targetIsArray = isArray(target)
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
     const res = Reflect.get(target, key, receiver)
 
-    if (isSymbol(key) && builtInSymbols.has(key) || key === '__proto__') {
+    if ((isSymbol(key) && builtInSymbols.has(key)) || key === '__proto__') {
       return res
     }
 
@@ -114,6 +116,7 @@ function createSetter(shallow = false) {
   }
 }
 
+// N-1：劫持删除属性，会判断是否存在该值，存在才会触发视图更新
 function deleteProperty(target: object, key: string | symbol): boolean {
   const hadKey = hasOwn(target, key)
   const oldValue = (target as any)[key]
@@ -124,12 +127,14 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
+// N-2: 在判断某个key是否属于某个对象的时候进行追踪
 function has(target: object, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
   track(target, TrackOpTypes.HAS, key)
   return result
 }
 
+// N-3：在取对象所有key的时候进行追踪
 function ownKeys(target: object): (string | number | symbol)[] {
   track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
   return Reflect.ownKeys(target)

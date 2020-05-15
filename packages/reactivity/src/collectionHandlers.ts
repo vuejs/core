@@ -202,9 +202,11 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 
 const mutableInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
+    debugger
     return get(this, key, toReactive)
   },
   get size() {
+    debugger
     return size((this as unknown) as IterableCollections)
   },
   has,

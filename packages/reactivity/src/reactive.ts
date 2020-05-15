@@ -127,8 +127,11 @@ function createReactiveObject(
   }
   const observed = new Proxy(
     target,
+    // N-1: 判断是否为es6的map set weakMap weakSet，因为代理方式不一样
     collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
   )
+  // Q-2: 为什么要使用defineProperty呢?
+  // A-2: 给源对象(target)打上标记，标记为可响应的对象，方便以后判断
   def(
     target,
     isReadonly ? ReactiveFlags.readonly : ReactiveFlags.reactive,
