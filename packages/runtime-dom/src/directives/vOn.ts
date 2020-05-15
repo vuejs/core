@@ -26,12 +26,12 @@ const modifierGuards: Record<
  * @internal
  */
 export const withModifiers = (fn: Function, modifiers: string[]) => {
-  return (event: Event) => {
+  return (event: Event, ...args: unknown[]) => {
     for (let i = 0; i < modifiers.length; i++) {
       const guard = modifierGuards[modifiers[i]]
       if (guard && guard(event, modifiers)) return
     }
-    return fn(event)
+    return fn(event, ...args)
   }
 }
 
