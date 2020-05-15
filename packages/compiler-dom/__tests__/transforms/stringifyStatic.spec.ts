@@ -31,7 +31,7 @@ describe('stringify static html', () => {
     )
     expect(ast.hoists.length).toBe(1)
     // should be a normal vnode call
-    expect(ast.hoists[0].type).toBe(NodeTypes.VNODE_CALL)
+    expect(ast.hoists[0]!.type).toBe(NodeTypes.VNODE_CALL)
   })
 
   test('should work on eligible content (elements with binding > 5)', () => {
@@ -52,7 +52,8 @@ describe('stringify static html', () => {
             `<span class="foo"></span>`,
             StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
           )}</div>`
-        )
+        ),
+        '1'
       ]
     })
   })
@@ -75,7 +76,36 @@ describe('stringify static html', () => {
             `<span></span>`,
             StringifyThresholds.NODE_COUNT
           )}</div>`
-        )
+        ),
+        '1'
+      ]
+    })
+  })
+
+  test('should work for multiple adjacent nodes', () => {
+    const { ast } = compileWithStringify(
+      `<div>${repeat(
+        `<span class="foo"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div>`
+    )
+    // should have 5 hoisted nodes, but the other 4 should be null
+    expect(ast.hoists.length).toBe(5)
+    for (let i = 1; i < 5; i++) {
+      expect(ast.hoists[i]).toBe(null)
+    }
+    // should be optimized now
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: CREATE_STATIC,
+      arguments: [
+        JSON.stringify(
+          repeat(
+            `<span class="foo"></span>`,
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+          )
+        ),
+        '5'
       ]
     })
   })
@@ -98,7 +128,8 @@ describe('stringify static html', () => {
             `<span class="foo bar">1 + false</span>`,
             StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
           )}</div>`
-        )
+        ),
+        '1'
       ]
     })
   })
@@ -122,7 +153,8 @@ describe('stringify static html', () => {
             `<span class="foo&gt;ar">1 + &lt;</span>` + `<span>&amp;</span>`,
             StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
           )}</div>`
-        )
+        ),
+        '1'
       ]
     })
   })

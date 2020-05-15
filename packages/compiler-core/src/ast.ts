@@ -103,7 +103,7 @@ export interface RootNode extends Node {
   helpers: symbol[]
   components: string[]
   directives: string[]
-  hoists: JSChildNode[]
+  hoists: (JSChildNode | null)[]
   imports: ImportItem[]
   cached: number
   temps: number

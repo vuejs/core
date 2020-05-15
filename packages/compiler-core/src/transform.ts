@@ -82,7 +82,7 @@ export interface TransformContext extends Required<TransformOptions> {
   helpers: Set<symbol>
   components: Set<string>
   directives: Set<string>
-  hoists: JSChildNode[]
+  hoists: (JSChildNode | null)[]
   imports: Set<ImportItem>
   temps: number
   cached: number
