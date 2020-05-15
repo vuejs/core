@@ -116,8 +116,7 @@ export interface RendererOptions<
     parent: HostElement,
     anchor: HostNode | null,
     isSVG: boolean
-  ): HostElement
-  setStaticContent?(node: HostElement, content: string): void
+  ): HostElement[]
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -333,8 +332,7 @@ function baseCreateRenderer(
     nextSibling: hostNextSibling,
     setScopeId: hostSetScopeId = NOOP,
     cloneNode: hostCloneNode,
-    insertStaticContent: hostInsertStaticContent,
-    setStaticContent: hostSetStaticContent
+    insertStaticContent: hostInsertStaticContent
   } = options
 
   // Note: functions inside this closure should use `const xxx = () => {}`
@@ -373,11 +371,7 @@ function baseCreateRenderer(
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, isSVG)
         } else if (__DEV__) {
-          // static nodes are only patched during dev for HMR
-          n2.el = n1.el
-          if (n2.children !== n1.children) {
-            hostSetStaticContent!(n2.el!, n2.children as string)
-          }
+          patchStaticNode(n1, n2, container, isSVG)
         }
         break
       case Fragment:
@@ -492,17 +486,83 @@ function baseCreateRenderer(
     isSVG: boolean
   ) => {
     if (n2.el && hostCloneNode !== undefined) {
-      hostInsert(hostCloneNode(n2.el), container, anchor)
+      // static node was already mounted (and reused), or adopted
+      // server-rendered node during hydration (in this case its children can be
+      // stripped by SSR optimizations). Clone the dom nodes instead.
+      let cur: RendererElement | null = n2.el
+      while (cur && cur !== n2.anchor) {
+        hostInsert(hostCloneNode(cur), container, anchor)
+        cur = hostNextSibling(cur)
+      }
+      hostInsert(hostCloneNode(n2.anchor!), container, anchor)
     } else {
       // static nodes are only present when used with compiler-dom/runtime-dom
       // which guarantees presence of hostInsertStaticContent.
-      n2.el = hostInsertStaticContent!(
+      ;[n2.el, n2.anchor] = hostInsertStaticContent!(
         n2.children as string,
         container,
         anchor,
         isSVG
       )
     }
+  }
+
+  /**
+   * Dev / HMR only
+   */
+  const patchStaticNode = (
+    n1: VNode,
+    n2: VNode,
+    container: RendererElement,
+    isSVG: boolean
+  ) => {
+    // static nodes are only patched during dev for HMR
+    if (n2.children !== n1.children) {
+      const anchor = hostNextSibling(n1.anchor!)
+      // remove existing
+      removeStaticNode(n1)
+      // insert new
+      ;[n2.el, n2.anchor] = hostInsertStaticContent!(
+        n2.children as string,
+        container,
+        anchor,
+        isSVG
+      )
+    } else {
+      n2.el = n1.el
+      n2.anchor = n1.anchor
+    }
+  }
+
+  /**
+   * Dev / HMR only
+   */
+  const moveStaticNode = (
+    vnode: VNode,
+    container: RendererElement,
+    anchor: RendererNode | null
+  ) => {
+    let cur = vnode.el
+    const end = vnode.anchor!
+    while (cur && cur !== end) {
+      const next = hostNextSibling(cur)
+      hostInsert(cur, container, anchor)
+      cur = next
+    }
+    hostInsert(end, container, anchor)
+  }
+
+  /**
+   * Dev / HMR only
+   */
+  const removeStaticNode = (vnode: VNode) => {
+    let cur = vnode.el
+    while (cur && cur !== vnode.anchor) {
+      const next = hostNextSibling(cur)
+      hostRemove(cur)
+      cur = next
+    }
+    hostRemove(vnode.anchor!)
   }
 
   const processElement = (
@@ -1456,7 +1516,7 @@ function baseCreateRenderer(
           n1,
           n2,
           container,
-          parentAnchor,
+          null,
           parentComponent,
           parentSuspense,
           isSVG,
@@ -1481,7 +1541,7 @@ function baseCreateRenderer(
           n1,
           n2,
           container,
-          parentAnchor,
+          null,
           parentComponent,
           parentSuspense,
           isSVG,
@@ -1692,6 +1752,12 @@ function baseCreateRenderer(
       return
     }
 
+    // static node move can only happen when force updating HMR
+    if (__DEV__ && type === Static) {
+      moveStaticNode(vnode, container, anchor)
+      return
+    }
+
     // single nodes
     const needTransition =
       moveType !== MoveType.REORDER &&
@@ -1805,6 +1871,11 @@ function baseCreateRenderer(
     const { type, el, anchor, transition } = vnode
     if (type === Fragment) {
       removeFragment(el!, anchor!)
+      return
+    }
+
+    if (__DEV__ && type === Static) {
+      removeStaticNode(vnode)
       return
     }
 

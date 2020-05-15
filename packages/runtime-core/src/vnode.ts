@@ -127,6 +127,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetAnchor: HostNode | null // teleport target anchor
+  staticCount: number // number of elements contained in a static vnode
 
   // optimization only
   shapeFlag: number
@@ -368,6 +369,7 @@ function _createVNode(
     anchor: null,
     target: null,
     targetAnchor: null,
+    staticCount: 0,
     shapeFlag,
     patchFlag,
     dynamicProps,
@@ -422,6 +424,7 @@ export function cloneVNode<T, U>(
     children: vnode.children,
     target: vnode.target,
     targetAnchor: vnode.targetAnchor,
+    staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
     // existing patch flag to be reliable and need to bail out of optimized mode.
@@ -459,8 +462,15 @@ export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
 /**
  * @internal
  */
-export function createStaticVNode(content: string): VNode {
-  return createVNode(Static, null, content)
+export function createStaticVNode(
+  content: string,
+  numberOfNodes: number
+): VNode {
+  // A static vnode can contain multiple stringified elements, and the number
+  // of elements is necessary for hydration.
+  const vnode = createVNode(Static, null, content)
+  vnode.staticCount = numberOfNodes
+  return vnode
 }
 
 /**
