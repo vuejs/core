@@ -45,9 +45,10 @@ const TransitionGroupImpl = {
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
+    const rawProps = toRaw(props)
+    const cssTransitionProps = resolveTransitionProps(rawProps)
     let prevChildren: VNode[]
     let children: VNode[]
-    let hasMove: boolean | null = null
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -55,16 +56,14 @@ const TransitionGroupImpl = {
         return
       }
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      // Check if move transition is needed. This check is cached per-instance.
-      hasMove =
-        hasMove === null
-          ? (hasMove = hasCSSTransform(
-              prevChildren[0].el as ElementWithTransition,
-              instance.vnode.el as Node,
-              moveClass
-            ))
-          : hasMove
-      if (!hasMove) {
+
+      if (
+        !hasCSSTransform(
+          prevChildren[0].el as ElementWithTransition,
+          instance.vnode.el as Node,
+          moveClass
+        )
+      ) {
         return
       }
 
@@ -97,8 +96,6 @@ const TransitionGroupImpl = {
     })
 
     return () => {
-      const rawProps = toRaw(props)
-      const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
       const slotChildren = slots.default ? slots.default() : []
