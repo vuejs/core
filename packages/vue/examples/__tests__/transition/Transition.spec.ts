@@ -752,7 +752,7 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-              <div id="container"><transition name="test-anim"><div v-if="toggle" class="test">content</div></transition></div>
+              <div id="container"><transition name="test-anim"><div v-if="toggle">content</div></transition></div>
               <button id="toggleBtn" @click="click">button</button>
             `,
             setup: () => {
@@ -762,37 +762,33 @@ describe('e2e: Transition', () => {
             }
           }).mount('#app')
         })
-        expect(await html('#container')).toBe('<div class="test">content</div>')
+        expect(await html('#container')).toBe('<div>content</div>')
 
         // leave
         expect(await classWhenTransitionStart()).toStrictEqual([
-          'test',
           'test-anim-leave-active',
           'test-anim-leave-from'
         ])
         await nextFrame()
-        expect(await classList('.test')).toStrictEqual([
-          'test',
+        expect(await classList('#container div')).toStrictEqual([
           'test-anim-leave-active',
           'test-anim-leave-to'
         ])
-        await transitionFinish()
+        await transitionFinish(100)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
-          'test',
           'test-anim-enter-active',
           'test-anim-enter-from'
         ])
         await nextFrame()
-        expect(await classList('.test')).toStrictEqual([
-          'test',
+        expect(await classList('#container div')).toStrictEqual([
           'test-anim-enter-active',
           'test-anim-enter-to'
         ])
         await transitionFinish()
-        expect(await html('#container')).toBe('<div class="test">content</div>')
+        expect(await html('#container')).toBe('<div class="">content</div>')
       },
       E2E_TIMEOUT
     )
