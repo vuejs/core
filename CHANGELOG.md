@@ -3,7 +3,7 @@
 
 ### Features
 
-* improve static content stringiciation ([d965bb6](https://github.com/vuejs/vue-next/commit/d965bb6227d53b715cfb797114b9452a6db841ec))
+* improve static content stringification ([d965bb6](https://github.com/vuejs/vue-next/commit/d965bb6227d53b715cfb797114b9452a6db841ec))
 
 
 
