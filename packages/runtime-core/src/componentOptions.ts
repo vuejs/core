@@ -195,7 +195,7 @@ export interface MethodOptions {
   [key: string]: Function
 }
 
-export type ExtractComputedReturns<T extends any> = {
+export type ExtractComputedReturns<T extends Record<any, any>> = {
   [key in keyof T]: T[key] extends { get: Function }
     ? ReturnType<T[key]['get']>
     : ReturnType<T[key]>
