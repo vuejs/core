@@ -78,9 +78,7 @@ export function createBuffer() {
   const buffer: SSRBuffer = []
   return {
     getBuffer(): SSRBuffer {
-      // If the current component's buffer contains any Promise from async children,
-      // then it must return a Promise too. Otherwise this is a component that
-      // contains only sync children so we can avoid the async book-keeping overhead.
+      // Return static buffer and await on items during unroll stage
       return buffer as SSRBuffer
     },
     push(item: SSRBufferItem) {
@@ -146,7 +144,7 @@ export function renderToStream(
       stream.destroy(error)
     })
 
-  // await resolveTeleports(context)
+  // TODO: handle teleports in some way?
 
   return stream
 }
