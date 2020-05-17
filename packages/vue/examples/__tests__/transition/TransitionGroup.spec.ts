@@ -372,7 +372,146 @@ describe('e2e: TransitionGroup', () => {
     E2E_TIMEOUT
   )
 
-  test.todo('events')
+  test(
+    'events',
+    async () => {
+      const onLeaveSpy = jest.fn()
+      const onEnterSpy = jest.fn()
+      const onAppearSpy = jest.fn()
+      const beforeLeaveSpy = jest.fn()
+      const beforeEnterSpy = jest.fn()
+      const beforeAppearSpy = jest.fn()
+      const afterLeaveSpy = jest.fn()
+      const afterEnterSpy = jest.fn()
+      const afterAppearSpy = jest.fn()
+
+      await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+      await page().exposeFunction('onEnterSpy', onEnterSpy)
+      await page().exposeFunction('onAppearSpy', onAppearSpy)
+      await page().exposeFunction('beforeLeaveSpy', beforeLeaveSpy)
+      await page().exposeFunction('beforeEnterSpy', beforeEnterSpy)
+      await page().exposeFunction('beforeAppearSpy', beforeAppearSpy)
+      await page().exposeFunction('afterLeaveSpy', afterLeaveSpy)
+      await page().exposeFunction('afterEnterSpy', afterEnterSpy)
+      await page().exposeFunction('afterAppearSpy', afterAppearSpy)
+
+      const appearHtml = await page().evaluate(() => {
+        const {
+          beforeAppearSpy,
+          onAppearSpy,
+          afterAppearSpy,
+          beforeEnterSpy,
+          onEnterSpy,
+          afterEnterSpy,
+          beforeLeaveSpy,
+          onLeaveSpy,
+          afterLeaveSpy
+        } = window as any
+        const { createApp, ref } = (window as any).Vue
+        createApp({
+          template: `
+                <div id="container">
+                  <transition-group name="test"
+                      appear
+                      appear-from-class="test-appear-from"
+                      appear-to-class="test-appear-to"
+                      appear-active-class="test-appear-active"
+                      @before-enter="beforeEnterSpy"
+                      @enter="onEnterSpy"
+                      @after-enter="afterEnterSpy"
+                      @before-leave="beforeLeaveSpy"
+                      @leave="onLeaveSpy"
+                      @after-leave="afterLeaveSpy"
+                      @before-appear="beforeAppearSpy"
+                      @appear="onAppearSpy"
+                      @after-appear="afterAppearSpy">
+                    <div v-for="item in items" :key="item" class="test">{{item}}</div>
+                  </transition-group>
+                </div>
+                <button id="toggleBtn" @click="click">button</button>
+              `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => (items.value = ['b', 'c', 'd'])
+            return {
+              click,
+              items,
+              beforeAppearSpy,
+              onAppearSpy,
+              afterAppearSpy,
+              beforeEnterSpy,
+              onEnterSpy,
+              afterEnterSpy,
+              beforeLeaveSpy,
+              onLeaveSpy,
+              afterLeaveSpy
+            }
+          }
+        }).mount('#app')
+        return Promise.resolve().then(() => {
+          return document.querySelector('#container')!.innerHTML
+        })
+      })
+      // appear fixme
+      expect(beforeAppearSpy).not.toBeCalled()
+      expect(onAppearSpy).not.toBeCalled()
+      expect(afterAppearSpy).not.toBeCalled()
+      expect(appearHtml).toBe(
+        `<div class="test test-appear-active test-appear-from">a</div>` +
+          `<div class="test test-appear-active test-appear-from">b</div>` +
+          `<div class="test test-appear-active test-appear-from">c</div>`
+      )
+      await nextFrame()
+      expect(onAppearSpy).not.toBeCalled()
+      expect(afterAppearSpy).not.toBeCalled()
+      expect(await html('#container')).toBe(
+        `<div class="test test-appear-active test-appear-to">a</div>` +
+          `<div class="test test-appear-active test-appear-to">b</div>` +
+          `<div class="test test-appear-active test-appear-to">c</div>`
+      )
+      await transitionFinish()
+      expect(afterAppearSpy).not.toBeCalled()
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>`
+      )
+
+      // enter + leave
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test test-leave-active test-leave-from">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test test-enter-active test-enter-from">d</div>`
+      )
+      expect(beforeLeaveSpy).toBeCalled()
+      expect(onLeaveSpy).not.toBeCalled()
+      expect(afterLeaveSpy).not.toBeCalled()
+      expect(beforeEnterSpy).toBeCalled()
+      expect(onEnterSpy).not.toBeCalled()
+      expect(afterEnterSpy).not.toBeCalled()
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test test-leave-active test-leave-to">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test test-enter-active test-enter-to">d</div>`
+      )
+      expect(onLeaveSpy).toBeCalled()
+      expect(afterLeaveSpy).not.toBeCalled()
+      expect(onEnterSpy).toBeCalled()
+      expect(afterEnterSpy).not.toBeCalled()
+      await transitionFinish()
+      expect(await html('#container')).toBe(
+        `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test">d</div>`
+      )
+      expect(afterLeaveSpy).toBeCalled()
+      expect(afterEnterSpy).toBeCalled()
+    },
+    E2E_TIMEOUT
+  )
 
   test('warn unkeyed children', () => {
     createApp({
