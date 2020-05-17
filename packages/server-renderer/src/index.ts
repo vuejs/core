@@ -1,5 +1,6 @@
 // public
-export { renderToString, SSRContext } from './renderToString'
+export { renderToString } from './renderToString'
+export { renderToStream } from './renderToStream'
 
 // internal runtime helpers
 export { renderComponent as ssrRenderComponent } from './renderToString'
