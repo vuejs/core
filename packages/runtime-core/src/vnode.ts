@@ -158,8 +158,8 @@ let currentBlock: VNode[] | null = null
  *   return (openBlock(),createBlock('div', null, [...]))
  * }
  * ```
- * disableTracking is true when creating a fragment block, since a fragment
- * always diffs its children.
+ * disableTracking is true when creating a v-for fragment block, since a v-for
+ * fragment always diffs its children.
  *
  * @internal
  */
