@@ -7,7 +7,8 @@ import {
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
-  readonlyCollectionHandlers
+  readonlyCollectionHandlers,
+  shallowCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRef, Ref } from './ref'
 import { makeMap } from '@vue/shared'
@@ -68,7 +69,7 @@ export function shallowReactive<T extends object>(target: T): T {
     target,
     false,
     shallowReactiveHandlers,
-    mutableCollectionHandlers
+    shallowCollectionHandlers
   )
 }
 

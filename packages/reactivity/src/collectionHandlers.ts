@@ -22,13 +22,15 @@ const toReactive = <T extends unknown>(value: T): T =>
 const toReadonly = <T extends unknown>(value: T): T =>
   isObject(value) ? readonly(value) : value
 
+const toShallow = <T extends unknown>(value: T): T => value
+
 const getProto = <T extends CollectionTypes>(v: T): any =>
   Reflect.getPrototypeOf(v)
 
 function get(
   target: MapTypes,
   key: unknown,
-  wrap: typeof toReactive | typeof toReadonly
+  wrap: typeof toReactive | typeof toReadonly | typeof toShallow
 ) {
   target = toRaw(target)
   const rawKey = toRaw(key)
@@ -132,7 +134,7 @@ function clear(this: IterableCollections) {
   return result
 }
 
-function createForEach(isReadonly: boolean) {
+function createForEach(isReadonly: boolean, shallow: boolean) {
   return function forEach(
     this: IterableCollections,
     callback: Function,
@@ -140,7 +142,7 @@ function createForEach(isReadonly: boolean) {
   ) {
     const observed = this
     const target = toRaw(observed)
-    const wrap = isReadonly ? toReadonly : toReactive
+    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
     !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
     // important: create sure the callback is
     // 1. invoked with the reactive map as `this` and 3rd arg
@@ -152,14 +154,18 @@ function createForEach(isReadonly: boolean) {
   }
 }
 
-function createIterableMethod(method: string | symbol, isReadonly: boolean) {
+function createIterableMethod(
+  method: string | symbol,
+  isReadonly: boolean,
+  shallow: boolean
+) {
   return function(this: IterableCollections, ...args: unknown[]) {
     const target = toRaw(this)
     const isMap = target instanceof Map
     const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
     const isKeyOnly = method === 'keys' && isMap
     const innerIterator = getProto(target)[method].apply(target, args)
-    const wrap = isReadonly ? toReadonly : toReactive
+    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
     !isReadonly &&
       track(
         target,
@@ -212,7 +218,22 @@ const mutableInstrumentations: Record<string, Function> = {
   set,
   delete: deleteEntry,
   clear,
-  forEach: createForEach(false)
+  forEach: createForEach(false, false)
+}
+
+const shallowInstrumentations: Record<string, Function> = {
+  get(this: MapTypes, key: unknown) {
+    return get(this, key, toShallow)
+  },
+  get size() {
+    return size((this as unknown) as IterableCollections)
+  },
+  has,
+  add,
+  set,
+  delete: deleteEntry,
+  clear,
+  forEach: createForEach(false, true)
 }
 
 const readonlyInstrumentations: Record<string, Function> = {
@@ -227,25 +248,34 @@ const readonlyInstrumentations: Record<string, Function> = {
   set: createReadonlyMethod(TriggerOpTypes.SET),
   delete: createReadonlyMethod(TriggerOpTypes.DELETE),
   clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
-  forEach: createForEach(true)
+  forEach: createForEach(true, false)
 }
 
 const iteratorMethods = ['keys', 'values', 'entries', Symbol.iterator]
 iteratorMethods.forEach(method => {
   mutableInstrumentations[method as string] = createIterableMethod(
     method,
+    false,
     false
   )
   readonlyInstrumentations[method as string] = createIterableMethod(
     method,
+    true,
+    false
+  )
+  shallowInstrumentations[method as string] = createIterableMethod(
+    method,
+    true,
     true
   )
 })
 
-function createInstrumentationGetter(isReadonly: boolean) {
-  const instrumentations = isReadonly
-    ? readonlyInstrumentations
-    : mutableInstrumentations
+function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
+  const instrumentations = shallow
+    ? shallowInstrumentations
+    : isReadonly
+      ? readonlyInstrumentations
+      : mutableInstrumentations
 
   return (
     target: CollectionTypes,
@@ -271,11 +301,15 @@ function createInstrumentationGetter(isReadonly: boolean) {
 }
 
 export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: createInstrumentationGetter(false)
+  get: createInstrumentationGetter(false, false)
+}
+
+export const shallowCollectionHandlers: ProxyHandler<CollectionTypes> = {
+  get: createInstrumentationGetter(false, true)
 }
 
 export const readonlyCollectionHandlers: ProxyHandler<CollectionTypes> = {
-  get: createInstrumentationGetter(true)
+  get: createInstrumentationGetter(true, false)
 }
 
 function checkIdentityKeys(
