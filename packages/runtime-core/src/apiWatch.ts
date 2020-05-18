@@ -44,13 +44,17 @@ export type WatchCallback<V = any, OV = any> = (
 ) => any
 
 type MapSources<T> = {
-  [K in keyof T]: T[K] extends WatchSource<infer V> ? V : never
+  [K in keyof T]: T[K] extends WatchSource<infer V>
+    ? V
+    : T[K] extends object ? T[K] : never
 }
 
 type MapOldSources<T, Immediate> = {
   [K in keyof T]: T[K] extends WatchSource<infer V>
     ? Immediate extends true ? (V | undefined) : V
-    : never
+    : T[K] extends object
+      ? Immediate extends true ? (T[K] | undefined) : T[K]
+      : never
 }
 
 type InvalidateCbRegistrator = (cb: () => void) => void
@@ -86,7 +90,7 @@ const INITIAL_WATCHER_VALUE = {}
 // on position in the source array. Otherwise the values will get a union type
 // of all possible value types.
 export function watch<
-  T extends Readonly<WatchSource<unknown>[]>,
+  T extends Readonly<Array<WatchSource<unknown> | object>>,
   Immediate extends Readonly<boolean> = false
 >(
   sources: T,
@@ -147,17 +151,31 @@ function doWatch(
     }
   }
 
+  const warnInvalidSource = (s: unknown) => {
+    warn(
+      `Invalid watch source: `,
+      s,
+      `A watch source can only be a getter/effect function, a ref, ` +
+        `a reactive object, or an array of these types.`
+    )
+  }
+
   const instance = currentInstance
 
   let getter: () => any
   if (isArray(source)) {
     getter = () =>
-      source.map(
-        s =>
-          isRef(s)
-            ? s.value
-            : callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
-      )
+      source.map(s => {
+        if (isRef(s)) {
+          return s.value
+        } else if (isReactive(s)) {
+          return traverse(s)
+        } else if (isFunction(s)) {
+          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+        } else {
+          __DEV__ && warnInvalidSource(s)
+        }
+      })
   } else if (isRef(source)) {
     getter = () => source.value
   } else if (isReactive(source)) {
@@ -187,13 +205,7 @@ function doWatch(
     }
   } else {
     getter = NOOP
-    __DEV__ &&
-      warn(
-        `Invalid watch source: `,
-        source,
-        `A watch source can only be a getter/effect function, a ref, ` +
-          `a reactive object, or an array of these types.`
-      )
+    __DEV__ && warnInvalidSource(source)
   }
 
   if (cb && deep) {
