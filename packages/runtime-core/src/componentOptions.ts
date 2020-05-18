@@ -196,9 +196,11 @@ export interface MethodOptions {
 }
 
 export type ExtractComputedReturns<T extends any> = {
-  [key in keyof T]: T[key] extends { get: Function }
+  [key in keyof T]: T[key] extends { get: (...args: any) => any }
     ? ReturnType<T[key]['get']>
-    : ReturnType<T[key]>
+    : T[key] extends (...args: any) => any
+      ? ReturnType<T[key]>
+      : any
 }
 
 type WatchOptionItem =
