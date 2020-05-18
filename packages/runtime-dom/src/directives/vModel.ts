@@ -6,7 +6,13 @@ import {
   warn
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
-import { isArray, looseEqual, looseIndexOf, invokeArrayFns } from '@vue/shared'
+import {
+  isArray,
+  looseEqual,
+  looseIndexOf,
+  invokeArrayFns,
+  toNumber
+} from '@vue/shared'
 
 type AssignerFn = (value: any) => void
 
@@ -31,11 +37,6 @@ function trigger(el: HTMLElement, type: string) {
   const e = document.createEvent('HTMLEvents')
   e.initEvent(type, true, true)
   el.dispatchEvent(e)
-}
-
-function toNumber(val: string): number | string {
-  const n = parseFloat(val)
-  return isNaN(n) ? val : n
 }
 
 type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
