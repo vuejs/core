@@ -570,14 +570,14 @@
     "@rushstack/node-core-library" "3.19.7"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.8.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.8.0.tgz#fea68e4f21c1bf18020560fd5728b15fe44f0976"
-  integrity sha512-H9dI7dCw005XuGa1dPAdZLQWEUu+B4yiF2v7NZ3p70mKo2iAZcd9LwmDTZ5OFALsNiHnJk1I5JZjcsj8dtB73g==
+  version "7.8.1"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.8.1.tgz#29b473ef85273b6b28974f89f1ccd46329297bc3"
+  integrity sha512-jS1B1E7kQK8yrCM6SwwYFdtXTHb0/xLrF/kbHJoRnNQYKz2c1hwHMK35JKTTDiWTwpBMpkbzCR5Fj+6Up3yy0A==
   dependencies:
     "@microsoft/api-extractor-model" "7.8.0"
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.19.7"
-    "@rushstack/ts-command-line" "4.3.14"
+    "@rushstack/ts-command-line" "4.4.0"
     colors "~1.2.1"
     lodash "~4.17.15"
     resolve "1.8.1"
@@ -682,12 +682,12 @@
     timsort "~0.3.0"
     z-schema "~3.18.3"
 
-"@rushstack/ts-command-line@4.3.14":
-  version "4.3.14"
-  resolved "https://registry.yarnpkg.com/@rushstack/ts-command-line/-/ts-command-line-4.3.14.tgz#5d7a437d4e9c564ff1b8e876215fca96c74858a1"
-  integrity sha512-YJZIyKvkm3f6ZdKSfMntHS9542Y2mmMWzaiPPoXxLFZntKxEIDE3WfUNlvOSo3yK4fNd09Tz3hfvTivQNHSiKQ==
+"@rushstack/ts-command-line@4.4.0":
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/@rushstack/ts-command-line/-/ts-command-line-4.4.0.tgz#796f24681fdcbd01d463278c9e80a51ea5f73b2b"
+  integrity sha512-AYRICJg9Cwz+IBo1+leG0MtHx2uVScEs5P5ZNW3oocKekN6oLZvM1SNxghB7EXJzmYHnEMvCGhQx0Ll4oEkIyQ==
   dependencies:
-    "@types/argparse" "1.0.33"
+    "@types/argparse" "1.0.38"
     argparse "~1.0.9"
     colors "~1.2.1"
 
@@ -705,10 +705,10 @@
   dependencies:
     type-detect "4.0.8"
 
-"@types/argparse@1.0.33":
-  version "1.0.33"
-  resolved "https://registry.yarnpkg.com/@types/argparse/-/argparse-1.0.33.tgz#2728669427cdd74a99e53c9f457ca2866a37c52d"
-  integrity sha512-VQgHxyPMTj3hIlq9SY1mctqx+Jj8kpQfoLvDlVSDNOyuYs8JYfkuY3OW/4+dO657yPmNhHpePRx0/Tje5ImNVQ==
+"@types/argparse@1.0.38":
+  version "1.0.38"
+  resolved "https://registry.yarnpkg.com/@types/argparse/-/argparse-1.0.38.tgz#a81fd8606d481f873a3800c6ebae4f1d768a56a9"
+  integrity sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==
 
 "@types/babel-types@*", "@types/babel-types@^7.0.0":
   version "7.0.7"
