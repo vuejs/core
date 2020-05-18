@@ -118,4 +118,13 @@ describe('runtime-dom: v-on directive', () => {
       expect(fn).toBeCalled()
     })
   })
+
+  it('should handle multiple arguments when using modifiers', () => {
+    const el = document.createElement('div')
+    const fn = jest.fn()
+    const handler = withModifiers(fn, ['ctrl'])
+    const event = triggerEvent(el, 'click', e => (e.ctrlKey = true))
+    handler(event, 'value', true)
+    expect(fn).toBeCalledWith(event, 'value', true)
+  })
 })
