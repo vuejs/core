@@ -127,13 +127,9 @@ export function renderToStream(
   const stream = new Readable()
 
   Promise.resolve(renderComponentVNode(vnode))
-    .then(async buffer => {
-      try {
-        await unrollBuffer(buffer, stream)
-        stream.push(null)
-      } catch (error) {
-        stream.destroy(error)
-      }
+    .then(buffer => unrollBuffer(buffer, stream))
+    .then(() => {
+      stream.push(null)
     })
     .catch(error => {
       stream.destroy(error)
