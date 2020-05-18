@@ -46,7 +46,7 @@ import {
   findDir
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { isStaticNode } from './hoistStatic'
+import { getStaticType } from './hoistStatic'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -156,7 +156,7 @@ export const transformElement: NodeTransform = (node, context) => {
         const hasDynamicTextChild =
           type === NodeTypes.INTERPOLATION ||
           type === NodeTypes.COMPOUND_EXPRESSION
-        if (hasDynamicTextChild && !isStaticNode(child)) {
+        if (hasDynamicTextChild && !getStaticType(child)) {
           patchFlag |= PatchFlags.TEXT
         }
         // pass directly if the only child is a text node
@@ -292,7 +292,7 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          isStaticNode(value))
+          getStaticType(value) > 0)
       ) {
         // skip if the prop is a cached handler or has constant value
         return

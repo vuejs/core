@@ -161,10 +161,10 @@ describe('stringify static html', () => {
 
   test('should bail on runtime constant v-bind bindings', () => {
     const { ast } = compile(
-      `<div><div><img src="./foo" />${repeat(
+      `<div><div>${repeat(
         `<span class="foo">foo</span>`,
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`,
+      )}<img src="./foo" /></div></div>`,
       {
         hoistStatic: true,
         prefixIdentifiers: true,

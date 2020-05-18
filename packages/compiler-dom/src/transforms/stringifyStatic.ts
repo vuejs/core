@@ -185,17 +185,6 @@ function analyzeNode(node: StringiableNode): [number, number] | false {
         ) {
           return bail()
         }
-        // some transforms, e.g. `transformAssetUrls` in `@vue/compiler-sfc` may
-        // convert static attributes into a v-bind with a constnat expresion.
-        // Such constant bindings are eligible for hoisting but not for static
-        // stringification because they cannot be pre-evaluated.
-        if (
-          p.exp &&
-          (p.exp.type === NodeTypes.COMPOUND_EXPRESSION ||
-            p.exp.isRuntimeConstant)
-        ) {
-          return bail()
-        }
       }
     }
     for (let i = 0; i < node.children.length; i++) {
