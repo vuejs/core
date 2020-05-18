@@ -54,7 +54,8 @@ export const vModelText: ModelDirective<
     el.value = value
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
-    addEventListener(el, lazy ? 'change' : 'input', () => {
+    addEventListener(el, lazy ? 'change' : 'input', e => {
+      if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
