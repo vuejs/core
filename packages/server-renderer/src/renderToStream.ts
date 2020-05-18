@@ -97,20 +97,15 @@ async function unrollBuffer(
   buffer: SSRBuffer,
   stream: Readable
 ): Promise<void> {
-  try {
-    for await (const item of buffer) {
-      if (isString(item)) {
-        stream.push(item)
-      } else {
-        try {
-          await unrollBuffer(item, stream)
-        } catch (error) {
-          stream.destroy(error)
-        }
-      }
+  for (let item of buffer) {
+    if (isPromise(item)) {
+      item = await item
     }
-  } catch (error) {
-    stream.destroy(error)
+    if (isString(item)) {
+      stream.push(item)
+    } else {
+      await unrollBuffer(item, stream)
+    }
   }
 }
 
