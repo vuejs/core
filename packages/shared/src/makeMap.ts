@@ -8,7 +8,12 @@ export function makeMap(
   expectsLowerCase?: boolean
 ): (key: string) => boolean {
   const map: Record<string, boolean> = Object.create(null)
-  const list: Array<string> = str.split(',')
+  const list: Array<string> = str
+    .split('\n')
+    .join('')
+    .split('   ')
+    .join('')
+    .split(',')
   for (let i = 0; i < list.length; i++) {
     map[list[i]] = true
   }
