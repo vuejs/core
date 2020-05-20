@@ -70,7 +70,7 @@
     "semver": "^6.3.0",
     "serve": "^11.3.0",
     "ts-jest": "^25.2.1",
-    "typescript": "^3.9.2",
+    "typescript": "^3.9.3",
     "yorkie": "^2.0.0"
   }
 }
