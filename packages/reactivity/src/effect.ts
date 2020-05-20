@@ -137,27 +137,26 @@ export function resetTracking() {
 }
 
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  if (!shouldTrack || activeEffect === undefined) {
-    return
-  }
-  let depsMap = targetMap.get(target)
-  if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()))
-  }
-  let dep = depsMap.get(key)
-  if (!dep) {
-    depsMap.set(key, (dep = new Set()))
-  }
-  if (!dep.has(activeEffect)) {
-    dep.add(activeEffect)
-    activeEffect.deps.push(dep)
-    if (__DEV__ && activeEffect.options.onTrack) {
-      activeEffect.options.onTrack({
-        effect: activeEffect,
-        target,
-        type,
-        key
-      })
+  if (shouldTrack && activeEffect !== undefined) {
+    let depsMap = targetMap.get(target)
+    if (!depsMap) {
+      targetMap.set(target, (depsMap = new Map()))
+    }
+    let dep = depsMap.get(key)
+    if (!dep) {
+      depsMap.set(key, (dep = new Set()))
+    }
+    if (!dep.has(activeEffect)) {
+      dep.add(activeEffect)
+      activeEffect.deps.push(dep)
+      if (__DEV__ && activeEffect.options.onTrack) {
+        activeEffect.options.onTrack({
+          effect: activeEffect,
+          target,
+          type,
+          key
+        })
+      }
     }
   }
 }
