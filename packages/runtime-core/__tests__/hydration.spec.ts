@@ -124,6 +124,15 @@ describe('SSR hydration', () => {
     expect(vnode.el.innerHTML).toBe(`<span>bar</span><span class="bar"></span>`)
   })
 
+  test('element with ref', () => {
+    const el = ref()
+    const { vnode, container } = mountWithHydration('<div></div>', () =>
+      h('div', { ref: el })
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(el.value).toBe(vnode.el)
+  })
+
   test('Fragment', async () => {
     const msg = ref('foo')
     const fn = jest.fn()
