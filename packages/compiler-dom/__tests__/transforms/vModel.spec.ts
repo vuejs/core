@@ -35,6 +35,13 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('simple expression with multiline', () => {
+    const root = transformWithModel('<input v-model="\n model \n" />')
+
+    expect(root.helpers).toContain(V_MODEL_TEXT)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('simple expression for input (text)', () => {
     const root = transformWithModel('<input type="text" v-model="model" />')
 
