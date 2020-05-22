@@ -1,6 +1,7 @@
 import {
   ComponentInternalInstance,
   ComponentOptions,
+  Data,
   InternalRenderFunction
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
@@ -59,7 +60,7 @@ function createRecord(id: string, comp: ComponentOptions): boolean {
   return true
 }
 
-function rerender(id: string, newRender?: Function) {
+function rerender(id: string, newRender?: Function, cssModule?: Data) {
   const record = map.get(id)
   if (!record) return
   // Array.from creates a snapshot which avoids the set being mutated during
@@ -67,6 +68,9 @@ function rerender(id: string, newRender?: Function) {
   Array.from(record).forEach(instance => {
     if (newRender) {
       instance.render = newRender as InternalRenderFunction
+    }
+    if (cssModule) {
+      instance.type.__cssModules = cssModule
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update
