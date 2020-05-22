@@ -172,6 +172,10 @@ export function renderComponentRoot(
       }
       root.transition = vnode.transition
     }
+    // inherit ref
+    if (Component.inheritRef && vnode.ref != null) {
+      root.ref = vnode.ref
+    }
 
     if (__DEV__ && setRoot) {
       setRoot(root)

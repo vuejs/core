@@ -100,6 +100,7 @@ export interface ComponentOptionsBase<
   components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
+  inheritRef?: boolean
   emits?: E | EE[]
 
   // Internal ------------------------------------------------------------------

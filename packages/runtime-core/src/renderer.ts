@@ -17,7 +17,8 @@ import {
   ComponentInternalInstance,
   createComponentInstance,
   Data,
-  setupComponent
+  setupComponent,
+  Component
 } from './component'
 import {
   renderComponentRoot,
@@ -64,6 +65,7 @@ import {
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
+import { ComponentPublicInstance } from './componentProxy'
 
 export interface Renderer<HostElement = any> {
   render: RootRenderFunction<HostElement>
@@ -276,11 +278,21 @@ export const setRef = (
   parent: ComponentInternalInstance,
   vnode: VNode | null
 ) => {
-  const value = vnode
-    ? vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? vnode.component!.proxy
-      : vnode.el
-    : null
+  let value: ComponentPublicInstance | RendererNode | null
+  if (!vnode) {
+    value = null
+  } else {
+    const { el, component, shapeFlag, type } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT && (type as Component).inheritRef) {
+      return
+    }
+    if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      value = component!.proxy
+    } else {
+      value = el
+    }
+  }
+
   const [owner, ref] = rawRef
   if (__DEV__ && !owner) {
     warn(
