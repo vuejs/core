@@ -5,10 +5,9 @@ describe('ssr compile: suspense', () => {
     expect(compile(`<suspense><foo/></suspense>`).code).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"@vue/server-renderer\\")
-
+      
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = _resolveComponent(\\"foo\\")
-
         _ssrRenderSuspense(_push, {
           default: () => {
             _push(_ssrRenderComponent(_component_foo, null, null, _parent))
@@ -32,10 +31,9 @@ describe('ssr compile: suspense', () => {
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"@vue/server-renderer\\")
-
+      
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = _resolveComponent(\\"foo\\")
-
         _ssrRenderSuspense(_push, {
           default: () => {
             _push(_ssrRenderComponent(_component_foo, null, null, _parent))

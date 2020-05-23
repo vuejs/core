@@ -52,10 +52,9 @@ describe('ssr: element', () => {
       expect(compile(`<textarea v-bind="obj">fallback</textarea>`).code)
         .toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           let _temp0
-
           _push(\`<textarea\${
             _ssrRenderAttrs(_temp0 = _ctx.obj, \\"textarea\\")
           }>\${

@@ -24,7 +24,6 @@ const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
-
   return (_openBlock(), _createBlock(_component_Child, null, {
     default: _withId(() => [
       _createVNode(\\"div\\")
@@ -40,7 +39,6 @@ const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
-
   return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 1 }, [
     (_ctx.ok)
       ? {
@@ -68,7 +66,6 @@ const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 
 export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
-
   return (_openBlock(), _createBlock(_component_Child, null, {
     foo: _withId(({ msg }) => [
       _createTextVNode(_toDisplayString(msg), 1 /* TEXT */)

@@ -6,7 +6,6 @@ exports[`compile should contain standard transforms 1`] = `
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createVNode: _createVNode, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = _Vue
-
     return (_openBlock(), _createBlock(_Fragment, null, [
       _createVNode(\\"div\\", { textContent: text }, null, 8 /* PROPS */, [\\"textContent\\"]),
       _createVNode(\\"div\\", { innerHTML: html }, null, 8 /* PROPS */, [\\"innerHTML\\"]),

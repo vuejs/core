@@ -225,7 +225,6 @@ export function generate(
           .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
           .join(', ')} } = _Vue`
       )
-      push(`\n`)
       newline()
     }
   }
@@ -250,7 +249,6 @@ export function generate(
     }
   }
   if (ast.components.length || ast.directives.length || ast.temps) {
-    push(`\n`)
     newline()
   }
 

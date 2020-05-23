@@ -5,10 +5,9 @@ describe('ssr: components', () => {
     expect(compile(`<foo id="a" :prop="b" />`).code).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+      
       return function ssrRender(_ctx, _push, _parent) {
         const _component_foo = _resolveComponent(\\"foo\\")
-
         _push(_ssrRenderComponent(_component_foo, {
           id: \\"a\\",
           prop: _ctx.b
@@ -44,10 +43,9 @@ describe('ssr: components', () => {
       expect(compile(`<foo>hello<div/></foo>`).code).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -70,10 +68,9 @@ describe('ssr: components', () => {
         .toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, {
             default: _withCtx(({ msg }, _push, _parent, _scopeId) => {
               if (_push) {
@@ -99,10 +96,9 @@ describe('ssr: components', () => {
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
@@ -136,10 +132,9 @@ describe('ssr: components', () => {
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             (_ctx.ok)
               ? {
@@ -168,10 +163,9 @@ describe('ssr: components', () => {
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, renderList: _renderList, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
             _renderList(_ctx.names, (key) => {
               return {
@@ -209,10 +203,9 @@ describe('ssr: components', () => {
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, {
             foo: _withCtx(({ list }, _push, _parent, _scopeId) => {
               if (_push) {
@@ -287,10 +280,9 @@ describe('ssr: components', () => {
         .toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
-
+        
         return function ssrRender(_ctx, _push, _parent) {
           const _component_foo = _resolveComponent(\\"foo\\")
-
           _push(_ssrRenderComponent(_component_foo, null, null, _parent))
         }"
       `)

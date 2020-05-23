@@ -69,7 +69,6 @@ return function render(_ctx, _cache) {
     const _directive_my_dir_0 = _resolveDirective(\\"my_dir_0\\")
     const _directive_my_dir_1 = _resolveDirective(\\"my_dir_1\\")
     let _temp0, _temp1, _temp2
-
     return null
   }
 }"
@@ -108,7 +107,6 @@ exports[`compiler: codegen function mode preamble 1`] = `
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { createVNode: _createVNode, resolveDirective: _resolveDirective } = _Vue
-
     return null
   }
 }"
@@ -187,7 +185,6 @@ exports[`compiler: codegen temps 1`] = `
 return function render(_ctx, _cache) {
   with (_ctx) {
     let _temp0, _temp1, _temp2
-
     return null
   }
 }"

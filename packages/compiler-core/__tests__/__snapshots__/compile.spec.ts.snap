@@ -6,7 +6,6 @@ exports[`compiler: integration tests function mode 1`] = `
 return function render(_ctx, _cache) {
   with (_ctx) {
     const { toDisplayString: _toDisplayString, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, createTextVNode: _createTextVNode, Fragment: _Fragment, renderList: _renderList } = _Vue
-
     return (_openBlock(), _createBlock(\\"div\\", {
       id: \\"foo\\",
       class: bar.baz
