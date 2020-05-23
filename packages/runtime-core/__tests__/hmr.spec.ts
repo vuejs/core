@@ -12,6 +12,7 @@ import {
 } from '@vue/runtime-test'
 import * as runtimeTest from '@vue/runtime-test'
 import { baseCompile } from '@vue/compiler-core'
+import { mockWarn } from '@vue/shared'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
@@ -26,6 +27,7 @@ function compileToFunction(template: string) {
 }
 
 describe('hot module replacement', () => {
+  mockWarn()
   test('inject global runtime', () => {
     expect(createRecord).toBeDefined()
     expect(rerender).toBeDefined()
@@ -109,6 +111,31 @@ describe('hot module replacement', () => {
       )
     )
     expect(serializeInner(root)).toBe(`<div><span>1</span></div>`)
+  })
+
+  test('re-render w/ css module', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-parent-css-module'
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      render: compileToFunction(`<div>{{ $style && $style.class }}</div>`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div></div>`)
+
+    // css module add
+    rerender(parentId, undefined, { $style: { class: 'class' } })
+    expect(serializeInner(root)).toBe(`<div>class</div>`)
+
+    // css module change
+    rerender(parentId, undefined, { $style: { change: 'change' } })
+    expect(serializeInner(root)).toBe(`<div></div>`)
+    // css module remove
+    rerender(parentId, undefined, {})
+    expect('Property "$style" was accessed during').toHaveBeenWarned()
   })
 
   test('reload', async () => {

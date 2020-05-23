@@ -123,10 +123,10 @@ function reload(id: string, newComp: ComponentOptions) {
   })
 }
 
-function tryWrap(fn: (id: string, arg: any) => any): Function {
-  return (id: string, arg: any) => {
+function tryWrap(fn: (...arg: any[]) => any): Function {
+  return (...arg: any[]) => {
     try {
-      return fn(id, arg)
+      return fn.apply(null, arg)
     } catch (e) {
       console.error(e)
       console.warn(
