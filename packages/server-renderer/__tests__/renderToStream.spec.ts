@@ -14,7 +14,7 @@ import { escapeHtml, mockWarn } from '@vue/shared'
 import {
   renderToStream as _renderToStream,
   renderComponent,
-  ssrRenderSlot
+  renderSlot
 } from '../src/renderToStream'
 import { Readable } from 'stream'
 
@@ -241,7 +241,7 @@ describe('ssr: renderToStream', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          ssrRenderSlot(
+          renderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },
@@ -306,7 +306,7 @@ describe('ssr: renderToStream', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          ssrRenderSlot(
+          renderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },

@@ -11,8 +11,11 @@ import {
   createStaticVNode
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import { renderToString, renderComponent } from '../src/renderToString'
-import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
+import {
+  renderToString,
+  renderComponent,
+  renderSlot
+} from '../src/renderToString'
 
 mockWarn()
 
@@ -219,7 +222,7 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          ssrRenderSlot(
+          renderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },
@@ -284,7 +287,7 @@ describe('ssr: renderToString', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          ssrRenderSlot(
+          renderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },

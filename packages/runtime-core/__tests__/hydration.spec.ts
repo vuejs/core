@@ -13,7 +13,7 @@ import {
 } from '@vue/runtime-dom'
 import { renderToString } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
-import { SSRContext } from 'packages/server-renderer/src/renderToString'
+import { SSRContext } from 'packages/server-renderer/src/render'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')

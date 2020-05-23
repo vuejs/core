@@ -3,8 +3,11 @@ export { renderToString } from './renderToString'
 export { renderToStream } from './renderToStream'
 
 // internal runtime helpers
-export { renderComponent as ssrRenderComponent } from './renderToString'
-export { ssrRenderSlot } from './helpers/ssrRenderSlot'
+export {
+  renderComponent as ssrRenderComponent,
+  renderSlot as ssrRenderSlot,
+  renderTeleport as ssrRenderTeleport
+} from './renderToString'
 export {
   ssrRenderClass,
   ssrRenderStyle,
@@ -14,7 +17,6 @@ export {
 } from './helpers/ssrRenderAttrs'
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
-export { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 export { ssrRenderSuspense } from './helpers/ssrRenderSuspense'
 
 // v-model helpers

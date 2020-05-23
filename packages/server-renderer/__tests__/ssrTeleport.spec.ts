@@ -1,6 +1,6 @@
 import { createApp, h, Teleport } from 'vue'
-import { renderToString, SSRContext } from '../src/renderToString'
-import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
+import { renderToString, renderTeleport } from '../src/renderToString'
+import { SSRContext } from '../src/render'
 
 describe('ssrRenderTeleport', () => {
   test('teleport rendering (compiled)', async () => {
@@ -11,7 +11,7 @@ describe('ssrRenderTeleport', () => {
           return { msg: 'hello' }
         },
         ssrRender(_ctx, _push, _parent) {
-          ssrRenderTeleport(
+          renderTeleport(
             _push,
             _push => {
               _push(`<div>content</div>`)
@@ -36,7 +36,7 @@ describe('ssrRenderTeleport', () => {
           return { msg: 'hello' }
         },
         ssrRender(_ctx, _push, _parent) {
-          ssrRenderTeleport(
+          renderTeleport(
             _push,
             _push => {
               _push(`<div>content</div>`)
