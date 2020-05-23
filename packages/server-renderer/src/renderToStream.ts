@@ -18,13 +18,13 @@ import { Readable } from 'stream'
 
 const { isVNode } = ssrUtils
 
-export function createBuffer(): BufferInstance {
+function createBuffer(): BufferInstance {
   let appendable = false
   const buffer: SSRBuffer = []
   return {
     getBuffer(): SSRBuffer {
       // Return static buffer and await on items during unroll stage
-      return buffer as SSRBuffer
+      return buffer
     },
     push(item: SSRBufferItem) {
       const isStringItem = isString(item)

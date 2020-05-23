@@ -33,8 +33,9 @@ function createBuffer(): BufferInstance {
       // If the current component's buffer contains any Promise from async children,
       // then it must return a Promise too. Otherwise this is a component that
       // contains only sync children so we can avoid the async book-keeping overhead.
-      // @ts-ignore
-      return hasAsync ? Promise.all(buffer) : (buffer as ResolvedSSRBuffer)
+      return hasAsync
+        ? Promise.all(buffer as ResolvedSSRBuffer)
+        : (buffer as ResolvedSSRBuffer)
     },
     push(item: SSRBufferItem) {
       const isStringItem = isString(item)
@@ -92,8 +93,7 @@ export async function renderToString(
 
   await resolveTeleports(context)
 
-  // @ts-ignore
-  return unrollBuffer(buffer)
+  return unrollBuffer(buffer as ResolvedSSRBuffer)
 }
 
 async function resolveTeleports(context: SSRContext) {
@@ -102,10 +102,9 @@ async function resolveTeleports(context: SSRContext) {
     for (const key in context.__teleportBuffers) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
-      context.teleports[key] = unrollBuffer(
-        // @ts-ignore
-        await Promise.all(context.__teleportBuffers[key])
-      )
+      context.teleports[key] = unrollBuffer((await Promise.all(
+        context.__teleportBuffers[key]
+      )) as ResolvedSSRBuffer)
     }
   }
 }
