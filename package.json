@@ -17,7 +17,7 @@
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
     "serve": "serve",
     "open": "open http://localhost:5000/packages/template-explorer/local.html",
-    "preinstall": "node ./scripts/CheckYarn.js"
+    "preinstall": "node ./scripts/checkYarn.js"
   },
   "types": "test-dts/index.d.ts",
   "tsd": {
