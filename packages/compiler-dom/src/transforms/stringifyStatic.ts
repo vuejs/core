@@ -25,7 +25,8 @@ import {
   toDisplayString,
   normalizeClass,
   normalizeStyle,
-  stringifyStyle
+  stringifyStyle,
+  makeMap
 } from '@vue/shared'
 
 export const enum StringifyThresholds {
@@ -59,6 +60,12 @@ type StringifiableNode = PlainElementNode | TextCallNode
  * This optimization is only performed in Node.js.
  */
 export const stringifyStatic: HoistTransform = (children, context) => {
+  if (
+    context.parent!.type === NodeTypes.ELEMENT &&
+    canNotStringifiableTag((context.parent as PlainElementNode).tag)
+  ) {
+    return
+  }
   let nc = 0 // current node count
   let ec = 0 // current element with binding count
   const currentChunk: StringifiableNode[] = []
@@ -135,6 +142,8 @@ const dataAriaRE = /^(data|aria)-/
 const isStringifiableAttr = (name: string) => {
   return isKnownAttr(name) || dataAriaRE.test(name)
 }
+
+const canNotStringifiableTag = makeMap('p,table,thead,tr,th,tbody,td,colspan')
 
 const replaceHoist = (
   node: StringifiableNode,

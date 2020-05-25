@@ -225,4 +225,18 @@ describe('stringify static html', () => {
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
+
+  // https://github.com/vitejs/vite/issues/226
+  test('should bail on break content with innerHTML (eg.tables related tags)', () => {
+    const { ast } = compileWithStringify(
+      `<div><div>${repeat(
+        `<tr class="foo">foo</tr>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></div>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
 })
