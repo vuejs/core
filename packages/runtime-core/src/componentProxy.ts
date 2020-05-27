@@ -114,13 +114,43 @@ export interface ComponentRenderContext {
 function getPublicInstanceProxyHandlers(
   instance: ComponentInternalInstance
 ): ProxyHandler<any> {
-  function getPropGetter(key: string): PropGetter {
+  function getPropGetter(key: string, mustWarn: boolean): PropGetter {
     let fn = instance.propGetters![key]
     if (fn) {
       return fn
     } else {
       fn = instance.propGetterFactory!(key)
-      instance.propGetters![key] = fn
+      if (fn !== UNKNOWN_PROP_GETTER) {
+        // Do not save it because it could be defined later in the ctx.
+        instance.propGetters![key] = fn
+      } else {
+        if (
+          __DEV__ &&
+          mustWarn &&
+          currentRenderingInstance &&
+          // #1091 avoid internal isRef/isVNode checks on component instance leading
+          // to infinite warning loop
+          key.indexOf('__v') !== 0
+        ) {
+          if (
+            instance.data !== EMPTY_OBJ &&
+            key[0] === '$' &&
+            hasOwn(instance.data, key)
+          ) {
+            warn(
+              `Property ${JSON.stringify(
+                key
+              )} must be accessed via $data because it starts with a reserved ` +
+                `character and is not proxied on the render context.`
+            )
+          } else {
+            warn(
+              `Property ${JSON.stringify(key)} was accessed during render ` +
+                `but is not defined on instance.`
+            )
+          }
+        }
+      }
       return fn
     }
   }
@@ -128,10 +158,10 @@ function getPublicInstanceProxyHandlers(
   return {
     ...PublicInstanceProxyHandlers,
     get(c: ComponentRenderContext, key: string) {
-      return getPropGetter(key)()
+      return getPropGetter(key, true)()
     },
     has(c: ComponentRenderContext, key: string) {
-      return getPropGetter(key) !== UNKNOWN_PROP_GETTER
+      return getPropGetter(key, false) !== UNKNOWN_PROP_GETTER
     }
   }
 }
@@ -296,50 +326,24 @@ function createPropGetterFactory(
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       return createRefPropGetter(setupState[key])
     } else if (instance.data !== EMPTY_OBJ && hasOwn(instance.data, key)) {
-      return createRefPropGetter(instance.data[key])
-    } else if (propKeys && hasOwn(propKeys[0]!, key)) {
+      return createMemberPropGetter(instance.data, key)
+    } else if (propKeys && propKeys[0] && hasOwn(propKeys[0]!, key)) {
       // only cache other properties when instance has declared (thus stable)
       // props
       return createMemberPropGetter(props, key)
-    } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
-      // Ctx props can be set dynamically so use a member prop getter.
-      return createMemberPropGetter(instance.ctx, key)
     } else if (publicPropertiesMap[key]) {
       if (__DEV__ && key === '$attrs') {
         markAttrsAccessed()
       }
       return createSimplePropGetter(publicPropertiesMap[key](instance))
+    } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
+      // Ctx props can be set dynamically so use a member prop getter.
+      return createMemberPropGetter(instance.ctx, key)
     } else if (cssModules && cssModules[key]) {
       return createSimplePropGetter(cssModules[key])
     } else if (hasOwn(globalProps, key)) {
       return createMemberPropGetter(globalProps, key)
     } else {
-      if (
-        __DEV__ &&
-        currentRenderingInstance &&
-        // #1091 avoid internal isRef/isVNode checks on component instance leading
-        // to infinite warning loop
-        key.indexOf('__v') !== 0
-      ) {
-        if (
-          instance.data !== EMPTY_OBJ &&
-          key[0] === '$' &&
-          hasOwn(instance.data, key)
-        ) {
-          warn(
-            `Property ${JSON.stringify(
-              key
-            )} must be accessed via $data because it starts with a reserved ` +
-              `character and is not proxied on the render context.`
-          )
-        } else {
-          warn(
-            `Property ${JSON.stringify(key)} was accessed during render ` +
-              `but is not defined on instance.`
-          )
-        }
-      }
-
       // Unknown property: ignore.
       return UNKNOWN_PROP_GETTER
     }
