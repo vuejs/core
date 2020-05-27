@@ -13,7 +13,8 @@ import {
   exposeSetupStateOnRenderContext,
   createInstanceProxy,
   createInstanceWithProxy,
-  PropGetterFactory
+  PropGetterFactory,
+  PropGetter
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
@@ -188,7 +189,7 @@ export interface ComponentInternalInstance {
   /**
    * Provides a quick property accessor in the context proxy.
    */
-  propGetters: Record<string, () => any> | null
+  propGetters: Record<string, PropGetter> | null
 
   /**
    * cache for render function values that rely on _ctx but won't need updates

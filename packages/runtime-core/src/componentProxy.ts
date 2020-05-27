@@ -375,7 +375,7 @@ function createMemberPropGetter(obj: any, key: string): PropGetter {
   return new Function('o', `return () => o["${key}"]`)(obj)
 }
 
-type PropGetter = () => any
+export type PropGetter = () => any
 export type PropGetterFactory = (key: string) => PropGetter
 
 // dev only
