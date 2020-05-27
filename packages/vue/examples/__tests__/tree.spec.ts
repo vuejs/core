@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: tree', () => {
   const { page, click, count, text, children, isVisible } = setupPuppeteer()
@@ -97,11 +97,19 @@ describe('e2e: tree', () => {
     )
   }
 
-  test('classic', async () => {
-    await testTree('classic')
-  })
+  test(
+    'classic',
+    async () => {
+      await testTree('classic')
+    },
+    E2E_TIMEOUT
+  )
 
-  test('composition', async () => {
-    await testTree('composition')
-  })
+  test(
+    'composition',
+    async () => {
+      await testTree('composition')
+    },
+    E2E_TIMEOUT
+  )
 })

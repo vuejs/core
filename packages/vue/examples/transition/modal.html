@@ -45,24 +45,23 @@ const Modal = {
 <!-- app -->
 <div id="app">
   <button id="show-modal" @click="showModal = true">Show Modal</button>
-  <portal target="#modal-container">
+  <teleport to="#modal-container">
     <!-- use the modal component, pass in the prop -->
     <modal :show="showModal" @close="showModal = false">
       <template #header>
         <h3>custom header</h3>
       </template>
     </modal>
-  </portal>
+  </teleport>
 </div>
 
 <script>
-const App = {
+Vue.createApp({
   components: { Modal },
-  data: {
+  data: () => ({
     showModal: false
-  }
-}
-Vue.createApp().mount(App, '#app')
+  })
+}).mount('#app')
 </script>
 
 <style>

@@ -100,7 +100,8 @@ const globalStats = [
   { label: 'E', value: 100 },
   { label: 'F', value: 100 }
 ]
-const App = {
+
+createApp({
   components: {
     Polygraph
   },
@@ -133,9 +134,7 @@ const App = {
       remove
     }
   }
-}
-
-createApp().mount(App, '#demo')
+}).mount('#demo')
 </script>
 
 <style>

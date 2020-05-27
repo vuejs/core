@@ -2,9 +2,16 @@ import { makeMap } from './makeMap'
 
 export { makeMap }
 export * from './patchFlags'
+export * from './shapeFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
+export * from './mockWarn'
+export * from './normalizeProp'
 export * from './domTagConfig'
+export * from './domAttrConfig'
+export * from './escapeHtml'
+export * from './looseEqual'
+export * from './toDisplayString'
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
@@ -18,7 +25,8 @@ export const NOOP = () => {}
  */
 export const NO = () => false
 
-export const isOn = (key: string) => key[0] === 'o' && key[1] === 'n'
+const onRE = /^on[^a-z]/
+export const isOn = (key: string) => onRE.test(key)
 
 export const extend = <T extends object, U extends object>(
   a: T,
@@ -28,6 +36,13 @@ export const extend = <T extends object, U extends object>(
     ;(a as any)[key] = b[key]
   }
   return a as any
+}
+
+export const remove = <T>(arr: T[], el: T) => {
+  const i = arr.indexOf(el)
+  if (i > -1) {
+    arr.splice(i, 1)
+  }
 }
 
 const hasOwnProperty = Object.prototype.hasOwnProperty
@@ -44,7 +59,7 @@ export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
 export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
-export function isPromise<T = any>(val: unknown): val is Promise<T> {
+export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return isObject(val) && isFunction(val.then) && isFunction(val.catch)
 }
 
@@ -52,7 +67,7 @@ export const objectToString = Object.prototype.toString
 export const toTypeString = (value: unknown): string =>
   objectToString.call(value)
 
-export function toRawType(value: unknown): string {
+export const toRawType = (value: unknown): string => {
   return toTypeString(value).slice(8, -1)
 }
 
@@ -66,7 +81,7 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
     'onVnodeBeforeUnmount,onVnodeUnmounted'
 )
 
-function cacheStringFunction<T extends (str: string) => string>(fn: T): T {
+const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
   return ((str: string) => {
     const hit = cache[str]
@@ -97,3 +112,21 @@ export const capitalize = cacheStringFunction(
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)
+
+export const invokeArrayFns = (fns: Function[], arg?: any) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i](arg)
+  }
+}
+
+export const def = (obj: object, key: string | symbol, value: any) => {
+  Object.defineProperty(obj, key, {
+    configurable: true,
+    value
+  })
+}
+
+export const toNumber = (val: any): any => {
+  const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}

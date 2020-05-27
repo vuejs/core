@@ -1,7 +1,12 @@
 import { VNode } from './vnode'
-import { Data, ComponentInternalInstance, Component } from './component'
+import {
+  Data,
+  ComponentInternalInstance,
+  Component,
+  formatComponentName
+} from './component'
 import { isString, isFunction } from '@vue/shared'
-import { toRaw, isRef, pauseTracking, resumeTracking } from '@vue/reactivity'
+import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
 type ComponentVNode = VNode & {
@@ -43,7 +48,7 @@ export function warn(msg: string, ...args: any[]) {
         msg + args.join(''),
         instance && instance.proxy,
         trace
-          .map(({ vnode }) => `at <${formatComponentName(vnode)}>`)
+          .map(({ vnode }) => `at <${formatComponentName(vnode.type)}>`)
           .join('\n'),
         trace
       ]
@@ -60,7 +65,7 @@ export function warn(msg: string, ...args: any[]) {
     console.warn(...warnArgs)
   }
 
-  resumeTracking()
+  resetTracking()
 }
 
 function getComponentTrace(): ComponentTraceStack {
@@ -84,8 +89,8 @@ function getComponentTrace(): ComponentTraceStack {
         recurseCount: 0
       })
     }
-    const parentInstance: ComponentInternalInstance | null = currentVNode.component!
-      .parent
+    const parentInstance: ComponentInternalInstance | null =
+      currentVNode.component && currentVNode.component.parent
     currentVNode = parentInstance && parentInstance.vnode
   }
 
@@ -103,30 +108,12 @@ function formatTrace(trace: ComponentTraceStack): any[] {
 function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
-  const open = ` at <${formatComponentName(vnode)}`
+  const isRoot = vnode.component ? vnode.component.parent == null : false
+  const open = ` at <${formatComponentName(vnode.type, isRoot)}`
   const close = `>` + postfix
-  const rootLabel = vnode.component!.parent == null ? `(Root)` : ``
   return vnode.props
-    ? [open, ...formatProps(vnode.props), close, rootLabel]
-    : [open + close, rootLabel]
-}
-
-const classifyRE = /(?:^|[-_])(\w)/g
-const classify = (str: string): string =>
-  str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
-
-function formatComponentName(vnode: ComponentVNode, file?: string): string {
-  const Component = vnode.type as Component
-  let name = isFunction(Component)
-    ? Component.displayName || Component.name
-    : Component.name
-  if (!name && file) {
-    const match = file.match(/([^/\\]+)\.vue$/)
-    if (match) {
-      name = match[1]
-    }
-  }
-  return name ? classify(name) : 'Anonymous'
+    ? [open, ...formatProps(vnode.props), close]
+    : [open + close]
 }
 
 function formatProps(props: Data): any[] {

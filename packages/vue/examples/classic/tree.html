@@ -69,43 +69,43 @@ const TreeItem = {
 </ul>
 
 <script>
-const App = {
-  components: {
-    TreeItem
-  },
-  data: {
-    treeData: {
-      name: 'My Tree',
+const treeData = {
+  name: 'My Tree',
+  children: [
+    { name: 'hello' },
+    { name: 'wat' },
+    {
+      name: 'child folder',
       children: [
+        {
+          name: 'child folder',
+          children: [
+            { name: 'hello' },
+            { name: 'wat' }
+          ]
+        },
         { name: 'hello' },
         { name: 'wat' },
         {
           name: 'child folder',
           children: [
-            {
-              name: 'child folder',
-              children: [
-                { name: 'hello' },
-                { name: 'wat' }
-              ]
-            },
             { name: 'hello' },
-            { name: 'wat' },
-            {
-              name: 'child folder',
-              children: [
-                { name: 'hello' },
-                { name: 'wat' }
-              ]
-            }
+            { name: 'wat' }
           ]
         }
       ]
     }
-  }
+  ]
 }
 
-Vue.createApp().mount(App, '#demo')
+Vue.createApp({
+  components: {
+    TreeItem
+  },
+  data: () => ({
+    treeData
+  })
+}).mount('#demo')
 </script>
 
 <style>

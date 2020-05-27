@@ -1,18 +1,25 @@
-import { VNode, normalizeVNode, VNodeChild } from '../vnode'
-import { ShapeFlags } from '../shapeFlags'
-import { isFunction, isArray } from '@vue/shared'
+import { VNode, normalizeVNode, VNodeChild, VNodeProps } from '../vnode'
+import { isFunction, isArray, ShapeFlags } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
 import { Slots } from '../componentSlots'
-import { RendererInternals, MoveType } from '../renderer'
+import {
+  RendererInternals,
+  MoveType,
+  SetupRenderEffectFn,
+  RendererNode,
+  RendererElement
+} from '../renderer'
 import { queuePostFlushCb, queueJob } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
-import { handleError, ErrorCodes } from '../errorHandling'
 import { pushWarningContext, popWarningContext } from '../warning'
+import { handleError, ErrorCodes } from '../errorHandling'
 
 export interface SuspenseProps {
   onResolve?: () => void
   onRecede?: () => void
 }
+
+export const isSuspense = (type: any): boolean => type.__isSuspense
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -26,8 +33,8 @@ export const SuspenseImpl = {
   process(
     n1: VNode | null,
     n2: VNode,
-    container: object,
-    anchor: object | null,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
@@ -58,7 +65,8 @@ export const SuspenseImpl = {
         rendererInternals
       )
     }
-  }
+  },
+  hydrate: hydrateSuspense
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -66,13 +74,13 @@ export const Suspense = ((__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as any) as {
   __isSuspense: true
-  new (): { $props: SuspenseProps }
+  new (): { $props: VNodeProps & SuspenseProps }
 }
 
 function mountSuspense(
   n2: VNode,
-  container: object,
-  anchor: object | null,
+  container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
@@ -80,8 +88,8 @@ function mountSuspense(
   rendererInternals: RendererInternals
 ) {
   const {
-    patch,
-    options: { createElement }
+    p: patch,
+    o: { createElement }
   } = rendererInternals
   const hiddenContainer = createElement('div')
   const suspense = (n2.suspense = createSuspenseBoundary(
@@ -96,14 +104,10 @@ function mountSuspense(
     rendererInternals
   ))
 
-  const { content, fallback } = normalizeSuspenseChildren(n2)
-  suspense.subTree = content
-  suspense.fallbackTree = fallback
-
   // start mounting the content subtree in an off-dom container
   patch(
     null,
-    content,
+    suspense.subTree,
     hiddenContainer,
     null,
     parentComponent,
@@ -116,7 +120,7 @@ function mountSuspense(
     // mount the fallback tree
     patch(
       null,
-      fallback,
+      suspense.fallbackTree,
       container,
       anchor,
       parentComponent,
@@ -124,7 +128,7 @@ function mountSuspense(
       isSVG,
       optimized
     )
-    n2.el = fallback.el
+    n2.el = suspense.fallbackTree.el
   } else {
     // Suspense has no async deps. Just resolve.
     suspense.resolve()
@@ -134,12 +138,12 @@ function mountSuspense(
 function patchSuspense(
   n1: VNode,
   n2: VNode,
-  container: object,
-  anchor: object | null,
+  container: RendererElement,
+  anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
   optimized: boolean,
-  { patch }: RendererInternals
+  { p: patch }: RendererInternals
 ) {
   const suspense = (n2.suspense = n1.suspense)!
   suspense.vnode = n2
@@ -192,66 +196,74 @@ function patchSuspense(
   suspense.fallbackTree = fallback
 }
 
-export interface SuspenseBoundary<
-  HostNode = any,
-  HostElement = any,
-  HostVNode = VNode<HostNode, HostElement>
-> {
-  vnode: HostVNode
-  parent: SuspenseBoundary<HostNode, HostElement> | null
+export interface SuspenseBoundary {
+  vnode: VNode
+  parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean
   optimized: boolean
-  container: HostElement
-  hiddenContainer: HostElement
-  anchor: HostNode | null
-  subTree: HostVNode
-  fallbackTree: HostVNode
+  container: RendererElement
+  hiddenContainer: RendererElement
+  anchor: RendererNode | null
+  subTree: VNode
+  fallbackTree: VNode
   deps: number
+  isHydrating: boolean
   isResolved: boolean
   isUnmounted: boolean
   effects: Function[]
   resolve(): void
   recede(): void
-  move(container: HostElement, anchor: HostNode | null, type: MoveType): void
-  next(): HostNode | null
+  move(
+    container: RendererElement,
+    anchor: RendererNode | null,
+    type: MoveType
+  ): void
+  next(): RendererNode | null
   registerDep(
     instance: ComponentInternalInstance,
-    setupRenderEffect: (
-      instance: ComponentInternalInstance,
-      parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-      initialVNode: VNode<HostNode, HostElement>,
-      container: HostElement,
-      anchor: HostNode | null,
-      isSVG: boolean
-    ) => void
+    setupRenderEffect: SetupRenderEffectFn
   ): void
-  unmount(
-    parentSuspense: SuspenseBoundary<HostNode, HostElement> | null,
-    doRemove?: boolean
-  ): void
+  unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
 
-function createSuspenseBoundary<HostNode, HostElement>(
-  vnode: VNode<HostNode, HostElement>,
-  parent: SuspenseBoundary<HostNode, HostElement> | null,
+let hasWarned = false
+
+function createSuspenseBoundary(
+  vnode: VNode,
+  parent: SuspenseBoundary | null,
   parentComponent: ComponentInternalInstance | null,
-  container: HostElement,
-  hiddenContainer: HostElement,
-  anchor: HostNode | null,
+  container: RendererElement,
+  hiddenContainer: RendererElement,
+  anchor: RendererNode | null,
   isSVG: boolean,
   optimized: boolean,
-  rendererInternals: RendererInternals<HostNode, HostElement>
-): SuspenseBoundary<HostNode, HostElement> {
+  rendererInternals: RendererInternals,
+  isHydrating = false
+): SuspenseBoundary {
+  /* istanbul ignore if */
+  if (__DEV__ && !__TEST__ && !hasWarned) {
+    hasWarned = true
+    console[console.info ? 'info' : 'log'](
+      `<Suspense> is an experimental feature and its API will likely change.`
+    )
+  }
+
   const {
-    patch,
-    move,
-    unmount,
-    next,
-    options: { parentNode }
+    p: patch,
+    m: move,
+    um: unmount,
+    n: next,
+    o: { parentNode }
   } = rendererInternals
 
-  const suspense: SuspenseBoundary<HostNode, HostElement> = {
+  const getCurrentTree = () =>
+    suspense.isResolved || suspense.isHydrating
+      ? suspense.subTree
+      : suspense.fallbackTree
+
+  const { content, fallback } = normalizeSuspenseChildren(vnode)
+  const suspense: SuspenseBoundary = {
     vnode,
     parent,
     parentComponent,
@@ -261,8 +273,9 @@ function createSuspenseBoundary<HostNode, HostElement>(
     hiddenContainer,
     anchor,
     deps: 0,
-    subTree: null as any, // will be set immediately after creation
-    fallbackTree: null as any, // will be set immediately after creation
+    subTree: content,
+    fallbackTree: fallback,
+    isHydrating,
     isResolved: false,
     isUnmounted: false,
     effects: [],
@@ -289,18 +302,23 @@ function createSuspenseBoundary<HostNode, HostElement>(
         container
       } = suspense
 
-      // this is initial anchor on mount
-      let { anchor } = suspense
-      // unmount fallback tree
-      if (fallbackTree.el) {
-        // if the fallback tree was mounted, it may have been moved
-        // as part of a parent suspense. get the latest anchor for insertion
-        anchor = next(fallbackTree)
-        unmount(fallbackTree as VNode, parentComponent, suspense, true)
+      if (suspense.isHydrating) {
+        suspense.isHydrating = false
+      } else {
+        // this is initial anchor on mount
+        let { anchor } = suspense
+        // unmount fallback tree
+        if (fallbackTree.el) {
+          // if the fallback tree was mounted, it may have been moved
+          // as part of a parent suspense. get the latest anchor for insertion
+          anchor = next(fallbackTree)
+          unmount(fallbackTree, parentComponent, suspense, true)
+        }
+        // move content from off-dom container to actual container
+        move(subTree, container, anchor, MoveType.ENTER)
       }
-      // move content from off-dom container to actual container
-      move(subTree as VNode, container, anchor, MoveType.ENTER)
-      const el = (vnode.el = (subTree as VNode).el!)
+
+      const el = (vnode.el = subTree.el!)
       // suspense as the root node of a component...
       if (parentComponent && parentComponent.subTree === vnode) {
         parentComponent.vnode.el = el
@@ -324,6 +342,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         queuePostFlushCb(effects)
       }
       suspense.isResolved = true
+      suspense.effects = []
       // invoke @resolve event
       const onResolve = vnode.props && vnode.props.onResolve
       if (isFunction(onResolve)) {
@@ -346,7 +365,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
 
       // move content tree back to the off-dom container
       const anchor = next(subTree)
-      move(subTree as VNode, hiddenContainer, null, MoveType.LEAVE)
+      move(subTree, hiddenContainer, null, MoveType.LEAVE)
       // remount the fallback tree
       patch(
         null,
@@ -358,7 +377,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         isSVG,
         optimized
       )
-      const el = (vnode.el = (fallbackTree as VNode).el!)
+      const el = (vnode.el = fallbackTree.el!)
       // suspense as the root node of a component...
       if (parentComponent && parentComponent.subTree === vnode) {
         parentComponent.vnode.el = el
@@ -373,19 +392,12 @@ function createSuspenseBoundary<HostNode, HostElement>(
     },
 
     move(container, anchor, type) {
-      move(
-        suspense.isResolved ? suspense.subTree : suspense.fallbackTree,
-        container,
-        anchor,
-        type
-      )
+      move(getCurrentTree(), container, anchor, type)
       suspense.container = container
     },
 
     next() {
-      return next(
-        suspense.isResolved ? suspense.subTree : suspense.fallbackTree
-      )
+      return next(getCurrentTree())
     },
 
     registerDep(instance, setupRenderEffect) {
@@ -398,6 +410,7 @@ function createSuspenseBoundary<HostNode, HostElement>(
         })
       }
 
+      const hydratedEl = instance.vnode.el
       suspense.deps++
       instance
         .asyncDep!.catch(err => {
@@ -416,15 +429,27 @@ function createSuspenseBoundary<HostNode, HostElement>(
           if (__DEV__) {
             pushWarningContext(vnode)
           }
-          handleSetupResult(instance, asyncSetupResult, suspense)
+          handleSetupResult(instance, asyncSetupResult, false)
+          if (hydratedEl) {
+            // vnode may have been replaced if an update happened before the
+            // async dep is resolved.
+            vnode.el = hydratedEl
+          }
           setupRenderEffect(
             instance,
-            suspense,
             vnode,
-            // component may have been moved before resolve
-            parentNode(instance.subTree.el)!,
-            next(instance.subTree),
-            isSVG
+            // component may have been moved before resolve.
+            // if this is not a hydration, instance.subTree will be the comment
+            // placeholder.
+            hydratedEl
+              ? parentNode(hydratedEl)!
+              : parentNode(instance.subTree.el!)!,
+            // anchor will not be used if this is hydration, so only need to
+            // consider the comment placeholder case.
+            hydratedEl ? null : next(instance.subTree),
+            suspense,
+            isSVG,
+            optimized
           )
           updateHOCHostEl(instance, vnode.el)
           if (__DEV__) {
@@ -453,7 +478,54 @@ function createSuspenseBoundary<HostNode, HostElement>(
   return suspense
 }
 
-function normalizeSuspenseChildren(
+function hydrateSuspense(
+  node: Node,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  isSVG: boolean,
+  optimized: boolean,
+  rendererInternals: RendererInternals,
+  hydrateNode: (
+    node: Node,
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    optimized: boolean
+  ) => Node | null
+): Node | null {
+  const suspense = (vnode.suspense = createSuspenseBoundary(
+    vnode,
+    parentSuspense,
+    parentComponent,
+    node.parentNode!,
+    document.createElement('div'),
+    null,
+    isSVG,
+    optimized,
+    rendererInternals,
+    true /* hydrating */
+  ))
+  // there are two possible scenarios for server-rendered suspense:
+  // - success: ssr content should be fully resolved
+  // - failure: ssr content should be the fallback branch.
+  // however, on the client we don't really know if it has failed or not
+  // attempt to hydrate the DOM assuming it has succeeded, but we still
+  // need to construct a suspense boundary first
+  const result = hydrateNode(
+    node,
+    suspense.subTree,
+    parentComponent,
+    suspense,
+    optimized
+  )
+  if (suspense.deps === 0) {
+    suspense.resolve()
+  }
+  return result
+}
+
+export function normalizeSuspenseChildren(
   vnode: VNode
 ): {
   content: VNode
@@ -478,7 +550,7 @@ export function queueEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
-  if (suspense !== null && !suspense.isResolved) {
+  if (suspense && !suspense.isResolved) {
     if (isArray(fn)) {
       suspense.effects.push(...fn)
     } else {

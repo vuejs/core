@@ -10,7 +10,7 @@ import { CAMELIZE } from '../runtimeHelpers'
 export const transformBind: DirectiveTransform = (dir, node, context) => {
   const { exp, modifiers, loc } = dir
   const arg = dir.arg!
-  if (!exp) {
+  if (!exp || (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content)) {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
   }
   // .prop is no longer necessary due to new patch behavior
@@ -30,7 +30,6 @@ export const transformBind: DirectiveTransform = (dir, node, context) => {
   return {
     props: [
       createObjectProperty(arg!, exp || createSimpleExpression('', true, loc))
-    ],
-    needRuntime: false
+    ]
   }
 }

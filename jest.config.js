@@ -5,8 +5,10 @@ module.exports = {
     __TEST__: true,
     __VERSION__: require('./package.json').version,
     __BROWSER__: false,
-    __BUNDLER__: true,
-    __RUNTIME_COMPILE__: true,
+    __GLOBAL__: false,
+    __ESM_BUNDLER__: true,
+    __ESM_BROWSER__: false,
+    __NODE_JS__: true,
     __FEATURE_OPTIONS__: true,
     __FEATURE_SUSPENSE__: true
   },
@@ -16,12 +18,14 @@ module.exports = {
     'packages/*/src/**/*.ts',
     '!packages/runtime-test/src/utils/**',
     '!packages/template-explorer/**',
-    '!packages/size-check/**'
+    '!packages/size-check/**',
+    '!packages/runtime-core/src/profiling.ts'
   ],
-  watchPathIgnorePatterns: ['/node_modules/'],
+  watchPathIgnorePatterns: ['/node_modules/', '/dist/', '/.git/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   moduleNameMapper: {
-    '^@vue/(.*?)$': '<rootDir>/packages/$1/src'
+    '^@vue/(.*?)$': '<rootDir>/packages/$1/src',
+    vue: '<rootDir>/packages/vue/src'
   },
   rootDir: __dirname,
   testMatch: ['<rootDir>/packages/**/__tests__/**/*spec.[jt]s?(x)'],

@@ -10,10 +10,17 @@ import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLTagConfig,
+  normalizeOptions
 } from './templateTransformAssetUrl'
-import { transformSrcset } from './templateTransformSrcset'
+import {
+  transformSrcset,
+  createSrcsetTransformWithOptions
+} from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
+import * as CompilerDOM from '@vue/compiler-dom'
+import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from 'consolidate'
 
 export interface TemplateCompiler {
@@ -32,12 +39,23 @@ export interface SFCTemplateCompileResults {
 export interface SFCTemplateCompileOptions {
   source: string
   filename: string
+  ssr?: boolean
   inMap?: RawSourceMap
   compiler?: TemplateCompiler
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
-  transformAssetUrls?: AssetURLOptions | boolean
+  /**
+   * In some cases, compiler-sfc may not be inside the project root (e.g. when
+   * linked or globally installed). In such cases a custom `require` can be
+   * passed to correctly resolve the preprocessors.
+   */
+  preprocessCustomRequire?: (id: string) => any
+  /**
+   * Configure what tags/attributes to trasnform into asset url imports,
+   * or disable the transform altogether with `false`.
+   */
+  transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
 }
 
 function preprocess(
@@ -65,9 +83,25 @@ function preprocess(
 export function compileTemplate(
   options: SFCTemplateCompileOptions
 ): SFCTemplateCompileResults {
-  const { preprocessLang } = options
-  const preprocessor =
-    preprocessLang && consolidate[preprocessLang as keyof typeof consolidate]
+  const { preprocessLang, preprocessCustomRequire } = options
+
+  if (
+    (__ESM_BROWSER__ || __GLOBAL__) &&
+    preprocessLang &&
+    !preprocessCustomRequire
+  ) {
+    throw new Error(
+      `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
+        `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
+        `version of the preprocessor in the shape of { render(): string }.`
+    )
+  }
+
+  const preprocessor = preprocessLang
+    ? preprocessCustomRequire
+      ? preprocessCustomRequire(preprocessLang)
+      : require('consolidate')[preprocessLang as keyof typeof consolidate]
+    : false
   if (preprocessor) {
     try {
       return doCompileTemplate({
@@ -106,7 +140,8 @@ function doCompileTemplate({
   filename,
   inMap,
   source,
-  compiler = require('@vue/compiler-dom'),
+  ssr = false,
+  compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
@@ -114,9 +149,10 @@ function doCompileTemplate({
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
-      createAssetUrlTransformWithOptions(transformAssetUrls),
-      transformSrcset
+      createAssetUrlTransformWithOptions(assetOptions),
+      createSrcsetTransformWithOptions(assetOptions)
     ]
   } else if (transformAssetUrls !== false) {
     nodeTransforms = [transformAssetUrl, transformSrcset]

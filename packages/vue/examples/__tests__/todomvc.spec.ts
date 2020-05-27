@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: todomvc', () => {
   const {
@@ -169,11 +169,19 @@ describe('e2e: todomvc', () => {
     expect(await count('.todo:not(.completed)')).toBe(3)
   }
 
-  test('classic', async () => {
-    await testTodomvc('classic')
-  })
+  test(
+    'classic',
+    async () => {
+      await testTodomvc('classic')
+    },
+    E2E_TIMEOUT
+  )
 
-  test('composition', async () => {
-    await testTodomvc('composition')
-  })
+  test(
+    'composition',
+    async () => {
+      await testTodomvc('composition')
+    },
+    E2E_TIMEOUT
+  )
 })

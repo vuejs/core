@@ -19,12 +19,13 @@ import {
   FunctionExpression,
   CallExpression,
   createCallExpression,
-  createArrayExpression
+  createArrayExpression,
+  SlotsExpression
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
-import { CREATE_SLOTS, RENDER_LIST } from '../runtimeHelpers'
+import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
 
 const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
@@ -93,18 +94,41 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
   }
 }
 
+export type SlotFnBuilder = (
+  slotProps: ExpressionNode | undefined,
+  slotChildren: TemplateChildNode[],
+  loc: SourceLocation
+) => FunctionExpression
+
+const buildClientSlotFn: SlotFnBuilder = (props, children, loc) =>
+  createFunctionExpression(
+    props,
+    children,
+    false /* newline */,
+    true /* isSlot */,
+    children.length ? children[0].loc : loc
+  )
+
 // Instead of being a DirectiveTransform, v-slot processing is called during
 // transformElement to build the slots object for a component.
 export function buildSlots(
   node: ElementNode,
-  context: TransformContext
+  context: TransformContext,
+  buildSlotFn: SlotFnBuilder = buildClientSlotFn
 ): {
-  slots: ObjectExpression | CallExpression
+  slots: SlotsExpression
   hasDynamicSlots: boolean
 } {
+  context.helper(WITH_CTX)
+
   const { children, loc } = node
   const slotsProperties: Property[] = []
   const dynamicSlots: (ConditionalExpression | CallExpression)[] = []
+
+  const buildDefaultSlotProperty = (
+    props: ExpressionNode | undefined,
+    children: TemplateChildNode[]
+  ) => createObjectProperty(`default`, buildSlotFn(props, children, loc))
 
   // If the slot is inside a v-for or another v-slot, force it to be dynamic
   // since it likely uses a scope variable.
@@ -115,17 +139,17 @@ export function buildSlots(
     hasDynamicSlots = hasScopeRef(node, context.identifiers)
   }
 
-  // 1. Check for default slot with slotProps on component itself.
+  // 1. Check for slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>
-  const onComponentDefaultSlot = findDir(node, 'slot', true)
-  if (onComponentDefaultSlot) {
-    const { arg, exp, loc } = onComponentDefaultSlot
-    if (arg) {
-      context.onError(
-        createCompilerError(ErrorCodes.X_V_SLOT_NAMED_SLOT_ON_COMPONENT, loc)
+  const onComponentSlot = findDir(node, 'slot', true)
+  if (onComponentSlot) {
+    const { arg, exp } = onComponentSlot
+    slotsProperties.push(
+      createObjectProperty(
+        arg || createSimpleExpression('default', true),
+        buildSlotFn(exp, children, loc)
       )
-    }
-    slotsProperties.push(buildDefaultSlot(exp, children, loc))
+    )
   }
 
   // 2. Iterate through children and check for template slots
@@ -150,8 +174,8 @@ export function buildSlots(
       continue
     }
 
-    if (onComponentDefaultSlot) {
-      // already has on-component default slot - this is incorrect usage.
+    if (onComponentSlot) {
+      // already has on-component slot - this is incorrect usage.
       context.onError(
         createCompilerError(ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE, slotDir.loc)
       )
@@ -174,14 +198,7 @@ export function buildSlots(
       hasDynamicSlots = true
     }
 
-    const slotFunction = createFunctionExpression(
-      slotProps,
-      slotChildren,
-      false /* newline */,
-      true /* isSlot */,
-      slotChildren.length ? slotChildren[0].loc : slotLoc
-    )
-
+    const slotFunction = buildSlotFn(slotProps, slotChildren, slotLoc)
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined
     let vElse: DirectiveNode | undefined
@@ -277,10 +294,10 @@ export function buildSlots(
     }
   }
 
-  if (!onComponentDefaultSlot) {
+  if (!onComponentSlot) {
     if (!hasTemplateSlots) {
       // implicit default slot (on component)
-      slotsProperties.push(buildDefaultSlot(undefined, children, loc))
+      slotsProperties.push(buildDefaultSlotProperty(undefined, children))
     } else if (implicitDefaultChildren.length) {
       // implicit default slot (mixed with named slots)
       if (hasNamedDefaultSlot) {
@@ -292,46 +309,29 @@ export function buildSlots(
         )
       } else {
         slotsProperties.push(
-          buildDefaultSlot(undefined, implicitDefaultChildren, loc)
+          buildDefaultSlotProperty(undefined, implicitDefaultChildren)
         )
       }
     }
   }
 
-  let slots: ObjectExpression | CallExpression = createObjectExpression(
+  let slots = createObjectExpression(
     slotsProperties.concat(
-      createObjectProperty(`_compiled`, createSimpleExpression(`true`, false))
+      createObjectProperty(`_`, createSimpleExpression(`1`, false))
     ),
     loc
-  )
+  ) as SlotsExpression
   if (dynamicSlots.length) {
     slots = createCallExpression(context.helper(CREATE_SLOTS), [
       slots,
       createArrayExpression(dynamicSlots)
-    ])
+    ]) as SlotsExpression
   }
 
   return {
     slots,
     hasDynamicSlots
   }
-}
-
-function buildDefaultSlot(
-  slotProps: ExpressionNode | undefined,
-  children: TemplateChildNode[],
-  loc: SourceLocation
-): Property {
-  return createObjectProperty(
-    `default`,
-    createFunctionExpression(
-      slotProps,
-      children,
-      false /* newline */,
-      true /* isSlot */,
-      children.length ? children[0].loc : loc
-    )
-  )
 }
 
 function buildDynamicSlot(

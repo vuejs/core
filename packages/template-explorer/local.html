@@ -1,0 +1,20 @@
+<title>Vue Template Explorer</title>
+<link rel="stylesheet" data-name="vs/editor/editor.main" href="../../node_modules/monaco-editor/min/vs/editor/editor.main.css">
+<link rel="stylesheet" href="./style.css">
+
+<div id="header"></div>
+<div id="source" class="editor"></div>
+<div id="output" class="editor"></div>
+
+<script src="../../node_modules/monaco-editor/min/vs/loader.js"></script>
+<script>
+require.config({
+  paths: {
+    'vs': '../../node_modules/monaco-editor/min/vs'
+  }
+})
+</script>
+<script src="./dist/template-explorer.global.js"></script>
+<script>
+require(['vs/editor/editor.main'], init /* injected by build */)
+</script>

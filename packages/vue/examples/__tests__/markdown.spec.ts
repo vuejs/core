@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
 
 describe('e2e: markdown', () => {
   const { page, isVisible, value, html } = setupPuppeteer()
@@ -18,7 +18,7 @@ describe('e2e: markdown', () => {
     await page().type('textarea', '\n## foo\n\n- bar\n- baz')
     // assert the output is not updated yet because of debounce
     expect(await html('#editor div')).toBe('<h1 id="hello">hello</h1>\n')
-    await page().waitFor(16)
+    await page().waitFor(100)
     expect(await html('#editor div')).toBe(
       '<h1 id="hello">hello</h1>\n' +
         '<h2 id="foo">foo</h2>\n' +
@@ -26,11 +26,19 @@ describe('e2e: markdown', () => {
     )
   }
 
-  test('classic', async () => {
-    await testMarkdown('classic')
-  })
+  test(
+    'classic',
+    async () => {
+      await testMarkdown('classic')
+    },
+    E2E_TIMEOUT
+  )
 
-  test('composition', async () => {
-    await testMarkdown('composition')
-  })
+  test(
+    'composition',
+    async () => {
+      await testMarkdown('composition')
+    },
+    E2E_TIMEOUT
+  )
 })

@@ -17,7 +17,11 @@ export {
   SFCTemplateCompileOptions,
   SFCTemplateCompileResults
 } from './compileTemplate'
-export { SFCStyleCompileOptions, SFCStyleCompileResults } from './compileStyle'
+export {
+  SFCStyleCompileOptions,
+  SFCAsyncStyleCompileOptions,
+  SFCStyleCompileResults
+} from './compileStyle'
 export {
   CompilerOptions,
   CompilerError,

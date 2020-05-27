@@ -1,5 +1,31 @@
 {
   "name": "@vue/shared",
-  "version": "3.0.0-alpha.1",
-  "private": true
+  "version": "3.0.0-beta.14",
+  "description": "internal utils shared across @vue packages",
+  "main": "index.js",
+  "module": "dist/shared.esm-bundler.js",
+  "types": "dist/shared.d.ts",
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "buildOptions": {
+    "formats": [
+      "esm-bundler",
+      "cjs"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/vue-next.git"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/vue-next/issues"
+  },
+  "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/shared#readme"
 }

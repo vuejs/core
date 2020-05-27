@@ -1,7 +1,10 @@
 import { reactive, effect, isReactive, toRaw } from '../../src'
+import { mockWarn } from '@vue/shared'
 
 describe('reactivity/collections', () => {
   describe('Set', () => {
+    mockWarn()
+
     it('instanceof', () => {
       const original = new Set()
       const observed = reactive(original)
@@ -19,6 +22,19 @@ describe('reactivity/collections', () => {
       set.add('value')
       expect(dummy).toBe(true)
       set.delete('value')
+      expect(dummy).toBe(false)
+    })
+
+    it('should observe mutations with observed value', () => {
+      let dummy
+      const value = reactive({})
+      const set = reactive(new Set())
+      effect(() => (dummy = set.has(value)))
+
+      expect(dummy).toBe(false)
+      set.add(value)
+      expect(dummy).toBe(true)
+      set.delete(value)
       expect(dummy).toBe(false)
     })
 
@@ -354,6 +370,61 @@ describe('reactivity/collections', () => {
         value.foo++
       })
       expect(dummy).toBe(2)
+    })
+
+    it('should work with reactive entries in raw set', () => {
+      const raw = new Set()
+      const entry = reactive({})
+      raw.add(entry)
+      const set = reactive(raw)
+
+      expect(set.has(entry)).toBe(true)
+
+      expect(set.delete(entry)).toBe(true)
+      expect(set.has(entry)).toBe(false)
+    })
+
+    it('should track deletion of reactive entries in raw set', () => {
+      const raw = new Set()
+      const entry = reactive({})
+      raw.add(entry)
+      const set = reactive(raw)
+
+      let dummy
+      effect(() => {
+        dummy = set.has(entry)
+      })
+      expect(dummy).toBe(true)
+
+      set.delete(entry)
+      expect(dummy).toBe(false)
+    })
+
+    it('should warn when set contains both raw and reactive versions of the same object', () => {
+      const raw = new Set()
+      const rawKey = {}
+      const key = reactive(rawKey)
+      raw.add(rawKey)
+      raw.add(key)
+      const set = reactive(raw)
+      set.delete(key)
+      expect(
+        `Reactive Set contains both the raw and reactive`
+      ).toHaveBeenWarned()
+    })
+    
+    it('thisArg', () => {
+      const raw = new Set([ 'value' ])
+      const proxy = reactive(raw)
+      const thisArg = {}
+      let count = 0
+      proxy.forEach(function (this :{}, value, _, set) {
+        ++count
+        expect(this).toBe(thisArg)
+        expect(value).toBe('value')
+        expect(set).toBe(proxy)
+      }, thisArg)
+      expect(count).toBe(1)
     })
   })
 })
