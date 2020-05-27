@@ -8,11 +8,12 @@ import {
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
-  PublicInstanceProxyHandlers,
-  RuntimeCompiledPublicInstanceProxyHandlers,
   createRenderContext,
   exposePropsOnRenderContext,
-  exposeSetupStateOnRenderContext
+  exposeSetupStateOnRenderContext,
+  createInstanceProxy,
+  createInstanceWithProxy,
+  PropGetterFactory
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
@@ -178,11 +179,17 @@ export interface ComponentInternalInstance {
    * @internal
    */
   effects: ReactiveEffect[] | null
+
   /**
-   * cache for proxy access type to avoid hasOwnProperty calls
-   * @internal
+   * Creates a fast instance/property-specific access function to be used in the context proxy.
    */
-  accessCache: Data | null
+  propGetterFactory: PropGetterFactory | null
+
+  /**
+   * Provides a quick property accessor in the context proxy.
+   */
+  propGetters: Record<string, () => any> | null
+
   /**
    * cache for render function values that rely on _ctx but won't need updates
    * after initialized (e.g. inline handlers)
@@ -343,7 +350,9 @@ export function createComponentInstance(
     withProxy: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
-    accessCache: null!,
+    propGetterFactory: null,
+    propGetters: null,
+
     renderCache: [],
 
     // state
@@ -460,15 +469,13 @@ function setupStatefulComponent(
       }
     }
   }
-  // 0. create render proxy property access cache
-  instance.accessCache = {}
-  // 1. create public instance / render proxy
+  // 0. create public instance / render proxy
   // also mark it raw so it's never observed
-  instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
+  instance.proxy = createInstanceProxy(instance)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
-  // 2. call setup()
+  // 1. call setup()
   const { setup } = Component
   if (setup) {
     const setupContext = (instance.setupContext =
@@ -606,10 +613,7 @@ function finishComponentSetup(
     // proxy used needs a different `has` handler which is more performant and
     // also only allows a whitelist of globals to fallthrough.
     if (instance.render._rc) {
-      instance.withProxy = new Proxy(
-        instance.ctx,
-        RuntimeCompiledPublicInstanceProxyHandlers
-      )
+      instance.withProxy = createInstanceWithProxy(instance)
     }
   }
 

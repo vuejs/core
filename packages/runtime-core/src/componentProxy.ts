@@ -7,7 +7,9 @@ import {
   UnwrapRef,
   toRaw,
   shallowReadonly,
-  ReactiveFlags
+  ReactiveFlags,
+  isRef,
+  Ref
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -104,125 +106,37 @@ const publicPropertiesMap: Record<
   $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
 }
 
-const enum AccessTypes {
-  SETUP,
-  DATA,
-  PROPS,
-  CONTEXT,
-  OTHER
-}
-
 export interface ComponentRenderContext {
   [key: string]: any
   _: ComponentInternalInstance
 }
 
-export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
-  get({ _: instance }: ComponentRenderContext, key: string) {
-    const {
-      ctx,
-      setupState,
-      data,
-      props,
-      accessCache,
-      type,
-      appContext
-    } = instance
-
-    // let @vue/reatvitiy know it should never observe Vue public instances.
-    if (key === ReactiveFlags.skip) {
-      return true
+function getPublicInstanceProxyHandlers(
+  instance: ComponentInternalInstance
+): ProxyHandler<any> {
+  function getPropGetter(key: string): PropGetter {
+    let fn = instance.propGetters![key]
+    if (fn) {
+      return fn
+    } else {
+      fn = instance.propGetterFactory!(key)
+      instance.propGetters![key] = fn
+      return fn
     }
+  }
 
-    // data / props / ctx
-    // This getter gets called for every property access on the render context
-    // during render and is a major hotspot. The most expensive part of this
-    // is the multiple hasOwn() calls. It's much faster to do a simple property
-    // access on a plain object, so we use an accessCache object (with null
-    // prototype) to memoize what access type a key corresponds to.
-    if (key[0] !== '$') {
-      const n = accessCache![key]
-      if (n !== undefined) {
-        switch (n) {
-          case AccessTypes.SETUP:
-            return setupState[key]
-          case AccessTypes.DATA:
-            return data[key]
-          case AccessTypes.CONTEXT:
-            return ctx[key]
-          case AccessTypes.PROPS:
-            return props![key]
-          // default: just fallthrough
-        }
-      } else if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
-        accessCache![key] = AccessTypes.SETUP
-        return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
-        accessCache![key] = AccessTypes.DATA
-        return data[key]
-      } else if (
-        // only cache other properties when instance has declared (thus stable)
-        // props
-        type.props &&
-        hasOwn(normalizePropsOptions(type.props)[0]!, key)
-      ) {
-        accessCache![key] = AccessTypes.PROPS
-        return props![key]
-      } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
-        accessCache![key] = AccessTypes.CONTEXT
-        return ctx[key]
-      } else {
-        accessCache![key] = AccessTypes.OTHER
-      }
+  return {
+    ...PublicInstanceProxyHandlers,
+    get(c: ComponentRenderContext, key: string) {
+      return getPropGetter(key)()
+    },
+    has(c: ComponentRenderContext, key: string) {
+      return getPropGetter(key) !== UNKNOWN_PROP_GETTER
     }
+  }
+}
 
-    const publicGetter = publicPropertiesMap[key]
-    let cssModule, globalProperties
-    // public $xxx properties
-    if (publicGetter) {
-      if (__DEV__ && key === '$attrs') {
-        markAttrsAccessed()
-      }
-      return publicGetter(instance)
-    } else if (
-      // css module (injected by vue-loader)
-      (cssModule = type.__cssModules) &&
-      (cssModule = cssModule[key])
-    ) {
-      return cssModule
-    } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
-      // user may set custom properties to `this` that start with `$`
-      accessCache![key] = AccessTypes.CONTEXT
-      return ctx[key]
-    } else if (
-      // global properties
-      ((globalProperties = appContext.config.globalProperties),
-      hasOwn(globalProperties, key))
-    ) {
-      return globalProperties[key]
-    } else if (
-      __DEV__ &&
-      currentRenderingInstance &&
-      // #1091 avoid internal isRef/isVNode checks on component instance leading
-      // to infinite warning loop
-      key.indexOf('__v') !== 0
-    ) {
-      if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
-        warn(
-          `Property ${JSON.stringify(
-            key
-          )} must be accessed via $data because it starts with a reserved ` +
-            `character and is not proxied on the render context.`
-        )
-      } else {
-        warn(
-          `Property ${JSON.stringify(key)} was accessed during render ` +
-            `but is not defined on instance.`
-        )
-      }
-    }
-  },
-
+const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   set(
     { _: instance }: ComponentRenderContext,
     key: string,
@@ -257,27 +171,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           value
         })
       } else {
+        console.log('setting', key)
         ctx[key] = value
       }
     }
     return true
-  },
-
-  has(
-    {
-      _: { data, setupState, accessCache, ctx, type, appContext }
-    }: ComponentRenderContext,
-    key: string
-  ) {
-    return (
-      accessCache![key] !== undefined ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      (type.props && hasOwn(normalizePropsOptions(type.props)[0]!, key)) ||
-      hasOwn(ctx, key) ||
-      hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
-    )
   }
 }
 
@@ -291,25 +189,30 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
-export const RuntimeCompiledPublicInstanceProxyHandlers = {
-  ...PublicInstanceProxyHandlers,
-  get(target: ComponentRenderContext, key: string) {
-    // fast path for unscopables when using `with` block
-    if ((key as any) === Symbol.unscopables) {
-      return
+function getRuntimeCompiledPublicInstanceProxyHandlers(
+  instance: ComponentInternalInstance
+): ProxyHandler<any> {
+  const handlers = getPublicInstanceProxyHandlers(instance)
+  return {
+    ...handlers,
+    get(target: ComponentRenderContext, key: string) {
+      // fast path for unscopables when using `with` block
+      if ((key as any) === Symbol.unscopables) {
+        return
+      }
+      return handlers.get!(target, key, target)
+    },
+    has(_: ComponentRenderContext, key: string) {
+      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      if (__DEV__ && !has && handlers.has!(_, key)) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} should not start with _ which is a reserved prefix for Vue internals.`
+        )
+      }
+      return has
     }
-    return PublicInstanceProxyHandlers.get!(target, key, target)
-  },
-  has(_: ComponentRenderContext, key: string) {
-    const has = key[0] !== '_' && !isGloballyWhitelisted(key)
-    if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
-      warn(
-        `Property ${JSON.stringify(
-          key
-        )} should not start with _ which is a reserved prefix for Vue internals.`
-      )
-    }
-    return has
   }
 }
 
@@ -351,6 +254,125 @@ export function createRenderContext(instance: ComponentInternalInstance) {
 
   return target as ComponentRenderContext
 }
+
+export function createInstanceProxy(instance: ComponentInternalInstance) {
+  setupPropGetterFactory(instance)
+  return new Proxy(instance.ctx, getPublicInstanceProxyHandlers(instance))
+}
+
+export function createInstanceWithProxy(instance: ComponentInternalInstance) {
+  setupPropGetterFactory(instance)
+  return new Proxy(
+    instance.ctx,
+    getRuntimeCompiledPublicInstanceProxyHandlers(instance)
+  )
+}
+
+function setupPropGetterFactory(instance: ComponentInternalInstance) {
+  instance.propGetterFactory = createPropGetterFactory(instance)
+  instance.propGetters = {}
+}
+
+/**
+ * Creates high-performance getters for context properties.
+ */
+function createPropGetterFactory(
+  instance: ComponentInternalInstance
+): PropGetterFactory {
+  // We can't use toRaw on props because we want to track changes.
+  const props = instance.props
+
+  const propKeys = normalizePropsOptions(instance.type.props)
+  const cssModules = instance.type.__cssModules
+  const globalProps = instance.appContext.config.globalProperties
+  return function(key: string): PropGetter {
+    const setupState = toRaw(instance.setupState)
+
+    if (key === ReactiveFlags.skip) {
+      // let @vue/reactivity know it should never observe Vue public instances.
+      return () => true
+    }
+
+    if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+      return createRefPropGetter(setupState[key])
+    } else if (instance.data !== EMPTY_OBJ && hasOwn(instance.data, key)) {
+      return createRefPropGetter(instance.data[key])
+    } else if (propKeys && hasOwn(propKeys[0]!, key)) {
+      // only cache other properties when instance has declared (thus stable)
+      // props
+      return createMemberPropGetter(props, key)
+    } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
+      // Ctx props can be set dynamically so use a member prop getter.
+      return createMemberPropGetter(instance.ctx, key)
+    } else if (publicPropertiesMap[key]) {
+      if (__DEV__ && key === '$attrs') {
+        markAttrsAccessed()
+      }
+      return createSimplePropGetter(publicPropertiesMap[key](instance))
+    } else if (cssModules && cssModules[key]) {
+      return createSimplePropGetter(cssModules[key])
+    } else if (hasOwn(globalProps, key)) {
+      return createMemberPropGetter(globalProps, key)
+    } else {
+      if (
+        __DEV__ &&
+        currentRenderingInstance &&
+        // #1091 avoid internal isRef/isVNode checks on component instance leading
+        // to infinite warning loop
+        key.indexOf('__v') !== 0
+      ) {
+        if (
+          instance.data !== EMPTY_OBJ &&
+          key[0] === '$' &&
+          hasOwn(instance.data, key)
+        ) {
+          warn(
+            `Property ${JSON.stringify(
+              key
+            )} must be accessed via $data because it starts with a reserved ` +
+              `character and is not proxied on the render context.`
+          )
+        } else {
+          warn(
+            `Property ${JSON.stringify(key)} was accessed during render ` +
+              `but is not defined on instance.`
+          )
+        }
+      }
+
+      // Unknown property: ignore.
+      return UNKNOWN_PROP_GETTER
+    }
+  }
+}
+
+function UNKNOWN_PROP_GETTER() {
+  return undefined
+}
+
+function createRefPropGetter(variable: any): PropGetter {
+  if (isRef(variable)) {
+    return function() {
+      return (variable as Ref<any>).value
+    }
+  } else {
+    return createSimplePropGetter(variable)
+  }
+}
+
+function createSimplePropGetter(variable: any): PropGetter {
+  return function() {
+    return variable
+  }
+}
+
+function createMemberPropGetter(obj: any, key: string): PropGetter {
+  // Use this when the property could change value at runtime.
+  return new Function('o', `return () => o["${key}"]`)(obj)
+}
+
+type PropGetter = () => any
+export type PropGetterFactory = (key: string) => PropGetter
 
 // dev only
 export function exposePropsOnRenderContext(
