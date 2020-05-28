@@ -129,6 +129,8 @@ function getPropGetter(
 function getPublicInstanceProxyHandlers(
   instance: ComponentInternalInstance
 ): ProxyHandler<any> {
+  // We create a new get and has function per instance, because it allows us to
+  // scope the instance object directly making the (total) 'get' time ~25% faster.
   return {
     ...PublicInstanceProxyHandlers,
     get(c: ComponentRenderContext, key: string) {
