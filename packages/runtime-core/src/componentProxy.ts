@@ -201,7 +201,6 @@ const PublicInstanceProxyHandlers: ProxyHandler<any> = {
           value
         })
       } else {
-        console.log('setting', key)
         ctx[key] = value
       }
     }
