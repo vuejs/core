@@ -14,10 +14,11 @@ import {
   makeMap,
   isReservedProp,
   EMPTY_ARR,
-  def
+  def,
+  extend
 } from '@vue/shared'
 import { warn } from './warning'
-import { Data, ComponentInternalInstance } from './component'
+import { Data, ComponentInternalInstance, Component } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 
@@ -104,6 +105,19 @@ export function initProps(
 ) {
   const props: Data = {}
   const attrs: Data = {}
+
+  // apply global mixin props
+  if (instance.appContext.mixins) {
+    instance.appContext.mixins.forEach(mixin => {
+      getMixinProps(mixin).forEach(props => mergeProps(instance, props))
+    })
+  }
+
+  // VUE 2 mixin props
+  if (__FEATURE_OPTIONS__) {
+    getMixinProps(instance.type).forEach(props => mergeProps(instance, props))
+  }
+
   def(attrs, InternalObjectKey, 1)
   setFullProps(instance, rawProps, props, attrs)
   const options = instance.type.props
@@ -500,4 +514,26 @@ function isExplicable(type: string): boolean {
 
 function isBoolean(...args: string[]): boolean {
   return args.some(elem => elem.toLowerCase() === 'boolean')
+}
+
+// returns all props from mixins
+function getMixinProps(
+  component: Component & { mixins?: Component[] },
+  deferredProps: PropOptions[] = []
+) {
+  if (component.props) {
+    deferredProps.push(component.props)
+  }
+  if (component.mixins) {
+    component.mixins.forEach(x => getMixinProps(x, deferredProps))
+  }
+  return deferredProps
+}
+
+function mergeProps(instance: ComponentInternalInstance, props: PropOptions) {
+  if (!instance.type.props) {
+    instance.type.props = props
+  } else {
+    extend(instance.type.props, props)
+  }
 }

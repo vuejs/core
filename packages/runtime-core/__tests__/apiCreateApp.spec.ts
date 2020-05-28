@@ -264,6 +264,83 @@ describe('api: createApp', () => {
     ])
   })
 
+  test('mixin props', () => {
+    const mixin = {
+      props: {
+        mixinProp: {
+          type: String,
+          default: 'mixin prop'
+        }
+      }
+    }
+    const Comp = defineComponent({
+      props: {
+        myProp: {
+          type: String,
+          default: 'my'
+        }
+      },
+      mixins: [mixin],
+      render(this: any) {
+        return `${this.myProp} ${this.mixinProp}`
+      }
+    })
+    const app = createApp(Comp)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`my mixin prop`)
+  })
+
+  test('mixin props nested', () => {
+    const mixinA = {
+      props: {
+        a: {
+          type: String,
+          default: 'a'
+        }
+      }
+    }
+
+    const mixinB = {
+      props: {
+        b: {
+          type: String,
+          default: 'b'
+        }
+      }
+    }
+
+    const mixinC = {
+      props: {
+        c: {
+          type: String,
+          default: 'c'
+        }
+      }
+    }
+
+    const mixin = {
+      mixins: [mixinA, mixinB]
+    }
+
+    const Comp = defineComponent({
+      mixins: [mixin],
+      render(this: any) {
+        return `${this.a} ${this.b} ${this.c}`
+      }
+    })
+    const app = createApp(Comp)
+
+    app.mixin(mixinC)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`a b c`)
+  })
+
   test('use', () => {
     const PluginA: Plugin = app => app.provide('foo', 1)
     const PluginB: Plugin = {
