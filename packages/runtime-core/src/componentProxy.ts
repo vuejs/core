@@ -110,61 +110,69 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
+function getPropGetter(
+  instance: ComponentInternalInstance,
+  key: string
+): PropGetter | undefined {
+  let fn: PropGetter | undefined = instance.propGetters![key]
+  if (fn) {
+    return fn
+  } else {
+    fn = getGetterForProxyKey(instance, key)
+    if (fn) {
+      instance.propGetters![key] = fn
+    }
+    return fn
+  }
+}
+
 function getPublicInstanceProxyHandlers(
   instance: ComponentInternalInstance
 ): ProxyHandler<any> {
-  function getPropGetter(
-    key: string,
-    mustWarn: boolean
-  ): PropGetter | undefined {
-    let fn: PropGetter | undefined = instance.propGetters![key]
-    if (fn) {
-      return fn
-    } else {
-      fn = getGetterForProxyKey(instance, key)
-      if (fn) {
-        instance.propGetters![key] = fn
-      } else {
-        if (
-          __DEV__ &&
-          mustWarn &&
-          currentRenderingInstance &&
-          // #1091 avoid internal isRef/isVNode checks on component instance leading
-          // to infinite warning loop
-          key.indexOf('__v') !== 0
-        ) {
-          if (
-            instance.data !== EMPTY_OBJ &&
-            key[0] === '$' &&
-            hasOwn(instance.data, key)
-          ) {
-            warn(
-              `Property ${JSON.stringify(
-                key
-              )} must be accessed via $data because it starts with a reserved ` +
-                `character and is not proxied on the render context.`
-            )
-          } else {
-            warn(
-              `Property ${JSON.stringify(key)} was accessed during render ` +
-                `but is not defined on instance.`
-            )
-          }
-        }
-      }
-      return fn
-    }
-  }
-
   return {
     ...PublicInstanceProxyHandlers,
     get(c: ComponentRenderContext, key: string) {
-      const propGetter = getPropGetter(key, true)
+      const propGetter = getPropGetter(instance, key)
+      if (__DEV__) {
+        if (!propGetter) {
+          warnForUnknownProxyPropertyAccess(instance, key)
+        }
+      }
       return propGetter ? propGetter.f(propGetter.a) : undefined
     },
     has(c: ComponentRenderContext, key: string) {
-      const propGetter = getPropGetter(key, false)
+      const propGetter = getPropGetter(instance, key)
       return propGetter !== undefined
+    }
+  }
+}
+
+function warnForUnknownProxyPropertyAccess(
+  instance: ComponentInternalInstance,
+  key: string
+) {
+  if (
+    currentRenderingInstance &&
+    // #1091 avoid internal isRef/isVNode checks on component instance leading
+    // to infinite warning loop
+    key.indexOf('__v') !== 0
+  ) {
+    if (
+      instance.data !== EMPTY_OBJ &&
+      key[0] === '$' &&
+      hasOwn(instance.data, key)
+    ) {
+      warn(
+        `Property ${JSON.stringify(
+          key
+        )} must be accessed via $data because it starts with a reserved ` +
+          `character and is not proxied on the render context.`
+      )
+    } else {
+      warn(
+        `Property ${JSON.stringify(key)} was accessed during render ` +
+          `but is not defined on instance.`
+      )
     }
   }
 }
