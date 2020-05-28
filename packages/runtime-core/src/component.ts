@@ -13,7 +13,6 @@ import {
   exposeSetupStateOnRenderContext,
   createInstanceProxy,
   createInstanceWithProxy,
-  PropGetterFactory,
   PropGetter
 } from './componentProxy'
 import { ComponentPropsOptions, initProps } from './componentProps'
@@ -182,11 +181,6 @@ export interface ComponentInternalInstance {
   effects: ReactiveEffect[] | null
 
   /**
-   * Creates a fast instance/property-specific access function to be used in the context proxy.
-   */
-  propGetterFactory: PropGetterFactory | null
-
-  /**
    * Provides a quick property accessor in the context proxy.
    */
   propGetters: Record<string, PropGetter> | null
@@ -351,7 +345,6 @@ export function createComponentInstance(
     withProxy: null,
     effects: null,
     provides: parent ? parent.provides : Object.create(appContext.provides),
-    propGetterFactory: null,
     propGetters: null,
 
     renderCache: [],

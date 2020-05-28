@@ -119,7 +119,7 @@ function getPublicInstanceProxyHandlers(
     if (fn) {
       return fn
     } else {
-      fn = instance.propGetterFactory!(key)
+      fn = getGetterForProxyKey(instance, key)
       if (fn !== UNKNOWN_PROP_GETTER) {
         // Do not save it because it could be defined later in the ctx.
         instance.propGetters![key] = fn
@@ -285,67 +285,68 @@ export function createRenderContext(instance: ComponentInternalInstance) {
 }
 
 export function createInstanceProxy(instance: ComponentInternalInstance) {
-  setupPropGetterFactory(instance)
+  setupPropGetters(instance)
   return new Proxy(instance.ctx, getPublicInstanceProxyHandlers(instance))
 }
 
 export function createInstanceWithProxy(instance: ComponentInternalInstance) {
-  setupPropGetterFactory(instance)
+  setupPropGetters(instance)
   return new Proxy(
     instance.ctx,
     getRuntimeCompiledPublicInstanceProxyHandlers(instance)
   )
 }
 
-function setupPropGetterFactory(instance: ComponentInternalInstance) {
-  instance.propGetterFactory = createPropGetterFactory(instance)
+function setupPropGetters(instance: ComponentInternalInstance) {
   instance.propGetters = {}
 }
 
 /**
- * Creates high-performance getters for context properties.
+ * Returns a getter function for an instance proxy property.
  */
-function createPropGetterFactory(
-  instance: ComponentInternalInstance
-): PropGetterFactory {
-  // We can't use toRaw on props because we want to track changes.
-  const props = instance.props
+function getGetterForProxyKey(
+  instance: ComponentInternalInstance,
+  key: string
+): PropGetter {
+  const setupState = toRaw(instance.setupState)
+
+  if (key === ReactiveFlags.skip) {
+    // let @vue/reactivity know it should never observe Vue public instances.
+    return () => true
+  }
+
+  if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+    return createRefPropGetter(setupState[key])
+  } else if (instance.data !== EMPTY_OBJ && hasOwn(instance.data, key)) {
+    return createMemberPropGetter(instance.data, key)
+  }
 
   const propKeys = normalizePropsOptions(instance.type.props)
+  if (propKeys && propKeys[0] && hasOwn(propKeys[0]!, key)) {
+    // only cache other properties when instance has declared (thus stable)
+    // props
+    return createMemberPropGetter(instance.props, key)
+  } else if (publicPropertiesMap[key]) {
+    if (__DEV__ && key === '$attrs') {
+      markAttrsAccessed()
+    }
+    return createSimplePropGetter(publicPropertiesMap[key](instance))
+  } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
+    // Ctx props can be set dynamically so use a member prop getter.
+    return createMemberPropGetter(instance.ctx, key)
+  }
+
   const cssModules = instance.type.__cssModules
-  const globalProps = instance.appContext.config.globalProperties
-  return function(key: string): PropGetter {
-    const setupState = toRaw(instance.setupState)
-
-    if (key === ReactiveFlags.skip) {
-      // let @vue/reactivity know it should never observe Vue public instances.
-      return () => true
-    }
-
-    if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
-      return createRefPropGetter(setupState[key])
-    } else if (instance.data !== EMPTY_OBJ && hasOwn(instance.data, key)) {
-      return createMemberPropGetter(instance.data, key)
-    } else if (propKeys && propKeys[0] && hasOwn(propKeys[0]!, key)) {
-      // only cache other properties when instance has declared (thus stable)
-      // props
-      return createMemberPropGetter(props, key)
-    } else if (publicPropertiesMap[key]) {
-      if (__DEV__ && key === '$attrs') {
-        markAttrsAccessed()
-      }
-      return createSimplePropGetter(publicPropertiesMap[key](instance))
-    } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
-      // Ctx props can be set dynamically so use a member prop getter.
-      return createMemberPropGetter(instance.ctx, key)
-    } else if (cssModules && cssModules[key]) {
-      return createSimplePropGetter(cssModules[key])
-    } else if (hasOwn(globalProps, key)) {
-      return createMemberPropGetter(globalProps, key)
-    } else {
-      // Unknown property: ignore.
-      return UNKNOWN_PROP_GETTER
-    }
+  if (cssModules && cssModules[key]) {
+    return createSimplePropGetter(cssModules[key])
+  } else if (hasOwn(instance.appContext.config.globalProperties, key)) {
+    return createMemberPropGetter(
+      instance.appContext.config.globalProperties,
+      key
+    )
+  } else {
+    // Unknown property: ignore.
+    return UNKNOWN_PROP_GETTER
   }
 }
 
