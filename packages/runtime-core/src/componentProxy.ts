@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, Data } from './component'
+import { Component, ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
 import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
@@ -8,8 +8,7 @@ import {
   toRaw,
   shallowReadonly,
   ReactiveFlags,
-  isRef,
-  Ref
+  unref
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -114,14 +113,16 @@ export interface ComponentRenderContext {
 function getPublicInstanceProxyHandlers(
   instance: ComponentInternalInstance
 ): ProxyHandler<any> {
-  function getPropGetter(key: string, mustWarn: boolean): PropGetter {
-    let fn = instance.propGetters![key]
+  function getPropGetter(
+    key: string,
+    mustWarn: boolean
+  ): PropGetter | undefined {
+    let fn: PropGetter | undefined = instance.propGetters![key]
     if (fn) {
       return fn
     } else {
       fn = getGetterForProxyKey(instance, key)
-      if (fn !== UNKNOWN_PROP_GETTER) {
-        // Do not save it because it could be defined later in the ctx.
+      if (fn) {
         instance.propGetters![key] = fn
       } else {
         if (
@@ -158,10 +159,12 @@ function getPublicInstanceProxyHandlers(
   return {
     ...PublicInstanceProxyHandlers,
     get(c: ComponentRenderContext, key: string) {
-      return getPropGetter(key, true)()
+      const propGetter = getPropGetter(key, true)
+      return propGetter ? propGetter.f(propGetter.a) : undefined
     },
     has(c: ComponentRenderContext, key: string) {
-      return getPropGetter(key, false) !== UNKNOWN_PROP_GETTER
+      const propGetter = getPropGetter(key, false)
+      return propGetter !== undefined
     }
   }
 }
@@ -301,82 +304,95 @@ function setupPropGetters(instance: ComponentInternalInstance) {
   instance.propGetters = {}
 }
 
+export type PropGetter<T = any> = { f: (arg: T) => any; a: T }
+
 /**
  * Returns a getter function for an instance proxy property.
  */
 function getGetterForProxyKey(
   instance: ComponentInternalInstance,
   key: string
-): PropGetter {
+): PropGetter | undefined {
   const setupState = toRaw(instance.setupState)
 
   if (key === ReactiveFlags.skip) {
     // let @vue/reactivity know it should never observe Vue public instances.
-    return () => true
+    return { f: () => true, a: undefined }
   }
 
   if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
-    return createRefPropGetter(setupState[key])
+    return { f: unref, a: setupState[key] }
   } else if (instance.data !== EMPTY_OBJ && hasOwn(instance.data, key)) {
-    return createMemberPropGetter(instance.data, key)
+    return {
+      f: createComponentMemberPropGetter(instance.type, key),
+      a: instance.data
+    }
   }
 
   const propKeys = normalizePropsOptions(instance.type.props)
   if (propKeys && propKeys[0] && hasOwn(propKeys[0]!, key)) {
     // only cache other properties when instance has declared (thus stable)
     // props
-    return createMemberPropGetter(instance.props, key)
+    return {
+      f: createComponentMemberPropGetter(instance.type, key),
+      a: instance.props
+    }
   } else if (publicPropertiesMap[key]) {
     if (__DEV__ && key === '$attrs') {
       markAttrsAccessed()
     }
-    return createSimplePropGetter(publicPropertiesMap[key](instance))
+    return { f: publicPropertiesMap[key], a: instance }
   } else if (instance.ctx !== EMPTY_OBJ && hasOwn(instance.ctx, key)) {
     // Ctx props can be set dynamically so use a member prop getter.
-    return createMemberPropGetter(instance.ctx, key)
+    return {
+      f: createComponentMemberPropGetter(instance.type, key),
+      a: instance.ctx
+    }
   }
 
   const cssModules = instance.type.__cssModules
   if (cssModules && cssModules[key]) {
-    return createSimplePropGetter(cssModules[key])
+    return { f: getArg, a: cssModules[key] }
   } else if (hasOwn(instance.appContext.config.globalProperties, key)) {
-    return createMemberPropGetter(
-      instance.appContext.config.globalProperties,
-      key
-    )
-  } else {
-    // Unknown property: ignore.
-    return UNKNOWN_PROP_GETTER
-  }
-}
-
-function UNKNOWN_PROP_GETTER() {
-  return undefined
-}
-
-function createRefPropGetter(variable: any): PropGetter {
-  if (isRef(variable)) {
-    return function() {
-      return (variable as Ref<any>).value
+    return {
+      f: createComponentMemberPropGetter(instance.type, key),
+      a: instance.appContext.config.globalProperties
     }
   } else {
-    return createSimplePropGetter(variable)
+    // Unknown property: ignore.
+    return undefined
   }
 }
 
-function createSimplePropGetter(variable: any): PropGetter {
-  return function() {
-    return variable
+function getArg<T = any>(a: T): T {
+  return a
+}
+
+// Member property getters are reused to limit memory usage.
+// However, we want a different one per component type as that makes it more
+// likely that the object param is always of the same shape, allow optimizations.
+type ComponentMemberPropGetter = (o: object) => any
+const componentMemberPropGetters = new WeakMap<
+  Component,
+  Record<string, ComponentMemberPropGetter>
+>()
+function createComponentMemberPropGetter(
+  component: Component,
+  key: string
+): ComponentMemberPropGetter {
+  let getters = componentMemberPropGetters.get(component)
+  if (!getters) {
+    getters = {}
+    componentMemberPropGetters.set(component, getters)
   }
+  if (!getters[key]) {
+    getters[key] = new Function(
+      'o',
+      `return o["${key}"]`
+    ) as ComponentMemberPropGetter
+  }
+  return getters[key]
 }
-
-function createMemberPropGetter(obj: any, key: string): PropGetter {
-  // Use this when the property could change value at runtime.
-  return new Function('o', `return () => o["${key}"]`)(obj)
-}
-
-export type PropGetter = () => any
-export type PropGetterFactory = (key: string) => PropGetter
 
 // dev only
 export function exposePropsOnRenderContext(
