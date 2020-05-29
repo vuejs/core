@@ -109,7 +109,6 @@ export function processIf(
     const siblings = context.parent!.children
     const comments = []
     let i = siblings.indexOf(node)
-    console.log('siub', [...siblings])
     while (i-- >= -1) {
       const sibling = siblings[i]
       if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
