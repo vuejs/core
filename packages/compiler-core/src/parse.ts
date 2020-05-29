@@ -243,12 +243,6 @@ function parseChildren(
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
