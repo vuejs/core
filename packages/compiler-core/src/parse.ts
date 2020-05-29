@@ -239,16 +239,15 @@ function parseChildren(
     }
   }
 
-  return removedWhitespace ? nodes.filter(Boolean) : nodes
+  const processedNodes = __DEV__
+    ? nodes
+    : /// ignore comments in production check issue #1256
+      nodes.filter(x => !x || x.type !== NodeTypes.COMMENT)
+
+  return removedWhitespace ? processedNodes.filter(Boolean) : processedNodes
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
