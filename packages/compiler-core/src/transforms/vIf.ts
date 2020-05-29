@@ -109,12 +109,20 @@ export function processIf(
     const siblings = context.parent!.children
     const comments = []
     let i = siblings.indexOf(node)
+    console.log('siub', [...siblings])
     while (i-- >= -1) {
       const sibling = siblings[i]
       if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
         context.removeNode(sibling)
         comments.unshift(sibling)
         continue
+      }
+      // check for empty text nodes
+      if (sibling && sibling.type === NodeTypes.TEXT) {
+        if (!/[^\t\r\n\f ]/.test(sibling.content)) {
+          context.removeNode(sibling)
+          continue
+        }
       }
       if (sibling && sibling.type === NodeTypes.IF) {
         // move the node to the if node's branches
