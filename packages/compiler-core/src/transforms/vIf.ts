@@ -111,7 +111,7 @@ export function processIf(
     let i = siblings.indexOf(node)
     while (i-- >= -1) {
       const sibling = siblings[i]
-      if (__DEV__ && sibling && sibling.type === NodeTypes.COMMENT) {
+      if (sibling && sibling.type === NodeTypes.COMMENT) {
         context.removeNode(sibling)
         comments.unshift(sibling)
         continue
@@ -120,7 +120,7 @@ export function processIf(
         // move the node to the if node's branches
         context.removeNode()
         const branch = createIfBranch(node, dir)
-        if (__DEV__ && comments.length) {
+        if (comments.length) {
           branch.children = [...comments, ...branch.children]
         }
         sibling.branches.push(branch)
