@@ -45,8 +45,6 @@ const TransitionGroupImpl = {
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
-    const rawProps = toRaw(props)
-    const cssTransitionProps = resolveTransitionProps(rawProps)
     let prevChildren: VNode[]
     let children: VNode[]
 
@@ -96,6 +94,8 @@ const TransitionGroupImpl = {
     })
 
     return () => {
+      const rawProps = toRaw(props)
+      const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
       const slotChildren = slots.default ? slots.default() : []
