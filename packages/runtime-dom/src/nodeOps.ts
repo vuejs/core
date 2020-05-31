@@ -7,6 +7,18 @@ const doc = (typeof document !== 'undefined' ? document : null) as Document
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement
 
+let wrapMap:any = {
+  thead: [ 1, "<table>", "</table>" ],
+  tr: [ 2, "<table><tbody>", "</tbody></table>" ],
+  td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
+  col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ],
+  _default: [ 0, "", "" ]
+}
+wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead
+wrapMap.th = wrapMap.td
+const rtagName = /<([\w:]+)/
+
+
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
     if (anchor) {
@@ -59,11 +71,22 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
   insertStaticContent(content, parent, anchor, isSVG) {
-    const temp = isSVG
+    let temp = isSVG
       ? tempSVGContainer ||
         (tempSVGContainer = doc.createElementNS(svgNS, 'svg'))
       : tempContainer || (tempContainer = doc.createElement('div'))
-    temp.innerHTML = content
+
+    const tag = ( rtagName.exec( content ) || ["", ""] )[1].toLowerCase()
+    if(wrapMap[tag]){
+      let [depth, before, after] = wrapMap[ tag ] || wrapMap._default
+      temp.innerHTML = before+content+after
+      while(depth--){
+        temp = temp.firstChild as HTMLElement|SVGElement
+      }
+    }else{
+      temp.innerHTML = content
+    }
+
     const first = temp.firstChild as Element
     let node: Element | null = first
     let last: Element = node
@@ -73,5 +96,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       node = temp.firstChild as Element
     }
     return [first, last]
-  }
+  },
 }
+
+

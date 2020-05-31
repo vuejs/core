@@ -47,4 +47,26 @@ describe('static vnode handling', () => {
     render(h('div', [h('b'), h('b'), s]), root)
     expect(root.innerHTML).toBe(`<div><b></b><b></b>${content}</div>`)
   })
+
+
+  test('should support tbody tr td...',()=>{
+    const content1 = `<tbody><tr><td>hello</td></tr></tbody>`
+    const content2 = `<tr><td>hello</td></tr>`
+    const content3 = `<td>hello</td>`
+
+    const root = document.createElement('div')
+    const s1 = createStaticVNode(content1,1)
+    const s2 = createStaticVNode(content2,1)
+    const s3 = createStaticVNode(content3,1)
+    render(h('table', [s1]), root)
+    expect(root.innerHTML).toBe(`<table>${content1}</table>`)
+    render(h('table', [s2]), root)
+    expect(root.innerHTML).toBe(`<table>${content2}</table>`)
+    render(h('tr', [s3]), root)
+    expect(root.innerHTML).toBe(`<tr>${content3}</tr>`)
+
+    
+  })
+
+
 })
