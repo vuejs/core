@@ -1,5 +1,9 @@
 import { RendererOptions } from '@vue/runtime-core'
 
+
+interface wrapConfig {
+  [name: string]: [number,string,string]
+}
 export const svgNS = 'http://www.w3.org/2000/svg'
 
 const doc = (typeof document !== 'undefined' ? document : null) as Document
@@ -7,12 +11,11 @@ const doc = (typeof document !== 'undefined' ? document : null) as Document
 let tempContainer: HTMLElement
 let tempSVGContainer: SVGElement
 
-let wrapMap:any = {
+let wrapMap:wrapConfig = {
   thead: [ 1, "<table>", "</table>" ],
   tr: [ 2, "<table><tbody>", "</tbody></table>" ],
   td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
-  col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ],
-  _default: [ 0, "", "" ]
+  col: [ 2, "<table><tbody></tbody><colgroup>", "</colgroup></table>" ]
 }
 wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead
 wrapMap.th = wrapMap.td
@@ -78,7 +81,8 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 
     const tag = ( rtagName.exec( content ) || ["", ""] )[1].toLowerCase()
     if(wrapMap[tag]){
-      let [depth, before, after] = wrapMap[ tag ] || wrapMap._default
+      // wrapping table labels to tr|td elements to return correct dom 
+      let [depth, before, after] = wrapMap[ tag ] || [ 0, "", "" ]
       temp.innerHTML = before+content+after
       while(depth--){
         temp = temp.firstChild as HTMLElement|SVGElement
