@@ -36,13 +36,8 @@ const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 run()
 
 async function run() {
-  if (!targets.length) {
-    await buildAll(allTargets)
-    checkAllSizes(allTargets)
-  } else {
-    await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
-    checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
-  }
+  targets.length && (await buildAll(allTargets), checkAllSizes(allTargets))
+  || (await buildAll(fuzzyMatchTarget(targets, buildAllMatching)), checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
 }
 
 async function buildAll(targets) {
@@ -61,9 +56,7 @@ async function build(target) {
   }
 
   // if building a specific format, do not remove dist.
-  if (!formats) {
-    await fs.remove(`${pkgDir}/dist`)
-  }
+  !formats && await fs.remove(`${pkgDir}/dist`)
 
   const env =
     (pkg.buildOptions && pkg.buildOptions.env) ||
