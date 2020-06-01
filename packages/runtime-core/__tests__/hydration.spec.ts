@@ -37,6 +37,10 @@ const triggerEvent = (type: string, el: Element) => {
 describe('SSR hydration', () => {
   mockWarn()
 
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
   test('text', async () => {
     const msg = ref('foo')
     const { vnode, container } = mountWithHydration('foo', () => msg.value)
