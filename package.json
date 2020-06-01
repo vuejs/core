@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.0.0-beta.10",
+  "version": "3.0.0-beta.12",
   "workspaces": [
     "packages/*"
   ],
@@ -70,7 +70,7 @@
     "semver": "^6.3.0",
     "serve": "^11.3.0",
     "ts-jest": "^25.2.1",
-    "typescript": "^3.9.1-rc",
+    "typescript": "^3.9.3",
     "yorkie": "^2.0.0"
   }
 }

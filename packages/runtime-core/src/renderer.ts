@@ -10,7 +10,8 @@ import {
   isSameVNodeType,
   Static,
   VNodeNormalizedRef,
-  VNodeHook
+  VNodeHook,
+  isVNode
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -33,7 +34,8 @@ import {
   ShapeFlags,
   NOOP,
   hasOwn,
-  invokeArrayFns
+  invokeArrayFns,
+  isArray
 } from '@vue/shared'
 import {
   queueJob,
@@ -769,6 +771,9 @@ function baseCreateRenderer(
         parentSuspense,
         areChildrenSVG
       )
+      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        traverseStaticChildren(n1, n2)
+      }
     } else if (!optimized) {
       // full diff
       patchChildren(
@@ -933,6 +938,9 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG
         )
+        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+          traverseStaticChildren(n1, n2)
+        }
       } else {
         // keyed / unkeyed, or manual fragments.
         // for keyed & unkeyed, since they are compiler generated from v-for,
@@ -1262,6 +1270,9 @@ function baseCreateRenderer(
     nextVNode: VNode,
     optimized: boolean
   ) => {
+    if (__DEV__ && instance.type.__hmrId) {
+      optimized = false
+    }
     nextVNode.component = instance
     const prevProps = instance.vnode.props
     instance.vnode = nextVNode
@@ -1717,7 +1728,16 @@ function baseCreateRenderer(
     parentSuspense,
     doRemove = false
   ) => {
-    const { props, ref, children, dynamicChildren, shapeFlag, dirs } = vnode
+    const {
+      type,
+      props,
+      ref,
+      children,
+      dynamicChildren,
+      shapeFlag,
+      patchFlag,
+      dirs
+    } = vnode
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
     const shouldKeepAlive = shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
     let vnodeHook: VNodeHook | undefined | null
@@ -1747,7 +1767,12 @@ function baseCreateRenderer(
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
       }
 
-      if (dynamicChildren) {
+      if (
+        dynamicChildren &&
+        // #1153: fast path should not be taken for non-stable (v-for) fragments
+        (type !== Fragment ||
+          (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
+      ) {
         // fast path for block nodes: only need to unmount dynamic children.
         unmountChildren(dynamicChildren, parentComponent, parentSuspense)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -1941,6 +1966,36 @@ function baseCreateRenderer(
       callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value, refs])
     } else if (__DEV__) {
       warn('Invalid template ref type:', value, `(${typeof value})`)
+    }
+  }
+
+  /**
+   * #1156
+   * When a component is HMR-enabled, we need to make sure that all static nodes
+   * inside a block also inherit the DOM element from the previous tree so that
+   * HMR updates (which are full updates) can retrieve the element for patching.
+   *
+   * Dev only.
+   */
+  const traverseStaticChildren = (n1: VNode, n2: VNode) => {
+    const ch1 = n1.children
+    const ch2 = n2.children
+    if (isArray(ch1) && isArray(ch2)) {
+      for (let i = 0; i < ch1.length; i++) {
+        const c1 = ch1[i]
+        const c2 = ch2[i]
+        if (
+          isVNode(c1) &&
+          isVNode(c2) &&
+          c2.shapeFlag & ShapeFlags.ELEMENT &&
+          !c2.dynamicChildren
+        ) {
+          if (c2.patchFlag <= 0) {
+            c2.el = c1.el
+          }
+          traverseStaticChildren(c1, c2)
+        }
+      }
     }
   }
 

@@ -52,7 +52,7 @@ export { getCurrentInstance } from './component'
 // For raw render function users
 export { h } from './h'
 // Advanced render function utilities
-export { createVNode, cloneVNode, mergeProps } from './vnode'
+export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
 export { Fragment, Text, Comment, Static } from './vnode'
 // Built-in components
