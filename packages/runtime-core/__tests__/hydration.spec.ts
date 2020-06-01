@@ -686,5 +686,17 @@ describe('SSR hydration', () => {
       // excessive children removal
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
+
+    test('Teleport target has empty children', () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport'
+      document.body.appendChild(teleportContainer)
+
+      mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
+        h(Teleport, { to: '#teleport' }, [h('span', 'value')])
+      )
+      expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
   })
 })
