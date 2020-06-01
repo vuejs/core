@@ -61,9 +61,7 @@ async function main() {
     }
   }
 
-  if (!semver.valid(targetVersion)) {
-    throw new Error(`invalid target version: ${targetVersion}`)
-  }
+  !semver.valid(targetVersion) && throw new Error(`invalid target version: ${targetVersion}`)
 
   const { yes } = await prompt({
     type: 'confirm',
@@ -77,12 +75,10 @@ async function main() {
 
   // run tests before release
   step('\nRunning tests...')
-  if (!skipTests && !isDryRun) {
-    await run(bin('jest'), ['--clearCache'])
-    await run('yarn', ['test', '--runInBand'])
-  } else {
-    console.log(`(skipped)`)
-  }
+  skipTests && !isDryRun && (
+    await run(bin('jest'), ['--clearCache']),
+    await run('yarn', ['test', '--runInBand'])) 
+  || console.log(`(skipped)`)
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
@@ -90,26 +86,22 @@ async function main() {
 
   // build all packages with types
   step('\nBuilding all packages...')
-  if (!skipBuild && !isDryRun) {
-    await run('yarn', ['build', '--release'])
+  !skipBuild && !isDryRun && (
+    await run('yarn', ['build', '--release']),
     // test generated dts files
-    step('\nVerifying type declarations...')
+    step('\nVerifying type declarations...'),
     await run(bin('tsd'))
-  } else {
-    console.log(`(skipped)`)
-  }
+  ) || console.log(`(skipped)`)
 
   // generate changelog
   await run(`yarn`, ['changelog'])
 
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
-  if (stdout) {
+  stdout && (
     step('\nCommitting changes...')
     await runIfNotDry('git', ['add', '-A'])
     await runIfNotDry('git', ['commit', '-m', `release: v${targetVersion}`])
-  } else {
-    console.log('No changes to commit.')
-  }
+  ) || console.log('No changes to commit.')
 
   // publish packages
   step('\nPublishing packages...')
@@ -123,11 +115,9 @@ async function main() {
   await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
   await runIfNotDry('git', ['push'])
 
-  if (isDryRun) {
-    console.log(`\nDry run finished - run git diff to see package changes.`)
-  }
+  isDryRun && console.log(`\nDry run finished - run git diff to see package changes.`)
 
-  if (skippedPackages.length) {
+  skippedPackages.length &&
     console.log(
       chalk.yellow(
         `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
@@ -135,7 +125,6 @@ async function main() {
         )}`
       )
     )
-  }
   console.log()
 }
 
@@ -159,15 +148,15 @@ function updateDeps(pkg, depType, version) {
   const deps = pkg[depType]
   if (!deps) return
   Object.keys(deps).forEach(dep => {
-    if (
+    (
       dep === 'vue' ||
       (dep.startsWith('@vue') && packages.includes(dep.replace(/^@vue\//, '')))
-    ) {
+    ) && (
       console.log(
         chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
-      )
+      ),
       deps[dep] = version
-    }
+    )
   })
 }
 
@@ -208,11 +197,9 @@ async function publishPackage(pkgName, version, runIfNotDry) {
     )
     console.log(chalk.green(`Successfully published ${pkgName}@${version}`))
   } catch (e) {
-    if (e.stderr.match(/previously published/)) {
+    e.stderr.match(/previously published/) &&
       console.log(chalk.red(`Skipping already published: ${pkgName}`))
-    } else {
-      throw e
-    }
+    || throw e
   }
 }
 
