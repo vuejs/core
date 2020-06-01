@@ -48,9 +48,7 @@ files.forEach(shortName => {
   }
 
   const readmePath = path.join(packagesDir, shortName, `README.md`)
-  if (args.force || !fs.existsSync(readmePath)) {
-    fs.writeFileSync(readmePath, `# ${name}`)
-  }
+  (args.force || !fs.existsSync(readmePath)) && fs.writeFileSync(readmePath, `# ${name}`)
 
   const apiExtractorConfigPath = path.join(
     packagesDir,
@@ -75,9 +73,7 @@ files.forEach(shortName => {
   const srcDir = path.join(packagesDir, shortName, `src`)
   const indexPath = path.join(packagesDir, shortName, `src/index.ts`)
   if (args.force || !fs.existsSync(indexPath)) {
-    if (!fs.existsSync(srcDir)) {
-      fs.mkdirSync(srcDir)
-    }
+    !fs.existsSync(srcDir) && fs.mkdirSync(srcDir)
     fs.writeFileSync(indexPath, ``)
   }
 
