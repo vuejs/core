@@ -48,7 +48,6 @@ describe('static vnode handling', () => {
     expect(root.innerHTML).toBe(`<div><b></b><b></b>${content}</div>`)
   })
 
-
   test('should support tbody tr td...',()=>{
     const content1 = `<tbody><tr><td>hello</td></tr></tbody>`
     const content2 = `<tr><td>hello</td></tr>`
@@ -64,9 +63,5 @@ describe('static vnode handling', () => {
     expect(root.innerHTML).toBe(`<table>${content2}</table>`)
     render(h('tr', [s3]), root)
     expect(root.innerHTML).toBe(`<tr>${content3}</tr>`)
-
-    
   })
-
-
 })

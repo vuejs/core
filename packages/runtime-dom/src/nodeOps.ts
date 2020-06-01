@@ -78,7 +78,6 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       ? tempSVGContainer ||
         (tempSVGContainer = doc.createElementNS(svgNS, 'svg'))
       : tempContainer || (tempContainer = doc.createElement('div'))
-
     const tag = ( rtagName.exec( content ) || ["", ""] )[1].toLowerCase()
     if(wrapMap[tag]){
       // wrapping table labels to tr|td elements to return correct dom 
@@ -100,7 +99,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       node = temp.firstChild as Element
     }
     return [first, last]
-  },
+  }
 }
 
 
