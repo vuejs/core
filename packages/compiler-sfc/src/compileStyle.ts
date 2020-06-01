@@ -54,7 +54,7 @@ export interface SFCStyleCompileResults {
   rawResult: LazyResult | Result | undefined
   errors: Error[]
   modules?: Record<string, string>
-  dependencies: string[]
+  dependencies: Set<string>
 }
 
 export function compileStyle(
@@ -173,14 +173,14 @@ export function doCompileStyle(
           errors,
           modules: cssModules,
           rawResult: result,
-          dependencies: Array.from(recordPlainCssDependencies(result.messages))
+          dependencies: recordPlainCssDependencies(result.messages)
         }))
         .catch(error => ({
           code: '',
           map: undefined,
           errors: [...errors, error],
           rawResult: undefined,
-          dependencies: Array.from(dependencies)
+          dependencies: dependencies
         }))
     }
 
@@ -197,7 +197,7 @@ export function doCompileStyle(
     map: outMap && (outMap.toJSON() as any),
     errors,
     rawResult: result,
-    dependencies: Array.from(dependencies)
+    dependencies: dependencies
   }
 }
 
