@@ -109,7 +109,10 @@ const styl: StylePreprocessor = {
 
       const result = ref.render()
       // stylus output path is relative path
-      const dependencies = getPositionPaths(ref.deps(), options.fileName)
+      const dependencies = getAbsolutePaths(
+        ref.deps(),
+        path.dirname(options.fileName)
+      )
       if (map) {
         return {
           code: result,
@@ -136,8 +139,6 @@ export const processors: Record<PreprocessLang, StylePreprocessor> = {
   stylus: styl
 }
 
-function getPositionPaths(relativePaths: string[], filePath: string): string[] {
-  return relativePaths.map(relativePath =>
-    path.join(path.dirname(filePath), relativePath)
-  )
+function getAbsolutePaths(relativePaths: string[], dirname: string): string[] {
+  return relativePaths.map(relativePath => path.join(dirname, relativePath))
 }
