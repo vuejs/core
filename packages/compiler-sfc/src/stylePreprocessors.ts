@@ -80,20 +80,24 @@ const less: StylePreprocessor = {
     )
 
     if (error) return { code: '', errors: [error], dependencies: [] }
-
+    // less output path is relative path
+    const dependencies = getAbsolutePaths(
+      result.imports,
+      path.dirname(options.fileName)
+    )
     if (map) {
       return {
         code: result.css.toString(),
         map: merge(map, result.map),
         errors: [],
-        dependencies: result.imports
+        dependencies: dependencies
       }
     }
 
     return {
       code: result.css.toString(),
       errors: [],
-      dependencies: result.imports
+      dependencies: dependencies
     }
   }
 }
