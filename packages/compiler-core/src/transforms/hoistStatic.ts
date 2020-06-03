@@ -1,22 +1,23 @@
 import {
-  RootNode,
-  NodeTypes,
-  TemplateChildNode,
-  SimpleExpressionNode,
-  ElementTypes,
-  PlainElementNode,
   ComponentNode,
-  TemplateNode,
   ElementNode,
+  ElementTypes,
+  NodeTypes,
+  ParentNode,
+  PlainElementNode,
+  RootNode,
+  SimpleExpressionNode,
+  TemplateChildNode,
+  TemplateNode,
   VNodeCall
 } from '../ast'
 import { TransformContext } from '../transform'
-import { PatchFlags, isString, isSymbol } from '@vue/shared'
-import { isSlotOutlet, findProp } from '../utils'
+import { isString, isSymbol, PatchFlags } from '@vue/shared'
+import { findProp, isSlotOutlet } from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
-    root.children,
+    root,
     context,
     new Map(),
     // Root node is unfortunately non-hoistable due to potential parent
@@ -44,7 +45,7 @@ const enum StaticType {
 }
 
 function walk(
-  children: TemplateChildNode[],
+  parent: ParentNode,
   context: TransformContext,
   resultCache: Map<TemplateChildNode, StaticType>,
   doNotHoistNode: boolean = false
@@ -59,7 +60,7 @@ function walk(
   // walk of the AST and allow `stringifyStatic` to stop walking as soon as its
   // stringficiation threshold is met.
   let hasRuntimeConstant = false
-
+  const children = parent.children
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for hoisting.
@@ -114,21 +115,47 @@ function walk(
 
     // walk further
     if (child.type === NodeTypes.ELEMENT) {
-      walk(child.children, context, resultCache)
+      walk(child, context, resultCache)
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child.children, context, resultCache, child.children.length === 1)
+      walk(child, context, resultCache, child.children.length === 1)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
         const branchChildren = child.branches[i].children
         // Do not hoist v-if single child because it has to be a block
-        walk(branchChildren, context, resultCache, branchChildren.length === 1)
+        walk(
+          child.branches[i],
+          context,
+          resultCache,
+          branchChildren.length === 1
+        )
       }
     }
   }
 
   if (!hasRuntimeConstant && hasHoistedNode && context.transformHoist) {
-    context.transformHoist(children, context)
+    if (
+      parent.type === NodeTypes.ELEMENT &&
+      (parent.tagType === ElementTypes.COMPONENT ||
+        parent.tagType === ElementTypes.TEMPLATE)
+    ) {
+      // slot case
+      // shouldn't stringify root level node inside slot, but the children of themselves can be stringify
+      children.forEach(child => {
+        if (
+          child.type === NodeTypes.ELEMENT ||
+          child.type === NodeTypes.COMPOUND_EXPRESSION
+        ) {
+          context.transformHoist!(
+            child.children as TemplateChildNode[],
+            context,
+            child as ElementNode
+          )
+        }
+      })
+    } else {
+      context.transformHoist(children, context, parent)
+    }
   }
 }
 

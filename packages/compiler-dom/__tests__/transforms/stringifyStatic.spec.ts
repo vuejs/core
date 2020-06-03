@@ -2,7 +2,8 @@ import {
   compile,
   NodeTypes,
   CREATE_STATIC,
-  createSimpleExpression
+  createSimpleExpression,
+  generate
 } from '../../src'
 import {
   stringifyStatic,
@@ -89,11 +90,8 @@ describe('stringify static html', () => {
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
       )}</div>`
     )
-    // should have 5 hoisted nodes, but the other 4 should be null
-    expect(ast.hoists.length).toBe(5)
-    for (let i = 1; i < 5; i++) {
-      expect(ast.hoists[i]).toBe(null)
-    }
+
+    expect(ast.hoists.length).toBe(1)
     // should be optimized now
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -224,5 +222,75 @@ describe('stringify static html', () => {
     expect(ast2.hoists[0]).toMatchObject({
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
+  })
+
+  test('should not work on root level element inside slot', () => {
+    const { ast } = compileWithStringify(
+      `<comp>${repeat(
+        `<span class="foo"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</comp>`
+    )
+    expect(generate(ast).code).toMatchInlineSnapshot(`
+      "const _Vue = Vue
+      const { createVNode: _createVNode } = _Vue
+
+      const _hoisted_1 = /*#__PURE__*/_createVNode(\\"span\\", { class: \\"foo\\" }, [], -1 /* HOISTED */)
+      const _hoisted_2 = /*#__PURE__*/_createVNode(\\"span\\", { class: \\"foo\\" }, [], -1 /* HOISTED */)
+      const _hoisted_3 = /*#__PURE__*/_createVNode(\\"span\\", { class: \\"foo\\" }, [], -1 /* HOISTED */)
+      const _hoisted_4 = /*#__PURE__*/_createVNode(\\"span\\", { class: \\"foo\\" }, [], -1 /* HOISTED */)
+      const _hoisted_5 = /*#__PURE__*/_createVNode(\\"span\\", { class: \\"foo\\" }, [], -1 /* HOISTED */)
+
+      return function render(_ctx, _cache) {
+        with (_ctx) {
+          const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+          const _component_comp = _resolveComponent(\\"comp\\")
+
+          return (_openBlock(), _createBlock(_component_comp, null, {
+            default: _withCtx(() => [
+              _hoisted_1,
+              _hoisted_2,
+              _hoisted_3,
+              _hoisted_4,
+              _hoisted_5
+            ]),
+            _: 1
+          }))
+        }
+      }"
+    `)
+  })
+
+  test('should work on inner elements inside top level elements in slot', () => {
+    const { ast } = compileWithStringify(
+      `<comp><div>${repeat(
+        `<span class="foo"/>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</div></comp>`
+    )
+    expect(generate(ast).code).toMatchInlineSnapshot(`
+      "const _Vue = Vue
+      const { createVNode: _createVNode, createStaticVNode: _createStaticVNode } = _Vue
+
+      const _hoisted_1 = /*#__PURE__*/_createVNode(\\"div\\", null, [
+        /*#__PURE__*/_createStaticVNode(\\"<span class=\\\\\\"foo\\\\\\"></span><span class=\\\\\\"foo\\\\\\"></span><span class=\\\\\\"foo\\\\\\"></span><span class=\\\\\\"foo\\\\\\"></span><span class=\\\\\\"foo\\\\\\"></span>\\", 5)
+      ], -1 /* HOISTED */)
+
+      return function render(_ctx, _cache) {
+        with (_ctx) {
+          const { createVNode: _createVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+          const _component_comp = _resolveComponent(\\"comp\\")
+
+          return (_openBlock(), _createBlock(_component_comp, null, {
+            default: _withCtx(() => [
+              _hoisted_1
+            ]),
+            _: 1
+          }))
+        }
+      }"
+    `)
   })
 })

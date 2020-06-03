@@ -58,12 +58,14 @@ type StringifiableNode = PlainElementNode | TextCallNode
  *
  * This optimization is only performed in Node.js.
  */
-export const stringifyStatic: HoistTransform = (children, context) => {
+export const stringifyStatic: HoistTransform = (children, context, parent) => {
   let nc = 0 // current node count
   let ec = 0 // current element with binding count
   const currentChunk: StringifiableNode[] = []
+  const chunks: (JSChildNode | TemplateChildNode)[] = []
+  const parentIsHoistedNode = getHoistedNode(parent as TemplateChildNode)
 
-  const stringifyCurrentChunk = (currentIndex: number): number => {
+  const pushChunk = () => {
     if (
       nc >= StringifyThresholds.NODE_COUNT ||
       ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
@@ -77,29 +79,30 @@ export const stringifyStatic: HoistTransform = (children, context) => {
         // will insert / hydrate
         String(currentChunk.length)
       ])
-      // replace the first node's hoisted expression with the static vnode call
-      replaceHoist(currentChunk[0], staticCall, context)
 
-      if (currentChunk.length > 1) {
-        for (let i = 1; i < currentChunk.length; i++) {
-          // for the merged nodes, set their hoisted expression to null
-          replaceHoist(currentChunk[i], null, context)
+      if (parentIsHoistedNode) {
+        // if parent is hoisted, just append staticCall instead of hoisted vnode list
+        chunks.push(staticCall)
+      } else {
+        // if parent isn't hoisted, this mean is hoisted node self.
+        // so need remove chunk nodes, re-create hoist for staticCall
+        for (let i = 0; i < currentChunk.length; i++) {
+          removeHoist(currentChunk[i], context)
         }
-
-        // also remove merged nodes from children
-        const deleteCount = currentChunk.length - 1
-        children.splice(currentIndex - currentChunk.length + 1, deleteCount)
-        return deleteCount
+        chunks.push(context.hoist(staticCall))
       }
+      currentChunk.length = 0
     }
-    return 0
+    // if the nodes of currentChunk can't static, should append to chunks
+    if (currentChunk.length) {
+      chunks.push(...currentChunk)
+    }
   }
 
   let i = 0
   for (; i < children.length; i++) {
     const child = children[i]
-    const hoisted = getHoistedNode(child)
-    if (hoisted) {
+    if (getHoistedNode(child) || parentIsHoistedNode) {
       // presence of hoisted means child must be a stringifiable node
       const node = child as StringifiableNode
       const result = analyzeNode(node)
@@ -113,15 +116,20 @@ export const stringifyStatic: HoistTransform = (children, context) => {
     }
     // we only reach here if we ran into a node that is not stringifiable
     // check if currently analyzed nodes meet criteria for stringification.
-    // adjust iteration index
-    i -= stringifyCurrentChunk(i)
+    pushChunk()
+    // current node should append to chunks
+    chunks.push(child)
     // reset state
     nc = 0
     ec = 0
-    currentChunk.length = 0
   }
-  // in case the last node was also stringifiable
-  stringifyCurrentChunk(i)
+  // maybe current chunk has children
+  pushChunk()
+  if (parentIsHoistedNode) {
+    (parent as any).codegenNode.hoisted!.children = chunks as TemplateChildNode[]
+  } else {
+    parent.children = chunks as TemplateChildNode[]
+  }
 }
 
 const getHoistedNode = (node: TemplateChildNode) =>
@@ -136,13 +144,9 @@ const isStringifiableAttr = (name: string) => {
   return isKnownAttr(name) || dataAriaRE.test(name)
 }
 
-const replaceHoist = (
-  node: StringifiableNode,
-  replacement: JSChildNode | null,
-  context: TransformContext
-) => {
-  const hoistToReplace = (node.codegenNode as SimpleExpressionNode).hoisted!
-  context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
+const removeHoist = (node: StringifiableNode, context: TransformContext) => {
+  const hoistToRemove = (node.codegenNode as SimpleExpressionNode).hoisted!
+  context.hoists.splice(context.hoists.indexOf(hoistToRemove), 1)
 }
 
 /**
