@@ -65,6 +65,9 @@ describe('api: createApp', () => {
 
     app.unmount(root)
     expect(serializeInner(root)).toBe(``)
+    // #1287 should can re-mount after unmount
+    app.mount(root)
+    expect(serializeInner(root)).toBe(`0`)
   })
 
   test('provide', () => {
