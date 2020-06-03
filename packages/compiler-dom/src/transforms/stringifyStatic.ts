@@ -2,30 +2,30 @@
  * This module is Node-only.
  */
 import {
-  NodeTypes,
-  ElementNode,
-  TransformContext,
-  TemplateChildNode,
-  SimpleExpressionNode,
-  createCallExpression,
-  HoistTransform,
   CREATE_STATIC,
-  ExpressionNode,
+  createCallExpression,
+  ElementNode,
   ElementTypes,
-  PlainElementNode,
+  ExpressionNode,
+  HoistTransform,
   JSChildNode,
-  TextCallNode
+  NodeTypes,
+  PlainElementNode,
+  SimpleExpressionNode,
+  TemplateChildNode,
+  TextCallNode,
+  TransformContext
 } from '@vue/compiler-core'
 import {
-  isVoidTag,
+  escapeHtml,
+  isKnownAttr,
   isString,
   isSymbol,
-  isKnownAttr,
-  escapeHtml,
-  toDisplayString,
+  isVoidTag,
   normalizeClass,
   normalizeStyle,
-  stringifyStyle
+  stringifyStyle,
+  toDisplayString
 } from '@vue/shared'
 
 export const enum StringifyThresholds {
@@ -104,13 +104,12 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
     const child = children[i]
     if (getHoistedNode(child) || parentIsHoistedNode) {
       // presence of hoisted means child must be a stringifiable node
-      const node = child as StringifiableNode
-      const result = analyzeNode(node)
+      const result = analyzeNode(child)
       if (result) {
         // node is stringifiable, record state
         nc += result[0]
         ec += result[1]
-        currentChunk.push(node)
+        currentChunk.push(child as StringifiableNode)
         continue
       }
     }
@@ -156,9 +155,12 @@ const removeHoist = (node: StringifiableNode, context: TransformContext) => {
  *   - nc is the number of nodes inside
  *   - ec is the number of element with bindings inside
  */
-function analyzeNode(node: StringifiableNode): [number, number] | false {
+function analyzeNode(node: TemplateChildNode): [number, number] | false {
   if (node.type === NodeTypes.TEXT_CALL) {
     return [1, 0]
+  }
+  if (node.type !== NodeTypes.ELEMENT) {
+    return false
   }
 
   let nc = 1 // node count
