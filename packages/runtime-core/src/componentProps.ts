@@ -273,7 +273,7 @@ function resolvePropValue(
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
       value =
-        opt._vueTypes_name === 'function' && isFunction(defaultValue)
+        opt._vueTypes_name !== 'function' && isFunction(defaultValue)
           ? defaultValue()
           : defaultValue
     }
