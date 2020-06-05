@@ -225,7 +225,9 @@ export function createAppAPI<HostElement>(
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
-            `App has already been mounted. Create a new app instance instead.`
+            `App has already been mounted.\n` +
+              `If you want remount the same app.Please put your app creation logic in a factory function ` +
+              `and call it to create a new app instance. eg. "const factory = () => createApp(App)"`
           )
         }
       },
