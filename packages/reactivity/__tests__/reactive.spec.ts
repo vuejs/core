@@ -206,6 +206,11 @@ describe('reactivity/reactive', () => {
 
       expect(isReactive(shallowMap.get(key))).toBe(false)
     })
+    it('should observe properties', () => {
+      const map = shallowReactive(new Map())
+      map.set('key', 'value')
+      expect(map.size).toBe(1)
+    })
 
     test('should not get reactive on foreach', () => {
       const shallowSet = shallowReactive(new Set())
