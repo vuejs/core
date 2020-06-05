@@ -189,16 +189,10 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
     }
     for (let i = 0; i < node.children.length; i++) {
       nc++
-      if (nc >= StringifyThresholds.NODE_COUNT) {
-        return true
-      }
       const child = node.children[i]
       if (child.type === NodeTypes.ELEMENT) {
         if (child.props.length > 0) {
           ec++
-          if (ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT) {
-            return true
-          }
         }
         walk(child)
         if (bailed) {
