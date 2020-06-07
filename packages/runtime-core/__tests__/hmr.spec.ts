@@ -244,7 +244,7 @@ describe('hot module replacement', () => {
     render(h(Parent), root)
     expect(serializeInner(root)).toBe(`<div class="test">foo</div>`)
 
-    rerender(parentId, compileToFunction(`<Child msg="bar" />`))
-    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+    rerender(parentId, compileToFunction(`<Child msg="foo" />`))
+    expect(serializeInner(root)).toBe(`<div>foo</div>`)
   })
 })
