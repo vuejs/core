@@ -218,4 +218,33 @@ describe('hot module replacement', () => {
     rerender(parentId, compileToFunction(`<Child msg="bar" />`))
     expect(serializeInner(root)).toBe(`<div>bar</div>`)
   })
+
+  // #1305 - component should remove class
+  test('remove class', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-props-parent'
+    const childId = 'test-force-props-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      props: {
+        msg: String
+      },
+      render: compileToFunction(`<div>{{ msg }}</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child class="test" msg="foo" />`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div class="test">foo</div>`)
+
+    rerender(parentId, compileToFunction(`<Child msg="bar" />`))
+    expect(serializeInner(root)).toBe(`<div>bar</div>`)
+  })
 })
