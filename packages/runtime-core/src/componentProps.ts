@@ -140,7 +140,7 @@ export function updateProps(
   } = instance
   const rawOptions = instance.type.props
   const rawCurrentProps = toRaw(props)
-  const { 0: options } = normalizePropsOptions(rawOptions)
+  const [options] = normalizePropsOptions(rawOptions)
 
   if ((optimized || patchFlag > 0) && !(patchFlag & PatchFlags.FULL_PROPS)) {
     if (patchFlag & PatchFlags.PROPS) {
@@ -220,7 +220,7 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
-  const { 0: options, 1: needCastKeys } = normalizePropsOptions(
+  const [options, needCastKeys] = normalizePropsOptions(
     instance.type.props
   )
   const emits = instance.type.emits
