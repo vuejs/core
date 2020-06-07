@@ -227,24 +227,21 @@ describe('hot module replacement', () => {
 
     const Child: ComponentOptions = {
       __hmrId: childId,
-      props: {
-        msg: String
-      },
-      render: compileToFunction(`<div>{{ msg }}</div>`)
+      render: compileToFunction(`<div>child</div>`)
     }
     createRecord(childId, Child)
 
     const Parent: ComponentOptions = {
       __hmrId: parentId,
       components: { Child },
-      render: compileToFunction(`<Child class="test" msg="foo" />`)
+      render: compileToFunction(`<Child class="test" />`)
     }
     createRecord(parentId, Parent)
 
     render(h(Parent), root)
-    expect(serializeInner(root)).toBe(`<div class="test">foo</div>`)
+    expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
 
-    rerender(parentId, compileToFunction(`<Child msg="foo" />`))
-    expect(serializeInner(root)).toBe(`<div>foo</div>`)
+    rerender(parentId, compileToFunction(`<Child/>`))
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
   })
 })
