@@ -220,7 +220,7 @@ describe('hot module replacement', () => {
   })
 
   // #1305 - component should remove class
-  test('remove class', () => {
+  test('remove static class from parent', () => {
     const root = nodeOps.createElement('div')
     const parentId = 'test-force-props-parent'
     const childId = 'test-force-props-child'
