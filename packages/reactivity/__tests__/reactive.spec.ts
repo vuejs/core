@@ -176,6 +176,15 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.foo)).toBe(false)
   })
 
+  test('should not observe objects with __v_skip', () => {
+    const original = {
+      foo: 1,
+      __v_skip: true
+    }
+    const observed = reactive(original)
+    expect(isReactive(observed)).toBe(false)
+  })
+
   describe('shallowReactive', () => {
     test('should not make non-reactive properties reactive', () => {
       const props = shallowReactive({ n: { foo: 1 } })
