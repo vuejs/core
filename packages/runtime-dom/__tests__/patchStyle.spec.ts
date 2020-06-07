@@ -6,8 +6,7 @@ describe(`runtime-dom: style patching`, () => {
     patchProp(el, 'style', {}, 'color:red')
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
   })
-  {
-  }
+
   // #1309
   it('should not patch same string style', () => {
     const el = document.createElement('div')
