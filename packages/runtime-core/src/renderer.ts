@@ -712,6 +712,16 @@ function baseCreateRenderer(
           optimized || !!vnode.dynamicChildren
         )
       }
+
+      /**
+       * When select is mounted with props.value,
+       * select won't be able to set any value because
+       * the options are not rendered yet.
+       */
+      if (props && props.value && el.value !== props.value) {
+        hostPatchProp(el, 'value', null, props.value, isSVG)
+      }
+
       if (transition && !transition.persisted) {
         transition.beforeEnter(el)
       }
