@@ -220,9 +220,7 @@ function setFullProps(
   props: Data,
   attrs: Data
 ) {
-  const [options, needCastKeys] = normalizePropsOptions(
-    instance.type.props
-  )
+  const [options, needCastKeys] = normalizePropsOptions(instance.type.props)
   const emits = instance.type.emits
 
   if (rawProps) {

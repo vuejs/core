@@ -28,9 +28,9 @@ import { Ref, ComponentPublicInstance } from '@vue/runtime-core'
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
-import * as CSS from 'csstype'
+import { Properties as CSS_Properties } from 'csstype'
 
-export interface CSSProperties extends CSS.Properties<string | number> {
+export interface CSSProperties extends CSS_Properties<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
    * using CSSType. You're able to use type assertion or module augmentation
