@@ -225,7 +225,7 @@ describe('stringify static html', () => {
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
-  
+
   test('should bail on non attribute bindings', () => {
     const { ast } = compileWithStringify(
       `<div><div>${repeat(
@@ -237,7 +237,7 @@ describe('stringify static html', () => {
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
-    
+
     const { ast: ast2 } = compileWithStringify(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
