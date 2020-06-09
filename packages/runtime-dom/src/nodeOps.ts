@@ -64,17 +64,14 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
         (tempSVGContainer = doc.createElementNS(svgNS, 'svg'))
       : tempContainer || (tempContainer = doc.createElement('div'))
     temp.innerHTML = content
-    const node = temp.children[0]
-    nodeOps.insert(node, parent, anchor)
-    return node
-  }
-}
-
-if (__DEV__) {
-  // __UNSAFE__
-  // Reason: innerHTML.
-  // same as `insertStaticContent`, but this is also dev only (for HMR).
-  nodeOps.setStaticContent = (el, content) => {
-    el.innerHTML = content
+    const first = temp.firstChild as Element
+    let node: Element | null = first
+    let last: Element = node
+    while (node) {
+      last = node
+      nodeOps.insert(node, parent, anchor)
+      node = temp.firstChild as Element
+    }
+    return [first, last]
   }
 }

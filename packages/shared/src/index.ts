@@ -125,3 +125,8 @@ export const def = (obj: object, key: string | symbol, value: any) => {
     value
   })
 }
+
+export const toNumber = (val: any): any => {
+  const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}

@@ -100,6 +100,8 @@ export function useTransitionState(): TransitionState {
 const BaseTransitionImpl = {
   name: `BaseTransition`,
 
+  inheritRef: true,
+
   props: {
     mode: String,
     appear: Boolean,

@@ -63,6 +63,8 @@ const KeepAliveImpl = {
   // would prevent it from being tree-shaken.
   __isKeepAlive: true,
 
+  inheritRef: true,
+
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],

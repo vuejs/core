@@ -536,7 +536,7 @@ describe('ssr: renderToString', () => {
 
     test('Static', async () => {
       const content = `<div id="ok">hello<span>world</span></div>`
-      expect(await renderToString(createStaticVNode(content))).toBe(content)
+      expect(await renderToString(createStaticVNode(content, 1))).toBe(content)
     })
   })
 

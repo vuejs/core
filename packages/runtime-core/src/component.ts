@@ -82,6 +82,7 @@ export interface FunctionalComponent<
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
+  inheritRef?: boolean
   displayName?: string
 }
 
@@ -321,7 +322,7 @@ export interface ComponentInternalInstance {
    * hmr marker (dev only)
    * @internal
    */
-  renderUpdated?: boolean
+  hmrUpdated?: boolean
 }
 
 const emptyAppContext = createAppContext()

@@ -187,5 +187,32 @@ describe('reactivity/reactive', () => {
       props.n = reactive({ foo: 2 })
       expect(isReactive(props.n)).toBe(true)
     })
+
+    test('should not observe when iterating', () => {
+      const shallowSet = shallowReactive(new Set())
+      const a = {}
+      shallowSet.add(a)
+
+      const spreadA = [...shallowSet][0]
+      expect(isReactive(spreadA)).toBe(false)
+    })
+
+    test('should not get reactive entry', () => {
+      const shallowMap = shallowReactive(new Map())
+      const a = {}
+      const key = 'a'
+
+      shallowMap.set(key, a)
+
+      expect(isReactive(shallowMap.get(key))).toBe(false)
+    })
+
+    test('should not get reactive on foreach', () => {
+      const shallowSet = shallowReactive(new Set())
+      const a = {}
+      shallowSet.add(a)
+
+      shallowSet.forEach(x => expect(isReactive(x)).toBe(false))
+    })
   })
 })

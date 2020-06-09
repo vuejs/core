@@ -70,9 +70,9 @@ function rerender(id: string, newRender?: Function) {
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update
-    instance.renderUpdated = true
+    instance.hmrUpdated = true
     instance.update()
-    instance.renderUpdated = false
+    instance.hmrUpdated = false
   })
 }
 

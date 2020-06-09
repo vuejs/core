@@ -1,4 +1,4 @@
-import { isObject, toRawType, def, hasOwn } from '@vue/shared'
+import { isObject, toRawType, def, hasOwn, makeMap } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
@@ -7,10 +7,10 @@ import {
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
-  readonlyCollectionHandlers
+  readonlyCollectionHandlers,
+  shallowCollectionHandlers
 } from './collectionHandlers'
 import { UnwrapRef, Ref } from './ref'
-import { makeMap } from '@vue/shared'
 
 export const enum ReactiveFlags {
   skip = '__v_skip',
@@ -68,7 +68,7 @@ export function shallowReactive<T extends object>(target: T): T {
     target,
     false,
     shallowReactiveHandlers,
-    mutableCollectionHandlers
+    shallowCollectionHandlers
   )
 }
 
