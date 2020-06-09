@@ -237,6 +237,17 @@ describe('stringify static html', () => {
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
+    
+    const { ast: ast2 } = compileWithStringify(
+      `<div><div>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}<input :indeterminate="true"></div></div>`
+    )
+    expect(ast2.hoists.length).toBe(1)
+    expect(ast2.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
   })
 
   // https://github.com/vitejs/vite/issues/226
@@ -249,17 +260,6 @@ describe('stringify static html', () => {
     )
     expect(ast.hoists.length).toBe(1)
     expect(ast.hoists[0]).toMatchObject({
-      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
-    })
-
-    const { ast: ast2 } = compileWithStringify(
-      `<div><div>${repeat(
-        `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}<input :indeterminate="true"></div></div>`
-    )
-    expect(ast2.hoists.length).toBe(1)
-    expect(ast2.hoists[0]).toMatchObject({
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
