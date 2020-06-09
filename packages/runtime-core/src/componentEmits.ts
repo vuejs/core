@@ -12,18 +12,13 @@ import { ComponentInternalInstance } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
 import { normalizePropsOptions } from './componentProps'
+import { UnionToIntersection } from './helpers/typeUtils'
 
 export type ObjectEmitsOptions = Record<
   string,
   ((...args: any[]) => any) | null
 >
 export type EmitsOptions = ObjectEmitsOptions | string[]
-
-type UnionToIntersection<U> = (U extends any
-  ? (k: U) => void
-  : never) extends ((k: infer I) => void)
-  ? I
-  : never
 
 export type EmitFn<
   Options = ObjectEmitsOptions,

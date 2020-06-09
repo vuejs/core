@@ -443,6 +443,11 @@ describe('api: options', () => {
       }
     }
     const mixinB = {
+      props: {
+        bP: {
+          type: String
+        }
+      },
       data() {
         return {
           b: 2
@@ -452,40 +457,65 @@ describe('api: options', () => {
         calls.push('mixinB created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
+        expect(this.bP).toBeUndefined()
         expect(this.c).toBe(3)
+        expect(this.cP1).toBeUndefined()
       },
       mounted() {
         calls.push('mixinB mounted')
       }
     }
-    const Comp = {
-      mixins: [mixinA, mixinB],
+    const mixinC = defineComponent({
+      props: ['cP1', 'cP2'],
       data() {
         return {
           c: 3
         }
       },
-      created(this: any) {
+      created() {
+        calls.push('mixinC created')
+        expect(this.c).toBe(3)
+        expect(this.cP1).toBeUndefined()
+      },
+      mounted() {
+        calls.push('mixinC mounted')
+      }
+    })
+    const Comp = defineComponent({
+      props: {
+        aaa: String
+      },
+      mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
+      data() {
+        return {
+          z: 4
+        }
+      },
+      created() {
         calls.push('comp created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
+        expect(this.bP).toBeUndefined()
         expect(this.c).toBe(3)
+        expect(this.cP2).toBeUndefined()
+        expect(this.z).toBe(4)
       },
       mounted() {
         calls.push('comp mounted')
       },
-      render(this: any) {
+      render() {
         return `${this.a}${this.b}${this.c}`
       }
-    }
-
+    })
     expect(renderToString(h(Comp))).toBe(`123`)
     expect(calls).toEqual([
       'mixinA created',
       'mixinB created',
+      'mixinC created',
       'comp created',
       'mixinA mounted',
       'mixinB mounted',
+      'mixinC mounted',
       'comp mounted'
     ])
   })
@@ -498,12 +528,17 @@ describe('api: options', () => {
           a: 1
         }
       },
-      mounted() {
+      methods: {
+        sayA() {}
+      },
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBe(2)
         calls.push('base')
       }
     }
-    const Comp = {
-      extends: Base,
+    const Comp = defineComponent({
+      extends: defineComponent(Base),
       data() {
         return {
           b: 2
@@ -512,13 +547,64 @@ describe('api: options', () => {
       mounted() {
         calls.push('comp')
       },
-      render(this: any) {
+      render() {
         return `${this.a}${this.b}`
       }
-    }
+    })
 
     expect(renderToString(h(Comp))).toBe(`12`)
     expect(calls).toEqual(['base', 'comp'])
+  })
+
+  test('extends with mixins', () => {
+    const calls: string[] = []
+    const Base = {
+      data() {
+        return {
+          a: 1
+        }
+      },
+      methods: {
+        sayA() {}
+      },
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBeTruthy()
+        expect(this.c).toBe(2)
+        calls.push('base')
+      }
+    }
+    const Base2 = {
+      data() {
+        return {
+          b: true
+        }
+      },
+      mounted(this: any) {
+        expect(this.a).toBe(1)
+        expect(this.b).toBeTruthy()
+        expect(this.c).toBe(2)
+        calls.push('base2')
+      }
+    }
+    const Comp = defineComponent({
+      extends: defineComponent(Base),
+      mixins: [defineComponent(Base2)],
+      data() {
+        return {
+          c: 2
+        }
+      },
+      mounted() {
+        calls.push('comp')
+      },
+      render() {
+        return `${this.a}${this.b}${this.c}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe(`1true2`)
+    expect(calls).toEqual(['base', 'base2', 'comp'])
   })
 
   test('accessing setup() state from options', async () => {

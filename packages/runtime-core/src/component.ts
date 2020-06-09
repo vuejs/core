@@ -7,6 +7,7 @@ import {
   shallowReadonly
 } from '@vue/reactivity'
 import {
+  CreateComponentPublicInstance,
   ComponentPublicInstance,
   PublicInstanceProxyHandlers,
   RuntimeCompiledPublicInstanceProxyHandlers,
@@ -96,7 +97,15 @@ export type Component = ComponentOptions | FunctionalComponent<any>
 // The constructor type is an artificial type returned by defineComponent().
 export type PublicAPIComponent =
   | Component
-  | { new (...args: any[]): ComponentPublicInstance<any, any, any, any, any> }
+  | {
+      new (...args: any[]): CreateComponentPublicInstance<
+        any,
+        any,
+        any,
+        any,
+        any
+      >
+    }
 
 export { ComponentOptions }
 

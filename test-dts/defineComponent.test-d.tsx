@@ -23,6 +23,7 @@ describe('with object props', () => {
     ddd: string[]
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
+    hhh: boolean
   }
 
   type GT = string & { __brand: unknown }
@@ -67,6 +68,10 @@ describe('with object props', () => {
       fff: {
         type: Function as PropType<(a: number, b: string) => { a: boolean }>,
         required: true
+      },
+      hhh: {
+        type: Boolean,
+        required: true
       }
     },
     setup(props) {
@@ -83,6 +88,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['ddd']>(props.ddd)
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
+      expectType<ExpectedProps['hhh']>(props.hhh)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -112,6 +118,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['ddd']>(props.ddd)
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
+      expectType<ExpectedProps['hhh']>(props.hhh)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -129,6 +136,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['ddd']>(this.ddd)
       expectType<ExpectedProps['eee']>(this.eee)
       expectType<ExpectedProps['fff']>(this.fff)
+      expectType<ExpectedProps['hhh']>(this.hhh)
 
       // @ts-expect-error props on `this` should be readonly
       expectError((this.a = 1))
@@ -159,6 +167,7 @@ describe('with object props', () => {
       ddd={['ddd']}
       eee={() => ({ a: 'eee' })}
       fff={(a, b) => ({ a: a > +b })}
+      hhh={false}
       // should allow extraneous as attrs
       class="bar"
       // should allow key
@@ -210,7 +219,7 @@ describe('with object props', () => {
 // })
 
 describe('type inference w/ array props declaration', () => {
-  defineComponent({
+  const MyComponent = defineComponent({
     props: ['a', 'b'],
     setup(props) {
       // @ts-expect-error props should be readonly
@@ -231,6 +240,9 @@ describe('type inference w/ array props declaration', () => {
       expectType<number>(this.c)
     }
   })
+  expectType<JSX.Element>(<MyComponent a={[1, 2]} b="b" />)
+  // @ts-expect-error
+  expectError(<MyComponent other="other" />)
 })
 
 describe('type inference w/ options API', () => {
@@ -294,6 +306,275 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.d)
     }
   })
+})
+
+describe('with mixins', () => {
+  const MixinA = defineComponent({
+    props: {
+      aP1: {
+        type: String,
+        default: 'aP1'
+      },
+      aP2: Boolean
+    },
+    data() {
+      return {
+        a: 1
+      }
+    }
+  })
+  const MixinB = defineComponent({
+    props: ['bP1', 'bP2'],
+    data() {
+      return {
+        b: 2
+      }
+    }
+  })
+  const MixinC = defineComponent({
+    data() {
+      return {
+        c: 3
+      }
+    }
+  })
+  const MixinD = defineComponent({
+    mixins: [MixinA],
+    data() {
+      return {
+        d: 4
+      }
+    },
+    computed: {
+      dC1(): number {
+        return this.d + this.a
+      },
+      dC2(): string {
+        return this.aP1 + 'dC2'
+      }
+    }
+  })
+  const MyComponent = defineComponent({
+    mixins: [MixinA, MixinB, MixinC, MixinD],
+    props: {
+      // required should make property non-void
+      z: {
+        type: String,
+        required: true
+      }
+    },
+    render() {
+      const props = this.$props
+      // props
+      expectType<string>(props.aP1)
+      expectType<boolean | undefined>(props.aP2)
+      expectType<any>(props.bP1)
+      expectType<any>(props.bP2)
+      expectType<string>(props.z)
+
+      const data = this.$data
+      expectType<number>(data.a)
+      expectType<number>(data.b)
+      expectType<number>(data.c)
+      expectType<number>(data.d)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<string>(this.aP1)
+      expectType<boolean | undefined>(this.aP2)
+      expectType<number>(this.b)
+      expectType<any>(this.bP1)
+      expectType<number>(this.c)
+      expectType<number>(this.d)
+      expectType<number>(this.dC1)
+      expectType<string>(this.dC2)
+
+      // props should be readonly
+      // @ts-expect-error
+      expectError((this.aP1 = 'new'))
+      // @ts-expect-error
+      expectError((this.z = 1))
+
+      // props on `this` should be readonly
+      // @ts-expect-error
+      expectError((this.bP1 = 1))
+
+      // string value can not assigned to number type value
+      // @ts-expect-error
+      expectError((this.c = '1'))
+
+      // setup context properties should be mutable
+      this.d = 5
+
+      return null
+    }
+  })
+
+  // Test TSX
+  expectType<JSX.Element>(
+    <MyComponent aP1={'aP'} aP2 bP1={1} bP2={[1, 2]} z={'z'} />
+  )
+
+  // missing required props
+  // @ts-expect-error
+  expectError(<MyComponent />)
+
+  // wrong prop types
+  // @ts-expect-error
+  expectError(<MyComponent aP1="ap" aP2={'wrong type'} bP1="b" z={'z'} />)
+  // @ts-expect-error
+  expectError(<MyComponent aP1={1} bP2={[1]} />)
+})
+
+describe('with extends', () => {
+  const Base = defineComponent({
+    props: {
+      aP1: Boolean,
+      aP2: {
+        type: Number,
+        default: 2
+      }
+    },
+    data() {
+      return {
+        a: 1
+      }
+    },
+    computed: {
+      c(): number {
+        return this.aP2 + this.a
+      }
+    }
+  })
+  const MyComponent = defineComponent({
+    extends: Base,
+    props: {
+      // required should make property non-void
+      z: {
+        type: String,
+        required: true
+      }
+    },
+    render() {
+      const props = this.$props
+      // props
+      expectType<boolean | undefined>(props.aP1)
+      expectType<number>(props.aP2)
+      expectType<string>(props.z)
+
+      const data = this.$data
+      expectType<number>(data.a)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<boolean | undefined>(this.aP1)
+      expectType<number>(this.aP2)
+
+      // setup context properties should be mutable
+      this.a = 5
+
+      return null
+    }
+  })
+
+  // Test TSX
+  expectType<JSX.Element>(<MyComponent aP2={3} aP1 z={'z'} />)
+
+  // missing required props
+  // @ts-expect-error
+  expectError(<MyComponent />)
+
+  // wrong prop types
+  // @ts-expect-error
+  expectError(<MyComponent aP2={'wrong type'} z={'z'} />)
+  // @ts-expect-error
+  expectError(<MyComponent aP1={3} />)
+})
+
+describe('extends with mixins', () => {
+  const Mixin = defineComponent({
+    props: {
+      mP1: {
+        type: String,
+        default: 'mP1'
+      },
+      mP2: Boolean
+    },
+    data() {
+      return {
+        a: 1
+      }
+    }
+  })
+  const Base = defineComponent({
+    props: {
+      p1: Boolean,
+      p2: {
+        type: Number,
+        default: 2
+      }
+    },
+    data() {
+      return {
+        b: 2
+      }
+    },
+    computed: {
+      c(): number {
+        return this.p2 + this.b
+      }
+    }
+  })
+  const MyComponent = defineComponent({
+    extends: Base,
+    mixins: [Mixin],
+    props: {
+      // required should make property non-void
+      z: {
+        type: String,
+        required: true
+      }
+    },
+    render() {
+      const props = this.$props
+      // props
+      expectType<boolean | undefined>(props.p1)
+      expectType<number>(props.p2)
+      expectType<string>(props.z)
+      expectType<string>(props.mP1)
+      expectType<boolean | undefined>(props.mP2)
+
+      const data = this.$data
+      expectType<number>(data.a)
+      expectType<number>(data.b)
+
+      // should also expose declared props on `this`
+      expectType<number>(this.a)
+      expectType<number>(this.b)
+      expectType<boolean | undefined>(this.p1)
+      expectType<number>(this.p2)
+      expectType<string>(this.mP1)
+      expectType<boolean | undefined>(this.mP2)
+
+      // setup context properties should be mutable
+      this.a = 5
+
+      return null
+    }
+  })
+
+  // Test TSX
+  expectType<JSX.Element>(<MyComponent mP1="p1" mP2 p1 p2={1} z={'z'} />)
+
+  // missing required props
+  // @ts-expect-error
+  expectError(<MyComponent />)
+
+  // wrong prop types
+  // @ts-expect-error
+  expectError(<MyComponent p2={'wrong type'} z={'z'} />)
+  // @ts-expect-error
+  expectError(<MyComponent mP1={3} />)
 })
 
 describe('compatibility w/ createApp', () => {

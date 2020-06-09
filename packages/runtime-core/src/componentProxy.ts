@@ -14,6 +14,9 @@ import {
   ComponentOptionsBase,
   ComputedOptions,
   MethodOptions,
+  ComponentOptionsMixin,
+  OptionTypesType,
+  OptionTypesKeys,
   resolveMergedOptions
 } from './componentOptions'
 import { normalizePropsOptions } from './componentProps'
@@ -24,6 +27,7 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { warn } from './warning'
+import { UnionToIntersection } from './helpers/typeUtils'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -52,6 +56,69 @@ import { warn } from './warning'
  */
 export interface ComponentCustomProperties {}
 
+type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
+  ? ComponentOptionsMixin extends T ? true : false
+  : false
+
+type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
+  infer P,
+  infer B,
+  infer D,
+  infer C,
+  infer M,
+  infer Mixin,
+  infer Extends,
+  any
+>
+  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}> &
+      IntersectionMixin<Mixin> &
+      IntersectionMixin<Extends>
+  : never
+
+// ExtractMixin(map type) is used to resolve circularly references
+type ExtractMixin<T> = {
+  Mixin: MixinToOptionTypes<T>
+}[T extends ComponentOptionsMixin ? 'Mixin' : never]
+
+type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
+  ? OptionTypesType<{}, {}, {}, {}, {}>
+  : UnionToIntersection<ExtractMixin<T>>
+
+type UnwrapMixinsType<
+  T,
+  Type extends OptionTypesKeys
+> = T extends OptionTypesType ? T[Type] : never
+
+type EnsureNonVoid<T> = T extends void ? {} : T
+
+export type CreateComponentPublicInstance<
+  P = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  PublicProps = P,
+  PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
+  PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
+  PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
+  PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>,
+  PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> &
+    EnsureNonVoid<C>,
+  PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
+    EnsureNonVoid<M>
+> = ComponentPublicInstance<
+  PublicP,
+  PublicB,
+  PublicD,
+  PublicC,
+  PublicM,
+  E,
+  PublicProps,
+  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E>
+>
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -61,11 +128,12 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  PublicProps = P
+  PublicProps = P,
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any>
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: PublicProps
+  $props: P & PublicProps
   $attrs: Data
   $refs: Data
   $slots: Slots
@@ -73,7 +141,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: ComponentOptionsBase<P, B, D, C, M, E>
+  $options: Options
   $forceUpdate: ReactiveEffect
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
@@ -83,6 +151,12 @@ export type ComponentPublicInstance<
   ExtractComputedReturns<C> &
   M &
   ComponentCustomProperties
+
+export type ComponentPublicInstanceConstructor<
+  T extends ComponentPublicInstance
+> = {
+  new (): T
+}
 
 const publicPropertiesMap: Record<
   string,

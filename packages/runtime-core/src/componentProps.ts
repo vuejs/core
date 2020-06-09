@@ -67,10 +67,12 @@ type OptionalKeys<T, MakeDefaultRequired> = Exclude<
 type InferPropType<T> = T extends null
   ? any // null & true would fail to infer
   : T extends { type: null | true }
-    ? any // somehow `ObjectConstructor` when inferred from { (): T } becomes `any`
+    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : T extends ObjectConstructor | { type: ObjectConstructor }
       ? { [key: string]: any }
-      : T extends Prop<infer V> ? V : T
+      : T extends BooleanConstructor | { type: BooleanConstructor }
+        ? boolean
+        : T extends Prop<infer V> ? V : T
 
 export type ExtractPropTypes<
   O,
