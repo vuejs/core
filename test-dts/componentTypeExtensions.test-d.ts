@@ -1,5 +1,4 @@
-import { expectError, expectType } from 'tsd'
-import { defineComponent } from './index'
+import { defineComponent, expectError, expectType } from './index'
 
 declare module '@vue/runtime-core' {
   interface ComponentCustomOptions {
@@ -20,9 +19,11 @@ export const Custom = defineComponent({
 
   methods: {
     aMethod() {
+      // @ts-expect-error
       expectError(this.notExisting)
       this.counter++
       this.state = 'running'
+      // @ts-expect-error
       expectError((this.state = 'not valid'))
     }
   }

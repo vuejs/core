@@ -135,7 +135,7 @@ export interface ComponentOptionsBase<
 
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by defineComponent() or FunctionalComponent
-  call?: never
+  call?: (this: unknown, ...args: unknown[]) => never
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
   __isTeleport?: never
@@ -197,9 +197,9 @@ export interface MethodOptions {
 }
 
 export type ExtractComputedReturns<T extends any> = {
-  [key in keyof T]: T[key] extends { get: Function }
-    ? ReturnType<T[key]['get']>
-    : ReturnType<T[key]>
+  [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
+    ? TReturn
+    : T[key] extends (...args: any[]) => infer TReturn ? TReturn : never
 }
 
 type WatchOptionItem =
