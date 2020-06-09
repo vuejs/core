@@ -15,7 +15,11 @@ import {
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext
 } from './componentProxy'
-import { ComponentPropsOptions, initProps } from './componentProps'
+import {
+  ComponentPropsOptions,
+  NormalizedPropsOptions,
+  initProps
+} from './componentProps'
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
@@ -50,7 +54,11 @@ export type Data = { [key: string]: unknown }
 
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
-export interface SFCInternalOptions {
+export interface ComponentInternalOptions {
+  /**
+   * @internal
+   */
+  __props?: NormalizedPropsOptions | []
   /**
    * @internal
    */
@@ -76,7 +84,7 @@ export interface SFCInternalOptions {
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions = Record<string, any>
-> extends SFCInternalOptions {
+> extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (props: P, ctx: SetupContext<E>): any
   props?: ComponentPropsOptions<P>

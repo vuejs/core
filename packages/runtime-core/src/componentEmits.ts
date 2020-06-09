@@ -44,7 +44,7 @@ export function emit(
     const options = normalizeEmitsOptions(instance.type.emits)
     if (options) {
       if (!(event in options)) {
-        const propsOptions = normalizePropsOptions(instance.type.props)[0]
+        const propsOptions = normalizePropsOptions(instance.type)[0]
         if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +

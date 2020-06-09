@@ -2,7 +2,7 @@ import {
   ComponentInternalInstance,
   Data,
   SetupContext,
-  SFCInternalOptions,
+  ComponentInternalOptions,
   PublicAPIComponent,
   Component
 } from './component'
@@ -87,7 +87,7 @@ export interface ComponentOptionsBase<
   EE extends string = string
 >
   extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
-    SFCInternalOptions,
+    ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
@@ -367,7 +367,6 @@ export function applyOptions(
     mixins,
     extends: extendsOptions,
     // state
-    props: propsOptions,
     data: dataOptions,
     computed: computedOptions,
     methods,
@@ -413,9 +412,12 @@ export function applyOptions(
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
 
-  if (__DEV__ && propsOptions) {
-    for (const key in normalizePropsOptions(propsOptions)[0]) {
-      checkDuplicateProperties!(OptionTypes.PROPS, key)
+  if (__DEV__) {
+    const propsOptions = normalizePropsOptions(options)[0]
+    if (propsOptions) {
+      for (const key in propsOptions) {
+        checkDuplicateProperties!(OptionTypes.PROPS, key)
+      }
     }
   }
 
