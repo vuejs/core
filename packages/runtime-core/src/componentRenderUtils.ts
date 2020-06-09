@@ -251,7 +251,7 @@ export function shouldUpdateComponent(
     __DEV__ &&
     (prevChildren || nextChildren) &&
     parentComponent &&
-    parentComponent.renderUpdated
+    parentComponent.hmrUpdated
   ) {
     return true
   }

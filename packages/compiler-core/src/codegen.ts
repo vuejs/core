@@ -891,7 +891,7 @@ function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
   for (let i = 0; i < l; i++) {
     const e = node.elements[i]
     if (isString(e)) {
-      push(e.replace(/`/g, '\\`'))
+      push(e.replace(/(`|\$|\\)/g, '\\$1'))
     } else {
       push('${')
       if (multilines) indent()

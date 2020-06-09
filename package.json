@@ -11,7 +11,7 @@
     "lint": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "ls-lint": "ls-lint",
     "test": "node scripts/build.js vue -f global -d && jest",
-    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsd",
+    "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
     "release": "node scripts/release.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "dev-compiler": "npm-run-all --parallel \"dev template-explorer\" serve",
@@ -70,8 +70,7 @@
     "semver": "^6.3.0",
     "serve": "^11.3.0",
     "ts-jest": "^25.2.1",
-    "tsd": "^0.11.0",
-    "typescript": "^3.8.3",
+    "typescript": "^3.9.3",
     "yorkie": "^2.0.0"
   }
 }

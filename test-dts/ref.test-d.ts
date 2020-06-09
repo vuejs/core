@@ -1,5 +1,4 @@
-import { expectType } from 'tsd'
-import { Ref, ref, isRef, unref, reactive } from './index'
+import { Ref, ref, isRef, unref, reactive, expectType } from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
