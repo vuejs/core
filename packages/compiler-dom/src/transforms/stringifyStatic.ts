@@ -25,7 +25,8 @@ import {
   toDisplayString,
   normalizeClass,
   normalizeStyle,
-  stringifyStyle
+  stringifyStyle,
+  makeMap
 } from '@vue/shared'
 
 export const enum StringifyThresholds {
@@ -145,6 +146,8 @@ const replaceHoist = (
   context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
 }
 
+const isNonStringifiable = /*#__PURE__*/ makeMap(`thead,tr,th,tbody,td`)
+
 /**
  * for a hoisted node, analyze it and return:
  * - false: bailed (contains runtime constant)
@@ -153,6 +156,10 @@ const replaceHoist = (
  *   - ec is the number of element with bindings inside
  */
 function analyzeNode(node: StringifiableNode): [number, number] | false {
+  if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
   if (node.type === NodeTypes.TEXT_CALL) {
     return [1, 0]
   }
@@ -189,16 +196,10 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
     }
     for (let i = 0; i < node.children.length; i++) {
       nc++
-      if (nc >= StringifyThresholds.NODE_COUNT) {
-        return true
-      }
       const child = node.children[i]
       if (child.type === NodeTypes.ELEMENT) {
         if (child.props.length > 0) {
           ec++
-          if (ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT) {
-            return true
-          }
         }
         walk(child)
         if (bailed) {

@@ -84,8 +84,10 @@ export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
 const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
-export const isMemberExpression = (path: string): boolean =>
-  memberExpRE.test(path)
+export const isMemberExpression = (path: string): boolean => {
+  if (!path) return false
+  return memberExpRE.test(path.trim())
+}
 
 export function getInnerRange(
   loc: SourceLocation,

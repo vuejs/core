@@ -244,6 +244,7 @@ function createSuspenseBoundary(
   /* istanbul ignore if */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
+    // @ts-ignore `console.info` cannot be null error
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`
     )
