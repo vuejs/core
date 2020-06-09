@@ -249,4 +249,17 @@ describe('stringify static html', () => {
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
+
+  test('should bail on break content with innerHTML (eg.tables related tags)', () => {
+    const { ast } = compileWithStringify(
+      `<table><tbody>${repeat(
+        `<tr class="foo"><td>foo</td></tr>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</tbody></table>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
 })
