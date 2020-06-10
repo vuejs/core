@@ -250,7 +250,7 @@ describe('stringify static html', () => {
     })
   })
 
-  test('should bail on break content with innerHTML (eg.tables related tags)', () => {
+  test('should bail on tags that has placement constraints (eg.tables related tags)', () => {
     const { ast } = compileWithStringify(
       `<table><tbody>${repeat(
         `<tr class="foo"><td>foo</td></tr>`,
@@ -260,6 +260,38 @@ describe('stringify static html', () => {
     expect(ast.hoists.length).toBe(1)
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
+
+  test('should bail inside slots', () => {
+    const { ast } = compileWithStringify(
+      `<foo>${repeat(
+        `<div class="foo"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</foo>`
+    )
+    expect(ast.hoists.length).toBe(
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    )
+    ast.hoists.forEach(node => {
+      expect(node).toMatchObject({
+        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+      })
+    })
+
+    const { ast: ast2 } = compileWithStringify(
+      `<foo><template #foo>${repeat(
+        `<div class="foo"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</template></foo>`
+    )
+    expect(ast2.hoists.length).toBe(
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    )
+    ast2.hoists.forEach(node => {
+      expect(node).toMatchObject({
+        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+      })
     })
   })
 })

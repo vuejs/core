@@ -59,7 +59,15 @@ type StringifiableNode = PlainElementNode | TextCallNode
  *
  * This optimization is only performed in Node.js.
  */
-export const stringifyStatic: HoistTransform = (children, context) => {
+export const stringifyStatic: HoistTransform = (children, context, parent) => {
+  if (
+    parent.type === NodeTypes.ELEMENT &&
+    (parent.tagType === ElementTypes.COMPONENT ||
+      parent.tagType === ElementTypes.TEMPLATE)
+  ) {
+    return
+  }
+
   let nc = 0 // current node count
   let ec = 0 // current element with binding count
   const currentChunk: StringifiableNode[] = []
