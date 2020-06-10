@@ -12,7 +12,7 @@ import { warn } from '../warning'
 
 /**
  * Compiler runtime helper for rendering <slot/>
- * @internal
+ * @private
  */
 export function renderSlot(
   slots: Slots,

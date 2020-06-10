@@ -8,14 +8,14 @@ export let currentScopeId: string | null = null
 const scopeIdStack: string[] = []
 
 /**
- * @internal
+ * @private
  */
 export function pushScopeId(id: string) {
   scopeIdStack.push((currentScopeId = id))
 }
 
 /**
- * @internal
+ * @private
  */
 export function popScopeId() {
   scopeIdStack.pop()
@@ -23,7 +23,7 @@ export function popScopeId() {
 }
 
 /**
- * @internal
+ * @private
  */
 export function withScopeId(id: string): <T extends Function>(fn: T) => T {
   return ((fn: Function) =>

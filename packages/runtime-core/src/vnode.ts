@@ -161,7 +161,7 @@ let currentBlock: VNode[] | null = null
  * disableTracking is true when creating a v-for fragment block, since a v-for
  * fragment always diffs its children.
  *
- * @internal
+ * @private
  */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
@@ -187,7 +187,7 @@ let shouldTrack = 1
  * )
  * ```
  *
- * @internal
+ * @private
  */
 export function setBlockTracking(value: number) {
   shouldTrack += value
@@ -198,7 +198,7 @@ export function setBlockTracking(value: number) {
  * A block root keeps track of dynamic nodes within the block in the
  * `dynamicChildren` array.
  *
- * @internal
+ * @private
  */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
@@ -453,14 +453,14 @@ export function cloneVNode<T, U>(
 }
 
 /**
- * @internal
+ * @private
  */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
 /**
- * @internal
+ * @private
  */
 export function createStaticVNode(
   content: string,
@@ -474,7 +474,7 @@ export function createStaticVNode(
 }
 
 /**
- * @internal
+ * @private
  */
 export function createCommentVNode(
   text: string = '',
