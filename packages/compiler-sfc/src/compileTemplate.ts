@@ -60,13 +60,20 @@ export interface SFCTemplateCompileOptions {
 
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: any
+  preprocessor: {
+    render: (
+      arg0: string,
+      arg1: any,
+      arg2: (_err: Error | null, _res: string) => void
+    ) => void
+  }
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
   // expose a synchronous API so that it is usable in Jest transforms (which
   // have to be sync because they are applied via Node.js require hooks)
-  let res: any, err
+  let res: string = '',
+    err
   preprocessor.render(
     source,
     { filename, ...preprocessOptions },
