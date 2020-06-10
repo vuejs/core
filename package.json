@@ -8,7 +8,8 @@
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
     "size": "node scripts/build.js vue runtime-dom size-check -p -f global",
-    "lint": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
+    "lint": "eslint --ext .ts packages/*/src/**",
+    "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "ls-lint": "ls-lint",
     "test": "node scripts/build.js vue -f global -d && jest",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
@@ -33,6 +34,7 @@
       "git add"
     ],
     "*.ts?(x)": [
+      "eslint",
       "prettier --parser=typescript --write",
       "git add"
     ]
@@ -50,11 +52,13 @@
     "@types/jest": "^25.1.4",
     "@types/node": "13.11.1",
     "@types/puppeteer": "^2.0.0",
+    "@typescript-eslint/parser": "^3.2.0",
     "brotli": "^1.3.2",
     "chalk": "^2.4.2",
     "conventional-changelog-cli": "^2.0.31",
     "csstype": "^2.6.8",
     "enquirer": "^2.3.2",
+    "eslint": "^7.2.0",
     "execa": "^2.0.4",
     "fs-extra": "^8.1.0",
     "jest": "^25.2.3",

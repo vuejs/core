@@ -1,7 +1,13 @@
 import { ComponentInternalInstance, Data } from './component'
 import { nextTick, queueJob } from './scheduler'
 import { instanceWatch } from './apiWatch'
-import { EMPTY_OBJ, hasOwn, isGloballyWhitelisted, NOOP } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  hasOwn,
+  isGloballyWhitelisted,
+  NOOP,
+  extend
+} from '@vue/shared'
 import {
   ReactiveEffect,
   UnwrapRef,
@@ -365,27 +371,30 @@ if (__DEV__ && !__TEST__) {
   }
 }
 
-export const RuntimeCompiledPublicInstanceProxyHandlers = {
-  ...PublicInstanceProxyHandlers,
-  get(target: ComponentRenderContext, key: string) {
-    // fast path for unscopables when using `with` block
-    if ((key as any) === Symbol.unscopables) {
-      return
+export const RuntimeCompiledPublicInstanceProxyHandlers = extend(
+  {},
+  PublicInstanceProxyHandlers,
+  {
+    get(target: ComponentRenderContext, key: string) {
+      // fast path for unscopables when using `with` block
+      if ((key as any) === Symbol.unscopables) {
+        return
+      }
+      return PublicInstanceProxyHandlers.get!(target, key, target)
+    },
+    has(_: ComponentRenderContext, key: string) {
+      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
+        warn(
+          `Property ${JSON.stringify(
+            key
+          )} should not start with _ which is a reserved prefix for Vue internals.`
+        )
+      }
+      return has
     }
-    return PublicInstanceProxyHandlers.get!(target, key, target)
-  },
-  has(_: ComponentRenderContext, key: string) {
-    const has = key[0] !== '_' && !isGloballyWhitelisted(key)
-    if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
-      warn(
-        `Property ${JSON.stringify(
-          key
-        )} should not start with _ which is a reserved prefix for Vue internals.`
-      )
-    }
-    return has
   }
-}
+)
 
 // In dev mode, the proxy target exposes the same properties as seen on `this`
 // for easier console inspection. In prod mode it will be an empty object so

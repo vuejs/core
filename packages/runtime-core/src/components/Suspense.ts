@@ -495,6 +495,7 @@ function hydrateSuspense(
     optimized: boolean
   ) => Node | null
 ): Node | null {
+  /* eslint-disable no-restricted-globals */
   const suspense = (vnode.suspense = createSuspenseBoundary(
     vnode,
     parentSuspense,
@@ -524,6 +525,7 @@ function hydrateSuspense(
     suspense.resolve()
   }
   return result
+  /* eslint-enable no-restricted-globals */
 }
 
 export function normalizeSuspenseChildren(

@@ -14,7 +14,8 @@ import {
   makeMap,
   isReservedProp,
   EMPTY_ARR,
-  def
+  def,
+  extend
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -308,7 +309,7 @@ export function normalizePropsOptions(
   if (__FEATURE_OPTIONS__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
       const [props, keys] = normalizePropsOptions(raw)
-      Object.assign(normalized, props)
+      extend(normalized, props)
       if (keys) needCastKeys.push(...keys)
     }
     if (comp.extends) {
