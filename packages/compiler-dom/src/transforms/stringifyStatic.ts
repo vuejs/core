@@ -146,7 +146,7 @@ const replaceHoist = (
   context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
 }
 
-const isNonStringifiable = /*#__PURE__*/ makeMap(`thead,tr,th,tbody,td`)
+const isNonStringifiable = /*#__PURE__*/ makeMap(`caption,thead,tr,th,tbody,td,tbody,colgroup,col`)
 
 /**
  * for a hoisted node, analyze it and return:
