@@ -120,7 +120,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
-  transition: TransitionHooks | null
+  transition: TransitionHooks<HostElement> | null
 
   // DOM
   el: HostNode | null
