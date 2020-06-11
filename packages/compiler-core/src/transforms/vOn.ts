@@ -11,6 +11,7 @@ import {
 import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
@@ -87,6 +88,15 @@ export const transformOn: DirectiveTransform = (
           exp.children.push(`($event)`)
         }
       }
+    }
+
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        exp as SimpleExpressionNode,
+        context,
+        false,
+        hasMultipleStatements
+      )
     }
 
     if (isInlineStatement || (isCacheable && isMemberExp)) {
