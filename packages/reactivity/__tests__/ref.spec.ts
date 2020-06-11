@@ -277,6 +277,12 @@ describe('reactivity/ref', () => {
     expect(dummyY).toBe(5)
   })
 
+  test('toRefs pass a reactivity object', () => {
+    console.warn = jest.fn()
+    const obj = { x: 1 }
+    toRefs(obj)
+    expect(console.warn).toBeCalled()
+  })
   test('customRef', () => {
     let value = 1
     let _trigger: () => void
