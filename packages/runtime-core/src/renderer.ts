@@ -779,7 +779,7 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    if (__DEV__ && parentComponent && parentComponent.renderUpdated) {
+    if (__DEV__ && parentComponent && parentComponent.hmrUpdated) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false
@@ -1006,7 +1006,7 @@ function baseCreateRenderer(
       optimized = true
     }
 
-    if (__DEV__ && parentComponent && parentComponent.renderUpdated) {
+    if (__DEV__ && parentComponent && parentComponent.hmrUpdated) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false

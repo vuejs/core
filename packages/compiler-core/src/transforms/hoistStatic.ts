@@ -8,7 +8,8 @@ import {
   ComponentNode,
   TemplateNode,
   ElementNode,
-  VNodeCall
+  VNodeCall,
+  ParentNode
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol } from '@vue/shared'
@@ -16,7 +17,7 @@ import { isSlotOutlet, findProp } from '../utils'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
   walk(
-    root.children,
+    root,
     context,
     new Map(),
     // Root node is unfortunately non-hoistable due to potential parent
@@ -44,7 +45,7 @@ const enum StaticType {
 }
 
 function walk(
-  children: TemplateChildNode[],
+  node: ParentNode,
   context: TransformContext,
   resultCache: Map<TemplateChildNode, StaticType>,
   doNotHoistNode: boolean = false
@@ -60,6 +61,7 @@ function walk(
   // stringficiation threshold is met.
   let hasRuntimeConstant = false
 
+  const { children } = node
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     // only plain elements & text calls are eligible for hoisting.
@@ -114,21 +116,25 @@ function walk(
 
     // walk further
     if (child.type === NodeTypes.ELEMENT) {
-      walk(child.children, context, resultCache)
+      walk(child, context, resultCache)
     } else if (child.type === NodeTypes.FOR) {
       // Do not hoist v-for single child because it has to be a block
-      walk(child.children, context, resultCache, child.children.length === 1)
+      walk(child, context, resultCache, child.children.length === 1)
     } else if (child.type === NodeTypes.IF) {
       for (let i = 0; i < child.branches.length; i++) {
-        const branchChildren = child.branches[i].children
         // Do not hoist v-if single child because it has to be a block
-        walk(branchChildren, context, resultCache, branchChildren.length === 1)
+        walk(
+          child.branches[i],
+          context,
+          resultCache,
+          child.branches[i].children.length === 1
+        )
       }
     }
   }
 
   if (!hasRuntimeConstant && hasHoistedNode && context.transformHoist) {
-    context.transformHoist(children, context)
+    context.transformHoist(children, context, node)
   }
 }
 

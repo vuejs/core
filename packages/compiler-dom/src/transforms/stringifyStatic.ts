@@ -25,7 +25,8 @@ import {
   toDisplayString,
   normalizeClass,
   normalizeStyle,
-  stringifyStyle
+  stringifyStyle,
+  makeMap
 } from '@vue/shared'
 
 export const enum StringifyThresholds {
@@ -58,7 +59,15 @@ type StringifiableNode = PlainElementNode | TextCallNode
  *
  * This optimization is only performed in Node.js.
  */
-export const stringifyStatic: HoistTransform = (children, context) => {
+export const stringifyStatic: HoistTransform = (children, context, parent) => {
+  if (
+    parent.type === NodeTypes.ELEMENT &&
+    (parent.tagType === ElementTypes.COMPONENT ||
+      parent.tagType === ElementTypes.TEMPLATE)
+  ) {
+    return
+  }
+
   let nc = 0 // current node count
   let ec = 0 // current element with binding count
   const currentChunk: StringifiableNode[] = []
@@ -145,6 +154,10 @@ const replaceHoist = (
   context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
 }
 
+const isNonStringifiable = /*#__PURE__*/ makeMap(
+  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`
+)
+
 /**
  * for a hoisted node, analyze it and return:
  * - false: bailed (contains runtime constant)
@@ -153,6 +166,10 @@ const replaceHoist = (
  *   - ec is the number of element with bindings inside
  */
 function analyzeNode(node: StringifiableNode): [number, number] | false {
+  if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
   if (node.type === NodeTypes.TEXT_CALL) {
     return [1, 0]
   }
@@ -189,16 +206,10 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
     }
     for (let i = 0; i < node.children.length; i++) {
       nc++
-      if (nc >= StringifyThresholds.NODE_COUNT) {
-        return true
-      }
       const child = node.children[i]
       if (child.type === NodeTypes.ELEMENT) {
         if (child.props.length > 0) {
           ec++
-          if (ec >= StringifyThresholds.ELEMENT_WITH_BINDING_COUNT) {
-            return true
-          }
         }
         walk(child)
         if (bailed) {

@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray, makeMap } from '@vue/shared'
+import { NO, isArray, makeMap, extend } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -24,7 +24,6 @@ import {
   InterpolationNode,
   createRoot
 } from './ast'
-import { extend } from '@vue/shared'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
@@ -91,10 +90,7 @@ function createParserContext(
   options: ParserOptions
 ): ParserContext {
   return {
-    options: {
-      ...defaultParserOptions,
-      ...options
-    },
+    options: extend({}, defaultParserOptions, options),
     column: 1,
     line: 1,
     offset: 0,

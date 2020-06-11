@@ -8,7 +8,7 @@ interface CompiledSlotDescriptor {
 
 /**
  * Compiler runtime helper for creating dynamic slots object
- * @internal
+ * @private
  */
 export function createSlots(
   slots: Record<string, Slot>,

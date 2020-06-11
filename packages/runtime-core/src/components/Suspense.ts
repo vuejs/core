@@ -244,6 +244,7 @@ function createSuspenseBoundary(
   /* istanbul ignore if */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
+    // @ts-ignore `console.info` cannot be null error
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`
     )
@@ -494,6 +495,7 @@ function hydrateSuspense(
     optimized: boolean
   ) => Node | null
 ): Node | null {
+  /* eslint-disable no-restricted-globals */
   const suspense = (vnode.suspense = createSuspenseBoundary(
     vnode,
     parentSuspense,
@@ -523,6 +525,7 @@ function hydrateSuspense(
     suspense.resolve()
   }
   return result
+  /* eslint-enable no-restricted-globals */
 }
 
 export function normalizeSuspenseChildren(
