@@ -216,13 +216,17 @@ function parseChildren(
               removedWhitespace = true
               nodes[i] = null as any
             } else {
-              // Otherwise, condensed consecutive whitespace inside the text down to
-              // a single space
+              // Otherwise, condensed consecutive whitespace inside the text
+              // down to a single space
               node.content = ' '
             }
           } else {
             node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
+        } else if (!__DEV__ && node.type === NodeTypes.COMMENT) {
+          // remove comment nodes in prod
+          removedWhitespace = true
+          nodes[i] = null as any
         }
       }
     } else if (parent && context.options.isPreTag(parent.tag)) {
@@ -239,12 +243,6 @@ function parseChildren(
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
