@@ -92,11 +92,19 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
-  test('unwrap', () => {
+  test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('toRaw on object using reactive as prototype', () => {
+    const original = reactive({})
+    const obj = Object.create(original)
+    const raw = toRaw(obj)
+    expect(raw).toBe(obj)
+    expect(raw).not.toBe(toRaw(original))
   })
 
   test('should not unwrap Ref<T>', () => {

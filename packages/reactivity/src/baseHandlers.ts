@@ -46,7 +46,13 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.isReadonly) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (
+      key === ReactiveFlags.raw &&
+      receiver ===
+        (isReadonly
+          ? (target as any).__v_readonly
+          : (target as any).__v_reactive)
+    ) {
       return target
     }
 
