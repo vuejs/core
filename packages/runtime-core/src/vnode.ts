@@ -545,8 +545,19 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       type = ShapeFlags.TEXT_CHILDREN
     }
   }
+
+  if (isArray(children)) {
+    children = normalizeArrayChildren(children)
+  }
+
   vnode.children = children as VNodeNormalizedChildren
   vnode.shapeFlag |= type
+}
+
+function normalizeArrayChildren(children: VNodeArrayChildren) {
+  return children.filter(
+    child => child !== null && child !== undefined && typeof child !== 'boolean'
+  )
 }
 
 const handlersRE = /^on|^vnode/

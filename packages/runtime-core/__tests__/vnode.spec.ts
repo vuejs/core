@@ -148,6 +148,11 @@ describe('vnode', () => {
         ShapeFlags.ELEMENT | ShapeFlags.ARRAY_CHILDREN
       )
     })
+
+    test('should skip null/undefined/boolean inside array children', () => {
+      const vnode = createVNode('div', null, [null, undefined, true])
+      expect(vnode.children!.length).toBe(0)
+    })
   })
 
   test('normalizeVNode', () => {
