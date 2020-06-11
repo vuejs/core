@@ -488,16 +488,13 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if (child == null || typeof child === 'boolean') {
-    // empty placeholder
-    return createVNode(Comment)
-  } else if (isArray(child)) {
+  if (isArray(child)) {
     // fragment
     return createVNode(Fragment, null, child)
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
-    return child.el === null ? child : cloneVNode(child)
+    return child!.el === null ? child! : cloneVNode(child!)
   } else {
     // strings and numbers
     return createVNode(Text, null, String(child))
@@ -555,9 +552,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
 }
 
 function normalizeArrayChildren(children: VNodeArrayChildren) {
-  return children.filter(
-    child => child !== null && child !== undefined && typeof child !== 'boolean'
-  )
+  return children.filter(child => child != null && typeof child !== 'boolean')
 }
 
 const handlersRE = /^on|^vnode/
