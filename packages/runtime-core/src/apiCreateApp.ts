@@ -226,8 +226,9 @@ export function createAppAPI<HostElement>(
         } else if (__DEV__) {
           warn(
             `App has already been mounted.\n` +
-              `If you want remount the same app.Please put your app creation logic in a factory function ` +
-              `and call it to create a new app instance. eg. "const factory = () => createApp(App)"`
+              `If you want to remount the same app, move your app creation logic ` +
+              `into a factory function and create fresh app instances for each ` +
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``
           )
         }
       },
