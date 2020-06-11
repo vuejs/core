@@ -229,11 +229,11 @@ export {
 // them in @vue/shared's typings
 import { toDisplayString, camelize } from '@vue/shared'
 /**
- * @internal
+ * @private
  */
 const _toDisplayString = toDisplayString
 /**
- * @internal
+ * @private
  */
 const _camelize = camelize
 export { _toDisplayString as toDisplayString, _camelize as camelize }

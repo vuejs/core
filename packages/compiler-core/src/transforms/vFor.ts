@@ -41,6 +41,7 @@ import {
   FRAGMENT
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformFor = createStructuralDirectiveTransform(
@@ -243,6 +244,9 @@ export function parseForExpression(
       context
     )
   }
+  if (__DEV__ && __BROWSER__) {
+    validateBrowserExpression(result.source as SimpleExpressionNode, context)
+  }
 
   let valueContent = LHS.trim()
     .replace(stripParensRE, '')
@@ -260,6 +264,13 @@ export function parseForExpression(
       result.key = createAliasExpression(loc, keyContent, keyOffset)
       if (!__BROWSER__ && context.prefixIdentifiers) {
         result.key = processExpression(result.key, context, true)
+      }
+      if (__DEV__ && __BROWSER__) {
+        validateBrowserExpression(
+          result.key as SimpleExpressionNode,
+          context,
+          true
+        )
       }
     }
 
@@ -280,6 +291,13 @@ export function parseForExpression(
         if (!__BROWSER__ && context.prefixIdentifiers) {
           result.index = processExpression(result.index, context, true)
         }
+        if (__DEV__ && __BROWSER__) {
+          validateBrowserExpression(
+            result.index as SimpleExpressionNode,
+            context,
+            true
+          )
+        }
       }
     }
   }
@@ -288,6 +306,13 @@ export function parseForExpression(
     result.value = createAliasExpression(loc, valueContent, trimmedOffset)
     if (!__BROWSER__ && context.prefixIdentifiers) {
       result.value = processExpression(result.value, context, true)
+    }
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        result.value as SimpleExpressionNode,
+        context,
+        true
+      )
     }
   }
 

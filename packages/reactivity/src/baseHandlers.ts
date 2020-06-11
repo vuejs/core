@@ -1,7 +1,14 @@
 import { reactive, readonly, toRaw, ReactiveFlags } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { track, trigger, ITERATE_KEY } from './effect'
-import { isObject, hasOwn, isSymbol, hasChanged, isArray } from '@vue/shared'
+import {
+  isObject,
+  hasOwn,
+  isSymbol,
+  hasChanged,
+  isArray,
+  extend
+} from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -39,7 +46,13 @@ function createGetter(isReadonly = false, shallow = false) {
       return !isReadonly
     } else if (key === ReactiveFlags.isReadonly) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (
+      key === ReactiveFlags.raw &&
+      receiver ===
+        (isReadonly
+          ? (target as any).__v_readonly
+          : (target as any).__v_reactive)
+    ) {
       return target
     }
 
@@ -49,7 +62,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
     const res = Reflect.get(target, key, receiver)
 
-    if (isSymbol(key) && builtInSymbols.has(key) || key === '__proto__') {
+    if ((isSymbol(key) && builtInSymbols.has(key)) || key === '__proto__') {
       return res
     }
 
@@ -167,16 +180,22 @@ export const readonlyHandlers: ProxyHandler<object> = {
   }
 }
 
-export const shallowReactiveHandlers: ProxyHandler<object> = {
-  ...mutableHandlers,
-  get: shallowGet,
-  set: shallowSet
-}
+export const shallowReactiveHandlers: ProxyHandler<object> = extend(
+  {},
+  mutableHandlers,
+  {
+    get: shallowGet,
+    set: shallowSet
+  }
+)
 
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers: ProxyHandler<object> = {
-  ...readonlyHandlers,
-  get: shallowReadonlyGet
-}
+export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
+  {},
+  readonlyHandlers,
+  {
+    get: shallowReadonlyGet
+  }
+)

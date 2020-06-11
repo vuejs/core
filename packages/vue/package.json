@@ -7,7 +7,6 @@
   "types": "dist/vue.d.ts",
   "unpkg": "dist/vue.global.js",
   "jsdelivr": "dist/vue.global.js",
-  "sideEffects": false,
   "files": [
     "index.js",
     "dist"

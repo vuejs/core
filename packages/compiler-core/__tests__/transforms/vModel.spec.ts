@@ -115,6 +115,43 @@ describe('compiler: transform v-model', () => {
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
   })
 
+  test('simple expression (with multilines)', () => {
+    const root = parseWithVModel('<input v-model="\n model \n" />')
+    const node = root.children[0] as ElementNode
+    const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
+      .properties
+
+    expect(props[0]).toMatchObject({
+      key: {
+        content: 'modelValue',
+        isStatic: true
+      },
+      value: {
+        content: '\n model \n',
+        isStatic: false
+      }
+    })
+
+    expect(props[1]).toMatchObject({
+      key: {
+        content: 'onUpdate:modelValue',
+        isStatic: true
+      },
+      value: {
+        children: [
+          '$event => (',
+          {
+            content: '\n model \n',
+            isStatic: false
+          },
+          ' = $event)'
+        ]
+      }
+    })
+
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
   test('compound expression', () => {
     const root = parseWithVModel('<input v-model="model[index]" />')
     const node = root.children[0] as ElementNode

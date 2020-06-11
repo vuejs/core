@@ -225,4 +225,73 @@ describe('stringify static html', () => {
       type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
     })
   })
+
+  test('should bail on non attribute bindings', () => {
+    const { ast } = compileWithStringify(
+      `<div><div>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}<input indeterminate></div></div>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+
+    const { ast: ast2 } = compileWithStringify(
+      `<div><div>${repeat(
+        `<span class="foo">foo</span>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}<input :indeterminate="true"></div></div>`
+    )
+    expect(ast2.hoists.length).toBe(1)
+    expect(ast2.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
+
+  test('should bail on tags that has placement constraints (eg.tables related tags)', () => {
+    const { ast } = compileWithStringify(
+      `<table><tbody>${repeat(
+        `<tr class="foo"><td>foo</td></tr>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</tbody></table>`
+    )
+    expect(ast.hoists.length).toBe(1)
+    expect(ast.hoists[0]).toMatchObject({
+      type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+    })
+  })
+
+  test('should bail inside slots', () => {
+    const { ast } = compileWithStringify(
+      `<foo>${repeat(
+        `<div class="foo"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</foo>`
+    )
+    expect(ast.hoists.length).toBe(
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    )
+    ast.hoists.forEach(node => {
+      expect(node).toMatchObject({
+        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+      })
+    })
+
+    const { ast: ast2 } = compileWithStringify(
+      `<foo><template #foo>${repeat(
+        `<div class="foo"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      )}</template></foo>`
+    )
+    expect(ast2.hoists.length).toBe(
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+    )
+    ast2.hoists.forEach(node => {
+      expect(node).toMatchObject({
+        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+      })
+    })
+  })
 })

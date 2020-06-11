@@ -12,7 +12,7 @@ import {
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
-import { isFunction, isString, isHTMLTag, isSVGTag } from '@vue/shared'
+import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -21,10 +21,7 @@ declare module '@vue/reactivity' {
   }
 }
 
-const rendererOptions = {
-  patchProp,
-  ...nodeOps
-}
+const rendererOptions = extend({ patchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.

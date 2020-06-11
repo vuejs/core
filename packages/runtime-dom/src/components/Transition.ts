@@ -7,7 +7,7 @@ import {
   getCurrentInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
-import { isObject, toNumber } from '@vue/shared'
+import { isObject, toNumber, extend } from '@vue/shared'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 const TRANSITION = 'transition'
@@ -39,8 +39,7 @@ export const Transition: FunctionalComponent<TransitionProps> = (
 
 Transition.inheritRef = true
 
-export const TransitionPropsValidators = (Transition.props = {
-  ...(BaseTransition as any).props,
+const DOMTransitionPropsValidators = {
   name: String,
   type: String,
   css: {
@@ -57,24 +56,40 @@ export const TransitionPropsValidators = (Transition.props = {
   leaveFromClass: String,
   leaveActiveClass: String,
   leaveToClass: String
-})
+}
 
-export function resolveTransitionProps({
-  name = 'v',
-  type,
-  css = true,
-  duration,
-  enterFromClass = `${name}-enter-from`,
-  enterActiveClass = `${name}-enter-active`,
-  enterToClass = `${name}-enter-to`,
-  appearFromClass = enterFromClass,
-  appearActiveClass = enterActiveClass,
-  appearToClass = enterToClass,
-  leaveFromClass = `${name}-leave-from`,
-  leaveActiveClass = `${name}-leave-active`,
-  leaveToClass = `${name}-leave-to`,
-  ...baseProps
-}: TransitionProps): BaseTransitionProps<Element> {
+export const TransitionPropsValidators = (Transition.props = extend(
+  {},
+  (BaseTransition as any).props,
+  DOMTransitionPropsValidators
+))
+
+export function resolveTransitionProps(
+  rawProps: TransitionProps
+): BaseTransitionProps<Element> {
+  let {
+    name = 'v',
+    type,
+    css = true,
+    duration,
+    enterFromClass = `${name}-enter-from`,
+    enterActiveClass = `${name}-enter-active`,
+    enterToClass = `${name}-enter-to`,
+    appearFromClass = enterFromClass,
+    appearActiveClass = enterActiveClass,
+    appearToClass = enterToClass,
+    leaveFromClass = `${name}-leave-from`,
+    leaveActiveClass = `${name}-leave-active`,
+    leaveToClass = `${name}-leave-to`
+  } = rawProps
+
+  const baseProps: BaseTransitionProps<Element> = {}
+  for (const key in rawProps) {
+    if (!(key in DOMTransitionPropsValidators)) {
+      ;(baseProps as any)[key] = (rawProps as any)[key]
+    }
+  }
+
   if (!css) {
     return baseProps
   }
@@ -117,8 +132,7 @@ export function resolveTransitionProps({
     callWithAsyncErrorHandling(hook, instance, ErrorCodes.TRANSITION_HOOK, args)
   }
 
-  return {
-    ...baseProps,
+  return extend(baseProps, {
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
       addTransitionClass(el, enterActiveClass)
@@ -158,7 +172,7 @@ export function resolveTransitionProps({
     },
     onEnterCancelled: finishEnter,
     onLeaveCancelled: finishLeave
-  }
+  } as BaseTransitionProps<Element>)
 }
 
 function normalizeDuration(

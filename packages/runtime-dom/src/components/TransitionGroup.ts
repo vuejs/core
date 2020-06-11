@@ -21,6 +21,7 @@ import {
   SetupContext
 } from '@vue/runtime-core'
 import { toRaw } from '@vue/reactivity'
+import { extend } from '@vue/shared'
 
 interface Position {
   top: number
@@ -36,11 +37,10 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
-  props: {
-    ...TransitionPropsValidators,
+  props: extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
-  },
+  }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!

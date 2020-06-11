@@ -1,9 +1,11 @@
+/* eslint-disable no-restricted-globals */
 import {
   ComponentInternalInstance,
   ComponentOptions,
   InternalRenderFunction
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
+import { extend } from '@vue/shared'
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -85,7 +87,7 @@ function reload(id: string, newComp: ComponentOptions) {
     const comp = instance.type
     if (!comp.__hmrUpdated) {
       // 1. Update existing comp definition to match new one
-      Object.assign(comp, newComp)
+      extend(comp, newComp)
       for (const key in comp) {
         if (!(key in newComp)) {
           delete (comp as any)[key]

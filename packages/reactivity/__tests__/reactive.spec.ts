@@ -1,11 +1,5 @@
 import { ref, isRef } from '../src/ref'
-import {
-  reactive,
-  isReactive,
-  toRaw,
-  markRaw,
-  shallowReactive
-} from '../src/reactive'
+import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
 import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
@@ -98,11 +92,19 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
-  test('unwrap', () => {
+  test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('toRaw on object using reactive as prototype', () => {
+    const original = reactive({})
+    const obj = Object.create(original)
+    const raw = toRaw(obj)
+    expect(raw).toBe(obj)
+    expect(raw).not.toBe(toRaw(original))
   })
 
   test('should not unwrap Ref<T>', () => {
@@ -183,50 +185,5 @@ describe('reactivity/reactive', () => {
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
-  })
-
-  describe('shallowReactive', () => {
-    test('should not make non-reactive properties reactive', () => {
-      const props = shallowReactive({ n: { foo: 1 } })
-      expect(isReactive(props.n)).toBe(false)
-    })
-
-    test('should keep reactive properties reactive', () => {
-      const props: any = shallowReactive({ n: reactive({ foo: 1 }) })
-      props.n = reactive({ foo: 2 })
-      expect(isReactive(props.n)).toBe(true)
-    })
-
-    test('should not observe when iterating', () => {
-      const shallowSet = shallowReactive(new Set())
-      const a = {}
-      shallowSet.add(a)
-
-      const spreadA = [...shallowSet][0]
-      expect(isReactive(spreadA)).toBe(false)
-    })
-
-    test('should not get reactive entry', () => {
-      const shallowMap = shallowReactive(new Map())
-      const a = {}
-      const key = 'a'
-
-      shallowMap.set(key, a)
-
-      expect(isReactive(shallowMap.get(key))).toBe(false)
-    })
-    it('should observe properties', () => {
-      const map = shallowReactive(new Map())
-      map.set('key', 'value')
-      expect(map.size).toBe(1)
-    })
-
-    test('should not get reactive on foreach', () => {
-      const shallowSet = shallowReactive(new Set())
-      const a = {}
-      shallowSet.add(a)
-
-      shallowSet.forEach(x => expect(isReactive(x)).toBe(false))
-    })
   })
 })

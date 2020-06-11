@@ -30,7 +30,7 @@ import {
   KEEP_ALIVE,
   BASE_TRANSITION
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate } from '@vue/shared'
+import { isString, isObject, hyphenate, extend } from '@vue/shared'
 import { parse } from '@babel/parser'
 import { walk } from 'estree-walker'
 import { Node } from '@babel/types'
@@ -84,8 +84,10 @@ export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
 const memberExpRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]+\])*$/
-export const isMemberExpression = (path: string): boolean =>
-  memberExpRE.test(path)
+export const isMemberExpression = (path: string): boolean => {
+  if (!path) return false
+  return memberExpRE.test(path.trim())
+}
 
 export function getInnerRange(
   loc: SourceLocation,
@@ -117,7 +119,11 @@ export function advancePositionWithClone(
   source: string,
   numberOfCharacters: number = source.length
 ): Position {
-  return advancePositionWithMutation({ ...pos }, source, numberOfCharacters)
+  return advancePositionWithMutation(
+    extend({}, pos),
+    source,
+    numberOfCharacters
+  )
 }
 
 // advance by mutation without cloning (for performance reasons), since this
