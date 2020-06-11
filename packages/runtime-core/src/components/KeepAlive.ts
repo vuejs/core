@@ -226,7 +226,7 @@ const KeepAliveImpl = {
         keys.add(key)
         // prune oldest entry
         if (max && keys.size > parseInt(max as string, 10)) {
-          pruneCacheEntry(Array.from(keys)[0])
+          pruneCacheEntry(keys.values().next().value)
         }
       }
       // avoid vnode being unmounted
