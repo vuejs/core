@@ -270,13 +270,16 @@ function resolvePropValue(
   key: string,
   value: unknown
 ) {
-  const opt = options[key]
+  const opt = options[key] as any
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      value = isFunction(defaultValue) ? defaultValue() : defaultValue
+      value =
+        opt.type !== Function && isFunction(defaultValue)
+          ? defaultValue()
+          : defaultValue
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {
