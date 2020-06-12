@@ -72,10 +72,6 @@ export interface ComponentInternalOptions {
    */
   __hmrId?: string
   /**
-   * @internal
-   */
-  __hmrUpdated?: boolean
-  /**
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
@@ -325,12 +321,6 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-
-  /**
-   * hmr marker (dev only)
-   * @internal
-   */
-  hmrUpdated?: boolean
 }
 
 const emptyAppContext = createAppContext()

@@ -32,6 +32,7 @@ import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
+import { hmrDirtyComponents } from './hmr'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -236,7 +237,7 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
-    (n2.type as Component).__hmrUpdated
+    hmrDirtyComponents.has(n2.type as Component)
   ) {
     // HMR only: if the component has been hot-updated, force a reload.
     return false

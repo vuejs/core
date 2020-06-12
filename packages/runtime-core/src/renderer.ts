@@ -56,7 +56,7 @@ import {
 } from './components/Suspense'
 import { TeleportImpl } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
-import { registerHMR, unregisterHMR } from './hmr'
+import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
 import {
   ErrorCodes,
   callWithErrorHandling,
@@ -791,18 +791,11 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    // check if any component of the parent chain has `hmrUpdated`
-    if (__DEV__ && parentComponent) {
-      let parent: ComponentInternalInstance | null = parentComponent
-      do {
-        if (parent.hmrUpdated) {
-          // HMR updated, force full diff
-          patchFlag = 0
-          optimized = false
-          dynamicChildren = null
-          break
-        }
-      } while ((parent = parent.parent))
+    if (__DEV__ && isHmrUpdating) {
+      // HMR updated, force full diff
+      patchFlag = 0
+      optimized = false
+      dynamicChildren = null
     }
 
     if (patchFlag > 0) {
@@ -1025,7 +1018,7 @@ function baseCreateRenderer(
       optimized = true
     }
 
-    if (__DEV__ && parentComponent && parentComponent.hmrUpdated) {
+    if (__DEV__ && isHmrUpdating) {
       // HMR updated, force full diff
       patchFlag = 0
       optimized = false

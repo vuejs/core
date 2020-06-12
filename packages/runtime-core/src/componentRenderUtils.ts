@@ -16,6 +16,7 @@ import {
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
 import { warn } from './warning'
+import { isHmrUpdating } from './hmr'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -247,13 +248,8 @@ export function shouldUpdateComponent(
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
   // force the child to update as well.
-  if (__DEV__ && (prevChildren || nextChildren) && parentComponent) {
-    let parent: ComponentInternalInstance | null = parentComponent
-    do {
-      if (parent.hmrUpdated) {
-        return true
-      }
-    } while ((parent = parent.parent))
+  if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
+    return true
   }
 
   // force child update for runtime directive or transition on component vnode.
