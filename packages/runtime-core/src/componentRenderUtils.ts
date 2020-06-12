@@ -247,13 +247,13 @@ export function shouldUpdateComponent(
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
   // force the child to update as well.
-  if (
-    __DEV__ &&
-    (prevChildren || nextChildren) &&
-    parentComponent &&
-    parentComponent.hmrUpdated
-  ) {
-    return true
+  if (__DEV__ && (prevChildren || nextChildren) && parentComponent) {
+    let parent: ComponentInternalInstance | null = parentComponent
+    do {
+      if (parent.hmrUpdated) {
+        return true
+      }
+    } while ((parent = parent.parent))
   }
 
   // force child update for runtime directive or transition on component vnode.
@@ -268,8 +268,11 @@ export function shouldUpdateComponent(
       return true
     }
     if (patchFlag & PatchFlags.FULL_PROPS) {
+      if (!prevProps) {
+        return !!nextProps
+      }
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps!, nextProps!)
+      return hasPropsChanged(prevProps, nextProps!)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {
