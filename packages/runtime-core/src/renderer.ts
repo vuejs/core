@@ -676,7 +676,16 @@ function baseCreateRenderer(
       if (props) {
         for (const key in props) {
           if (!isReservedProp(key)) {
-            hostPatchProp(el, key, null, props[key], isSVG)
+            hostPatchProp(
+              el,
+              key,
+              null,
+              props[key],
+              isSVG,
+              vnode.children as VNode[],
+              parentComponent,
+              parentSuspense
+            )
           }
         }
         if ((vnodeHook = props.onVnodeBeforeMount)) {
