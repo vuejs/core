@@ -218,4 +218,75 @@ describe('hot module replacement', () => {
     rerender(parentId, compileToFunction(`<Child msg="bar" />`))
     expect(serializeInner(root)).toBe(`<div>bar</div>`)
   })
+
+  // #1305 - component should remove class
+  test('remove static class from parent', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-class-parent'
+    const childId = 'test-force-class-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child class="test" />`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
+
+    rerender(parentId, compileToFunction(`<Child/>`))
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
+  })
+
+  test('rerender if any parent in the parent chain', () => {
+    const root = nodeOps.createElement('div')
+    const parent = 'test-force-props-parent-'
+    const childId = 'test-force-props-child'
+
+    const numberOfParents = 5
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`)
+    }
+    createRecord(childId, Child)
+
+    const components: ComponentOptions[] = []
+
+    for (let i = 0; i < numberOfParents; i++) {
+      const parentId = `${parent}${i}`
+      const parentComp: ComponentOptions = {
+        __hmrId: parentId
+      }
+      components.push(parentComp)
+      if (i === 0) {
+        parentComp.render = compileToFunction(`<Child />`)
+        parentComp.components = {
+          Child
+        }
+      } else {
+        parentComp.render = compileToFunction(`<Parent />`)
+        parentComp.components = {
+          Parent: components[i - 1]
+        }
+      }
+
+      createRecord(parentId, parentComp)
+    }
+
+    const last = components[components.length - 1]
+
+    render(h(last), root)
+    expect(serializeInner(root)).toBe(`<div>child</div>`)
+
+    rerender(last.__hmrId!, compileToFunction(`<Parent class="test"/>`))
+    expect(serializeInner(root)).toBe(`<div class="test">child</div>`)
+  })
 })

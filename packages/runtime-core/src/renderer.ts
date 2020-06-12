@@ -791,11 +791,18 @@ function baseCreateRenderer(
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
 
-    if (__DEV__ && parentComponent && parentComponent.hmrUpdated) {
-      // HMR updated, force full diff
-      patchFlag = 0
-      optimized = false
-      dynamicChildren = null
+    // check if any component of the parent chain has `hmrUpdated`
+    if (__DEV__ && parentComponent) {
+      let parent: ComponentInternalInstance | null = parentComponent
+      do {
+        if (parent.hmrUpdated) {
+          // HMR updated, force full diff
+          patchFlag = 0
+          optimized = false
+          dynamicChildren = null
+          break
+        }
+      } while ((parent = parent.parent))
     }
 
     if (patchFlag > 0) {
