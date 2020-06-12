@@ -157,6 +157,7 @@ describe('component props', () => {
   test('default value', () => {
     let proxy: any
     const defaultFn = jest.fn(() => ({ a: 1 }))
+    const defaultBaz = jest.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -165,6 +166,10 @@ describe('component props', () => {
         },
         bar: {
           default: defaultFn
+        },
+        baz: {
+          type: Function,
+          default: defaultBaz
         }
       },
       render() {
@@ -177,7 +182,9 @@ describe('component props', () => {
     expect(proxy.foo).toBe(2)
     const prevBar = proxy.bar
     expect(proxy.bar).toEqual({ a: 1 })
+    expect(proxy.baz).toEqual(defaultBaz)
     expect(defaultFn).toHaveBeenCalledTimes(1)
+    expect(defaultBaz).toHaveBeenCalledTimes(0)
 
     // #999: updates should not cause default factory of unchanged prop to be
     // called again
