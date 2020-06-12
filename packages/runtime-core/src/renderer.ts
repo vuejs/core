@@ -672,6 +672,23 @@ function baseCreateRenderer(
         isSVG,
         props && props.is
       )
+
+      // mount children first, since some props may rely on child content
+      // being already rendered, e.g. `<select value>`
+      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        hostSetElementText(el, vnode.children as string)
+      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        mountChildren(
+          vnode.children as VNodeArrayChildren,
+          el,
+          null,
+          parentComponent,
+          parentSuspense,
+          isSVG && type !== 'foreignObject',
+          optimized || !!vnode.dynamicChildren
+        )
+      }
+
       // props
       if (props) {
         for (const key in props) {
@@ -707,20 +724,6 @@ function baseCreateRenderer(
         hostSetScopeId(el, treeOwnerId + '-s')
       }
 
-      // children
-      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-        hostSetElementText(el, vnode.children as string)
-      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        mountChildren(
-          vnode.children as VNodeArrayChildren,
-          el,
-          null,
-          parentComponent,
-          parentSuspense,
-          isSVG && type !== 'foreignObject',
-          optimized || !!vnode.dynamicChildren
-        )
-      }
       if (transition && !transition.persisted) {
         transition.beforeEnter(el)
       }
