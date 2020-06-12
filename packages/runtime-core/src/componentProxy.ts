@@ -13,7 +13,9 @@ import {
   UnwrapRef,
   toRaw,
   shallowReadonly,
-  ReactiveFlags
+  ReactiveFlags,
+  track,
+  TrackOpTypes
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -260,8 +262,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
-      if (__DEV__ && key === '$attrs') {
-        markAttrsAccessed()
+      if (key === '$attrs') {
+        track(instance, TrackOpTypes.GET, key)
+        __DEV__ && markAttrsAccessed()
       }
       return publicGetter(instance)
     } else if (

@@ -1,4 +1,9 @@
-import { toRaw, shallowReactive } from '@vue/reactivity'
+import {
+  toRaw,
+  shallowReactive,
+  trigger,
+  TriggerOpTypes
+} from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -214,6 +219,9 @@ export function updateProps(
       }
     }
   }
+
+  // trigger updates for $attrs in case it's used in component slots
+  trigger(instance, TriggerOpTypes.SET, '$attrs')
 
   if (__DEV__ && rawProps) {
     validateProps(props, instance.type)
