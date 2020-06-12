@@ -1,4 +1,5 @@
 // public
+export { SSRContext } from './render'
 export { renderToString } from './renderToString'
 export { renderToStream } from './renderToStream'
 
