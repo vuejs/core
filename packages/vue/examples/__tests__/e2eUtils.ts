@@ -73,8 +73,8 @@ export function setupPuppeteer() {
   async function setValue(selector: string, value: string) {
     await page.$eval(
       selector,
-      (node: HTMLInputElement, value) => {
-        node.value = value
+      (node, value) => {
+        (node as HTMLInputElement).value = value
         node.dispatchEvent(new Event('input'))
       },
       value
