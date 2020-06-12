@@ -29,6 +29,9 @@ describe('h inference w/ element', () => {
   expectError(h('div', { ref: {} }))
   //  @ts-expect-error
   expectError(h('div', { ref: 123 }))
+  // slots
+  const slots = { default: () => {} } // RawSlots
+  h('div', {}, slots)
 })
 
 describe('h inference w/ Fragment', () => {
