@@ -252,7 +252,7 @@ function getName(comp: Component): string | void {
 
 function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
-    return (pattern as any).some((p: string | RegExp) => matches(p, name))
+    return pattern.some((p: string | RegExp) => matches(p, name))
   } else if (isString(pattern)) {
     return pattern.split(',').indexOf(name) > -1
   } else if (pattern.test) {
