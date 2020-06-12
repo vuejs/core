@@ -62,7 +62,7 @@ export const transformSrcset: NodeTransform = (
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }, index) => {
+            imageCandidates.forEach(({ url, descriptor }) => {
               descriptor = descriptor ? ` ${descriptor}` : ``
               if (isRelativeUrl(url)) {
                 set.push((path.posix || path).join(base, url) + descriptor)

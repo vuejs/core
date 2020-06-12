@@ -239,7 +239,6 @@ const isElementRoot = (vnode: VNode) => {
 export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   optimized?: boolean
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode

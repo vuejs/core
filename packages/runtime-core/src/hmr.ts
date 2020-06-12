@@ -48,7 +48,7 @@ export function registerHMR(instance: ComponentInternalInstance) {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
-    createRecord(id, instance.type as ComponentOptions)
+    createRecord(id)
     record = map.get(id)!
   }
   record.add(instance)
@@ -58,7 +58,7 @@ export function unregisterHMR(instance: ComponentInternalInstance) {
   map.get(instance.type.__hmrId!)!.delete(instance)
 }
 
-function createRecord(id: string, comp: ComponentOptions): boolean {
+function createRecord(id: string): boolean {
   if (map.has(id)) {
     return false
   }
