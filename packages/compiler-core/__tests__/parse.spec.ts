@@ -1401,6 +1401,36 @@ describe('compiler: parse', () => {
       })
     })
 
+    // #1241 special case for 2.x compat
+    test('v-slot arg containing dots', () => {
+      const ast = baseParse('<Comp v-slot:foo.bar="{ a }" />')
+      const directive = (ast.children[0] as ElementNode).props[0]
+
+      expect(directive).toMatchObject({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        arg: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'foo.bar',
+          isStatic: true,
+          isConstant: true,
+          loc: {
+            source: 'foo.bar',
+            start: {
+              column: 14,
+              line: 1,
+              offset: 13
+            },
+            end: {
+              column: 21,
+              line: 1,
+              offset: 20
+            }
+          }
+        }
+      })
+    })
+
     test('v-pre', () => {
       const ast = baseParse(
         `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
