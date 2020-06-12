@@ -18,6 +18,14 @@ module.exports = {
     ]
   },
   overrides: [
+    // tests, no restrictions (runs in Node / jest with jsdom)
+    {
+      files: ['**/__tests__/**'],
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off'
+      }
+    },
     // Packages targeting DOM
     {
       files: ['packages/{vue,runtime-dom}/**'],
@@ -33,7 +41,7 @@ module.exports = {
         'no-restricted-syntax': 'off'
       }
     },
-    // Private package, no syntax restrictions
+    // Private package, browser only + no syntax restrictions
     {
       files: ['packages/template-explorer/**'],
       rules: {
