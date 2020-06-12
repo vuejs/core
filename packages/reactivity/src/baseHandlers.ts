@@ -60,34 +60,34 @@ function createGetter(isReadonly = false, shallow = false) {
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
+
     const res = Reflect.get(target, key, receiver)
 
     if ((isSymbol(key) && builtInSymbols.has(key)) || key === '__proto__') {
       return res
     }
 
-    !isReadonly && track(target, TrackOpTypes.GET, key)
+    if (!isReadonly) {
+      track(target, TrackOpTypes.GET, key)
+    }
 
     if (shallow) {
       return res
     }
 
     if (isRef(res)) {
-      if (targetIsArray) {
-        return res
-      } else {
-        // ref unwrapping, only for Objects, not for Arrays.
-        return res.value
-      }
+      // ref unwrapping, only for Objects, not for Arrays.
+      return targetIsArray ? res : res.value
     }
 
-    return isObject(res)
-      ? isReadonly
-        ? // need to lazy access readonly and reactive here to avoid
-          // circular dependency
-          readonly(res)
-        : reactive(res)
-      : res
+    if (isObject(res)) {
+      // Convert returned value into a proxy as well. we do the isObject check
+      // here to avoid invalid value warning. Also need to lazy access readonly
+      // and reactive here to avoid circular dependency.
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+
+    return res
   }
 }
 
