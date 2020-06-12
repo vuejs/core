@@ -131,6 +131,21 @@ describe('reactivity/reactive', () => {
     expect(typeof obj.b).toBe(`number`)
   })
 
+  test('should allow setting property from a ref to another ref', () => {
+    const foo = ref(0)
+    const bar = ref(1)
+    const observed = reactive({ a: foo })
+    const dummy = computed(() => observed.a)
+    expect(dummy.value).toBe(0)
+
+    // @ts-ignore
+    observed.a = bar
+    expect(dummy.value).toBe(1)
+
+    bar.value++
+    expect(dummy.value).toBe(2)
+  })
+
   test('non-observable values', () => {
     const assertValue = (value: any) => {
       reactive(value)

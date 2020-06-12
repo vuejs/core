@@ -66,14 +66,14 @@ function createGetter(isReadonly = false, shallow = false) {
       return res
     }
 
+    !isReadonly && track(target, TrackOpTypes.GET, key)
+
     if (shallow) {
-      !isReadonly && track(target, TrackOpTypes.GET, key)
       return res
     }
 
     if (isRef(res)) {
       if (targetIsArray) {
-        !isReadonly && track(target, TrackOpTypes.GET, key)
         return res
       } else {
         // ref unwrapping, only for Objects, not for Arrays.
@@ -81,7 +81,6 @@ function createGetter(isReadonly = false, shallow = false) {
       }
     }
 
-    !isReadonly && track(target, TrackOpTypes.GET, key)
     return isObject(res)
       ? isReadonly
         ? // need to lazy access readonly and reactive here to avoid
