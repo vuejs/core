@@ -94,7 +94,7 @@ export function processIf(
     dir.exp = processExpression(dir.exp as SimpleExpressionNode, context)
   }
 
-  if (__DEV__ && __BROWSER__ && dir.exp) {
+  if (__DEV__ && __BROWSER__ && dir.exp && dir.name !== 'else') {
     validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
