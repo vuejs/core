@@ -1304,6 +1304,7 @@ function baseCreateRenderer(
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
         let { next, bu, u, parent, vnode } = instance
+        let originNext = next
         let vnodeHook: VNodeHook | null | undefined
         if (__DEV__) {
           pushWarningContext(next || instance.vnode)
@@ -1355,7 +1356,7 @@ function baseCreateRenderer(
           endMeasure(instance, `patch`)
         }
         next.el = nextTree.el
-        if (next === null) {
+        if (originNext === null) {
           // self-triggered update. In case of HOC, update parent component
           // vnode el. HOC is indicated by parent instance's subTree pointing
           // to child component's vnode
