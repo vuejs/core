@@ -44,17 +44,20 @@ function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.isReactive) {
       return !isReadonly
-    } else if (key === ReactiveFlags.isReadonly) {
+    }
+
+    if (key === ReactiveFlags.isReadonly) {
       return isReadonly
-    } else if (
+    }
+
+    if (
       key === ReactiveFlags.raw &&
       receiver ===
         (isReadonly
           ? (target as any).__v_readonly
           : (target as any).__v_reactive)
-    ) {
+    )
       return target
-    }
 
     const targetIsArray = isArray(target)
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
