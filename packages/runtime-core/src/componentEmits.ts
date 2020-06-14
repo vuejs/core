@@ -39,16 +39,17 @@ export function emit(
   ...args: any[]
 ) {
   const props = instance.vnode.props || EMPTY_OBJ
+  const eventProp = `on${capitalize(event)}`
 
   if (__DEV__) {
     const options = normalizeEmitsOptions(instance.type.emits)
     if (options) {
       if (!(event in options)) {
         const propsOptions = normalizePropsOptions(instance.type)[0]
-        if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
+        if (!propsOptions || !(eventProp in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "on${capitalize(event)}" prop.`
+              `the emits option nor as an "${eventProp}" prop.`
           )
         }
       } else {
@@ -65,7 +66,7 @@ export function emit(
     }
   }
 
-  let handler = props[`on${capitalize(event)}`]
+  let handler = props[eventProp]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && event.startsWith('update:')) {
