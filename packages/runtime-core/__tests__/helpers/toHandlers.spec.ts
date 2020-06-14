@@ -18,8 +18,8 @@ describe('toHandlers', () => {
     const change = () => {}
 
     expect(toHandlers({ input, change })).toStrictEqual({
-      oninput: input,
-      onchange: change
+      onInput: input,
+      onChange: change
     })
   })
 })
