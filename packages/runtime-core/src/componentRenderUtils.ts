@@ -11,7 +11,8 @@ import {
   cloneVNode,
   Fragment,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  isSameVNodeType
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
@@ -318,8 +319,8 @@ export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el // HostNode
 ) {
-  while (parent && parent.subTree === vnode) {
-    ;(vnode = parent.vnode).el = el
+  while (parent && isSameVNodeType(parent.subTree, vnode)) {
+    ;(vnode = parent.vnode).el = parent.subTree.el = el
     parent = parent.parent
   }
 }
