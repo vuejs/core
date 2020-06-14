@@ -30,13 +30,6 @@ export const isOn = (key: string) => onRE.test(key)
 
 export const extend = Object.assign
 
-export const remove = <T>(arr: T[], el: T) => {
-  const i = arr.indexOf(el)
-  if (i > -1) {
-    arr.splice(i, 1)
-  }
-}
-
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
