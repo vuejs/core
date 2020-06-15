@@ -309,11 +309,11 @@ describe('compiler: expression transform', () => {
 
   test('should not prefix an object property key', () => {
     const node = parseWithExpressionTransform(
-      `{{ { foo: bar } }}`
+      `{{ { foo: () => {}, value: bar } }}`
     ) as InterpolationNode
     expect(node.content).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
-      children: [`{ foo: `, { content: `_ctx.bar` }, ` }`]
+      children: [`{ foo: () => {}, value: `, { content: `_ctx.bar` }, ` }`]
     })
   })
 
