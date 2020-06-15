@@ -1216,6 +1216,7 @@ function baseCreateRenderer(
       // no update needed. just copy over properties
       n2.component = n1.component
       n2.el = n1.el
+      // instance.vnode = n2
     }
   }
 
