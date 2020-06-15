@@ -49,11 +49,6 @@ export type SSRContext = {
   __teleportBuffers?: Record<string, SSRBuffer>
 }
 
-export type BufferInstance = {
-  getBuffer: () => SSRBuffer | Promise<SSRBuffer>
-  push: PushFn
-}
-
 export type SSRSlots = Record<string, SSRSlot>
 
 export type SSRSlot = (
@@ -69,7 +64,7 @@ export type SSRSlot = (
 // - A resolved buffer (recursive arrays of strings that can be unrolled
 //   synchronously)
 // - An async buffer (a Promise that resolves to a resolved buffer)
-function createBuffer(): BufferInstance {
+function createBuffer() {
   let appendable = false
   const buffer: SSRBuffer = []
   return {
