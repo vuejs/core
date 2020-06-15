@@ -218,4 +218,32 @@ describe('api: template refs', () => {
     render(h(Comp), root)
     expect(state.refKey).toBe(root.children[0])
   })
+
+  test('multiple root refs', () => {
+    const root = nodeOps.createElement('div')
+    const refKey1 = ref(null)
+    const refKey2 = ref(null)
+    const refKey3 = ref(null)
+
+    const Comp = {
+      setup() {
+        return {
+          refKey1,
+          refKey2,
+          refKey3
+        }
+      },
+      render() {
+        return [
+          h('div', { ref: 'refKey1' }),
+          h('div', { ref: 'refKey2' }),
+          h('div', { ref: 'refKey3' })
+        ]
+      }
+    }
+    render(h(Comp), root)
+    expect(refKey1.value).toBe(root.children[1])
+    expect(refKey2.value).toBe(root.children[2])
+    expect(refKey3.value).toBe(root.children[3])
+  })
 })
