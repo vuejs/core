@@ -277,12 +277,13 @@ export const InternalObjectKey = `__vInternal`
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
-  (ref != null
+const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] => {
+  return (ref != null
     ? isArray(ref)
       ? ref
       : [currentRenderingInstance!, ref]
     : null) as any
+}
 
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
@@ -420,7 +421,7 @@ export function cloneVNode<T, U>(
     type: vnode.type,
     props,
     key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
+    ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,

@@ -14,6 +14,7 @@ import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { h, reactive, isReactive } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -198,24 +199,55 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+  })
 
+  test('cloneVNode key normalization', () => {
     // #1041 should use resolved key/ref
     expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
     expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
     expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
+  })
 
-    // ref normalizes to [currentRenderingInstance, ref]
-    expect(cloneVNode(createVNode('div', { ref: 'foo' })).ref).toEqual([
-      null,
-      'foo'
-    ])
-    expect(
-      cloneVNode(createVNode('div', { ref: 'foo' }), { ref: 'bar' }).ref
-    ).toEqual([null, 'bar'])
-    expect(cloneVNode(createVNode('div'), { ref: 'bar' }).ref).toEqual([
-      null,
-      'bar'
-    ])
+  // ref normalizes to [currentRenderingInstance, ref]
+  test('cloneVNode ref normalization', () => {
+    const mockInstance1 = {} as any
+    const mockInstance2 = {} as any
+
+    setCurrentRenderingInstance(mockInstance1)
+    const original = createVNode('div', { ref: 'foo' })
+    expect(original.ref).toEqual([mockInstance1, 'foo'])
+
+    // clone and preserve original ref
+    const cloned1 = cloneVNode(original)
+    expect(cloned1.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned2 = cloneVNode(original, { ref: 'bar' })
+    expect(cloned2.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const original2 = createVNode('div')
+    const cloned3 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned3.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning with different context instance
+    setCurrentRenderingInstance(mockInstance2)
+
+    // clone and preserve original ref
+    const cloned4 = cloneVNode(original)
+    // #1311 should preserve original context instance!
+    expect(cloned4.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned5 = cloneVNode(original, { ref: 'bar' })
+    // new ref should use current context instance and overwrite orgiinal
+    expect(cloned5.ref).toEqual([mockInstance2, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const cloned6 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned6.ref).toEqual([mockInstance2, 'bar'])
+
+    setCurrentRenderingInstance(null)
   })
 
   describe('mergeProps', () => {
