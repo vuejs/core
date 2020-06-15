@@ -11,11 +11,8 @@ import {
   createStaticVNode
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import {
-  renderToString,
-  renderComponent,
-  renderSlot
-} from '../src/renderToString'
+import { renderComponent, renderSlot } from '../src/render'
+import { renderToString } from '../src/renderToString'
 
 mockWarn()
 

@@ -8,7 +8,7 @@ export {
   renderComponent as ssrRenderComponent,
   renderSlot as ssrRenderSlot,
   renderTeleport as ssrRenderTeleport
-} from './renderToString'
+} from './render'
 export {
   ssrRenderClass,
   ssrRenderStyle,

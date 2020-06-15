@@ -7,42 +7,17 @@ import {
   ssrContextKey
 } from 'vue'
 import { isString, isPromise } from '@vue/shared'
-import {
-  createServerRenderer,
-  SSRBuffer,
-  SSRBufferItem,
-  SSRContext,
-  BufferInstance
-} from './render'
+import { renderComponentVNode, SSRBuffer, SSRContext } from './render'
 import { Readable } from 'stream'
 
 const { isVNode } = ssrUtils
-
-function createBuffer(): BufferInstance {
-  let appendable = false
-  const buffer: SSRBuffer = []
-  return {
-    getBuffer(): SSRBuffer {
-      // Return static buffer and await on items during unroll stage
-      return buffer
-    },
-    push(item: SSRBufferItem) {
-      const isStringItem = isString(item)
-      if (appendable && isStringItem) {
-        buffer[buffer.length - 1] += item as string
-      } else {
-        buffer.push(item)
-      }
-      appendable = isStringItem
-    }
-  }
-}
 
 async function unrollBuffer(
   buffer: SSRBuffer,
   stream: Readable
 ): Promise<void> {
-  for (let item of buffer) {
+  for (let i = 0; i < buffer.length; i++) {
+    let item = buffer[i]
     if (isPromise(item)) {
       item = await item
     }
@@ -53,14 +28,6 @@ async function unrollBuffer(
     }
   }
 }
-
-const {
-  renderComponentVNode,
-  renderComponent,
-  renderSlot
-} = createServerRenderer(createBuffer)
-
-export { renderComponent, renderSlot }
 
 export function renderToStream(
   input: App | VNode,
