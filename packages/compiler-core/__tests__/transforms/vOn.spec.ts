@@ -142,7 +142,7 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`$event => (`, { content: `i++` }, `)`]
+            children: [`($event, ...args) => (`, { content: `i++` }, `)`]
           }
         }
       ]
@@ -160,7 +160,11 @@ describe('compiler: transform v-on', () => {
             // should wrap with `{` for multiple statements
             // in this case the return value is discarded and the behavior is
             // consistent with 2.x
-            children: [`$event => {`, { content: `foo();bar()` }, `}`]
+            children: [
+              `($event, ...args) => {`,
+              { content: `foo();bar()` },
+              `}`
+            ]
           }
         }
       ]
@@ -196,7 +200,7 @@ describe('compiler: transform v-on', () => {
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `$event => (`,
+              `($event, ...args) => (`,
               {
                 type: NodeTypes.COMPOUND_EXPRESSION,
                 children: [
@@ -226,7 +230,7 @@ describe('compiler: transform v-on', () => {
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `$event => {`,
+              `($event, ...args) => {`,
               {
                 children: [
                   { content: `_ctx.foo` },
@@ -400,7 +404,11 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$event => (`, { content: `_ctx.foo($event)` }, `)`]
+          children: [
+            `($event, ...args) => (`,
+            { content: `_ctx.foo($event, ...args)` },
+            `)`
+          ]
         }
       })
     })
@@ -444,7 +452,7 @@ describe('compiler: transform v-on', () => {
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
-            `$event => (`,
+            `($event, ...args) => (`,
             { children: [{ content: `_ctx.foo` }, `++`] },
             `)`
           ]
