@@ -39,13 +39,7 @@ const {
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[]
-export type SSRBufferItem =
-  | string
-  | SSRBuffer
-  | ResolvedSSRBuffer
-  | Promise<SSRBuffer>
-  | Promise<ResolvedSSRBuffer>
-export type ResolvedSSRBuffer = (string | ResolvedSSRBuffer)[]
+export type SSRBufferItem = string | SSRBuffer | Promise<SSRBuffer>
 export type PushFn = (item: SSRBufferItem) => void
 export type Props = Record<string, unknown>
 
