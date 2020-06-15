@@ -56,6 +56,7 @@ function compileToFunction(
               )
             warn(codeFrame ? `${message}\n${codeFrame}` : message)
           } else {
+            /* istanbul ignore next */
             throw err
           }
         }
