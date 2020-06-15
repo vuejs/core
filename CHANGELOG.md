@@ -36,7 +36,7 @@
 ### Features
 
 * **compiler:** better warning for invalid expressions in function/browser mode ([e29f0b3](https://github.com/vuejs/vue-next/commit/e29f0b3fc2b10c76264cdd8e49c2ab4260286fd6)), closes [#1266](https://github.com/vuejs/vue-next/issues/1266)
-* **runtime-core:** add inheritRef option + make <transition> & <keep-alive> inherit refs ([38f2d23](https://github.com/vuejs/vue-next/commit/38f2d23a607cd7077da189ac274a3a0ad542cc1f))
+* **runtime-core:** add inheritRef option + make `<transition>` & `<keep-alive>` inherit refs ([38f2d23](https://github.com/vuejs/vue-next/commit/38f2d23a607cd7077da189ac274a3a0ad542cc1f))
 * **types:** adjust type exports for manual render function and tooling usage ([e4dc03a](https://github.com/vuejs/vue-next/commit/e4dc03a8b17d5e9f167de6a62a645878ac7ef3e2)), closes [#1329](https://github.com/vuejs/vue-next/issues/1329)
 * **types:** mixins/extends support in TypeScript ([#626](https://github.com/vuejs/vue-next/issues/626)) ([d3c436a](https://github.com/vuejs/vue-next/commit/d3c436ae2e66b75b7f2ed574dadda3f0e1fdce73))
 * **types:** support typing directive value via generic argument ([#1007](https://github.com/vuejs/vue-next/issues/1007)) ([419b86d](https://github.com/vuejs/vue-next/commit/419b86d1908f2a0521e6a7eafcbee764e9ee59a0)), closes [#998](https://github.com/vuejs/vue-next/issues/998)
