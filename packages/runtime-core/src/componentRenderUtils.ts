@@ -319,7 +319,7 @@ export function updateHOCHostEl(
   el: typeof vnode.el // HostNode
 ) {
   while (parent && parent.subTree === vnode) {
-    ;(vnode = parent.vnode).el = parent.subTree.el = el
+    ;(vnode = parent.vnode).el = el
     parent = parent.parent
   }
 }
