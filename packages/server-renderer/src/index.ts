@@ -4,10 +4,9 @@ export { renderToString } from './renderToString'
 export { renderToStream } from './renderToStream'
 
 // internal runtime helpers
-export {
-  renderTeleport as ssrRenderTeleport
-} from './helpers/ssrRenderTeleport'
-export { renderSlot as ssrRenderSlot } from './helpers/ssrRenderSlot'
+export { ssrRenderComponent } from './helpers/ssrRenderComponent'
+export { ssrRenderSlot } from './helpers/ssrRenderSlot'
+export { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 export {
   ssrRenderClass,
   ssrRenderStyle,
@@ -26,4 +25,3 @@ export {
   ssrRenderDynamicModel,
   ssrGetDynamicModelProps
 } from './helpers/ssrVModelHelpers'
-export { renderComponent as ssrRenderComponent } from './helpers/ssrComponent'

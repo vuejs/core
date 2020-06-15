@@ -24,7 +24,7 @@ import {
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
-import { renderTeleport } from './helpers/ssrRenderTeleport'
+import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
   createComponentInstance,
@@ -270,7 +270,7 @@ function renderTeleportVNode(
     )
     return []
   }
-  renderTeleport(
+  ssrRenderTeleport(
     push,
     push => {
       renderVNodeChildren(

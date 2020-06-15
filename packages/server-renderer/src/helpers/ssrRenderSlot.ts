@@ -9,7 +9,7 @@ export type SSRSlot = (
   scopeId: string | null
 ) => void
 
-export function renderSlot(
+export function ssrRenderSlot(
   slots: Slots | SSRSlots,
   slotName: string,
   slotProps: Props,

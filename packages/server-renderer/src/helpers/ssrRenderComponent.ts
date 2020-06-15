@@ -7,7 +7,7 @@ import {
 import { Props, renderComponentVNode, SSRBuffer } from '../render'
 import { SSRSlots } from './ssrRenderSlot'
 
-export function renderComponent(
+export function ssrRenderComponent(
   comp: Component,
   props: Props | null = null,
   children: Slots | SSRSlots | null = null,

@@ -13,8 +13,8 @@ import {
 import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { Readable } from 'stream'
-import { renderSlot } from '../src/helpers/ssrRenderSlot'
-import { renderComponent } from '../src/helpers/ssrComponent'
+import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
+import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 
 mockWarn()
 
@@ -165,7 +165,7 @@ describe('ssr: renderToStream', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
               push(`</div>`)
             }
           })
@@ -214,11 +214,13 @@ describe('ssr: renderToStream', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
+                ssrRenderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
               )
-              push(renderComponent(VNodeChild, { msg: 'vnode' }, null, parent))
               push(
-                renderComponent(
+                ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+              )
+              push(
+                ssrRenderComponent(
                   TemplateChild,
                   { msg: 'template' },
                   null,
@@ -239,7 +241,7 @@ describe('ssr: renderToStream', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(
+          ssrRenderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },
@@ -259,7 +261,7 @@ describe('ssr: renderToStream', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(
+                ssrRenderComponent(
                   Child,
                   { msg: 'hello' },
                   {
@@ -289,7 +291,7 @@ describe('ssr: renderToStream', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, { msg: 'hello' }, null, parent))
+              push(ssrRenderComponent(Child, { msg: 'hello' }, null, parent))
               push(`</div>`)
             }
           })
@@ -304,7 +306,7 @@ describe('ssr: renderToStream', () => {
         props: ['msg'],
         ssrRender(ctx: any, push: any, parent: any) {
           push(`<div class="child">`)
-          renderSlot(
+          ssrRenderSlot(
             ctx.$slots,
             'default',
             { msg: 'from slot' },
@@ -322,7 +324,7 @@ describe('ssr: renderToStream', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(
+                ssrRenderComponent(
                   Child,
                   { msg: 'hello' },
                   {
@@ -408,7 +410,7 @@ describe('ssr: renderToStream', () => {
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
-              push(renderComponent(Child, null, null, parent))
+              push(ssrRenderComponent(Child, null, null, parent))
               push(`</div>`)
             }
           })
@@ -447,9 +449,11 @@ describe('ssr: renderToStream', () => {
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
               push(
-                renderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
+                ssrRenderComponent(OptimizedChild, { msg: 'opt' }, null, parent)
               )
-              push(renderComponent(VNodeChild, { msg: 'vnode' }, null, parent))
+              push(
+                ssrRenderComponent(VNodeChild, { msg: 'vnode' }, null, parent)
+              )
               push(`</div>`)
             }
           })
