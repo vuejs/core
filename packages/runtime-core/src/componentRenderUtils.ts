@@ -113,7 +113,9 @@ export function renderComponentRoot(
         root.shapeFlag & ShapeFlags.ELEMENT ||
         root.shapeFlag & ShapeFlags.COMPONENT
       ) {
+        const ref = root.ref
         root = cloneVNode(root, fallthroughAttrs)
+        root.ref = ref
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []

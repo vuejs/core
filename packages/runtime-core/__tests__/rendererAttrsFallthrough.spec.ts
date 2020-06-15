@@ -10,7 +10,9 @@ import {
   openBlock,
   createBlock,
   FunctionalComponent,
-  createCommentVNode
+  createCommentVNode,
+  VNode,
+  withCtx
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/shared'
 
@@ -573,7 +575,7 @@ describe('attribute fallthrough', () => {
     }
 
     const Child = {
-      setup(props: any) {
+      setup() {
         return () => [
           createCommentVNode('hello'),
           h('button'),
@@ -592,5 +594,34 @@ describe('attribute fallthrough', () => {
     const button = root.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
+  })
+
+  // #1311
+  it('should not rewrite ref when fallthrough slot', () => {
+    const value = ref('')
+    let vnode: VNode
+    const Parent = {
+      render: () => {
+        return h(
+          Child,
+          { class: 'class' },
+          {
+            default: withCtx(() => {
+              return [(vnode = h('div', { ref: value }))]
+            })
+          }
+        )
+      }
+    }
+    const Child = {
+      render({ $slots }: any) {
+        return $slots.default()
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Parent), root)
+    expect(vnode!.ref![0].type).toBe(Parent)
   })
 })
