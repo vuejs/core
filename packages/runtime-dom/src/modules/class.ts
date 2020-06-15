@@ -15,8 +15,8 @@ export function patchClass(el: Element, value: string | null, isSVG: boolean) {
     const transitionClasses = (el as ElementWithTransition)._vtc
     if (transitionClasses) {
       value = (value
-        ? [value, ...transitionClasses]
-        : [...transitionClasses]
+        ? [value].concat(Array.from(transitionClasses))
+        : Array.from(transitionClasses)
       ).join(' ')
     }
     el.className = value
