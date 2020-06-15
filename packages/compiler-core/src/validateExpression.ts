@@ -32,6 +32,13 @@ export function validateBrowserExpression(
   asRawStatements = false
 ) {
   const exp = node.content
+
+  // empty expressions are validated per-directive since some directives
+  // do allow empty expressions.
+  if (!exp.trim()) {
+    return
+  }
+
   try {
     new Function(
       asRawStatements
