@@ -142,7 +142,7 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`($event, ...args) => (`, { content: `i++` }, `)`]
+            children: [`$event => (`, { content: `i++` }, `)`]
           }
         }
       ]
@@ -160,18 +160,14 @@ describe('compiler: transform v-on', () => {
             // should wrap with `{` for multiple statements
             // in this case the return value is discarded and the behavior is
             // consistent with 2.x
-            children: [
-              `($event, ...args) => {`,
-              { content: `foo();bar()` },
-              `}`
-            ]
+            children: [`$event => {`, { content: `foo();bar()` }, `}`]
           }
         }
       ]
     })
   })
 
-  test('should handle multiple line statement', () => {
+  test('should handle multi-line statement', () => {
     const { node } = parseWithVOn(`<div @click="\nfoo();\nbar()\n"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -200,7 +196,7 @@ describe('compiler: transform v-on', () => {
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `($event, ...args) => (`,
+              `$event => (`,
               {
                 type: NodeTypes.COMPOUND_EXPRESSION,
                 children: [
@@ -230,7 +226,7 @@ describe('compiler: transform v-on', () => {
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `($event, ...args) => {`,
+              `$event => {`,
               {
                 children: [
                   { content: `_ctx.foo` },
@@ -452,7 +448,7 @@ describe('compiler: transform v-on', () => {
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
           children: [
-            `($event, ...args) => (`,
+            `$event => (`,
             { children: [{ content: `_ctx.foo` }, `++`] },
             `)`
           ]
