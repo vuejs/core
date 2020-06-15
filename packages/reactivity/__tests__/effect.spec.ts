@@ -7,7 +7,9 @@ import {
   TriggerOpTypes,
   DebuggerEvent,
   markRaw,
-  ref
+  ref,
+  pauseTracking,
+  enableTracking
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -791,5 +793,24 @@ describe('reactivity/effect', () => {
     expect(count.value).toBe(1)
     count.value = 10
     expect(count.value).toBe(11)
+  })
+
+
+  it('pauseTracking', () => {
+    let dummy = 0
+    const counter = reactive({ num: 0 })
+    
+    expect(dummy).toBe(0)
+
+    pauseTracking()
+    effect(() => (dummy = counter.num))
+    counter.num = 7
+    expect(dummy).toBe(0)
+
+    enableTracking()
+    effect(() => (dummy = counter.num))
+    counter.num = 7
+    expect(dummy).toBe(7)
+
   })
 })
