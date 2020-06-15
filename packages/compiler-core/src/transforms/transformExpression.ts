@@ -271,7 +271,9 @@ const isFunction = (node: Node): node is Function =>
   /Function(Expression|Declaration)$/.test(node.type)
 
 const isStaticProperty = (node: Node): node is ObjectProperty =>
-  node && node.type === 'ObjectProperty' && !node.computed
+  node &&
+  (node.type === 'ObjectProperty' || node.type === 'ObjectMethod') &&
+  !node.computed
 
 const isPropertyShorthand = (node: Node, parent: Node) => {
   return (
