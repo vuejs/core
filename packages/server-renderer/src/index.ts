@@ -5,10 +5,9 @@ export { renderToStream } from './renderToStream'
 
 // internal runtime helpers
 export {
-  renderComponent as ssrRenderComponent,
-  renderSlot as ssrRenderSlot,
   renderTeleport as ssrRenderTeleport
-} from './render'
+} from './helpers/ssrRenderTeleport'
+export { renderSlot as ssrRenderSlot } from './helpers/ssrRenderSlot'
 export {
   ssrRenderClass,
   ssrRenderStyle,
@@ -27,3 +26,4 @@ export {
   ssrRenderDynamicModel,
   ssrGetDynamicModelProps
 } from './helpers/ssrVModelHelpers'
+export { renderComponent as ssrRenderComponent } from './helpers/ssrComponent'

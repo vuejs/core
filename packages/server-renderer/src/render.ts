@@ -2,13 +2,9 @@ import {
   Comment,
   Component,
   ComponentInternalInstance,
-  createVNode,
   DirectiveBinding,
   Fragment,
   mergeProps,
-  Slot,
-  Slots,
-  ssrContextKey,
   ssrUtils,
   Static,
   Text,
@@ -28,6 +24,7 @@ import {
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
+import { renderTeleport } from './helpers/ssrRenderTeleport'
 
 const {
   createComponentInstance,
@@ -49,22 +46,13 @@ export type SSRContext = {
   __teleportBuffers?: Record<string, SSRBuffer>
 }
 
-export type SSRSlots = Record<string, SSRSlot>
-
-export type SSRSlot = (
-  props: Props,
-  push: PushFn,
-  parentComponent: ComponentInternalInstance | null,
-  scopeId: string | null
-) => void
-
 // Each component has a buffer array.
 // A buffer array can contain one of the following:
 // - plain string
 // - A resolved buffer (recursive arrays of strings that can be unrolled
 //   synchronously)
 // - An async buffer (a Promise that resolves to a resolved buffer)
-function createBuffer() {
+export function createBuffer() {
   let appendable = false
   const buffer: SSRBuffer = []
   return {
@@ -82,18 +70,6 @@ function createBuffer() {
       appendable = isStringItem
     }
   }
-}
-
-export function renderComponent(
-  comp: Component,
-  props: Props | null = null,
-  children: Slots | SSRSlots | null = null,
-  parentComponent: ComponentInternalInstance | null = null
-): SSRBuffer | Promise<SSRBuffer> {
-  return renderComponentVNode(
-    createVNode(comp, props, children),
-    parentComponent
-  )
 }
 
 export function renderComponentVNode(
@@ -191,7 +167,7 @@ function renderVNode(
   }
 }
 
-function renderVNodeChildren(
+export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance
@@ -307,65 +283,4 @@ function renderTeleportVNode(
     disabled || disabled === '',
     parentComponent
   )
-}
-
-export function renderTeleport(
-  parentPush: PushFn,
-  contentRenderFn: (push: PushFn) => void,
-  target: string,
-  disabled: boolean,
-  parentComponent: ComponentInternalInstance
-) {
-  parentPush('<!--teleport start-->')
-
-  let teleportContent: SSRBufferItem
-
-  if (disabled) {
-    contentRenderFn(parentPush)
-    teleportContent = `<!---->`
-  } else {
-    const { getBuffer, push } = createBuffer()
-    contentRenderFn(push)
-    push(`<!---->`) // teleport end anchor
-    teleportContent = getBuffer()
-  }
-
-  const context = parentComponent.appContext.provides[
-    ssrContextKey as any
-  ] as SSRContext
-  const teleportBuffers =
-    context.__teleportBuffers || (context.__teleportBuffers = {})
-  if (teleportBuffers[target]) {
-    teleportBuffers[target].push(teleportContent)
-  } else {
-    teleportBuffers[target] = [teleportContent]
-  }
-
-  parentPush('<!--teleport end-->')
-}
-
-export function renderSlot(
-  slots: Slots | SSRSlots,
-  slotName: string,
-  slotProps: Props,
-  fallbackRenderFn: (() => void) | null,
-  push: PushFn,
-  parentComponent: ComponentInternalInstance
-) {
-  // template-compiled slots are always rendered as fragments
-  push(`<!--[-->`)
-  const slotFn = slots[slotName]
-  if (slotFn) {
-    if (slotFn.length > 1) {
-      // only ssr-optimized slot fns accept more than 1 arguments
-      const scopeId = parentComponent && parentComponent.type.__scopeId
-      slotFn(slotProps, push, parentComponent, scopeId ? ` ${scopeId}-s` : ``)
-    } else {
-      // normal slot
-      renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)
-    }
-  } else if (fallbackRenderFn) {
-    fallbackRenderFn()
-  }
-  push(`<!--]-->`)
 }

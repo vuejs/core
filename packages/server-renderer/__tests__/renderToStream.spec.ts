@@ -11,9 +11,10 @@ import {
   createStaticVNode
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import { renderComponent, renderSlot } from '../src/render'
 import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { Readable } from 'stream'
+import { renderSlot } from '../src/helpers/ssrRenderSlot'
+import { renderComponent } from '../src/helpers/ssrComponent'
 
 mockWarn()
 
