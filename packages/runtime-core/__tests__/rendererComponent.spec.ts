@@ -18,7 +18,6 @@ describe('renderer: component', () => {
     const Parent = {
       render: () => {
         // let Parent first rerender
-        console.log(value.value)
         return (parentVnode = h(Child))
       }
     }
