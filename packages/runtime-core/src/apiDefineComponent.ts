@@ -174,7 +174,7 @@ export function defineComponent<
   >
 ): ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
-    ExtractPropTypes<PropsOptions>,
+    ExtractPropTypes<PropsOptions, false>,
     RawBindings,
     D,
     C,
@@ -182,7 +182,7 @@ export function defineComponent<
     Mixin,
     Extends,
     E,
-    VNodeProps & ExtractPropTypes<PropsOptions, false>
+    VNodeProps
   >
 > &
   ComponentOptionsWithObjectProps<
