@@ -28,7 +28,8 @@ import {
   TELEPORT,
   SUSPENSE,
   KEEP_ALIVE,
-  BASE_TRANSITION
+  BASE_TRANSITION,
+  FRAGMENT
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
 import { parse } from '@babel/parser'
@@ -47,6 +48,8 @@ export function isCoreComponent(tag: string): symbol | void {
     return KEEP_ALIVE
   } else if (isBuiltInType(tag, 'BaseTransition')) {
     return BASE_TRANSITION
+  } else if (isBuiltInType(tag, 'Fragment')) {
+    return FRAGMENT
   }
 }
 
