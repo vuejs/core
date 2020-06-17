@@ -136,4 +136,22 @@ describe('compiler + runtime integration', () => {
       '[Vue warn]: Template element not found or is empty: #not-exist-id'
     ).toHaveBeenWarned()
   })
+
+  it('should warn when container is not found', () => {
+    const origin = document.querySelector
+    document.querySelector = jest.fn().mockReturnValue(null)
+    const App = {
+      template: `{{ count }}`,
+      data() {
+        return {
+          count: 0
+        }
+      }
+    }
+    createApp(App).mount('#not-exist-id')
+    expect(
+      '[Vue warn]: Failed to mount app: mount target selector returned null.'
+    ).toHaveBeenWarned()
+    document.querySelector = origin
+  })
 })
