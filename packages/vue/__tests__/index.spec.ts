@@ -149,6 +149,7 @@ describe('compiler + runtime integration', () => {
       }
     }
     createApp(App).mount('#not-exist-id')
+
     expect(
       '[Vue warn]: Failed to mount app: mount target selector returned null.'
     ).toHaveBeenWarned()
