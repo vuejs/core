@@ -2,7 +2,6 @@ import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw } from './reactive'
-import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
@@ -157,9 +156,9 @@ type BaseTypes = string | number | boolean
  */
 export interface RefUnwrapBailTypes {}
 
-export type UnwrapRef<T> = T extends ComputedRef<infer V>
+export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
-  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
+  : UnwrapRefSimple<T>
 
 type UnwrapRefSimple<T> = T extends
   | Function
