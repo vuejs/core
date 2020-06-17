@@ -99,6 +99,24 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe('hello')
   })
 
+  it('should support selector of rootContainer', () => {
+    const container = document.createElement('div')
+    const origin = document.querySelector
+    document.querySelector = jest.fn().mockReturnValue(container)
+
+    const App = {
+      template: `{{ count }}`,
+      data() {
+        return {
+          count: 0
+        }
+      }
+    }
+    createApp(App).mount('#app')
+    expect(container.innerHTML).toBe(`0`)
+    document.querySelector = origin
+  })
+
   it('should warn when template is not avaiable', () => {
     const app = createApp({
       template: {}
