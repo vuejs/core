@@ -13,7 +13,6 @@ import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
-import './devtools'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
