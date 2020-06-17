@@ -203,7 +203,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
-      false /* isForBlock */,
+      false /* disableTracking */,
       node.loc
     )
   }

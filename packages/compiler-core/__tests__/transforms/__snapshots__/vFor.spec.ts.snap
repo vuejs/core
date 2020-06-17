@@ -150,6 +150,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-for codegen v-for with constant expression 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, toDisplayString: _toDisplayString, createVNode: _createVNode } = _Vue
+
+    return (_openBlock(), _createBlock(_Fragment, null, _renderList(10, (item) => {
+      return _createVNode(\\"p\\", null, _toDisplayString(item), 1 /* TEXT */)
+    }), 64 /* STABLE_FRAGMENT */))
+  }
+}"
+`;
+
 exports[`compiler: v-for codegen v-if + v-for 1`] = `
 "const _Vue = Vue
 

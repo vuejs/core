@@ -32,7 +32,7 @@ import {
   FRAGMENT,
   RENDER_LIST
 } from '../src/runtimeHelpers'
-import { createElementWithCodegen } from './testUtils'
+import { createElementWithCodegen, genFlagText } from './testUtils'
 import { PatchFlags } from '@vue/shared'
 
 function createRoot(options: Partial<RootNode> = {}): RootNode {
@@ -283,7 +283,7 @@ describe('compiler: codegen', () => {
             type: NodeTypes.VNODE_CALL,
             tag: FRAGMENT,
             isBlock: true,
-            isForBlock: true,
+            disableTracking: true,
             props: undefined,
             children: createCallExpression(RENDER_LIST),
             patchFlag: '1',
@@ -295,6 +295,37 @@ describe('compiler: codegen', () => {
       })
     )
     expect(code).toMatch(`openBlock(true)`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('forNode with constant expression', () => {
+    const { code } = generate(
+      createRoot({
+        codegenNode: {
+          type: NodeTypes.FOR,
+          loc: locStub,
+          source: createSimpleExpression('1 + 2', false, locStub, true),
+          valueAlias: undefined,
+          keyAlias: undefined,
+          objectIndexAlias: undefined,
+          children: [],
+          parseResult: {} as any,
+          codegenNode: {
+            type: NodeTypes.VNODE_CALL,
+            tag: FRAGMENT,
+            isBlock: true,
+            disableTracking: false,
+            props: undefined,
+            children: createCallExpression(RENDER_LIST),
+            patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+            dynamicProps: undefined,
+            directives: undefined,
+            loc: locStub
+          } as ForCodegenNode
+        }
+      })
+    )
+    expect(code).toMatch(`openBlock()`)
     expect(code).toMatchSnapshot()
   })
 
