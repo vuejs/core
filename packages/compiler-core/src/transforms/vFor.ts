@@ -55,9 +55,14 @@ export const transformFor = createStructuralDirectiveTransform(
         forNode.source
       ]) as ForRenderListExpression
       const keyProp = findProp(node, `key`)
-      const fragmentFlag = keyProp
-        ? PatchFlags.KEYED_FRAGMENT
-        : PatchFlags.UNKEYED_FRAGMENT
+      const isStableFragment =
+        forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
+        forNode.source.isConstant
+      const fragmentFlag = isStableFragment
+        ? PatchFlags.STABLE_FRAGMENT
+        : keyProp
+          ? PatchFlags.KEYED_FRAGMENT
+          : PatchFlags.UNKEYED_FRAGMENT
       forNode.codegenNode = createVNodeCall(
         context,
         helper(FRAGMENT),
@@ -67,7 +72,7 @@ export const transformFor = createStructuralDirectiveTransform(
         undefined,
         undefined,
         true /* isBlock */,
-        true /* isForBlock */,
+        !isStableFragment /* disableTracking */,
         node.loc
       ) as ForCodegenNode
 
@@ -122,9 +127,11 @@ export const transformFor = createStructuralDirectiveTransform(
           // but mark it as a block.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
-          childBlock.isBlock = true
-          helper(OPEN_BLOCK)
-          helper(CREATE_BLOCK)
+          childBlock.isBlock = !isStableFragment
+          if (childBlock.isBlock) {
+            helper(OPEN_BLOCK)
+            helper(CREATE_BLOCK)
+          }
         }
 
         renderExp.arguments.push(createFunctionExpression(
