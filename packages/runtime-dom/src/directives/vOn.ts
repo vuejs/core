@@ -23,7 +23,7 @@ const modifierGuards: Record<
 }
 
 /**
- * @internal
+ * @private
  */
 export const withModifiers = (fn: Function, modifiers: string[]) => {
   return (event: Event, ...args: unknown[]) => {
@@ -48,7 +48,7 @@ const keyNames: Record<string, string | string[]> = {
 }
 
 /**
- * @internal
+ * @private
  */
 export const withKeys = (fn: Function, modifiers: string[]) => {
   return (event: KeyboardEvent) => {

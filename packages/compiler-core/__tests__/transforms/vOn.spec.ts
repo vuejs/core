@@ -167,6 +167,24 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should handle multi-line statement', () => {
+    const { node } = parseWithVOn(`<div @click="\nfoo();\nbar()\n"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            // should wrap with `{` for multiple statements
+            // in this case the return value is discarded and the behavior is
+            // consistent with 2.x
+            children: [`$event => {`, { content: `\nfoo();\nbar()\n` }, `}`]
+          }
+        }
+      ]
+    })
+  })
+
   test('inline statement w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="foo($event)"/>`, {
       prefixIdentifiers: true
@@ -382,7 +400,11 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`$event => (`, { content: `_ctx.foo($event)` }, `)`]
+          children: [
+            `($event, ...args) => (`,
+            { content: `_ctx.foo($event, ...args)` },
+            `)`
+          ]
         }
       })
     })

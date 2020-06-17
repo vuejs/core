@@ -98,4 +98,24 @@ describe('compiler + runtime integration', () => {
     app.mount(container)
     expect(container.innerHTML).toBe('hello')
   })
+
+  it('should warn when template is not avaiable', () => {
+    const app = createApp({
+      template: {}
+    })
+    const container = document.createElement('div')
+    app.mount(container)
+    expect('[Vue warn]: invalid template option:').toHaveBeenWarned()
+  })
+
+  it('should warn when template is is not found', () => {
+    const app = createApp({
+      template: '#not-exist-id'
+    })
+    const container = document.createElement('div')
+    app.mount(container)
+    expect(
+      '[Vue warn]: Template element not found or is empty: #not-exist-id'
+    ).toHaveBeenWarned()
+  })
 })

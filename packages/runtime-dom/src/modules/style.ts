@@ -8,7 +8,9 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   if (!next) {
     el.removeAttribute('style')
   } else if (isString(next)) {
-    style.cssText = next
+    if (prev !== next) {
+      style.cssText = next
+    }
   } else {
     for (const key in next) {
       setStyle(style, key, next[key] as string)

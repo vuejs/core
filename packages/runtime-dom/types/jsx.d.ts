@@ -1331,6 +1331,7 @@ declare global {
     }
     interface IntrinsicElements extends NativeElements {
       // allow arbitrary elements
+      // @ts-ignore supress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
   }

@@ -42,11 +42,7 @@ function trigger(el: HTMLElement, type: string) {
 type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
-// be tree-shaken in case v-model is never used. These are used by compilers
-// only and userland code should avoid relying on them.
-/**
- * @internal
- */
+// be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
@@ -96,9 +92,6 @@ export const vModelText: ModelDirective<
   }
 }
 
-/**
- * @internal
- */
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   beforeMount(el, binding, vnode) {
     setChecked(el, binding, vnode)
@@ -144,9 +137,6 @@ function setChecked(
   }
 }
 
-/**
- * @internal
- */
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
   beforeMount(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
@@ -163,9 +153,6 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
   }
 }
 
-/**
- * @internal
- */
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   // use mounted & updated because <select> relies on its children <option>s.
   mounted(el, { value }, vnode) {
@@ -227,9 +214,6 @@ function getCheckboxValue(
   return key in el ? el[key] : checked
 }
 
-/**
- * @internal
- */
 export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {

@@ -314,9 +314,8 @@ function hydrateTeleport(
           optimized
         )
       }
-      ;(target as TeleportTargetElement)._lpa = nextSibling(
-        vnode.targetAnchor as Node
-      )
+      ;(target as TeleportTargetElement)._lpa =
+        vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
     }
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)

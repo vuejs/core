@@ -16,6 +16,7 @@ import {
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
 import { warn } from './warning'
+import { isHmrUpdating } from './hmr'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -238,7 +239,6 @@ const isElementRoot = (vnode: VNode) => {
 export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   optimized?: boolean
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode
@@ -247,12 +247,7 @@ export function shouldUpdateComponent(
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
   // force the child to update as well.
-  if (
-    __DEV__ &&
-    (prevChildren || nextChildren) &&
-    parentComponent &&
-    parentComponent.hmrUpdated
-  ) {
+  if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
     return true
   }
 
@@ -268,8 +263,11 @@ export function shouldUpdateComponent(
       return true
     }
     if (patchFlag & PatchFlags.FULL_PROPS) {
+      if (!prevProps) {
+        return !!nextProps
+      }
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps!, nextProps!)
+      return hasPropsChanged(prevProps, nextProps!)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {

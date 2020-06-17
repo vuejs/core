@@ -1,5 +1,5 @@
 import { ParserOptions } from './options'
-import { NO, isArray, makeMap } from '@vue/shared'
+import { NO, isArray, makeMap, extend } from '@vue/shared'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import {
   assert,
@@ -24,7 +24,6 @@ import {
   InterpolationNode,
   createRoot
 } from './ast'
-import { extend } from '@vue/shared'
 
 type OptionalOptions = 'isNativeTag' | 'isBuiltInComponent'
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
@@ -91,10 +90,7 @@ function createParserContext(
   options: ParserOptions
 ): ParserContext {
   return {
-    options: {
-      ...defaultParserOptions,
-      ...options
-    },
+    options: extend({}, defaultParserOptions, options),
     column: 1,
     line: 1,
     offset: 0,
@@ -220,13 +216,17 @@ function parseChildren(
               removedWhitespace = true
               nodes[i] = null as any
             } else {
-              // Otherwise, condensed consecutive whitespace inside the text down to
-              // a single space
+              // Otherwise, condensed consecutive whitespace inside the text
+              // down to a single space
               node.content = ' '
             }
           } else {
             node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
+        } else if (!__DEV__ && node.type === NodeTypes.COMMENT) {
+          // remove comment nodes in prod
+          removedWhitespace = true
+          nodes[i] = null as any
         }
       }
     } else if (parent && context.options.isPreTag(parent.tag)) {
@@ -243,12 +243,6 @@ function parseChildren(
 }
 
 function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
-  // ignore comments in production
-  /* istanbul ignore next */
-  if (!__DEV__ && node.type === NodeTypes.COMMENT) {
-    return
-  }
-
   if (node.type === NodeTypes.TEXT) {
     const prev = last(nodes)
     // Merge if both this and the previous node are text and those are
@@ -605,18 +599,27 @@ function parseAttribute(
   const loc = getSelection(context, start)
 
   if (!context.inVPre && /^(v-|:|@|#)/.test(name)) {
-    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)([^\.]+))?(.+)?$/i.exec(
+    const match = /(?:^v-([a-z0-9-]+))?(?:(?::|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
       name
     )!
+
+    const dirName =
+      match[1] ||
+      (startsWith(name, ':') ? 'bind' : startsWith(name, '@') ? 'on' : 'slot')
 
     let arg: ExpressionNode | undefined
 
     if (match[2]) {
+      const isSlot = dirName === 'slot'
       const startOffset = name.indexOf(match[2])
       const loc = getSelection(
         context,
         getNewPosition(context, start, startOffset),
-        getNewPosition(context, start, startOffset + match[2].length)
+        getNewPosition(
+          context,
+          start,
+          startOffset + match[2].length + ((isSlot && match[3]) || '').length
+        )
       )
       let content = match[2]
       let isStatic = true
@@ -632,6 +635,11 @@ function parseAttribute(
         }
 
         content = content.substr(1, content.length - 2)
+      } else if (isSlot) {
+        // #1241 special case for v-slot: vuetify relies extensively on slot
+        // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
+        // supports such usage so we are keeping it consistent with 2.x.
+        content += match[3] || ''
       }
 
       arg = {
@@ -653,13 +661,7 @@ function parseAttribute(
 
     return {
       type: NodeTypes.DIRECTIVE,
-      name:
-        match[1] ||
-        (startsWith(name, ':')
-          ? 'bind'
-          : startsWith(name, '@')
-            ? 'on'
-            : 'slot'),
+      name: dirName,
       exp: value && {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: value.content,

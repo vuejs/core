@@ -7,6 +7,22 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
   })
 
+  // #1309
+  it('should not patch same string style', () => {
+    const el = document.createElement('div')
+    const fn = jest.fn()
+    const value = (el.style.cssText = 'color:red;')
+    Object.defineProperty(el.style, 'cssText', {
+      get(): any {
+        return value
+      },
+      set: fn
+    })
+    patchProp(el, 'style', value, value)
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+    expect(fn).not.toBeCalled()
+  })
+
   it('plain object', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { color: 'red' })
