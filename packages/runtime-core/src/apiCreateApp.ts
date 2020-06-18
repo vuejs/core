@@ -87,15 +87,15 @@ export function createAppContext(): AppContext {
       isNativeTag: NO,
       devtools: true,
       performance: false,
-      globalProperties: {},
-      optionMergeStrategies: {},
+      globalProperties: Object.create(null),
+      optionMergeStrategies: Object.create(null),
       isCustomElement: NO,
       errorHandler: undefined,
       warnHandler: undefined
     },
     mixins: [],
-    components: {},
-    directives: {},
+    components: Object.create(null),
+    directives: Object.create(null),
     provides: Object.create(null)
   }
 }
