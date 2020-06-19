@@ -481,7 +481,7 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    currentInstance = instance
+    setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -490,7 +490,7 @@ function setupStatefulComponent(
       [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
     )
     resetTracking()
-    currentInstance = null
+    setCurrentInstance(null)
 
     if (isPromise(setupResult)) {
       if (isSSR) {
@@ -622,9 +622,9 @@ function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS__) {
-    currentInstance = instance
+    setCurrentInstance(instance)
     applyOptions(instance, Component)
-    currentInstance = null
+    setCurrentInstance(null)
   }
 }
 
