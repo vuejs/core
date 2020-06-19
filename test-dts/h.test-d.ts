@@ -111,37 +111,37 @@ describe('h inference w/ defineComponent', () => {
   expectError(h(Foo, { bar: 1, foo: 1 }))
 })
 
-// describe('h inference w/ defineComponent + optional props', () => {
-//   const Foo = defineComponent({
-//     setup(_props: { foo?: string; bar: number }) {}
-//   })
+describe('h inference w/ defineComponent + optional props', () => {
+  const Foo = defineComponent({
+    setup(_props: { foo?: string; bar: number }) {}
+  })
 
-//   h(Foo, { bar: 1 })
-//   h(Foo, { bar: 1, foo: 'ok' })
-//   // should allow extraneous props (attrs fallthrough)
-//   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
-//   // @ts-expect-error should fail on missing required prop
-//   expectError(h(Foo, {}))
-//   // @ts-expect-error
-//   expectError(h(Foo, { foo: 'ok' }))
-//   // @ts-expect-error should fail on wrong type
-//   expectError(h(Foo, { bar: 1, foo: 1 }))
-// })
+  h(Foo, { bar: 1 })
+  h(Foo, { bar: 1, foo: 'ok' })
+  // should allow extraneous props (attrs fallthrough)
+  h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
+  // @ts-expect-error should fail on missing required prop
+  expectError(h(Foo, {}))
+  // @ts-expect-error
+  expectError(h(Foo, { foo: 'ok' }))
+  // @ts-expect-error should fail on wrong type
+  expectError(h(Foo, { bar: 1, foo: 1 }))
+})
 
-// describe('h inference w/ defineComponent + direct function', () => {
-//   const Foo = defineComponent((_props: { foo?: string; bar: number }) => {})
+describe('h inference w/ defineComponent + direct function', () => {
+  const Foo = defineComponent((_props: { foo?: string; bar: number }) => {})
 
-//   h(Foo, { bar: 1 })
-//   h(Foo, { bar: 1, foo: 'ok' })
-//   // should allow extraneous props (attrs fallthrough)
-//   h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
-//   // @ts-expect-error should fail on missing required prop
-//   expectError(h(Foo, {}))
-//   //  @ts-expect-error
-//   expectError(h(Foo, { foo: 'ok' }))
-//   // @ts-expect-error should fail on wrong type
-//   expectError(h(Foo, { bar: 1, foo: 1 }))
-// })
+  h(Foo, { bar: 1 })
+  h(Foo, { bar: 1, foo: 'ok' })
+  // should allow extraneous props (attrs fallthrough)
+  h(Foo, { bar: 1, foo: 'ok', class: 'extra' })
+  // @ts-expect-error should fail on missing required prop
+  expectError(h(Foo, {}))
+  //  @ts-expect-error
+  expectError(h(Foo, { foo: 'ok' }))
+  // @ts-expect-error should fail on wrong type
+  expectError(h(Foo, { bar: 1, foo: 1 }))
+})
 
 // #922
 describe('h support for generic component type', () => {
