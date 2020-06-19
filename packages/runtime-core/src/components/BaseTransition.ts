@@ -173,7 +173,6 @@ const BaseTransitionImpl = {
         oldInnerChild.type !== Comment &&
         !isSameVNodeType(innerChild, oldInnerChild)
       ) {
-        const prevHooks = oldInnerChild.transition!
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
@@ -192,7 +191,6 @@ const BaseTransitionImpl = {
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out') {
-          delete prevHooks.delayedLeave
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
