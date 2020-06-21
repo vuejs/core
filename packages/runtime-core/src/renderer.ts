@@ -1616,24 +1616,22 @@ function baseCreateRenderer(
     // (a b)
     // c (a b)
     // i = 0, e1 = -1, e2 = 0
-    if (i > e1) {
-      if (i <= e2) {
-        const nextPos = e2 + 1
-        const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
-        while (i <= e2) {
-          patch(
-            null,
-            (c2[i] = optimized
-              ? cloneIfMounted(c2[i] as VNode)
-              : normalizeVNode(c2[i])),
-            container,
-            anchor,
-            parentComponent,
-            parentSuspense,
-            isSVG
-          )
-          i++
-        }
+    if (i > e1 && i <= e2) {
+      const nextPos = e2 + 1
+      const anchor = nextPos < l2 ? (c2[nextPos] as VNode).el : parentAnchor
+      while (i <= e2) {
+        patch(
+          null,
+          (c2[i] = optimized
+            ? cloneIfMounted(c2[i] as VNode)
+            : normalizeVNode(c2[i])),
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          isSVG
+        )
+        i++
       }
     }
 
@@ -1660,7 +1658,7 @@ function baseCreateRenderer(
       const s2 = i // next starting index
 
       // 5.1 build key:index map for newChildren
-      const keyToNewIndexMap: Map<string | number, number> = new Map()
+      const keyToNewIndexMap: Map<string | number | null, number> = new Map()
       for (i = s2; i <= e2; i++) {
         const nextChild = (c2[i] = optimized
           ? cloneIfMounted(c2[i] as VNode)
@@ -1700,10 +1698,8 @@ function baseCreateRenderer(
           unmount(prevChild, parentComponent, parentSuspense, true)
           continue
         }
-        let newIndex
-        if (prevChild.key != null) {
-          newIndex = keyToNewIndexMap.get(prevChild.key)
-        } else {
+        let newIndex = keyToNewIndexMap.get(prevChild.key)
+        if (newIndex === undefined) {
           // key-less node, try to locate a key-less node of the same type
           for (j = s2; j <= e2; j++) {
             if (
@@ -1711,19 +1707,30 @@ function baseCreateRenderer(
               isSameVNodeType(prevChild, c2[j] as VNode)
             ) {
               newIndex = j
+              newIndexToOldIndexMap[newIndex - s2] = i + 1
+              if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
+              else moved = true
+              patch(
+                prevChild,
+                c2[newIndex] as VNode,
+                container,
+                null,
+                parentComponent,
+                parentSuspense,
+                isSVG,
+                optimized
+              )
+              patched++
               break
             }
           }
-        }
-        if (newIndex === undefined) {
-          unmount(prevChild, parentComponent, parentSuspense, true)
+          if (newIndex === undefined) {
+            unmount(prevChild, parentComponent, parentSuspense, true)
+          }
         } else {
           newIndexToOldIndexMap[newIndex - s2] = i + 1
-          if (newIndex >= maxNewIndexSoFar) {
-            maxNewIndexSoFar = newIndex
-          } else {
-            moved = true
-          }
+          if (newIndex >= maxNewIndexSoFar) maxNewIndexSoFar = newIndex
+          else moved = true
           patch(
             prevChild,
             c2[newIndex] as VNode,
