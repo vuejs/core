@@ -37,11 +37,10 @@ export const remove = <T>(arr: T[], el: T) => {
   }
 }
 
-const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
   key: string | symbol
-): key is keyof typeof val => hasOwnProperty.call(val, key)
+): key is keyof typeof val => key in val && key !== 'constructor'
 
 export const isArray = Array.isArray
 export const isFunction = (val: unknown): val is Function =>
