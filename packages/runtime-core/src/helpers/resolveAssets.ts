@@ -1,7 +1,12 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import { currentInstance, Component, FunctionalComponent } from '../component'
+import {
+  currentInstance,
+  Component,
+  FunctionalComponent,
+  ComponentOptions
+} from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString } from '@vue/shared'
+import { camelize, capitalize, isString, isObject } from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
@@ -77,14 +82,21 @@ function resolveAsset(
         res = self
       }
     }
-    if (__DEV__ && warnMissing && !res) {
-      warn(
-        `Failed to resolve ${type.slice(0, -1)}: ${name}` +
-          (type === COMPONENTS
-            ? `\nFor recursive components, make sure to provide the "name" option.`
-            : '')
-      )
+
+    // infer anonymous component's name based on registered name
+    if (
+      res &&
+      type === COMPONENTS &&
+      isObject(res) &&
+      !(res as ComponentOptions).name
+    ) {
+      ;(res as ComponentOptions).name = name
     }
+
+    if (__DEV__ && warnMissing && !res) {
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+    }
+
     return res
   } else if (__DEV__) {
     warn(
