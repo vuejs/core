@@ -50,8 +50,8 @@ function createGetter(isReadonly = false, shallow = false) {
       key === ReactiveFlags.raw &&
       receiver ===
         (isReadonly
-          ? (target as any).__v_readonly
-          : (target as any).__v_reactive)
+          ? (target as any)[ReactiveFlags.readonly]
+          : (target as any)[ReactiveFlags.reactive])
     ) {
       return target
     }
