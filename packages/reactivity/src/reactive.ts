@@ -22,12 +22,12 @@ export const enum ReactiveFlags {
 }
 
 interface Target {
-  __v_skip?: boolean
-  __v_isReactive?: boolean
-  __v_isReadonly?: boolean
-  __v_raw?: any
-  __v_reactive?: any
-  __v_readonly?: any
+  [ReactiveFlags.skip]?: boolean
+  [ReactiveFlags.isReactive]?: boolean
+  [ReactiveFlags.isReadonly]?: boolean
+  [ReactiveFlags.raw]?: any
+  [ReactiveFlags.reactive]?: any
+  [ReactiveFlags.readonly]?: any
 }
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
