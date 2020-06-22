@@ -11,6 +11,7 @@ import {
 import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
@@ -82,17 +83,28 @@ export const transformOn: DirectiveTransform = (
       // avoiding the need to be patched.
       if (isCacheable && isMemberExp) {
         if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          exp.content += `($event)`
+          exp.content += `($event, ...args)`
         } else {
-          exp.children.push(`($event)`)
+          exp.children.push(`($event, ...args)`)
         }
       }
+    }
+
+    if (__DEV__ && __BROWSER__) {
+      validateBrowserExpression(
+        exp as SimpleExpressionNode,
+        context,
+        false,
+        hasMultipleStatements
+      )
     }
 
     if (isInlineStatement || (isCacheable && isMemberExp)) {
       // wrap inline statement in a function expression
       exp = createCompoundExpression([
-        `$event => ${hasMultipleStatements ? `{` : `(`}`,
+        `${isInlineStatement ? `$event` : `($event, ...args)`} => ${
+          hasMultipleStatements ? `{` : `(`
+        }`,
         exp,
         hasMultipleStatements ? `}` : `)`
       ])

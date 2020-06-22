@@ -5,6 +5,7 @@ import {
   SimpleExpressionNode,
   SourceLocation
 } from '@vue/compiler-core'
+import { parseStringStyle } from '@vue/shared'
 
 // Parse inline CSS strings for static style attributes into an object.
 // This is a NodeTransform since it works on the static `style` attribute and
@@ -12,7 +13,7 @@ import {
 // style="color: red" -> :style='{ "color": "red" }'
 // It is then processed by `transformElement` and included in the generated
 // props.
-export const transformStyle: NodeTransform = (node, context) => {
+export const transformStyle: NodeTransform = node => {
   if (node.type === NodeTypes.ELEMENT) {
     node.props.forEach((p, i) => {
       if (p.type === NodeTypes.ATTRIBUTE && p.name === 'style' && p.value) {
@@ -30,19 +31,10 @@ export const transformStyle: NodeTransform = (node, context) => {
   }
 }
 
-const listDelimiterRE = /;(?![^(]*\))/g
-const propertyDelimiterRE = /:(.+)/
-
-function parseInlineCSS(
+const parseInlineCSS = (
   cssText: string,
   loc: SourceLocation
-): SimpleExpressionNode {
-  const res: Record<string, string> = {}
-  cssText.split(listDelimiterRE).forEach(item => {
-    if (item) {
-      const tmp = item.split(propertyDelimiterRE)
-      tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())
-    }
-  })
-  return createSimpleExpression(JSON.stringify(res), false, loc, true)
+): SimpleExpressionNode => {
+  const normalized = parseStringStyle(cssText)
+  return createSimpleExpression(JSON.stringify(normalized), false, loc, true)
 }

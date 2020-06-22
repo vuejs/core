@@ -54,6 +54,8 @@ import {
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
+const PURE_ANNOTATION = `/*#__PURE__*/`
+
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
 export interface CodegenResult {
@@ -69,6 +71,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
   column: number
   offset: number
   indentLevel: number
+  pure: boolean
   map?: SourceMapGenerator
   helper(key: symbol): string
   push(code: string, node?: CodegenNode): void
@@ -107,6 +110,7 @@ function createCodegenContext(
     line: 1,
     offset: 0,
     indentLevel: 0,
+    pure: false,
     map: undefined,
     helper(key) {
       return `_${helperNameMap[key]}`
@@ -201,7 +205,7 @@ export function generate(
 
   // enter render function
   if (genScopeId && !ssr) {
-    push(`const render = _withId(`)
+    push(`const render = ${PURE_ANNOTATION}_withId(`)
   }
   if (!ssr) {
     push(`function render(_ctx, _cache) {`)
@@ -400,7 +404,9 @@ function genModulePreamble(
   }
 
   if (genScopeId) {
-    push(`const _withId = ${helper(WITH_SCOPE_ID)}("${scopeId}")`)
+    push(
+      `const _withId = ${PURE_ANNOTATION}${helper(WITH_SCOPE_ID)}("${scopeId}")`
+    )
     newline()
   }
 
@@ -428,10 +434,11 @@ function genAssets(
   }
 }
 
-function genHoists(hoists: JSChildNode[], context: CodegenContext) {
+function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   if (!hoists.length) {
     return
   }
+  context.pure = true
   const { push, newline, helper, scopeId, mode } = context
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
@@ -444,15 +451,18 @@ function genHoists(hoists: JSChildNode[], context: CodegenContext) {
   }
 
   hoists.forEach((exp, i) => {
-    push(`const _hoisted_${i + 1} = `)
-    genNode(exp, context)
-    newline()
+    if (exp) {
+      push(`const _hoisted_${i + 1} = `)
+      genNode(exp, context)
+      newline()
+    }
   })
 
   if (genScopeId) {
     push(`${helper(POP_SCOPE_ID)}()`)
     newline()
   }
+  context.pure = false
 }
 
 function genImports(importsOptions: ImportItem[], context: CodegenContext) {
@@ -627,7 +637,8 @@ function genExpression(node: SimpleExpressionNode, context: CodegenContext) {
 }
 
 function genInterpolation(node: InterpolationNode, context: CodegenContext) {
-  const { push, helper } = context
+  const { push, helper, pure } = context
+  if (pure) push(PURE_ANNOTATION)
   push(`${helper(TO_DISPLAY_STRING)}(`)
   genNode(node.content, context)
   push(`)`)
@@ -669,13 +680,16 @@ function genExpressionAsPropertyKey(
 
 function genComment(node: CommentNode, context: CodegenContext) {
   if (__DEV__) {
-    const { push, helper } = context
+    const { push, helper, pure } = context
+    if (pure) {
+      push(PURE_ANNOTATION)
+    }
     push(`${helper(CREATE_COMMENT)}(${JSON.stringify(node.content)})`, node)
   }
 }
 
 function genVNodeCall(node: VNodeCall, context: CodegenContext) {
-  const { push, helper } = context
+  const { push, helper, pure } = context
   const {
     tag,
     props,
@@ -684,13 +698,16 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    isForBlock
+    disableTracking
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
   if (isBlock) {
-    push(`(${helper(OPEN_BLOCK)}(${isForBlock ? `true` : ``}), `)
+    push(`(${helper(OPEN_BLOCK)}(${disableTracking ? `true` : ``}), `)
+  }
+  if (pure) {
+    push(PURE_ANNOTATION)
   }
   push(helper(isBlock ? CREATE_BLOCK : CREATE_VNODE) + `(`, node)
   genNodeList(
@@ -718,12 +735,14 @@ function genNullableArgs(args: any[]): CallExpression['arguments'] {
 
 // JavaScript
 function genCallExpression(node: CallExpression, context: CodegenContext) {
-  const callee = isString(node.callee)
-    ? node.callee
-    : context.helper(node.callee)
-  context.push(callee + `(`, node)
+  const { push, helper, pure } = context
+  const callee = isString(node.callee) ? node.callee : helper(node.callee)
+  if (pure) {
+    push(PURE_ANNOTATION)
+  }
+  push(callee + `(`, node)
   genNodeList(node.arguments, context)
-  context.push(`)`)
+  push(`)`)
 }
 
 function genObjectExpression(node: ObjectExpression, context: CodegenContext) {
@@ -872,7 +891,7 @@ function genTemplateLiteral(node: TemplateLiteral, context: CodegenContext) {
   for (let i = 0; i < l; i++) {
     const e = node.elements[i]
     if (isString(e)) {
-      push(e.replace(/`/g, '\\`'))
+      push(e.replace(/(`|\$|\\)/g, '\\$1'))
     } else {
       push('${')
       if (multilines) indent()

@@ -10,9 +10,14 @@ import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   transformAssetUrl,
   AssetURLOptions,
-  createAssetUrlTransformWithOptions
+  createAssetUrlTransformWithOptions,
+  AssetURLTagConfig,
+  normalizeOptions
 } from './templateTransformAssetUrl'
-import { transformSrcset } from './templateTransformSrcset'
+import {
+  transformSrcset,
+  createSrcsetTransformWithOptions
+} from './templateTransformSrcset'
 import { isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
@@ -40,23 +45,42 @@ export interface SFCTemplateCompileOptions {
   compilerOptions?: CompilerOptions
   preprocessLang?: string
   preprocessOptions?: any
+  /**
+   * In some cases, compiler-sfc may not be inside the project root (e.g. when
+   * linked or globally installed). In such cases a custom `require` can be
+   * passed to correctly resolve the preprocessors.
+   */
   preprocessCustomRequire?: (id: string) => any
-  transformAssetUrls?: AssetURLOptions | boolean
+  /**
+   * Configure what tags/attributes to trasnform into asset url imports,
+   * or disable the transform altogether with `false`.
+   */
+  transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
+}
+  
+interface PreProcessor {
+  render(
+    source: string,
+    options: any,
+    cb: (err: Error | null, res: string) => void
+  ): void
 }
 
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: any
+  preprocessor: PreProcessor
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
   // expose a synchronous API so that it is usable in Jest transforms (which
   // have to be sync because they are applied via Node.js require hooks)
-  let res: any, err
+  let res: string = ''
+  let err: Error | null = null
+
   preprocessor.render(
     source,
     { filename, ...preprocessOptions },
-    (_err: Error | null, _res: string) => {
+    (_err, _res) => {
       if (_err) err = _err
       res = _res
     }
@@ -135,9 +159,10 @@ function doCompileTemplate({
 
   let nodeTransforms: NodeTransform[] = []
   if (isObject(transformAssetUrls)) {
+    const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
-      createAssetUrlTransformWithOptions(transformAssetUrls),
-      transformSrcset
+      createAssetUrlTransformWithOptions(assetOptions),
+      createSrcsetTransformWithOptions(assetOptions)
     ]
   } else if (transformAssetUrls !== false) {
     nodeTransforms = [transformAssetUrl, transformSrcset]

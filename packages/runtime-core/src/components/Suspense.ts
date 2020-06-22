@@ -244,6 +244,7 @@ function createSuspenseBoundary(
   /* istanbul ignore if */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
+    // @ts-ignore `console.info` cannot be null error
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`
     )
@@ -432,7 +433,7 @@ function createSuspenseBoundary(
           handleSetupResult(instance, asyncSetupResult, false)
           if (hydratedEl) {
             // vnode may have been replaced if an update happened before the
-            // async dep is reoslved.
+            // async dep is resolved.
             vnode.el = hydratedEl
           }
           setupRenderEffect(
@@ -494,6 +495,7 @@ function hydrateSuspense(
     optimized: boolean
   ) => Node | null
 ): Node | null {
+  /* eslint-disable no-restricted-globals */
   const suspense = (vnode.suspense = createSuspenseBoundary(
     vnode,
     parentSuspense,
@@ -523,6 +525,7 @@ function hydrateSuspense(
     suspense.resolve()
   }
   return result
+  /* eslint-enable no-restricted-globals */
 }
 
 export function normalizeSuspenseChildren(

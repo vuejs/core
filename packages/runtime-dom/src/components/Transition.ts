@@ -7,7 +7,7 @@ import {
   getCurrentInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
-import { isObject } from '@vue/shared'
+import { isObject, toNumber, extend } from '@vue/shared'
 import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 const TRANSITION = 'transition'
@@ -37,8 +37,9 @@ export const Transition: FunctionalComponent<TransitionProps> = (
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
-export const TransitionPropsValidators = (Transition.props = {
-  ...(BaseTransition as any).props,
+Transition.inheritRef = true
+
+const DOMTransitionPropsValidators = {
   name: String,
   type: String,
   css: {
@@ -55,28 +56,45 @@ export const TransitionPropsValidators = (Transition.props = {
   leaveFromClass: String,
   leaveActiveClass: String,
   leaveToClass: String
-})
+}
 
-export function resolveTransitionProps({
-  name = 'v',
-  type,
-  css = true,
-  duration,
-  enterFromClass = `${name}-enter-from`,
-  enterActiveClass = `${name}-enter-active`,
-  enterToClass = `${name}-enter-to`,
-  appearFromClass = enterFromClass,
-  appearActiveClass = enterActiveClass,
-  appearToClass = enterToClass,
-  leaveFromClass = `${name}-leave-from`,
-  leaveActiveClass = `${name}-leave-active`,
-  leaveToClass = `${name}-leave-to`,
-  ...baseProps
-}: TransitionProps): BaseTransitionProps<Element> {
+export const TransitionPropsValidators = (Transition.props = extend(
+  {},
+  (BaseTransition as any).props,
+  DOMTransitionPropsValidators
+))
+
+export function resolveTransitionProps(
+  rawProps: TransitionProps
+): BaseTransitionProps<Element> {
+  let {
+    name = 'v',
+    type,
+    css = true,
+    duration,
+    enterFromClass = `${name}-enter-from`,
+    enterActiveClass = `${name}-enter-active`,
+    enterToClass = `${name}-enter-to`,
+    appearFromClass = enterFromClass,
+    appearActiveClass = enterActiveClass,
+    appearToClass = enterToClass,
+    leaveFromClass = `${name}-leave-from`,
+    leaveActiveClass = `${name}-leave-active`,
+    leaveToClass = `${name}-leave-to`
+  } = rawProps
+
+  const baseProps: BaseTransitionProps<Element> = {}
+  for (const key in rawProps) {
+    if (!(key in DOMTransitionPropsValidators)) {
+      ;(baseProps as any)[key] = (rawProps as any)[key]
+    }
+  }
+
   if (!css) {
     return baseProps
   }
 
+  const originEnterClass = [enterFromClass, enterActiveClass, enterToClass]
   const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
@@ -84,7 +102,7 @@ export function resolveTransitionProps({
   const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
 
   // is appearing
-  if (appear && !getCurrentInstance()!.isMounted) {
+  if (appear && !instance.isMounted) {
     enterFromClass = appearFromClass
     enterActiveClass = appearActiveClass
     enterToClass = appearToClass
@@ -96,6 +114,10 @@ export function resolveTransitionProps({
     removeTransitionClass(el, enterToClass)
     removeTransitionClass(el, enterActiveClass)
     done && done()
+    // reset enter class
+    if (appear) {
+      ;[enterFromClass, enterActiveClass, enterToClass] = originEnterClass
+    }
   }
 
   const finishLeave: Hook = (el, done) => {
@@ -110,8 +132,7 @@ export function resolveTransitionProps({
     callWithAsyncErrorHandling(hook, instance, ErrorCodes.TRANSITION_HOOK, args)
   }
 
-  return {
-    ...baseProps,
+  return extend(baseProps, {
     onBeforeEnter(el) {
       onBeforeEnter && onBeforeEnter(el)
       addTransitionClass(el, enterActiveClass)
@@ -151,7 +172,7 @@ export function resolveTransitionProps({
     },
     onEnterCancelled: finishEnter,
     onLeaveCancelled: finishLeave
-  }
+  } as BaseTransitionProps<Element>)
 }
 
 function normalizeDuration(
@@ -160,15 +181,15 @@ function normalizeDuration(
   if (duration == null) {
     return null
   } else if (isObject(duration)) {
-    return [toNumber(duration.enter), toNumber(duration.leave)]
+    return [NumberOf(duration.enter), NumberOf(duration.leave)]
   } else {
-    const n = toNumber(duration)
+    const n = NumberOf(duration)
     return [n, n]
   }
 }
 
-function toNumber(val: unknown): number {
-  const res = Number(val || 0)
+function NumberOf(val: unknown): number {
+  const res = toNumber(val)
   if (__DEV__) validateDuration(res)
   return res
 }

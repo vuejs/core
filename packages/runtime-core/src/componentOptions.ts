@@ -2,8 +2,7 @@ import {
   ComponentInternalInstance,
   Data,
   SetupContext,
-  RenderFunction,
-  SFCInternalOptions,
+  ComponentInternalOptions,
   PublicAPIComponent,
   Component
 } from './component'
@@ -49,8 +48,12 @@ import {
 } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { Directive } from './directives'
-import { ComponentPublicInstance } from './componentProxy'
+import {
+  CreateComponentPublicInstance,
+  ComponentPublicInstance
+} from './componentProxy'
 import { warn } from './warning'
+import { VNodeChild } from './vnode'
 
 /**
  * Interface for declaring custom options.
@@ -70,17 +73,21 @@ import { warn } from './warning'
  */
 export interface ComponentCustomOptions {}
 
+export type RenderFunction = () => VNodeChild
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
   D,
   C extends ComputedOptions,
   M extends MethodOptions,
+  Mixin extends ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string
 >
-  extends LegacyOptions<Props, D, C, M>,
-    SFCInternalOptions,
+  extends LegacyOptions<Props, D, C, M, Mixin, Extends>,
+    ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
     this: void,
@@ -95,28 +102,45 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  // SSR only. This is produced by compiler-ssr and attached in compiler-sfc
-  // not user facing, so the typing is lax and for test only.
+  components?: Record<string, PublicAPIComponent>
+  directives?: Record<string, Directive>
+  inheritAttrs?: boolean
+  inheritRef?: boolean
+  emits?: E | EE[]
+
+  // Internal ------------------------------------------------------------------
+
+  /**
+   * SSR only. This is produced by compiler-ssr and attached in compiler-sfc
+   * not user facing, so the typing is lax and for test only.
+   *
+   * @internal
+   */
   ssrRender?: (
     ctx: any,
     push: (item: any) => void,
     parentInstance: ComponentInternalInstance
   ) => void
-  components?: Record<string, PublicAPIComponent>
-  directives?: Record<string, Directive>
-  inheritAttrs?: boolean
-  emits?: E | EE[]
 
-  // Internal ------------------------------------------------------------------
-
-  // marker for AsyncComponentWrapper
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
   __asyncLoader?: () => Promise<Component>
-  // cache for merged $options
+  /**
+   * cache for merged $options
+   * @internal
+   */
   __merged?: ComponentOptions
+
+  // Type differentiators ------------------------------------------------------
+
+  // Note these are internal but need to be exposed in d.ts for type inference
+  // to work!
 
   // type-only differentiator to separate OptionWithoutProps from a constructor
   // type returned by defineComponent() or FunctionalComponent
-  call?: never
+  call?: (this: unknown, ...args: unknown[]) => never
   // type-only differentiators for built-in Vnode types
   __isFragment?: never
   __isTeleport?: never
@@ -129,12 +153,24 @@ export type ComponentOptionsWithoutProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props?: undefined
 } & ThisType<
-    ComponentPublicInstance<{}, RawBindings, D, C, M, E, Readonly<Props>>
+    CreateComponentPublicInstance<
+      {},
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      Readonly<Props>
+    >
   >
 
 export type ComponentOptionsWithArrayProps<
@@ -143,12 +179,25 @@ export type ComponentOptionsWithArrayProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props: PropNames[]
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, E>>
+} & ThisType<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E
+    >
+  >
 
 export type ComponentOptionsWithObjectProps<
   PropsOptions = ComponentObjectPropsOptions,
@@ -156,17 +205,42 @@ export type ComponentOptionsWithObjectProps<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, E, EE> & {
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
   props: PropsOptions
-} & ThisType<ComponentPublicInstance<Props, RawBindings, D, C, M, E>>
+} & ThisType<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E
+    >
+  >
 
 export type ComponentOptions =
   | ComponentOptionsWithoutProps<any, any, any, any, any>
   | ComponentOptionsWithObjectProps<any, any, any, any, any>
   | ComponentOptionsWithArrayProps<any, any, any, any, any>
+
+export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any
+>
 
 export type ComputedOptions = Record<
   string,
@@ -178,9 +252,9 @@ export interface MethodOptions {
 }
 
 export type ExtractComputedReturns<T extends any> = {
-  [key in keyof T]: T[key] extends { get: Function }
-    ? ReturnType<T[key]['get']>
-    : ReturnType<T[key]>
+  [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
+    ? TReturn
+    : T[key] extends (...args: any[]) => infer TReturn ? TReturn : never
 }
 
 type WatchOptionItem =
@@ -199,11 +273,13 @@ type ComponentInjectOptions =
       string | symbol | { from: string | symbol; default?: unknown }
     >
 
-export interface LegacyOptions<
+interface LegacyOptions<
   Props,
   D,
   C extends ComputedOptions,
-  M extends MethodOptions
+  M extends MethodOptions,
+  Mixin extends ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin
 > {
   // allow any custom options
   [key: string]: any
@@ -213,8 +289,8 @@ export interface LegacyOptions<
   // since that leads to some sort of circular inference and breaks ThisType
   // for the entire component.
   data?: (
-    this: ComponentPublicInstance<Props>,
-    vm: ComponentPublicInstance<Props>
+    this: CreateComponentPublicInstance<Props>,
+    vm: CreateComponentPublicInstance<Props>
   ) => D
   computed?: C
   methods?: M
@@ -223,8 +299,8 @@ export interface LegacyOptions<
   inject?: ComponentInjectOptions
 
   // composition
-  mixins?: ComponentOptions[]
-  extends?: ComponentOptions
+  mixins?: Mixin[]
+  extends?: Extends
 
   // lifecycle
   beforeCreate?(): void
@@ -240,6 +316,22 @@ export interface LegacyOptions<
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
+}
+
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M'
+
+export type OptionTypesType<
+  P = {},
+  B = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {}
+> = {
+  P: P
+  B: B
+  D: D
+  C: C
+  M: M
 }
 
 const enum OptionTypes {
@@ -275,7 +367,6 @@ export function applyOptions(
     mixins,
     extends: extendsOptions,
     // state
-    props: propsOptions,
     data: dataOptions,
     computed: computedOptions,
     methods,
@@ -321,9 +412,12 @@ export function applyOptions(
 
   const checkDuplicateProperties = __DEV__ ? createDuplicateChecker() : null
 
-  if (__DEV__ && propsOptions) {
-    for (const key in normalizePropsOptions(propsOptions)[0]) {
-      checkDuplicateProperties!(OptionTypes.PROPS, key)
+  if (__DEV__) {
+    const propsOptions = normalizePropsOptions(options)[0]
+    if (propsOptions) {
+      for (const key in propsOptions) {
+        checkDuplicateProperties!(OptionTypes.PROPS, key)
+      }
     }
   }
 
@@ -399,12 +493,14 @@ export function applyOptions(
       for (const key in rawData) {
         checkDuplicateProperties!(OptionTypes.DATA, key)
         // expose data on ctx during dev
-        Object.defineProperty(ctx, key, {
-          configurable: true,
-          enumerable: true,
-          get: () => rawData[key],
-          set: NOOP
-        })
+        if (key[0] !== '$' && key[0] !== '_') {
+          Object.defineProperty(ctx, key, {
+            configurable: true,
+            enumerable: true,
+            get: () => rawData[key],
+            set: NOOP
+          })
+        }
       }
     }
   }

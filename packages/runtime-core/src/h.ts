@@ -46,7 +46,7 @@ h(Component, null, {})
 
 type RawProps = VNodeProps & {
   // used to differ from a single VNode object as children
-  _isVNode?: never
+  __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
 }
@@ -80,7 +80,7 @@ export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren
+  children?: RawChildren | RawSlots
 ): VNode
 
 // fragment

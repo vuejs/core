@@ -21,6 +21,7 @@ import {
   SetupContext
 } from '@vue/runtime-core'
 import { toRaw } from '@vue/reactivity'
+import { extend } from '@vue/shared'
 
 interface Position {
   top: number
@@ -36,11 +37,10 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
-  props: {
-    ...TransitionPropsValidators,
+  props: extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
-  },
+  }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
@@ -101,12 +101,8 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      children = slots.default ? slots.default() : []
-
-      // handle fragment children case, e.g. v-for
-      if (children.length === 1 && children[0].type === Fragment) {
-        children = children[0].children as VNode[]
-      }
+      const slotChildren = slots.default ? slots.default() : []
+      children = getTransitionRawChildren(slotChildren)
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
@@ -115,7 +111,7 @@ const TransitionGroupImpl = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-        } else if (__DEV__ && child.type !== Comment) {
+        } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
         }
       }
@@ -131,9 +127,25 @@ const TransitionGroupImpl = {
         }
       }
 
-      return createVNode(tag, null, children)
+      return createVNode(tag, null, slotChildren)
     }
   }
+}
+
+function getTransitionRawChildren(children: VNode[]): VNode[] {
+  let ret: VNode[] = []
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    // handle fragment children case, e.g. v-for
+    if (child.type === Fragment) {
+      ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
+    }
+    // comment placeholders should be skipped, e.g. v-if
+    else if (child.type !== Comment) {
+      ret.push(child)
+    }
+  }
+  return ret
 }
 
 // remove mode props as TransitionGroup doesn't support it

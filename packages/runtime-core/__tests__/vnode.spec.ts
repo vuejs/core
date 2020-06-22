@@ -12,8 +12,9 @@ import {
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
-import { h } from '../src'
+import { h, reactive, isReactive } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
 
 describe('vnode', () => {
   test('create with just tag', () => {
@@ -198,24 +199,55 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+  })
 
-    // #1041 should use reoslved key/ref
+  test('cloneVNode key normalization', () => {
+    // #1041 should use resolved key/ref
     expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
     expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
     expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
+  })
 
-    // ref normalizes to [currentRenderingInstance, ref]
-    expect(cloneVNode(createVNode('div', { ref: 'foo' })).ref).toEqual([
-      null,
-      'foo'
-    ])
-    expect(
-      cloneVNode(createVNode('div', { ref: 'foo' }), { ref: 'bar' }).ref
-    ).toEqual([null, 'bar'])
-    expect(cloneVNode(createVNode('div'), { ref: 'bar' }).ref).toEqual([
-      null,
-      'bar'
-    ])
+  // ref normalizes to [currentRenderingInstance, ref]
+  test('cloneVNode ref normalization', () => {
+    const mockInstance1 = {} as any
+    const mockInstance2 = {} as any
+
+    setCurrentRenderingInstance(mockInstance1)
+    const original = createVNode('div', { ref: 'foo' })
+    expect(original.ref).toEqual([mockInstance1, 'foo'])
+
+    // clone and preserve original ref
+    const cloned1 = cloneVNode(original)
+    expect(cloned1.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned2 = cloneVNode(original, { ref: 'bar' })
+    expect(cloned2.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const original2 = createVNode('div')
+    const cloned3 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned3.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning with different context instance
+    setCurrentRenderingInstance(mockInstance2)
+
+    // clone and preserve original ref
+    const cloned4 = cloneVNode(original)
+    // #1311 should preserve original context instance!
+    expect(cloned4.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned5 = cloneVNode(original, { ref: 'bar' })
+    // new ref should use current context instance and overwrite orgiinal
+    expect(cloned5.ref).toEqual([mockInstance2, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const cloned6 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned6.ref).toEqual([mockInstance2, 'bar'])
+
+    setCurrentRenderingInstance(null)
   })
 
   describe('mergeProps', () => {
@@ -259,16 +291,45 @@ describe('vnode', () => {
       })
     })
 
-    test('handlers', () => {
-      let clickHander1 = function() {}
-      let clickHander2 = function() {}
-      let focusHander2 = function() {}
-
-      let props1: Data = { onClick: clickHander1 }
-      let props2: Data = { onClick: clickHander2, onFocus: focusHander2 }
+    test('style w/ strings', () => {
+      let props1: Data = {
+        style: 'width:100px;right:10;top:10'
+      }
+      let props2: Data = {
+        style: [
+          {
+            color: 'blue',
+            width: '200px'
+          },
+          {
+            width: '300px',
+            height: '300px',
+            fontSize: 30
+          }
+        ]
+      }
       expect(mergeProps(props1, props2)).toMatchObject({
-        onClick: [clickHander1, clickHander2],
-        onFocus: focusHander2
+        style: {
+          color: 'blue',
+          width: '300px',
+          height: '300px',
+          fontSize: 30,
+          right: '10',
+          top: '10'
+        }
+      })
+    })
+
+    test('handlers', () => {
+      let clickHandler1 = function() {}
+      let clickHandler2 = function() {}
+      let focusHandler2 = function() {}
+
+      let props1: Data = { onClick: clickHandler1 }
+      let props2: Data = { onClick: clickHandler2, onFocus: focusHandler2 }
+      expect(mergeProps(props1, props2)).toMatchObject({
+        onClick: [clickHandler1, clickHandler2],
+        onFocus: focusHandler2
       })
     })
 
@@ -359,7 +420,7 @@ describe('vnode', () => {
     // #1039
     // <component :is="foo">{{ bar }}</component>
     // - content is compiled as slot
-    // - dynamic component reoslves to plain element, but as a block
+    // - dynamic component resolves to plain element, but as a block
     // - block creation disables its own tracking, accidentally causing the
     //   slot content (called during the block node creation) to be missed
     test('element block should track normalized slot children', () => {
@@ -375,6 +436,39 @@ describe('vnode', () => {
         }
       }))
       expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+    })
+
+    test('openBlock w/ disableTracking: true', () => {
+      const hoist = createVNode('div')
+      let vnode1
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        // a v-for fragment block generated by the compiler
+        // disables tracking because it always diffs its
+        // children.
+        (vnode1 = (openBlock(true),
+        createBlock(Fragment, null, [
+          hoist,
+          /*vnode2*/ createVNode(() => {}, null, 'text')
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+      expect(vnode1.dynamicChildren).toStrictEqual([])
+    })
+
+    test('openBlock without disableTracking: true', () => {
+      const hoist = createVNode('div')
+      let vnode1, vnode2
+      const vnode = (openBlock(),
+      createBlock('div', null, [
+        (vnode1 = (openBlock(),
+        createBlock(Fragment, null, [
+          hoist,
+          (vnode2 = createVNode(() => {}, null, 'text'))
+        ])))
+      ]))
+      expect(vnode.dynamicChildren).toStrictEqual([vnode1])
+      expect(vnode1.dynamicChildren).toStrictEqual([vnode2])
     })
   })
 
@@ -424,6 +518,13 @@ describe('vnode', () => {
       const root = nodeOps.createElement('div')
       createApp(App).mount(root)
       expect(serializeInner(root)).toBe('<h1>Root Component</h1>')
+    })
+
+    test('should not be observable', () => {
+      const a = createVNode('div')
+      const b = reactive(a)
+      expect(b).toBe(a)
+      expect(isReactive(b)).toBe(false)
     })
   })
 })

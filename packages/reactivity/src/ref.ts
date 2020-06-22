@@ -2,21 +2,17 @@ import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw } from './reactive'
-import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
-const isRefSymbol = Symbol()
+declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
-  // This field is necessary to allow TS to differentiate a Ref from a plain
-  // object that happens to have a "value" field.
-  // However, checking a symbol on an arbitrary object is much slower than
-  // checking a plain property, so we use a _isRef plain property for isRef()
-  // check in the actual implementation.
-  // The reason for not just declaring _isRef in the interface is because we
-  // don't want this internal field to leak into userland autocompletion -
-  // a private symbol, on the other hand, achieves just that.
-  [isRefSymbol]: true
+  /**
+   * Type differentiator only.
+   * We need this to be in public d.ts but don't want it to show up in IDE
+   * autocomplete, so we use a private Symbol instead.
+   */
+  [RefSymbol]: true
   value: T
 }
 
@@ -27,7 +23,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r._isRef === true : false
+  return r ? r.__v_isRef === true : false
 }
 
 export function ref<T extends object>(
@@ -51,7 +47,7 @@ function createRef(rawValue: unknown, shallow = false) {
   }
   let value = shallow ? rawValue : convert(rawValue)
   const r = {
-    _isRef: true,
+    __v_isRef: true,
     get value() {
       track(r, TrackOpTypes.GET, 'value')
       return value
@@ -99,7 +95,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
     () => trigger(r, TriggerOpTypes.SET, 'value')
   )
   const r = {
-    _isRef: true,
+    __v_isRef: true,
     get value() {
       return get()
     },
@@ -126,7 +122,7 @@ export function toRef<T extends object, K extends keyof T>(
   key: K
 ): Ref<T[K]> {
   return {
-    _isRef: true,
+    __v_isRef: true,
     get value(): any {
       return object[key]
     },
@@ -139,13 +135,37 @@ export function toRef<T extends object, K extends keyof T>(
 // corner case when use narrows type
 // Ex. type RelativePath = string & { __brand: unknown }
 // RelativePath extends object -> true
-type BaseTypes = string | number | boolean | Node | Window
+type BaseTypes = string | number | boolean
 
-export type UnwrapRef<T> = T extends ComputedRef<infer V>
+/**
+ * This is a special exported interface for other packages to declare
+ * additional types that should bail out for ref unwrapping. For example
+ * \@vue/runtime-dom can declare it like so in its d.ts:
+ *
+ * ``` ts
+ * declare module '@vue/reactivity' {
+ *   export interface RefUnwrapBailTypes {
+ *     runtimeDOMBailTypes: Node | Window
+ *   }
+ * }
+ * ```
+ *
+ * Note that api-extractor somehow refuses to include `decalre module`
+ * augmentations in its generated d.ts, so we have to manually append them
+ * to the final generated d.ts in our build process.
+ */
+export interface RefUnwrapBailTypes {}
+
+export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
-  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
+  : UnwrapRefSimple<T>
 
-type UnwrapRefSimple<T> = T extends Function | CollectionTypes | BaseTypes | Ref
+type UnwrapRefSimple<T> = T extends
+  | Function
+  | CollectionTypes
+  | BaseTypes
+  | Ref
+  | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
   : T extends Array<any> ? T : T extends object ? UnwrappedObject<T> : T
 

@@ -6,6 +6,27 @@ describe('ssr: text', () => {
     expect(getCompiledString(`foo`)).toMatchInlineSnapshot(`"\`foo\`"`)
   })
 
+  test('static text with template string special chars', () => {
+    expect(getCompiledString(`\`\${foo}\``)).toMatchInlineSnapshot(
+      `"\`\\\\\`\\\\\${foo}\\\\\`\`"`
+    )
+  })
+
+  test('static text with char escape', () => {
+    // the desired generated code should be `\\\$foo`
+    // snapshot -> inline snapshot goes through two escapes
+    // so that makes a total of 3 * 2 * 2 = 12 back slashes
+    expect(getCompiledString(`\\$foo`)).toMatchInlineSnapshot(
+      `"\`\\\\\\\\\\\\$foo\`"`
+    )
+  })
+
+  test('comments', () => {
+    expect(getCompiledString(`<!--bar-->`)).toMatchInlineSnapshot(
+      `"\`<!--bar-->\`"`
+    )
+  })
+
   test('static text escape', () => {
     expect(getCompiledString(`&lt;foo&gt;`)).toMatchInlineSnapshot(
       `"\`&lt;foo&gt;\`"`

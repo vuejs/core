@@ -214,6 +214,7 @@ describe('reactivity/readonly', () => {
           const key2 = {}
           const original = new Collection([[key1, {}], [key2, {}]])
           const wrapped: any = readonly(original)
+          expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
             expect(isReadonly(key)).toBe(true)
             expect(isReadonly(value)).toBe(true)
@@ -267,6 +268,7 @@ describe('reactivity/readonly', () => {
         test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
           const wrapped: any = readonly(original)
+          expect(wrapped.size).toBe(2)
           for (const value of wrapped) {
             expect(isReadonly(value)).toBe(true)
           }

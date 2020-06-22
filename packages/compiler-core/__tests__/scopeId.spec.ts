@@ -20,8 +20,10 @@ describe('scopeId compiler support', () => {
       scopeId: 'test'
     })
     expect(ast.helpers).toContain(WITH_SCOPE_ID)
-    expect(code).toMatch(`const _withId = _withScopeId("test")`)
-    expect(code).toMatch(`export const render = _withId(function render(`)
+    expect(code).toMatch(`const _withId = /*#__PURE__*/_withScopeId("test")`)
+    expect(code).toMatch(
+      `export const render = /*#__PURE__*/_withId(function render(`
+    )
     expect(code).toMatchSnapshot()
   })
 
@@ -83,10 +85,10 @@ describe('scopeId compiler support', () => {
     expect(code).toMatch(
       [
         `_pushScopeId("test")`,
-        `const _hoisted_1 = _createVNode("div", null, "hello", ${genFlagText(
+        `const _hoisted_1 = /*#__PURE__*/_createVNode("div", null, "hello", ${genFlagText(
           PatchFlags.HOISTED
         )})`,
-        `const _hoisted_2 = _createVNode("div", null, "world", ${genFlagText(
+        `const _hoisted_2 = /*#__PURE__*/_createVNode("div", null, "world", ${genFlagText(
           PatchFlags.HOISTED
         )})`,
         `_popScopeId()`

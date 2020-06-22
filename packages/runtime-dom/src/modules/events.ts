@@ -24,7 +24,7 @@ type EventValueWithOptions = {
 let _getNow: () => number = Date.now
 
 // Determine what event timestamp the browser is using. Annoyingly, the
-// timestamp can either be hi-res ( relative to page load) or low-res
+// timestamp can either be hi-res (relative to page load) or low-res
 // (relative to UNIX epoch), so in order to compare time we have to use the
 // same timestamp type when saving the flush timestamp.
 if (
@@ -128,7 +128,8 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
-    if (e.timeStamp >= invoker.lastUpdated - 1) {
+    const timeStamp = e.timeStamp || _getNow()
+    if (timeStamp >= invoker.lastUpdated - 1) {
       callWithAsyncErrorHandling(
         patchStopImmediatePropagation(e, invoker.value),
         instance,

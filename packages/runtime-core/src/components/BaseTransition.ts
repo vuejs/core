@@ -43,14 +43,14 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
 }
 
-export interface TransitionHooks {
+export interface TransitionHooks<HostElement extends RendererElement = RendererElement> {
   persisted: boolean
-  beforeEnter(el: RendererElement): void
-  enter(el: RendererElement): void
-  leave(el: RendererElement, remove: () => void): void
+  beforeEnter(el: HostElement): void
+  enter(el: HostElement): void
+  leave(el: HostElement, remove: () => void): void
   afterLeave?(): void
   delayLeave?(
-    el: RendererElement,
+    el: HostElement,
     earlyRemove: () => void,
     delayedLeave: () => void
   ): void
@@ -75,7 +75,7 @@ export interface TransitionState {
 
 export interface TransitionElement {
   // in persisted mode (e.g. v-show), the same element is toggled, so the
-  // pending enter/leave callbacks may need to cancalled if the state is toggled
+  // pending enter/leave callbacks may need to be cancelled if the state is toggled
   // before it finishes.
   _enterCb?: PendingCallback
   _leaveCb?: PendingCallback
@@ -99,6 +99,8 @@ export function useTransitionState(): TransitionState {
 
 const BaseTransitionImpl = {
   name: `BaseTransition`,
+
+  inheritRef: true,
 
   props: {
     mode: String,
@@ -270,9 +272,9 @@ export function resolveTransitionHooks(
       )
   }
 
-  const hooks: TransitionHooks = {
+  const hooks: TransitionHooks<TransitionElement> = {
     persisted,
-    beforeEnter(el: TransitionElement) {
+    beforeEnter(el) {
       if (!appear && !state.isMounted) {
         return
       }
@@ -293,7 +295,7 @@ export function resolveTransitionHooks(
       callHook(onBeforeEnter, [el])
     },
 
-    enter(el: TransitionElement) {
+    enter(el) {
       if (!appear && !state.isMounted) {
         return
       }
@@ -318,7 +320,7 @@ export function resolveTransitionHooks(
       }
     },
 
-    leave(el: TransitionElement, remove) {
+    leave(el, remove) {
       const key = String(vnode.key)
       if (el._enterCb) {
         el._enterCb(true /* cancelled */)

@@ -18,6 +18,7 @@ import {
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
 import { withCtx } from './helpers/withRenderContext'
+import { isHmrUpdating } from './hmr'
 
 export type Slot = (...args: any[]) => VNode[]
 
@@ -124,11 +125,13 @@ export const updateSlots = (
   if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
       // compiled slots.
-      if (
+      if (__DEV__ && isHmrUpdating) {
+        // Parent was HMR updated so slot content may have changed.
+        // force update slots and mark instance for hmr as well
+        extend(slots, children as Slots)
+      } else if (
         // bail on dynamic slots (v-if, v-for, reference of scope variables)
-        !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS) &&
-        // bail on HRM updates
-        !(__DEV__ && instance.parent && instance.parent.renderUpdated)
+        !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)
       ) {
         // compiled AND static.
         // no need to update, and skip stale slots removal.

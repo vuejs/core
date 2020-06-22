@@ -10,6 +10,10 @@ import {
 import { PatchFlags } from '@vue/shared'
 import { warn } from '../warning'
 
+/**
+ * Compiler runtime helper for rendering <slot/>
+ * @private
+ */
 export function renderSlot(
   slots: Slots,
   name: string,

@@ -225,7 +225,10 @@ export function createAppAPI<HostElement>(
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
-            `App has already been mounted. Create a new app instance instead.`
+            `App has already been mounted.\n` +
+              `If you want to remount the same app, move your app creation logic ` +
+              `into a factory function and create fresh app instances for each ` +
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``
           )
         }
       },
@@ -241,7 +244,7 @@ export function createAppAPI<HostElement>(
       provide(key, value) {
         if (__DEV__ && key in context.provides) {
           warn(
-            `App already provides property with key "${key}". ` +
+            `App already provides property with key "${String(key)}". ` +
               `It will be overwritten with the new value.`
           )
         }
