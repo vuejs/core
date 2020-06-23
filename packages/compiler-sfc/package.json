@@ -43,7 +43,7 @@
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
     "postcss": "^7.0.27",
-    "postcss-modules": "^2.0.0",
+    "postcss-modules": "^3.1.0",
     "postcss-selector-parser": "^6.0.2",
     "source-map": "^0.6.1"
   },
