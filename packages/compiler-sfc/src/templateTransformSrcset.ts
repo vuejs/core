@@ -56,7 +56,7 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
-          // for base64 need recheck url
+          // for data url need recheck url
           for (let i = 0; i < imageCandidates.length; i++) {
             if (imageCandidates[i].url.trim().startsWith('data:')) {
               imageCandidates[i + 1].url =
