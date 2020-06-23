@@ -56,6 +56,15 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
+          // for base64 need recheck url
+          for (let i = 0; i < imageCandidates.length; i++) {
+            if (imageCandidates[i].url.endsWith(';base64')) {
+              imageCandidates[i + 1].url =
+                imageCandidates[i].url + ',' + imageCandidates[i + 1].url
+              imageCandidates.splice(i, 1)
+            }
+          }
+
           // When srcset does not contain any relative URLs, skip transforming
           if (
             !options.includeAbsolute &&
