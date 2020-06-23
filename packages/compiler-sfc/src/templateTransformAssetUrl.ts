@@ -108,7 +108,6 @@ export const transformAssetUrl: NodeTransform = (
         attr.value.content[0] === '#' ||
         (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
       ) {
-        console.log('skip')
         return
       }
 

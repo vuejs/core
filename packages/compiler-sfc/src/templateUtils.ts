@@ -13,7 +13,6 @@ export function isExternalUrl(url: string): boolean {
 
 const base64RE = /^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\/?%\s]*?)\s*$/i
 export function isBase64(url: string): boolean {
-  console.log(base64RE.test(url), url)
   return base64RE.test(url)
 }
 
