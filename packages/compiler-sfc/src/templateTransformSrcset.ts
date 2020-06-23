@@ -6,7 +6,12 @@ import {
   NodeTypes,
   SimpleExpressionNode
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl, isExternalUrl } from './templateUtils'
+import {
+  isRelativeUrl,
+  parseUrl,
+  isExternalUrl,
+  isBase64
+} from './templateUtils'
 import {
   AssetURLOptions,
   defaultAssetUrlOptions
@@ -78,6 +83,7 @@ export const transformSrcset: NodeTransform = (
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (
               !isExternalUrl(url) &&
+              !isBase64(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
             ) {
               const { path } = parseUrl(url)

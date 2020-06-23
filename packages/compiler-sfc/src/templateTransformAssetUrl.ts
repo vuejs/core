@@ -7,7 +7,12 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl, isExternalUrl } from './templateUtils'
+import {
+  isRelativeUrl,
+  parseUrl,
+  isExternalUrl,
+  isBase64
+} from './templateUtils'
 import { isArray } from '@vue/shared'
 
 export interface AssetURLTagConfig {
@@ -99,9 +104,11 @@ export const transformAssetUrl: NodeTransform = (
         !assetAttrs.includes(attr.name) ||
         !attr.value ||
         isExternalUrl(attr.value.content) ||
+        isBase64(attr.value.content) ||
         attr.value.content[0] === '#' ||
         (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
       ) {
+        console.log('skip')
         return
       }
 

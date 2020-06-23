@@ -55,6 +55,10 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", {
       src: \\"/logo.png\\",
       srcset: _hoisted_8
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"data:image/png;base64,i\\",
+      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"
