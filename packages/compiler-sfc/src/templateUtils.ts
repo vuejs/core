@@ -11,9 +11,9 @@ export function isExternalUrl(url: string): boolean {
   return externalRE.test(url)
 }
 
-const base64RE = /^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\/?%\s]*?)\s*$/i
-export function isBase64(url: string): boolean {
-  return base64RE.test(url)
+const dataUrlRE = /^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\/?%\s]*?)\s*$/i
+export function isDataUrl(url: string): boolean {
+  return dataUrlRE.test(url)
 }
 
 /**

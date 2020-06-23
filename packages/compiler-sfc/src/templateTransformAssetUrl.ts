@@ -11,7 +11,7 @@ import {
   isRelativeUrl,
   parseUrl,
   isExternalUrl,
-  isBase64
+  isDataUrl
 } from './templateUtils'
 import { isArray } from '@vue/shared'
 
@@ -104,7 +104,7 @@ export const transformAssetUrl: NodeTransform = (
         !assetAttrs.includes(attr.name) ||
         !attr.value ||
         isExternalUrl(attr.value.content) ||
-        isBase64(attr.value.content) ||
+        isDataUrl(attr.value.content) ||
         attr.value.content[0] === '#' ||
         (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
       ) {

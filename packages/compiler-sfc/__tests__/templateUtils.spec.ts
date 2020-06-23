@@ -1,6 +1,7 @@
 import {
   isRelativeUrl,
-  isExternalUrl
+  isExternalUrl,
+  isDataUrl
 } from '../../compiler-sfc/src/templateUtils'
 
 describe('compiler sfc:templateUtils isRelativeUrl', () => {
@@ -34,5 +35,19 @@ describe('compiler sfc:templateUtils isExternalUrl', () => {
     const url = 'https://vuejs.org/'
     const result = isExternalUrl(url)
     expect(result).toBe(true)
+  })
+})
+
+describe('compiler sfc:templateUtils isDataUrl', () => {
+  test('should return true w/ hasn`t media type and encode', () => {
+    expect(isDataUrl('data:,i')).toBe(true)
+  })
+
+  test('should return true w/ media type + encode', () => {
+    expect(isDataUrl('data:image/png;base64,i')).toBe(true)
+  })
+
+  test('should return true w/ media type + hasn`t encode', () => {
+    expect(isDataUrl('data:image/png,i')).toBe(true)
   })
 })

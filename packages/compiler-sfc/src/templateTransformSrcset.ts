@@ -10,7 +10,7 @@ import {
   isRelativeUrl,
   parseUrl,
   isExternalUrl,
-  isBase64
+  isDataUrl
 } from './templateUtils'
 import {
   AssetURLOptions,
@@ -58,7 +58,7 @@ export const transformSrcset: NodeTransform = (
 
           // for base64 need recheck url
           for (let i = 0; i < imageCandidates.length; i++) {
-            if (imageCandidates[i].url.endsWith(';base64')) {
+            if (imageCandidates[i].url.trim().startsWith('data:')) {
               imageCandidates[i + 1].url =
                 imageCandidates[i].url + ',' + imageCandidates[i + 1].url
               imageCandidates.splice(i, 1)
@@ -92,7 +92,7 @@ export const transformSrcset: NodeTransform = (
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (
               !isExternalUrl(url) &&
-              !isBase64(url) &&
+              !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
             ) {
               const { path } = parseUrl(url)
