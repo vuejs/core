@@ -32,7 +32,8 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", { src: _imports_1 }),
     _createVNode(\\"img\\", { src: _imports_1 }),
     _createVNode(\\"img\\", { src: \\"http://example.com/fixtures/logo.png\\" }),
-    _createVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" })
+    _createVNode(\\"img\\", { src: \\"/fixtures/logo.png\\" }),
+    _createVNode(\\"img\\", { src: \\"data:image/png;base64,i\\" })
   ], 64 /* STABLE_FRAGMENT */))
 }"
 `;
