@@ -11,7 +11,7 @@ export function isExternalUrl(url: string): boolean {
   return externalRE.test(url)
 }
 
-const dataUrlRE = /^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\/?%\s]*?)\s*$/i
+const dataUrlRE = /^\s*data:/i
 export function isDataUrl(url: string): boolean {
   return dataUrlRE.test(url)
 }
