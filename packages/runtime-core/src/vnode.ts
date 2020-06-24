@@ -8,7 +8,8 @@ import {
   normalizeClass,
   normalizeStyle,
   PatchFlags,
-  ShapeFlags
+  ShapeFlags,
+  toString
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -502,7 +503,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
     return child.el === null ? child : cloneVNode(child)
   } else {
     // strings and numbers
-    return createVNode(Text, null, String(child))
+    return createVNode(Text, null, toString(child))
   }
 }
 
@@ -538,7 +539,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
-    children = String(children)
+    children = toString(children as string | number)
     // force teleport children to array so it can be moved around
     if (shapeFlag & ShapeFlags.TELEPORT) {
       type = ShapeFlags.ARRAY_CHILDREN

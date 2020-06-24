@@ -25,7 +25,8 @@ import {
   PatchFlagNames,
   isSymbol,
   isOn,
-  isObject
+  isObject,
+  toString
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -187,7 +188,7 @@ export const transformElement: NodeTransform = (node, context) => {
           vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
         }
       } else {
-        vnodePatchFlag = String(patchFlag)
+        vnodePatchFlag = toString(patchFlag)
       }
       if (dynamicPropNames && dynamicPropNames.length) {
         vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)

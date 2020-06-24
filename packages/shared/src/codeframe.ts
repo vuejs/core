@@ -1,3 +1,4 @@
+import { toString } from '@vue/shared'
 const range: number = 2
 
 export function generateCodeFrame(
@@ -14,7 +15,9 @@ export function generateCodeFrame(
       for (let j = i - range; j <= i + range || end > count; j++) {
         if (j < 0 || j >= lines.length) continue
         const line = j + 1
-        res.push(`${line}${' '.repeat(3 - String(line).length)}|  ${lines[j]}`)
+        res.push(
+          `${line}${' '.repeat(3 - toString(line).length)}|  ${lines[j]}`
+        )
         const lineLength = lines[j].length
         if (j === i) {
           // push underline

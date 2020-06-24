@@ -26,7 +26,8 @@ import {
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
-  makeMap
+  makeMap,
+  toString
 } from '@vue/shared'
 
 export const enum StringifyThresholds {
@@ -84,7 +85,7 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
         ),
         // the 2nd argument indicates the number of DOM nodes this static vnode
         // will insert / hydrate
-        String(currentChunk.length)
+        toString(currentChunk.length)
       ])
       // replace the first node's hoisted expression with the static vnode call
       replaceHoist(currentChunk[0], staticCall, context)

@@ -122,3 +122,7 @@ export const toNumber = (val: any): any => {
   const n = parseFloat(val)
   return isNaN(n) ? val : n
 }
+
+//just use to change a variable as number or string to string
+export const toString = (val: number | string): string =>
+  val.constructor === String ? val : `${val}`
