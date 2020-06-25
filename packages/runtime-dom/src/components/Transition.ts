@@ -3,12 +3,9 @@ import {
   BaseTransitionProps,
   h,
   warn,
-  FunctionalComponent,
-  getCurrentInstance,
-  callWithAsyncErrorHandling
+  FunctionalComponent
 } from '@vue/runtime-core'
 import { isObject, toNumber, extend } from '@vue/shared'
-import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -94,7 +91,6 @@ export function resolveTransitionProps(
     return baseProps
   }
 
-  const instance = getCurrentInstance()!
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
@@ -104,13 +100,10 @@ export function resolveTransitionProps(
     onEnterCancelled,
     onLeave,
     onLeaveCancelled,
-    onBeforeAppear,
-    onAppear,
-    onAppearCancelled
+    onBeforeAppear = onBeforeEnter,
+    onAppear = onEnter,
+    onAppearCancelled = onEnterCancelled
   } = baseProps
-
-  type HookWithDone = (el: Element, done: () => void) => void
-  type Hook = HookWithDone | ((el: Element) => void)
 
   const finishEnter = (el: Element, isAppear: boolean, done?: () => void) => {
     removeTransitionClass(el, isAppear ? appearToClass : enterToClass)
@@ -124,24 +117,12 @@ export function resolveTransitionProps(
     done && done()
   }
 
-  // only needed for user hooks called in nextFrame
-  // sync errors are already handled by BaseTransition
-  const callHook = (hook: Hook | undefined, args: any[]) => {
-    hook &&
-      callWithAsyncErrorHandling(
-        hook,
-        instance,
-        ErrorCodes.TRANSITION_HOOK,
-        args
-      )
-  }
-
-  const makeEnterHook = (isAppear: boolean): HookWithDone => {
-    const hook = isAppear ? onAppear : onEnter
-    return (el, done) => {
+  const makeEnterHook = (isAppear: boolean) => {
+    return (el: Element, done: () => void) => {
+      const hook = isAppear ? onAppear : onEnter
+      const resolve = () => finishEnter(el, isAppear, done)
+      hook && hook(el, resolve)
       nextFrame(() => {
-        const resolve = () => finishEnter(el, isAppear, done)
-        callHook(hook, [el, resolve])
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!(hook && hook.length > 1)) {
@@ -169,11 +150,10 @@ export function resolveTransitionProps(
     onEnter: makeEnterHook(false),
     onAppear: makeEnterHook(true),
     onLeave(el, done) {
+      const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveActiveClass)
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
-        const resolve = () => finishLeave(el, done)
-        callHook(onLeave, [el, resolve])
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
@@ -184,6 +164,7 @@ export function resolveTransitionProps(
           }
         }
       })
+      onLeave && onLeave(el, resolve)
     },
     onEnterCancelled(el) {
       finishEnter(el, false)

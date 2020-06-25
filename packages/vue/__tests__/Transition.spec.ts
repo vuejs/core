@@ -339,7 +339,7 @@ describe('e2e: Transition', () => {
         ])
         // todo test event with arguments. Note: not get dom, get object. '{}'
         expect(beforeLeaveSpy).toBeCalled()
-        expect(onLeaveSpy).not.toBeCalled()
+        expect(onLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -347,7 +347,6 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        expect(beforeLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<!--v-if-->')
@@ -360,7 +359,7 @@ describe('e2e: Transition', () => {
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
-        expect(onEnterSpy).not.toBeCalled()
+        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -368,7 +367,6 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
@@ -603,7 +601,7 @@ describe('e2e: Transition', () => {
           'test-appear-from'
         ])
         expect(beforeAppearSpy).toBeCalled()
-        expect(onAppearSpy).not.toBeCalled()
+        expect(onAppearSpy).toBeCalled()
         expect(afterAppearSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -611,7 +609,6 @@ describe('e2e: Transition', () => {
           'test-appear-active',
           'test-appear-to'
         ])
-        expect(onAppearSpy).toBeCalled()
         expect(afterAppearSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
@@ -628,7 +625,7 @@ describe('e2e: Transition', () => {
           'test-leave-from'
         ])
         expect(beforeLeaveSpy).toBeCalled()
-        expect(onLeaveSpy).not.toBeCalled()
+        expect(onLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -636,7 +633,6 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        expect(onLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<!--v-if-->')
@@ -649,7 +645,7 @@ describe('e2e: Transition', () => {
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
-        expect(onEnterSpy).not.toBeCalled()
+        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -657,7 +653,6 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
@@ -1233,7 +1228,7 @@ describe('e2e: Transition', () => {
           'test-leave-from'
         ])
         expect(beforeLeaveSpy).toBeCalled()
-        expect(onLeaveSpy).not.toBeCalled()
+        expect(onLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -1241,7 +1236,6 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        expect(beforeLeaveSpy).toBeCalled()
         expect(afterLeaveSpy).not.toBeCalled()
         await transitionFinish()
         expect(await isVisible('.test')).toBe(false)
@@ -1254,7 +1248,7 @@ describe('e2e: Transition', () => {
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
-        expect(onEnterSpy).not.toBeCalled()
+        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
@@ -1262,7 +1256,6 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        expect(onEnterSpy).toBeCalled()
         expect(afterEnterSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe(
