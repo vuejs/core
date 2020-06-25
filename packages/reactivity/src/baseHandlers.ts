@@ -42,16 +42,16 @@ const arrayInstrumentations: Record<string, Function> = {}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
-    if (key === ReactiveFlags.IsReactive) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
-    } else if (key === ReactiveFlags.IsReadonly) {
+    } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (
-      key === ReactiveFlags.Raw &&
+      key === ReactiveFlags.RAW &&
       receiver ===
         (isReadonly
-          ? (target as any)[ReactiveFlags.Readonly]
-          : (target as any)[ReactiveFlags.Reactive])
+          ? (target as any)[ReactiveFlags.READONLY]
+          : (target as any)[ReactiveFlags.REACTIVE])
     ) {
       return target
     }

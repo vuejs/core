@@ -13,21 +13,21 @@ import {
 import { UnwrapRef, Ref } from './ref'
 
 export const enum ReactiveFlags {
-  Skip = '__v_skip',
-  IsReactive = '__v_isReactive',
-  IsReadonly = '__v_isReadonly',
-  Raw = '__v_raw',
-  Reactive = '__v_reactive',
-  Readonly = '__v_readonly'
+  SKIP = '__v_skip',
+  IS_REACTIVE = '__v_isReactive',
+  IS_READONLY = '__v_isReadonly',
+  RAW = '__v_raw',
+  REACTIVE = '__v_reactive',
+  READONLY = '__v_readonly'
 }
 
 interface Target {
-  [ReactiveFlags.Skip]?: boolean
-  [ReactiveFlags.IsReactive]?: boolean
-  [ReactiveFlags.IsReadonly]?: boolean
-  [ReactiveFlags.Raw]?: any
-  [ReactiveFlags.Reactive]?: any
-  [ReactiveFlags.Readonly]?: any
+  [ReactiveFlags.SKIP]?: boolean
+  [ReactiveFlags.IS_REACTIVE]?: boolean
+  [ReactiveFlags.IS_READONLY]?: boolean
+  [ReactiveFlags.RAW]?: any
+  [ReactiveFlags.REACTIVE]?: any
+  [ReactiveFlags.READONLY]?: any
 }
 
 const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
@@ -37,7 +37,7 @@ const isObservableType = /*#__PURE__*/ makeMap(
 
 const canObserve = (value: Target): boolean => {
   return (
-    !value[ReactiveFlags.Skip] &&
+    !value[ReactiveFlags.SKIP] &&
     isObservableType(toRawType(value)) &&
     !Object.isFrozen(value)
   )
@@ -49,7 +49,7 @@ type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRef<T>
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
-  if (target && (target as Target)[ReactiveFlags.IsReadonly]) {
+  if (target && (target as Target)[ReactiveFlags.IS_READONLY]) {
     return target
   }
   return createReactiveObject(
@@ -113,18 +113,18 @@ function createReactiveObject(
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
-    target[ReactiveFlags.Raw] &&
-    !(isReadonly && target[ReactiveFlags.IsReactive])
+    target[ReactiveFlags.RAW] &&
+    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
   ) {
     return target
   }
   // target already has corresponding Proxy
   if (
-    hasOwn(target, isReadonly ? ReactiveFlags.Readonly : ReactiveFlags.Reactive)
+    hasOwn(target, isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE)
   ) {
     return isReadonly
-      ? target[ReactiveFlags.Readonly]
-      : target[ReactiveFlags.Reactive]
+      ? target[ReactiveFlags.READONLY]
+      : target[ReactiveFlags.REACTIVE]
   }
   // only a whitelist of value types can be observed.
   if (!canObserve(target)) {
@@ -136,7 +136,7 @@ function createReactiveObject(
   )
   def(
     target,
-    isReadonly ? ReactiveFlags.Readonly : ReactiveFlags.Reactive,
+    isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE,
     observed
   )
   return observed
@@ -144,13 +144,13 @@ function createReactiveObject(
 
 export function isReactive(value: unknown): boolean {
   if (isReadonly(value)) {
-    return isReactive((value as Target)[ReactiveFlags.Raw])
+    return isReactive((value as Target)[ReactiveFlags.RAW])
   }
-  return !!(value && (value as Target)[ReactiveFlags.IsReactive])
+  return !!(value && (value as Target)[ReactiveFlags.IS_REACTIVE])
 }
 
 export function isReadonly(value: unknown): boolean {
-  return !!(value && (value as Target)[ReactiveFlags.IsReadonly])
+  return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
 }
 
 export function isProxy(value: unknown): boolean {
@@ -159,11 +159,11 @@ export function isProxy(value: unknown): boolean {
 
 export function toRaw<T>(observed: T): T {
   return (
-    (observed && toRaw((observed as Target)[ReactiveFlags.Raw])) || observed
+    (observed && toRaw((observed as Target)[ReactiveFlags.RAW])) || observed
   )
 }
 
 export function markRaw<T extends object>(value: T): T {
-  def(value, ReactiveFlags.Skip, true)
+  def(value, ReactiveFlags.SKIP, true)
   return value
 }
