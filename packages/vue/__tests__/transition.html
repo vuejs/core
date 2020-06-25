@@ -1,19 +1,6 @@
-<script src="../../dist/vue.global.js"></script>
-<div id="app"></div>
-<script>
-  Vue.createApp({
-    template: `
-      <div id="test"><transition><div v-if="toggle" class="test">content</div></transition></div>
-      <button @click="click">button</button>
-    `,
-    setup:() => {
-      const toggle = Vue.ref(true)
-      const click = () => toggle.value = !toggle.value
-      return { toggle, click }
-    }
-  }).mount('#app')
-</script>
+<script src="../dist/vue.global.js"></script>
 
+<div id="app"></div>
 <style>
   .test {
     -webkit-transition: opacity 50ms ease;
