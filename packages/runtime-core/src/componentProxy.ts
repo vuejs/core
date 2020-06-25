@@ -242,12 +242,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
-      } else if (
-        // only cache other properties when instance has declared (thus stable)
-        // props
-        type.props &&
-        hasOwn(normalizePropsOptions(type)[0]!, key)
-      ) {
+      } else if (props !== EMPTY_OBJ && hasOwn(props, key)) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
@@ -311,12 +306,12 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     key: string,
     value: any
   ): boolean {
-    const { data, setupState, ctx } = instance
+    const { data, setupState, ctx, props } = instance
     if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
       setupState[key] = value
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
-    } else if (key in instance.props) {
+    } else if (props !== EMPTY_OBJ && hasOwn(props, key)) {
       __DEV__ &&
         warn(
           `Attempting to mutate prop "${key}". Props are readonly.`,
@@ -348,7 +343,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, type, appContext }
+      _: { data, setupState, accessCache, props, ctx, appContext }
     }: ComponentRenderContext,
     key: string
   ) {
@@ -356,7 +351,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      (type.props && hasOwn(normalizePropsOptions(type)[0]!, key)) ||
+      (props !== EMPTY_OBJ && hasOwn(props, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)
