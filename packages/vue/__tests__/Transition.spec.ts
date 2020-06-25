@@ -1,4 +1,4 @@
-import { E2E_TIMEOUT, setupPuppeteer } from '../e2eUtils'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { mockWarn } from '@vue/shared'
 import { h, createApp, Transition } from 'vue'
@@ -6,13 +6,10 @@ import { h, createApp, Transition } from 'vue'
 describe('e2e: Transition', () => {
   mockWarn()
   const { page, html, classList, isVisible } = setupPuppeteer()
-  const baseUrl = `file://${path.resolve(
-    __dirname,
-    '../../transition/transition.html'
-  )}`
+  const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = 50
-  const buffer = 10
+  const buffer = 5
 
   const classWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -50,7 +47,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-            <div id="container"><transition><div v-if="toggle" class="test">content</div></transition></div>
+            <div id="container">
+              <transition>
+                <div v-if="toggle" class="test">content</div>
+              </transition>
+            </div>
             <button id="toggleBtn" @click="click">button</button>
           `,
             setup: () => {
@@ -102,7 +103,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-              <div id="container"><transition name="test"><div v-if="toggle" class="test">content</div></transition></div>
+              <div id="container">
+                <transition name="test">
+                  <div v-if="toggle" class="test">content</div>
+                </transition>
+              </div>
               <button id="toggleBtn" @click="click">button</button>
             `,
             setup: () => {
@@ -156,12 +161,14 @@ describe('e2e: Transition', () => {
             template: `
           <div id="container">
             <transition enter-from-class="hello-from"
-                enter-active-class="hello-active"
-                enter-to-class="hello-to"
-                leave-from-class="bye-from"
-                leave-active-class="bye-active"
-                leave-to-class="bye-to"><div v-if="toggle" class="test">content</div></transition>
-            </div>
+              enter-active-class="hello-active"
+              enter-to-class="hello-to"
+              leave-from-class="bye-from"
+              leave-active-class="bye-active"
+              leave-to-class="bye-to">
+              <div v-if="toggle" class="test">content</div>
+            </transition>
+          </div>
           <button id="toggleBtn" @click="click">button</button>
           `,
             setup: () => {
@@ -213,7 +220,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-          <div id="container"><transition :name="name"><div v-if="toggle" class="test">content</div></transition></div>
+          <div id="container">
+            <transition :name="name">
+              <div v-if="toggle" class="test">content</div>
+            </transition>
+          </div>
           <button id="toggleBtn" @click="click">button</button>
           <button id="changeNameBtn" @click="changeName">button</button>
           `,
@@ -752,7 +763,11 @@ describe('e2e: Transition', () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
-              <div id="container"><transition name="test-anim"><div v-if="toggle">content</div></transition></div>
+              <div id="container">
+                <transition name="test-anim">
+                  <div v-if="toggle">content</div>
+                </transition>
+              </div>
               <button id="toggleBtn" @click="click">button</button>
             `,
             setup: () => {
@@ -774,7 +789,7 @@ describe('e2e: Transition', () => {
           'test-anim-leave-active',
           'test-anim-leave-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
@@ -829,7 +844,7 @@ describe('e2e: Transition', () => {
           'test-anim-long-leave-active',
           'test-anim-long-leave-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
@@ -849,7 +864,7 @@ describe('e2e: Transition', () => {
           'test-anim-long-enter-active',
           'test-anim-long-enter-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="">content</div>')
       },
       E2E_TIMEOUT
@@ -1391,12 +1406,12 @@ describe('e2e: Transition', () => {
     test(
       'single value',
       async () => {
-        await page().evaluate(() => {
+        await page().evaluate(duration => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
               <div id="container">
-                <transition name="test" duration="100">
+                <transition name="test" duration="${duration * 2}">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1408,7 +1423,7 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
-        })
+        }, duration)
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1423,7 +1438,7 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
@@ -1438,7 +1453,7 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="test">content</div>')
       },
       E2E_TIMEOUT
@@ -1447,12 +1462,12 @@ describe('e2e: Transition', () => {
     test(
       'enter with explicit durations',
       async () => {
-        await page().evaluate(() => {
+        await page().evaluate(duration => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
               <div id="container">
-                <transition name="test" :duration="{ enter: 100 }">
+                <transition name="test" :duration="{ enter: ${duration * 2} }">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1464,7 +1479,7 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
-        })
+        }, duration)
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1494,7 +1509,7 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<div class="test">content</div>')
       },
       E2E_TIMEOUT
@@ -1503,12 +1518,12 @@ describe('e2e: Transition', () => {
     test(
       'leave with explicit durations',
       async () => {
-        await page().evaluate(() => {
+        await page().evaluate(duration => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
               <div id="container">
-                <transition name="test" :duration="{ leave: 100 }">
+                <transition name="test" :duration="{ leave: ${duration * 2} }">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1520,7 +1535,7 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
-        })
+        }, duration)
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1535,7 +1550,7 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
@@ -1559,12 +1574,15 @@ describe('e2e: Transition', () => {
     test(
       'separate enter and leave',
       async () => {
-        await page().evaluate(() => {
+        await page().evaluate(duration => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
               <div id="container">
-                <transition name="test" :duration="{ enter: 200, leave: 100 }">
+                <transition name="test" :duration="{
+                  enter: ${duration * 4},
+                  leave: ${duration * 2}
+                }">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1576,7 +1594,7 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
-        })
+        }, duration)
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
@@ -1591,7 +1609,7 @@ describe('e2e: Transition', () => {
           'test-leave-active',
           'test-leave-to'
         ])
-        await transitionFinish(100)
+        await transitionFinish(duration * 2)
         expect(await html('#container')).toBe('<!--v-if-->')
 
         // enter
