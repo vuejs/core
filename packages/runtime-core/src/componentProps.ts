@@ -278,7 +278,7 @@ function resolvePropValue(
   key: string,
   value: unknown
 ) {
-  const opt = options[key] as any
+  const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
     // default values
