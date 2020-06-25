@@ -99,7 +99,14 @@ export function resolveTransitionProps(
   const durations = normalizeDuration(duration)
   const enterDuration = durations && durations[0]
   const leaveDuration = durations && durations[1]
-  const { appear, onBeforeEnter, onEnter, onLeave } = baseProps
+  const {
+    appear,
+    onBeforeEnter,
+    onEnter,
+    onLeave,
+    onEnterCancelled,
+    onLeaveCancelled
+  } = baseProps
 
   // is appearing
   if (appear && !instance.isMounted) {
@@ -108,9 +115,11 @@ export function resolveTransitionProps(
     enterToClass = appearToClass
   }
 
-  type Hook = (el: Element, done?: () => void) => void
+  type Hook =
+    | ((el: Element, done: () => void) => void)
+    | ((el: Element) => void)
 
-  const finishEnter: Hook = (el, done) => {
+  const finishEnter = (el: Element, done?: () => void) => {
     removeTransitionClass(el, enterToClass)
     removeTransitionClass(el, enterActiveClass)
     done && done()
@@ -120,7 +129,7 @@ export function resolveTransitionProps(
     }
   }
 
-  const finishLeave: Hook = (el, done) => {
+  const finishLeave = (el: Element, done?: () => void) => {
     removeTransitionClass(el, leaveToClass)
     removeTransitionClass(el, leaveActiveClass)
     done && done()
@@ -128,8 +137,14 @@ export function resolveTransitionProps(
 
   // only needed for user hooks called in nextFrame
   // sync errors are already handled by BaseTransition
-  function callHookWithErrorHandling(hook: Hook, args: any[]) {
-    callWithAsyncErrorHandling(hook, instance, ErrorCodes.TRANSITION_HOOK, args)
+  const callHook = (hook: Hook | undefined, args: any[]) => {
+    hook &&
+      callWithAsyncErrorHandling(
+        hook,
+        instance,
+        ErrorCodes.TRANSITION_HOOK,
+        args
+      )
   }
 
   return extend(baseProps, {
@@ -141,7 +156,7 @@ export function resolveTransitionProps(
     onEnter(el, done) {
       nextFrame(() => {
         const resolve = () => finishEnter(el, done)
-        onEnter && callHookWithErrorHandling(onEnter as Hook, [el, resolve])
+        callHook(onEnter, [el, resolve])
         removeTransitionClass(el, enterFromClass)
         addTransitionClass(el, enterToClass)
         if (!(onEnter && onEnter.length > 1)) {
@@ -158,7 +173,7 @@ export function resolveTransitionProps(
       addTransitionClass(el, leaveFromClass)
       nextFrame(() => {
         const resolve = () => finishLeave(el, done)
-        onLeave && callHookWithErrorHandling(onLeave as Hook, [el, resolve])
+        callHook(onLeave, [el, resolve])
         removeTransitionClass(el, leaveFromClass)
         addTransitionClass(el, leaveToClass)
         if (!(onLeave && onLeave.length > 1)) {
@@ -170,8 +185,14 @@ export function resolveTransitionProps(
         }
       })
     },
-    onEnterCancelled: finishEnter,
-    onLeaveCancelled: finishLeave
+    onEnterCancelled(el) {
+      finishEnter(el)
+      onEnterCancelled && onEnterCancelled(el)
+    },
+    onLeaveCancelled(el) {
+      finishLeave(el)
+      onLeaveCancelled && onLeaveCancelled(el)
+    }
   } as BaseTransitionProps<Element>)
 }
 

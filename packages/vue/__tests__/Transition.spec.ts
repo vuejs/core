@@ -433,8 +433,7 @@ describe('e2e: Transition', () => {
         'test-leave-active',
         'test-leave-from'
       ])
-      // fixme
-      expect(enterCancelledSpy).not.toBeCalled()
+      expect(enterCancelledSpy).toBeCalled()
       await nextFrame()
       expect(await classList('.test')).toStrictEqual([
         'test',
@@ -1255,8 +1254,8 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <transition name="test">
-                <div v-show="toggle" class="test" @leave-cancelled="onLeaveCancelledSpy">content</div>
+              <transition name="test" @leave-cancelled="onLeaveCancelledSpy">
+                <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
             <button id="toggleBtn" @click="click">button</button>
@@ -1290,8 +1289,7 @@ describe('e2e: Transition', () => {
           'test-enter-active',
           'test-enter-from'
         ])
-        // fixme
-        expect(onLeaveCancelledSpy).not.toBeCalled()
+        expect(onLeaveCancelledSpy).toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
