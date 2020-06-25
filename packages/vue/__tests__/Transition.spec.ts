@@ -11,7 +11,8 @@ describe('e2e: Transition', () => {
     classList,
     isVisible,
     timeout,
-    nextFrame
+    nextFrame,
+    click
   } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
@@ -665,18 +666,32 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    // fixme
     test(
       'css: false',
       async () => {
-        const onLeaveSpy = jest.fn()
+        const onBeforeEnterSpy = jest.fn()
         const onEnterSpy = jest.fn()
+        const onAfterEnterSpy = jest.fn()
+        const onBeforeLeaveSpy = jest.fn()
+        const onLeaveSpy = jest.fn()
+        const onAfterLeaveSpy = jest.fn()
 
-        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onBeforeEnterSpy', onBeforeEnterSpy)
         await page().exposeFunction('onEnterSpy', onEnterSpy)
+        await page().exposeFunction('onAfterEnterSpy', onAfterEnterSpy)
+        await page().exposeFunction('onBeforeLeaveSpy', onBeforeLeaveSpy)
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onAfterLeaveSpy', onAfterLeaveSpy)
 
         await page().evaluate(() => {
-          const { onLeaveSpy, onEnterSpy } = window as any
+          const {
+            onBeforeEnterSpy,
+            onEnterSpy,
+            onAfterEnterSpy,
+            onBeforeLeaveSpy,
+            onLeaveSpy,
+            onAfterLeaveSpy
+          } = window as any
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
@@ -684,8 +699,12 @@ describe('e2e: Transition', () => {
               <transition
                 :css="false"
                 name="test"
+                @before-enter="onBeforeEnterSpy"
                 @enter="onEnterSpy"
-                @leave="onLeaveSpy">
+                @after-enter="onAfterEnterSpy"
+                @before-leave="onBeforeLeaveSpy"
+                @leave="onLeaveSpy"
+                @after-leave="onAfterLeaveSpy">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -694,21 +713,32 @@ describe('e2e: Transition', () => {
             setup: () => {
               const toggle = ref(true)
               const click = () => (toggle.value = !toggle.value)
-              return { toggle, click, onLeaveSpy, onEnterSpy }
+              return {
+                toggle,
+                click,
+                onBeforeEnterSpy,
+                onEnterSpy,
+                onAfterEnterSpy,
+                onBeforeLeaveSpy,
+                onLeaveSpy,
+                onAfterLeaveSpy
+              }
             }
           }).mount('#app')
         })
         expect(await html('#container')).toBe('<div class="test">content</div>')
 
         // leave
-        await classWhenTransitionStart()
+        await click('#toggleBtn')
+        expect(onBeforeLeaveSpy).toBeCalled()
         expect(onLeaveSpy).toBeCalled()
-        expect(await html('#container')).toBe(
-          '<div class="test">content</div><!--v-if-->'
-        )
+        expect(onAfterLeaveSpy).toBeCalled()
+        expect(await html('#container')).toBe('<!--v-if-->')
         // enter
         await classWhenTransitionStart()
+        expect(onBeforeEnterSpy).toBeCalled()
         expect(onEnterSpy).toBeCalled()
+        expect(onAfterEnterSpy).toBeCalled()
         expect(await html('#container')).toBe('<div class="test">content</div>')
       },
       E2E_TIMEOUT

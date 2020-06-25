@@ -343,6 +343,9 @@ export function resolveTransitionHooks(
       })
       if (hook) {
         hook(el, done)
+        if (hook.length <= 1) {
+          done()
+        }
       } else {
         done()
       }
@@ -358,7 +361,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const afterLeave = (el._leaveCb = (cancelled?) => {
+      const done = (el._leaveCb = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -374,9 +377,12 @@ export function resolveTransitionHooks(
       })
       leavingVNodesCache[key] = vnode
       if (onLeave) {
-        onLeave(el, afterLeave)
+        onLeave(el, done)
+        if (onLeave.length <= 1) {
+          done()
+        }
       } else {
-        afterLeave()
+        done()
       }
     }
   }
