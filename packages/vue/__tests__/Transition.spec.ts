@@ -447,7 +447,7 @@ describe('e2e: Transition', () => {
     test(
       'transition on appear',
       async () => {
-        await page().evaluate(async () => {
+        const appearClass = await page().evaluate(async () => {
           const { createApp, ref } = (window as any).Vue
           createApp({
             template: `
@@ -468,9 +468,12 @@ describe('e2e: Transition', () => {
               return { toggle, click }
             }
           }).mount('#app')
+          return Promise.resolve().then(() => {
+            return document.querySelector('.test')!.className.split(/\s+/g)
+          })
         })
         // appear
-        expect(await classList('.test')).toStrictEqual([
+        expect(appearClass).toStrictEqual([
           'test',
           'test-appear-active',
           'test-appear-from'
@@ -598,13 +601,13 @@ describe('e2e: Transition', () => {
             return document.querySelector('.test')!.className.split(/\s+/g)
           })
         })
-        // appear fixme spy called
+        // appear
         expect(appearClass).toStrictEqual([
           'test',
           'test-appear-active',
           'test-appear-from'
         ])
-        expect(beforeAppearSpy).not.toBeCalled()
+        expect(beforeAppearSpy).toBeCalled()
         expect(onAppearSpy).not.toBeCalled()
         expect(afterAppearSpy).not.toBeCalled()
         await nextFrame()
@@ -613,11 +616,15 @@ describe('e2e: Transition', () => {
           'test-appear-active',
           'test-appear-to'
         ])
-        expect(onAppearSpy).not.toBeCalled()
+        expect(onAppearSpy).toBeCalled()
         expect(afterAppearSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
-        expect(afterAppearSpy).not.toBeCalled()
+        expect(afterAppearSpy).toBeCalled()
+
+        expect(beforeEnterSpy).not.toBeCalled()
+        expect(onEnterSpy).not.toBeCalled()
+        expect(afterEnterSpy).not.toBeCalled()
 
         // leave
         expect(await classWhenTransitionStart()).toStrictEqual([
@@ -640,15 +647,15 @@ describe('e2e: Transition', () => {
         expect(await html('#container')).toBe('<!--v-if-->')
         expect(afterLeaveSpy).toBeCalled()
 
-        // enter fixme spy called
+        // enter
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
           'test-enter-active',
           'test-enter-from'
         ])
         expect(beforeEnterSpy).toBeCalled()
-        expect(onEnterSpy).toBeCalled()
-        expect(afterEnterSpy).toBeCalled()
+        expect(onEnterSpy).not.toBeCalled()
+        expect(afterEnterSpy).not.toBeCalled()
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -656,7 +663,7 @@ describe('e2e: Transition', () => {
           'test-enter-to'
         ])
         expect(onEnterSpy).toBeCalled()
-        expect(afterEnterSpy).toBeCalled()
+        expect(afterEnterSpy).not.toBeCalled()
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">content</div>')
         expect(afterEnterSpy).toBeCalled()

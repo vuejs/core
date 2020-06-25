@@ -41,9 +41,16 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onLeave?: (el: HostElement, done: () => void) => void
   onAfterLeave?: (el: HostElement) => void
   onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
+  // appear
+  onBeforeAppear?: (el: HostElement) => void
+  onAppear?: (el: HostElement, done: () => void) => void
+  onAfterAppear?: (el: HostElement) => void
+  onAppearCancelled?: (el: HostElement) => void
 }
 
-export interface TransitionHooks<HostElement extends RendererElement = RendererElement> {
+export interface TransitionHooks<
+  HostElement extends RendererElement = RendererElement
+> {
   persisted: boolean
   beforeEnter(el: HostElement): void
   enter(el: HostElement): void
@@ -115,7 +122,12 @@ const BaseTransitionImpl = {
     onBeforeLeave: Function,
     onLeave: Function,
     onAfterLeave: Function,
-    onLeaveCancelled: Function
+    onLeaveCancelled: Function,
+    // appear
+    onBeforeAppear: Function,
+    onAppear: Function,
+    onAfterAppear: Function,
+    onAppearCancelled: Function
   },
 
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
@@ -254,7 +266,11 @@ export function resolveTransitionHooks(
     onBeforeLeave,
     onLeave,
     onAfterLeave,
-    onLeaveCancelled
+    onLeaveCancelled,
+    onBeforeAppear,
+    onAppear,
+    onAfterAppear,
+    onAppearCancelled
   }: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance
@@ -275,8 +291,13 @@ export function resolveTransitionHooks(
   const hooks: TransitionHooks<TransitionElement> = {
     persisted,
     beforeEnter(el) {
-      if (!appear && !state.isMounted) {
-        return
+      let hook = onBeforeEnter
+      if (!state.isMounted) {
+        if (appear) {
+          hook = onBeforeAppear || onBeforeEnter
+        } else {
+          return
+        }
       }
       // for same element (v-show)
       if (el._leaveCb) {
@@ -292,31 +313,40 @@ export function resolveTransitionHooks(
         // force early removal (not cancelled)
         leavingVNode.el!._leaveCb()
       }
-      callHook(onBeforeEnter, [el])
+      callHook(hook, [el])
     },
 
     enter(el) {
-      if (!appear && !state.isMounted) {
-        return
+      let hook = onEnter
+      let afterHook = onAfterEnter
+      let cancelHook = onEnterCancelled
+      if (!state.isMounted) {
+        if (appear) {
+          hook = onAppear || onEnter
+          afterHook = onAfterAppear || onAfterEnter
+          cancelHook = onAppearCancelled || onEnterCancelled
+        } else {
+          return
+        }
       }
       let called = false
-      const afterEnter = (el._enterCb = (cancelled?) => {
+      const done = (el._enterCb = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
-          callHook(onEnterCancelled, [el])
+          callHook(cancelHook, [el])
         } else {
-          callHook(onAfterEnter, [el])
+          callHook(afterHook, [el])
         }
         if (hooks.delayedLeave) {
           hooks.delayedLeave()
         }
         el._enterCb = undefined
       })
-      if (onEnter) {
-        onEnter(el, afterEnter)
+      if (hook) {
+        hook(el, done)
       } else {
-        afterEnter()
+        done()
       }
     },
 
