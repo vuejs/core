@@ -5,11 +5,11 @@ import { createApp, ref } from 'vue'
 
 describe('e2e: TransitionGroup', () => {
   mockWarn()
-  const { page, html } = setupPuppeteer()
+  const { page, html, nextFrame, timeout } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = 50
-  const buffer = 10
+  const buffer = 5
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -19,20 +19,7 @@ describe('e2e: TransitionGroup', () => {
       })
     })
 
-  const transitionFinish = (time = duration) =>
-    new Promise(r => {
-      setTimeout(r, time + buffer)
-    })
-
-  const nextFrame = () => {
-    return page().evaluate(() => {
-      return new Promise(resolve => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(resolve)
-        })
-      })
-    })
-  }
+  const transitionFinish = (time = duration) => timeout(time + buffer)
 
   beforeEach(async () => {
     await page().goto(baseUrl)
@@ -302,7 +289,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test group-move" style="">a</div>` +
           `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`
       )
-      await transitionFinish()
+      await transitionFinish(duration * 2)
       expect(await html('#container')).toBe(
         `<div class="test">d</div>` +
           `<div class="test">b</div>` +
@@ -359,7 +346,9 @@ describe('e2e: TransitionGroup', () => {
           `<div class="group-move" style="">b</div>` +
           `<div class="group-move" style="">c</div>`
       )
-      await transitionFinish(100)
+      // not sure why but we just have to wait really long for this to
+      // pass consistently :/
+      await transitionFinish(duration * 4)
       expect(await html('#container')).toBe(
         `<div class="" style="">a</div>` +
           `<div class="" style="">b</div>` +

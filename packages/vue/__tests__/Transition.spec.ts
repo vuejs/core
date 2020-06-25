@@ -5,11 +5,20 @@ import { h, createApp, Transition } from 'vue'
 
 describe('e2e: Transition', () => {
   mockWarn()
-  const { page, html, classList, isVisible } = setupPuppeteer()
+  const {
+    page,
+    html,
+    classList,
+    isVisible,
+    timeout,
+    nextFrame
+  } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = 50
   const buffer = 5
+
+  const transitionFinish = (time = duration) => timeout(time + buffer)
 
   const classWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -18,21 +27,6 @@ describe('e2e: Transition', () => {
         return document.querySelector('#container div')!.className.split(/\s+/g)
       })
     })
-
-  const transitionFinish = (time = duration) =>
-    new Promise(r => {
-      setTimeout(r, time + buffer)
-    })
-
-  const nextFrame = () => {
-    return page().evaluate(() => {
-      return new Promise(resolve => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(resolve)
-        })
-      })
-    })
-  }
 
   beforeEach(async () => {
     await page().goto(baseUrl)
