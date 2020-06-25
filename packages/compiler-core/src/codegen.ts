@@ -698,13 +698,13 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     dynamicProps,
     directives,
     isBlock,
-    isForBlock
+    disableTracking
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
   }
   if (isBlock) {
-    push(`(${helper(OPEN_BLOCK)}(${isForBlock ? `true` : ``}), `)
+    push(`(${helper(OPEN_BLOCK)}(${disableTracking ? `true` : ``}), `)
   }
   if (pure) {
     push(PURE_ANNOTATION)
