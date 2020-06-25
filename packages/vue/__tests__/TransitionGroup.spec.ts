@@ -438,8 +438,7 @@ describe('e2e: TransitionGroup', () => {
           return document.querySelector('#container')!.innerHTML
         })
       })
-      // appear fixme
-      expect(beforeAppearSpy).not.toBeCalled()
+      expect(beforeAppearSpy).toBeCalled()
       expect(onAppearSpy).not.toBeCalled()
       expect(afterAppearSpy).not.toBeCalled()
       expect(appearHtml).toBe(
@@ -448,7 +447,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test test-appear-active test-appear-from">c</div>`
       )
       await nextFrame()
-      expect(onAppearSpy).not.toBeCalled()
+      expect(onAppearSpy).toBeCalled()
       expect(afterAppearSpy).not.toBeCalled()
       expect(await html('#container')).toBe(
         `<div class="test test-appear-active test-appear-to">a</div>` +
@@ -456,7 +455,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test test-appear-active test-appear-to">c</div>`
       )
       await transitionFinish()
-      expect(afterAppearSpy).not.toBeCalled()
+      expect(afterAppearSpy).toBeCalled()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
