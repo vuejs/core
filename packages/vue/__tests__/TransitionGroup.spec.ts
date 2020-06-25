@@ -1,4 +1,4 @@
-import { E2E_TIMEOUT, setupPuppeteer } from '../e2eUtils'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { mockWarn } from '@vue/shared'
 import { createApp, ref } from 'vue'
@@ -6,10 +6,7 @@ import { createApp, ref } from 'vue'
 describe('e2e: TransitionGroup', () => {
   mockWarn()
   const { page, html } = setupPuppeteer()
-  const baseUrl = `file://${path.resolve(
-    __dirname,
-    '../../transition/index.html'
-  )}`
+  const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 
   const duration = 50
   const buffer = 10
