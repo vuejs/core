@@ -154,12 +154,28 @@ function createForEach(isReadonly: boolean, shallow: boolean) {
   }
 }
 
+interface Iterable {
+  [Symbol.iterator](): Iterator
+}
+
+interface Iterator {
+  next(value?: any): IterationResult
+}
+
+interface IterationResult {
+  value: any
+  done: boolean
+}
+
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
   shallow: boolean
 ) {
-  return function(this: IterableCollections, ...args: unknown[]) {
+  return function(
+    this: IterableCollections,
+    ...args: unknown[]
+  ): Iterable & Iterator {
     const target = toRaw(this)
     const isMap = target instanceof Map
     const isPair = method === 'entries' || (method === Symbol.iterator && isMap)

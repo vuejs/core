@@ -165,9 +165,10 @@ type UnwrapRefSimple<T> = T extends
   | CollectionTypes
   | BaseTypes
   | Ref
+  | Array<any>
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
-  : T extends Array<any> ? T : T extends object ? UnwrappedObject<T> : T
+  : T extends object ? UnwrappedObject<T> : T
 
 // Extract all known symbols from an object
 // when unwrapping Object the symbols are not `in keyof`, this should cover all the
