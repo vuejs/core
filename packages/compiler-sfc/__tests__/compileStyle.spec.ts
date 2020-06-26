@@ -4,7 +4,7 @@ import {
   SFCStyleCompileOptions
 } from '../src/compileStyle'
 import { mockWarn } from '@vue/shared'
-
+import path from 'path'
 describe('SFC scoped CSS', () => {
   mockWarn()
 
@@ -316,5 +316,33 @@ describe('SFC CSS modules', () => {
     expect(result.modules).toBeDefined()
     expect(result.modules!.fooBar).toMatch('__foo-bar__')
     expect(result.modules!.bazQux).toBeUndefined()
+  })
+})
+
+describe('SFC style preprocessors', () => {
+  test('scss @import', () => {
+    const res = compileStyle({
+      source: `
+        @import "import.scss";
+      `,
+      filename: 'test.scss',
+      id: '',
+      preprocessLang: 'scss',
+      preprocessOptions: {
+        // test with file will get error which `import.scss is not find`
+        importer: function(url: string, prev: string, done: string) {
+          if (url === 'import.scss') {
+            return { file: path.join(__dirname, url), contents: '' }
+          }
+        }
+      }
+    })
+
+    // test.scss will be include with 'http://localhost/test.scss'
+    expect(
+      Array.from(res.dependencies).filter(
+        d => !d.startsWith('http://localhost')
+      )
+    ).toStrictEqual([path.join(__dirname, 'import.scss')])
   })
 })

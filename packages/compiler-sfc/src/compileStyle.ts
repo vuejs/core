@@ -180,7 +180,7 @@ export function doCompileStyle(
           map: undefined,
           errors: [...errors, error],
           rawResult: undefined,
-          dependencies: dependencies
+          dependencies
         }))
     }
 
@@ -197,7 +197,7 @@ export function doCompileStyle(
     map: outMap && (outMap.toJSON() as any),
     errors,
     rawResult: result,
-    dependencies: dependencies
+    dependencies
   }
 }
 
