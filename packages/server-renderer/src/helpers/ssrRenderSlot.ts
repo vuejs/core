@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, Slot, Slots } from '@vue/runtime-core'
+import { ComponentInternalInstance, Slot, Slots } from 'vue'
 import { Props, PushFn, renderVNodeChildren } from '../render'
 
 export type SSRSlots = Record<string, SSRSlot>

@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, warn } from '@vue/runtime-core'
+import { ComponentInternalInstance, warn } from 'vue'
 import { compile } from '@vue/compiler-ssr'
 import { generateCodeFrame, NO } from '@vue/shared'
 import { CompilerError } from '@vue/compiler-core'

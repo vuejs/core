@@ -1,9 +1,4 @@
-import {
-  Component,
-  ComponentInternalInstance,
-  createVNode,
-  Slots
-} from '@vue/runtime-core'
+import { Component, ComponentInternalInstance, createVNode, Slots } from 'vue'
 import { Props, renderComponentVNode, SSRBuffer } from '../render'
 import { SSRSlots } from './ssrRenderSlot'
 

@@ -12,7 +12,7 @@ import {
   VNodeArrayChildren,
   VNodeProps,
   warn
-} from '@vue/runtime-core'
+} from 'vue'
 import {
   escapeHtml,
   escapeHtmlComment,

@@ -1,4 +1,4 @@
-import { ComponentInternalInstance, ssrContextKey } from '@vue/runtime-core'
+import { ComponentInternalInstance, ssrContextKey } from 'vue'
 import { createBuffer, PushFn, SSRBufferItem, SSRContext } from '../render'
 
 export function ssrRenderTeleport(
