@@ -212,7 +212,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } = instance
 
     // let @vue/reatvitiy know it should never observe Vue public instances.
-    if (key === ReactiveFlags.skip) {
+    if (key === ReactiveFlags.SKIP) {
       return true
     }
 

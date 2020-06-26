@@ -298,11 +298,11 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
     key: string | symbol,
     receiver: CollectionTypes
   ) => {
-    if (key === ReactiveFlags.isReactive) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
-    } else if (key === ReactiveFlags.isReadonly) {
+    } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (key === ReactiveFlags.RAW) {
       return target
     }
 
