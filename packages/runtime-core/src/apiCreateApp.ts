@@ -13,8 +13,10 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
+import { version } from '.'
 
 export interface App<HostElement = any> {
+  version: string
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
@@ -125,6 +127,8 @@ export function createAppAPI<HostElement>(
       _props: rootProps,
       _container: null,
       _context: context,
+
+      version,
 
       get config() {
         return context.config
