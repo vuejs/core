@@ -111,7 +111,10 @@ function renderComponentSubTree(
       // optimized
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
-      comp.ssrRender(instance.proxy, push, instance)
+      // fallthrough attrs
+      const attrs =
+        instance.type.inheritAttrs !== false ? instance.attrs : undefined
+      comp.ssrRender(instance.proxy, push, instance, attrs)
       setCurrentRenderingInstance(null)
     } else if (instance.render) {
       renderVNode(push, renderComponentRoot(instance), instance)
