@@ -11,13 +11,32 @@ import {
   createStaticVNode
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
-import { renderToString } from '../src/renderToString'
+import { renderToStream as _renderToStream } from '../src/renderToStream'
+import { Readable } from 'stream'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 
 mockWarn()
 
-describe('ssr: renderToString', () => {
+const promisifyStream = (stream: Readable) => {
+  return new Promise((resolve, reject) => {
+    let result = ''
+    stream.on('data', data => {
+      result += data
+    })
+    stream.on('error', () => {
+      reject(result)
+    })
+    stream.on('end', () => {
+      resolve(result)
+    })
+  })
+}
+
+const renderToStream = (app: any, context?: any) =>
+  promisifyStream(_renderToStream(app, context))
+
+describe('ssr: renderToStream', () => {
   test('should apply app context', async () => {
     const app = createApp({
       render() {
@@ -28,14 +47,14 @@ describe('ssr: renderToString', () => {
     app.component('foo', {
       render: () => h('div', 'foo')
     })
-    const html = await renderToString(app)
+    const html = await renderToStream(app)
     expect(html).toBe(`<div>foo</div>`)
   })
 
   describe('components', () => {
     test('vnode components', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             data() {
               return { msg: 'hello' }
@@ -50,7 +69,7 @@ describe('ssr: renderToString', () => {
 
     test('option components returning render from setup', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             setup() {
               const msg = ref('hello')
@@ -63,7 +82,7 @@ describe('ssr: renderToString', () => {
 
     test('setup components returning render from setup', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           createApp(
             defineComponent((props: {}) => {
               const msg = ref('hello')
@@ -76,7 +95,7 @@ describe('ssr: renderToString', () => {
 
     test('optimized components', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             data() {
               return { msg: 'hello' }
@@ -92,7 +111,7 @@ describe('ssr: renderToString', () => {
     describe('template components', () => {
       test('render', async () => {
         expect(
-          await renderToString(
+          await renderToStream(
             createApp({
               data() {
                 return { msg: 'hello' }
@@ -104,7 +123,7 @@ describe('ssr: renderToString', () => {
       })
 
       test('handle compiler errors', async () => {
-        await renderToString(createApp({ template: `<` }))
+        await renderToStream(createApp({ template: `<` }))
 
         expect(
           'Template compilation error: Unexpected EOF in tag.\n' +
@@ -123,7 +142,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             render() {
               return h('div', ['parent', h(Child, { msg: 'hello' })])
@@ -142,7 +161,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -164,7 +183,7 @@ describe('ssr: renderToString', () => {
       })
       app.component('Child', Child)
 
-      expect(await renderToString(app)).toBe(
+      expect(await renderToStream(app)).toBe(
         `<div>parent<div>hello</div></div>`
       )
     })
@@ -190,7 +209,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -237,7 +256,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -268,7 +287,7 @@ describe('ssr: renderToString', () => {
 
       // test fallback
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -300,7 +319,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -339,7 +358,7 @@ describe('ssr: renderToString', () => {
         template: `<div>parent<Child v-slot="{ msg }"><span>{{ msg }}</span></Child></div>`
       })
 
-      expect(await renderToString(app)).toBe(
+      expect(await renderToStream(app)).toBe(
         `<div>parent<div class="child">` +
           `<!--[--><span>from slot</span><!--]-->` +
           `</div></div>`
@@ -365,7 +384,7 @@ describe('ssr: renderToString', () => {
       })
       app.component('Child', Child)
 
-      expect(await renderToString(app)).toBe(
+      expect(await renderToStream(app)).toBe(
         `<div>parent<div class="child">` +
           // no comment anchors because slot is used directly as element children
           `<span>from slot</span>` +
@@ -387,7 +406,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -425,7 +444,7 @@ describe('ssr: renderToString', () => {
       }
 
       expect(
-        await renderToString(
+        await renderToStream(
           createApp({
             ssrRender(_ctx, push, parent) {
               push(`<div>parent`)
@@ -446,19 +465,19 @@ describe('ssr: renderToString', () => {
   describe('vnode element', () => {
     test('props', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           h('div', { id: 'foo&', class: ['bar', 'baz'] }, 'hello')
         )
       ).toBe(`<div id="foo&amp;" class="bar baz">hello</div>`)
     })
 
     test('text children', async () => {
-      expect(await renderToString(h('div', 'hello'))).toBe(`<div>hello</div>`)
+      expect(await renderToStream(h('div', 'hello'))).toBe(`<div>hello</div>`)
     })
 
     test('array children', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           h('div', [
             'foo',
             h('span', 'bar'),
@@ -472,12 +491,12 @@ describe('ssr: renderToString', () => {
     })
 
     test('void elements', async () => {
-      expect(await renderToString(h('input'))).toBe(`<input>`)
+      expect(await renderToStream(h('input'))).toBe(`<input>`)
     })
 
     test('innerHTML', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           h(
             'div',
             {
@@ -491,7 +510,7 @@ describe('ssr: renderToString', () => {
 
     test('textContent', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           h(
             'div',
             {
@@ -505,7 +524,7 @@ describe('ssr: renderToString', () => {
 
     test('textarea value', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           h(
             'textarea',
             {
@@ -520,7 +539,7 @@ describe('ssr: renderToString', () => {
 
   describe('raw vnode types', () => {
     test('Text', async () => {
-      expect(await renderToString(createTextVNode('hello <div>'))).toBe(
+      expect(await renderToStream(createTextVNode('hello <div>'))).toBe(
         `hello &lt;div&gt;`
       )
     })
@@ -528,7 +547,7 @@ describe('ssr: renderToString', () => {
     test('Comment', async () => {
       // https://www.w3.org/TR/html52/syntax.html#comments
       expect(
-        await renderToString(
+        await renderToStream(
           h('div', [
             createCommentVNode('>foo'),
             createCommentVNode('->foo'),
@@ -541,7 +560,7 @@ describe('ssr: renderToString', () => {
 
     test('Static', async () => {
       const content = `<div id="ok">hello<span>world</span></div>`
-      expect(await renderToString(createStaticVNode(content, 1))).toBe(content)
+      expect(await renderToStream(createStaticVNode(content, 1))).toBe(content)
     })
   })
 
@@ -553,7 +572,7 @@ describe('ssr: renderToString', () => {
 
     test('basic', async () => {
       expect(
-        await renderToString(
+        await renderToStream(
           withId(() => {
             return h('div')
           })()
@@ -578,7 +597,7 @@ describe('ssr: renderToString', () => {
         })
       }
 
-      expect(await renderToString(h(Parent))).toBe(
+      expect(await renderToStream(h(Parent))).toBe(
         `<div data-v-test data-v-child><span data-v-test data-v-child-s>slot</span></div>`
       )
     })

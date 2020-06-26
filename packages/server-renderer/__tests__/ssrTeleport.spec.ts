@@ -1,5 +1,6 @@
 import { createApp, h, Teleport } from 'vue'
-import { renderToString, SSRContext } from '../src/renderToString'
+import { renderToString } from '../src/renderToString'
+import { SSRContext } from '../src/render'
 import { ssrRenderTeleport } from '../src/helpers/ssrRenderTeleport'
 
 describe('ssrRenderTeleport', () => {
