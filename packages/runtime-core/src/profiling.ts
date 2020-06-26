@@ -17,11 +17,7 @@ export function endMeasure(instance: ComponentInternalInstance, type: string) {
     const startTag = `vue-${type}-${instance.uid}`
     const endTag = startTag + `:end`
     perf.mark(endTag)
-    perf.measure(
-      `<${formatComponentName(instance.type)}> ${type}`,
-      startTag,
-      endTag
-    )
+    perf.measure(`<${formatComponentName(instance)}> ${type}`, startTag, endTag)
     perf.clearMarks(startTag)
     perf.clearMarks(endTag)
   }
