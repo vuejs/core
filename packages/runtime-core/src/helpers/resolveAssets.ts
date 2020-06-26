@@ -1,12 +1,7 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import {
-  currentInstance,
-  Component,
-  FunctionalComponent,
-  ComponentOptions
-} from '../component'
+import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString, isObject } from '@vue/shared'
+import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
