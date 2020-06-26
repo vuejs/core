@@ -323,15 +323,15 @@ describe('SFC style preprocessors', () => {
   test('scss @import', () => {
     const res = compileStyle({
       source: `
-        @import "import.scss";
+        @import "./fixture/import.scss";
       `,
-      filename: 'test.scss',
+      filename: './fixture/test.scss',
       id: '',
       preprocessLang: 'scss',
       preprocessOptions: {
         // test with file will get error which `import.scss is not find`
         importer: function(url: string, prev: string, done: string) {
-          if (url === 'import.scss') {
+          if (url === './fixture/import.scss') {
             return { file: path.join(__dirname, url), contents: '' }
           }
         }
@@ -343,6 +343,6 @@ describe('SFC style preprocessors', () => {
       Array.from(res.dependencies).filter(
         d => !d.startsWith('http://localhost')
       )
-    ).toStrictEqual([path.join(__dirname, 'import.scss')])
+    ).toStrictEqual([path.join(__dirname, './fixture/import.scss')])
   })
 })
