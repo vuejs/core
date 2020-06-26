@@ -16,15 +16,33 @@ async function unrollBuffer(
   buffer: SSRBuffer,
   stream: Readable
 ): Promise<void> {
+  if (buffer.hasAsync) {
+    for (let i = 0; i < buffer.length; i++) {
+      let item = buffer[i]
+      if (isPromise(item)) {
+        item = await item
+      }
+      if (isString(item)) {
+        stream.push(item)
+      } else {
+        await unrollBuffer(item, stream)
+      }
+    }
+  } else {
+    // sync buffer can be more efficiently unrolled without unnecessary await
+    // ticks
+    unrollBufferSync(buffer, stream)
+  }
+}
+
+function unrollBufferSync(buffer: SSRBuffer, stream: Readable) {
   for (let i = 0; i < buffer.length; i++) {
     let item = buffer[i]
-    if (isPromise(item)) {
-      item = await item
-    }
     if (isString(item)) {
       stream.push(item)
     } else {
-      await unrollBuffer(item, stream)
+      // since this is a sync buffer, child buffers are never promises
+      unrollBufferSync(item as SSRBuffer, stream)
     }
   }
 }

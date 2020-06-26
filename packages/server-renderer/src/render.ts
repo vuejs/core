@@ -20,7 +20,8 @@ import {
   isPromise,
   isString,
   isVoidTag,
-  ShapeFlags
+  ShapeFlags,
+  isArray
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
@@ -35,7 +36,7 @@ const {
   normalizeSuspenseChildren
 } = ssrUtils
 
-export type SSRBuffer = SSRBufferItem[]
+export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
 export type SSRBufferItem = string | SSRBuffer | Promise<SSRBuffer>
 export type PushFn = (item: SSRBufferItem) => void
 export type Props = Record<string, unknown>
@@ -68,6 +69,11 @@ export function createBuffer() {
         buffer.push(item)
       }
       appendable = isStringItem
+      if (isPromise(item) || (isArray(item) && item.hasAsync)) {
+        // promise, or child buffer with async, mark as async.
+        // this allows skipping unnecessary await ticks during unroll stage
+        buffer.hasAsync = true
+      }
     }
   }
 }
