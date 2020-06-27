@@ -190,13 +190,19 @@ export function updateProps(
     for (const key in rawCurrentProps) {
       if (
         !rawProps ||
-        (!hasOwn(rawProps, key) &&
+        (
+          // for camelCase
+          !hasOwn(rawProps, key) &&
           // it's possible the original props was passed in as kebab-case
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
         if (options) {
-          if (rawPrevProps && rawPrevProps[kebabKey!] !== undefined) {
+          if (rawPrevProps && (
+            // for camelCase
+            rawPrevProps[key] !== undefined ||
+            // for kebab-case
+            rawPrevProps[kebabKey!] !== undefined)) {
             props[key] = resolvePropValue(
               options,
               rawProps || EMPTY_OBJ,
@@ -278,7 +284,7 @@ function resolvePropValue(
   key: string,
   value: unknown
 ) {
-  const opt = options[key] as any
+  const opt = options[key]
   if (opt != null) {
     const hasDefault = hasOwn(opt, 'default')
     // default values

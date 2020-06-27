@@ -48,7 +48,9 @@ export function warn(msg: string, ...args: any[]) {
         msg + args.join(''),
         instance && instance.proxy,
         trace
-          .map(({ vnode }) => `at <${formatComponentName(vnode.type)}>`)
+          .map(
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`
+          )
           .join('\n'),
         trace
       ]
@@ -109,7 +111,11 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const postfix =
     recurseCount > 0 ? `... (${recurseCount} recursive calls)` : ``
   const isRoot = vnode.component ? vnode.component.parent == null : false
-  const open = ` at <${formatComponentName(vnode.type, isRoot)}`
+  const open = ` at <${formatComponentName(
+    vnode.component,
+    vnode.type,
+    isRoot
+  )}`
   const close = `>` + postfix
   return vnode.props
     ? [open, ...formatProps(vnode.props), close]

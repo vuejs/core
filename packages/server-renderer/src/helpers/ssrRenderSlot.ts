@@ -1,8 +1,7 @@
-import { Props, PushFn, renderVNodeChildren } from '../renderToString'
-import { ComponentInternalInstance, Slot, Slots } from 'vue'
+import { ComponentInternalInstance, Slots } from 'vue'
+import { Props, PushFn, renderVNodeChildren } from '../render'
 
 export type SSRSlots = Record<string, SSRSlot>
-
 export type SSRSlot = (
   props: Props,
   push: PushFn,
@@ -22,13 +21,16 @@ export function ssrRenderSlot(
   push(`<!--[-->`)
   const slotFn = slots[slotName]
   if (slotFn) {
-    if (slotFn.length > 1) {
-      // only ssr-optimized slot fns accept more than 1 arguments
-      const scopeId = parentComponent && parentComponent.type.__scopeId
-      slotFn(slotProps, push, parentComponent, scopeId ? ` ${scopeId}-s` : ``)
-    } else {
+    const scopeId = parentComponent && parentComponent.type.__scopeId
+    const ret = slotFn(
+      slotProps,
+      push,
+      parentComponent,
+      scopeId ? ` ${scopeId}-s` : ``
+    )
+    if (Array.isArray(ret)) {
       // normal slot
-      renderVNodeChildren(push, (slotFn as Slot)(slotProps), parentComponent)
+      renderVNodeChildren(push, ret, parentComponent)
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()

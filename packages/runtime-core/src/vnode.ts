@@ -408,11 +408,11 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps
 ): VNode<T, U> {
-  const props = (extraProps
+  const props = extraProps
     ? vnode.props
       ? mergeProps(vnode.props, extraProps)
       : extend({}, extraProps)
-    : vnode.props) as any
+    : vnode.props
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   return {
@@ -554,8 +554,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
 const handlersRE = /^on|^vnode/
 
 export function mergeProps(...args: (Data & VNodeProps)[]) {
-  const ret: Data = {}
-  extend(ret, args[0])
+  const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
@@ -571,7 +570,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, toMerge[key])
             : incoming
         }
       } else {

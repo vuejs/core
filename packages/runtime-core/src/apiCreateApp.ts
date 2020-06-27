@@ -17,6 +17,7 @@ import { initDevtools } from './devtools'
 import { version } from '.'
 
 export interface App<HostElement = any> {
+  version: string
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
@@ -127,6 +128,8 @@ export function createAppAPI<HostElement>(
       _props: rootProps,
       _container: null,
       _context: context,
+
+      version,
 
       get config() {
         return context.config

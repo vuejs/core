@@ -682,6 +682,7 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function formatComponentName(
+  instance: ComponentInternalInstance | null,
   Component: Component,
   isRoot = false
 ): string {
@@ -694,5 +695,17 @@ export function formatComponentName(
       name = match[1]
     }
   }
+
+  if (!name && instance && instance.parent) {
+    // try to infer the name based on local resolution
+    const registry = instance.parent.components
+    for (const key in registry) {
+      if (registry[key] === Component) {
+        name = key
+        break
+      }
+    }
+  }
+
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
 }
