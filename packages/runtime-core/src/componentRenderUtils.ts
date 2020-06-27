@@ -150,12 +150,14 @@ export function renderComponentRoot(
 
     // inherit scopeId
     const scopeId = vnode.scopeId
-    if (scopeId) {
-      root = cloneVNode(root, { [scopeId]: '' })
-    }
     const treeOwnerId = parent && parent.type.__scopeId
-    if (treeOwnerId && treeOwnerId !== scopeId) {
-      root = cloneVNode(root, { [treeOwnerId + '-s']: '' })
+    const slotScopeId =
+      treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
+    if (scopeId || slotScopeId) {
+      const extras: Data = {}
+      if (scopeId) extras[scopeId] = ''
+      if (slotScopeId) extras[slotScopeId] = ''
+      root = cloneVNode(root, extras)
     }
 
     // inherit directives

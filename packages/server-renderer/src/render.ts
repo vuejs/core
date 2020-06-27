@@ -109,11 +109,23 @@ function renderComponentSubTree(
 
     if (comp.ssrRender) {
       // optimized
+      // resolve fallthrough attrs
+      let attrs =
+        instance.type.inheritAttrs !== false ? instance.attrs : undefined
+
+      // inherited scopeId
+      const scopeId = instance.vnode.scopeId
+      const treeOwnerId = instance.parent && instance.parent.type.__scopeId
+      const slotScopeId =
+        treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
+      if (scopeId || slotScopeId) {
+        attrs = { ...attrs }
+        if (scopeId) attrs[scopeId] = ''
+        if (slotScopeId) attrs[slotScopeId] = ''
+      }
+
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
-      // fallthrough attrs
-      const attrs =
-        instance.type.inheritAttrs !== false ? instance.attrs : undefined
       comp.ssrRender(instance.proxy, push, instance, attrs)
       setCurrentRenderingInstance(null)
     } else if (instance.render) {

@@ -12,7 +12,7 @@ import {
 } from 'vue'
 import { escapeHtml, mockWarn } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
-import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
+import { ssrRenderSlot, SSRSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
 
 mockWarn()
@@ -222,9 +222,9 @@ describe('ssr: renderToString', () => {
                   { msg: 'hello' },
                   {
                     // optimized slot using string push
-                    default: ({ msg }: any, push: any, _p: any) => {
+                    default: (({ msg }, push, _p) => {
                       push(`<span>${msg}</span>`)
-                    },
+                    }) as SSRSlot,
                     // important to avoid slots being normalized
                     _: 1 as any
                   },
