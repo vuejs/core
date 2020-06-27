@@ -210,7 +210,7 @@ export function generate(
   if (!ssr) {
     push(`function render(_ctx, _cache) {`)
   } else {
-    push(`function ssrRender(_ctx, _push, _parent) {`)
+    push(`function ssrRender(_ctx, _push, _parent, _attrs) {`)
   }
   indent()
 

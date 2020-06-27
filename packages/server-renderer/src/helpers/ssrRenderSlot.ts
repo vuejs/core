@@ -1,8 +1,7 @@
-import { Props, PushFn, renderVNodeChildren } from '../renderToString'
 import { ComponentInternalInstance, Slot, Slots } from 'vue'
+import { Props, PushFn, renderVNodeChildren } from '../render'
 
 export type SSRSlots = Record<string, SSRSlot>
-
 export type SSRSlot = (
   props: Props,
   push: PushFn,

@@ -119,7 +119,8 @@ export interface ComponentOptionsBase<
   ssrRender?: (
     ctx: any,
     push: (item: any) => void,
-    parentInstance: ComponentInternalInstance
+    parentInstance: ComponentInternalInstance,
+    attrs?: Data
   ) => void
 
   /**

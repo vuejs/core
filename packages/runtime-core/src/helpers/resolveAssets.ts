@@ -1,12 +1,7 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import {
-  currentInstance,
-  Component,
-  FunctionalComponent,
-  ComponentOptions
-} from '../component'
+import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString, isObject } from '@vue/shared'
+import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
@@ -82,19 +77,8 @@ function resolveAsset(
         res = self
       }
     }
-    if (__DEV__) {
-      if (res) {
-        // in dev, infer anonymous component's name based on registered name
-        if (
-          type === COMPONENTS &&
-          isObject(res) &&
-          !(res as ComponentOptions).name
-        ) {
-          ;(res as ComponentOptions).name = name
-        }
-      } else if (warnMissing) {
-        warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
-      }
+    if (__DEV__ && warnMissing && !res) {
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
     return res
   } else if (__DEV__) {

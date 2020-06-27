@@ -42,7 +42,6 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
-    parent,
     vnode,
     proxy,
     withProxy,
@@ -149,9 +148,8 @@ export function renderComponentRoot(
     }
 
     // inherit scopeId
-    const parentScopeId = parent && parent.type.__scopeId
-    if (parentScopeId) {
-      root = cloneVNode(root, { [parentScopeId]: '' })
+    if (vnode.scopeId) {
+      root = cloneVNode(root, { [vnode.scopeId]: '' })
     }
     // inherit directives
     if (vnode.dirs) {

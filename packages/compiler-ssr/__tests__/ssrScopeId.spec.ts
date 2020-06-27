@@ -9,9 +9,10 @@ describe('ssr: scopeId', () => {
         scopeId
       }).code
     ).toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent) {
-        _push(\`<div data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
       }"
     `)
   })
@@ -26,10 +27,10 @@ describe('ssr: scopeId', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        _push(_ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, _attrs, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`foo\`)
@@ -54,10 +55,10 @@ describe('ssr: scopeId', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        _push(_ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, _attrs, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)
@@ -82,11 +83,11 @@ describe('ssr: scopeId', () => {
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
         const _component_bar = _resolveComponent(\\"bar\\")
 
-        _push(_ssrRenderComponent(_component_foo, null, {
+        _push(_ssrRenderComponent(_component_foo, _attrs, {
           default: _withCtx((_, _push, _parent, _scopeId) => {
             if (_push) {
               _push(\`<span data-v-xxxxxxx\${_scopeId}>hello</span>\`)

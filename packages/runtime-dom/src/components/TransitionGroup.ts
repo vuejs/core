@@ -47,7 +47,6 @@ const TransitionGroupImpl = {
     const state = useTransitionState()
     let prevChildren: VNode[]
     let children: VNode[]
-    let hasMove: boolean | null = null
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -55,16 +54,14 @@ const TransitionGroupImpl = {
         return
       }
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      // Check if move transition is needed. This check is cached per-instance.
-      hasMove =
-        hasMove === null
-          ? (hasMove = hasCSSTransform(
-              prevChildren[0].el as ElementWithTransition,
-              instance.vnode.el as Node,
-              moveClass
-            ))
-          : hasMove
-      if (!hasMove) {
+
+      if (
+        !hasCSSTransform(
+          prevChildren[0].el as ElementWithTransition,
+          instance.vnode.el as Node,
+          moveClass
+        )
+      ) {
         return
       }
 

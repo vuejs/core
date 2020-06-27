@@ -79,7 +79,7 @@ export function setupPuppeteer() {
     await page.$eval(
       selector,
       (node, value) => {
-        (node as HTMLInputElement).value = value
+        ;(node as HTMLInputElement).value = value
         node.dispatchEvent(new Event('input'))
       },
       value
@@ -106,6 +106,24 @@ export function setupPuppeteer() {
     )
   }
 
+  function timeout(time: number) {
+    return page.evaluate(time => {
+      return new Promise(r => {
+        setTimeout(r, time)
+      })
+    }, time)
+  }
+
+  function nextFrame() {
+    return page.evaluate(() => {
+      return new Promise(resolve => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve)
+        })
+      })
+    })
+  }
+
   return {
     page: () => page,
     click,
@@ -121,6 +139,8 @@ export function setupPuppeteer() {
     setValue,
     typeValue,
     enterValue,
-    clearValue
+    clearValue,
+    timeout,
+    nextFrame
   }
 }

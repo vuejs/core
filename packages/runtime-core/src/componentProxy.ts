@@ -212,7 +212,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } = instance
 
     // let @vue/reatvitiy know it should never observe Vue public instances.
-    if (key === ReactiveFlags.skip) {
+    if (key === ReactiveFlags.SKIP) {
       return true
     }
 
@@ -222,6 +222,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
       if (n !== undefined) {
@@ -245,8 +246,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        type.props &&
-        hasOwn(normalizePropsOptions(type)[0]!, key)
+        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
@@ -352,11 +353,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }: ComponentRenderContext,
     key: string
   ) {
+    let normalizedProps
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      (type.props && hasOwn(normalizePropsOptions(type)[0]!, key)) ||
+      ((normalizedProps = normalizePropsOptions(type)[0]) &&
+        hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)

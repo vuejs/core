@@ -102,7 +102,10 @@ export const initSlots = (
 ) => {
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
-      instance.slots = children as InternalSlots
+      const slots: InternalSlots = (instance.slots = {})
+      for (const key in children as RawSlots) {
+        if (key !== '_') slots[key] = (children as Slots)[key]
+      }
     } else {
       normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
     }
@@ -128,7 +131,9 @@ export const updateSlots = (
       if (__DEV__ && isHmrUpdating) {
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
-        extend(slots, children as Slots)
+        for (const key in children as RawSlots) {
+          if (key !== '_') slots[key] = (children as Slots)[key]
+        }
       } else if (
         // bail on dynamic slots (v-if, v-for, reference of scope variables)
         !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)

@@ -494,7 +494,7 @@ describe('compiler: codegen', () => {
     )
     expect(code).toMatchInlineSnapshot(`
       "
-      export function ssrRender(_ctx, _push, _parent) {
+      export function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`foo\${_renderAttr(id, foo)}bar\`)
       }"
     `)
@@ -515,7 +515,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             ok()
           }
@@ -538,7 +538,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else {
@@ -566,7 +566,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else if (bar) {
@@ -595,7 +595,7 @@ describe('compiler: codegen', () => {
       )
       expect(code).toMatchInlineSnapshot(`
         "
-        export function ssrRender(_ctx, _push, _parent) {
+        export function ssrRender(_ctx, _push, _parent, _attrs) {
           if (foo) {
             foo()
           } else if (bar) {
