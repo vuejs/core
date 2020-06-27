@@ -45,13 +45,18 @@ describe('scopeId runtime support', () => {
         return h('div', this.$slots.default())
       })
     }
+    const withChil2Id = withScopeId('child2')
+    const Child2 = {
+      __scopeId: 'child2',
+      render: withChil2Id(() => h('span'))
+    }
     const App = {
       __scopeId: 'parent',
       render: withParentId(() => {
         return h(
           Child,
           withParentId(() => {
-            return h('div')
+            return [h('div'), h(Child2)]
           })
         )
       })
@@ -62,7 +67,14 @@ describe('scopeId runtime support', () => {
     // - scopeId from parent
     // - slotted scopeId (with `-s` postfix) from child (the tree owner)
     expect(serializeInner(root)).toBe(
-      `<div parent child><div parent child-s></div></div>`
+      `<div parent child>` +
+        `<div parent child-s></div>` +
+        // component inside slot should have:
+        // - scopeId from template context
+        // - slotted scopeId from slot owner
+        // - its own scopeId
+        `<span parent child-s child2></span>` +
+        `</div>`
     )
   })
 })

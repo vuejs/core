@@ -42,6 +42,7 @@ export function renderComponentRoot(
 ): VNode {
   const {
     type: Component,
+    parent,
     vnode,
     proxy,
     withProxy,
@@ -148,9 +149,15 @@ export function renderComponentRoot(
     }
 
     // inherit scopeId
-    if (vnode.scopeId) {
-      root = cloneVNode(root, { [vnode.scopeId]: '' })
+    const scopeId = vnode.scopeId
+    if (scopeId) {
+      root = cloneVNode(root, { [scopeId]: '' })
     }
+    const treeOwnerId = parent && parent.type.__scopeId
+    if (treeOwnerId && treeOwnerId !== scopeId) {
+      root = cloneVNode(root, { [treeOwnerId + '-s']: '' })
+    }
+
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
