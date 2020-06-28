@@ -77,17 +77,17 @@ describe('test renderer', () => {
     })
 
     expect(ops[1]).toEqual({
+      type: NodeOpTypes.SET_ELEMENT_TEXT,
+      text: 'hello',
+      targetNode: root.children[0]
+    })
+
+    expect(ops[2]).toEqual({
       type: NodeOpTypes.PATCH,
       targetNode: root.children[0],
       propKey: 'id',
       propPrevValue: null,
       propNextValue: 'test'
-    })
-
-    expect(ops[2]).toEqual({
-      type: NodeOpTypes.SET_ELEMENT_TEXT,
-      text: 'hello',
-      targetNode: root.children[0]
     })
 
     expect(ops[3]).toEqual({

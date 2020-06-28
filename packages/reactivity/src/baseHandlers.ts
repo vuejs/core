@@ -1,7 +1,14 @@
 import { reactive, readonly, toRaw, ReactiveFlags } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { track, trigger, ITERATE_KEY } from './effect'
-import { isObject, hasOwn, isSymbol, hasChanged, isArray } from '@vue/shared'
+import {
+  isObject,
+  hasOwn,
+  isSymbol,
+  hasChanged,
+  isArray,
+  extend
+} from '@vue/shared'
 import { isRef } from './ref'
 
 const builtInSymbols = new Set(
@@ -35,11 +42,17 @@ const arrayInstrumentations: Record<string, Function> = {}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
-    if (key === ReactiveFlags.isReactive) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
-    } else if (key === ReactiveFlags.isReadonly) {
+    } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw || key === '__proto__') {
+    } else if (
+      key === ReactiveFlags.RAW &&
+      receiver ===
+        (isReadonly
+          ? (target as any)[ReactiveFlags.READONLY]
+          : (target as any)[ReactiveFlags.REACTIVE])
+    ) {
       return target
     }
 
@@ -47,35 +60,38 @@ function createGetter(isReadonly = false, shallow = false) {
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
+
     const res = Reflect.get(target, key, receiver)
 
-    if (isSymbol(key) && builtInSymbols.has(key)) {
+    if (
+      isSymbol(key)
+        ? builtInSymbols.has(key)
+        : key === `__proto__` || key === `__v_isRef`
+    ) {
       return res
     }
 
+    if (!isReadonly) {
+      track(target, TrackOpTypes.GET, key)
+    }
+
     if (shallow) {
-      !isReadonly && track(target, TrackOpTypes.GET, key)
       return res
     }
 
     if (isRef(res)) {
-      if (targetIsArray) {
-        !isReadonly && track(target, TrackOpTypes.GET, key)
-        return res
-      } else {
-        // ref unwrapping, only for Objects, not for Arrays.
-        return res.value
-      }
+      // ref unwrapping, only for Objects, not for Arrays.
+      return targetIsArray ? res : res.value
     }
 
-    !isReadonly && track(target, TrackOpTypes.GET, key)
-    return isObject(res)
-      ? isReadonly
-        ? // need to lazy access readonly and reactive here to avoid
-          // circular dependency
-          readonly(res)
-        : reactive(res)
-      : res
+    if (isObject(res)) {
+      // Convert returned value into a proxy as well. we do the isObject check
+      // here to avoid invalid value warning. Also need to lazy access readonly
+      // and reactive here to avoid circular dependency.
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+
+    return res
   }
 }
 
@@ -167,16 +183,22 @@ export const readonlyHandlers: ProxyHandler<object> = {
   }
 }
 
-export const shallowReactiveHandlers: ProxyHandler<object> = {
-  ...mutableHandlers,
-  get: shallowGet,
-  set: shallowSet
-}
+export const shallowReactiveHandlers: ProxyHandler<object> = extend(
+  {},
+  mutableHandlers,
+  {
+    get: shallowGet,
+    set: shallowSet
+  }
+)
 
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers: ProxyHandler<object> = {
-  ...readonlyHandlers,
-  get: shallowReadonlyGet
-}
+export const shallowReadonlyHandlers: ProxyHandler<object> = extend(
+  {},
+  readonlyHandlers,
+  {
+    get: shallowReadonlyGet
+  }
+)

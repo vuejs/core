@@ -34,7 +34,15 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (
-        isSVG
+        // spellcheck and draggable are numerated attrs, however their
+        // corresponding DOM properties are actually booleans - this leads to
+        // setting it with a string "false" value leading it to be coerced to
+        // `true`, so we need to always treat them as attributes.
+        // Note that `contentEditable` doesn't have this problem: its DOM
+        // property is also enumerated string values.
+        key !== 'spellcheck' &&
+        key !== 'draggable' &&
+        (isSVG
           ? // most keys must be set as attribute on svg elements to work
             // ...except innerHTML
             key === 'innerHTML' ||
@@ -43,7 +51,7 @@ export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
           : // for normal html elements, set as a property if it exists
             key in el &&
             // except native onclick with string values
-            !(nativeOnRE.test(key) && isString(nextValue))
+            !(nativeOnRE.test(key) && isString(nextValue)))
       ) {
         patchDOMProp(
           el,

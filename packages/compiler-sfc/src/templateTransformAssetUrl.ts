@@ -7,7 +7,12 @@ import {
   SourceLocation,
   TransformContext
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl } from './templateUtils'
+import {
+  isRelativeUrl,
+  parseUrl,
+  isExternalUrl,
+  isDataUrl
+} from './templateUtils'
 import { isArray } from '@vue/shared'
 
 export interface AssetURLTagConfig {
@@ -81,62 +86,63 @@ export const transformAssetUrl: NodeTransform = (
   options: AssetURLOptions = defaultAssetUrlOptions
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
-    const tags = options.tags || defaultAssetUrlOptions.tags
-    for (const tag in tags) {
-      if ((tag === '*' || node.tag === tag) && node.props.length) {
-        const attributes = tags[tag]
-        attributes.forEach(name => {
-          node.props.forEach((attr, index) => {
-            if (
-              attr.type !== NodeTypes.ATTRIBUTE ||
-              attr.name !== name ||
-              !attr.value ||
-              (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
-            ) {
-              return
-            }
-
-            const url = parseUrl(attr.value.content)
-
-            if (options.base) {
-              // explicit base - directly rewrite the url into absolute url
-              // does not apply to absolute urls or urls that start with `@`
-              // since they are aliases
-              if (
-                attr.value.content[0] !== '@' &&
-                isRelativeUrl(attr.value.content)
-              ) {
-                // when packaged in the browser, path will be using the posix-
-                // only version provided by rollup-plugin-node-builtins.
-                attr.value.content = (path.posix || path).join(
-                  options.base,
-                  url.path + (url.hash || '')
-                )
-              }
-              return
-            }
-
-            // otherwise, transform the url into an import.
-            // this assumes a bundler will resolve the import into the correct
-            // absolute url (e.g. webpack file-loader)
-            const exp = getImportsExpressionExp(
-              url.path,
-              url.hash,
-              attr.loc,
-              context
-            )
-            node.props[index] = {
-              type: NodeTypes.DIRECTIVE,
-              name: 'bind',
-              arg: createSimpleExpression(name, true, attr.loc),
-              exp,
-              modifiers: [],
-              loc: attr.loc
-            }
-          })
-        })
-      }
+    if (!node.props.length) {
+      return
     }
+
+    const tags = options.tags || defaultAssetUrlOptions.tags
+    const attrs = tags[node.tag]
+    const wildCardAttrs = tags['*']
+    if (!attrs && !wildCardAttrs) {
+      return
+    }
+
+    const assetAttrs = (attrs || []).concat(wildCardAttrs || [])
+    node.props.forEach((attr, index) => {
+      if (
+        attr.type !== NodeTypes.ATTRIBUTE ||
+        !assetAttrs.includes(attr.name) ||
+        !attr.value ||
+        isExternalUrl(attr.value.content) ||
+        isDataUrl(attr.value.content) ||
+        attr.value.content[0] === '#' ||
+        (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
+      ) {
+        return
+      }
+
+      const url = parseUrl(attr.value.content)
+      if (options.base) {
+        // explicit base - directly rewrite the url into absolute url
+        // does not apply to absolute urls or urls that start with `@`
+        // since they are aliases
+        if (
+          attr.value.content[0] !== '@' &&
+          isRelativeUrl(attr.value.content)
+        ) {
+          // when packaged in the browser, path will be using the posix-
+          // only version provided by rollup-plugin-node-builtins.
+          attr.value.content = (path.posix || path).join(
+            options.base,
+            url.path + (url.hash || '')
+          )
+        }
+        return
+      }
+
+      // otherwise, transform the url into an import.
+      // this assumes a bundler will resolve the import into the correct
+      // absolute url (e.g. webpack file-loader)
+      const exp = getImportsExpressionExp(url.path, url.hash, attr.loc, context)
+      node.props[index] = {
+        type: NodeTypes.DIRECTIVE,
+        name: 'bind',
+        arg: createSimpleExpression(attr.name, true, attr.loc),
+        exp,
+        modifiers: [],
+        loc: attr.loc
+      }
+    })
   }
 }
 

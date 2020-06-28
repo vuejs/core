@@ -1,7 +1,9 @@
 // This entry exports the runtime only, and is built as
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
-import './devCheck'
+import { initDev } from './dev'
 import { warn } from '@vue/runtime-dom'
+
+__DEV__ && initDev()
 
 export * from '@vue/runtime-dom'
 

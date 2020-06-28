@@ -55,6 +55,10 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", {
       src: \\"/logo.png\\",
       srcset: _hoisted_8
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"data:image/png;base64,i\\",
+      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"
@@ -104,6 +108,10 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", {
       src: \\"/logo.png\\",
       srcset: \\"/logo.png, /foo/logo.png 2x\\"
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"data:image/png;base64,i\\",
+      srcset: \\"data:image/png;base64,i 1x, data:image/png;base64,i 2x\\"
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"
@@ -125,6 +133,7 @@ const _hoisted_7 = _imports_0 + ', ' + _imports_0 + '2x, ' + _imports_0 + '3x'
 const _hoisted_8 = _imports_1 + ', ' + _imports_1 + '2x'
 const _hoisted_9 = \\"https://example.com/logo.png\\" + ', ' + \\"https://example.com/logo.png\\" + '2x'
 const _hoisted_10 = _imports_1 + ', ' + _imports_0 + '2x'
+const _hoisted_11 = \\"data:image/png;base64,i\\" + '1x, ' + \\"data:image/png;base64,i\\" + '2x'
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_Fragment, null, [
@@ -167,6 +176,10 @@ export function render(_ctx, _cache) {
     _createVNode(\\"img\\", {
       src: \\"/logo.png\\",
       srcset: _hoisted_10
+    }),
+    _createVNode(\\"img\\", {
+      src: \\"data:image/png;base64,i\\",
+      srcset: _hoisted_11
     })
   ], 64 /* STABLE_FRAGMENT */))
 }"

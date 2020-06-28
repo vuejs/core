@@ -6,7 +6,8 @@ import {
   nodeOps,
   FunctionalComponent,
   defineComponent,
-  ref
+  ref,
+  serializeInner
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 import { mockWarn } from '@vue/shared'
@@ -20,7 +21,7 @@ describe('component props', () => {
     let proxy: any
 
     const Comp = defineComponent({
-      props: ['fooBar'],
+      props: ['fooBar', 'barBaz'],
       render() {
         props = this.$props
         attrs = this.$attrs
@@ -41,13 +42,16 @@ describe('component props', () => {
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     // test updating kebab-case should not delete it (#955)
-    render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4 }), root)
+    render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4, barBaz: 5 }), root)
     expect(proxy.fooBar).toBe(3)
-    expect(props).toEqual({ fooBar: 3 })
+    expect(proxy.barBaz).toBe(5)
+    expect(props).toEqual({ fooBar: 3, barBaz: 5 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     render(h(Comp, { qux: 5 }), root)
     expect(proxy.fooBar).toBeUndefined()
+    // remove the props with camelCase key (#1412)
+    expect(proxy.barBaz).toBeUndefined()
     expect(props).toEqual({})
     expect(attrs).toEqual({ qux: 5 })
   })
@@ -157,6 +161,7 @@ describe('component props', () => {
   test('default value', () => {
     let proxy: any
     const defaultFn = jest.fn(() => ({ a: 1 }))
+    const defaultBaz = jest.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -165,6 +170,10 @@ describe('component props', () => {
         },
         bar: {
           default: defaultFn
+        },
+        baz: {
+          type: Function,
+          default: defaultBaz
         }
       },
       render() {
@@ -177,7 +186,9 @@ describe('component props', () => {
     expect(proxy.foo).toBe(2)
     const prevBar = proxy.bar
     expect(proxy.bar).toEqual({ a: 1 })
+    expect(proxy.baz).toEqual(defaultBaz)
     expect(defaultFn).toHaveBeenCalledTimes(1)
+    expect(defaultBaz).toHaveBeenCalledTimes(0)
 
     // #999: updates should not cause default factory of unchanged prop to be
     // called again
@@ -258,5 +269,47 @@ describe('component props', () => {
       ;(instance!.proxy as any).foo = 2
     }).toThrow(TypeError)
     expect(`Attempting to mutate prop "foo"`).toHaveBeenWarned()
+  })
+
+  test('merging props from mixins and extends', () => {
+    let setupProps: any
+    let renderProxy: any
+
+    const E = {
+      props: ['base']
+    }
+    const M1 = {
+      props: ['m1']
+    }
+    const M2 = {
+      props: { m2: null }
+    }
+    const Comp = {
+      props: ['self'],
+      mixins: [M1, M2],
+      extends: E,
+      setup(props: any) {
+        setupProps = props
+      },
+      render(this: any) {
+        renderProxy = this
+        return h('div', [this.self, this.base, this.m1, this.m2])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const props = {
+      self: 'from self, ',
+      base: 'from base, ',
+      m1: 'from mixin 1, ',
+      m2: 'from mixin 2'
+    }
+    render(h(Comp, props), root)
+
+    expect(serializeInner(root)).toMatch(
+      `from self, from base, from mixin 1, from mixin 2`
+    )
+    expect(setupProps).toMatchObject(props)
+    expect(renderProxy.$props).toMatchObject(props)
   })
 })

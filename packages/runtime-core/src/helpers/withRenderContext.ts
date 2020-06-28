@@ -7,7 +7,7 @@ import { ComponentInternalInstance } from '../component'
 
 /**
  * Wrap a slot function to memoize current rendering instance
- * @internal
+ * @private
  */
 export function withCtx(
   fn: Slot,

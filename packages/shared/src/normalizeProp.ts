@@ -1,13 +1,16 @@
 import { isArray, isString, isObject, hyphenate } from './'
 import { isNoUnitNumericStyleProp } from './domAttrConfig'
 
-export function normalizeStyle(
-  value: unknown
-): Record<string, string | number> | undefined {
+export type NormalizedStyle = Record<string, string | number>
+
+export function normalizeStyle(value: unknown): NormalizedStyle | undefined {
   if (isArray(value)) {
     const res: Record<string, string | number> = {}
     for (let i = 0; i < value.length; i++) {
-      const normalized = normalizeStyle(value[i])
+      const item = value[i]
+      const normalized = normalizeStyle(
+        isString(item) ? parseStringStyle(item) : item
+      )
       if (normalized) {
         for (const key in normalized) {
           res[key] = normalized[key]
@@ -20,9 +23,21 @@ export function normalizeStyle(
   }
 }
 
-export function stringifyStyle(
-  styles: Record<string, string | number> | undefined
-): string {
+const listDelimiterRE = /;(?![^(]*\))/g
+const propertyDelimiterRE = /:(.+)/
+
+export function parseStringStyle(cssText: string): NormalizedStyle {
+  const ret: NormalizedStyle = {}
+  cssText.split(listDelimiterRE).forEach(item => {
+    if (item) {
+      const tmp = item.split(propertyDelimiterRE)
+      tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim())
+    }
+  })
+  return ret
+}
+
+export function stringifyStyle(styles: NormalizedStyle | undefined): string {
   let ret = ''
   if (!styles) {
     return ret

@@ -16,6 +16,7 @@ import {
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
 import { warn } from './warning'
+import { isHmrUpdating } from './hmr'
 
 // mark the current rendering instance for asset resolution (e.g.
 // resolveComponent, resolveDirective) during render
@@ -148,10 +149,17 @@ export function renderComponentRoot(
     }
 
     // inherit scopeId
-    const parentScopeId = parent && parent.type.__scopeId
-    if (parentScopeId) {
-      root = cloneVNode(root, { [parentScopeId]: '' })
+    const scopeId = vnode.scopeId
+    const treeOwnerId = parent && parent.type.__scopeId
+    const slotScopeId =
+      treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
+    if (scopeId || slotScopeId) {
+      const extras: Data = {}
+      if (scopeId) extras[scopeId] = ''
+      if (slotScopeId) extras[slotScopeId] = ''
+      root = cloneVNode(root, extras)
     }
+
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
@@ -171,6 +179,10 @@ export function renderComponentRoot(
         )
       }
       root.transition = vnode.transition
+    }
+    // inherit ref
+    if (Component.inheritRef && vnode.ref != null) {
+      root.ref = vnode.ref
     }
 
     if (__DEV__ && setRoot) {
@@ -234,7 +246,6 @@ const isElementRoot = (vnode: VNode) => {
 export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   optimized?: boolean
 ): boolean {
   const { props: prevProps, children: prevChildren } = prevVNode
@@ -243,12 +254,7 @@ export function shouldUpdateComponent(
   // Parent component's render function was hot-updated. Since this may have
   // caused the child component's slots content to have changed, we need to
   // force the child to update as well.
-  if (
-    __DEV__ &&
-    (prevChildren || nextChildren) &&
-    parentComponent &&
-    parentComponent.renderUpdated
-  ) {
+  if (__DEV__ && (prevChildren || nextChildren) && isHmrUpdating) {
     return true
   }
 
@@ -264,8 +270,11 @@ export function shouldUpdateComponent(
       return true
     }
     if (patchFlag & PatchFlags.FULL_PROPS) {
+      if (!prevProps) {
+        return !!nextProps
+      }
       // presence of this flag indicates props are always non-null
-      return hasPropsChanged(prevProps!, nextProps!)
+      return hasPropsChanged(prevProps, nextProps!)
     } else if (patchFlag & PatchFlags.PROPS) {
       const dynamicProps = nextVNode.dynamicProps!
       for (let i = 0; i < dynamicProps.length; i++) {

@@ -21,6 +21,7 @@ import {
   SetupContext
 } from '@vue/runtime-core'
 import { toRaw } from '@vue/reactivity'
+import { extend } from '@vue/shared'
 
 interface Position {
   top: number
@@ -36,18 +37,16 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
-  props: {
-    ...TransitionPropsValidators,
+  props: extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
-  },
+  }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
     let prevChildren: VNode[]
     let children: VNode[]
-    let hasMove: boolean | null = null
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -55,16 +54,14 @@ const TransitionGroupImpl = {
         return
       }
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
-      // Check if move transition is needed. This check is cached per-instance.
-      hasMove =
-        hasMove === null
-          ? (hasMove = hasCSSTransform(
-              prevChildren[0].el as ElementWithTransition,
-              instance.vnode.el as Node,
-              moveClass
-            ))
-          : hasMove
-      if (!hasMove) {
+
+      if (
+        !hasCSSTransform(
+          prevChildren[0].el as ElementWithTransition,
+          instance.vnode.el as Node,
+          moveClass
+        )
+      ) {
         return
       }
 

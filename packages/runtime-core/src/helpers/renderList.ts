@@ -3,7 +3,7 @@ import { isArray, isString, isObject } from '@vue/shared'
 
 /**
  * v-for string
- * @internal
+ * @private
  */
 export function renderList(
   source: string,
@@ -12,7 +12,6 @@ export function renderList(
 
 /**
  * v-for number
- * @internal
  */
 export function renderList(
   source: number,
@@ -21,7 +20,6 @@ export function renderList(
 
 /**
  * v-for array
- * @internal
  */
 export function renderList<T>(
   source: T[],
@@ -30,7 +28,6 @@ export function renderList<T>(
 
 /**
  * v-for iterable
- * @internal
  */
 export function renderList<T>(
   source: Iterable<T>,
@@ -39,7 +36,6 @@ export function renderList<T>(
 
 /**
  * v-for object
- * @internal
  */
 export function renderList<T>(
   source: T,
@@ -50,7 +46,9 @@ export function renderList<T>(
   ) => VNodeChild
 ): VNodeChild[]
 
-// actual implementation
+/**
+ * Actual implementation
+ */
 export function renderList(
   source: any,
   renderItem: (...args: any[]) => VNodeChild

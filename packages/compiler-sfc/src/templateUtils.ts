@@ -11,6 +11,11 @@ export function isExternalUrl(url: string): boolean {
   return externalRE.test(url)
 }
 
+const dataUrlRE = /^\s*data:/i
+export function isDataUrl(url: string): boolean {
+  return dataUrlRE.test(url)
+}
+
 /**
  * Parses string url into URL object.
  */

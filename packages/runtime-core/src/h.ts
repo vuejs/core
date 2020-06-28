@@ -80,7 +80,7 @@ export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren
+  children?: RawChildren | RawSlots
 ): VNode
 
 // fragment

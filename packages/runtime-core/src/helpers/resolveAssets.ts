@@ -1,23 +1,24 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
-import {
-  currentInstance,
-  Component,
-  FunctionalComponent,
-  ComponentOptions
-} from '../component'
+import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString, isObject } from '@vue/shared'
+import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
 
+/**
+ * @private
+ */
 export function resolveComponent(name: string): Component | string | undefined {
   return resolveAsset(COMPONENTS, name) || name
 }
 
 export const NULL_DYNAMIC_COMPONENT = Symbol()
 
+/**
+ * @private
+ */
 export function resolveDynamicComponent(
   component: unknown
 ): Component | string | typeof NULL_DYNAMIC_COMPONENT {
@@ -29,11 +30,17 @@ export function resolveDynamicComponent(
   }
 }
 
+/**
+ * @private
+ */
 export function resolveDirective(name: string): Directive | undefined {
   return resolveAsset(DIRECTIVES, name)
 }
 
-// overload 1: components
+/**
+ * @private
+ * overload 1: components
+ */
 function resolveAsset(
   type: typeof COMPONENTS,
   name: string,
@@ -44,7 +51,7 @@ function resolveAsset(
   type: typeof DIRECTIVES,
   name: string
 ): Directive | undefined
-
+// implementation
 function resolveAsset(
   type: typeof COMPONENTS | typeof DIRECTIVES,
   name: string,
@@ -70,19 +77,8 @@ function resolveAsset(
         res = self
       }
     }
-    if (__DEV__) {
-      if (res) {
-        // in dev, infer anonymous component's name based on registered name
-        if (
-          type === COMPONENTS &&
-          isObject(res) &&
-          !(res as ComponentOptions).name
-        ) {
-          ;(res as ComponentOptions).name = name
-        }
-      } else if (warnMissing) {
-        warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
-      }
+    if (__DEV__ && warnMissing && !res) {
+      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
     }
     return res
   } else if (__DEV__) {

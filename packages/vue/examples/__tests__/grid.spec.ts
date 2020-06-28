@@ -1,5 +1,5 @@
 import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import { setupPuppeteer, E2E_TIMEOUT } from '../../__tests__/e2eUtils'
 
 interface TableData {
   name: string
@@ -7,7 +7,7 @@ interface TableData {
 }
 
 describe('e2e: grid', () => {
-  const { page, click, text, count, setValue, clearValue } = setupPuppeteer()
+  const { page, click, text, count, typeValue, clearValue } = setupPuppeteer()
   const columns = ['name', 'power'] as const
 
   async function assertTable(data: TableData[]) {
@@ -88,18 +88,18 @@ describe('e2e: grid', () => {
       { name: 'Jet Li', power: 8000 }
     ])
 
-    await setValue('input[name="query"]', 'j')
+    await typeValue('input[name="query"]', 'j')
     await assertTable([
       { name: 'Jackie Chan', power: 7000 },
       { name: 'Jet Li', power: 8000 }
     ])
 
-    await setValue('input[name="query"]', 'infinity')
+    await typeValue('input[name="query"]', 'infinity')
     await assertTable([{ name: 'Chuck Norris', power: Infinity }])
 
     await clearValue('input[name="query"]')
     expect(await count('p')).toBe(0)
-    await setValue('input[name="query"]', 'stringthatdoesnotexistanywhere')
+    await typeValue('input[name="query"]', 'stringthatdoesnotexistanywhere')
     expect(await count('p')).toBe(1)
   }
 

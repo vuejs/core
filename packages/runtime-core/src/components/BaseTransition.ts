@@ -41,16 +41,23 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   onLeave?: (el: HostElement, done: () => void) => void
   onAfterLeave?: (el: HostElement) => void
   onLeaveCancelled?: (el: HostElement) => void // only fired in persisted mode
+  // appear
+  onBeforeAppear?: (el: HostElement) => void
+  onAppear?: (el: HostElement, done: () => void) => void
+  onAfterAppear?: (el: HostElement) => void
+  onAppearCancelled?: (el: HostElement) => void
 }
 
-export interface TransitionHooks {
+export interface TransitionHooks<
+  HostElement extends RendererElement = RendererElement
+> {
   persisted: boolean
-  beforeEnter(el: RendererElement): void
-  enter(el: RendererElement): void
-  leave(el: RendererElement, remove: () => void): void
+  beforeEnter(el: HostElement): void
+  enter(el: HostElement): void
+  leave(el: HostElement, remove: () => void): void
   afterLeave?(): void
   delayLeave?(
-    el: RendererElement,
+    el: HostElement,
     earlyRemove: () => void,
     delayedLeave: () => void
   ): void
@@ -100,6 +107,8 @@ export function useTransitionState(): TransitionState {
 const BaseTransitionImpl = {
   name: `BaseTransition`,
 
+  inheritRef: true,
+
   props: {
     mode: String,
     appear: Boolean,
@@ -113,7 +122,12 @@ const BaseTransitionImpl = {
     onBeforeLeave: Function,
     onLeave: Function,
     onAfterLeave: Function,
-    onLeaveCancelled: Function
+    onLeaveCancelled: Function,
+    // appear
+    onBeforeAppear: Function,
+    onAppear: Function,
+    onAfterAppear: Function,
+    onAppearCancelled: Function
   },
 
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
@@ -171,7 +185,6 @@ const BaseTransitionImpl = {
         oldInnerChild.type !== Comment &&
         !isSameVNodeType(innerChild, oldInnerChild)
       ) {
-        const prevHooks = oldInnerChild.transition!
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
@@ -190,7 +203,6 @@ const BaseTransitionImpl = {
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out') {
-          delete prevHooks.delayedLeave
           leavingHooks.delayLeave = (
             el: TransitionElement,
             earlyRemove,
@@ -252,7 +264,11 @@ export function resolveTransitionHooks(
     onBeforeLeave,
     onLeave,
     onAfterLeave,
-    onLeaveCancelled
+    onLeaveCancelled,
+    onBeforeAppear,
+    onAppear,
+    onAfterAppear,
+    onAppearCancelled
   }: BaseTransitionProps<any>,
   state: TransitionState,
   instance: ComponentInternalInstance
@@ -270,11 +286,16 @@ export function resolveTransitionHooks(
       )
   }
 
-  const hooks: TransitionHooks = {
+  const hooks: TransitionHooks<TransitionElement> = {
     persisted,
-    beforeEnter(el: TransitionElement) {
-      if (!appear && !state.isMounted) {
-        return
+    beforeEnter(el) {
+      let hook = onBeforeEnter
+      if (!state.isMounted) {
+        if (appear) {
+          hook = onBeforeAppear || onBeforeEnter
+        } else {
+          return
+        }
       }
       // for same element (v-show)
       if (el._leaveCb) {
@@ -290,35 +311,47 @@ export function resolveTransitionHooks(
         // force early removal (not cancelled)
         leavingVNode.el!._leaveCb()
       }
-      callHook(onBeforeEnter, [el])
+      callHook(hook, [el])
     },
 
-    enter(el: TransitionElement) {
-      if (!appear && !state.isMounted) {
-        return
+    enter(el) {
+      let hook = onEnter
+      let afterHook = onAfterEnter
+      let cancelHook = onEnterCancelled
+      if (!state.isMounted) {
+        if (appear) {
+          hook = onAppear || onEnter
+          afterHook = onAfterAppear || onAfterEnter
+          cancelHook = onAppearCancelled || onEnterCancelled
+        } else {
+          return
+        }
       }
       let called = false
-      const afterEnter = (el._enterCb = (cancelled?) => {
+      const done = (el._enterCb = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
-          callHook(onEnterCancelled, [el])
+          callHook(cancelHook, [el])
         } else {
-          callHook(onAfterEnter, [el])
+          callHook(afterHook, [el])
         }
         if (hooks.delayedLeave) {
           hooks.delayedLeave()
         }
         el._enterCb = undefined
       })
-      if (onEnter) {
-        onEnter(el, afterEnter)
+      if (hook) {
+        hook(el, done)
+        if (hook.length <= 1) {
+          done()
+        }
       } else {
-        afterEnter()
+        done()
       }
     },
 
-    leave(el: TransitionElement, remove) {
+    leave(el, remove) {
       const key = String(vnode.key)
       if (el._enterCb) {
         el._enterCb(true /* cancelled */)
@@ -328,7 +361,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const afterLeave = (el._leaveCb = (cancelled?) => {
+      const done = (el._leaveCb = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -344,9 +377,12 @@ export function resolveTransitionHooks(
       })
       leavingVNodesCache[key] = vnode
       if (onLeave) {
-        onLeave(el, afterLeave)
+        onLeave(el, done)
+        if (onLeave.length <= 1) {
+          done()
+        }
       } else {
-        afterLeave()
+        done()
       }
     }
   }

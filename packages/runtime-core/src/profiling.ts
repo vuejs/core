@@ -18,7 +18,7 @@ export function endMeasure(instance: ComponentInternalInstance, type: string) {
     const endTag = startTag + `:end`
     perf.mark(endTag)
     perf.measure(
-      `<${formatComponentName(instance.type)}> ${type}`,
+      `<${formatComponentName(instance, instance.type)}> ${type}`,
       startTag,
       endTag
     )
@@ -31,11 +31,13 @@ function isSupported() {
   if (supported !== undefined) {
     return supported
   }
+  /* eslint-disable no-restricted-globals */
   if (typeof window !== 'undefined' && window.performance) {
     supported = true
     perf = window.performance
   } else {
     supported = false
   }
+  /* eslint-enable no-restricted-globals */
   return supported
 }

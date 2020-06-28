@@ -96,10 +96,20 @@ export function parse(
     isNativeTag: () => true,
     // preserve all whitespaces
     isPreTag: () => true,
-    getTextMode: (tag, _ns, parent) => {
+    getTextMode: ({ tag, props }, parent) => {
       // all top level elements except <template> are parsed as raw text
       // containers
-      if (!parent && tag !== 'template') {
+      if (
+        (!parent && tag !== 'template') ||
+        // <template lang="xxx"> should also be treated as raw text
+        props.some(
+          p =>
+            p.type === NodeTypes.ATTRIBUTE &&
+            p.name === 'lang' &&
+            p.value &&
+            p.value.content !== 'html'
+        )
+      ) {
         return TextModes.RAWTEXT
       } else {
         return TextModes.DATA
@@ -255,17 +265,23 @@ function generateSourceMap(
   map.setSourceContent(filename, source)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
-      map.addMapping({
-        source: filename,
-        original: {
-          line: index + 1 + lineOffset,
-          column: 0
-        },
-        generated: {
-          line: index + 1,
-          column: 0
+      const originalLine = index + 1 + lineOffset
+      const generatedLine = index + 1
+      for (let i = 0; i < line.length; i++) {
+        if (!/\s/.test(line[i])) {
+          map.addMapping({
+            source: filename,
+            original: {
+              line: originalLine,
+              column: i
+            },
+            generated: {
+              line: generatedLine,
+              column: i
+            }
+          })
         }
-      })
+      }
     }
   })
   return JSON.parse(map.toString())

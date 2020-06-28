@@ -52,7 +52,7 @@ export { getCurrentInstance } from './component'
 // For raw render function users
 export { h } from './h'
 // Advanced render function utilities
-export { createVNode, cloneVNode, mergeProps } from './vnode'
+export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
 export { Fragment, Text, Comment, Static } from './vnode'
 // Built-in components
@@ -162,6 +162,7 @@ export {
 } from './component'
 export {
   ComponentOptions,
+  ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithArrayProps,
@@ -232,11 +233,11 @@ export {
 // them in @vue/shared's typings
 import { toDisplayString, camelize } from '@vue/shared'
 /**
- * @internal
+ * @private
  */
 const _toDisplayString = toDisplayString
 /**
- * @internal
+ * @private
  */
 const _camelize = camelize
 export { _toDisplayString as toDisplayString, _camelize as camelize }

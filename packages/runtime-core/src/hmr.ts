@@ -1,9 +1,16 @@
+/* eslint-disable no-restricted-globals */
 import {
+  Component,
   ComponentInternalInstance,
   ComponentOptions,
   InternalRenderFunction
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
+import { extend } from '@vue/shared'
+
+export let isHmrUpdating = false
+
+export const hmrDirtyComponents = new Set<Component>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
@@ -41,7 +48,7 @@ export function registerHMR(instance: ComponentInternalInstance) {
   const id = instance.type.__hmrId!
   let record = map.get(id)
   if (!record) {
-    createRecord(id, instance.type as ComponentOptions)
+    createRecord(id)
     record = map.get(id)!
   }
   record.add(instance)
@@ -51,7 +58,7 @@ export function unregisterHMR(instance: ComponentInternalInstance) {
   map.get(instance.type.__hmrId!)!.delete(instance)
 }
 
-function createRecord(id: string, comp: ComponentOptions): boolean {
+function createRecord(id: string): boolean {
   if (map.has(id)) {
     return false
   }
@@ -70,9 +77,9 @@ function rerender(id: string, newRender?: Function) {
     }
     instance.renderCache = []
     // this flag forces child components with slot content to update
-    instance.renderUpdated = true
+    isHmrUpdating = true
     instance.update()
-    instance.renderUpdated = false
+    isHmrUpdating = false
   })
 }
 
@@ -83,9 +90,9 @@ function reload(id: string, newComp: ComponentOptions) {
   // updates
   Array.from(record).forEach(instance => {
     const comp = instance.type
-    if (!comp.__hmrUpdated) {
+    if (!hmrDirtyComponents.has(comp)) {
       // 1. Update existing comp definition to match new one
-      Object.assign(comp, newComp)
+      extend(comp, newComp)
       for (const key in comp) {
         if (!(key in newComp)) {
           delete (comp as any)[key]
@@ -93,10 +100,10 @@ function reload(id: string, newComp: ComponentOptions) {
       }
       // 2. Mark component dirty. This forces the renderer to replace the component
       // on patch.
-      comp.__hmrUpdated = true
+      hmrDirtyComponents.add(comp)
       // 3. Make sure to unmark the component after the reload.
       queuePostFlushCb(() => {
-        comp.__hmrUpdated = false
+        hmrDirtyComponents.delete(comp)
       })
     }
 

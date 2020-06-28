@@ -21,6 +21,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   const expString =
     exp.type === NodeTypes.SIMPLE_EXPRESSION ? exp.content : exp.loc.source
+
   if (!isMemberExpression(expString)) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)

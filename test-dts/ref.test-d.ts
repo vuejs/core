@@ -1,5 +1,4 @@
-import { expectType } from 'tsd'
-import { Ref, ref, isRef, unref, reactive } from './index'
+import { Ref, ref, isRef, unref, reactive, expectType } from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -60,11 +59,13 @@ function bailType(arg: HTMLElement | Ref<HTMLElement>) {
   expectType<HTMLElement>(unref(arg))
 
   // ref inner type should be unwrapped
+  // eslint-disable-next-line no-restricted-globals
   const nestedRef = ref({ foo: ref(document.createElement('DIV')) })
 
   expectType<Ref<{ foo: HTMLElement }>>(nestedRef)
   expectType<{ foo: HTMLElement }>(nestedRef.value)
 }
+// eslint-disable-next-line no-restricted-globals
 const el = document.createElement('DIV')
 bailType(el)
 
