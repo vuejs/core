@@ -31,7 +31,7 @@ export interface App<HostElement = any> {
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
-  // internal. We need to expose these for the server-renderer
+  // internal. We need to expose these for the server-renderer and devtools
   _component: Component
   _props: Data | null
   _container: HostElement | null
