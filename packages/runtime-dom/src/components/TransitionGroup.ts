@@ -37,6 +37,8 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
+  name: 'TransitionGroup',
+
   props: extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
