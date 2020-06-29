@@ -9,11 +9,11 @@ import {
 } from './Transition'
 import {
   Fragment,
-  Comment,
   VNode,
   warn,
   resolveTransitionHooks,
   useTransitionState,
+  getTransitionRawChildren,
   getCurrentInstance,
   setTransitionHooks,
   createVNode,
@@ -127,22 +127,6 @@ const TransitionGroupImpl = {
       return createVNode(tag, null, slotChildren)
     }
   }
-}
-
-function getTransitionRawChildren(children: VNode[]): VNode[] {
-  let ret: VNode[] = []
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    // handle fragment children case, e.g. v-for
-    if (child.type === Fragment) {
-      ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
-    }
-    // comment placeholders should be skipped, e.g. v-if
-    else if (child.type !== Comment) {
-      ret.push(child)
-    }
-  }
-  return ret
 }
 
 // remove mode props as TransitionGroup doesn't support it

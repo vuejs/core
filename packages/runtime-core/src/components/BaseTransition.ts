@@ -8,7 +8,8 @@ import {
   Comment,
   isSameVNodeType,
   VNode,
-  VNodeArrayChildren
+  VNodeArrayChildren,
+  Fragment
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
@@ -135,7 +136,10 @@ const BaseTransitionImpl = {
     const state = useTransitionState()
 
     return () => {
-      const children = slots.default && slots.default()
+      const children = getTransitionRawChildren(
+        slots.default ? slots.default() : [],
+        true
+      )
       if (!children || !children.length) {
         return
       }
@@ -416,4 +420,28 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else {
     vnode.transition = hooks
   }
+}
+
+export function getTransitionRawChildren(
+  children: VNode[],
+  keepComment: boolean = false
+): VNode[] {
+  let ret: VNode[] = []
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    // handle fragment children case, e.g. v-for
+    if (child.type === Fragment) {
+      ret = ret.concat(
+        getTransitionRawChildren(child.children as VNode[], keepComment)
+      )
+    }
+    // comment placeholders should be skipped, e.g. v-if
+    else if (
+      child.type !== Comment ||
+      (child.type === Comment && keepComment)
+    ) {
+      ret.push(child)
+    }
+  }
+  return ret
 }
