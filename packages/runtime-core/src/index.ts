@@ -91,7 +91,8 @@ export { registerRuntimeCompiler } from './component'
 export {
   useTransitionState,
   resolveTransitionHooks,
-  setTransitionHooks
+  setTransitionHooks,
+  getTransitionRawChildren
 } from './components/BaseTransition'
 
 // Types -----------------------------------------------------------------------

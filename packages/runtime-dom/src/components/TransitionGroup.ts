@@ -13,6 +13,7 @@ import {
   warn,
   resolveTransitionHooks,
   useTransitionState,
+  getTransitionRawChildren,
   getCurrentInstance,
   setTransitionHooks,
   createVNode,
@@ -21,7 +22,6 @@ import {
 } from '@vue/runtime-core'
 import { toRaw } from '@vue/reactivity'
 import { extend } from '@vue/shared'
-import { getTransitionRawChildren } from '../../../runtime-core/src/components/BaseTransition'
 
 interface Position {
   top: number
