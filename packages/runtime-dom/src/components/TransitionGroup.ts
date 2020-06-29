@@ -100,8 +100,7 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      const slotChildren = slots.default ? slots.default() : []
-      children = getTransitionRawChildren(slotChildren)
+      children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
@@ -126,7 +125,7 @@ const TransitionGroupImpl = {
         }
       }
 
-      return createVNode(tag, null, slotChildren)
+      return createVNode(tag, null, children)
     }
   }
 }
