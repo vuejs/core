@@ -136,8 +136,8 @@ const BaseTransitionImpl = {
     const state = useTransitionState()
 
     return () => {
-      const children = getTransitionRawChildren(
-        slots.default ? slots.default() : [],
+      const children = slots.default && getTransitionRawChildren(
+        slots.default(),
         true
       )
       if (!children || !children.length) {
