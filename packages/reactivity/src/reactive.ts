@@ -74,8 +74,7 @@ export function shallowReactive<T extends object>(target: T): T {
 
 type Primitive = string | number | boolean | bigint | symbol | undefined | null
 type Builtin = Primitive | Function | Date | Error | RegExp
-
-export type DeepReadonly<T> = T extends Builtin
+type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
     ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
