@@ -9,11 +9,7 @@ let tempSVGContainer: SVGElement
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    if (anchor) {
-      parent.insertBefore(child, anchor)
-    } else {
-      parent.appendChild(child)
-    }
+    parent.insertBefore(child, anchor || null)
   },
 
   remove: child => {
