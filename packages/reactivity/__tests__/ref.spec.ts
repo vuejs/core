@@ -109,21 +109,10 @@ describe('reactivity/ref', () => {
   })
 
   it('should NOT unwrap ref types nested inside arrays', () => {
-    const arr = ref([1, ref(1)]).value
-    ;(arr[0] as number)++
-    ;(arr[1] as Ref<number>).value++
-
-    const arr2 = ref([1, new Map<string, any>(), ref('1')]).value
-    const value = arr2[0]
-    if (isRef(value)) {
-      value + 'foo'
-    } else if (typeof value === 'number') {
-      value + 1
-    } else {
-      // should narrow down to Map type
-      // and not contain any Ref type
-      value.has('foo')
-    }
+    const arr = ref([1, ref(3)]).value
+    expect(isRef(arr[0])).toBe(false)
+    expect(isRef(arr[1])).toBe(true)
+    expect((arr[1] as Ref).value).toBe(3)
   })
 
   it('should keep tuple types', () => {
