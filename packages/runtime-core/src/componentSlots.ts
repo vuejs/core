@@ -104,7 +104,12 @@ export const initSlots = (
     if ((children as RawSlots)._ === 1) {
       const slots: InternalSlots = (instance.slots = {})
       for (const key in children as RawSlots) {
-        if (key !== '_') slots[key] = (children as Slots)[key]
+        Object.defineProperty(slots, key, {
+          configurable: true,
+          value: (children as Slots)[key],
+          enumerable: key !== '_',
+          writable: true
+        })
       }
     } else {
       normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
