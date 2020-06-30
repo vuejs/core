@@ -9,11 +9,11 @@ import {
 } from './Transition'
 import {
   Fragment,
-  Comment,
   VNode,
   warn,
   resolveTransitionHooks,
   useTransitionState,
+  getTransitionRawChildren,
   getCurrentInstance,
   setTransitionHooks,
   createVNode,
@@ -37,6 +37,8 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 }
 
 const TransitionGroupImpl = {
+  name: 'TransitionGroup',
+
   props: extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
@@ -98,8 +100,7 @@ const TransitionGroupImpl = {
       const cssTransitionProps = resolveTransitionProps(rawProps)
       const tag = rawProps.tag || Fragment
       prevChildren = children
-      const slotChildren = slots.default ? slots.default() : []
-      children = getTransitionRawChildren(slotChildren)
+      children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
@@ -124,25 +125,9 @@ const TransitionGroupImpl = {
         }
       }
 
-      return createVNode(tag, null, slotChildren)
+      return createVNode(tag, null, children)
     }
   }
-}
-
-function getTransitionRawChildren(children: VNode[]): VNode[] {
-  let ret: VNode[] = []
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    // handle fragment children case, e.g. v-for
-    if (child.type === Fragment) {
-      ret = ret.concat(getTransitionRawChildren(child.children as VNode[]))
-    }
-    // comment placeholders should be skipped, e.g. v-if
-    else if (child.type !== Comment) {
-      ret.push(child)
-    }
-  }
-  return ret
 }
 
 // remove mode props as TransitionGroup doesn't support it

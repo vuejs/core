@@ -8,13 +8,14 @@ import {
   Comment,
   isSameVNodeType,
   VNode,
-  VNodeArrayChildren
+  VNodeArrayChildren,
+  Fragment
 } from '../vnode'
 import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
-import { ShapeFlags } from '@vue/shared'
+import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
 
@@ -135,7 +136,10 @@ const BaseTransitionImpl = {
     const state = useTransitionState()
 
     return () => {
-      const children = slots.default && slots.default()
+      const children = slots.default && getTransitionRawChildren(
+        slots.default(),
+        true
+      )
       if (!children || !children.length) {
         return
       }
@@ -416,4 +420,36 @@ export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
   } else {
     vnode.transition = hooks
   }
+}
+
+export function getTransitionRawChildren(
+  children: VNode[],
+  keepComment: boolean = false
+): VNode[] {
+  let ret: VNode[] = []
+  let keyedFragmentCount = 0
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    // handle fragment children case, e.g. v-for
+    if (child.type === Fragment) {
+      if (child.patchFlag & PatchFlags.KEYED_FRAGMENT) keyedFragmentCount++
+      ret = ret.concat(
+        getTransitionRawChildren(child.children as VNode[], keepComment)
+      )
+    }
+    // comment placeholders should be skipped, e.g. v-if
+    else if (keepComment || child.type !== Comment) {
+      ret.push(child)
+    }
+  }
+  // #1126 if a transition children list contains multiple sub fragments, these
+  // fragments will be merged into a flat children array. Since each v-for
+  // fragment may contain different static bindings inside, we need to de-top
+  // these children to force full diffs to ensure correct behavior.
+  if (keyedFragmentCount > 1) {
+    for (let i = 0; i < ret.length; i++) {
+      ret[i].patchFlag = PatchFlags.BAIL
+    }
+  }
+  return ret
 }
