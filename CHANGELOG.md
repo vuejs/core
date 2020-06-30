@@ -9,13 +9,13 @@
 * **compiler-core:** should not prefix object method ([#1375](https://github.com/vuejs/vue-next/issues/1375)) ([35dbef2](https://github.com/vuejs/vue-next/commit/35dbef268ca43234aa8544a62dfa4240dcc2974e))
 * **compiler-core:** skip empty expressions when validating expressions in browser mode ([afb231e](https://github.com/vuejs/vue-next/commit/afb231ec5ce5ac77ff6260bea4d866ec2d5bbd85))
 * **compiler-core/v-on:** pass noninitial arguments in cached event handlers ([#1265](https://github.com/vuejs/vue-next/issues/1265)) ([7e28173](https://github.com/vuejs/vue-next/commit/7e281733120fe003552b915f97713a3d26f4dc8a))
-* **compiler-sfc:** transformAssetUrl should ignore inline data url ([#1431](https://github.com/vuejs/vue-next/issues/1431)) ([90c285c](https://github.com/vuejs/vue-next/commit/90c285c5c8ac13afb4932974c1f9aede15e81337))
+* **compiler-sfc:** `transformAssetUrl` should ignore inline data url ([#1431](https://github.com/vuejs/vue-next/issues/1431)) ([90c285c](https://github.com/vuejs/vue-next/commit/90c285c5c8ac13afb4932974c1f9aede15e81337))
 * **runtime-core:** always check props presence in public instance proxy ([e0d19a6](https://github.com/vuejs/vue-next/commit/e0d19a695316a8a459274874d304872fea384851)), closes [#1236](https://github.com/vuejs/vue-next/issues/1236)
-* **runtime-core:** cloneVNode should preserve correct ctx instance when normalizing ref ([be69bee](https://github.com/vuejs/vue-next/commit/be69beed5ed05067006c297589598b33e7108b1b)), closes [#1311](https://github.com/vuejs/vue-next/issues/1311)
-* **runtime-core:** component root should inherit scopeId from vnode ([f3f94e4](https://github.com/vuejs/vue-next/commit/f3f94e4deb40d3a0d83804454874833b194f83da)), closes [#1399](https://github.com/vuejs/vue-next/issues/1399)
+* **runtime-core:** `cloneVNode` should preserve correct ctx instance when normalizing ref ([be69bee](https://github.com/vuejs/vue-next/commit/be69beed5ed05067006c297589598b33e7108b1b)), closes [#1311](https://github.com/vuejs/vue-next/issues/1311)
+* **runtime-core:** component root should inherit `scopeId` from `VNode` ([f3f94e4](https://github.com/vuejs/vue-next/commit/f3f94e4deb40d3a0d83804454874833b194f83da)), closes [#1399](https://github.com/vuejs/vue-next/issues/1399)
 * **runtime-core:** fix component name inference in warnings ([e765d81](https://github.com/vuejs/vue-next/commit/e765d814048c2cdc3cc32bdffb73c6e59b0d747d)), closes [#1418](https://github.com/vuejs/vue-next/issues/1418)
 * **runtime-core:** fix parent el update on nested HOC self-update ([#1360](https://github.com/vuejs/vue-next/issues/1360)) ([6c8bfa1](https://github.com/vuejs/vue-next/commit/6c8bfa10189d1a5a6837d2e25a9451889a0e19d6)), closes [#1357](https://github.com/vuejs/vue-next/issues/1357)
-* **runtime-core:** fix scopeId inheritance for component inside slots ([978d952](https://github.com/vuejs/vue-next/commit/978d9522e80cb19257ee2f4c8ba5da6f8aa6b3d2))
+* **runtime-core:** fix `scopeId` inheritance for component inside slots ([978d952](https://github.com/vuejs/vue-next/commit/978d9522e80cb19257ee2f4c8ba5da6f8aa6b3d2))
 * **runtime-core:** handle patch flag de-op from cloned vnode ([0dd5cde](https://github.com/vuejs/vue-next/commit/0dd5cde861735e80cfe21537380e52789cc865f8)), closes [#1426](https://github.com/vuejs/vue-next/issues/1426)
 * **runtime-core:** properly capitalize v-on object keys ([#1358](https://github.com/vuejs/vue-next/issues/1358)) ([250eb4a](https://github.com/vuejs/vue-next/commit/250eb4a5bc121d303aa109c20251c95616049f05))
 * **runtime-core:** should remove no longer present camelCase props ([#1413](https://github.com/vuejs/vue-next/issues/1413)) ([1c4e1b6](https://github.com/vuejs/vue-next/commit/1c4e1b679261ad151c4ed04b11279a3768a1c9e2)), closes [#1412](https://github.com/vuejs/vue-next/issues/1412)
@@ -27,8 +27,8 @@
 * **transition:** fix css:false with hooks with no explicit done callback ([9edbc27](https://github.com/vuejs/vue-next/commit/9edbc27f45aafaa6bc27ab244dc77d4d86d09fc4)), closes [#1149](https://github.com/vuejs/vue-next/issues/1149)
 * **transition:** fix dom transition cancel hooks not being called ([acd3156](https://github.com/vuejs/vue-next/commit/acd3156d2c45609ab04cb54734258fe340c4ca02))
 * **transition-group:** vue 2 compatible handling of transition-group w/ multiple v-for children ([86d3972](https://github.com/vuejs/vue-next/commit/86d3972855990c23f583a4b11b3c86fe04f1ab90)), closes [#1126](https://github.com/vuejs/vue-next/issues/1126)
-* **types:** ensure correct public props interface for defineComponent instance type ([2961e14](https://github.com/vuejs/vue-next/commit/2961e149c9825d56680e982acd056d9f337afc5e)), closes [#1385](https://github.com/vuejs/vue-next/issues/1385)
-* **types:** export ComponentOptionsMixin ([#1361](https://github.com/vuejs/vue-next/issues/1361)) ([68e2d6c](https://github.com/vuejs/vue-next/commit/68e2d6c68a4e8a95d112597b82d40efb8571d9c0))
+* **types:** ensure correct public props interface for `defineComponent` instance type ([2961e14](https://github.com/vuejs/vue-next/commit/2961e149c9825d56680e982acd056d9f337afc5e)), closes [#1385](https://github.com/vuejs/vue-next/issues/1385)
+* **types:** export `ComponentOptionsMixin` ([#1361](https://github.com/vuejs/vue-next/issues/1361)) ([68e2d6c](https://github.com/vuejs/vue-next/commit/68e2d6c68a4e8a95d112597b82d40efb8571d9c0))
 * **types:** should unwrap array -> object -> ref ([82b28a5](https://github.com/vuejs/vue-next/commit/82b28a5ecb95be1565e50427bfd5eefe4b2d408c))
 * **v-show:** fix v-show unmount with falsy value ([#1403](https://github.com/vuejs/vue-next/issues/1403)) ([d7beea0](https://github.com/vuejs/vue-next/commit/d7beea015bdb208d89a2352a5d43cc1913f87337)), closes [#1401](https://github.com/vuejs/vue-next/issues/1401)
 
@@ -36,7 +36,7 @@
 ### Features
 
 * **runtime-core:** expose version on app instance ([056cac9](https://github.com/vuejs/vue-next/commit/056cac91855e644e94cd704ff5462c4e1acba66b)), closes [#1449](https://github.com/vuejs/vue-next/issues/1449)
-* **ssr:** renderToStream ([#1197](https://github.com/vuejs/vue-next/issues/1197)) ([6bc0e0a](https://github.com/vuejs/vue-next/commit/6bc0e0a31a173cfd4cef82230862f269e4d94c94))
+* **ssr:** `renderToStream` ([#1197](https://github.com/vuejs/vue-next/issues/1197)) ([6bc0e0a](https://github.com/vuejs/vue-next/commit/6bc0e0a31a173cfd4cef82230862f269e4d94c94))
 
 
 ### Performance Improvements
