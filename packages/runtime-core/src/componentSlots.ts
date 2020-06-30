@@ -130,9 +130,7 @@ export const updateSlots = (
       if (__DEV__ && isHmrUpdating) {
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
-        for (const key in children as RawSlots) {
-          if (key !== '_') slots[key] = (children as Slots)[key]
-        }
+        extend(slots, children as Slots)
       } else if (
         // bail on dynamic slots (v-if, v-for, reference of scope variables)
         !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)
