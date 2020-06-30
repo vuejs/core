@@ -75,11 +75,8 @@ export const vModelText: ModelDirective<
       addEventListener(el, 'change', onCompositionEnd)
     }
   },
-  beforeUpdate(el, { value, oldValue, modifiers: { trim, number } }, vnode) {
+  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
-    if (value === oldValue) {
-      return
-    }
     if (document.activeElement === el) {
       if (trim && el.value.trim() === value) {
         return
