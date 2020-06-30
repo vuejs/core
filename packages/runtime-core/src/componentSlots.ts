@@ -102,10 +102,9 @@ export const initSlots = (
 ) => {
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
-      const slots: InternalSlots = (instance.slots = {})
-      for (const key in children as RawSlots) {
-        if (key !== '_') slots[key] = (children as Slots)[key]
-      }
+      instance.slots = children as InternalSlots
+      // make compiler marker non-enumerable
+      def(children as InternalSlots, '_', 1)
     } else {
       normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
     }
