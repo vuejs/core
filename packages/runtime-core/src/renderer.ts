@@ -698,7 +698,8 @@ function baseCreateRenderer(
               isSVG,
               vnode.children as VNode[],
               parentComponent,
-              parentSuspense
+              parentSuspense,
+              unmountChildren
             )
           }
         }
