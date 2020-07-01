@@ -25,7 +25,12 @@ import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
-import { applyOptions, ComponentOptions } from './componentOptions'
+import {
+  applyOptions,
+  ComponentOptions,
+  LazyComponentResolver,
+  LazyDirectiveResolver
+} from './componentOptions'
 import {
   EmitsOptions,
   ObjectEmitsOptions,
@@ -214,6 +219,12 @@ export interface ComponentInternalInstance {
    */
   directives: Record<string, Directive>
 
+  /**
+   * Functions for lazy loading os assets, only when they are required
+   */
+  getComponent: LazyComponentResolver | undefined
+  getDirective: LazyDirectiveResolver | undefined
+
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -366,6 +377,10 @@ export function createComponentInstance(
     // per-instance asset storage (mutable during options resolution)
     components: Object.create(appContext.components),
     directives: Object.create(appContext.directives),
+
+    // lazy asset resolvers
+    getComponent: appContext.getComponent,
+    getDirective: appContext.getDirective,
 
     // suspense related
     suspense,

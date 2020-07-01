@@ -101,6 +101,20 @@ export const capitalize = cacheStringFunction(
   }
 )
 
+/**
+ * Get all variations of a identifier spelling.
+ */
+export const identifierSpellings = (str: string): Object => {
+  const camelized = camelize(str)
+  return {
+    raw: str,
+    hyphenated: hyphenate(str),
+    camelized: camelized,
+    PascalCase: capitalize(camelized),
+    toString: () => str
+  }
+}
+
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
   value !== oldValue && (value === value || oldValue === oldValue)

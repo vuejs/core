@@ -75,6 +75,16 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
+export type LazyComponentResolver = (
+  s: Object,
+  i: ComponentInternalInstance
+) => Component | undefined
+
+export type LazyDirectiveResolver = (
+  s: Object,
+  i: ComponentInternalInstance
+) => Directive | undefined
+
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -104,6 +114,8 @@ export interface ComponentOptionsBase<
   render?: Function
   components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
+  getComponent?: LazyComponentResolver
+  getDirective?: LazyDirectiveResolver
   inheritAttrs?: boolean
   inheritRef?: boolean
   emits?: E | EE[]

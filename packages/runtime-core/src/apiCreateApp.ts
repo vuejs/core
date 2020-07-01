@@ -4,7 +4,11 @@ import {
   validateComponentName,
   PublicAPIComponent
 } from './component'
-import { ComponentOptions } from './componentOptions'
+import {
+  ComponentOptions,
+  LazyComponentResolver,
+  LazyDirectiveResolver
+} from './componentOptions'
 import { ComponentPublicInstance } from './componentProxy'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
@@ -71,6 +75,8 @@ export interface AppContext {
   mixins: ComponentOptions[]
   components: Record<string, PublicAPIComponent>
   directives: Record<string, Directive>
+  getComponent?: LazyComponentResolver
+  getDirective?: LazyDirectiveResolver
   provides: Record<string | symbol, any>
   reload?: () => void // HMR only
 }
@@ -118,6 +124,8 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
+    context.getComponent = (rootComponent as ComponentOptions).getComponent
+    context.getDirective = (rootComponent as ComponentOptions).getDirective
     const installedPlugins = new Set()
 
     let isMounted = false

@@ -1,11 +1,19 @@
 import { currentRenderingInstance } from '../componentRenderUtils'
 import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
-import { camelize, capitalize, isString } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  isString,
+  identifierSpellings
+} from '@vue/shared'
 import { warn } from '../warning'
 
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
+
+const COMPONENT_LAZY = 'getComponent'
+const DIRECTIVE_LAZY = 'getDirective'
 
 /**
  * @private
@@ -37,6 +45,17 @@ export function resolveDirective(name: string): Directive | undefined {
   return resolveAsset(DIRECTIVES, name)
 }
 
+function getLazyAssetKey(
+  type: typeof COMPONENTS | typeof DIRECTIVES
+): typeof COMPONENT_LAZY | typeof DIRECTIVE_LAZY {
+  switch (type) {
+    case COMPONENTS:
+      return COMPONENT_LAZY
+    case DIRECTIVES:
+      return DIRECTIVE_LAZY
+  }
+}
+
 /**
  * @private
  * overload 1: components
@@ -61,7 +80,7 @@ function resolveAsset(
   if (instance) {
     let camelized, capitalized
     const registry = instance[type]
-    let res =
+    let res: any =
       registry[name] ||
       registry[(camelized = camelize(name))] ||
       registry[(capitalized = capitalize(camelized))]
@@ -75,6 +94,14 @@ function resolveAsset(
           selfName === capitalized)
       ) {
         res = self
+      }
+    }
+    if (!res) {
+      // @TODO I don't know if this is the best way to do it
+      const lazyType = getLazyAssetKey(type)
+      const lazyRegistry = instance[lazyType]
+      if (lazyRegistry instanceof Function) {
+        res = lazyRegistry(identifierSpellings(name), instance)
       }
     }
     if (__DEV__ && warnMissing && !res) {
