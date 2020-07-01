@@ -8,7 +8,12 @@ import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
 
-export const patchProp: RendererOptions<Node, Element>['patchProp'] = (
+type DOMRendererOptions = RendererOptions<Node, Element>
+
+export const forcePatchProp: DOMRendererOptions['forcePatchProp'] = (_, key) =>
+  key === 'value'
+
+export const patchProp: DOMRendererOptions['patchProp'] = (
   el,
   key,
   prevValue,

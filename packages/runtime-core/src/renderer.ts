@@ -96,6 +96,7 @@ export interface RendererOptions<
     parentSuspense?: SuspenseBoundary | null,
     unmountChildren?: UnmountChildrenFn
   ): void
+  forcePatchProp?(el: HostElement, key: string): boolean
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
   createElement(
@@ -383,6 +384,7 @@ function baseCreateRenderer(
     insert: hostInsert,
     remove: hostRemove,
     patchProp: hostPatchProp,
+    forcePatchProp: hostForcePatchProp,
     createElement: hostCreateElement,
     createText: hostCreateText,
     createComment: hostCreateComment,
@@ -845,7 +847,10 @@ function baseCreateRenderer(
             const key = propsToUpdate[i]
             const prev = oldProps[key]
             const next = newProps[key]
-            if (prev !== next) {
+            if (
+              next !== prev ||
+              (hostForcePatchProp && hostForcePatchProp(el, key))
+            ) {
               hostPatchProp(
                 el,
                 key,
@@ -969,7 +974,10 @@ function baseCreateRenderer(
         if (isReservedProp(key)) continue
         const next = newProps[key]
         const prev = oldProps[key]
-        if (next !== prev) {
+        if (
+          next !== prev ||
+          (hostForcePatchProp && hostForcePatchProp(el, key))
+        ) {
           hostPatchProp(
             el,
             key,
