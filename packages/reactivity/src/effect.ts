@@ -162,6 +162,8 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+const effects = new Set<ReactiveEffect>()
+let triggerNumber = 0
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -176,7 +178,6 @@ export function trigger(
     return
   }
 
-  const effects = new Set<ReactiveEffect>()
   const computedRunners = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
@@ -184,7 +185,7 @@ export function trigger(
         if (effect !== activeEffect || !shouldTrack) {
           if (effect.options.computed) {
             computedRunners.add(effect)
-          } else {
+          } else if (!effects.has(effect)) {
             effects.add(effect)
           }
         } else {
@@ -247,6 +248,10 @@ export function trigger(
 
   // Important: computed effects must be run first so that computed getters
   // can be invalidated before any normal effects that depend on them are run.
+  triggerNumber++
   computedRunners.forEach(run)
-  effects.forEach(run)
+  triggerNumber--
+  if (triggerNumber === 0) {
+    effects.forEach(run)
+  }
 }

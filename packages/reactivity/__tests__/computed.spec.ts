@@ -177,4 +177,22 @@ describe('reactivity/computed', () => {
       'Write operation failed: computed value is readonly'
     ).toHaveBeenWarnedLast()
   })
+
+  it('should invoke once when computed and reactivity has one effect', () => {
+    const value = ref(0)
+    let computedVal = computed(() => value.value)
+    let effectVal
+    const spy = jest.fn()
+
+    effect(() => {
+      effectVal = value.value + computedVal.value
+      spy()
+    })
+    expect(effectVal).toBe(0)
+    expect(spy).toBeCalledTimes(1)
+
+    value.value = 1
+    expect(effectVal).toBe(2)
+    expect(spy).toBeCalledTimes(2)
+  })
 })
