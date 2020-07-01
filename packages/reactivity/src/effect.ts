@@ -252,6 +252,9 @@ export function trigger(
   computedRunners.forEach(run)
   triggerNumber--
   if (triggerNumber === 0) {
-    effects.forEach(run)
+    effects.forEach(effect => {
+      run(effect)
+      effects.delete(effect)
+    })
   }
 }
