@@ -86,7 +86,6 @@ export interface FunctionalComponent<
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
-  inheritRef?: boolean
   displayName?: string
 }
 

@@ -108,8 +108,6 @@ export function useTransitionState(): TransitionState {
 const BaseTransitionImpl = {
   name: `BaseTransition`,
 
-  inheritRef: true,
-
   props: {
     mode: String,
     appear: Boolean,
@@ -135,11 +133,11 @@ const BaseTransitionImpl = {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
 
+    let prevTransitionKey: any
+
     return () => {
-      const children = slots.default && getTransitionRawChildren(
-        slots.default(),
-        true
-      )
+      const children =
+        slots.default && getTransitionRawChildren(slots.default(), true)
       if (!children || !children.length) {
         return
       }
@@ -183,11 +181,24 @@ const BaseTransitionImpl = {
 
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
+
+      let transitionKeyChanged = false
+      const { getTransitionKey } = innerChild.type as any
+      if (getTransitionKey) {
+        const key = getTransitionKey()
+        if (prevTransitionKey === undefined) {
+          prevTransitionKey = key
+        } else if (key !== prevTransitionKey) {
+          prevTransitionKey = key
+          transitionKeyChanged = true
+        }
+      }
+
       // handle mode
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild)
+        (!isSameVNodeType(innerChild, oldInnerChild) || transitionKeyChanged)
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,

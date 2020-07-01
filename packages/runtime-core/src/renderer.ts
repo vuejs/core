@@ -17,8 +17,7 @@ import {
   ComponentInternalInstance,
   createComponentInstance,
   Data,
-  setupComponent,
-  Component
+  setupComponent
 } from './component'
 import {
   renderComponentRoot,
@@ -283,14 +282,10 @@ export const setRef = (
   if (!vnode) {
     value = null
   } else {
-    const { el, component, shapeFlag, type } = vnode
-    if (shapeFlag & ShapeFlags.COMPONENT && (type as Component).inheritRef) {
-      return
-    }
-    if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      value = component!.proxy
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      value = vnode.component!.proxy
     } else {
-      value = el
+      value = vnode.el
     }
   }
 

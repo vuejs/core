@@ -34,7 +34,6 @@ export const Transition: FunctionalComponent<TransitionProps> = (
   { slots }
 ) => h(BaseTransition, resolveTransitionProps(props), slots)
 
-Transition.inheritRef = true
 Transition.displayName = 'Transition'
 
 const DOMTransitionPropsValidators = {
