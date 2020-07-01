@@ -177,16 +177,11 @@ export function trigger(
   }
 
   const effects = new Set<ReactiveEffect>()
-  const computedRunners = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || !shouldTrack) {
-          if (effect.options.computed) {
-            computedRunners.add(effect)
-          } else {
-            effects.add(effect)
-          }
+          effects.add(effect)
         } else {
           // the effect mutated its own dependency during its execution.
           // this can be caused by operations like foo.value++
@@ -245,8 +240,5 @@ export function trigger(
     }
   }
 
-  // Important: computed effects must be run first so that computed getters
-  // can be invalidated before any normal effects that depend on them are run.
-  computedRunners.forEach(run)
   effects.forEach(run)
 }
