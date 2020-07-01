@@ -259,15 +259,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
-    const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     // public $xxx properties
-    if (publicGetter) {
+    if (hasOwn(publicPropertiesMap, key)) {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
       }
-      return publicGetter(instance)
+      return publicPropertiesMap[key](instance)
     } else if (
       // css module (injected by vue-loader)
       (cssModule = type.__cssModules) &&
@@ -284,6 +283,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       hasOwn(globalProperties, key))
     ) {
       return globalProperties[key]
+    } else if (hasOwn(Object.prototype, key)) {
+      return Object.prototype[key]
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
@@ -362,7 +363,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      hasOwn(Object.prototype, key)
     )
   }
 }
