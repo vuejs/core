@@ -107,8 +107,9 @@ describe('api: options', () => {
   })
 
   test('watch', async () => {
+    let context: any
     function returnThis(this: any) {
-      return this
+      return (context = this)
     }
     const spyA = jest.fn(returnThis)
     const spyB = jest.fn(returnThis)
@@ -147,7 +148,7 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(context).toBe(ctx)
     }
 
     ctx.foo++
@@ -168,8 +169,9 @@ describe('api: options', () => {
   })
 
   test('watch array', async () => {
+    let context: any
     function returnThis(this: any) {
-      return this
+      return (context = this)
     }
     const spyA = jest.fn(returnThis)
     const spyB = jest.fn(returnThis)
@@ -210,7 +212,7 @@ describe('api: options', () => {
 
     function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(context).toBe(ctx)
     }
 
     ctx.foo++
