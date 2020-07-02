@@ -23,7 +23,8 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode
+  RendererNode,
+  invokeVNodeHook
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentProxy'
@@ -96,11 +97,11 @@ const KeepAliveImpl = {
     const storageContainer = createElement('div')
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
-      const child = vnode.component!
+      const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
-        child.vnode,
+        instance.vnode,
         vnode,
         container,
         anchor,
@@ -110,27 +111,35 @@ const KeepAliveImpl = {
         optimized
       )
       queuePostRenderEffect(() => {
-        child.isDeactivated = false
-        if (child.a) {
-          invokeArrayFns(child.a)
+        instance.isDeactivated = false
+        if (instance.a) {
+          invokeArrayFns(instance.a)
+        }
+        const vnodeHook = vnode.props && vnode.props.onVnodeMounted
+        if (vnodeHook) {
+          invokeVNodeHook(vnodeHook, instance.parent, vnode)
         }
       }, parentSuspense)
     }
 
     sharedContext.deactivate = (vnode: VNode) => {
+      const instance = vnode.component!
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
-        const component = vnode.component!
-        if (component.da) {
-          invokeArrayFns(component.da)
+        if (instance.da) {
+          invokeArrayFns(instance.da)
         }
-        component.isDeactivated = true
+        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+        if (vnodeHook) {
+          invokeVNodeHook(vnodeHook, instance.parent, vnode)
+        }
+        instance.isDeactivated = true
       }, parentSuspense)
     }
 
     function unmount(vnode: VNode) {
       // reset the shapeFlag so it can be properly unmounted
-      vnode.shapeFlag = ShapeFlags.STATEFUL_COMPONENT
+      resetShapeFlag(vnode)
       _unmount(vnode, instance, parentSuspense)
     }
 
@@ -150,7 +159,7 @@ const KeepAliveImpl = {
       } else if (current) {
         // current active instance should no longer be kept-alive.
         // we can't unmount it now but it might be later, so reset its flag now.
-        current.shapeFlag = ShapeFlags.STATEFUL_COMPONENT
+        resetShapeFlag(current)
       }
       cache.delete(key)
       keys.delete(key)
@@ -165,7 +174,18 @@ const KeepAliveImpl = {
     )
 
     onBeforeUnmount(() => {
-      cache.forEach(unmount)
+      cache.forEach(cached => {
+        const { subTree, suspense } = instance
+        if (cached.type === subTree.type) {
+          // current instance will be unmounted as part of keep-alive's unmount
+          resetShapeFlag(subTree)
+          // but invoke its deactivated hook here
+          const da = subTree.component!.da
+          da && queuePostRenderEffect(da, suspense)
+          return
+        }
+        unmount(cached)
+      })
     })
 
     return () => {
@@ -197,7 +217,7 @@ const KeepAliveImpl = {
         (include && (!name || !matches(include, name))) ||
         (exclude && name && matches(exclude, name))
       ) {
-        return vnode
+        return (current = vnode)
       }
 
       const key = vnode.key == null ? comp : vnode.key
@@ -324,4 +344,15 @@ function injectToKeepAliveRoot(
   onUnmounted(() => {
     remove(keepAliveRoot[type]!, hook)
   }, target)
+}
+
+function resetShapeFlag(vnode: VNode) {
+  let shapeFlag = vnode.shapeFlag
+  if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    shapeFlag -= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+  }
+  if (shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+    shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
+  }
+  vnode.shapeFlag = shapeFlag
 }

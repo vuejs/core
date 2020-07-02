@@ -42,6 +42,20 @@ describe('vnode', () => {
     expect(vnode.props).toBe(null)
   })
 
+  test('create from an existing vnode', () => {
+    const vnode1 = createVNode('p', { id: 'foo' })
+    const vnode2 = createVNode(vnode1, { class: 'bar' }, 'baz')
+    expect(vnode2).toMatchObject({
+      type: 'p',
+      props: {
+        id: 'foo',
+        class: 'bar'
+      },
+      children: 'baz',
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+    })
+  })
+
   test('vnode keys', () => {
     for (const key of ['', 'a', 0, 1, NaN]) {
       expect(createVNode('div', { key }).key).toBe(key)

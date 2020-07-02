@@ -166,10 +166,9 @@ export type ComponentPublicInstanceConstructor<
   new (): T
 }
 
-const publicPropertiesMap: Record<
-  string,
-  (i: ComponentInternalInstance) => any
-> = {
+type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+
+const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
@@ -184,7 +183,7 @@ const publicPropertiesMap: Record<
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
   $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
-}
+} as PublicPropertiesMap)
 
 const enum AccessTypes {
   SETUP,

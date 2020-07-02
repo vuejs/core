@@ -1,3 +1,21 @@
+# [3.0.0-beta.18](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.16...v3.0.0-beta.18) (2020-07-02)
+
+
+### Bug Fixes
+
+* **runtime-core:** avoid accidental access of Object.prototype properties ([f3e9c1b](https://github.com/vuejs/vue-next/commit/f3e9c1b59d5d3999ac6180ed75c84d88b29c41e6))
+* ensure vnode hooks are called consistently regardless of keep-alive ([4e8e689](https://github.com/vuejs/vue-next/commit/4e8e689572dcae0cb468989c5e0c531a837a900b))
+* **runtime-core:** pass unmount into inital mount patch prop ([2bdb5c1](https://github.com/vuejs/vue-next/commit/2bdb5c146449092623f06e20fb71ebaca7e5588f))
+* **runtime-dom:** allow force updating value bindings for controlled inputs ([b3536d8](https://github.com/vuejs/vue-next/commit/b3536d87a587dc1e78c8712cb29ca61ca0931ac9)), closes [#1471](https://github.com/vuejs/vue-next/issues/1471)
+* **slots:** make compiled slot marker non-enumerable ([062835d](https://github.com/vuejs/vue-next/commit/062835d45aaf4168ddf2e39a5c7e162b3a18ccae)), closes [#1470](https://github.com/vuejs/vue-next/issues/1470)
+
+
+### Features
+
+* **runtime-core:** support creating vnode from existing vnode ([c9629f2](https://github.com/vuejs/vue-next/commit/c9629f26924fcb3c51994549a3013ccc05c1030a))
+
+
+
 # [3.0.0-beta.17](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.16...v3.0.0-beta.17) (2020-06-30)
 
 

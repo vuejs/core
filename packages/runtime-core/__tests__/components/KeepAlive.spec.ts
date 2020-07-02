@@ -567,7 +567,7 @@ describe('KeepAlive', () => {
     })
   })
 
-  it('should not call onVnodeUnmounted', async () => {
+  it('should call correct vnode hooks', async () => {
     const Foo = markRaw({
       name: 'Foo',
       render() {
@@ -643,14 +643,16 @@ describe('KeepAlive', () => {
     await nextTick()
 
     expect(spyMounted).toHaveBeenCalledTimes(2)
-    expect(spyUnmounted).toHaveBeenCalledTimes(0)
+    expect(spyUnmounted).toHaveBeenCalledTimes(1)
 
     toggle()
     await nextTick()
+    expect(spyMounted).toHaveBeenCalledTimes(3)
+    expect(spyUnmounted).toHaveBeenCalledTimes(2)
+
     render(null, root)
     await nextTick()
-
-    expect(spyMounted).toHaveBeenCalledTimes(2)
-    expect(spyUnmounted).toHaveBeenCalledTimes(2)
+    expect(spyMounted).toHaveBeenCalledTimes(3)
+    expect(spyUnmounted).toHaveBeenCalledTimes(4)
   })
 })

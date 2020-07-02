@@ -105,7 +105,6 @@ export interface ComponentOptionsBase<
   components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
-  inheritRef?: boolean
   emits?: E | EE[]
 
   // Internal ------------------------------------------------------------------
@@ -724,9 +723,8 @@ export function resolveMergedOptions(
 function mergeOptions(to: any, from: any, instance: ComponentInternalInstance) {
   const strats = instance.appContext.config.optionMergeStrategies
   for (const key in from) {
-    const strat = strats && strats[key]
-    if (strat) {
-      to[key] = strat(to[key], from[key], instance.proxy, key)
+    if (strats && hasOwn(strats, key)) {
+      to[key] = strats[key](to[key], from[key], instance.proxy, key)
     } else if (!hasOwn(to, key)) {
       to[key] = from[key]
     }

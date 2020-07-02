@@ -17,8 +17,7 @@ import {
   ComponentInternalInstance,
   createComponentInstance,
   Data,
-  setupComponent,
-  Component
+  setupComponent
 } from './component'
 import {
   renderComponentRoot,
@@ -283,14 +282,10 @@ export const setRef = (
   if (!vnode) {
     value = null
   } else {
-    const { el, component, shapeFlag, type } = vnode
-    if (shapeFlag & ShapeFlags.COMPONENT && (type as Component).inheritRef) {
-      return
-    }
-    if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-      value = component!.proxy
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      value = vnode.component!.proxy
     } else {
-      value = el
+      value = vnode.el
     }
   }
 
@@ -703,7 +698,8 @@ function baseCreateRenderer(
               isSVG,
               vnode.children as VNode[],
               parentComponent,
-              parentSuspense
+              parentSuspense,
+              unmountChildren
             )
           }
         }
@@ -1870,25 +1866,25 @@ function baseCreateRenderer(
       patchFlag,
       dirs
     } = vnode
-    const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
-    const shouldKeepAlive = shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
-    let vnodeHook: VNodeHook | undefined | null
-
     // unset ref
     if (ref != null && parentComponent) {
       setRef(ref, null, parentComponent, null)
     }
 
-    if ((vnodeHook = props && props.onVnodeBeforeUnmount) && !shouldKeepAlive) {
+    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      return
+    }
+
+    const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+
+    let vnodeHook: VNodeHook | undefined | null
+    if ((vnodeHook = props && props.onVnodeBeforeUnmount)) {
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (shouldKeepAlive) {
-        ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
-      } else {
-        unmountComponent(vnode.component!, parentSuspense, doRemove)
-      }
+      unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
@@ -1921,10 +1917,7 @@ function baseCreateRenderer(
       }
     }
 
-    if (
-      ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) &&
-      !shouldKeepAlive
-    ) {
+    if ((vnodeHook = props && props.onVnodeUnmounted) || shouldInvokeDirs) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
