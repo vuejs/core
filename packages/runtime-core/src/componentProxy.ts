@@ -30,10 +30,7 @@ import {
 import { normalizePropsOptions } from './componentProps'
 import { EmitsOptions, EmitFn } from './componentEmits'
 import { Slots } from './componentSlots'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
 import { warn } from './warning'
 import { UnionToIntersection } from './helpers/typeUtils'
 
@@ -285,7 +282,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return globalProperties[key]
     } else if (
       __DEV__ &&
-      currentRenderingInstance &&
       // #1091 avoid internal isRef/isVNode checks on component instance leading
       // to infinite warning loop
       key.indexOf('__v') !== 0
@@ -299,7 +295,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         )
       } else {
         warn(
-          `Property ${JSON.stringify(key)} was accessed during render ` +
+          `Property ${JSON.stringify(key)} was accessed ` +
             `but is not defined on instance.`
         )
       }
