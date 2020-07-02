@@ -132,7 +132,9 @@ function createReactiveObject(
   }
   const observed = new Proxy(
     target,
-    collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
+    [...collectionTypes].some(c => target instanceof c)
+      ? collectionHandlers
+      : baseHandlers
   )
   def(
     target,

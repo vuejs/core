@@ -439,5 +439,22 @@ describe('reactivity/collections', () => {
       map.set('b', 1)
       expect(spy).toHaveBeenCalledTimes(3)
     })
+
+    it(`should observe instance from custom class which inherits from Map/Set/WeakMap/WeakSet`, () => {
+      class SomeMap extends Map {}
+      const raw = new SomeMap()
+      const key = reactive({})
+      raw.set(key, 1)
+      const map = reactive(raw)
+
+      let dummy
+      effect(() => {
+        dummy = map.has(key)
+      })
+      expect(dummy).toBe(true)
+
+      map.delete(key)
+      expect(dummy).toBe(false)
+    })
   })
 })
