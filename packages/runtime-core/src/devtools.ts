@@ -52,7 +52,8 @@ export function componentAdded(component: ComponentInternalInstance) {
   devtools.emit(
     DevtoolsHooks.COMPONENT_ADDED,
     component.appContext.__app,
-    component.uid
+    component.uid,
+    component.parent ? component.parent.uid : undefined
   )
 }
 
@@ -61,7 +62,8 @@ export function componentUpdated(component: ComponentInternalInstance) {
   devtools.emit(
     DevtoolsHooks.COMPONENT_UPDATED,
     component.appContext.__app,
-    component.uid
+    component.uid,
+    component.parent ? component.parent.uid : undefined
   )
 }
 
@@ -70,6 +72,7 @@ export function componentRemoved(component: ComponentInternalInstance) {
   devtools.emit(
     DevtoolsHooks.COMPONENT_REMOVED,
     component.appContext.__app,
-    component.uid
+    component.uid,
+    component.parent ? component.parent.uid : undefined
   )
 }
