@@ -562,19 +562,20 @@
     "@rushstack/node-core-library" "3.24.4"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.8.15"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.8.15.tgz#f5392de83cfd21906e1aed73638d126e3b67a00e"
-  integrity sha512-8a2j67fYlD1RO26x2UVY1uTwHrL4fp1MjPfLosi63nZGhYOKU4TuNJngGJ84//9A/s0P2c7Wfs74ImE7D3GS5g==
+  version "7.9.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.0.tgz#d6fd64c98af06dcf7aff9e482f29caea681a4c2d"
+  integrity sha512-pB29upamyni4VR7uWxaS7jRxxIOw7UPoih6ZRj7r/jlUPgqVDewMb6FbdZH3UVmXtOFU7PReRFEddsvk3jUQMw==
   dependencies:
     "@microsoft/api-extractor-model" "7.8.11"
     "@microsoft/tsdoc" "0.12.19"
     "@rushstack/node-core-library" "3.24.4"
-    "@rushstack/ts-command-line" "4.4.5"
+    "@rushstack/ts-command-line" "4.4.6"
     colors "~1.2.1"
     lodash "~4.17.15"
     resolve "~1.17.0"
+    semver "~5.3.0"
     source-map "~0.6.1"
-    typescript "~3.7.2"
+    typescript "~3.9.5"
 
 "@microsoft/tsdoc@0.12.19":
   version "0.12.19"
@@ -642,10 +643,10 @@
     timsort "~0.3.0"
     z-schema "~3.18.3"
 
-"@rushstack/ts-command-line@4.4.5":
-  version "4.4.5"
-  resolved "https://registry.yarnpkg.com/@rushstack/ts-command-line/-/ts-command-line-4.4.5.tgz#924a810177a821571297925dfdd04563d28fe2ab"
-  integrity sha512-UyqdvegMvtMCAbHbrNKkWNVvcRRtQ9t47GuXlWO9PsSa33FUkIBbYmjyC53bl4mS9Zhr3YaCLN+oi9VlUtQxSg==
+"@rushstack/ts-command-line@4.4.6":
+  version "4.4.6"
+  resolved "https://registry.yarnpkg.com/@rushstack/ts-command-line/-/ts-command-line-4.4.6.tgz#7818f19e444274e68564a756ef62a2b4e0ced0f8"
+  integrity sha512-ue3p2m773Yea/s4Ef2Q3gEyLd9T0NDjXCl+PlodGTrJHgxoiRwbROSWHAdYJL/LceGWa6Biqizu9qxUDEWFweQ==
   dependencies:
     "@types/argparse" "1.0.38"
     argparse "~1.0.9"
@@ -7132,15 +7133,10 @@ typedarray@^0.0.6:
   resolved "https://registry.yarnpkg.com/typedarray/-/typedarray-0.0.6.tgz#867ac74e3864187b1d3d47d996a78ec5c8830777"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
 
-typescript@^3.9.3:
+typescript@^3.9.3, typescript@~3.9.5:
   version "3.9.6"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.6.tgz#8f3e0198a34c3ae17091b35571d3afd31999365a"
   integrity sha512-Pspx3oKAPJtjNwE92YS05HQoY7z2SFyOpHo9MqJor3BXAGNaPUs83CuVp9VISFkSjyRfiTpmKuAYGJB7S7hOxw==
-
-typescript@~3.7.2:
-  version "3.7.5"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.7.5.tgz#0692e21f65fd4108b9330238aac11dd2e177a1ae"
-  integrity sha512-/P5lkRXkWHNAbcJIiHPfRoKqyd7bsyCma1hZNUGfn20qm64T6ZBlrzprymeu918H+mB/0rIg2gGK/BXkhhYgBw==
 
 uglify-js@^2.6.1:
   version "2.8.29"
