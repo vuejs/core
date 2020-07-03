@@ -23,7 +23,7 @@ import {
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
+import { AppContext, createAppContext, AppConfig, App } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './componentOptions'
 import {
@@ -49,6 +49,7 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { startMeasure, endMeasure } from './profiling'
+import { componentAdded } from './devtools'
 
 export type Data = { [key: string]: unknown }
 
@@ -399,6 +400,9 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+
+  __DEV__ && componentAdded(instance)
+
   return instance
 }
 

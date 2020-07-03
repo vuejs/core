@@ -95,7 +95,7 @@ export {
 } from './components/BaseTransition'
 
 // For devtools
-export { devtools, setDevtoolsHook, initDevtools } from './devtools'
+export { devtools, setDevtoolsHook } from './devtools'
 
 // Types -------------------------------------------------------------------------
 
