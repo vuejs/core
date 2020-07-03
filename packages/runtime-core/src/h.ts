@@ -108,7 +108,7 @@ export function h(
 ): VNode
 
 // functional component
-export function h<P, E extends EmitsOptions = EmitsOptions>(
+export function h<P, E extends EmitsOptions = {}>(
   type: FunctionalComponent<P, E>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
