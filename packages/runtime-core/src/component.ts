@@ -23,7 +23,7 @@ import {
 import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
-import { AppContext, createAppContext, AppConfig, App } from './apiCreateApp'
+import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './componentOptions'
 import {
