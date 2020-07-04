@@ -55,7 +55,7 @@ We are using [this thread](https://github.com/vuejs/jsx/issues/141) to unify the
 | @vue/test-utils     | [![alpha][vtu-badge]][vtu-npm] [[Github][vtu-code]] |
 | vue-class-component | [![alpha][vcc-badge]][vcc-npm] [[Github][vcc-code]] |
 | vue-loader          | [![alpha][vl-badge]][vl-npm] [[Github][vl-code]] |
-| rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][jsx-code]] |
+| rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][rpv-code]] |
 
 [epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue/next.svg
 [epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue/v/next
