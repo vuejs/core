@@ -37,6 +37,15 @@ Vue 3 support in Vue CLI is currently provided via the [vue-cli-plugin-vue-next]
 
 Note if you are not particularly attached to webpack and IE11 support, you can also start a Vue 3 project with [Vite](https://github.com/vitejs/vite).
 
+### JSX Support
+
+There are currently two JSX transform implementations for Vue 3 with slightly differing syntax (for Vue specific features):
+
+- [vueComponent/jsx](https://github.com/vueComponent/jsx)
+- [HcySunYang/vue-next-jsx](https://github.com/HcySunYang/vue-next-jsx)
+
+We are using [this thread](https://github.com/vuejs/jsx/issues/141) to unify the design and land on an official specification of how Vue features should be handled in JSX. If you use Vue with JSX, please provide your feedback in that thread.
+
 ### Other Projects
 
 | Project             | Status |
@@ -44,10 +53,9 @@ Note if you are not particularly attached to webpack and IE11 support, you can a
 | vue-devtools        | WIP (beta channel with Vue 3 support in early July) |
 | eslint-plugin-vue   | [![alpha][epv-badge]][epv-npm] [[Github][epv-code]] |
 | @vue/test-utils     | [![alpha][vtu-badge]][vtu-npm] [[Github][vtu-code]] |
-| Babel jsx transform | [![alpha][jsx-badge]][jsx-npm] [[Github][jsx-code]] |
 | vue-class-component | [![alpha][vcc-badge]][vcc-npm] [[Github][vcc-code]] |
 | vue-loader          | [![alpha][vl-badge]][vl-npm] [[Github][vl-code]] |
-| rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][jsx-code]] |
+| rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][rpv-code]] |
 
 [epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue/next.svg
 [epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue/v/next
