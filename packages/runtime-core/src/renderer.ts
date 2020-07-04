@@ -1900,7 +1900,7 @@ function baseCreateRenderer(
         }
       }
 
-      // 5.3 move and mount
+      // 5.5 move and mount
       // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
