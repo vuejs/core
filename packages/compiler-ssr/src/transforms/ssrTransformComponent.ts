@@ -31,9 +31,19 @@ import {
   ExpressionNode,
   TemplateNode,
   SUSPENSE,
-  TRANSITION_GROUP
+  TRANSITION_GROUP,
+  createAssignmentExpression,
+  CallExpression,
+  createBlockStatement,
+  IfStatement,
+  BlockStatement,
+  AssignmentExpression
 } from '@vue/compiler-dom'
-import { SSR_RENDER_COMPONENT } from '../runtimeHelpers'
+import {
+  SSR_RENDER_COMPONENT,
+  SSR_IS_COMPONENT,
+  SSR_RENDER_VNODE
+} from '../runtimeHelpers'
 import {
   SSRTransformContext,
   processChildren,
@@ -133,6 +143,41 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     const slots = node.children.length
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
+    const isDynamicComponent = typeof component !== 'string'
+    if (isDynamicComponent) {
+      const tempId = `_temp${context.temps++}`
+      const tempExp = createSimpleExpression(tempId, false)
+
+      const ifStatement = createIfStatement(
+        createCallExpression(context.helper(SSR_IS_COMPONENT), [tempExp]),
+        createBlockStatement([
+          createCallExpression(`_push`, [
+            createCallExpression(context.helper(SSR_RENDER_COMPONENT), [
+              tempExp,
+              props,
+              slots,
+              `_parent`
+            ])
+          ])
+        ]),
+        createBlockStatement([
+          createCallExpression(context.helper(SSR_RENDER_VNODE), [
+            tempExp,
+            props,
+            slots,
+            `_push`,
+            `_parent`
+          ])
+        ])
+      )
+
+      node.ssrCodegenNode = createBlockStatement([
+        createAssignmentExpression(tempExp, component as CallExpression),
+        ifStatement
+      ])
+      node.asStatement = true
+      return
+    }
 
     node.ssrCodegenNode = createCallExpression(
       context.helper(SSR_RENDER_COMPONENT),
@@ -176,7 +221,15 @@ export function ssrProcessComponent(
         vnodeBranch
       )
     }
-    context.pushStatement(createCallExpression(`_push`, [node.ssrCodegenNode]))
+    if (node.asStatement) {
+      ;(node.ssrCodegenNode as BlockStatement).body.forEach(statement => {
+        context.pushStatement(statement as IfStatement | AssignmentExpression)
+      })
+    } else {
+      context.pushStatement(
+        createCallExpression(`_push`, [node.ssrCodegenNode])
+      )
+    }
   }
 }
 

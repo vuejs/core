@@ -143,7 +143,8 @@ export interface ComponentNode extends BaseElementNode {
     | VNodeCall
     | CacheExpression // when cached by v-once
     | undefined
-  ssrCodegenNode?: CallExpression
+  ssrCodegenNode?: CallExpression | SequenceExpression | BlockStatement
+  asStatement?: boolean
 }
 
 export interface SlotOutletNode extends BaseElementNode {
@@ -380,7 +381,7 @@ export interface TemplateLiteral extends Node {
 
 export interface IfStatement extends Node {
   type: NodeTypes.JS_IF_STATEMENT
-  test: ExpressionNode
+  test: ExpressionNode | CallExpression
   consequent: BlockStatement
   alternate: IfStatement | BlockStatement | ReturnStatement | undefined
 }

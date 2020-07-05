@@ -84,7 +84,8 @@ export {
 export {
   resolveComponent,
   resolveDirective,
-  resolveDynamicComponent
+  resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler } from './component'

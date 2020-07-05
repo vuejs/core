@@ -21,20 +21,34 @@ describe('ssr: components', () => {
     expect(compile(`<component is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
       "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      const { ssrIsComponent: _ssrIsComponent, ssrRenderComponent: _ssrRenderComponent, ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(\\"foo\\"), _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        let _temp0
+
+        _temp0 = _resolveDynamicComponent(\\"foo\\")
+        if (_ssrIsComponent(_temp0)) {
+          _push(_ssrRenderComponent(_temp0, _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        } else {
+          _ssrRenderVNode(_temp0, _mergeProps({ prop: \\"b\\" }, _attrs), null, _push, _parent)
+        }
       }"
     `)
 
     expect(compile(`<component :is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
       "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      const { ssrIsComponent: _ssrIsComponent, ssrRenderComponent: _ssrRenderComponent, ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        let _temp0
+
+        _temp0 = _resolveDynamicComponent(_ctx.foo)
+        if (_ssrIsComponent(_temp0)) {
+          _push(_ssrRenderComponent(_temp0, _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        } else {
+          _ssrRenderVNode(_temp0, _mergeProps({ prop: \\"b\\" }, _attrs), null, _push, _parent)
+        }
       }"
     `)
   })

@@ -1,4 +1,11 @@
-import { Component, ComponentInternalInstance, createVNode, Slots } from 'vue'
+import {
+  Component,
+  ComponentInternalInstance,
+  createVNode,
+  Slots,
+  resolveDynamicComponent,
+  NULL_DYNAMIC_COMPONENT
+} from 'vue'
 import { Props, renderComponentVNode, SSRBuffer } from '../render'
 import { SSRSlots } from './ssrRenderSlot'
 
@@ -12,4 +19,10 @@ export function ssrRenderComponent(
     createVNode(comp, props, children),
     parentComponent
   )
+}
+
+export function ssrIsComponent(
+  comp: ReturnType<typeof resolveDynamicComponent>
+) {
+  return typeof comp !== 'string' && comp !== NULL_DYNAMIC_COMPONENT
 }

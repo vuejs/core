@@ -11,7 +11,8 @@ import {
   CompilerOptions,
   IfStatement,
   CallExpression,
-  isText
+  isText,
+  AssignmentExpression
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
 import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
@@ -85,7 +86,9 @@ function createSSRTransformContext(
         bufferedElements.push(part)
       }
     },
-    pushStatement(statement: IfStatement | CallExpression) {
+    pushStatement(
+      statement: IfStatement | CallExpression | AssignmentExpression
+    ) {
       // close current string
       currentString = null
       body.push(statement)
