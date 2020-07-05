@@ -43,7 +43,14 @@ import {
   flushPostFlushCbs,
   invalidateJob
 } from './scheduler'
-import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
+import {
+  effect,
+  stop,
+  ReactiveEffectOptions,
+  isRef,
+  pauseTracking,
+  resetTracking
+} from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -306,7 +313,9 @@ export const setRef = (
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (hasOwn(setupState, oldRef)) {
+        pauseTracking()
         setupState[oldRef] = null
+        resetTracking()
       }
     } else if (isRef(oldRef)) {
       oldRef.value = null
@@ -316,7 +325,9 @@ export const setRef = (
   if (isString(ref)) {
     refs[ref] = value
     if (hasOwn(setupState, ref)) {
+      pauseTracking()
       setupState[ref] = value
+      resetTracking()
     }
   } else if (isRef(ref)) {
     ref.value = value
