@@ -190,19 +190,20 @@ export function updateProps(
     for (const key in rawCurrentProps) {
       if (
         !rawProps ||
-        (
-          // for camelCase
-          !hasOwn(rawProps, key) &&
+        // for camelCase
+        (!hasOwn(rawProps, key) &&
           // it's possible the original props was passed in as kebab-case
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
         if (options) {
-          if (rawPrevProps && (
+          if (
+            rawPrevProps &&
             // for camelCase
-            rawPrevProps[key] !== undefined ||
-            // for kebab-case
-            rawPrevProps[kebabKey!] !== undefined)) {
+            (rawPrevProps[key] !== undefined ||
+              // for kebab-case
+              rawPrevProps[kebabKey!] !== undefined)
+          ) {
             props[key] = resolvePropValue(
               options,
               rawProps || EMPTY_OBJ,
@@ -255,7 +256,11 @@ function setFullProps(
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
         props[camelKey] = value
-      } else if (!emits || !isEmitListener(emits, key)) {
+      } else if (
+        (!emits || !isEmitListener(emits, key)) &&
+        // ignore v-model listeners
+        !key.startsWith(`onUpdate:`)
+      ) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
