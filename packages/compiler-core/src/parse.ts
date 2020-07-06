@@ -950,6 +950,6 @@ function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
     source.substr(2, tag.length).toLowerCase() === tag.toLowerCase() &&
-    /[\t\n\f />]/.test(source[2 + tag.length] || '>')
+    /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
   )
 }
