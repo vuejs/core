@@ -553,27 +553,27 @@
   resolved "https://registry.yarnpkg.com/@ls-lint/ls-lint/-/ls-lint-1.9.0.tgz#fa4637d34526e71aea7e5228426493a113f27d77"
   integrity sha512-F6QJ9MB2qPC8MYQ2qE0+V4yGr7qrL72uxmEwZrazGT/lYk9DkhuE1y3nPV4kqEcW7Cj8iHLQeT9Hsl6ugktoNA==
 
-"@microsoft/api-extractor-model@7.8.11":
-  version "7.8.11"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.8.11.tgz#641664307584f4c8dbd38b3cf3cd618b7a092643"
-  integrity sha512-1bqqmmOz18z6fWmFUEEteFl4obK21/2gj0rqLxN7AFijrvKfZ6p6zKB6FkBBp2hJbIfSdf3Kr6RGFG5vifvW+w==
+"@microsoft/api-extractor-model@7.8.12":
+  version "7.8.12"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor-model/-/api-extractor-model-7.8.12.tgz#d089193ef29275b8b20802498c6bdfab80dcef59"
+  integrity sha512-lE9xcNStS2hf5K+ZQy4L9DQ9Xd62bNsMqW+SyPQWXuQ5HJqUBSXJ2yxCWXP/+rcAkFCvZrikbql9M8Z88nKvwQ==
   dependencies:
     "@microsoft/tsdoc" "0.12.19"
-    "@rushstack/node-core-library" "3.24.4"
+    "@rushstack/node-core-library" "3.25.0"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.9.0"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.0.tgz#d6fd64c98af06dcf7aff9e482f29caea681a4c2d"
-  integrity sha512-pB29upamyni4VR7uWxaS7jRxxIOw7UPoih6ZRj7r/jlUPgqVDewMb6FbdZH3UVmXtOFU7PReRFEddsvk3jUQMw==
+  version "7.9.1"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.1.tgz#12e21c1afe50d9fe27f081a90be88300b2384938"
+  integrity sha512-xN52HjZTTvAeKh1IwQhYIIamySGrKEQjpnqJhK3za+BEt3jsUJjtwLsDlUAXJ955CItLoqiB8fXySEvf7wCfjw==
   dependencies:
-    "@microsoft/api-extractor-model" "7.8.11"
+    "@microsoft/api-extractor-model" "7.8.12"
     "@microsoft/tsdoc" "0.12.19"
-    "@rushstack/node-core-library" "3.24.4"
+    "@rushstack/node-core-library" "3.25.0"
     "@rushstack/ts-command-line" "4.4.6"
     colors "~1.2.1"
     lodash "~4.17.15"
     resolve "~1.17.0"
-    semver "~5.3.0"
+    semver "~7.3.0"
     source-map "~0.6.1"
     typescript "~3.9.5"
 
@@ -630,16 +630,16 @@
   dependencies:
     estree-walker "^1.0.1"
 
-"@rushstack/node-core-library@3.24.4":
-  version "3.24.4"
-  resolved "https://registry.yarnpkg.com/@rushstack/node-core-library/-/node-core-library-3.24.4.tgz#0ec278329e1b0db7d9eda077583f41c37722daf7"
-  integrity sha512-h8XQjpI78o5Mq7mJKX/rSfV9R02CJXBzxgqQ4EnptUP1StZ/BvyzwAp5VHvvNoJKXlFgqJwwOt8TE4d7bHGLgg==
+"@rushstack/node-core-library@3.25.0":
+  version "3.25.0"
+  resolved "https://registry.yarnpkg.com/@rushstack/node-core-library/-/node-core-library-3.25.0.tgz#ba40bc1b188ab5d31f5705999cd2b3b56b8a32cf"
+  integrity sha512-e2NCFtAu/eu14b8nlzRX6ZrE9Sb3J2wVt+pninQmTn/IgfnRLAtM0D4PzUO4+ktZwF9fCnpqrOGokLzw6RSVNw==
   dependencies:
     "@types/node" "10.17.13"
     colors "~1.2.1"
     fs-extra "~7.0.1"
     jju "~1.4.0"
-    semver "~5.3.0"
+    semver "~7.3.0"
     timsort "~0.3.0"
     z-schema "~3.18.3"
 
@@ -6274,7 +6274,7 @@ semver-compare@^1.0.0:
   resolved "https://registry.yarnpkg.com/semver/-/semver-5.7.1.tgz#a954f931aeba508d307bbf069eff0c01c96116f7"
   integrity sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==
 
-semver@7.x, semver@^7.2.1, semver@^7.3.2:
+semver@7.x, semver@^7.2.1, semver@^7.3.2, semver@~7.3.0:
   version "7.3.2"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.3.2.tgz#604962b052b81ed0786aae84389ffba70ffd3938"
   integrity sha512-OrOb32TeeambH6UrhtShmF7CRDqhL6/5XpPNp2DuRH6+9QLw/orhp72j87v8Qa1ScDkvrrBNpZcDejAirJmfXQ==
@@ -6288,11 +6288,6 @@ semver@~2.3.1:
   version "2.3.2"
   resolved "https://registry.yarnpkg.com/semver/-/semver-2.3.2.tgz#b9848f25d6cf36333073ec9ef8856d42f1233e52"
   integrity sha1-uYSPJdbPNjMwc+ye+IVtQvEjPlI=
-
-semver@~5.3.0:
-  version "5.3.0"
-  resolved "https://registry.yarnpkg.com/semver/-/semver-5.3.0.tgz#9b2ce5d3de02d17c6012ad326aa6b4d0cf54f94f"
-  integrity sha1-myzl094C0XxgEq0yaqa00M9U+U8=
 
 serialize-javascript@^3.0.0:
   version "3.1.0"
