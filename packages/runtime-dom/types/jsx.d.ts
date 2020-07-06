@@ -1334,6 +1334,7 @@ declare global {
       // @ts-ignore supress ts:2374 = Duplicate string index signature.
       [name: string]: any
     }
+    interface IntrinsicAttributes extends ReservedProps {}
   }
 }
 
