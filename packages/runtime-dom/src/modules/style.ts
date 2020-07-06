@@ -17,7 +17,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     }
     if (prev && !isString(prev)) {
       for (const key in prev) {
-        if (!next[key]) {
+        if (next[key] == null) {
           setStyle(style, key, '')
         }
       }
