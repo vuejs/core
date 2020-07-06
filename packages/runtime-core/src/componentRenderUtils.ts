@@ -11,10 +11,11 @@ import {
   cloneVNode,
   Fragment,
   VNodeArrayChildren,
-  isVNode
+  isVNode,
+  mergeProps
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isOn, extend } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 
@@ -157,7 +158,11 @@ export function renderComponentRoot(
       const extras: Data = {}
       if (scopeId) extras[scopeId] = ''
       if (slotScopeId) extras[slotScopeId] = ''
-      root = cloneVNode(root, extras)
+
+      const props = root.props
+        ? mergeProps(root.props, extras)
+        : extend({}, extras)
+      root.props = props
     }
 
     // inherit directives
