@@ -47,7 +47,7 @@ export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
   beforeMount(el, { value, modifiers: { lazy, trim, number } }, vnode) {
-    el.value = value
+    if (value !== undefined && value !== null) el.value = value
     el._assign = getModelAssigner(vnode)
     const castToNumber = number || el.type === 'number'
     addEventListener(el, lazy ? 'change' : 'input', e => {
@@ -85,6 +85,7 @@ export const vModelText: ModelDirective<
         return
       }
     }
+    if (value === undefined || value === null) value = ''
     el.value = value
   }
 }
