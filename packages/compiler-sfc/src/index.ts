@@ -2,6 +2,7 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
+export { compileScriptSetup, analyzeScriptBindings } from './compileScript'
 
 // Types
 export {

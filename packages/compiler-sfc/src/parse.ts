@@ -35,7 +35,7 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
-  setup?: boolean
+  setup?: boolean | string
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -46,6 +46,7 @@ export interface SFCStyleBlock extends SFCBlock {
 
 export interface SFCDescriptor {
   filename: string
+  source: string
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
@@ -86,6 +87,7 @@ export function parse(
 
   const descriptor: SFCDescriptor = {
     filename,
+    source,
     template: null,
     script: null,
     scriptSetup: null,
@@ -152,7 +154,7 @@ export function parse(
           descriptor.script = block
           break
         }
-        warnDuplicateBlock(source, filename, node, block.setup)
+        warnDuplicateBlock(source, filename, node, !!block.setup)
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -251,7 +253,7 @@ function createBlock(
       } else if (type === 'template' && p.name === 'functional') {
         ;(block as SFCTemplateBlock).functional = true
       } else if (type === 'script' && p.name === 'setup') {
-        ;(block as SFCScriptBlock).setup = true
+        ;(block as SFCScriptBlock).setup = attrs.setup || true
       }
     }
   })
