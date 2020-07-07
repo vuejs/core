@@ -46,6 +46,7 @@ export const Static = Symbol(__DEV__ ? 'Static' : undefined)
 
 export type VNodeTypes =
   | string
+  | VNode
   | Component
   | typeof Text
   | typeof Static
@@ -290,7 +291,7 @@ export const createVNode = (__DEV__
   : _createVNode) as typeof _createVNode
 
 function _createVNode(
-  type: VNode | VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
+  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
