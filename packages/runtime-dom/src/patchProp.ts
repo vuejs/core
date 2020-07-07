@@ -5,7 +5,6 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
-import { chdir } from 'process'
 
 const nativeOnRE = /^on[a-z]/
 
