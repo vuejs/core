@@ -45,7 +45,7 @@ export function compileScriptSetup(
   }
 
   const bindings: BindingMetadata = {}
-  const imports: Record<string, boolean> = {}
+  const imports: Record<string, string> = {}
   const setupScopeVars: Record<string, boolean> = {}
   const setupExports: Record<string, boolean> = {}
   let exportAllIndex = 0
@@ -59,13 +59,12 @@ export function compileScriptSetup(
   const scriptEndOffset = script && script.loc.end.offset
 
   // parse and transform <script setup>
+  const isTS = scriptSetup.lang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.parserPlugins || []),
-    ...(babelParserDefautPlugins as ParserPlugin[])
+    ...(babelParserDefautPlugins as ParserPlugin[]),
+    ...(isTS ? (['typescript'] as const) : [])
   ]
-  if (scriptSetup.lang === 'ts') {
-    plugins.push('typescript')
-  }
 
   // process normal <script> first if it exists
   if (script) {
@@ -81,7 +80,7 @@ export function compileScriptSetup(
         for (const {
           local: { name }
         } of node.specifiers) {
-          imports[name] = true
+          imports[name] = node.source.value
         }
       } else if (node.type === 'ExportDefaultDeclaration') {
         // export default
@@ -100,43 +99,64 @@ export function compileScriptSetup(
         defaultExport = node
         if (node.source) {
           // export { x as default } from './x'
+          // TODO
         } else {
           // export { x as default }
+          // TODO
         }
       }
     }
   }
 
   // check <script setup="xxx"> function signature
+  const hasExplicitSignature = typeof scriptSetup.setup === 'string'
   let propsVar = `$props`
   let emitVar = `$emit`
-  let args = `${propsVar}, { emit: ${emitVar}, attrs: $attrs, slots: $slots }`
-  if (typeof scriptSetup.setup === 'string') {
+  let slotsVar = `$slots`
+  let attrsVar = `$attrs`
+
+  let propsType = `{}`
+  let emitType = `(e: string, ...args: any[]) => void`
+  let slotsType = `__Slots__`
+  let attrsType = `Record<string, any>`
+
+  let propsASTNode
+  let setupCtxASTNode
+
+  // props/emits declared via types
+  const typeDeclaredProps: string[] = []
+  const typeDeclaredEmits: string[] = []
+
+  if (isTS && hasExplicitSignature) {
     // <script setup="xxx" lang="ts">
     // parse the signature to extract the props/emit variables the user wants
     // we need them to find corresponding type declarations.
-    if (scriptSetup.lang === 'ts') {
-      const signatureAST = parse(`(${scriptSetup.setup})=>{}`, { plugins })
-        .program.body[0]
-      const params = ((signatureAST as ExpressionStatement)
-        .expression as ArrowFunctionExpression).params
-      if (params[0] && params[0].type === 'Identifier') {
-        propsVar = params[0].name
-      }
-      if (params[1] && params[1].type === 'ObjectPattern') {
-        for (const p of params[1].properties) {
-          if (
-            p.type === 'ObjectProperty' &&
-            p.key.type === 'Identifier' &&
-            p.key.name === 'emit' &&
-            p.value.type === 'Identifier'
-          ) {
+    const signatureAST = parse(`(${scriptSetup.setup})=>{}`, { plugins })
+      .program.body[0]
+    const params = ((signatureAST as ExpressionStatement)
+      .expression as ArrowFunctionExpression).params
+    if (params[0] && params[0].type === 'Identifier') {
+      propsASTNode = params[0]
+      propsVar = propsASTNode.name
+    }
+    if (params[1] && params[1].type === 'ObjectPattern') {
+      setupCtxASTNode = params[1]
+      for (const p of params[1].properties) {
+        if (
+          p.type === 'ObjectProperty' &&
+          p.key.type === 'Identifier' &&
+          p.value.type === 'Identifier'
+        ) {
+          if (p.key.name === 'emit') {
             emitVar = p.value.name
+          } else if (p.key.name === 'slots') {
+            slotsVar = p.value.name
+          } else if (p.key.name === 'attrs') {
+            attrsVar = p.value.name
           }
         }
       }
     }
-    args = scriptSetup.setup
   }
 
   const scriptSetupAST = parse(scriptSetup.content, {
@@ -172,7 +192,7 @@ export function compileScriptSetup(
             specifier.end! + startOffset
           )
         } else {
-          imports[specifier.local.name] = true
+          imports[specifier.local.name] = node.source.value
         }
         prev = specifier
       }
@@ -181,13 +201,13 @@ export function compileScriptSetup(
       }
     }
 
-    if (node.type === 'ExportNamedDeclaration') {
+    if (node.type === 'ExportNamedDeclaration' && node.exportKind !== 'type') {
       // named exports
       if (node.declaration) {
         // variable/function/class declarations.
         // remove leading `export ` keyword
         s.remove(start, start + 7)
-        walkDeclaration(node.declaration, setupExports, propsVar, emitVar)
+        walkDeclaration(node.declaration, setupExports)
       }
       if (node.specifiers.length) {
         // named export with specifiers
@@ -277,11 +297,47 @@ export function compileScriptSetup(
     }
 
     if (
-      node.type === 'VariableDeclaration' ||
-      node.type === 'FunctionDeclaration' ||
-      node.type === 'ClassDeclaration'
+      (node.type === 'VariableDeclaration' ||
+        node.type === 'FunctionDeclaration' ||
+        node.type === 'ClassDeclaration') &&
+      !node.declare
     ) {
-      walkDeclaration(node, setupScopeVars, propsVar, emitVar)
+      walkDeclaration(node, setupScopeVars)
+    }
+
+    // Type declarations
+    if (node.type === 'VariableDeclaration' && node.declare) {
+      s.remove(start, end)
+      for (const { id } of node.declarations) {
+        if (id.type === 'Identifier') {
+          if (
+            id.typeAnnotation &&
+            id.typeAnnotation.type === 'TSTypeAnnotation'
+          ) {
+            const typeNode = id.typeAnnotation.typeAnnotation
+            const typeString = source.slice(
+              typeNode.start! + startOffset,
+              typeNode.end! + startOffset
+            )
+            if (typeNode.type === 'TSTypeLiteral') {
+              if (id.name === propsVar) {
+                propsType = typeString
+                extractProps(typeNode, typeDeclaredProps)
+              } else if (id.name === slotsVar) {
+                slotsType = typeString
+              } else if (id.name === attrsVar) {
+                attrsType = typeString
+              }
+            } else if (
+              id.name === emitVar &&
+              typeNode.type === 'TSFunctionType'
+            ) {
+              emitType = typeString
+              extractEmits(typeNode, typeDeclaredEmits)
+            }
+          }
+        }
+      }
     }
 
     if (
@@ -289,7 +345,11 @@ export function compileScriptSetup(
       node.id &&
       node.id.name === emitVar
     ) {
-      genEmits(node)
+      const index = node.id.start! + startOffset
+      s.overwrite(index, index + emitVar.length, '__emit__')
+      s.move(start, end, 0)
+      emitType = `typeof __emit__`
+      extractEmits(node, typeDeclaredEmits)
     }
   }
 
@@ -325,7 +385,38 @@ export function compileScriptSetup(
   }
 
   // wrap setup code with function
-  // determine the argument signature.
+  // finalize the argument signature.
+  let args
+  if (isTS) {
+    if (slotsType === '__Slots__') {
+      s.prepend(`import { Slots as __Slots__ } from 'vue'\n`)
+    }
+    const ctxType = `{
+  emit: ${emitType},
+  slots: ${slotsType},
+  attrs: ${attrsType}
+}`
+    if (hasExplicitSignature) {
+      // inject types to user signature
+      args = scriptSetup.setup as string
+      const ss = new MagicString(args)
+      if (propsASTNode) {
+        // compensate for () wraper offset
+        ss.appendRight(propsASTNode.end! - 1, `: ${propsType}`)
+      }
+      if (setupCtxASTNode) {
+        ss.appendRight(setupCtxASTNode.end! - 1!, `: ${ctxType}`)
+      }
+      args = ss.toString()
+    } else {
+      args = `$props: ${propsType}, { emit: $emit, slots: $slots, attrs: $attrs }: ${ctxType}`
+    }
+  } else {
+    args = hasExplicitSignature
+      ? scriptSetup.setup
+      : `$props, { emit: $emit, slots: $slots, attrs: $attrs }`
+  }
+
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
   s.appendLeft(startOffset, `\nexport function setup(${args}) {\n`)
@@ -372,35 +463,11 @@ export function compileScriptSetup(
   }
 }
 
-function walkDeclaration(
-  node: Declaration,
-  bindings: Record<string, boolean>,
-  propsKey: string,
-  emitsKey: string
-) {
+function walkDeclaration(node: Declaration, bindings: Record<string, boolean>) {
   if (node.type === 'VariableDeclaration') {
     // export const foo = ...
     for (const { id } of node.declarations) {
-      if (node.declare) {
-        // TODO `declare const $props...`
-        if (id.type === 'Identifier') {
-          if (
-            id.name === propsKey &&
-            id.typeAnnotation &&
-            id.typeAnnotation.type === 'TSTypeAnnotation' &&
-            id.typeAnnotation.typeAnnotation.type === 'TSTypeLiteral'
-          ) {
-            genProps(id.typeAnnotation.typeAnnotation)
-          } else if (
-            id.name === emitsKey &&
-            id.typeAnnotation &&
-            id.typeAnnotation.type === 'TSTypeAnnotation' &&
-            id.typeAnnotation.typeAnnotation.type === 'TSFunctionType'
-          ) {
-            genEmits(id.typeAnnotation.typeAnnotation)
-          }
-        }
-      } else if (id.type === 'Identifier') {
+      if (id.type === 'Identifier') {
         bindings[id.name] = true
       } else if (id.type === 'ObjectPattern') {
         walkObjectPattern(id, bindings)
@@ -469,14 +536,17 @@ function walkPattern(node: Node, bindings: Record<string, boolean>) {
   }
 }
 
-function genProps(node: TSTypeLiteral) {
+function extractProps(node: TSTypeLiteral, props: string[]) {
   // TODO
-  console.log('gen props', node)
+  console.log('gen props', node, props)
 }
 
-function genEmits(node: TSFunctionType | TSDeclareFunction) {
+function extractEmits(
+  node: TSFunctionType | TSDeclareFunction,
+  emits: string[]
+) {
   // TODO
-  console.log('gen emits', node)
+  console.log('gen emits', node, emits)
 }
 
 /**
@@ -486,7 +556,7 @@ function genEmits(node: TSFunctionType | TSDeclareFunction) {
 function checkDefaultExport(
   root: Node,
   scopeVars: Record<string, boolean>,
-  imports: Record<string, boolean>,
+  imports: Record<string, string>,
   exports: Record<string, boolean>,
   source: string,
   offset: number
