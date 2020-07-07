@@ -33,7 +33,7 @@
     "@vue/shared": "3.0.0-beta.20",
     "@babel/parser": "^7.10.4",
     "@babel/types": "^7.10.4",
-    "estree-walker": "^0.8.1",
+    "estree-walker": "^2.0.1",
     "source-map": "^0.6.1"
   }
 }

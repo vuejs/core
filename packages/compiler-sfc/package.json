@@ -40,6 +40,7 @@
     "@vue/compiler-ssr": "3.0.0-beta.20",
     "@vue/shared": "3.0.0-beta.20",
     "consolidate": "^0.15.1",
+    "estree-walker": "^2.0.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "magic-string": "^0.25.7",
