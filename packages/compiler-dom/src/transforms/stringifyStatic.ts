@@ -155,7 +155,7 @@ const replaceHoist = (
 }
 
 const isNonStringifiable = /*#__PURE__*/ makeMap(
-  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`
+  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col,script`
 )
 
 /**
