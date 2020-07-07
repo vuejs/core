@@ -20,21 +20,21 @@ describe('ssr: components', () => {
   test('dynamic component', () => {
     expect(compile(`<component is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(\\"foo\\"), _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(\\"foo\\"), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
       }"
     `)
 
     expect(compile(`<component :is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: \\"b\\" }, _attrs), null, _parent))
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
       }"
     `)
   })

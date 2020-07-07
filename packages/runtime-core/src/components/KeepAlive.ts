@@ -9,7 +9,13 @@ import {
 } from '../component'
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
-import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
+import {
+  onBeforeUnmount,
+  injectHook,
+  onUnmounted,
+  onBeforeMount,
+  onBeforeUpdate
+} from '../apiLifecycle'
 import {
   isString,
   isArray,
@@ -173,6 +179,16 @@ const KeepAliveImpl = {
       }
     )
 
+    // cache sub tree in beforeMount/Update (i.e. right after the render)
+    let pendingCacheKey: CacheKey | null = null
+    const cacheSubtree = () => {
+      if (pendingCacheKey) {
+        cache.set(pendingCacheKey, instance.subTree)
+      }
+    }
+    onBeforeMount(cacheSubtree)
+    onBeforeUpdate(cacheSubtree)
+
     onBeforeUnmount(() => {
       cache.forEach(cached => {
         const { subTree, suspense } = instance
@@ -189,6 +205,8 @@ const KeepAliveImpl = {
     })
 
     return () => {
+      pendingCacheKey = null
+
       if (!slots.default) {
         return null
       }
@@ -227,7 +245,12 @@ const KeepAliveImpl = {
       if (vnode.el) {
         vnode = cloneVNode(vnode)
       }
-      cache.set(key, vnode)
+      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // fallthrough or scopeId, so the vnode here may not be the final vnode
+      // that is mounted. Instead of caching it directly, we store the pending
+      // key and cache `instance.subTree` (the normalized vnode) in
+      // beforeMount/beforeUpdate hooks.
+      pendingCacheKey = key
 
       if (cachedVNode) {
         // copy over mounted state

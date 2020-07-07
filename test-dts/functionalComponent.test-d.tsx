@@ -5,6 +5,8 @@ const Foo = (props: { foo: number }) => props.foo
 
 // TSX
 expectType<JSX.Element>(<Foo foo={1} />)
+expectType<JSX.Element>(<Foo foo={1} key="1" />)
+expectType<JSX.Element>(<Foo foo={1} ref="ref" />)
 // @ts-expect-error
 expectError(<Foo />)
 //  @ts-expect-error

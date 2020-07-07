@@ -48,6 +48,7 @@ describe('vModel', () => {
 
     const input = root.querySelector('input')!
     const data = root._vnode.component.data
+    expect(input.value).toEqual('')
 
     input.value = 'foo'
     triggerEvent('input', input)
@@ -57,6 +58,10 @@ describe('vModel', () => {
     data.value = 'bar'
     await nextTick()
     expect(input.value).toEqual('bar')
+
+    data.value = undefined
+    await nextTick()
+    expect(input.value).toEqual('')
   })
 
   it('should work with multiple listeners', async () => {

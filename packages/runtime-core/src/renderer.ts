@@ -275,7 +275,8 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
 export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
-  parent: ComponentInternalInstance,
+  parentComponent: ComponentInternalInstance,
+  parentSuspense: SuspenseBoundary | null,
   vnode: VNode | null
 ) => {
   let value: ComponentPublicInstance | RendererNode | null
@@ -306,7 +307,9 @@ export const setRef = (
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (hasOwn(setupState, oldRef)) {
-        setupState[oldRef] = null
+        queuePostRenderEffect(() => {
+          setupState[oldRef] = null
+        }, parentSuspense)
       }
     } else if (isRef(oldRef)) {
       oldRef.value = null
@@ -316,12 +319,17 @@ export const setRef = (
   if (isString(ref)) {
     refs[ref] = value
     if (hasOwn(setupState, ref)) {
-      setupState[ref] = value
+      queuePostRenderEffect(() => {
+        setupState[ref] = value
+      }, parentSuspense)
     }
   } else if (isRef(ref)) {
     ref.value = value
   } else if (isFunction(ref)) {
-    callWithErrorHandling(ref, parent, ErrorCodes.FUNCTION_REF, [value, refs])
+    callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
+      value,
+      refs
+    ])
   } else if (__DEV__) {
     warn('Invalid template ref type:', value, `(${typeof value})`)
   }
@@ -497,7 +505,7 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentComponent, n2)
+      setRef(ref, n1 && n1.ref, parentComponent, parentSuspense, n2)
     }
   }
 
@@ -1868,7 +1876,7 @@ function baseCreateRenderer(
     } = vnode
     // unset ref
     if (ref != null && parentComponent) {
-      setRef(ref, null, parentComponent, null)
+      setRef(ref, null, parentComponent, parentSuspense, null)
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -1988,16 +1996,18 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
-    if (effects) {
-      for (let i = 0; i < effects.length; i++) {
-        stop(effects[i])
-      }
-    }
     // update may be null if a component is unmounted before its async
     // setup has resolved.
     if (update) {
       stop(update)
       unmount(subTree, instance, parentSuspense, doRemove)
+    }
+    if (effects) {
+      queuePostRenderEffect(() => {
+        for (let i = 0; i < effects.length; i++) {
+          stop(effects[i])
+        }
+      }, parentSuspense)
     }
     // unmounted hook
     if (um) {
