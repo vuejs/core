@@ -142,7 +142,7 @@ function renderComponentSubTree(
   return getBuffer()
 }
 
-function renderVNode(
+export function renderVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance
