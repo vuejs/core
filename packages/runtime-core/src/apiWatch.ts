@@ -29,7 +29,6 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
@@ -134,7 +133,8 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
+  instance = currentInstance
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -159,8 +159,6 @@ function doWatch(
         `a reactive object, or an array of these types.`
     )
   }
-
-  const instance = currentInstance
 
   let getter: () => any
   if (isArray(source)) {
@@ -316,9 +314,7 @@ export function instanceWatch(
   const getter = isString(source)
     ? () => publicThis[source]
     : source.bind(publicThis)
-  const stop = watch(getter, cb.bind(publicThis), options)
-  onBeforeUnmount(stop, this)
-  return stop
+  return doWatch(getter, cb.bind(publicThis), options, this)
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {

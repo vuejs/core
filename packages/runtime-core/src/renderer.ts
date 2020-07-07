@@ -1996,16 +1996,18 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
-    if (effects) {
-      for (let i = 0; i < effects.length; i++) {
-        stop(effects[i])
-      }
-    }
     // update may be null if a component is unmounted before its async
     // setup has resolved.
     if (update) {
       stop(update)
       unmount(subTree, instance, parentSuspense, doRemove)
+    }
+    if (effects) {
+      queuePostRenderEffect(() => {
+        for (let i = 0; i < effects.length; i++) {
+          stop(effects[i])
+        }
+      }, parentSuspense)
     }
     // unmounted hook
     if (um) {
