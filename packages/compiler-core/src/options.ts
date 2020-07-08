@@ -59,7 +59,7 @@ export type HoistTransform = (
 
 export interface TransformOptions {
   /**
-   * An array of node trasnforms to be applied to every AST node.
+   * An array of node transforms to be applied to every AST node.
    */
   nodeTransforms?: NodeTransform[]
   /**
@@ -118,7 +118,7 @@ export interface TransformOptions {
   scopeId?: string | null
   /**
    * Generate SSR-optimized render functions instead.
-   * The resulting funciton must be attached to the component via the
+   * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
    */
   ssr?: boolean
