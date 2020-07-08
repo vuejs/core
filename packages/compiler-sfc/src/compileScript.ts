@@ -344,9 +344,16 @@ export function compileScriptSetup(
     ) {
       const index = node.id.start! + startOffset
       s.overwrite(index, index + emitVar.length, '__emit__')
-      s.move(start, end, 0)
       emitType = `typeof __emit__`
       extractEmits(node, typeDeclaredEmits)
+    }
+
+    // move all type declarations to outer scope
+    if (
+      node.type.startsWith('TS') ||
+      (node.type === 'ExportNamedDeclaration' && node.exportKind === 'type')
+    ) {
+      s.move(start, end, 0)
     }
   }
 
