@@ -400,11 +400,7 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [
-            `($event, ...args) => (`,
-            { content: `_ctx.foo($event, ...args)` },
-            `)`
-          ]
+          children: [`(...args) => (`, { content: `_ctx.foo(...args)` }, `)`]
         }
       })
     })
