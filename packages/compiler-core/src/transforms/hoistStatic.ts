@@ -51,7 +51,7 @@ function walk(
   doNotHoistNode: boolean = false
 ) {
   let hasHoistedNode = false
-  // Some transforms, e.g. trasnformAssetUrls from @vue/compiler-sfc, replaces
+  // Some transforms, e.g. transformAssetUrls from @vue/compiler-sfc, replaces
   // static bindings with expressions. These expressions are guaranteed to be
   // constant so they are still eligible for hoisting, but they are only
   // available at runtime and therefore cannot be evaluated ahead of time.

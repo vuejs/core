@@ -333,7 +333,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
   }
   // generate variables for ssr helpers
   if (!__BROWSER__ && ast.ssrHelpers && ast.ssrHelpers.length) {
-    // ssr guaruntees prefixIdentifier: true
+    // ssr guarantees prefixIdentifier: true
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
@@ -372,7 +372,7 @@ function genModulePreamble(
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
       // incurring both payload size increase and potential perf overhead.
-      // therefore we assign the imports to vairables (which is a constant ~50b
+      // therefore we assign the imports to variables (which is a constant ~50b
       // cost per-component instead of scaling with template size)
       push(
         `import { ${ast.helpers
@@ -446,7 +446,7 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
-  // push scope Id before initilaizing hoisted vnodes so that these vnodes
+  // push scope Id before initializing hoisted vnodes so that these vnodes
   // get the proper scopeId as well.
   if (genScopeId) {
     push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)

@@ -3,6 +3,7 @@ import { currentInstance, Component, FunctionalComponent } from '../component'
 import { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
+import { VNodeTypes } from '../vnode'
 
 const COMPONENTS = 'components'
 const DIRECTIVES = 'directives'
@@ -19,14 +20,12 @@ export const NULL_DYNAMIC_COMPONENT = Symbol()
 /**
  * @private
  */
-export function resolveDynamicComponent(
-  component: unknown
-): Component | string | typeof NULL_DYNAMIC_COMPONENT {
+export function resolveDynamicComponent(component: unknown): VNodeTypes {
   if (isString(component)) {
     return resolveAsset(COMPONENTS, component, false) || component
   } else {
     // invalid types will fallthrough to createVNode and raise warning
-    return (component as any) || NULL_DYNAMIC_COMPONENT
+    return (component || NULL_DYNAMIC_COMPONENT) as any
   }
 }
 

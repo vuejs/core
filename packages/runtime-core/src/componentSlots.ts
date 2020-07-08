@@ -38,7 +38,7 @@ export type RawSlots = {
   // internal, indicates compiler generated slots
   // we use a reserved property instead of a vnode patchFlag because the slots
   // object may be directly passed down to a child component in a manual
-  // render funciton, and the optimization hint need to be on the slot object
+  // render function, and the optimization hint need to be on the slot object
   // itself to be preserved.
   _?: 1
 }
