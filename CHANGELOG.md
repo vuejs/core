@@ -1,3 +1,19 @@
+# [3.0.0-beta.20](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.19...v3.0.0-beta.20) (2020-07-08)
+
+
+### Bug Fixes
+
+* **compiler-core/v-on:** bail caching for member expression handlers on components ([87c2a1e](https://github.com/vuejs/vue-next/commit/87c2a1e50f5317a0c47051b06f419e60e5644a1a)), closes [#1541](https://github.com/vuejs/vue-next/issues/1541)
+* **compiler-dom:** should ignore and warn side effect tags like script and style ([5e52f4e](https://github.com/vuejs/vue-next/commit/5e52f4e4d7c92ee8ec9c0d644735e23342965096))
+* **runtime-core:** should allow v-model listeners to fallthrough, but ignore for warning ([903e8f6](https://github.com/vuejs/vue-next/commit/903e8f697e4377e0ae92e1a6b58777438fba3610)), closes [#1543](https://github.com/vuejs/vue-next/issues/1543)
+
+
+### Features
+
+* **types:** expose WritableComputedRef ([#1500](https://github.com/vuejs/vue-next/issues/1500)) ([220db9b](https://github.com/vuejs/vue-next/commit/220db9bcda17a56bb4e5222d2634800672513983))
+
+
+
 # [3.0.0-beta.19](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.18...v3.0.0-beta.19) (2020-07-07)
 
 
