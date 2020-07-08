@@ -58,7 +58,6 @@ export function compileScriptSetup(
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
 
-  // parse and transform <script setup>
   const isTS = scriptSetup.lang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.parserPlugins || []),
@@ -66,7 +65,7 @@ export function compileScriptSetup(
     ...(isTS ? (['typescript'] as const) : [])
   ]
 
-  // process normal <script> first if it exists
+  // 1. process normal <script> first if it exists
   if (script) {
     // import dedupe between <script> and <script setup>
     const scriptAST = parse(script.content, {
@@ -108,7 +107,7 @@ export function compileScriptSetup(
     }
   }
 
-  // check <script setup="xxx"> function signature
+  // 2. check <script setup="xxx"> function signature
   const hasExplicitSignature = typeof scriptSetup.setup === 'string'
   let propsVar = `$props`
   let emitVar = `$emit`
@@ -124,8 +123,8 @@ export function compileScriptSetup(
   let setupCtxASTNode
 
   // props/emits declared via types
-  const typeDeclaredProps: string[] = []
-  const typeDeclaredEmits: string[] = []
+  const typeDeclaredProps: Set<string> = new Set()
+  const typeDeclaredEmits: Set<string> = new Set()
 
   if (isTS && hasExplicitSignature) {
     // <script setup="xxx" lang="ts">
@@ -159,13 +158,11 @@ export function compileScriptSetup(
     }
   }
 
-  const scriptSetupAST = parse(scriptSetup.content, {
+  // 3. parse <script setup> and  walk over top level statements
+  for (const node of parse(scriptSetup.content, {
     plugins,
     sourceType: 'module'
-  }).program.body
-
-  // walk over top level statements
-  for (const node of scriptSetupAST) {
+  }).program.body) {
     const start = node.start! + startOffset
     let end = node.end! + startOffset
     // import or type declarations: move to top
@@ -436,10 +433,33 @@ export function compileScriptSetup(
 
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
-  if (defaultExport) {
-    s.append(`__default__.setup = setup\nexport default __default__`)
+  // finalize default export
+  if (isTS) {
+    // for TS, make sure the exported type is still valid type with
+    // correct props information
+    s.prepend(`import { defineComponent as __define__ } from 'vue'\n`)
+    // we have to use object spread for types to be merged properly
+    // user's TS setting should compile it down to proper targets
+    const def = defaultExport ? `\n  ...__default__,` : ``
+    const runtimeProps = typeDeclaredProps.size
+      ? `\n  props: [${Array.from(typeDeclaredProps)
+          .map(p => JSON.stringify(p))
+          .join(', ')}] as unknown as undefined,`
+      : ``
+    const runtimeEmits = typeDeclaredEmits.size
+      ? `\n  emits: [${Array.from(typeDeclaredEmits)
+          .map(p => JSON.stringify(p))
+          .join(', ')}] as unknown as undefined,`
+      : ``
+    s.append(
+      `export default __define__({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
+    )
   } else {
-    s.append(`export default { setup }`)
+    if (defaultExport) {
+      s.append(`__default__.setup = setup\nexport default __default__`)
+    } else {
+      s.append(`export default { setup }`)
+    }
   }
 
   s.trim()
@@ -536,17 +556,36 @@ function walkPattern(node: Node, bindings: Record<string, boolean>) {
   }
 }
 
-function extractProps(node: TSTypeLiteral, props: string[]) {
-  // TODO
-  console.log('gen props', node, props)
+function extractProps(node: TSTypeLiteral, props: Set<string>) {
+  for (const m of node.members) {
+    if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
+      props.add(m.key.name)
+    }
+  }
 }
 
 function extractEmits(
   node: TSFunctionType | TSDeclareFunction,
-  emits: string[]
+  emits: Set<string>
 ) {
-  // TODO
-  console.log('gen emits', node, emits)
+  const eventName =
+    node.type === 'TSDeclareFunction' ? node.params[0] : node.parameters[0]
+  if (
+    eventName.type === 'Identifier' &&
+    eventName.typeAnnotation &&
+    eventName.typeAnnotation.type === 'TSTypeAnnotation'
+  ) {
+    const typeNode = eventName.typeAnnotation.typeAnnotation
+    if (typeNode.type === 'TSLiteralType') {
+      emits.add(String(typeNode.literal.value))
+    } else if (typeNode.type === 'TSUnionType') {
+      for (const t of typeNode.types) {
+        if (t.type === 'TSLiteralType') {
+          emits.add(String(t.literal.value))
+        }
+      }
+    }
+  }
 }
 
 /**
