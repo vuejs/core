@@ -121,8 +121,12 @@ export function renderComponentRoot(
         for (let i = 0, l = allAttrs.length; i < l; i++) {
           const key = allAttrs[i]
           if (isOn(key)) {
-            // remove `on`, lowercase first letter to reflect event casing accurately
-            eventAttrs.push(key[2].toLowerCase() + key.slice(3))
+            // ignore v-model handlers when they fail to fallthrough
+            if (!key.startsWith('onUpdate:')) {
+              // remove `on`, lowercase first letter to reflect event casing
+              // accurately
+              eventAttrs.push(key[2].toLowerCase() + key.slice(3))
+            }
           } else {
             extraAttrs.push(key)
           }
