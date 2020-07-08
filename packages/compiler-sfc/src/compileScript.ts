@@ -10,6 +10,7 @@ import {
   Identifier,
   ExpressionStatement,
   ArrowFunctionExpression,
+  ExportSpecifier,
   TSTypeLiteral,
   TSFunctionType,
   TSDeclareFunction
@@ -90,18 +91,38 @@ export function compileScriptSetup(
           start + `export default`.length,
           `const __default__ =`
         )
-      } else if (
-        node.type === 'ExportNamedDeclaration' &&
-        node.specifiers &&
-        node.specifiers.some(s => s.exported.name === 'default')
-      ) {
-        defaultExport = node
-        if (node.source) {
-          // export { x as default } from './x'
-          // TODO
-        } else {
-          // export { x as default }
-          // TODO
+      } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
+        const defaultSpecifier = node.specifiers.find(
+          s => s.exported.name === 'default'
+        ) as ExportSpecifier
+        if (defaultSpecifier) {
+          defaultExport = node
+          // 1. remove specifier
+          if (node.specifiers.length > 1) {
+            s.remove(
+              defaultSpecifier.start! + scriptStartOffset!,
+              defaultSpecifier.end! + scriptStartOffset!
+            )
+          } else {
+            s.remove(
+              node.start! + scriptStartOffset!,
+              node.end! + scriptStartOffset!
+            )
+          }
+          if (node.source) {
+            // export { x as default } from './x'
+            // rewrite to `import { x as __default__ } from './x'` and
+            // add to top
+            s.prepend(
+              `import { ${defaultSpecifier.local.name} as __default__ } from '${
+                node.source.value
+              }'\n`
+            )
+          } else {
+            // export { x as default }
+            // rewrite to `const __default__ = x` and move to end
+            s.append(`\nconst __default__ = ${defaultSpecifier.local.name}\n`)
+          }
         }
       }
     }
@@ -230,22 +251,39 @@ export function compileScriptSetup(
           } else if (specifier.type == 'ExportSpecifier') {
             if (specifier.exported.name === 'default') {
               defaultExport = node
-              if (!node.source) {
-                // export { x as default }
-                // rewrite to `const __default__ = x`
-                s.overwrite(
-                  start,
-                  end,
-                  `const __default__ = ${specifier.local.name}\n`
+              // 1. remove specifier
+              if (node.specifiers.length > 1) {
+                s.remove(
+                  specifier.start! + startOffset,
+                  specifier.end! + startOffset
                 )
-                s.move(start, end, source.length)
+              } else {
+                s.remove(node.start! + startOffset!, node.end! + startOffset!)
+              }
+              if (!node.source) {
+                // export { x as default, ... }
+                const local = specifier.local.name
+                if (setupScopeVars[local] || setupExports[local]) {
+                  throw new Error(
+                    `Cannot export locally defined variable as default in <script setup>.\n` +
+                      `Default export must be an object literal with no reference to local scope.\n` +
+                      generateCodeFrame(
+                        source,
+                        specifier.start! + startOffset,
+                        specifier.end! + startOffset
+                      )
+                  )
+                }
+                // rewrite to `const __default__ = x` and move to end
+                s.append(`\nconst __default__ = ${local}\n`)
               } else {
                 // export { x as default } from './x'
-                // rewrite to `import { x as __default__ } from './x'`
-                s.overwrite(
-                  specifier.exported.start! + startOffset,
-                  specifier.exported.start! + startOffset + 7,
-                  '__default__'
+                // rewrite to `import { x as __default__ } from './x'` and
+                // add to top
+                s.prepend(
+                  `import { ${specifier.local.name} as __default__ } from '${
+                    node.source.value
+                  }'\n`
                 )
               }
             } else {
@@ -261,7 +299,7 @@ export function compileScriptSetup(
       s.overwrite(
         start,
         node.source.start! + startOffset,
-        `import * as __import_all_${exportAllIndex++}__ from `
+        `import * as __export_all_${exportAllIndex++}__ from `
       )
       s.move(start, end, 0)
     }
