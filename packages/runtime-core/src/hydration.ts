@@ -80,7 +80,7 @@ export function createHydrationFunctions(
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
-      handleMismtach(
+      handleMismatch(
         node,
         vnode,
         parentComponent,
@@ -397,7 +397,7 @@ export function createHydrationFunctions(
     }
   }
 
-  const handleMismtach = (
+  const handleMismatch = (
     node: Node,
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
