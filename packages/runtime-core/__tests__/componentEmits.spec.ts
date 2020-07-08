@@ -26,13 +26,13 @@ describe('component: emit', () => {
     render(h(Comp), nodeOps.createElement('div'))
 
     expect(onfoo).not.toHaveBeenCalled()
-    // only capitalized or special chars are considerd event listeners
+    // only capitalized or special chars are considered event listeners
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
   })
 
   // for v-model:foo-bar usage in DOM templates
-  test('trigger hyphendated events for update:xxx events', () => {
+  test('trigger hyphenated events for update:xxx events', () => {
     const Foo = defineComponent({
       render() {},
       created() {

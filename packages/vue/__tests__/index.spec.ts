@@ -117,7 +117,7 @@ describe('compiler + runtime integration', () => {
     document.querySelector = origin
   })
 
-  it('should warn when template is not avaiable', () => {
+  it('should warn when template is not available', () => {
     const app = createApp({
       template: {}
     })

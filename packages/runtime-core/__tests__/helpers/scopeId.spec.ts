@@ -45,10 +45,10 @@ describe('scopeId runtime support', () => {
         return h('div', this.$slots.default())
       })
     }
-    const withChil2Id = withScopeId('child2')
+    const withChild2Id = withScopeId('child2')
     const Child2 = {
       __scopeId: 'child2',
-      render: withChil2Id(() => h('span'))
+      render: withChild2Id(() => h('span'))
     }
     const App = {
       __scopeId: 'parent',
