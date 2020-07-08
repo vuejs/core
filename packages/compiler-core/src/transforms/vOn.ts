@@ -6,7 +6,8 @@ import {
   ExpressionNode,
   NodeTypes,
   createCompoundExpression,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  ElementTypes
 } from '../ast'
 import { capitalize, camelize } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -76,7 +77,16 @@ export const transformOn: DirectiveTransform = (
       // with scope analysis, the function is hoistable if it has no reference
       // to scope variables.
       isCacheable =
-        context.cacheHandlers && !hasScopeRef(exp, context.identifiers)
+        context.cacheHandlers &&
+        // #1541 bail if this is a member exp handler passed to a component -
+        // we need to use the original function to preserve arity,
+        // e.g. <transition> relies on checking cb.length to determine
+        // transition end handling. Inline function is ok since its arity
+        // is preserved even when cached.
+        !(isMemberExp && node.tagType === ElementTypes.COMPONENT) &&
+        // bail if the function references closure variables (v-for, v-slot)
+        // it must be passed fresh to avoid stale values.
+        !hasScopeRef(exp, context.identifiers)
       // If the expression is optimizable and is a member expression pointing
       // to a function, turn it into invocation (and wrap in an arrow function
       // below) so that it always accesses the latest value when called - thus
