@@ -142,7 +142,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
 
     if (typeof component !== 'string') {
       // dynamic component that resolved to a `resolveDynamicComponent` call
-      // expression - since the reoslved result may be a plain element (string)
+      // expression - since the resolved result may be a plain element (string)
       // or a VNode, handle it with `renderVNode`.
       node.ssrCodegenNode = createCallExpression(
         context.helper(SSR_RENDER_VNODE),

@@ -64,7 +64,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // element
     // generate the template literal representing the open tag.
     const openTag: TemplateLiteral['elements'] = [`<${node.tag}`]
-    // some tags need to be pasesd to runtime for special checks
+    // some tags need to be passed to runtime for special checks
     const needTagForRuntime =
       node.tag === 'textarea' || node.tag.indexOf('-') > 0
 
