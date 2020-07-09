@@ -205,9 +205,82 @@ describe('SFC compile <script setup>', () => {
       expect(bindings).toStrictEqual({ a: 'setup' })
     })
 
-    test('extract props', () => {})
+    test('extract props', () => {
+      const { code } = compile(`
+      <script setup="myProps" lang="ts">
+      interface Test {}
 
-    test('extract emits', () => {})
+      type Alias = number[]
+
+      declare const myProps: {
+        string: string
+        number: number
+        boolean: boolean
+        object: object
+        objectLiteral: { a: number }
+        fn: (n: number) => void
+        functionRef: Function
+        objectRef: Object
+        array: string[]
+        arrayRef: Array<any>
+        tuple: [number, number]
+        set: Set<string>
+        literal: 'foo'
+        optional?: any
+        recordRef: Record<string, null>
+        interface: Test
+        alias: Alias
+
+        union: string | number
+        literalUnion: 'foo' | 'bar'
+        literalUnionMixed: 'foo' | 1 | boolean
+        intersection: Test & {}
+      }
+      </script>`)
+      assertCode(code)
+      expect(code).toMatch(`string: { type: String, required: true }`)
+      expect(code).toMatch(`number: { type: Number, required: true }`)
+      expect(code).toMatch(`boolean: { type: Boolean, required: true }`)
+      expect(code).toMatch(`object: { type: Object, required: true }`)
+      expect(code).toMatch(`objectLiteral: { type: Object, required: true }`)
+      expect(code).toMatch(`fn: { type: Function, required: true }`)
+      expect(code).toMatch(`functionRef: { type: Function, required: true }`)
+      expect(code).toMatch(`objectRef: { type: Object, required: true }`)
+      expect(code).toMatch(`array: { type: Array, required: true }`)
+      expect(code).toMatch(`arrayRef: { type: Array, required: true }`)
+      expect(code).toMatch(`tuple: { type: Array, required: true }`)
+      expect(code).toMatch(`set: { type: Set, required: true }`)
+      expect(code).toMatch(`literal: { type: String, required: true }`)
+      expect(code).toMatch(`optional: { type: null, required: false }`)
+      expect(code).toMatch(`recordRef: { type: Object, required: true }`)
+      expect(code).toMatch(`interface: { type: Object, required: true }`)
+      expect(code).toMatch(`alias: { type: Array, required: true }`)
+      expect(code).toMatch(`union: { type: [String, Number], required: true }`)
+      expect(code).toMatch(
+        `literalUnion: { type: [String, String], required: true }`
+      )
+      expect(code).toMatch(
+        `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
+      )
+      expect(code).toMatch(`intersection: { type: Object, required: true }`)
+    })
+
+    test('extract emits', () => {
+      const { code } = compile(`
+      <script setup="_, { emit: myEmit }" lang="ts">
+      declare function myEmit(e: 'foo' | 'bar'): void
+      declare function myEmit(e: 'baz', id: number): void
+      </script>
+      `)
+      assertCode(code)
+      expect(code).toMatch(`declare function __emit__(e: 'foo' | 'bar'): void`)
+      expect(code).toMatch(
+        `declare function __emit__(e: 'baz', id: number): void`
+      )
+      expect(code).toMatch(
+        `emits: ["foo", "bar", "baz"] as unknown as undefined`
+      )
+    })
   })
 
   describe('errors', () => {

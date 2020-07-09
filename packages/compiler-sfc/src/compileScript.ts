@@ -420,7 +420,7 @@ export function compileScriptSetup(
     }
   }
 
-  // check default export to make sure it doesn't reference setup scope
+  // 4. check default export to make sure it doesn't reference setup scope
   // variables
   if (needDefaultExportRefCheck) {
     checkDefaultExport(
@@ -433,7 +433,7 @@ export function compileScriptSetup(
     )
   }
 
-  // remove non-script content
+  // 5. remove non-script content
   if (script) {
     if (startOffset < scriptStartOffset!) {
       // <script setup> before <script>
@@ -451,8 +451,7 @@ export function compileScriptSetup(
     s.remove(endOffset, source.length)
   }
 
-  // wrap setup code with function
-  // finalize the argument signature.
+  // 5. finalize setup argument signature.
   let args = ``
   if (isTS) {
     if (slotsType === '__Slots__') {
@@ -480,6 +479,7 @@ export function compileScriptSetup(
     args = hasExplicitSignature ? (scriptSetup.setup as string) : ``
   }
 
+  // 6. wrap setup code with function.
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
   s.appendLeft(startOffset, `\nexport function setup(${args}) {\n`)
@@ -499,7 +499,7 @@ export function compileScriptSetup(
 
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
-  // finalize default export
+  // 7. finalize default export
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
@@ -520,9 +520,7 @@ export function compileScriptSetup(
     }
   }
 
-  s.trim()
-
-  // analyze bindings for template compiler optimization
+  // 8. expose bindings for template compiler optimization
   if (script) {
     Object.assign(bindings, analyzeScriptBindings(script))
   }
@@ -530,6 +528,7 @@ export function compileScriptSetup(
     bindings[key] = 'setup'
   })
 
+  s.trim()
   return {
     bindings,
     code: s.toString(),

@@ -1,5 +1,92 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`SFC compile <script setup> <script setup lang="ts"> extract emits 1`] = `
+"import { defineComponent as __define__ } from 'vue'
+import { Slots as __Slots__ } from 'vue'
+declare function __emit__(e: 'foo' | 'bar'): void
+      declare function __emit__(e: 'baz', id: number): void
+      
+export function setup(_: {}, { emit: myEmit }: {
+  emit: typeof __emit__,
+  slots: __Slots__,
+  attrs: Record<string, any>
+}) {
+
+      
+return {  }
+}
+
+export default __define__({
+  emits: [\\"foo\\", \\"bar\\", \\"baz\\"] as unknown as undefined,
+  setup
+})"
+`;
+
+exports[`SFC compile <script setup> <script setup lang="ts"> extract props 1`] = `
+"import { defineComponent as __define__ } from 'vue'
+import { Slots as __Slots__ } from 'vue'
+interface Test {}
+
+      type Alias = number[]
+
+      
+export function setup(myProps: {
+        string: string
+        number: number
+        boolean: boolean
+        object: object
+        objectLiteral: { a: number }
+        fn: (n: number) => void
+        functionRef: Function
+        objectRef: Object
+        array: string[]
+        arrayRef: Array<any>
+        tuple: [number, number]
+        set: Set<string>
+        literal: 'foo'
+        optional?: any
+        recordRef: Record<string, null>
+        interface: Test
+        alias: Alias
+
+        union: string | number
+        literalUnion: 'foo' | 'bar'
+        literalUnionMixed: 'foo' | 1 | boolean
+        intersection: Test & {}
+      }) {
+
+      
+return {  }
+}
+
+export default __define__({
+  props: {
+    string: { type: String, required: true },
+    number: { type: Number, required: true },
+    boolean: { type: Boolean, required: true },
+    object: { type: Object, required: true },
+    objectLiteral: { type: Object, required: true },
+    fn: { type: Function, required: true },
+    functionRef: { type: Function, required: true },
+    objectRef: { type: Object, required: true },
+    array: { type: Array, required: true },
+    arrayRef: { type: Array, required: true },
+    tuple: { type: Array, required: true },
+    set: { type: Set, required: true },
+    literal: { type: String, required: true },
+    optional: { type: null, required: false },
+    recordRef: { type: Object, required: true },
+    interface: { type: Object, required: true },
+    alias: { type: Array, required: true },
+    union: { type: [String, Number], required: true },
+    literalUnion: { type: [String, String], required: true },
+    literalUnionMixed: { type: [String, Number, Boolean], required: true },
+    intersection: { type: Object, required: true }
+  } as unknown as undefined,
+  setup
+})"
+`;
+
 exports[`SFC compile <script setup> <script setup lang="ts"> hoist type declarations 1`] = `
 "import { defineComponent as __define__ } from 'vue'
 import { Slots as __Slots__ } from 'vue'
