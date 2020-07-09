@@ -562,9 +562,9 @@
     "@rushstack/node-core-library" "3.25.0"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.9.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.1.tgz#12e21c1afe50d9fe27f081a90be88300b2384938"
-  integrity sha512-xN52HjZTTvAeKh1IwQhYIIamySGrKEQjpnqJhK3za+BEt3jsUJjtwLsDlUAXJ955CItLoqiB8fXySEvf7wCfjw==
+  version "7.9.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.2.tgz#3bb8c93f4280fcb94171e4214d714e1639f4fbd4"
+  integrity sha512-R4b3zXlYdicoS8bRLXEChTKLPyhUHrG1cb0GDtOX0zdoxlovU1p0JaPt97A/vC7N3Gm2E8gd2qsDWElKU3/wKQ==
   dependencies:
     "@microsoft/api-extractor-model" "7.8.12"
     "@microsoft/tsdoc" "0.12.19"
