@@ -23,6 +23,7 @@ export {
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
+export { SFCScriptCompileOptions } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,

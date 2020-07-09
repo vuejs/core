@@ -51,7 +51,21 @@ export function compileScriptSetup(
   const setupExports: Record<string, boolean> = {}
   let exportAllIndex = 0
   let defaultExport: Node | undefined
-  let needDefaultExportCheck: boolean = false
+  let needDefaultExportRefCheck: boolean = false
+
+  const checkDuplicateDefaultExport = (node: Node) => {
+    if (defaultExport) {
+      // <script> already has export default
+      throw new Error(
+        `Default export is already declared in normal <script>.\n\n` +
+          generateCodeFrame(
+            source,
+            node.start! + startOffset,
+            node.start! + startOffset + `export default`.length
+          )
+      )
+    }
+  }
 
   const s = new MagicString(source)
   const startOffset = scriptSetup.loc.start.offset
@@ -62,7 +76,7 @@ export function compileScriptSetup(
   const isTS = scriptSetup.lang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.parserPlugins || []),
-    ...(babelParserDefautPlugins as ParserPlugin[]),
+    ...babelParserDefautPlugins,
     ...(isTS ? (['typescript'] as const) : [])
   ]
 
@@ -130,10 +144,11 @@ export function compileScriptSetup(
 
   // 2. check <script setup="xxx"> function signature
   const hasExplicitSignature = typeof scriptSetup.setup === 'string'
-  let propsVar = `$props`
-  let emitVar = `$emit`
-  let slotsVar = `$slots`
-  let attrsVar = `$attrs`
+
+  let propsVar: string | undefined
+  let emitVar: string | undefined
+  let slotsVar: string | undefined
+  let attrsVar: string | undefined
 
   let propsType = `{}`
   let emitType = `(e: string, ...args: any[]) => void`
@@ -239,24 +254,32 @@ export function compileScriptSetup(
           s.remove(start, end)
         }
         for (const specifier of node.specifiers) {
-          if (specifier.type == 'ExportDefaultSpecifier') {
+          if (specifier.type === 'ExportDefaultSpecifier') {
             // export default from './x'
             // rewrite to `import __default__ from './x'`
+            checkDuplicateDefaultExport(node)
             defaultExport = node
             s.overwrite(
               specifier.exported.start! + startOffset,
               specifier.exported.start! + startOffset + 7,
               '__default__'
             )
-          } else if (specifier.type == 'ExportSpecifier') {
+          } else if (specifier.type === 'ExportSpecifier') {
             if (specifier.exported.name === 'default') {
+              checkDuplicateDefaultExport(node)
               defaultExport = node
               // 1. remove specifier
               if (node.specifiers.length > 1) {
-                s.remove(
-                  specifier.start! + startOffset,
-                  specifier.end! + startOffset
-                )
+                // removing the default specifier from a list of specifiers.
+                // look ahead until we reach the first non , or whitespace char.
+                let end = specifier.end! + startOffset
+                while (end < source.length) {
+                  if (/[^,\s]/.test(source.charAt(end))) {
+                    break
+                  }
+                  end++
+                }
+                s.remove(specifier.start! + startOffset, end)
               } else {
                 s.remove(node.start! + startOffset!, node.end! + startOffset!)
               }
@@ -288,6 +311,9 @@ export function compileScriptSetup(
               }
             } else {
               setupExports[specifier.exported.name] = true
+              if (node.source) {
+                imports[specifier.exported.name] = node.source.value
+              }
             }
           }
         }
@@ -305,30 +331,15 @@ export function compileScriptSetup(
     }
 
     if (node.type === 'ExportDefaultDeclaration') {
-      if (defaultExport) {
-        // <script> already has export default
-        throw new Error(
-          `Default export is already declared in normal <script>.\n\n` +
-            generateCodeFrame(
-              source,
-              node.start! + startOffset,
-              node.start! + startOffset + `export default`.length
-            )
-        )
-      } else {
-        // export default {} inside <script setup>
-        // this should be kept in module scope - move it to the end
-        s.move(start, end, source.length)
-        s.overwrite(
-          start,
-          start + `export default`.length,
-          `const __default__ =`
-        )
-        // save it for analysis when all imports and variable declarations have
-        // been recorded
-        defaultExport = node
-        needDefaultExportCheck = true
-      }
+      checkDuplicateDefaultExport(node)
+      // export default {} inside <script setup>
+      // this should be kept in module scope - move it to the end
+      s.move(start, end, source.length)
+      s.overwrite(start, start + `export default`.length, `const __default__ =`)
+      // save it for analysis when all imports and variable declarations have
+      // been recorded
+      defaultExport = node
+      needDefaultExportRefCheck = true
     }
 
     if (
@@ -397,7 +408,7 @@ export function compileScriptSetup(
 
   // check default export to make sure it doesn't reference setup scope
   // variables
-  if (needDefaultExportCheck) {
+  if (needDefaultExportRefCheck) {
     checkDefaultExport(
       defaultExport!,
       setupScopeVars,
@@ -428,7 +439,7 @@ export function compileScriptSetup(
 
   // wrap setup code with function
   // finalize the argument signature.
-  let args
+  let args = ``
   if (isTS) {
     if (slotsType === '__Slots__') {
       s.prepend(`import { Slots as __Slots__ } from 'vue'\n`)
@@ -450,13 +461,9 @@ export function compileScriptSetup(
         ss.appendRight(setupCtxASTNode.end! - 1!, `: ${ctxType}`)
       }
       args = ss.toString()
-    } else {
-      args = `$props: ${propsType}, { emit: $emit, slots: $slots, attrs: $attrs }: ${ctxType}`
     }
   } else {
-    args = hasExplicitSignature
-      ? scriptSetup.setup
-      : `$props, { emit: $emit, slots: $slots, attrs: $attrs }`
+    args = hasExplicitSignature ? (scriptSetup.setup as string) : ``
   }
 
   // export the content of <script setup> as a named export, `setup`.
@@ -602,6 +609,7 @@ function walkPattern(node: Node, bindings: Record<string, boolean>) {
 }
 
 function extractProps(node: TSTypeLiteral, props: Set<string>) {
+  // TODO generate type/required checks in dev
   for (const m of node.members) {
     if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
       props.add(m.key.name)

@@ -23,7 +23,7 @@ export const babelParserDefautPlugins = [
   'bigInt',
   'optionalChaining',
   'nullishCoalescingOperator'
-]
+] as const
 
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})

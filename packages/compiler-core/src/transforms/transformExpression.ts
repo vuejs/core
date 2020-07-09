@@ -30,7 +30,6 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { Node, Function, Identifier, ObjectProperty } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
-import { ParserPlugin } from '@babel/parser'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
@@ -130,10 +129,7 @@ export function processExpression(
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parseJS(source, {
-      plugins: [
-        ...context.expressionPlugins,
-        ...(babelParserDefautPlugins as ParserPlugin[])
-      ]
+      plugins: [...context.expressionPlugins, ...babelParserDefautPlugins]
     }).program
   } catch (e) {
     context.onError(
