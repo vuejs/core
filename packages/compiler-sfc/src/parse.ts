@@ -5,10 +5,12 @@ import {
   CompilerError,
   TextModes
 } from '@vue/compiler-core'
+import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
-import * as CompilerDOM from '@vue/compiler-dom'
+import { compileScript, BindingMetadata } from './compileScript'
+import { ParserPlugin } from '@babel/parser'
 
 export interface SFCParseOptions {
   filename?: string
@@ -16,6 +18,7 @@ export interface SFCParseOptions {
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
   compiler?: TemplateCompiler
+  babelParserPlugins?: ParserPlugin[]
 }
 
 export interface SFCBlock {
@@ -35,7 +38,7 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
-  setup?: boolean | string
+  bindings?: BindingMetadata
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -50,6 +53,7 @@ export interface SFCDescriptor {
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
+  scriptTransformed: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
 }
@@ -75,7 +79,8 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = CompilerDOM
+    compiler = CompilerDOM,
+    babelParserPlugins
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -91,6 +96,7 @@ export function parse(
     template: null,
     script: null,
     scriptSetup: null,
+    scriptTransformed: null,
     styles: [],
     customBlocks: []
   }
@@ -146,15 +152,16 @@ export function parse(
         break
       case 'script':
         const block = createBlock(node, source, pad) as SFCScriptBlock
-        if (block.setup && !descriptor.scriptSetup) {
+        const isSetup = !!block.attrs.setup
+        if (isSetup && !descriptor.scriptSetup) {
           descriptor.scriptSetup = block
           break
         }
-        if (!block.setup && !descriptor.script) {
+        if (!isSetup && !descriptor.script) {
           descriptor.script = block
           break
         }
-        warnDuplicateBlock(source, filename, node, !!block.setup)
+        warnDuplicateBlock(source, filename, node, isSetup)
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -180,6 +187,16 @@ export function parse(
     genMap(descriptor.template)
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
+  }
+
+  if (descriptor.script || descriptor.scriptSetup) {
+    try {
+      descriptor.scriptTransformed = compileScript(descriptor, {
+        babelParserPlugins
+      })
+    } catch (e) {
+      errors.push(e)
+    }
   }
 
   const result = {
@@ -252,8 +269,6 @@ function createBlock(
         }
       } else if (type === 'template' && p.name === 'functional') {
         ;(block as SFCTemplateBlock).functional = true
-      } else if (type === 'script' && p.name === 'setup') {
-        ;(block as SFCScriptBlock).setup = attrs.setup || true
       }
     }
   })

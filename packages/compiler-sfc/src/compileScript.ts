@@ -1,4 +1,4 @@
-import MagicString, { SourceMap } from 'magic-string'
+import MagicString from 'magic-string'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefautPlugins, generateCodeFrame } from '@vue/shared'
@@ -17,13 +17,14 @@ import {
   TSDeclareFunction
 } from '@babel/types'
 import { walk } from 'estree-walker'
+import { RawSourceMap } from 'source-map'
+
+export interface SFCScriptCompileOptions {
+  babelParserPlugins?: ParserPlugin[]
+}
 
 export interface BindingMetadata {
   [key: string]: 'data' | 'props' | 'setup' | 'ctx'
-}
-
-export interface SFCScriptCompileOptions {
-  parserPlugins?: ParserPlugin[]
 }
 
 let hasWarned = false
@@ -33,10 +34,10 @@ let hasWarned = false
  * It requires the whole SFC descriptor because we need to handle and merge
  * normal `<script>` + `<script setup>` if both are present.
  */
-export function compileScriptSetup(
+export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions = {}
-) {
+): SFCScriptBlock {
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     console.log(
@@ -47,7 +48,13 @@ export function compileScriptSetup(
 
   const { script, scriptSetup, source, filename } = sfc
   if (!scriptSetup) {
-    throw new Error('SFC has no <script setup>.')
+    if (!script) {
+      throw new Error(`SFC contains no <script> tags.`)
+    }
+    return {
+      ...script,
+      bindings: analyzeScriptBindings(script)
+    }
   }
 
   if (script && script.lang !== scriptSetup.lang) {
@@ -86,7 +93,7 @@ export function compileScriptSetup(
 
   const isTS = scriptSetup.lang === 'ts'
   const plugins: ParserPlugin[] = [
-    ...(options.parserPlugins || []),
+    ...(options.babelParserPlugins || []),
     ...babelParserDefautPlugins,
     ...(isTS ? (['typescript'] as const) : [])
   ]
@@ -154,7 +161,8 @@ export function compileScriptSetup(
   }
 
   // 2. check <script setup="xxx"> function signature
-  const hasExplicitSignature = typeof scriptSetup.setup === 'string'
+  const setupValue = scriptSetup.attrs.setup
+  const hasExplicitSignature = typeof setupValue === 'string'
 
   let propsVar: string | undefined
   let emitVar: string | undefined
@@ -179,8 +187,8 @@ export function compileScriptSetup(
     // <script setup="xxx" lang="ts">
     // parse the signature to extract the props/emit variables the user wants
     // we need them to find corresponding type declarations.
-    const signatureAST = parse(`(${scriptSetup.setup})=>{}`, { plugins })
-      .program.body[0]
+    const signatureAST = parse(`(${setupValue})=>{}`, { plugins }).program
+      .body[0]
     const params = ((signatureAST as ExpressionStatement)
       .expression as ArrowFunctionExpression).params
     if (params[0] && params[0].type === 'Identifier') {
@@ -464,7 +472,7 @@ export function compileScriptSetup(
 }`
     if (hasExplicitSignature) {
       // inject types to user signature
-      args = scriptSetup.setup as string
+      args = setupValue as string
       const ss = new MagicString(args)
       if (propsASTNode) {
         // compensate for () wraper offset
@@ -476,7 +484,7 @@ export function compileScriptSetup(
       args = ss.toString()
     }
   } else {
-    args = hasExplicitSignature ? (scriptSetup.setup as string) : ``
+    args = hasExplicitSignature ? (setupValue as string) : ``
   }
 
   // 6. wrap setup code with function.
@@ -530,13 +538,14 @@ export function compileScriptSetup(
 
   s.trim()
   return {
+    ...scriptSetup,
     bindings,
-    code: s.toString(),
-    map: s.generateMap({
+    content: s.toString(),
+    map: (s.generateMap({
       source: filename,
       hires: true,
       includeContent: true
-    }) as SourceMap
+    }) as unknown) as RawSourceMap
   }
 }
 

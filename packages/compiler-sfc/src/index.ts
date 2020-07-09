@@ -2,7 +2,7 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
-export { compileScriptSetup, analyzeScriptBindings } from './compileScript'
+export { compileScript, analyzeScriptBindings } from './compileScript'
 
 // Types
 export {
@@ -23,7 +23,7 @@ export {
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
-export { SFCScriptCompileOptions } from './compileScript'
+export { SFCScriptCompileOptions, BindingMetadata } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,
