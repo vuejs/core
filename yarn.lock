@@ -562,9 +562,9 @@
     "@rushstack/node-core-library" "3.25.0"
 
 "@microsoft/api-extractor@^7.3.9":
-  version "7.9.1"
-  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.1.tgz#12e21c1afe50d9fe27f081a90be88300b2384938"
-  integrity sha512-xN52HjZTTvAeKh1IwQhYIIamySGrKEQjpnqJhK3za+BEt3jsUJjtwLsDlUAXJ955CItLoqiB8fXySEvf7wCfjw==
+  version "7.9.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/api-extractor/-/api-extractor-7.9.2.tgz#3bb8c93f4280fcb94171e4214d714e1639f4fbd4"
+  integrity sha512-R4b3zXlYdicoS8bRLXEChTKLPyhUHrG1cb0GDtOX0zdoxlovU1p0JaPt97A/vC7N3Gm2E8gd2qsDWElKU3/wKQ==
   dependencies:
     "@microsoft/api-extractor-model" "7.8.12"
     "@microsoft/tsdoc" "0.12.19"
@@ -4580,9 +4580,9 @@ lodash.templatesettings@^4.0.0:
     lodash._reinterpolate "^3.0.0"
 
 lodash@^4.17.13, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.4, lodash@~4.17.15:
-  version "4.17.15"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.15.tgz#b447f6670a0455bbfeedd11392eff330ea097548"
-  integrity sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==
+  version "4.17.19"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.19.tgz#e48ddedbe30b3321783c5b4301fbd353bc1e4a4b"
+  integrity sha512-JNvd8XER9GQX0v2qJgsaN/mzFCNA5BRe/j8JN9d+tWyGLSodKQHKFicdwNYzWwI3wjRnaKPsGj1XkBjx/F96DQ==
 
 log-symbols@^4.0.0:
   version "4.0.0"
@@ -6202,9 +6202,9 @@ rollup-pluginutils@^2.3.1:
     estree-walker "^0.6.1"
 
 rollup@^2.16.1:
-  version "2.20.0"
-  resolved "https://registry.yarnpkg.com/rollup/-/rollup-2.20.0.tgz#7456fed8424a5247954958751642e9fdd0ad7485"
-  integrity sha512-hkbp//ne1om8+PQRpd81zk0KDvbJxkLZdZJh1ZNxjd1EkI0H1TmYuHqqXx88yciS+5YnMom3geubQjTeeUnNNw==
+  version "2.21.0"
+  resolved "https://registry.yarnpkg.com/rollup/-/rollup-2.21.0.tgz#d2e114533812043d5c9b7b0a83f1b2a242e4e1d6"
+  integrity sha512-BEGgy+wSzux7Ycq58pRiWEOBZaXRXTuvzl1gsm7gqmsAHxkWf9nyA5V2LN9fGSHhhDQd0/C13iRzSh4bbIpWZQ==
   optionalDependencies:
     fsevents "~2.1.2"
 

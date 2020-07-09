@@ -13,7 +13,7 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template)
+  const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [transformExpression, transformElement],
     directiveTransforms: {
@@ -400,13 +400,18 @@ describe('compiler: transform v-on', () => {
         index: 1,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [
-            `($event, ...args) => (`,
-            { content: `_ctx.foo($event, ...args)` },
-            `)`
-          ]
+          children: [`(...args) => (`, { content: `_ctx.foo(...args)` }, `)`]
         }
       })
+    })
+
+    test('bail on component member expression handler', () => {
+      const { root } = parseWithVOn(`<comp v-on:click="foo" />`, {
+        prefixIdentifiers: true,
+        cacheHandlers: true,
+        isNativeTag: tag => tag === 'div'
+      })
+      expect(root.cached).toBe(0)
     })
 
     test('inline function expression handler', () => {

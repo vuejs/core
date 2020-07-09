@@ -256,11 +256,7 @@ function setFullProps(
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
         props[camelKey] = value
-      } else if (
-        (!emits || !isEmitListener(emits, key)) &&
-        // ignore v-model listeners
-        !key.startsWith(`onUpdate:`)
-      ) {
+      } else if (!emits || !isEmitListener(emits, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
