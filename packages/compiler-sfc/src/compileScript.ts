@@ -11,6 +11,7 @@ import {
   ExpressionStatement,
   ArrowFunctionExpression,
   ExportSpecifier,
+  TSType,
   TSTypeLiteral,
   TSFunctionType,
   TSDeclareFunction
@@ -25,6 +26,8 @@ export interface SFCScriptCompileOptions {
   parserPlugins?: ParserPlugin[]
 }
 
+let hasWarned = false
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -34,6 +37,14 @@ export function compileScriptSetup(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions = {}
 ) {
+  if (__DEV__ && !__TEST__ && !hasWarned) {
+    hasWarned = true
+    console.log(
+      `\n[@vue/compiler-sfc] <script setup> is still an experimental proposal.\n` +
+        `Follow https://github.com/vuejs/rfcs/pull/182 for its status.\n`
+    )
+  }
+
   const { script, scriptSetup, source, filename } = sfc
   if (!scriptSetup) {
     throw new Error('SFC has no <script setup>.')
@@ -159,8 +170,10 @@ export function compileScriptSetup(
   let setupCtxASTNode
 
   // props/emits declared via types
-  const typeDeclaredProps: Set<string> = new Set()
+  const typeDeclaredProps: Record<string, PropTypeData> = {}
   const typeDeclaredEmits: Set<string> = new Set()
+  // record declared types for runtime props type generation
+  const declaredTypes: Record<string, string[]> = {}
 
   if (isTS && hasExplicitSignature) {
     // <script setup="xxx" lang="ts">
@@ -368,7 +381,7 @@ export function compileScriptSetup(
             if (typeNode.type === 'TSTypeLiteral') {
               if (id.name === propsVar) {
                 propsType = typeString
-                extractProps(typeNode, typeDeclaredProps)
+                extractRuntimeProps(typeNode, typeDeclaredProps, declaredTypes)
               } else if (id.name === slotsVar) {
                 slotsType = typeString
               } else if (id.name === attrsVar) {
@@ -379,7 +392,7 @@ export function compileScriptSetup(
               typeNode.type === 'TSFunctionType'
             ) {
               emitType = typeString
-              extractEmits(typeNode, typeDeclaredEmits)
+              extractRuntimeEmits(typeNode, typeDeclaredEmits)
             }
           }
         }
@@ -394,7 +407,7 @@ export function compileScriptSetup(
       const index = node.id.start! + startOffset
       s.overwrite(index, index + emitVar.length, '__emit__')
       emitType = `typeof __emit__`
-      extractEmits(node, typeDeclaredEmits)
+      extractRuntimeEmits(node, typeDeclaredEmits)
     }
 
     // move all type declarations to outer scope
@@ -402,6 +415,7 @@ export function compileScriptSetup(
       node.type.startsWith('TS') ||
       (node.type === 'ExportNamedDeclaration' && node.exportKind === 'type')
     ) {
+      recordType(node, declaredTypes)
       s.move(start, end, 0)
     }
   }
@@ -493,16 +507,8 @@ export function compileScriptSetup(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     const def = defaultExport ? `\n  ...__default__,` : ``
-    const runtimeProps = typeDeclaredProps.size
-      ? `\n  props: [${Array.from(typeDeclaredProps)
-          .map(p => JSON.stringify(p))
-          .join(', ')}] as unknown as undefined,`
-      : ``
-    const runtimeEmits = typeDeclaredEmits.size
-      ? `\n  emits: [${Array.from(typeDeclaredEmits)
-          .map(p => JSON.stringify(p))
-          .join(', ')}] as unknown as undefined,`
-      : ``
+    const runtimeProps = genRuntimeProps(typeDeclaredProps)
+    const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
     s.append(
       `export default __define__({${def}${runtimeProps}${runtimeEmits}\n  setup\n})`
     )
@@ -608,16 +614,157 @@ function walkPattern(node: Node, bindings: Record<string, boolean>) {
   }
 }
 
-function extractProps(node: TSTypeLiteral, props: Set<string>) {
-  // TODO generate type/required checks in dev
+interface PropTypeData {
+  key: string
+  type: string[]
+  required: boolean
+}
+
+function recordType(node: Node, declaredTypes: Record<string, string[]>) {
+  if (node.type === 'TSInterfaceDeclaration') {
+    declaredTypes[node.id.name] = [`Object`]
+  } else if (node.type === 'TSTypeAliasDeclaration') {
+    declaredTypes[node.id.name] = inferRuntimeType(
+      node.typeAnnotation,
+      declaredTypes
+    )
+  } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
+    recordType(node.declaration, declaredTypes)
+  }
+}
+
+function extractRuntimeProps(
+  node: TSTypeLiteral,
+  props: Record<string, PropTypeData>,
+  declaredTypes: Record<string, string[]>
+) {
   for (const m of node.members) {
     if (m.type === 'TSPropertySignature' && m.key.type === 'Identifier') {
-      props.add(m.key.name)
+      props[m.key.name] = {
+        key: m.key.name,
+        required: !m.optional,
+        type:
+          __DEV__ && m.typeAnnotation
+            ? inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
+            : [`null`]
+      }
     }
   }
 }
 
-function extractEmits(
+function inferRuntimeType(
+  node: TSType,
+  declaredTypes: Record<string, string[]>
+): string[] {
+  switch (node.type) {
+    case 'TSStringKeyword':
+      return ['String']
+    case 'TSNumberKeyword':
+      return ['Number']
+    case 'TSBooleanKeyword':
+      return ['Boolean']
+    case 'TSObjectKeyword':
+      return ['Object']
+    case 'TSTypeLiteral':
+      // TODO (nice to have) generate runtime property validation
+      return ['Object']
+    case 'TSFunctionType':
+      return ['Function']
+    case 'TSArrayType':
+    case 'TSTupleType':
+      // TODO (nice to have) genrate runtime element type/length checks
+      return ['Array']
+
+    case 'TSLiteralType':
+      switch (node.literal.type) {
+        case 'StringLiteral':
+          return ['String']
+        case 'BooleanLiteral':
+          return ['Boolean']
+        case 'NumericLiteral':
+        case 'BigIntLiteral':
+          return ['Number']
+        default:
+          return [`null`]
+      }
+
+    case 'TSTypeReference':
+      if (node.typeName.type === 'Identifier') {
+        if (declaredTypes[node.typeName.name]) {
+          return declaredTypes[node.typeName.name]
+        }
+        switch (node.typeName.name) {
+          case 'Array':
+          case 'Function':
+          case 'Object':
+          case 'Set':
+          case 'Map':
+          case 'WeakSet':
+          case 'WeakMap':
+            return [node.typeName.name]
+          case 'Record':
+          case 'Partial':
+          case 'Readonly':
+          case 'Pick':
+          case 'Omit':
+          case 'Exclude':
+          case 'Extract':
+          case 'Required':
+          case 'InstanceType':
+            return ['Object']
+        }
+      }
+      return [`null`]
+
+    case 'TSUnionType':
+      return [
+        ...new Set(
+          [].concat(node.types.map(t =>
+            inferRuntimeType(t, declaredTypes)
+          ) as any)
+        )
+      ]
+
+    case 'TSIntersectionType':
+      return ['Object']
+
+    default:
+      return [`null`] // no runtime check
+  }
+}
+
+function genRuntimeProps(props: Record<string, PropTypeData>) {
+  const keys = Object.keys(props)
+  if (!keys.length) {
+    return ``
+  }
+
+  if (!__DEV__) {
+    // production: generate array version only
+    return `\n  props: [\n    ${keys
+      .map(k => JSON.stringify(k))
+      .join(',\n    ')}\n  ] as unknown as undefined,`
+  }
+
+  return `\n  props: {\n    ${keys
+    .map(key => {
+      const { type, required } = props[key]
+      return `${key}: { type: ${toRuntimeTypeString(
+        type
+      )}, required: ${required} }`
+    })
+    .join(',\n    ')}\n  } as unknown as undefined,`
+}
+
+function toRuntimeTypeString(types: string[]) {
+  return types.some(t => t === 'null')
+    ? `null`
+    : types.length > 1
+      ? `[${types.join(', ')}]`
+      : types[0]
+}
+
+function extractRuntimeEmits(
   node: TSFunctionType | TSDeclareFunction,
   emits: Set<string>
 ) {
@@ -639,6 +786,14 @@ function extractEmits(
       }
     }
   }
+}
+
+function genRuntimeEmits(emits: Set<string>) {
+  return emits.size
+    ? `\n  emits: [${Array.from(emits)
+        .map(p => JSON.stringify(p))
+        .join(', ')}] as unknown as undefined,`
+    : ``
 }
 
 /**

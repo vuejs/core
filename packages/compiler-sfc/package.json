@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@babel/parser": "^7.10.4",
+    "@babel/types": "^7.10.4",
     "@vue/compiler-core": "3.0.0-beta.20",
     "@vue/compiler-dom": "3.0.0-beta.20",
     "@vue/compiler-ssr": "3.0.0-beta.20",
