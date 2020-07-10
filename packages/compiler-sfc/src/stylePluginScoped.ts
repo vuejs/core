@@ -44,9 +44,10 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
           }
 
           if (n.type === 'pseudo') {
+            const { value } = n
             // deep: inject [id] attribute at the node before the ::v-deep
             // combinator.
-            if (n.value === '::v-deep') {
+            if (value === ':deep' || value === '::v-deep') {
               if (n.nodes.length) {
                 // .foo ::v-deep(.bar) -> .foo[xxxxxxx] .bar
                 // replace the current node with ::v-deep's inner selector
@@ -81,7 +82,7 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
             // slot: use selector inside `::v-slotted` and inject [id + '-s']
             // instead.
             // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
-            if (n.value === '::v-slotted') {
+            if (value === ':slotted' || value === '::v-slotted') {
               rewriteSelector(n.nodes[0] as Selector, true /* slotted */)
               selector.insertAfter(n, n.nodes[0])
               selector.removeChild(n)
@@ -93,7 +94,7 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
 
             // global: replace with inner selector and do not inject [id].
             // ::v-global(.foo) -> .foo
-            if (n.value === '::v-global') {
+            if (value === ':global' || n.value === '::v-global') {
               selectors.insertAfter(selector, n.nodes[0])
               selectors.removeChild(selector)
               return false

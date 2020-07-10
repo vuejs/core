@@ -60,6 +60,10 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-deep', () => {
+    expect(compileScoped(`:deep(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      "[test] .foo { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-deep(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       "[test] .foo { color: red;
@@ -78,6 +82,11 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-slotted', () => {
+    expect(compileScoped(`:slotted(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+    ".foo[test-s] { color: red;
+    }"
+  `)
     expect(compileScoped(`::v-slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo[test-s] { color: red;
@@ -96,6 +105,11 @@ describe('SFC scoped CSS', () => {
   })
 
   test('::v-global', () => {
+    expect(compileScoped(`:global(.foo) { color: red; }`))
+      .toMatchInlineSnapshot(`
+    ".foo { color: red;
+    }"
+  `)
     expect(compileScoped(`::v-global(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo { color: red;
