@@ -10,7 +10,8 @@ import {
 import { ShapeFlags } from '@vue/shared/src'
 
 export function useCSSVars(
-  getter: (ctx: ComponentPublicInstance) => Record<string, string>
+  getter: (ctx: ComponentPublicInstance) => Record<string, string>,
+  scopeId?: string
 ) {
   const instance = getCurrentInstance()
   if (!instance) {
@@ -20,22 +21,27 @@ export function useCSSVars(
   }
   onMounted(() => {
     watchEffect(() => {
-      setVarsOnVNode(instance.vnode, getter(instance.proxy!))
+      setVarsOnVNode(instance.vnode, getter(instance.proxy!), scopeId)
     })
   })
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
+function setVarsOnVNode(
+  vnode: VNode,
+  vars: Record<string, string>,
+  scopeId?: string
+) {
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
     vnode = vnode.component.subTree
   }
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
+    const prefix = scopeId ? scopeId + '-' : ''
     for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
+      style.setProperty(`--${prefix}${key}`, vars[key])
     }
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, scopeId))
   }
 }
