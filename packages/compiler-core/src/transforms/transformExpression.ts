@@ -263,8 +263,9 @@ export function processExpression(
   return ret
 }
 
-const isFunction = (node: Node): node is Function =>
-  /Function(Expression|Declaration)$/.test(node.type)
+const isFunction = (node: Node): node is Function => {
+  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
+}
 
 const isStaticProperty = (node: Node): node is ObjectProperty =>
   node &&

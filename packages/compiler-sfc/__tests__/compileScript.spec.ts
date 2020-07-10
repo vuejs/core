@@ -49,10 +49,6 @@ describe('SFC compile <script setup>', () => {
     )
   })
 
-  test('async/await detection', () => {
-    // TODO
-  })
-
   describe('exports', () => {
     test('export const x = ...', () => {
       const { content, bindings } = compile(
@@ -329,6 +325,45 @@ describe('SFC compile <script setup>', () => {
           `<script setup>export const color = 'red'</script>\n` +
             `<style vars="{ color }">div{ color: var(--color); }</style>`
         ).content
+      )
+    })
+  })
+
+  describe('async/await detection', () => {
+    function assertAwaitDetection(code: string, shouldAsync = true) {
+      const { content } = compile(`<script setup>${code}</script>`)
+      expect(content).toMatch(
+        `export ${shouldAsync ? `async ` : ``}function setup`
+      )
+    }
+
+    test('expression statement', () => {
+      assertAwaitDetection(`await foo`)
+    })
+
+    test('variable', () => {
+      assertAwaitDetection(`const a = 1 + (await foo)`)
+    })
+
+    test('export', () => {
+      assertAwaitDetection(`export const a = 1 + (await foo)`)
+    })
+
+    test('nested statements', () => {
+      assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
+    })
+
+    test('should ignore await inside functions', () => {
+      // function declaration
+      assertAwaitDetection(`export async function foo() { await bar }`, false)
+      // function expression
+      assertAwaitDetection(`const foo = async () => { await bar }`, false)
+      // object method
+      assertAwaitDetection(`const obj = { async method() { await bar }}`, false)
+      // class method
+      assertAwaitDetection(
+        `const cls = class Foo { async method() { await bar }}`,
+        false
       )
     })
   })

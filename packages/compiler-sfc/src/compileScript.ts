@@ -11,6 +11,7 @@ import {
   ExpressionStatement,
   ArrowFunctionExpression,
   ExportSpecifier,
+  Function as FunctionNode,
   TSType,
   TSTypeLiteral,
   TSFunctionType,
@@ -87,7 +88,8 @@ export function compileScript(
   const setupExports: Record<string, boolean> = {}
   let exportAllIndex = 0
   let defaultExport: Node | undefined
-  let needDefaultExportRefCheck: boolean = false
+  let needDefaultExportRefCheck = false
+  let hasAwait = false
 
   const checkDuplicateDefaultExport = (node: Node) => {
     if (defaultExport) {
@@ -230,7 +232,11 @@ export function compileScript(
 
   // 3. parse <script setup> and  walk over top level statements
   for (const node of parse(scriptSetup.content, {
-    plugins,
+    plugins: [
+      ...plugins,
+      // allow top level await but only inside <script setup>
+      'topLevelAwait'
+    ],
     sourceType: 'module'
   }).program.body) {
     const start = node.start! + startOffset
@@ -439,6 +445,27 @@ export function compileScript(
       recordType(node, declaredTypes)
       s.move(start, end, 0)
     }
+
+    // walk statements & named exports / variable declarations for top level
+    // await
+    if (
+      node.type === 'VariableDeclaration' ||
+      (node.type === 'ExportNamedDeclaration' &&
+        node.declaration &&
+        node.declaration.type === 'VariableDeclaration') ||
+      node.type.endsWith('Statement')
+    ) {
+      ;(walk as any)(node, {
+        enter(node: Node) {
+          if (isFunction(node)) {
+            this.skip()
+          }
+          if (node.type === 'AwaitExpression') {
+            hasAwait = true
+          }
+        }
+      })
+    }
   }
 
   // 4. check default export to make sure it doesn't reference setup scope
@@ -503,7 +530,10 @@ export function compileScript(
   // 6. wrap setup code with function.
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
-  s.prependLeft(startOffset, `\nexport function setup(${args}) {\n`)
+  s.prependLeft(
+    startOffset,
+    `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+  )
 
   // generate return statement
   let returned = `{ ${Object.keys(setupExports).join(', ')} }`
@@ -867,11 +897,7 @@ function checkDefaultExport(
               )
           )
         }
-      } else if (
-        node.type === 'FunctionDeclaration' ||
-        node.type === 'FunctionExpression' ||
-        node.type === 'ArrowFunctionExpression'
-      ) {
+      } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
@@ -925,6 +951,10 @@ function isStaticPropertyKey(node: Node, parent: Node): boolean {
     !parent.computed &&
     parent.key === node
   )
+}
+
+function isFunction(node: Node): node is FunctionNode {
+  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
 /**
