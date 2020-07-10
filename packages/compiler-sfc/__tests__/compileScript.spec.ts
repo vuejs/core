@@ -49,6 +49,10 @@ describe('SFC compile <script setup>', () => {
     )
   })
 
+  test('async/await detection', () => {
+    // TODO
+  })
+
   describe('exports', () => {
     test('export const x = ...', () => {
       const { content, bindings } = compile(
@@ -284,6 +288,47 @@ describe('SFC compile <script setup>', () => {
       )
       expect(content).toMatch(
         `emits: ["foo", "bar", "baz"] as unknown as undefined`
+      )
+    })
+  })
+
+  describe('CSS vars injection', () => {
+    test('<script> w/ no default export', () => {
+      assertCode(
+        compile(
+          `<script>const a = 1</script>\n` +
+            `<style vars="{ color }">div{ color: var(--color); }</style>`
+        ).content
+      )
+    })
+
+    test('<script> w/ default export', () => {
+      assertCode(
+        compile(
+          `<script>export default { setup() {} }</script>\n` +
+            `<style vars="{ color }">div{ color: var(--color); }</style>`
+        ).content
+      )
+    })
+
+    test('<script> w/ default export in strings/comments', () => {
+      assertCode(
+        compile(
+          `<script>
+          // export default {}
+          export default {}
+        </script>\n` +
+            `<style vars="{ color }">div{ color: var(--color); }</style>`
+        ).content
+      )
+    })
+
+    test('w/ <script setup>', () => {
+      assertCode(
+        compile(
+          `<script setup>export const color = 'red'</script>\n` +
+            `<style vars="{ color }">div{ color: var(--color); }</style>`
+        ).content
       )
     })
   })

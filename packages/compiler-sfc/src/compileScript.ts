@@ -18,6 +18,7 @@ import {
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
+import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -49,13 +50,26 @@ export function compileScript(
     )
   }
 
-  const { script, scriptSetup, source, filename } = sfc
+  const { script, scriptSetup, styles, source, filename } = sfc
+  const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
+
+  const isTS =
+    (script && script.lang === 'ts') ||
+    (scriptSetup && scriptSetup.lang === 'ts')
+
+  const plugins: ParserPlugin[] = [
+    ...(options.babelParserPlugins || []),
+    ...babelParserDefautPlugins,
+    ...(isTS ? (['typescript'] as const) : [])
+  ]
+
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`SFC contains no <script> tags.`)
     }
     return {
       ...script,
+      content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
       bindings: analyzeScriptBindings(script)
     }
   }
@@ -94,13 +108,6 @@ export function compileScript(
   const endOffset = scriptSetup.loc.end.offset
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
-
-  const isTS = scriptSetup.lang === 'ts'
-  const plugins: ParserPlugin[] = [
-    ...(options.babelParserPlugins || []),
-    ...babelParserDefautPlugins,
-    ...(isTS ? (['typescript'] as const) : [])
-  ]
 
   // 1. process normal <script> first if it exists
   if (script) {
@@ -496,7 +503,7 @@ export function compileScript(
   // 6. wrap setup code with function.
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
-  s.appendLeft(startOffset, `\nexport function setup(${args}) {\n`)
+  s.prependLeft(startOffset, `\nexport function setup(${args}) {\n`)
 
   // generate return statement
   let returned = `{ ${Object.keys(setupExports).join(', ')} }`
@@ -509,6 +516,20 @@ export function compileScript(
       returned += `,\n  __toRefs__(__export_all_${i}__)`
     }
     returned = `Object.assign(\n  ${returned}\n)`
+  }
+
+  // inject `useCSSVars` calls
+  if (hasCssVars) {
+    s.prepend(`import { useCSSVars as __useCSSVars__ } from 'vue'\n`)
+    for (const style of styles) {
+      const vars = style.attrs.vars
+      if (typeof vars === 'string') {
+        s.prependRight(
+          endOffset,
+          `\n${genCssVarsCode(vars, !!style.scoped, setupExports)}`
+        )
+      }
+    }
   }
 
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)

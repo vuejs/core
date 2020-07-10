@@ -237,6 +237,21 @@ describe('SFC scoped CSS', () => {
       ).toHaveBeenWarned()
     })
   })
+
+  describe('<style vars>', () => {
+    test('should rewrite CSS vars in scoped mode', () => {
+      const code = compileScoped(`.foo {
+        color: var(--color);
+        font-size: var(--global:font);
+      }`)
+      expect(code).toMatchInlineSnapshot(`
+        ".foo[test] {
+                color: var(--test-color);
+                font-size: var(--font);
+        }"
+      `)
+    })
+  })
 })
 
 describe('SFC CSS modules', () => {
