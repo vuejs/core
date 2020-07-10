@@ -1,15 +1,23 @@
-import { compileStyle, compileStyleAsync } from '../src/compileStyle'
+import {
+  compileStyle,
+  compileStyleAsync,
+  SFCStyleCompileOptions
+} from '../src/compileStyle'
 import { mockWarn } from '@vue/shared'
 
 describe('SFC scoped CSS', () => {
   mockWarn()
 
-  function compileScoped(source: string): string {
+  function compileScoped(
+    source: string,
+    options?: Partial<SFCStyleCompileOptions>
+  ): string {
     const res = compileStyle({
       source,
       filename: 'test.css',
       id: 'test',
-      scoped: true
+      scoped: true,
+      ...options
     })
     if (res.errors.length) {
       res.errors.forEach(err => {
@@ -254,10 +262,15 @@ describe('SFC scoped CSS', () => {
 
   describe('<style vars>', () => {
     test('should rewrite CSS vars in scoped mode', () => {
-      const code = compileScoped(`.foo {
+      const code = compileScoped(
+        `.foo {
         color: var(--color);
         font-size: var(--global:font);
-      }`)
+      }`,
+        {
+          vars: true
+        }
+      )
       expect(code).toMatchInlineSnapshot(`
         ".foo[test] {
                 color: var(--test-color);

@@ -174,7 +174,7 @@ export function compileScript(
   }
 
   // 2. check <script setup="xxx"> function signature
-  const setupValue = scriptSetup.attrs.setup
+  const setupValue = scriptSetup.setup
   const hasExplicitSignature = typeof setupValue === 'string'
 
   let propsVar: string | undefined

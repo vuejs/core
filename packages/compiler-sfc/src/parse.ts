@@ -40,12 +40,14 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
+  setup?: string | boolean
   bindings?: BindingMetadata
 }
 
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
+  vars?: string
   module?: string | boolean
 }
 
@@ -266,11 +268,15 @@ function createBlock(
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
+        } else if (p.name === 'vars' && typeof attrs.vars === 'string') {
+          ;(block as SFCStyleBlock).vars = attrs.vars
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
       } else if (type === 'template' && p.name === 'functional') {
         ;(block as SFCTemplateBlock).functional = true
+      } else if (type === 'script' && p.name === 'setup') {
+        ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }
   })
