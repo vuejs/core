@@ -5,13 +5,14 @@ import {
   watchEffect,
   warn,
   VNode,
-  Fragment
+  Fragment,
+  ComponentInternalInstance
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared/src'
 
 export function useCSSVars(
   getter: (ctx: ComponentPublicInstance) => Record<string, string>,
-  scopeId?: string
+  scoped = false
 ) {
   const instance = getCurrentInstance()
   if (!instance) {
@@ -21,7 +22,12 @@ export function useCSSVars(
   }
   onMounted(() => {
     watchEffect(() => {
-      setVarsOnVNode(instance.vnode, getter(instance.proxy!), scopeId)
+      setVarsOnVNode(
+        instance.subTree,
+        getter(instance.proxy!),
+        instance,
+        scoped
+      )
     })
   })
 }
@@ -29,7 +35,8 @@ export function useCSSVars(
 function setVarsOnVNode(
   vnode: VNode,
   vars: Record<string, string>,
-  scopeId?: string
+  owner: ComponentInternalInstance,
+  scoped: boolean
 ) {
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
@@ -37,11 +44,14 @@ function setVarsOnVNode(
   }
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
-    const prefix = scopeId ? scopeId + '-' : ''
+    const prefix =
+      scoped && owner.type.__scopeId ? `${owner.type.__scopeId}-` : ``
     for (const key in vars) {
       style.setProperty(`--${prefix}${key}`, vars[key])
     }
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, scopeId))
+    ;(vnode.children as VNode[]).forEach(c =>
+      setVarsOnVNode(c, vars, owner, scoped)
+    )
   }
 }

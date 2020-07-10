@@ -64,13 +64,14 @@ describe('useCssVars', () => {
     }))
   })
 
-  test('with scopeId', async () => {
+  test('with <style scoped>', async () => {
     const id = 'v-12345'
 
     await assertCssVars(
       state => ({
+        __scopeId: id,
         setup() {
-          useCSSVars(() => state, id)
+          useCSSVars(() => state, true)
           return () => h('div')
         }
       }),
