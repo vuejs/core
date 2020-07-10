@@ -146,15 +146,33 @@ h1 { color: red }
     test('should only allow single template element', () => {
       parse(`<template><div/></template><template><div/></template>`)
       expect(
-        `Single file component can contain only one template element`
+        `Single file component can contain only one <template> element`
       ).toHaveBeenWarned()
     })
 
     test('should only allow single script element', () => {
       parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
       expect(
-        `Single file component can contain only one script element`
+        `Single file component can contain only one <script> element`
       ).toHaveBeenWarned()
+    })
+
+    test('should only allow single script setup element', () => {
+      parse(
+        `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
+      )
+      expect(
+        `Single file component can contain only one <script setup> element`
+      ).toHaveBeenWarned()
+    })
+
+    test('should not warn script & script setup', () => {
+      parse(
+        `<script setup>console.log(1)</script><script>console.log(1)</script>`
+      )
+      expect(
+        `Single file component can contain only one`
+      ).not.toHaveBeenWarned()
     })
   })
 })

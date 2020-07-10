@@ -34,13 +34,17 @@
     "vue": "3.0.0-beta.20"
   },
   "dependencies": {
+    "@babel/parser": "^7.10.4",
+    "@babel/types": "^7.10.4",
     "@vue/compiler-core": "3.0.0-beta.20",
     "@vue/compiler-dom": "3.0.0-beta.20",
     "@vue/compiler-ssr": "3.0.0-beta.20",
     "@vue/shared": "3.0.0-beta.20",
     "consolidate": "^0.15.1",
+    "estree-walker": "^2.0.1",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
+    "magic-string": "^0.25.7",
     "merge-source-map": "^1.1.0",
     "postcss": "^7.0.27",
     "postcss-modules": "^3.1.0",

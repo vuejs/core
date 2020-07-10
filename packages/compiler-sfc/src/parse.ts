@@ -35,6 +35,7 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
+  setup?: boolean | string
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -45,8 +46,10 @@ export interface SFCStyleBlock extends SFCBlock {
 
 export interface SFCDescriptor {
   filename: string
+  source: string
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
+  scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
 }
@@ -84,8 +87,10 @@ export function parse(
 
   const descriptor: SFCDescriptor = {
     filename,
+    source,
     template: null,
     script: null,
+    scriptSetup: null,
     styles: [],
     customBlocks: []
   }
@@ -140,11 +145,16 @@ export function parse(
         }
         break
       case 'script':
-        if (!descriptor.script) {
-          descriptor.script = createBlock(node, source, pad) as SFCScriptBlock
-        } else {
-          warnDuplicateBlock(source, filename, node)
+        const block = createBlock(node, source, pad) as SFCScriptBlock
+        if (block.setup && !descriptor.scriptSetup) {
+          descriptor.scriptSetup = block
+          break
         }
+        if (!block.setup && !descriptor.script) {
+          descriptor.script = block
+          break
+        }
+        warnDuplicateBlock(source, filename, node, !!block.setup)
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -183,7 +193,8 @@ export function parse(
 function warnDuplicateBlock(
   source: string,
   filename: string,
-  node: ElementNode
+  node: ElementNode,
+  isScriptSetup = false
 ) {
   const codeFrame = generateCodeFrame(
     source,
@@ -192,9 +203,9 @@ function warnDuplicateBlock(
   )
   const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
   console.warn(
-    `Single file component can contain only one ${
-      node.tag
-    } element (${location}):\n\n${codeFrame}`
+    `Single file component can contain only one <${node.tag}${
+      isScriptSetup ? ` setup` : ``
+    }> element (${location}):\n\n${codeFrame}`
   )
 }
 
@@ -241,6 +252,8 @@ function createBlock(
         }
       } else if (type === 'template' && p.name === 'functional') {
         ;(block as SFCTemplateBlock).functional = true
+      } else if (type === 'script' && p.name === 'setup') {
+        ;(block as SFCScriptBlock).setup = attrs.setup || true
       }
     }
   })

@@ -22,7 +22,11 @@ import {
   parseJS,
   walkJS
 } from '../utils'
-import { isGloballyWhitelisted, makeMap } from '@vue/shared'
+import {
+  isGloballyWhitelisted,
+  makeMap,
+  babelParserDefautPlugins
+} from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { Node, Function, Identifier, ObjectProperty } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
@@ -125,15 +129,7 @@ export function processExpression(
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parseJS(source, {
-      plugins: [
-        ...context.expressionPlugins,
-        // by default we enable proposals slated for ES2020.
-        // full list at https://babeljs.io/docs/en/next/babel-parser#plugins
-        // this will need to be updated as the spec moves forward.
-        'bigInt',
-        'optionalChaining',
-        'nullishCoalescingOperator'
-      ]
+      plugins: [...context.expressionPlugins, ...babelParserDefautPlugins]
     }).program
   } catch (e) {
     context.onError(
