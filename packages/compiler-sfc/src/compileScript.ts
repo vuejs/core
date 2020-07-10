@@ -20,6 +20,9 @@ import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
 
 export interface SFCScriptCompileOptions {
+  /**
+   * https://babeljs.io/docs/en/babel-parser#plugins
+   */
   babelParserPlugins?: ParserPlugin[]
 }
 
@@ -63,6 +66,7 @@ export function compileScript(
     )
   }
 
+  const defaultTempVar = `__default__`
   const bindings: BindingMetadata = {}
   const imports: Record<string, string> = {}
   const setupScopeVars: Record<string, boolean> = {}
@@ -121,7 +125,7 @@ export function compileScript(
         s.overwrite(
           start,
           start + `export default`.length,
-          `const __default__ =`
+          `const ${defaultTempVar} =`
         )
       } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
         const defaultSpecifier = node.specifiers.find(
@@ -146,14 +150,16 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as __default__ } from '${
-                node.source.value
-              }'\n`
+              `import { ${
+                defaultSpecifier.local.name
+              } as ${defaultTempVar} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            s.append(`\nconst __default__ = ${defaultSpecifier.local.name}\n`)
+            s.append(
+              `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
+            )
           }
         }
       }
@@ -283,7 +289,7 @@ export function compileScript(
             s.overwrite(
               specifier.exported.start! + startOffset,
               specifier.exported.start! + startOffset + 7,
-              '__default__'
+              defaultTempVar
             )
           } else if (specifier.type === 'ExportSpecifier') {
             if (specifier.exported.name === 'default') {
@@ -319,15 +325,15 @@ export function compileScript(
                   )
                 }
                 // rewrite to `const __default__ = x` and move to end
-                s.append(`\nconst __default__ = ${local}\n`)
+                s.append(`\nconst ${defaultTempVar} = ${local}\n`)
               } else {
                 // export { x as default } from './x'
                 // rewrite to `import { x as __default__ } from './x'` and
                 // add to top
                 s.prepend(
-                  `import { ${specifier.local.name} as __default__ } from '${
-                    node.source.value
-                  }'\n`
+                  `import { ${
+                    specifier.local.name
+                  } as ${defaultTempVar} } from '${node.source.value}'\n`
                 )
               }
             } else {
@@ -514,7 +520,7 @@ export function compileScript(
     s.prepend(`import { defineComponent as __define__ } from 'vue'\n`)
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
-    const def = defaultExport ? `\n  ...__default__,` : ``
+    const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
     const runtimeProps = genRuntimeProps(typeDeclaredProps)
     const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
     s.append(
@@ -522,7 +528,9 @@ export function compileScript(
     )
   } else {
     if (defaultExport) {
-      s.append(`__default__.setup = setup\nexport default __default__`)
+      s.append(
+        `${defaultTempVar}.setup = setup\nexport default ${defaultTempVar}`
+      )
     } else {
       s.append(`export default { setup }`)
     }

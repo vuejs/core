@@ -9,16 +9,18 @@ import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
-import { compileScript, BindingMetadata } from './compileScript'
-import { ParserPlugin } from '@babel/parser'
+import {
+  compileScript,
+  BindingMetadata,
+  SFCScriptCompileOptions
+} from './compileScript'
 
-export interface SFCParseOptions {
+export interface SFCParseOptions extends SFCScriptCompileOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
   compiler?: TemplateCompiler
-  babelParserPlugins?: ParserPlugin[]
 }
 
 export interface SFCBlock {
