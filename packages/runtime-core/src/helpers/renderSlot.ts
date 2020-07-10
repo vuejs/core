@@ -39,7 +39,9 @@ export function renderSlot(
       Fragment,
       { key: props.key },
       slot ? slot(props) : fallback ? fallback() : [],
-      slots._ ? PatchFlags.STABLE_FRAGMENT : PatchFlags.BAIL
+      // full diff slot children.
+      // eg. #1557 switch slot/fallback static tree
+      PatchFlags.BAIL
     )
   )
 }
