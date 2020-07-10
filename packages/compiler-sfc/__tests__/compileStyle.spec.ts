@@ -155,7 +155,8 @@ describe('SFC scoped CSS', () => {
   })
 
   test('scoped keyframes', () => {
-    const style = compileScoped(`
+    const style = compileScoped(
+      `
 .anim {
   animation: color 5s infinite, other 5s;
 }
@@ -190,23 +191,27 @@ describe('SFC scoped CSS', () => {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-    `)
+    `,
+      { id: 'data-v-test' }
+    )
 
     expect(style).toContain(
-      `.anim[test] {\n  animation: color-test 5s infinite, other 5s;`
+      `.anim[data-v-test] {\n  animation: color-test 5s infinite, other 5s;`
     )
-    expect(style).toContain(`.anim-2[test] {\n  animation-name: color-test`)
     expect(style).toContain(
-      `.anim-3[test] {\n  animation: 5s color-test infinite, 5s other;`
+      `.anim-2[data-v-test] {\n  animation-name: color-test`
+    )
+    expect(style).toContain(
+      `.anim-3[data-v-test] {\n  animation: 5s color-test infinite, 5s other;`
     )
     expect(style).toContain(`@keyframes color-test {`)
     expect(style).toContain(`@-webkit-keyframes color-test {`)
 
     expect(style).toContain(
-      `.anim-multiple[test] {\n  animation: color-test 5s infinite,opacity-test 2s;`
+      `.anim-multiple[data-v-test] {\n  animation: color-test 5s infinite,opacity-test 2s;`
     )
     expect(style).toContain(
-      `.anim-multiple-2[test] {\n  animation-name: color-test,opacity-test;`
+      `.anim-multiple-2[data-v-test] {\n  animation-name: color-test,opacity-test;`
     )
     expect(style).toContain(`@keyframes opacity-test {`)
     expect(style).toContain(`@-webkit-keyframes opacity-test {`)
@@ -268,11 +273,12 @@ describe('SFC scoped CSS', () => {
         font-size: var(--global:font);
       }`,
         {
+          id: 'data-v-test',
           vars: true
         }
       )
       expect(code).toMatchInlineSnapshot(`
-        ".foo[test] {
+        ".foo[data-v-test] {
                 color: var(--test-color);
                 font-size: var(--font);
         }"

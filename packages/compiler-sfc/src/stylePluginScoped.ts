@@ -8,6 +8,7 @@ const cssVarRE = /\bvar\(--(global:)?([^)]+)\)/g
 export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
   const { id, vars: hasInjectedVars } = options as { id: string; vars: boolean }
   const keyframes = Object.create(null)
+  const shortId = id.replace(/^data-v-/, '')
 
   root.each(function rewriteSelectors(node) {
     if (node.type !== 'rule') {
@@ -17,7 +18,7 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
           node.each(rewriteSelectors)
         } else if (/-?keyframes$/.test(node.name)) {
           // register keyframes
-          keyframes[node.params] = node.params = node.params + '-' + id
+          keyframes[node.params] = node.params = node.params + '-' + shortId
         }
       }
       return
@@ -170,7 +171,7 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
       // rewrite CSS variables
       if (hasInjectedVars && cssVarRE.test(decl.value)) {
         decl.value = decl.value.replace(cssVarRE, (_, $1, $2) => {
-          return $1 ? `var(--${$2})` : `var(--${id}-${$2})`
+          return $1 ? `var(--${$2})` : `var(--${shortId}-${$2})`
         })
       }
     })

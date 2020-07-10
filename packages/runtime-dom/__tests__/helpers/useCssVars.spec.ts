@@ -15,17 +15,21 @@ describe('useCssVars', () => {
     const state = reactive({ color: 'red' })
     const App = getApp(state)
     const root = document.createElement('div')
-    const prefix = scopeId ? `${scopeId}-` : ``
+    const prefix = scopeId ? `${scopeId.replace(/^data-v-/, '')}-` : ``
 
     render(h(App), root)
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--${prefix}color`))
+      expect(
+        (c as HTMLElement).style.getPropertyValue(`--${prefix}color`)
+      ).toBe(`red`)
     }
 
     state.color = 'green'
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--${prefix}color`))
+      expect(
+        (c as HTMLElement).style.getPropertyValue(`--${prefix}color`)
+      ).toBe('green')
     }
   }
 
@@ -65,7 +69,7 @@ describe('useCssVars', () => {
   })
 
   test('with <style scoped>', async () => {
-    const id = 'v-12345'
+    const id = 'data-v-12345'
 
     await assertCssVars(
       state => ({

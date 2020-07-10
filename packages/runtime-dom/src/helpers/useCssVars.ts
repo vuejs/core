@@ -5,8 +5,7 @@ import {
   watchEffect,
   warn,
   VNode,
-  Fragment,
-  ComponentInternalInstance
+  Fragment
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared/src'
 
@@ -20,14 +19,15 @@ export function useCSSVars(
       warn(`useCssVars is called without current active component instance.`)
     return
   }
+
+  const prefix =
+    scoped && instance.type.__scopeId
+      ? `${instance.type.__scopeId.replace(/^data-v-/, '')}-`
+      : ``
+
   onMounted(() => {
     watchEffect(() => {
-      setVarsOnVNode(
-        instance.subTree,
-        getter(instance.proxy!),
-        instance,
-        scoped
-      )
+      setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
     })
   })
 }
@@ -35,8 +35,7 @@ export function useCSSVars(
 function setVarsOnVNode(
   vnode: VNode,
   vars: Record<string, string>,
-  owner: ComponentInternalInstance,
-  scoped: boolean
+  prefix: string
 ) {
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
@@ -44,14 +43,10 @@ function setVarsOnVNode(
   }
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
-    const prefix =
-      scoped && owner.type.__scopeId ? `${owner.type.__scopeId}-` : ``
     for (const key in vars) {
       style.setProperty(`--${prefix}${key}`, vars[key])
     }
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c =>
-      setVarsOnVNode(c, vars, owner, scoped)
-    )
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, prefix))
   }
 }
