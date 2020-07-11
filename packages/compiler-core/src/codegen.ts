@@ -64,7 +64,8 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
-export interface CodegenContext extends Required<CodegenOptions> {
+export interface CodegenContext
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata'> {
   source: string
   code: string
   line: number
@@ -204,16 +205,19 @@ export function generate(
   }
 
   // enter render function
+  const optimizeSources = options.bindingMetadata
+    ? `, $props, $setup, $data, $options`
+    : ``
   if (!ssr) {
     if (genScopeId) {
       push(`const render = ${PURE_ANNOTATION}_withId(`)
     }
-    push(`function render(_ctx, _cache) {`)
+    push(`function render(_ctx, _cache${optimizeSources}) {`)
   } else {
     if (genScopeId) {
       push(`const ssrRender = ${PURE_ANNOTATION}_withId(`)
     }
-    push(`function ssrRender(_ctx, _push, _parent, _attrs) {`)
+    push(`function ssrRender(_ctx, _push, _parent, _attrs${optimizeSources}) {`)
   }
   indent()
 

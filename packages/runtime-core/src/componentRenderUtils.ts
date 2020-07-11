@@ -50,7 +50,11 @@ export function renderComponentRoot(
     slots,
     attrs,
     emit,
-    renderCache
+    render,
+    renderCache,
+    data,
+    setupState,
+    ctx
   } = instance
 
   let result
@@ -65,7 +69,15 @@ export function renderComponentRoot(
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
       result = normalizeVNode(
-        instance.render!.call(proxyToUse, proxyToUse!, renderCache)
+        render!.call(
+          proxyToUse,
+          proxyToUse!,
+          renderCache,
+          props,
+          setupState,
+          data,
+          ctx
+        )
       )
       fallthroughAttrs = attrs
     } else {

@@ -24,9 +24,10 @@ export {
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
-export { SFCScriptCompileOptions, BindingMetadata } from './compileScript'
+export { SFCScriptCompileOptions } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,
+  BindingMetadata,
   generateCodeFrame
 } from '@vue/compiler-core'

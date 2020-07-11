@@ -57,6 +57,10 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
+export interface BindingMetadata {
+  [key: string]: 'data' | 'props' | 'setup' | 'options'
+}
+
 export interface TransformOptions {
   /**
    * An array of node transforms to be applied to every AST node.
@@ -122,6 +126,11 @@ export interface TransformOptions {
    * `ssrRender` option instead of `render`.
    */
   ssr?: boolean
+  /**
+   * Optional binding metadata analyzed from script - used to optimize
+   * binding access when `prefixIdentifiers` is enabled.
+   */
+  bindingMetadata?: BindingMetadata
   onError?: (error: CompilerError) => void
 }
 
@@ -169,6 +178,7 @@ export interface CodegenOptions {
   runtimeGlobalName?: string
   // we need to know this during codegen to generate proper preambles
   prefixIdentifiers?: boolean
+  bindingMetadata?: BindingMetadata
   // generate ssr-specific code?
   ssr?: boolean
 }

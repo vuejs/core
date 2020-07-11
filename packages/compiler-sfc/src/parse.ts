@@ -3,17 +3,14 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  TextModes
+  TextModes,
+  BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
-import {
-  compileScript,
-  BindingMetadata,
-  SFCScriptCompileOptions
-} from './compileScript'
+import { compileScript, SFCScriptCompileOptions } from './compileScript'
 
 export interface SFCParseOptions extends SFCScriptCompileOptions {
   filename?: string

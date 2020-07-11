@@ -77,10 +77,8 @@ export interface ComponentInternalOptions {
   __file?: string
 }
 
-export interface FunctionalComponent<
-  P = {},
-  E extends EmitsOptions = {}
-> extends ComponentInternalOptions {
+export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
+  extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (props: P, ctx: SetupContext<E>): any
   props?: ComponentPropsOptions<P>
@@ -142,7 +140,12 @@ export interface SetupContext<E = ObjectEmitsOptions> {
 export type InternalRenderFunction = {
   (
     ctx: ComponentPublicInstance,
-    cache: ComponentInternalInstance['renderCache']
+    cache: ComponentInternalInstance['renderCache'],
+    // for compiler-optimized bindings
+    $props: ComponentInternalInstance['props'],
+    $setup: ComponentInternalInstance['setupState'],
+    $data: ComponentInternalInstance['data'],
+    $options: ComponentInternalInstance['ctx']
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
 }

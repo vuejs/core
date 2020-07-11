@@ -1,4 +1,5 @@
 import MagicString from 'magic-string'
+import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefautPlugins, generateCodeFrame } from '@vue/shared'
@@ -26,10 +27,6 @@ export interface SFCScriptCompileOptions {
    * https://babeljs.io/docs/en/babel-parser#plugins
    */
   babelParserPlugins?: ParserPlugin[]
-}
-
-export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'ctx'
 }
 
 let hasWarned = false
