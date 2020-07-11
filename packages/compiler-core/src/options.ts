@@ -155,7 +155,7 @@ export interface CodegenOptions {
    * (only used for webpack code-split)
    * @default false
    */
-  optimizeBindings?: boolean
+  optimizeImports?: boolean
   /**
    * Customize where to import runtime helpers from.
    * @default 'vue'

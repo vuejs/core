@@ -88,7 +88,7 @@ function createCodegenContext(
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
-    optimizeBindings = false,
+    optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false
@@ -100,7 +100,7 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
@@ -355,7 +355,7 @@ function genModulePreamble(
     helper,
     newline,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeModuleName
   } = context
 
@@ -368,7 +368,7 @@ function genModulePreamble(
 
   // generate import statements for helpers
   if (ast.helpers.length) {
-    if (optimizeBindings) {
+    if (optimizeImports) {
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
       // incurring both payload size increase and potential perf overhead.
