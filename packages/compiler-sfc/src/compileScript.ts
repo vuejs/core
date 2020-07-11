@@ -1,4 +1,5 @@
-import MagicString, { SourceMap } from 'magic-string'
+import MagicString from 'magic-string'
+import { BindingMetadata } from '@vue/compiler-core'
 import { SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse, ParserPlugin } from '@babel/parser'
 import { babelParserDefautPlugins, generateCodeFrame } from '@vue/shared'
@@ -11,19 +12,21 @@ import {
   ExpressionStatement,
   ArrowFunctionExpression,
   ExportSpecifier,
+  Function as FunctionNode,
   TSType,
   TSTypeLiteral,
   TSFunctionType,
   TSDeclareFunction
 } from '@babel/types'
 import { walk } from 'estree-walker'
-
-export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'ctx'
-}
+import { RawSourceMap } from 'source-map'
+import { genCssVarsCode, injectCssVarsCalls } from './genCssVars'
 
 export interface SFCScriptCompileOptions {
-  parserPlugins?: ParserPlugin[]
+  /**
+   * https://babeljs.io/docs/en/babel-parser#plugins
+   */
+  babelParserPlugins?: ParserPlugin[]
 }
 
 let hasWarned = false
@@ -33,10 +36,10 @@ let hasWarned = false
  * It requires the whole SFC descriptor because we need to handle and merge
  * normal `<script>` + `<script setup>` if both are present.
  */
-export function compileScriptSetup(
+export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions = {}
-) {
+): SFCScriptBlock {
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     console.log(
@@ -45,9 +48,28 @@ export function compileScriptSetup(
     )
   }
 
-  const { script, scriptSetup, source, filename } = sfc
+  const { script, scriptSetup, styles, source, filename } = sfc
+  const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
+
+  const isTS =
+    (script && script.lang === 'ts') ||
+    (scriptSetup && scriptSetup.lang === 'ts')
+
+  const plugins: ParserPlugin[] = [
+    ...(options.babelParserPlugins || []),
+    ...babelParserDefautPlugins,
+    ...(isTS ? (['typescript'] as const) : [])
+  ]
+
   if (!scriptSetup) {
-    throw new Error('SFC has no <script setup>.')
+    if (!script) {
+      throw new Error(`SFC contains no <script> tags.`)
+    }
+    return {
+      ...script,
+      content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
+      bindings: analyzeScriptBindings(script)
+    }
   }
 
   if (script && script.lang !== scriptSetup.lang) {
@@ -56,13 +78,15 @@ export function compileScriptSetup(
     )
   }
 
+  const defaultTempVar = `__default__`
   const bindings: BindingMetadata = {}
   const imports: Record<string, string> = {}
   const setupScopeVars: Record<string, boolean> = {}
   const setupExports: Record<string, boolean> = {}
   let exportAllIndex = 0
   let defaultExport: Node | undefined
-  let needDefaultExportRefCheck: boolean = false
+  let needDefaultExportRefCheck = false
+  let hasAwait = false
 
   const checkDuplicateDefaultExport = (node: Node) => {
     if (defaultExport) {
@@ -83,13 +107,6 @@ export function compileScriptSetup(
   const endOffset = scriptSetup.loc.end.offset
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
-
-  const isTS = scriptSetup.lang === 'ts'
-  const plugins: ParserPlugin[] = [
-    ...(options.parserPlugins || []),
-    ...babelParserDefautPlugins,
-    ...(isTS ? (['typescript'] as const) : [])
-  ]
 
   // 1. process normal <script> first if it exists
   if (script) {
@@ -114,7 +131,7 @@ export function compileScriptSetup(
         s.overwrite(
           start,
           start + `export default`.length,
-          `const __default__ =`
+          `const ${defaultTempVar} =`
         )
       } else if (node.type === 'ExportNamedDeclaration' && node.specifiers) {
         const defaultSpecifier = node.specifiers.find(
@@ -139,14 +156,16 @@ export function compileScriptSetup(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as __default__ } from '${
-                node.source.value
-              }'\n`
+              `import { ${
+                defaultSpecifier.local.name
+              } as ${defaultTempVar} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
-            s.append(`\nconst __default__ = ${defaultSpecifier.local.name}\n`)
+            s.append(
+              `\nconst ${defaultTempVar} = ${defaultSpecifier.local.name}\n`
+            )
           }
         }
       }
@@ -154,7 +173,8 @@ export function compileScriptSetup(
   }
 
   // 2. check <script setup="xxx"> function signature
-  const hasExplicitSignature = typeof scriptSetup.setup === 'string'
+  const setupValue = scriptSetup.setup
+  const hasExplicitSignature = typeof setupValue === 'string'
 
   let propsVar: string | undefined
   let emitVar: string | undefined
@@ -179,8 +199,8 @@ export function compileScriptSetup(
     // <script setup="xxx" lang="ts">
     // parse the signature to extract the props/emit variables the user wants
     // we need them to find corresponding type declarations.
-    const signatureAST = parse(`(${scriptSetup.setup})=>{}`, { plugins })
-      .program.body[0]
+    const signatureAST = parse(`(${setupValue})=>{}`, { plugins }).program
+      .body[0]
     const params = ((signatureAST as ExpressionStatement)
       .expression as ArrowFunctionExpression).params
     if (params[0] && params[0].type === 'Identifier') {
@@ -209,7 +229,11 @@ export function compileScriptSetup(
 
   // 3. parse <script setup> and  walk over top level statements
   for (const node of parse(scriptSetup.content, {
-    plugins,
+    plugins: [
+      ...plugins,
+      // allow top level await but only inside <script setup>
+      'topLevelAwait'
+    ],
     sourceType: 'module'
   }).program.body) {
     const start = node.start! + startOffset
@@ -275,7 +299,7 @@ export function compileScriptSetup(
             s.overwrite(
               specifier.exported.start! + startOffset,
               specifier.exported.start! + startOffset + 7,
-              '__default__'
+              defaultTempVar
             )
           } else if (specifier.type === 'ExportSpecifier') {
             if (specifier.exported.name === 'default') {
@@ -311,15 +335,15 @@ export function compileScriptSetup(
                   )
                 }
                 // rewrite to `const __default__ = x` and move to end
-                s.append(`\nconst __default__ = ${local}\n`)
+                s.append(`\nconst ${defaultTempVar} = ${local}\n`)
               } else {
                 // export { x as default } from './x'
                 // rewrite to `import { x as __default__ } from './x'` and
                 // add to top
                 s.prepend(
-                  `import { ${specifier.local.name} as __default__ } from '${
-                    node.source.value
-                  }'\n`
+                  `import { ${
+                    specifier.local.name
+                  } as ${defaultTempVar} } from '${node.source.value}'\n`
                 )
               }
             } else {
@@ -418,6 +442,27 @@ export function compileScriptSetup(
       recordType(node, declaredTypes)
       s.move(start, end, 0)
     }
+
+    // walk statements & named exports / variable declarations for top level
+    // await
+    if (
+      node.type === 'VariableDeclaration' ||
+      (node.type === 'ExportNamedDeclaration' &&
+        node.declaration &&
+        node.declaration.type === 'VariableDeclaration') ||
+      node.type.endsWith('Statement')
+    ) {
+      ;(walk as any)(node, {
+        enter(node: Node) {
+          if (isFunction(node)) {
+            this.skip()
+          }
+          if (node.type === 'AwaitExpression') {
+            hasAwait = true
+          }
+        }
+      })
+    }
   }
 
   // 4. check default export to make sure it doesn't reference setup scope
@@ -464,7 +509,7 @@ export function compileScriptSetup(
 }`
     if (hasExplicitSignature) {
       // inject types to user signature
-      args = scriptSetup.setup as string
+      args = setupValue as string
       const ss = new MagicString(args)
       if (propsASTNode) {
         // compensate for () wraper offset
@@ -476,13 +521,16 @@ export function compileScriptSetup(
       args = ss.toString()
     }
   } else {
-    args = hasExplicitSignature ? (scriptSetup.setup as string) : ``
+    args = hasExplicitSignature ? (setupValue as string) : ``
   }
 
   // 6. wrap setup code with function.
   // export the content of <script setup> as a named export, `setup`.
   // this allows `import { setup } from '*.vue'` for testing purposes.
-  s.appendLeft(startOffset, `\nexport function setup(${args}) {\n`)
+  s.prependLeft(
+    startOffset,
+    `\nexport ${hasAwait ? `async ` : ``}function setup(${args}) {\n`
+  )
 
   // generate return statement
   let returned = `{ ${Object.keys(setupExports).join(', ')} }`
@@ -497,6 +545,20 @@ export function compileScriptSetup(
     returned = `Object.assign(\n  ${returned}\n)`
   }
 
+  // inject `useCSSVars` calls
+  if (hasCssVars) {
+    s.prepend(`import { useCSSVars as __useCSSVars__ } from 'vue'\n`)
+    for (const style of styles) {
+      const vars = style.attrs.vars
+      if (typeof vars === 'string') {
+        s.prependRight(
+          endOffset,
+          `\n${genCssVarsCode(vars, !!style.scoped, setupExports)}`
+        )
+      }
+    }
+  }
+
   s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
 
   // 7. finalize default export
@@ -506,7 +568,7 @@ export function compileScriptSetup(
     s.prepend(`import { defineComponent as __define__ } from 'vue'\n`)
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
-    const def = defaultExport ? `\n  ...__default__,` : ``
+    const def = defaultExport ? `\n  ...${defaultTempVar},` : ``
     const runtimeProps = genRuntimeProps(typeDeclaredProps)
     const runtimeEmits = genRuntimeEmits(typeDeclaredEmits)
     s.append(
@@ -514,7 +576,9 @@ export function compileScriptSetup(
     )
   } else {
     if (defaultExport) {
-      s.append(`__default__.setup = setup\nexport default __default__`)
+      s.append(
+        `${defaultTempVar}.setup = setup\nexport default ${defaultTempVar}`
+      )
     } else {
       s.append(`export default { setup }`)
     }
@@ -530,13 +594,14 @@ export function compileScriptSetup(
 
   s.trim()
   return {
+    ...scriptSetup,
     bindings,
-    code: s.toString(),
-    map: s.generateMap({
+    content: s.toString(),
+    map: (s.generateMap({
       source: filename,
       hires: true,
       includeContent: true
-    }) as SourceMap
+    }) as unknown) as RawSourceMap
   }
 }
 
@@ -829,11 +894,7 @@ function checkDefaultExport(
               )
           )
         }
-      } else if (
-        node.type === 'FunctionDeclaration' ||
-        node.type === 'FunctionExpression' ||
-        node.type === 'ArrowFunctionExpression'
-      ) {
+      } else if (isFunction(node)) {
         // walk function expressions and add its arguments to known identifiers
         // so that we don't prefix them
         node.params.forEach(p =>
@@ -887,6 +948,10 @@ function isStaticPropertyKey(node: Node, parent: Node): boolean {
     !parent.computed &&
     parent.key === node
   )
+}
+
+function isFunction(node: Node): node is FunctionNode {
+  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
 }
 
 /**

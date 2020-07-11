@@ -15,6 +15,7 @@ export interface SFCStyleCompileOptions {
   id: string
   map?: RawSourceMap
   scoped?: boolean
+  vars?: boolean
   trim?: boolean
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
@@ -73,6 +74,7 @@ export function doCompileStyle(
     filename,
     id,
     scoped = false,
+    vars = false,
     trim = true,
     modules = false,
     modulesOptions = {},
@@ -90,7 +92,7 @@ export function doCompileStyle(
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(id))
+    plugins.push(scopedPlugin({ id, vars }))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {

@@ -105,6 +105,61 @@ export default __define__({
 })"
 `;
 
+exports[`SFC compile <script setup> CSS vars injection <script> w/ default export 1`] = `
+"const __default__ = { setup() {} }
+import { useCSSVars as __useCSSVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCSSVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection <script> w/ default export in strings/comments 1`] = `
+"
+          // export default {}
+          const __default__ = {}
+        
+import { useCSSVars as __useCSSVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCSSVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection <script> w/ no default export 1`] = `
+"const a = 1
+const __default__ = {}
+import { useCSSVars as __useCSSVars__ } from 'vue'
+const __injectCSSVars__ = () => {
+__useCSSVars__(_ctx => ({ color: _ctx.color }))
+}
+const __setup__ = __default__.setup
+__default__.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+export default __default__"
+`;
+
+exports[`SFC compile <script setup> CSS vars injection w/ <script setup> 1`] = `
+"import { useCSSVars as __useCSSVars__ } from 'vue'
+
+export function setup() {
+const color = 'red'
+__useCSSVars__(_ctx => ({ color }))
+return { color }
+}
+
+export default { setup }"
+`;
+
 exports[`SFC compile <script setup> errors should allow export default referencing imported binding 1`] = `
 "import { bar } from './bar'
           

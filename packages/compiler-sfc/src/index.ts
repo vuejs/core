@@ -2,7 +2,8 @@
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
-export { compileScriptSetup, analyzeScriptBindings } from './compileScript'
+export { compileScript, analyzeScriptBindings } from './compileScript'
+export { rewriteDefault } from './rewriteDefault'
 
 // Types
 export {
@@ -27,5 +28,6 @@ export { SFCScriptCompileOptions } from './compileScript'
 export {
   CompilerOptions,
   CompilerError,
+  BindingMetadata,
   generateCodeFrame
 } from '@vue/compiler-core'

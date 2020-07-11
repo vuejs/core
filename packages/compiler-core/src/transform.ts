@@ -120,6 +120,7 @@ export function createTransformContext(
     expressionPlugins = [],
     scopeId = null,
     ssr = false,
+    bindingMetadata = {},
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -135,6 +136,7 @@ export function createTransformContext(
     expressionPlugins,
     scopeId,
     ssr,
+    bindingMetadata,
     onError,
 
     // state

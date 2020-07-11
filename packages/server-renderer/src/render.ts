@@ -126,7 +126,17 @@ function renderComponentSubTree(
 
       // set current rendering instance for asset resolution
       setCurrentRenderingInstance(instance)
-      comp.ssrRender(instance.proxy, push, instance, attrs)
+      comp.ssrRender(
+        instance.proxy,
+        push,
+        instance,
+        attrs,
+        // compiler-optimized bindings
+        instance.props,
+        instance.setupState,
+        instance.data,
+        instance.ctx
+      )
       setCurrentRenderingInstance(null)
     } else if (instance.render) {
       renderVNode(push, renderComponentRoot(instance), instance)

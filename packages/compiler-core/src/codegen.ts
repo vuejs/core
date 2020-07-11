@@ -64,7 +64,8 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
-export interface CodegenContext extends Required<CodegenOptions> {
+export interface CodegenContext
+  extends Omit<Required<CodegenOptions>, 'bindingMetadata'> {
   source: string
   code: string
   line: number
@@ -88,7 +89,7 @@ function createCodegenContext(
     sourceMap = false,
     filename = `template.vue.html`,
     scopeId = null,
-    optimizeBindings = false,
+    optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
     ssr = false
@@ -100,7 +101,7 @@ function createCodegenContext(
     sourceMap,
     filename,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
     ssr,
@@ -204,16 +205,19 @@ export function generate(
   }
 
   // enter render function
+  const optimizeSources = options.bindingMetadata
+    ? `, $props, $setup, $data, $options`
+    : ``
   if (!ssr) {
     if (genScopeId) {
       push(`const render = ${PURE_ANNOTATION}_withId(`)
     }
-    push(`function render(_ctx, _cache) {`)
+    push(`function render(_ctx, _cache${optimizeSources}) {`)
   } else {
     if (genScopeId) {
       push(`const ssrRender = ${PURE_ANNOTATION}_withId(`)
     }
-    push(`function ssrRender(_ctx, _push, _parent, _attrs) {`)
+    push(`function ssrRender(_ctx, _push, _parent, _attrs${optimizeSources}) {`)
   }
   indent()
 
@@ -355,7 +359,7 @@ function genModulePreamble(
     helper,
     newline,
     scopeId,
-    optimizeBindings,
+    optimizeImports,
     runtimeModuleName
   } = context
 
@@ -368,7 +372,7 @@ function genModulePreamble(
 
   // generate import statements for helpers
   if (ast.helpers.length) {
-    if (optimizeBindings) {
+    if (optimizeImports) {
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
       // incurring both payload size increase and potential perf overhead.
