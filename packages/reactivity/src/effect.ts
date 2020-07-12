@@ -171,7 +171,7 @@ export function trigger(
   oldTarget?: Map<unknown, unknown> | Set<unknown>
 ) {
   const depsMap = targetMap.get(target)
-  if (!depsMap) {
+  if (!(depsMap?.size)) {
     // never been tracked
     return
   }
