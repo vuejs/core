@@ -9,7 +9,8 @@ export const compilerOptions: CompilerOptions = reactive({
   optimizeImports: false,
   hoistStatic: false,
   cacheHandlers: false,
-  scopeId: null
+  scopeId: null,
+  ssrCssVars: `{ color }`
 })
 
 const App = {

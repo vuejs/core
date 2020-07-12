@@ -127,6 +127,11 @@ export interface TransformOptions {
    */
   ssr?: boolean
   /**
+   * SFC <style vars> injection string
+   * needed to render inline CSS variables on component root
+   */
+  ssrCssVars?: string
+  /**
    * Optional binding metadata analyzed from script - used to optimize
    * binding access when `prefixIdentifiers` is enabled.
    */

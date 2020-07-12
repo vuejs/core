@@ -9,7 +9,7 @@ import {
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared/src'
 
-export function useCSSVars(
+export function useCssVars(
   getter: (ctx: ComponentPublicInstance) => Record<string, string>,
   scoped = false
 ) {

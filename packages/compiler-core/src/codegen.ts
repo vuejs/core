@@ -204,10 +204,11 @@ export function generate(
     genFunctionPreamble(ast, context)
   }
 
-  // enter render function
+  // binding optimizations
   const optimizeSources = options.bindingMetadata
     ? `, $props, $setup, $data, $options`
     : ``
+  // enter render function
   if (!ssr) {
     if (genScopeId) {
       push(`const render = ${PURE_ANNOTATION}_withId(`)
