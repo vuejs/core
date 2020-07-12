@@ -81,7 +81,7 @@ function createReactiveEffect<T = any>(
   fn: (...args: any[]) => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(...args: unknown[]): unknown {
+  const effect = function(...args: unknown[]): unknown {
     if (!effect.active) {
       return options.scheduler ? undefined : fn(...args)
     }
@@ -161,6 +161,49 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     }
   }
 }
+function addEffect(
+  effects: any,
+  effectsToAdd: Set<ReactiveEffect> | undefined
+) {
+  if (effectsToAdd) {
+    effectsToAdd.forEach(effect => {
+      if (effect !== activeEffect || !shouldTrack) {
+        effects.add(effect)
+      } else {
+        // the effect mutated its own dependency during its execution.
+        // this can be caused by operations like foo.value++
+        // do not trigger or we end in an infinite loop
+      }
+    })
+  }
+}
+
+function runEffect(
+  effect: ReactiveEffect,
+  target: object,
+  type: TriggerOpTypes,
+  key?: unknown,
+  newValue?: unknown,
+  oldValue?: unknown,
+  oldTarget?: Map<unknown, unknown> | Set<unknown>
+) {
+  if (__DEV__ && effect.options.onTrigger) {
+    effect.options.onTrigger({
+      effect,
+      target,
+      key,
+      type,
+      newValue,
+      oldValue,
+      oldTarget
+    })
+  }
+  if (effect.options.scheduler) {
+    effect.options.scheduler(effect)
+  } else {
+    effect()
+  }
+}
 
 export function trigger(
   target: object,
@@ -177,34 +220,21 @@ export function trigger(
   }
 
   const effects = new Set<ReactiveEffect>()
-  const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
-    if (effectsToAdd) {
-      effectsToAdd.forEach(effect => {
-        if (effect !== activeEffect || !shouldTrack) {
-          effects.add(effect)
-        } else {
-          // the effect mutated its own dependency during its execution.
-          // this can be caused by operations like foo.value++
-          // do not trigger or we end in an infinite loop
-        }
-      })
-    }
-  }
 
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
-    depsMap.forEach(add)
+    depsMap.forEach(deps => addEffect(effects, deps))
   } else if (key === 'length' && isArray(target)) {
-    depsMap.forEach((dep, key) => {
+    depsMap.forEach((deps, key) => {
       if (key === 'length' || key >= (newValue as number)) {
-        add(dep)
+        addEffect(effects, deps)
       }
     })
   } else {
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      add(depsMap.get(key))
+      addEffect(effects, depsMap.get(key))
     }
     // also run for iteration key on ADD | DELETE | Map.SET
     const isAddOrDelete =
@@ -214,31 +244,14 @@ export function trigger(
       isAddOrDelete ||
       (type === TriggerOpTypes.SET && target instanceof Map)
     ) {
-      add(depsMap.get(isArray(target) ? 'length' : ITERATE_KEY))
+      addEffect(effects, depsMap.get(isArray(target) ? 'length' : ITERATE_KEY))
     }
     if (isAddOrDelete && target instanceof Map) {
-      add(depsMap.get(MAP_KEY_ITERATE_KEY))
+      addEffect(effects, depsMap.get(MAP_KEY_ITERATE_KEY))
     }
   }
 
-  const run = (effect: ReactiveEffect) => {
-    if (__DEV__ && effect.options.onTrigger) {
-      effect.options.onTrigger({
-        effect,
-        target,
-        key,
-        type,
-        newValue,
-        oldValue,
-        oldTarget
-      })
-    }
-    if (effect.options.scheduler) {
-      effect.options.scheduler(effect)
-    } else {
-      effect()
-    }
-  }
-
-  effects.forEach(run)
+  effects.forEach(effect =>
+    runEffect(effect, target, type, key, newValue, oldValue, oldTarget)
+  )
 }
