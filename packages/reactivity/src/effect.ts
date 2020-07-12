@@ -191,8 +191,8 @@ function runEffect(
     effect.options.onTrigger({
       effect,
       target,
-      key,
       type,
+      key,
       newValue,
       oldValue,
       oldTarget
