@@ -9,6 +9,7 @@ import {
 } from '../vnode'
 import { PatchFlags } from '@vue/shared'
 import { warn } from '../warning'
+import { currentRenderingInstance } from '../componentRenderUtils'
 
 /**
  * Compiler runtime helper for rendering <slot/>
@@ -39,7 +40,10 @@ export function renderSlot(
       Fragment,
       { key: props.key },
       slot ? slot(props) : fallback ? fallback() : [],
-      slots._ ? PatchFlags.STABLE_FRAGMENT : PatchFlags.BAIL
+      slots._ &&
+      !(currentRenderingInstance!.vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL
     )
   )
 }
