@@ -14,6 +14,7 @@ import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
+import { CAPITALIZE } from '../runtimeHelpers'
 
 const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
 
@@ -47,12 +48,16 @@ export const transformOn: DirectiveTransform = (
         : capitalize(rawName)
       eventName = createSimpleExpression(`on${normalizedName}`, true, arg.loc)
     } else {
-      eventName = createCompoundExpression([`"on" + (`, arg, `)`])
+      eventName = createCompoundExpression([
+        `"on" + ${context.helperString(CAPITALIZE)}(`,
+        arg,
+        `)`
+      ])
     }
   } else {
     // already a compound expression.
     eventName = arg
-    eventName.children.unshift(`"on" + (`)
+    eventName.children.unshift(`"on" + ${context.helperString(CAPITALIZE)}(`)
     eventName.children.push(`)`)
   }
 
