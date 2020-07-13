@@ -1,5 +1,5 @@
 import { Data } from '../component'
-import { Slots } from '../componentSlots'
+import { Slots, RawSlots, CompiledSlotTypes } from '../componentSlots'
 import {
   VNodeArrayChildren,
   openBlock,
@@ -39,7 +39,9 @@ export function renderSlot(
       Fragment,
       { key: props.key },
       slot ? slot(props) : fallback ? fallback() : [],
-      slots._ ? PatchFlags.STABLE_FRAGMENT : PatchFlags.BAIL
+      (slots as RawSlots)._ === CompiledSlotTypes.STATIC
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL
     )
   )
 }

@@ -140,7 +140,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 1 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -172,7 +172,7 @@ describe('ssr: components', () => {
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 1 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
             _renderList(_ctx.names, (key) => {
               return {
                 name: key,
