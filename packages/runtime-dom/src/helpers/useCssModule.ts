@@ -1,7 +1,7 @@
 import { warn, getCurrentInstance } from '@vue/runtime-core'
 import { EMPTY_OBJ } from '@vue/shared'
 
-export function useCSSModule(name = '$style'): Record<string, string> {
+export function useCssModule(name = '$style'): Record<string, string> {
   if (!__GLOBAL__) {
     const instance = getCurrentInstance()!
     if (!instance) {

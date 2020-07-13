@@ -591,6 +591,11 @@ export function compileScript(
   Object.keys(setupExports).forEach(key => {
     bindings[key] = 'setup'
   })
+  Object.keys(typeDeclaredProps).forEach(key => {
+    bindings[key] = 'props'
+  })
+  // TODO analyze props if user declared props via `export default {}` inside
+  // <script setup>
 
   s.trim()
   return {

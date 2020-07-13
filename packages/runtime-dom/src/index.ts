@@ -114,8 +114,8 @@ function normalizeContainer(container: Element | string): Element | null {
 }
 
 // SFC CSS utilities
-export { useCSSModule } from './helpers/useCssModule'
-export { useCSSVars } from './helpers/useCssVars'
+export { useCssModule } from './helpers/useCssModule'
+export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
 export { Transition, TransitionProps } from './components/Transition'

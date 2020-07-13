@@ -1,6 +1,6 @@
 import {
   render,
-  useCSSVars,
+  useCssVars,
   h,
   reactive,
   nextTick,
@@ -37,7 +37,7 @@ describe('useCssVars', () => {
     await assertCssVars(state => ({
       setup() {
         // test receiving render context
-        useCSSVars((ctx: any) => ({
+        useCssVars((ctx: any) => ({
           color: ctx.color
         }))
         return state
@@ -51,7 +51,7 @@ describe('useCssVars', () => {
   test('on fragment root', async () => {
     await assertCssVars(state => ({
       setup() {
-        useCSSVars(() => state)
+        useCssVars(() => state)
         return () => [h('div'), h('div')]
       }
     }))
@@ -62,7 +62,7 @@ describe('useCssVars', () => {
 
     await assertCssVars(state => ({
       setup() {
-        useCSSVars(() => state)
+        useCssVars(() => state)
         return () => h(Child)
       }
     }))
@@ -75,7 +75,7 @@ describe('useCssVars', () => {
       state => ({
         __scopeId: id,
         setup() {
-          useCSSVars(() => state, true)
+          useCssVars(() => state, true)
           return () => h('div')
         }
       }),
