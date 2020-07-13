@@ -7,7 +7,8 @@ import {
   createSimpleExpression,
   NodeTypes,
   createCompoundExpression,
-  ExpressionNode
+  ExpressionNode,
+  SimpleExpressionNode
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap } from '@vue/shared'
@@ -19,14 +20,17 @@ const isNonKeyModifier = /*#__PURE__*/ makeMap(
     // system modifiers + exact
     `ctrl,shift,alt,meta,exact,` +
     // mouse
-    `left,middle,right`
+    `middle`
 )
+// left & right could be mouse or key modifiers based on event type
+const maybeKeyModifier = /*#__PURE__*/ makeMap('left,right')
 const isKeyboardEvent = /*#__PURE__*/ makeMap(
   `onkeyup,onkeydown,onkeypress`,
   true
 )
 
-const generateModifiers = (modifiers: string[]) => {
+const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
+  const isStaticKey = key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
@@ -39,10 +43,23 @@ const generateModifiers = (modifiers: string[]) => {
       eventOptionModifiers.push(modifier)
     } else {
       // runtimeModifiers: modifiers that needs runtime guards
-      if (isNonKeyModifier(modifier)) {
-        nonKeyModifiers.push(modifier)
+      if (maybeKeyModifier(modifier)) {
+        if (isStaticKey) {
+          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+            keyModifiers.push(modifier)
+          } else {
+            nonKeyModifiers.push(modifier)
+          }
+        } else {
+          keyModifiers.push(modifier)
+          nonKeyModifiers.push(modifier)
+        }
       } else {
-        keyModifiers.push(modifier)
+        if (isNonKeyModifier(modifier)) {
+          nonKeyModifiers.push(modifier)
+        } else {
+          keyModifiers.push(modifier)
+        }
       }
     }
   }
@@ -82,7 +99,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       keyModifiers,
       nonKeyModifiers,
       eventOptionModifiers
-    } = generateModifiers(modifiers)
+    } = resolveModifiers(key, modifiers)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {
