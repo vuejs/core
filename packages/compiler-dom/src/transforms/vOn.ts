@@ -8,7 +8,8 @@ import {
   NodeTypes,
   createCompoundExpression,
   ExpressionNode,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  isStaticExp
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap } from '@vue/shared'
@@ -30,7 +31,6 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
 )
 
 const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
-  const isStaticKey = key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic
   const keyModifiers = []
   const nonKeyModifiers = []
   const eventOptionModifiers = []
@@ -44,7 +44,7 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
     } else {
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
-        if (isStaticKey) {
+        if (isStaticExp(key)) {
           if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
             keyModifiers.push(modifier)
           } else {
@@ -73,9 +73,7 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
 
 const transformClick = (key: ExpressionNode, event: string) => {
   const isStaticClick =
-    key.type === NodeTypes.SIMPLE_EXPRESSION &&
-    key.isStatic &&
-    key.content.toLowerCase() === 'onclick'
+    isStaticExp(key) && key.content.toLowerCase() === 'onclick'
   return isStaticClick
     ? createSimpleExpression(event, true)
     : key.type !== NodeTypes.SIMPLE_EXPRESSION
@@ -119,9 +117,7 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     if (
       keyModifiers.length &&
       // if event name is dynamic, always wrap with keys guard
-      (key.type === NodeTypes.COMPOUND_EXPRESSION ||
-        !key.isStatic ||
-        isKeyboardEvent(key.content))
+      (!isStaticExp(key) || isKeyboardEvent(key.content))
     ) {
       handlerExp = createCallExpression(context.helper(V_ON_WITH_KEYS), [
         handlerExp,

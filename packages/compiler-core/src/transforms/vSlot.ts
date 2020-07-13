@@ -14,7 +14,6 @@ import {
   SourceLocation,
   createConditionalExpression,
   ConditionalExpression,
-  JSChildNode,
   SimpleExpressionNode,
   FunctionExpression,
   CallExpression,
@@ -24,12 +23,16 @@ import {
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
-import { findDir, isTemplateNode, assert, isVSlot, hasScopeRef } from '../utils'
+import {
+  findDir,
+  isTemplateNode,
+  assert,
+  isVSlot,
+  hasScopeRef,
+  isStaticExp
+} from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
-
-const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
-  p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
