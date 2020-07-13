@@ -1694,7 +1694,6 @@ function baseCreateRenderer(
 
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
-      let j
       let patched = 0
       const toBePatched = e2 - s2 + 1
       let moved = false
@@ -1705,8 +1704,7 @@ function baseCreateRenderer(
       // and oldIndex = 0 is a special value indicating the new node has
       // no corresponding old node.
       // used for determining longest stable subsequence
-      const newIndexToOldIndexMap = new Array(toBePatched)
-      for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
+      const newIndexToOldIndexMap = new Array(toBePatched).fill(0)
 
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
@@ -1720,12 +1718,12 @@ function baseCreateRenderer(
           newIndex = keyToNewIndexMap.get(prevChild.key)
         } else {
           // key-less node, try to locate a key-less node of the same type
-          for (j = s2; j <= e2; j++) {
+          for (let i2 = s2; i2 <= e2; i2++) {
             if (
-              newIndexToOldIndexMap[j - s2] === 0 &&
-              isSameVNodeType(prevChild, c2[j] as VNode)
+              newIndexToOldIndexMap[i2 - s2] === 0 &&
+              isSameVNodeType(prevChild, c2[i2] as VNode)
             ) {
-              newIndex = j
+              newIndex = i2
               break
             }
           }
@@ -1758,7 +1756,7 @@ function baseCreateRenderer(
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
         : EMPTY_ARR
-      j = increasingNewIndexSequence.length - 1
+      let j = increasingNewIndexSequence.length - 1
       // looping backwards so that we can use last patched node as anchor
       for (i = toBePatched - 1; i >= 0; i--) {
         const nextIndex = s2 + i
