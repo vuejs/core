@@ -62,6 +62,10 @@ export interface ComponentInternalOptions {
   /**
    * @internal
    */
+  __emits?: ObjectEmitsOptions
+  /**
+   * @internal
+   */
   __scopeId?: string
   /**
    * @internal

@@ -6,9 +6,9 @@ import {
   capitalize,
   hyphenate,
   isFunction,
-  def
+  extend
 } from '@vue/shared'
-import { ComponentInternalInstance } from './component'
+import { ComponentInternalInstance, Component } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
 import { normalizePropsOptions } from './componentProps'
@@ -43,7 +43,7 @@ export function emit(
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
-    const options = normalizeEmitsOptions(instance.type.emits)
+    const options = normalizeEmitsOptions(instance.type)
     if (options) {
       if (!(event in options)) {
         const propsOptions = normalizePropsOptions(instance.type)[0]
@@ -84,34 +84,52 @@ export function emit(
   }
 }
 
-export function normalizeEmitsOptions(
-  options: EmitsOptions | undefined
+function normalizeEmitsOptions(
+  comp: Component
 ): ObjectEmitsOptions | undefined {
-  if (!options) {
-    return
-  } else if (isArray(options)) {
-    if ((options as any)._n) {
-      return (options as any)._n
-    }
-    const normalized: ObjectEmitsOptions = {}
-    options.forEach(key => (normalized[key] = null))
-    def(options, '_n', normalized)
-    return normalized
-  } else {
-    return options
+  if (hasOwn(comp, '__emits')) {
+    return comp.__emits
   }
+
+  const raw = comp.emits
+  let normalized: ObjectEmitsOptions = {}
+
+  // apply mixin/extends props
+  let hasExtends = false
+  if (__FEATURE_OPTIONS__ && !isFunction(comp)) {
+    if (comp.extends) {
+      hasExtends = true
+      extend(normalized, normalizeEmitsOptions(comp.extends))
+    }
+    if (comp.mixins) {
+      hasExtends = true
+      comp.mixins.forEach(m => extend(normalized, normalizeEmitsOptions(m)))
+    }
+  }
+
+  if (!raw && !hasExtends) {
+    return (comp.__emits = undefined)
+  }
+
+  if (isArray(raw)) {
+    raw.forEach(key => (normalized[key] = null))
+  } else {
+    extend(normalized, raw)
+  }
+  return (comp.__emits = normalized)
 }
 
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
-export function isEmitListener(emits: EmitsOptions, key: string): boolean {
+export function isEmitListener(comp: Component, key: string): boolean {
+  if (!isOn(key)) {
+    return false
+  }
+  const emits = normalizeEmitsOptions(comp)
   return (
-    isOn(key) &&
-    (hasOwn(
-      (emits = normalizeEmitsOptions(emits) as ObjectEmitsOptions),
-      key[2].toLowerCase() + key.slice(3)
-    ) ||
+    !!emits &&
+    (hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
       hasOwn(emits, key.slice(2)))
   )
 }
