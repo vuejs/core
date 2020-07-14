@@ -31,12 +31,14 @@ export function patchDOMProp(
     el.value = value == null ? '' : value
     return
   }
+  // #1576
+  if (isFalsyAttrValue(value)) {
+    el.removeAttribute(key)
+    return
+  }
   if (value === '' && typeof el[key] === 'boolean') {
     // e.g. <select multiple> compiles to { multiple: '' }
     el[key] = true
-  } else if (value == null && typeof el[key] === 'string') {
-    // e.g. <div :id="null">
-    el[key] = ''
   } else {
     // some properties perform value validation and throw
     try {
@@ -51,4 +53,8 @@ export function patchDOMProp(
       }
     }
   }
+}
+
+function isFalsyAttrValue(val: any): boolean {
+  return val == null || val === false
 }
