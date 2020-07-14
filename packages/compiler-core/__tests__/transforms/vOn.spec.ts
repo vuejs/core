@@ -73,7 +73,7 @@ describe('compiler: transform v-on', () => {
         {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`"on" + (`, { content: `event` }, `)`]
+            children: [`"on" + _capitalize(`, { content: `event` }, `)`]
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -94,7 +94,7 @@ describe('compiler: transform v-on', () => {
         {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`"on" + (`, { content: `_ctx.event` }, `)`]
+            children: [`"on" + _capitalize(`, { content: `_ctx.event` }, `)`]
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -116,7 +116,7 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `"on" + (`,
+              `"on" + _capitalize(`,
               { content: `_ctx.event` },
               `(`,
               { content: `_ctx.foo` },

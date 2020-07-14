@@ -206,9 +206,9 @@ describe('compiler-dom: transform v-on', () => {
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        { children: [`"on" + _capitalize(`, { content: 'event' }, `)`] },
         `).toLowerCase() === "onclick" ? "onContextmenu" : (`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        { children: [`"on" + _capitalize(`, { content: 'event' }, `)`] },
         `)`
       ]
     })
@@ -232,9 +232,9 @@ describe('compiler-dom: transform v-on', () => {
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [
         `(`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        { children: [`"on" + _capitalize(`, { content: 'event' }, `)`] },
         `).toLowerCase() === "onclick" ? "onMouseup" : (`,
-        { children: [`"on" + (`, { content: 'event' }, `)`] },
+        { children: [`"on" + _capitalize(`, { content: 'event' }, `)`] },
         `)`
       ]
     })
