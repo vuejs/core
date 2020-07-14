@@ -67,12 +67,21 @@ export function emit(
     }
   }
 
-  let handler = props[`on${capitalize(event)}`]
+  let handlerName = `on${capitalize(event)}`
+  let handler = props[handlerName]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
   if (!handler && event.startsWith('update:')) {
-    event = hyphenate(event)
-    handler = props[`on${capitalize(event)}`]
+    handlerName = `on${capitalize(hyphenate(event))}`
+    handler = props[handlerName]
+  }
+  if (!handler) {
+    handler = props[handlerName + `.once`]
+    if (!instance.emitted) {
+      ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
+    } else if (instance.emitted[handlerName]) {
+      return
+    }
   }
   if (handler) {
     callWithAsyncErrorHandling(
@@ -123,13 +132,13 @@ function normalizeEmitsOptions(
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
 export function isEmitListener(comp: Component, key: string): boolean {
-  if (!isOn(key)) {
+  let emits: ObjectEmitsOptions | undefined
+  if (!isOn(key) || !(emits = normalizeEmitsOptions(comp))) {
     return false
   }
-  const emits = normalizeEmitsOptions(comp)
+  key = key.replace(/\.once$/, '')
   return (
-    !!emits &&
-    (hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
-      hasOwn(emits, key.slice(2)))
+    hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
+    hasOwn(emits, key.slice(2))
   )
 }

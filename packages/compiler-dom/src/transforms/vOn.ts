@@ -3,7 +3,6 @@ import {
   DirectiveTransform,
   createObjectProperty,
   createCallExpression,
-  createObjectExpression,
   createSimpleExpression,
   NodeTypes,
   createCompoundExpression,
@@ -80,7 +79,7 @@ const transformClick = (key: ExpressionNode, event: string) => {
       ? createCompoundExpression([
           `(`,
           key,
-          `).toLowerCase() === "onclick" ? "${event}" : (`,
+          `) === "onClick" ? "${event}" : (`,
           key,
           `)`
         ])
@@ -126,20 +125,16 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     if (eventOptionModifiers.length) {
-      handlerExp = createObjectExpression([
-        createObjectProperty('handler', handlerExp),
-        createObjectProperty(
-          'options',
-          createObjectExpression(
-            eventOptionModifiers.map(modifier =>
-              createObjectProperty(
-                modifier,
-                createSimpleExpression('true', false)
-              )
-            )
+      key = isStaticExp(key)
+        ? createSimpleExpression(
+            `${key.content}.${eventOptionModifiers.join(`.`)}`,
+            true
           )
-        )
-      ])
+        : createCompoundExpression([
+            `(`,
+            key,
+            `) + ".${eventOptionModifiers.join(`.`)}"`
+          ])
     }
 
     return {

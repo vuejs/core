@@ -57,17 +57,11 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  it('should support event options', async () => {
+  it('should support event option modifiers', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
-    const nextValue = {
-      handler: fn,
-      options: {
-        once: true
-      }
-    }
-    patchProp(el, 'onClick', null, nextValue)
+    patchProp(el, 'onClick.once.capture', null, fn)
     el.dispatchEvent(event)
     await timeout()
     el.dispatchEvent(event)
@@ -75,39 +69,12 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  it('should support varying event options', async () => {
-    const el = document.createElement('div')
-    const event = new Event('click')
-    const prevFn = jest.fn()
-    const nextFn = jest.fn()
-    const nextValue = {
-      handler: nextFn,
-      options: {
-        once: true
-      }
-    }
-    patchProp(el, 'onClick', null, prevFn)
-    patchProp(el, 'onClick', prevFn, nextValue)
-    el.dispatchEvent(event)
-    await timeout()
-    el.dispatchEvent(event)
-    await timeout()
-    expect(prevFn).not.toHaveBeenCalled()
-    expect(nextFn).toHaveBeenCalledTimes(1)
-  })
-
   it('should unassign event handler with options', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
     const fn = jest.fn()
-    const nextValue = {
-      handler: fn,
-      options: {
-        once: true
-      }
-    }
-    patchProp(el, 'onClick', null, nextValue)
-    patchProp(el, 'onClick', nextValue, null)
+    patchProp(el, 'onClick.capture', null, fn)
+    patchProp(el, 'onClick.capture', fn, null)
     el.dispatchEvent(event)
     await timeout()
     el.dispatchEvent(event)
