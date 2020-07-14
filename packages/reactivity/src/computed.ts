@@ -47,6 +47,7 @@ export function computed<T>(
 
   const runner = effect(getter, {
     lazy: true,
+    computed: true,
     scheduler: () => {
       if (!dirty) {
         dirty = true
