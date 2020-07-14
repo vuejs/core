@@ -175,7 +175,7 @@ export function renderComponentRoot(
       treeOwnerId && treeOwnerId !== scopeId ? treeOwnerId + '-s' : null
     if (needScopeId || slotScopeId) {
       const extras: Data = {}
-      if (needScopeId) extras[scopeId] = ''
+      if (needScopeId) extras[scopeId!] = ''
       if (slotScopeId) extras[slotScopeId] = ''
       root = cloneVNode(root, extras)
     }
