@@ -1,3 +1,28 @@
+# [3.0.0-beta.21](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.20...v3.0.0-beta.21) (2020-07-14)
+
+
+### Bug Fixes
+
+* **compiler-dom:** fix v-on .left .right modifier handling ([6b63ba2](https://github.com/vuejs/vue-next/commit/6b63ba2f453b3f9bbf9e9e2167030de42f76b5ac))
+* **runtime-core:** avoid scopeId as attr for slot nodes with same scopeId ([#1561](https://github.com/vuejs/vue-next/issues/1561)) ([583a1c7](https://github.com/vuejs/vue-next/commit/583a1c7b45e67e9cd57e411853c20509248def89)), closes [vitejs/vite#536](https://github.com/vitejs/vite/issues/536)
+* **runtime-core/emits:** merge emits options from mixins/extends ([ba3b3cd](https://github.com/vuejs/vue-next/commit/ba3b3cdda98f6efb5d4c4fafc579b8f568a19bde)), closes [#1562](https://github.com/vuejs/vue-next/issues/1562)
+* **runtime-dom:** remove attrs with nullish values ([cb6a091](https://github.com/vuejs/vue-next/commit/cb6a0915c540af94f5d79c311022b99bc17f2965)), closes [#1576](https://github.com/vuejs/vue-next/issues/1576)
+* **runtime-dom/v-on:** only block event handlers based on attach timestamp ([8b320cc](https://github.com/vuejs/vue-next/commit/8b320cc12f74aafea9ec69f7ce70231d4f0d08fd)), closes [#1565](https://github.com/vuejs/vue-next/issues/1565)
+* **slots:** differentiate dynamic/static compiled slots ([65beba9](https://github.com/vuejs/vue-next/commit/65beba98fe5793133d3218945218b9e3f8d136eb)), closes [#1557](https://github.com/vuejs/vue-next/issues/1557)
+* **v-on:** capitalize dynamic event names ([9152a89](https://github.com/vuejs/vue-next/commit/9152a8901653d7cef864a52a3c618afcc70d827d))
+* **v-on:** refactor DOM event options modifer handling ([380c679](https://github.com/vuejs/vue-next/commit/380c6792d8899f1a43a9e6400c5df483c63290b6)), closes [#1567](https://github.com/vuejs/vue-next/issues/1567)
+
+
+### Features
+
+* ssr support for `<style vars>` ([b9595e6](https://github.com/vuejs/vue-next/commit/b9595e64cfdfc2607d3d3e6232b4a7ea199dd553))
+* **compiler-sfc:** `<script setup>` support (experimental) ([4c43d4e](https://github.com/vuejs/vue-next/commit/4c43d4e5b9df8732b601a269bf4030f9721d466f))
+* **compiler-sfc:** `<style vars>` CSS variable injection ([bd5c3b9](https://github.com/vuejs/vue-next/commit/bd5c3b96be2c6c4a0b84b096c3baa3c30feb95d6))
+* **compiler-sfc:** allow using :deep, :global & :slotted for short in `<style scoped>` ([f3cc41f](https://github.com/vuejs/vue-next/commit/f3cc41f0c8713475f2aa592bae3d82ffbc6b1300))
+* **runtime-dom:** useCssVars ([9f706a9](https://github.com/vuejs/vue-next/commit/9f706a9f5ee52c8256c52111da4271bf43b811ab))
+
+
+
 # [3.0.0-beta.20](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.19...v3.0.0-beta.20) (2020-07-08)
 
 
