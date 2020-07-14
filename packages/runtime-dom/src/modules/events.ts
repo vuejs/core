@@ -82,23 +82,20 @@ export function patchEvent(
   }
 }
 
-const optionsModifierRE = /\.(once|passive|capture)\b/g
+const optionsModifierRE = /(?:Once|Passive|Capture)$/
 
 function parseName(name: string): [string, EventListenerOptions | undefined] {
-  name = name.slice(2).toLowerCase()
+  let options: EventListenerOptions | undefined
   if (optionsModifierRE.test(name)) {
-    const options: EventListenerOptions = {}
-    name = name.replace(
-      optionsModifierRE,
-      (_, key: keyof EventListenerOptions) => {
-        options[key] = true
-        return ''
-      }
-    )
-    return [name, options]
-  } else {
-    return [name, undefined]
+    options = {}
+    let m
+    while ((m = name.match(optionsModifierRE))) {
+      name = name.slice(0, name.length - m[0].length)
+      ;(options as any)[m[0].toLowerCase()] = true
+      options
+    }
   }
+  return [name.slice(2).toLowerCase(), options]
 }
 
 function createInvoker(

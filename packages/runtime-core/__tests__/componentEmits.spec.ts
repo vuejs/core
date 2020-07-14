@@ -174,7 +174,7 @@ describe('component: emit', () => {
     const fn = jest.fn()
     render(
       h(Foo, {
-        'onFoo.once': fn
+        onFooOnce: fn
       }),
       nodeOps.createElement('div')
     )
@@ -213,8 +213,8 @@ describe('component: emit', () => {
 
     test('.once listeners', () => {
       const def2 = { emits: { click: null } }
-      expect(isEmitListener(def2, 'onClick.once')).toBe(true)
-      expect(isEmitListener(def2, 'onclick.once')).toBe(false)
+      expect(isEmitListener(def2, 'onClickOnce')).toBe(true)
+      expect(isEmitListener(def2, 'onclickOnce')).toBe(false)
     })
   })
 })

@@ -77,13 +77,13 @@ describe('compiler-dom: transform v-on', () => {
   it('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const {
       props: [prop]
-    } = parseWithVOn(`<div @click.stop.capture.passive="test"/>`, {
+    } = parseWithVOn(`<div @click.stop.capture.once="test"/>`, {
       prefixIdentifiers: true
     })
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       key: {
-        content: `onClick.capture.passive`
+        content: `onClickCaptureOnce`
       },
       value: {
         callee: V_ON_WITH_MODIFIERS,
@@ -101,7 +101,7 @@ describe('compiler-dom: transform v-on', () => {
     expect(prop).toMatchObject({
       type: NodeTypes.JS_PROPERTY,
       key: {
-        content: `onKeydown.capture`
+        content: `onKeydownCapture`
       },
       value: {
         callee: V_ON_WITH_KEYS,
@@ -274,7 +274,7 @@ describe('compiler-dom: transform v-on', () => {
     )
     expect(prop).toMatchObject({
       key: {
-        content: `onKeyup.capture`
+        content: `onKeyupCapture`
       },
       value: {
         type: NodeTypes.JS_CACHE_EXPRESSION,

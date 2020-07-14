@@ -76,7 +76,7 @@ export function emit(
     handler = props[handlerName]
   }
   if (!handler) {
-    handler = props[handlerName + `.once`]
+    handler = props[handlerName + `Once`]
     if (!instance.emitted) {
       ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
     } else if (instance.emitted[handlerName]) {
@@ -136,7 +136,7 @@ export function isEmitListener(comp: Component, key: string): boolean {
   if (!isOn(key) || !(emits = normalizeEmitsOptions(comp))) {
     return false
   }
-  key = key.replace(/\.once$/, '')
+  key = key.replace(/Once$/, '')
   return (
     hasOwn(emits, key[2].toLowerCase() + key.slice(3)) ||
     hasOwn(emits, key.slice(2))

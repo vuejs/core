@@ -11,7 +11,7 @@ import {
   isStaticExp
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
-import { makeMap } from '@vue/shared'
+import { makeMap, capitalize } from '@vue/shared'
 
 const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
 const isNonKeyModifier = /*#__PURE__*/ makeMap(
@@ -38,7 +38,8 @@ const resolveModifiers = (key: ExpressionNode, modifiers: string[]) => {
     const modifier = modifiers[i]
 
     if (isEventOptionModifier(modifier)) {
-      // eventOptionModifiers: modifiers for addEventListener() options, e.g. .passive & .capture
+      // eventOptionModifiers: modifiers for addEventListener() options,
+      // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
     } else {
       // runtimeModifiers: modifiers that needs runtime guards
@@ -125,16 +126,10 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     }
 
     if (eventOptionModifiers.length) {
+      const modifierPostfix = eventOptionModifiers.map(capitalize).join('')
       key = isStaticExp(key)
-        ? createSimpleExpression(
-            `${key.content}.${eventOptionModifiers.join(`.`)}`,
-            true
-          )
-        : createCompoundExpression([
-            `(`,
-            key,
-            `) + ".${eventOptionModifiers.join(`.`)}"`
-          ])
+        ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
+        : createCompoundExpression([`(`, key, `) + "${modifierPostfix}"`])
     }
 
     return {
