@@ -6,7 +6,12 @@ import {
   NodeTypes,
   SimpleExpressionNode
 } from '@vue/compiler-core'
-import { isRelativeUrl, parseUrl, isExternalUrl } from './templateUtils'
+import {
+  isRelativeUrl,
+  parseUrl,
+  isExternalUrl,
+  isDataUrl
+} from './templateUtils'
 import {
   AssetURLOptions,
   defaultAssetUrlOptions
@@ -51,6 +56,15 @@ export const transformSrcset: NodeTransform = (
             return { url, descriptor }
           })
 
+          // for data url need recheck url
+          for (let i = 0; i < imageCandidates.length; i++) {
+            if (imageCandidates[i].url.trim().startsWith('data:')) {
+              imageCandidates[i + 1].url =
+                imageCandidates[i].url + ',' + imageCandidates[i + 1].url
+              imageCandidates.splice(i, 1)
+            }
+          }
+
           // When srcset does not contain any relative URLs, skip transforming
           if (
             !options.includeAbsolute &&
@@ -62,7 +76,7 @@ export const transformSrcset: NodeTransform = (
           if (options.base) {
             const base = options.base
             const set: string[] = []
-            imageCandidates.forEach(({ url, descriptor }, index) => {
+            imageCandidates.forEach(({ url, descriptor }) => {
               descriptor = descriptor ? ` ${descriptor}` : ``
               if (isRelativeUrl(url)) {
                 set.push((path.posix || path).join(base, url) + descriptor)
@@ -78,6 +92,7 @@ export const transformSrcset: NodeTransform = (
           imageCandidates.forEach(({ url, descriptor }, index) => {
             if (
               !isExternalUrl(url) &&
+              !isDataUrl(url) &&
               (options.includeAbsolute || isRelativeUrl(url))
             ) {
               const { path } = parseUrl(url)

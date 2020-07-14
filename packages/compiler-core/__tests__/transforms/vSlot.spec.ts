@@ -53,7 +53,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
   }
 }
 
-function createSlotMatcher(obj: Record<string, any>) {
+function createSlotMatcher(obj: Record<string, any>, isDynamic = false) {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
     properties: Object.keys(obj)
@@ -70,7 +70,7 @@ function createSlotMatcher(obj: Record<string, any>) {
       })
       .concat({
         key: { content: `_` },
-        value: { content: `1`, isStatic: false }
+        value: { content: isDynamic ? `2` : `1`, isStatic: false }
       })
   }
 }
@@ -230,29 +230,32 @@ describe('compiler: transform component slots', () => {
       { prefixIdentifiers: true }
     )
     expect(slots).toMatchObject(
-      createSlotMatcher({
-        '[_ctx.named]': {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: {
-            type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
-          },
-          returns: [
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `foo`
-              }
+      createSlotMatcher(
+        {
+          '[_ctx.named]': {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            params: {
+              type: NodeTypes.COMPOUND_EXPRESSION,
+              children: [`{ `, { content: `foo` }, ` }`]
             },
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `_ctx.bar`
+            returns: [
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `foo`
+                }
+              },
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `_ctx.bar`
+                }
               }
-            }
-          ]
-        }
-      })
+            ]
+          }
+        },
+        true
+      )
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -307,50 +310,53 @@ describe('compiler: transform component slots', () => {
       { prefixIdentifiers: true }
     )
     expect(slots).toMatchObject(
-      createSlotMatcher({
-        '[_ctx.one]': {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: {
-            type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `foo` }, ` }`]
-          },
-          returns: [
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `foo`
-              }
+      createSlotMatcher(
+        {
+          '[_ctx.one]': {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            params: {
+              type: NodeTypes.COMPOUND_EXPRESSION,
+              children: [`{ `, { content: `foo` }, ` }`]
             },
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `_ctx.bar`
+            returns: [
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `foo`
+                }
+              },
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `_ctx.bar`
+                }
               }
-            }
-          ]
+            ]
+          },
+          '[_ctx.two]': {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            params: {
+              type: NodeTypes.COMPOUND_EXPRESSION,
+              children: [`{ `, { content: `bar` }, ` }`]
+            },
+            returns: [
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `_ctx.foo`
+                }
+              },
+              {
+                type: NodeTypes.INTERPOLATION,
+                content: {
+                  content: `bar`
+                }
+              }
+            ]
+          }
         },
-        '[_ctx.two]': {
-          type: NodeTypes.JS_FUNCTION_EXPRESSION,
-          params: {
-            type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`{ `, { content: `bar` }, ` }`]
-          },
-          returns: [
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `_ctx.foo`
-              }
-            },
-            {
-              type: NodeTypes.INTERPOLATION,
-              content: {
-                content: `bar`
-              }
-            }
-          ]
-        }
-      })
+        true
+      )
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -382,35 +388,38 @@ describe('compiler: transform component slots', () => {
                 type: NodeTypes.VNODE_CALL,
                 tag: `_component_Inner`,
                 props: undefined,
-                children: createSlotMatcher({
-                  default: {
-                    type: NodeTypes.JS_FUNCTION_EXPRESSION,
-                    params: {
-                      type: NodeTypes.COMPOUND_EXPRESSION,
-                      children: [`{ `, { content: `bar` }, ` }`]
-                    },
-                    returns: [
-                      {
-                        type: NodeTypes.INTERPOLATION,
-                        content: {
-                          content: `foo`
-                        }
+                children: createSlotMatcher(
+                  {
+                    default: {
+                      type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                      params: {
+                        type: NodeTypes.COMPOUND_EXPRESSION,
+                        children: [`{ `, { content: `bar` }, ` }`]
                       },
-                      {
-                        type: NodeTypes.INTERPOLATION,
-                        content: {
-                          content: `bar`
+                      returns: [
+                        {
+                          type: NodeTypes.INTERPOLATION,
+                          content: {
+                            content: `foo`
+                          }
+                        },
+                        {
+                          type: NodeTypes.INTERPOLATION,
+                          content: {
+                            content: `bar`
+                          }
+                        },
+                        {
+                          type: NodeTypes.INTERPOLATION,
+                          content: {
+                            content: `_ctx.baz`
+                          }
                         }
-                      },
-                      {
-                        type: NodeTypes.INTERPOLATION,
-                        content: {
-                          content: `_ctx.baz`
-                        }
-                      }
-                    ]
-                  }
-                }),
+                      ]
+                    }
+                  },
+                  true
+                ),
                 // nested slot should be forced dynamic, since scope variables
                 // are not tracked as dependencies of the slot.
                 patchFlag: genFlagText(PatchFlags.DYNAMIC_SLOTS)
@@ -522,7 +531,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[1]`
+          _: `[2]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -564,7 +573,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[1]`
+          _: `[2]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -613,7 +622,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[1]`
+          _: `[2]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,
@@ -672,7 +681,7 @@ describe('compiler: transform component slots', () => {
       callee: CREATE_SLOTS,
       arguments: [
         createObjectMatcher({
-          _: `[1]`
+          _: `[2]`
         }),
         {
           type: NodeTypes.JS_ARRAY_EXPRESSION,

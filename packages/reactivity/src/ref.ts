@@ -2,7 +2,6 @@ import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw } from './reactive'
-import { ComputedRef } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
@@ -151,15 +150,15 @@ type BaseTypes = string | number | boolean
  * }
  * ```
  *
- * Note that api-extractor somehow refuses to include `decalre module`
+ * Note that api-extractor somehow refuses to include `declare module`
  * augmentations in its generated d.ts, so we have to manually append them
  * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
 
-export type UnwrapRef<T> = T extends ComputedRef<infer V>
+export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
-  : T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>
+  : UnwrapRefSimple<T>
 
 type UnwrapRefSimple<T> = T extends
   | Function
@@ -168,7 +167,9 @@ type UnwrapRefSimple<T> = T extends
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   ? T
-  : T extends Array<any> ? T : T extends object ? UnwrappedObject<T> : T
+  : T extends Array<any>
+    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+    : T extends object ? UnwrappedObject<T> : T
 
 // Extract all known symbols from an object
 // when unwrapping Object the symbols are not `in keyof`, this should cover all the

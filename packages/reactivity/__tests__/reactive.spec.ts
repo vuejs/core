@@ -92,11 +92,19 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
-  test('unwrap', () => {
+  test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
     expect(toRaw(observed)).toBe(original)
     expect(toRaw(original)).toBe(original)
+  })
+
+  test('toRaw on object using reactive as prototype', () => {
+    const original = reactive({})
+    const obj = Object.create(original)
+    const raw = toRaw(obj)
+    expect(raw).toBe(obj)
+    expect(raw).not.toBe(toRaw(original))
   })
 
   test('should not unwrap Ref<T>', () => {
@@ -121,6 +129,21 @@ describe('reactivity/reactive', () => {
     obj.b + 1
     expect(typeof obj.a).toBe(`number`)
     expect(typeof obj.b).toBe(`number`)
+  })
+
+  test('should allow setting property from a ref to another ref', () => {
+    const foo = ref(0)
+    const bar = ref(1)
+    const observed = reactive({ a: foo })
+    const dummy = computed(() => observed.a)
+    expect(dummy.value).toBe(0)
+
+    // @ts-ignore
+    observed.a = bar
+    expect(dummy.value).toBe(1)
+
+    bar.value++
+    expect(dummy.value).toBe(2)
   })
 
   test('non-observable values', () => {
@@ -168,5 +191,14 @@ describe('reactivity/reactive', () => {
       foo: Object.freeze({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
+  })
+
+  test('should not observe objects with __v_skip', () => {
+    const original = {
+      foo: 1,
+      __v_skip: true
+    }
+    const observed = reactive(original)
+    expect(isReactive(observed)).toBe(false)
   })
 })

@@ -11,9 +11,8 @@ import {
   defineAsyncComponent,
   defineComponent
 } from '@vue/runtime-dom'
-import { renderToString } from '@vue/server-renderer'
+import { renderToString, SSRContext } from '@vue/server-renderer'
 import { mockWarn } from '@vue/shared'
-import { SSRContext } from 'packages/server-renderer/src/renderToString'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -36,6 +35,10 @@ const triggerEvent = (type: string, el: Element) => {
 
 describe('SSR hydration', () => {
   mockWarn()
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
 
   test('text', async () => {
     const msg = ref('foo')
@@ -684,6 +687,18 @@ describe('SSR hydration', () => {
       // as 2nd fragment child.
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
       // excessive children removal
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('Teleport target has empty children', () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport'
+      document.body.appendChild(teleportContainer)
+
+      mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
+        h(Teleport, { to: '#teleport' }, [h('span', 'value')])
+      )
+      expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
   })

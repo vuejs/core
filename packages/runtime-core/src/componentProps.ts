@@ -1,4 +1,9 @@
-import { toRaw, shallowReactive } from '@vue/reactivity'
+import {
+  toRaw,
+  shallowReactive,
+  trigger,
+  TriggerOpTypes
+} from '@vue/reactivity'
 import {
   EMPTY_OBJ,
   camelize,
@@ -53,8 +58,8 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T> = T extends (...args: any) => any // if is function with args
-  ? { new (): T; (): T; readonly proptotype: Function } // Create Function like constructor
+type PropMethod<T, TConstructor = any> = T extends (...args: any) => any // if is function with args
+  ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
 
 type RequiredKeys<T, MakeDefaultRequired> = {
@@ -185,13 +190,20 @@ export function updateProps(
     for (const key in rawCurrentProps) {
       if (
         !rawProps ||
+        // for camelCase
         (!hasOwn(rawProps, key) &&
           // it's possible the original props was passed in as kebab-case
           // and converted to camelCase (#955)
           ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
       ) {
         if (options) {
-          if (rawPrevProps && rawPrevProps[kebabKey!] !== undefined) {
+          if (
+            rawPrevProps &&
+            // for camelCase
+            (rawPrevProps[key] !== undefined ||
+              // for kebab-case
+              rawPrevProps[kebabKey!] !== undefined)
+          ) {
             props[key] = resolvePropValue(
               options,
               rawProps || EMPTY_OBJ,
@@ -215,6 +227,9 @@ export function updateProps(
     }
   }
 
+  // trigger updates for $attrs in case it's used in component slots
+  trigger(instance, TriggerOpTypes.SET, '$attrs')
+
   if (__DEV__ && rawProps) {
     validateProps(props, instance.type)
   }
@@ -227,8 +242,6 @@ function setFullProps(
   attrs: Data
 ) {
   const [options, needCastKeys] = normalizePropsOptions(instance.type)
-  const emits = instance.type.emits
-
   if (rawProps) {
     for (const key in rawProps) {
       const value = rawProps[key]
@@ -241,7 +254,7 @@ function setFullProps(
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {
         props[camelKey] = value
-      } else if (!emits || !isEmitListener(emits, key)) {
+      } else if (!isEmitListener(instance.type, key)) {
         // Any non-declared (either as a prop or an emitted event) props are put
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
@@ -276,7 +289,10 @@ function resolvePropValue(
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      value = isFunction(defaultValue) ? defaultValue() : defaultValue
+      value =
+        opt.type !== Function && isFunction(defaultValue)
+          ? defaultValue()
+          : defaultValue
     }
     // boolean casting
     if (opt[BooleanFlags.shouldCast]) {

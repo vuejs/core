@@ -41,7 +41,7 @@ const _withId = /*#__PURE__*/_withScopeId(\\"test\\")
 export const render = /*#__PURE__*/_withId(function render(_ctx, _cache) {
   const _component_Child = _resolveComponent(\\"Child\\")
 
-  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 1 }, [
+  return (_openBlock(), _createBlock(_component_Child, null, _createSlots({ _: 2 }, [
     (_ctx.ok)
       ? {
           name: \\"foo\\",

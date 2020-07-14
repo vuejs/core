@@ -79,7 +79,7 @@ async function main() {
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
     await run(bin('jest'), ['--clearCache'])
-    await run('yarn', ['test', '--runInBand'])
+    await run('yarn', ['test'])
   } else {
     console.log(`(skipped)`)
   }
@@ -94,7 +94,7 @@ async function main() {
     await run('yarn', ['build', '--release'])
     // test generated dts files
     step('\nVerifying type declarations...')
-    await run(bin('tsd'))
+    await run('yarn', ['test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }

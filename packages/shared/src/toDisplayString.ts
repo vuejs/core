@@ -1,6 +1,9 @@
 import { isArray, isObject, isPlainObject } from './index'
 
-// For converting {{ interpolation }} values to displayed strings.
+/**
+ * For converting {{ interpolation }} values to displayed strings.
+ * @private
+ */
 export const toDisplayString = (val: unknown): string => {
   return val == null
     ? ''

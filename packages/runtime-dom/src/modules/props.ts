@@ -4,7 +4,7 @@
 
 import { warn } from '@vue/runtime-core'
 
-// functions. The user is reponsible for using them with only trusted content.
+// functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
   key: string,

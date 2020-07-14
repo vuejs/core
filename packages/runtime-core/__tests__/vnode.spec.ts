@@ -11,11 +11,14 @@ import {
   transformVNodeArgs
 } from '../src/vnode'
 import { Data } from '../src/component'
-import { ShapeFlags, PatchFlags } from '@vue/shared'
+import { ShapeFlags, PatchFlags, mockWarn } from '@vue/shared'
 import { h, reactive, isReactive } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
 
 describe('vnode', () => {
+  mockWarn()
+
   test('create with just tag', () => {
     const vnode = createVNode('p')
     expect(vnode.type).toBe('p')
@@ -41,12 +44,27 @@ describe('vnode', () => {
     expect(vnode.props).toBe(null)
   })
 
+  test('create from an existing vnode', () => {
+    const vnode1 = createVNode('p', { id: 'foo' })
+    const vnode2 = createVNode(vnode1, { class: 'bar' }, 'baz')
+    expect(vnode2).toMatchObject({
+      type: 'p',
+      props: {
+        id: 'foo',
+        class: 'bar'
+      },
+      children: 'baz',
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+    })
+  })
+
   test('vnode keys', () => {
     for (const key of ['', 'a', 0, 1, NaN]) {
       expect(createVNode('div', { key }).key).toBe(key)
     }
     expect(createVNode('div').key).toBe(null)
     expect(createVNode('div', { key: undefined }).key).toBe(null)
+    expect(`VNode created with invalid key (NaN)`).toHaveBeenWarned()
   })
 
   test('create with class component', () => {
@@ -198,24 +216,55 @@ describe('vnode', () => {
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+  })
 
+  test('cloneVNode key normalization', () => {
     // #1041 should use resolved key/ref
     expect(cloneVNode(createVNode('div', { key: 1 })).key).toBe(1)
     expect(cloneVNode(createVNode('div', { key: 1 }), { key: 2 }).key).toBe(2)
     expect(cloneVNode(createVNode('div'), { key: 2 }).key).toBe(2)
+  })
 
-    // ref normalizes to [currentRenderingInstance, ref]
-    expect(cloneVNode(createVNode('div', { ref: 'foo' })).ref).toEqual([
-      null,
-      'foo'
-    ])
-    expect(
-      cloneVNode(createVNode('div', { ref: 'foo' }), { ref: 'bar' }).ref
-    ).toEqual([null, 'bar'])
-    expect(cloneVNode(createVNode('div'), { ref: 'bar' }).ref).toEqual([
-      null,
-      'bar'
-    ])
+  // ref normalizes to [currentRenderingInstance, ref]
+  test('cloneVNode ref normalization', () => {
+    const mockInstance1 = {} as any
+    const mockInstance2 = {} as any
+
+    setCurrentRenderingInstance(mockInstance1)
+    const original = createVNode('div', { ref: 'foo' })
+    expect(original.ref).toEqual([mockInstance1, 'foo'])
+
+    // clone and preserve original ref
+    const cloned1 = cloneVNode(original)
+    expect(cloned1.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned2 = cloneVNode(original, { ref: 'bar' })
+    expect(cloned2.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const original2 = createVNode('div')
+    const cloned3 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned3.ref).toEqual([mockInstance1, 'bar'])
+
+    // cloning with different context instance
+    setCurrentRenderingInstance(mockInstance2)
+
+    // clone and preserve original ref
+    const cloned4 = cloneVNode(original)
+    // #1311 should preserve original context instance!
+    expect(cloned4.ref).toEqual([mockInstance1, 'foo'])
+
+    // cloning with new ref, but with same context instance
+    const cloned5 = cloneVNode(original, { ref: 'bar' })
+    // new ref should use current context instance and overwrite original
+    expect(cloned5.ref).toEqual([mockInstance2, 'bar'])
+
+    // cloning and adding ref to original that has no ref
+    const cloned6 = cloneVNode(original2, { ref: 'bar' })
+    expect(cloned6.ref).toEqual([mockInstance2, 'bar'])
+
+    setCurrentRenderingInstance(null)
   })
 
   describe('mergeProps', () => {

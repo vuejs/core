@@ -3,14 +3,16 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  TextModes
+  TextModes,
+  BindingMetadata
 } from '@vue/compiler-core'
+import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
-import * as CompilerDOM from '@vue/compiler-dom'
+import { compileScript, SFCScriptCompileOptions } from './compileScript'
 
-export interface SFCParseOptions {
+export interface SFCParseOptions extends SFCScriptCompileOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
@@ -35,18 +37,24 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
+  setup?: string | boolean
+  bindings?: BindingMetadata
 }
 
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
+  vars?: string
   module?: string | boolean
 }
 
 export interface SFCDescriptor {
   filename: string
+  source: string
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
+  scriptSetup: SFCScriptBlock | null
+  scriptTransformed: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
 }
@@ -72,7 +80,8 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = CompilerDOM
+    compiler = CompilerDOM,
+    babelParserPlugins
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -84,8 +93,11 @@ export function parse(
 
   const descriptor: SFCDescriptor = {
     filename,
+    source,
     template: null,
     script: null,
+    scriptSetup: null,
+    scriptTransformed: null,
     styles: [],
     customBlocks: []
   }
@@ -140,11 +152,17 @@ export function parse(
         }
         break
       case 'script':
-        if (!descriptor.script) {
-          descriptor.script = createBlock(node, source, pad) as SFCScriptBlock
-        } else {
-          warnDuplicateBlock(source, filename, node)
+        const block = createBlock(node, source, pad) as SFCScriptBlock
+        const isSetup = !!block.attrs.setup
+        if (isSetup && !descriptor.scriptSetup) {
+          descriptor.scriptSetup = block
+          break
         }
+        if (!isSetup && !descriptor.script) {
+          descriptor.script = block
+          break
+        }
+        warnDuplicateBlock(source, filename, node, isSetup)
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -172,6 +190,16 @@ export function parse(
     descriptor.styles.forEach(genMap)
   }
 
+  if (descriptor.script || descriptor.scriptSetup) {
+    try {
+      descriptor.scriptTransformed = compileScript(descriptor, {
+        babelParserPlugins
+      })
+    } catch (e) {
+      errors.push(e)
+    }
+  }
+
   const result = {
     descriptor,
     errors
@@ -183,7 +211,8 @@ export function parse(
 function warnDuplicateBlock(
   source: string,
   filename: string,
-  node: ElementNode
+  node: ElementNode,
+  isScriptSetup = false
 ) {
   const codeFrame = generateCodeFrame(
     source,
@@ -192,9 +221,9 @@ function warnDuplicateBlock(
   )
   const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
   console.warn(
-    `Single file component can contain only one ${
-      node.tag
-    } element (${location}):\n\n${codeFrame}`
+    `Single file component can contain only one <${node.tag}${
+      isScriptSetup ? ` setup` : ``
+    }> element (${location}):\n\n${codeFrame}`
   )
 }
 
@@ -236,11 +265,15 @@ function createBlock(
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
+        } else if (p.name === 'vars' && typeof attrs.vars === 'string') {
+          ;(block as SFCStyleBlock).vars = attrs.vars
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
       } else if (type === 'template' && p.name === 'functional') {
         ;(block as SFCTemplateBlock).functional = true
+      } else if (type === 'script' && p.name === 'setup') {
+        ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }
   })

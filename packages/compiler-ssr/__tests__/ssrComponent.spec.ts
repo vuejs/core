@@ -3,16 +3,16 @@ import { compile } from '../src'
 describe('ssr: components', () => {
   test('basic', () => {
     expect(compile(`<foo id="a" :prop="b" />`).code).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
+      "const { resolveComponent: _resolveComponent, mergeProps: _mergeProps } = require(\\"vue\\")
       const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        _push(_ssrRenderComponent(_component_foo, {
+        _push(_ssrRenderComponent(_component_foo, _mergeProps({
           id: \\"a\\",
           prop: _ctx.b
-        }, null, _parent))
+        }, _attrs), null, _parent))
       }"
     `)
   })
@@ -20,21 +20,21 @@ describe('ssr: components', () => {
   test('dynamic component', () => {
     expect(compile(`<component is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(\\"foo\\"), { prop: \\"b\\" }, null, _parent))
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(\\"foo\\"), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
       }"
     `)
 
     expect(compile(`<component :is="foo" prop="b" />`).code)
       .toMatchInlineSnapshot(`
-      "const { resolveDynamicComponent: _resolveDynamicComponent } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require(\\"vue\\")
+      const { ssrRenderVNode: _ssrRenderVNode } = require(\\"@vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent) {
-        _push(_ssrRenderComponent(_resolveDynamicComponent(_ctx.foo), { prop: \\"b\\" }, null, _parent))
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({ prop: \\"b\\" }, _attrs), null), _parent)
       }"
     `)
   })
@@ -45,10 +45,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`hello<div\${_scopeId}></div>\`)
@@ -71,10 +71,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, _attrs, {
             default: _withCtx(({ msg }, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`\${_ssrInterpolate(msg + _ctx.outer)}\`)
@@ -100,10 +100,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, _attrs, {
             default: _withCtx((_, _push, _parent, _scopeId) => {
               if (_push) {
                 _push(\`foo\`)
@@ -137,10 +137,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
             (_ctx.ok)
               ? {
                   name: \\"named\\",
@@ -169,10 +169,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, renderList: _renderList, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, _createSlots({ _: 1 }, [
+          _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 }, [
             _renderList(_ctx.names, (key) => {
               return {
                 name: key,
@@ -210,10 +210,10 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
-          _push(_ssrRenderComponent(_component_foo, null, {
+          _push(_ssrRenderComponent(_component_foo, _attrs, {
             foo: _withCtx(({ list }, _push, _parent, _scopeId) => {
               if (_push) {
                 if (_ctx.ok) {
@@ -270,7 +270,7 @@ describe('ssr: components', () => {
       expect(compile(`<transition><div/></transition>`).code)
         .toMatchInlineSnapshot(`
         "
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div></div>\`)
         }"
       `)
@@ -278,7 +278,7 @@ describe('ssr: components', () => {
       expect(compile(`<transition-group><div/></transition-group>`).code)
         .toMatchInlineSnapshot(`
         "
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<!--[--><div></div><!--]-->\`)
         }"
       `)
@@ -288,7 +288,7 @@ describe('ssr: components', () => {
         "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
 
-        return function ssrRender(_ctx, _push, _parent) {
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, null, null, _parent))

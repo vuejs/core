@@ -7,6 +7,12 @@ module.exports = {
     sourceType: 'module'
   },
   rules: {
+    'no-unused-vars': [
+      'error',
+      // we are only using this rule to check for unused arguments since TS
+      // catches unused variables but not args.
+      { varsIgnorePattern: '.*', args: 'after-used', argsIgnorePattern: '^_' }
+    ],
     // most of the codebase are expected to be env agnostic
     'no-restricted-globals': ['error', ...DOMGlobals, ...NodeGlobals],
     // since we target ES2015 for baseline support, we need to forbid object
@@ -18,6 +24,14 @@ module.exports = {
     ]
   },
   overrides: [
+    // tests, no restrictions (runs in Node / jest with jsdom)
+    {
+      files: ['**/__tests__/**', 'test-dts/**'],
+      rules: {
+        'no-restricted-globals': 'off',
+        'no-restricted-syntax': 'off'
+      }
+    },
     // Packages targeting DOM
     {
       files: ['packages/{vue,runtime-dom}/**'],
@@ -33,7 +47,7 @@ module.exports = {
         'no-restricted-syntax': 'off'
       }
     },
-    // Private package, no syntax restrictions
+    // Private package, browser only + no syntax restrictions
     {
       files: ['packages/template-explorer/**'],
       rules: {

@@ -30,6 +30,7 @@ describe('compiler sfc: transform asset url', () => {
 			<img src="~/fixtures/logo.png"/>
 			<img src="http://example.com/fixtures/logo.png"/>
 			<img src="/fixtures/logo.png"/>
+			<img src="data:image/png;base64,i"/>
 		`)
 
     expect(result.code).toMatchSnapshot()

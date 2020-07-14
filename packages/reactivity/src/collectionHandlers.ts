@@ -154,12 +154,28 @@ function createForEach(isReadonly: boolean, shallow: boolean) {
   }
 }
 
+interface Iterable {
+  [Symbol.iterator](): Iterator
+}
+
+interface Iterator {
+  next(value?: any): IterationResult
+}
+
+interface IterationResult {
+  value: any
+  done: boolean
+}
+
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
   shallow: boolean
 ) {
-  return function(this: IterableCollections, ...args: unknown[]) {
+  return function(
+    this: IterableCollections,
+    ...args: unknown[]
+  ): Iterable & Iterator {
     const target = toRaw(this)
     const isMap = target instanceof Map
     const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
@@ -282,11 +298,11 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
     key: string | symbol,
     receiver: CollectionTypes
   ) => {
-    if (key === ReactiveFlags.isReactive) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
-    } else if (key === ReactiveFlags.isReadonly) {
+    } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (key === ReactiveFlags.RAW) {
       return target
     }
 

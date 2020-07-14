@@ -7,7 +7,7 @@ import { ErrorCodes } from 'packages/runtime-core/src/errorHandling'
 
 interface Invoker extends EventListener {
   value: EventValue
-  lastUpdated: number
+  attached: number
 }
 
 type EventValue = (Function | Function[]) & {
@@ -103,7 +103,6 @@ export function patchEvent(
       ;(prevValue as EventValue).invoker = null
       invoker.value = value
       nextValue.invoker = invoker
-      invoker.lastUpdated = getNow()
     } else {
       addEventListener(
         el,
@@ -128,7 +127,8 @@ function createInvoker(
     // the solution is simple: we save the timestamp when a handler is attached,
     // and the handler would only fire if the event passed to it was fired
     // AFTER it was attached.
-    if (e.timeStamp >= invoker.lastUpdated - 1) {
+    const timeStamp = e.timeStamp || _getNow()
+    if (timeStamp >= invoker.attached - 1) {
       callWithAsyncErrorHandling(
         patchStopImmediatePropagation(e, invoker.value),
         instance,
@@ -139,7 +139,7 @@ function createInvoker(
   }
   invoker.value = initialValue
   initialValue.invoker = invoker
-  invoker.lastUpdated = getNow()
+  invoker.attached = getNow()
   return invoker
 }
 

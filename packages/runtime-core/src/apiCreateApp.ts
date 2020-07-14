@@ -13,8 +13,10 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
+import { version } from '.'
 
 export interface App<HostElement = any> {
+  version: string
   config: AppConfig
   use(plugin: Plugin, ...options: any[]): this
   mixin(mixin: ComponentOptions): this
@@ -126,6 +128,8 @@ export function createAppAPI<HostElement>(
       _container: null,
       _context: context,
 
+      version,
+
       get config() {
         return context.config
       },
@@ -225,7 +229,10 @@ export function createAppAPI<HostElement>(
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
-            `App has already been mounted. Create a new app instance instead.`
+            `App has already been mounted.\n` +
+              `If you want to remount the same app, move your app creation logic ` +
+              `into a factory function and create fresh app instances for each ` +
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``
           )
         }
       },

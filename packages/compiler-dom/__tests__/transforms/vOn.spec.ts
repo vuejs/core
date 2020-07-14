@@ -137,6 +137,42 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
+  it('should wrap keys guard for static key event w/ left/right modifiers', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @keyup.left="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [{ content: '_ctx.test' }, '["left"]']
+      }
+    })
+  })
+
+  it('should wrap both for dynamic key event w/ left/right modifiers', () => {
+    const {
+      props: [prop]
+    } = parseWithVOn(`<div @[e].left="test"/>`, {
+      prefixIdentifiers: true
+    })
+    expect(prop).toMatchObject({
+      type: NodeTypes.JS_PROPERTY,
+      value: {
+        callee: V_ON_WITH_KEYS,
+        arguments: [
+          {
+            callee: V_ON_WITH_MODIFIERS,
+            arguments: [{ content: `_ctx.test` }, `["left"]`]
+          },
+          '["left"]'
+        ]
+      }
+    })
+  })
+
   it('should not wrap normal guard if there is only keys guard', () => {
     const {
       props: [prop]

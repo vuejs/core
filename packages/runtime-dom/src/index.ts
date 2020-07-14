@@ -10,7 +10,7 @@ import {
   RootHydrateFunction
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
-import { patchProp } from './patchProp'
+import { patchProp, forcePatchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import { isFunction, isString, isHTMLTag, isSVGTag, extend } from '@vue/shared'
 
@@ -21,16 +21,16 @@ declare module '@vue/reactivity' {
   }
 }
 
-const rendererOptions = extend({ patchProp }, nodeOps)
+const rendererOptions = extend({ patchProp, forcePatchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer: Renderer | HydrationRenderer
+let renderer: Renderer<Element> | HydrationRenderer
 
 let enabledHydration = false
 
 function ensureRenderer() {
-  return renderer || (renderer = createRenderer(rendererOptions))
+  return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
 
 function ensureHydrationRenderer() {
@@ -112,6 +112,10 @@ function normalizeContainer(container: Element | string): Element | null {
   }
   return container
 }
+
+// SFC CSS utilities
+export { useCssModule } from './helpers/useCssModule'
+export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
 export { Transition, TransitionProps } from './components/Transition'

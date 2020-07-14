@@ -13,7 +13,9 @@ import {
   UnwrapRef,
   toRaw,
   shallowReadonly,
-  ReactiveFlags
+  ReactiveFlags,
+  track,
+  TrackOpTypes
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -164,10 +166,9 @@ export type ComponentPublicInstanceConstructor<
   new (): T
 }
 
-const publicPropertiesMap: Record<
-  string,
-  (i: ComponentInternalInstance) => any
-> = {
+type PublicPropertiesMap = Record<string, (i: ComponentInternalInstance) => any>
+
+const publicPropertiesMap: PublicPropertiesMap = extend(Object.create(null), {
   $: i => i,
   $el: i => i.vnode.el,
   $data: i => i.data,
@@ -182,7 +183,7 @@ const publicPropertiesMap: Record<
   $forceUpdate: i => () => queueJob(i.update),
   $nextTick: () => nextTick,
   $watch: __FEATURE_OPTIONS__ ? i => instanceWatch.bind(i) : NOOP
-}
+} as PublicPropertiesMap)
 
 const enum AccessTypes {
   SETUP,
@@ -209,8 +210,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       appContext
     } = instance
 
-    // let @vue/reatvitiy know it should never observe Vue public instances.
-    if (key === ReactiveFlags.skip) {
+    // let @vue/reactivity know it should never observe Vue public instances.
+    if (key === ReactiveFlags.SKIP) {
       return true
     }
 
@@ -220,6 +221,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
       if (n !== undefined) {
@@ -243,8 +245,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (
         // only cache other properties when instance has declared (thus stable)
         // props
-        type.props &&
-        hasOwn(normalizePropsOptions(type)[0]!, key)
+        (normalizedProps = normalizePropsOptions(type)[0]) &&
+        hasOwn(normalizedProps, key)
       ) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
@@ -260,8 +262,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
-      if (__DEV__ && key === '$attrs') {
-        markAttrsAccessed()
+      if (key === '$attrs') {
+        track(instance, TrackOpTypes.GET, key)
+        __DEV__ && markAttrsAccessed()
       }
       return publicGetter(instance)
     } else if (
@@ -349,11 +352,13 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     }: ComponentRenderContext,
     key: string
   ) {
+    let normalizedProps
     return (
       accessCache![key] !== undefined ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
       (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
-      (type.props && hasOwn(normalizePropsOptions(type)[0]!, key)) ||
+      ((normalizedProps = normalizePropsOptions(type)[0]) &&
+        hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
       hasOwn(appContext.config.globalProperties, key)

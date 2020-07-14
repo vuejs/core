@@ -21,7 +21,7 @@ describe('component props', () => {
     let proxy: any
 
     const Comp = defineComponent({
-      props: ['fooBar'],
+      props: ['fooBar', 'barBaz'],
       render() {
         props = this.$props
         attrs = this.$attrs
@@ -42,13 +42,16 @@ describe('component props', () => {
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     // test updating kebab-case should not delete it (#955)
-    render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4 }), root)
+    render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4, barBaz: 5 }), root)
     expect(proxy.fooBar).toBe(3)
-    expect(props).toEqual({ fooBar: 3 })
+    expect(proxy.barBaz).toBe(5)
+    expect(props).toEqual({ fooBar: 3,barBaz: 5 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     render(h(Comp, { qux: 5 }), root)
     expect(proxy.fooBar).toBeUndefined()
+    // remove the props with camelCase key (#1412)
+    expect(proxy.barBaz).toBeUndefined()
     expect(props).toEqual({})
     expect(attrs).toEqual({ qux: 5 })
   })
@@ -158,6 +161,7 @@ describe('component props', () => {
   test('default value', () => {
     let proxy: any
     const defaultFn = jest.fn(() => ({ a: 1 }))
+    const defaultBaz = jest.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -166,6 +170,10 @@ describe('component props', () => {
         },
         bar: {
           default: defaultFn
+        },
+        baz: {
+          type: Function,
+          default: defaultBaz
         }
       },
       render() {
@@ -178,7 +186,9 @@ describe('component props', () => {
     expect(proxy.foo).toBe(2)
     const prevBar = proxy.bar
     expect(proxy.bar).toEqual({ a: 1 })
+    expect(proxy.baz).toEqual(defaultBaz)
     expect(defaultFn).toHaveBeenCalledTimes(1)
+    expect(defaultBaz).toHaveBeenCalledTimes(0)
 
     // #999: updates should not cause default factory of unchanged prop to be
     // called again

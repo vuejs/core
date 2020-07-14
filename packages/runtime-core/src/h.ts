@@ -12,6 +12,7 @@ import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import { FunctionalComponent, Component } from './component'
 import { ComponentOptions } from './componentOptions'
+import { EmitsOptions } from './componentEmits'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -80,7 +81,7 @@ export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren
+  children?: RawChildren | RawSlots
 ): VNode
 
 // fragment
@@ -107,8 +108,8 @@ export function h(
 ): VNode
 
 // functional component
-export function h<P>(
-  type: FunctionalComponent<P>,
+export function h<P, E extends EmitsOptions = {}>(
+  type: FunctionalComponent<P, E>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode

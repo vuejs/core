@@ -43,7 +43,8 @@ import {
   findProp,
   isCoreComponent,
   isBindKey,
-  findDir
+  findDir,
+  isStaticExp
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getStaticType } from './hoistStatic'
@@ -203,7 +204,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
-      false /* isForBlock */,
+      false /* disableTracking */,
       node.loc
     )
   }
@@ -275,12 +276,12 @@ export function buildProps(
   const dynamicPropNames: string[] = []
 
   const analyzePatchFlag = ({ key, value }: Property) => {
-    if (key.type === NodeTypes.SIMPLE_EXPRESSION && key.isStatic) {
+    if (isStaticExp(key)) {
       const name = key.content
       if (
         !isComponent &&
         isOn(name) &&
-        // omit the flag for click handlers becaues hydration gives click
+        // omit the flag for click handlers because hydration gives click
         // dedicated fast path.
         name.toLowerCase() !== 'onclick' &&
         // omit v-model handlers

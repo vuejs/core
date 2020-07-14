@@ -22,6 +22,7 @@ import {
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
+import { validateBrowserExpression } from '../validateExpression'
 import {
   CREATE_BLOCK,
   FRAGMENT,
@@ -91,6 +92,10 @@ export function processIf(
     // dir.exp can only be simple expression because vIf transform is applied
     // before expression transform.
     dir.exp = processExpression(dir.exp as SimpleExpressionNode, context)
+  }
+
+  if (__DEV__ && __BROWSER__ && dir.exp) {
+    validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
   if (dir.name === 'if') {

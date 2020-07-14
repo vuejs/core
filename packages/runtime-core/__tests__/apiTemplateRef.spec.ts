@@ -5,7 +5,8 @@ import {
   render,
   nextTick,
   defineComponent,
-  reactive
+  reactive,
+  serializeInner
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#template-refs
@@ -217,5 +218,54 @@ describe('api: template refs', () => {
     }
     render(h(Comp), root)
     expect(state.refKey).toBe(root.children[0])
+  })
+
+  test('multiple root refs', () => {
+    const root = nodeOps.createElement('div')
+    const refKey1 = ref(null)
+    const refKey2 = ref(null)
+    const refKey3 = ref(null)
+
+    const Comp = {
+      setup() {
+        return {
+          refKey1,
+          refKey2,
+          refKey3
+        }
+      },
+      render() {
+        return [
+          h('div', { ref: 'refKey1' }),
+          h('div', { ref: 'refKey2' }),
+          h('div', { ref: 'refKey3' })
+        ]
+      }
+    }
+    render(h(Comp), root)
+    expect(refKey1.value).toBe(root.children[1])
+    expect(refKey2.value).toBe(root.children[2])
+    expect(refKey3.value).toBe(root.children[3])
+  })
+
+  // #1505
+  test('reactive template ref in the same template', async () => {
+    const Comp = {
+      setup() {
+        const el = ref()
+        return { el }
+      },
+      render(this: any) {
+        return h('div', { id: 'foo', ref: 'el' }, this.el && this.el.props.id)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    // ref not ready on first render, but should queue an update immediately
+    expect(serializeInner(root)).toBe(`<div id="foo"></div>`)
+    await nextTick()
+    // ref should be updated
+    expect(serializeInner(root)).toBe(`<div id="foo">foo</div>`)
   })
 })

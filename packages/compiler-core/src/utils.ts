@@ -20,7 +20,8 @@ import {
   IfBranchNode,
   TextNode,
   InterpolationNode,
-  VNodeCall
+  VNodeCall,
+  SimpleExpressionNode
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -34,6 +35,9 @@ import { isString, isObject, hyphenate, extend } from '@vue/shared'
 import { parse } from '@babel/parser'
 import { walk } from 'estree-walker'
 import { Node } from '@babel/types'
+
+export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
+  p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
 export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
@@ -196,12 +200,7 @@ export function findProp(
 }
 
 export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
-  return !!(
-    arg &&
-    arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-    arg.isStatic &&
-    arg.content === name
-  )
+  return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
 export function hasDynamicKeyVBind(node: ElementNode): boolean {

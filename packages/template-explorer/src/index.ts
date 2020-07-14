@@ -4,6 +4,7 @@ import { compile as ssrCompile } from '@vue/compiler-ssr'
 import { compilerOptions, initOptions, ssrMode } from './options'
 import { watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map'
+import theme from './theme'
 
 declare global {
   interface Window {
@@ -19,8 +20,21 @@ interface PersistedState {
   options: CompilerOptions
 }
 
+const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
+  fontSize: 14,
+  scrollBeyondLastLine: false,
+  renderWhitespace: 'selection',
+  minimap: {
+    enabled: false
+  }
+}
+
 window.init = () => {
   const monaco = window.monaco
+
+  monaco.editor.defineTheme('my-theme', theme)
+  monaco.editor.setTheme('my-theme')
+
   const persistedState: PersistedState = JSON.parse(
     decodeURIComponent(window.location.hash.slice(1)) ||
       localStorage.getItem('state') ||
@@ -94,22 +108,11 @@ window.init = () => {
     }
   }
 
-  const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
-    theme: 'vs-dark',
-    fontSize: 14,
-    wordWrap: 'on',
-    scrollBeyondLastLine: false,
-    renderWhitespace: 'selection',
-    contextmenu: false,
-    minimap: {
-      enabled: false
-    }
-  }
-
   const editor = monaco.editor.create(document.getElementById('source')!, {
     value: persistedState.src || `<div>Hello World!</div>`,
     language: 'html',
-    ...sharedEditorOptions
+    ...sharedEditorOptions,
+    wordWrap: 'bounded'
   })
 
   editor.getModel()!.updateOptions({

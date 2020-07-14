@@ -13,6 +13,18 @@ export * from './escapeHtml'
 export * from './looseEqual'
 export * from './toDisplayString'
 
+/**
+ * List of @babel/parser plugins that are used for template expression
+ * transforms and SFC script transforms. By default we enable proposals slated
+ * for ES2020. This will need to be updated as the spec moves forward.
+ * Full list at https://babeljs.io/docs/en/next/babel-parser#plugins
+ */
+export const babelParserDefautPlugins = [
+  'bigInt',
+  'optionalChaining',
+  'nullishCoalescingOperator'
+] as const
+
 export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
   ? Object.freeze({})
   : {}
@@ -82,6 +94,9 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 }
 
 const camelizeRE = /-(\w)/g
+/**
+ * @private
+ */
 export const camelize = cacheStringFunction(
   (str: string): string => {
     return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
@@ -89,12 +104,18 @@ export const camelize = cacheStringFunction(
 )
 
 const hyphenateRE = /\B([A-Z])/g
+/**
+ * @private
+ */
 export const hyphenate = cacheStringFunction(
   (str: string): string => {
     return str.replace(hyphenateRE, '-$1').toLowerCase()
   }
 )
 
+/**
+ * @private
+ */
 export const capitalize = cacheStringFunction(
   (str: string): string => {
     return str.charAt(0).toUpperCase() + str.slice(1)
@@ -114,6 +135,7 @@ export const invokeArrayFns = (fns: Function[], arg?: any) => {
 export const def = (obj: object, key: string | symbol, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,
+    enumerable: false,
     value
   })
 }

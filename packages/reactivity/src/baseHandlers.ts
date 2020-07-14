@@ -42,11 +42,17 @@ const arrayInstrumentations: Record<string, Function> = {}
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target: object, key: string | symbol, receiver: object) {
-    if (key === ReactiveFlags.isReactive) {
+    if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
-    } else if (key === ReactiveFlags.isReadonly) {
+    } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
-    } else if (key === ReactiveFlags.raw) {
+    } else if (
+      key === ReactiveFlags.RAW &&
+      receiver ===
+        (isReadonly
+          ? (target as any)[ReactiveFlags.READONLY]
+          : (target as any)[ReactiveFlags.REACTIVE])
+    ) {
       return target
     }
 
@@ -54,35 +60,38 @@ function createGetter(isReadonly = false, shallow = false) {
     if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
       return Reflect.get(arrayInstrumentations, key, receiver)
     }
+
     const res = Reflect.get(target, key, receiver)
 
-    if ((isSymbol(key) && builtInSymbols.has(key)) || key === '__proto__') {
+    if (
+      isSymbol(key)
+        ? builtInSymbols.has(key)
+        : key === `__proto__` || key === `__v_isRef`
+    ) {
       return res
     }
 
+    if (!isReadonly) {
+      track(target, TrackOpTypes.GET, key)
+    }
+
     if (shallow) {
-      !isReadonly && track(target, TrackOpTypes.GET, key)
       return res
     }
 
     if (isRef(res)) {
-      if (targetIsArray) {
-        !isReadonly && track(target, TrackOpTypes.GET, key)
-        return res
-      } else {
-        // ref unwrapping, only for Objects, not for Arrays.
-        return res.value
-      }
+      // ref unwrapping, only for Objects, not for Arrays.
+      return targetIsArray ? res : res.value
     }
 
-    !isReadonly && track(target, TrackOpTypes.GET, key)
-    return isObject(res)
-      ? isReadonly
-        ? // need to lazy access readonly and reactive here to avoid
-          // circular dependency
-          readonly(res)
-        : reactive(res)
-      : res
+    if (isObject(res)) {
+      // Convert returned value into a proxy as well. we do the isObject check
+      // here to avoid invalid value warning. Also need to lazy access readonly
+      // and reactive here to avoid circular dependency.
+      return isReadonly ? readonly(res) : reactive(res)
+    }
+
+    return res
   }
 }
 
