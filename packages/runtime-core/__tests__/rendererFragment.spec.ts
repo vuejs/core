@@ -124,7 +124,7 @@ describe('renderer: fragment', () => {
           createTextVNode('bar'),
           createTextVNode('baz')
         ],
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT
       ),
       root
     )
