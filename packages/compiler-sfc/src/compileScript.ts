@@ -40,15 +40,17 @@ export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions = {}
 ): SFCScriptBlock {
-  if (__DEV__ && !__TEST__ && !hasWarned) {
+  const { script, scriptSetup, styles, source, filename } = sfc
+
+  if (__DEV__ && !__TEST__ && !hasWarned && scriptSetup) {
     hasWarned = true
-    console.log(
+    // @ts-ignore `console.info` cannot be null error
+    console[console.info ? 'info' : 'log'](
       `\n[@vue/compiler-sfc] <script setup> is still an experimental proposal.\n` +
         `Follow https://github.com/vuejs/rfcs/pull/182 for its status.\n`
     )
   }
 
-  const { script, scriptSetup, styles, source, filename } = sfc
   const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
 
   const isTS =

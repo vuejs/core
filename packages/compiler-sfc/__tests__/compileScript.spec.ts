@@ -457,7 +457,7 @@ describe('SFC compile <script setup>', () => {
       )
     })
 
-    test('error on duplicated defalut export', () => {
+    test('error on duplicated default export', () => {
       expect(
         parse(`
       <script>
