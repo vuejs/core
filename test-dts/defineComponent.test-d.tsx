@@ -7,7 +7,9 @@ import {
   createApp,
   expectError,
   expectType,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  ComponentOptions,
+  SetupContext
 } from './index'
 
 describe('with object props', () => {
@@ -683,4 +685,11 @@ describe('emits', () => {
   const instance = {} as ComponentPublicInstance
   instance.$emit('test', 1)
   instance.$emit('test')
+})
+
+describe('componentOptions setup should be `SetupContext`', () => {
+  expect<ComponentOptions['setup']>({} as (
+    props: Record<string, any>,
+    ctx: SetupContext
+  ) => any)
 })
