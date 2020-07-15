@@ -557,7 +557,7 @@ export function compileScript(
 
   // inject `useCSSVars` calls
   if (hasCssVars) {
-    s.prepend(`import { useCSSVars as __useCSSVars__ } from 'vue'\n`)
+    s.prepend(`import { useCssVars as __useCssVars__ } from 'vue'\n`)
     for (const style of styles) {
       const vars = style.attrs.vars
       if (typeof vars === 'string') {

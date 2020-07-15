@@ -109,7 +109,7 @@ exports[`SFC compile <script setup> CSS vars injection <script> w/ default expor
 "const __default__ = { setup() {} }
 import { useCSSVars as __useCSSVars__ } from 'vue'
 const __injectCSSVars__ = () => {
-__useCSSVars__(_ctx => ({ color: _ctx.color }))
+__useCssVars__(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -125,7 +125,7 @@ exports[`SFC compile <script setup> CSS vars injection <script> w/ default expor
         
 import { useCSSVars as __useCSSVars__ } from 'vue'
 const __injectCSSVars__ = () => {
-__useCSSVars__(_ctx => ({ color: _ctx.color }))
+__useCssVars__(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -139,7 +139,7 @@ exports[`SFC compile <script setup> CSS vars injection <script> w/ no default ex
 const __default__ = {}
 import { useCSSVars as __useCSSVars__ } from 'vue'
 const __injectCSSVars__ = () => {
-__useCSSVars__(_ctx => ({ color: _ctx.color }))
+__useCssVars__(_ctx => ({ color: _ctx.color }))
 }
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -149,11 +149,11 @@ export default __default__"
 `;
 
 exports[`SFC compile <script setup> CSS vars injection w/ <script setup> 1`] = `
-"import { useCSSVars as __useCSSVars__ } from 'vue'
+"import { useCssVars as __useCssVars__ } from 'vue'
 
 export function setup() {
 const color = 'red'
-__useCSSVars__(_ctx => ({ color }))
+__useCssVars__(_ctx => ({ color }))
 return { color }
 }
 
