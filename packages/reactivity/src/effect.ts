@@ -226,8 +226,8 @@ export function trigger(
       effect.options.onTrigger({
         effect,
         target,
-        key,
         type,
+        key,
         newValue,
         oldValue,
         oldTarget
