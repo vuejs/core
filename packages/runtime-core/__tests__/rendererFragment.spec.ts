@@ -129,6 +129,20 @@ describe('renderer: fragment', () => {
       root
     )
     expect(serializeInner(root)).toBe(`<div>foo</div>barbaz`)
+
+    render(
+      createVNode(
+        Fragment,
+        null,
+        [
+          createTextVNode('baz'),
+          createVNode('div', null, 'foo', PatchFlags.TEXT)
+        ],
+        PatchFlags.UNKEYED_FRAGMENT
+      ),
+      root
+    )
+    expect(serializeInner(root)).toBe(`baz<div>foo</div>`)
   })
 
   it('patch fragment children (compiler generated, keyed)', () => {

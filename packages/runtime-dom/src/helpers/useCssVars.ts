@@ -14,6 +14,7 @@ export function useCssVars(
   scoped = false
 ) {
   const instance = getCurrentInstance()
+  /* istanbul ignore next */
   if (!instance) {
     __DEV__ &&
       warn(`useCssVars is called without current active component instance.`)
