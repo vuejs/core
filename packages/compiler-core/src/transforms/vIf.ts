@@ -5,7 +5,6 @@ import {
 } from '../transform'
 import {
   NodeTypes,
-  ParentNode,
   ElementTypes,
   ElementNode,
   DirectiveNode,
@@ -37,9 +36,11 @@ import { PatchFlags, PatchFlagNames } from '@vue/shared'
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
-    return processIf(node, dir, context, (ifNode, branch, parent, isRoot) => {
-      // #1587: We need to dynamically calculate the key based on the current node's sibling nodes
-      const siblings = parent.children
+    return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      // #1587: We need to dynamically increment the key based on the current
+      // node's sibling nodes, since chained v-if/else branches are
+      // rendered at the same depth
+      const siblings = context.parent!.children
       let i = siblings.indexOf(ifNode)
       let key = 0
       while (i-- >= 0) {
@@ -86,7 +87,6 @@ export function processIf(
   processCodegen?: (
     node: IfNode,
     branch: IfBranchNode,
-    parent: ParentNode,
     isRoot: boolean
   ) => (() => void) | undefined
 ) {
@@ -120,7 +120,7 @@ export function processIf(
     }
     context.replaceNode(ifNode)
     if (processCodegen) {
-      return processCodegen(ifNode, branch, context.parent!, true)
+      return processCodegen(ifNode, branch, true)
     }
   } else {
     // locate the adjacent v-if
@@ -142,9 +142,7 @@ export function processIf(
           branch.children = [...comments, ...branch.children]
         }
         sibling.branches.push(branch)
-        const onExit =
-          processCodegen &&
-          processCodegen(sibling, branch, context.parent!, false)
+        const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
         // make sure to traverse here.
         traverseNode(branch, context)
