@@ -736,14 +736,17 @@ function baseCreateRenderer(
     }
 
     hostInsert(el, container, anchor)
+    // #1583 For inside suspense case, enter hook should call when suspense resolved
+    const needCallTransitionHooks =
+      !parentSuspense && transition && !transition.persisted
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
-      (transition && !transition.persisted) ||
+      needCallTransitionHooks ||
       dirs
     ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        transition && !transition.persisted && transition.enter(el)
+        needCallTransitionHooks && transition!.enter(el)
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
       }, parentSuspense)
     }
