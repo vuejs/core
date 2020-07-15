@@ -40,4 +40,45 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<span></span>`)
     expect(parentVnode!.el).toBe(childVnode2!.el)
   })
+
+  it('should create an Component with props', () => {
+    const Comp = {
+      render: () => {
+        return h('div')
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp, { id: 'foo', class: 'bar' }), root)
+    expect(serializeInner(root)).toBe(`<div id="foo" class="bar"></div>`)
+  })
+
+  it('should create an Component with direct text children', () => {
+    const Comp = {
+      render: () => {
+        return h('div', 'test')
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp, { id: 'foo', class: 'bar' }), root)
+    expect(serializeInner(root)).toBe(`<div id="foo" class="bar">test</div>`)
+  })
+
+  it('should update an Component tag which is already mounted', () => {
+    const Comp1 = {
+      render: () => {
+        return h('div', 'foo')
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp1), root)
+    expect(serializeInner(root)).toBe('<div>foo</div>')
+
+    const Comp2 = {
+      render: () => {
+        return h('span', 'foo')
+      }
+    }
+    render(h(Comp2), root)
+    expect(serializeInner(root)).toBe('<span>foo</span>')
+  })
 })
