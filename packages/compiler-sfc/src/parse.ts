@@ -8,7 +8,6 @@ import {
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
-import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
 import { compileScript, SFCScriptCompileOptions } from './compileScript'
 
@@ -61,7 +60,7 @@ export interface SFCDescriptor {
 
 export interface SFCParseResult {
   descriptor: SFCDescriptor
-  errors: CompilerError[]
+  errors: (CompilerError | SyntaxError)[]
 }
 
 const SFC_CACHE_MAX_SIZE = 500
@@ -102,7 +101,7 @@ export function parse(
     customBlocks: []
   }
 
-  const errors: CompilerError[] = []
+  const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     // there are no components at SFC parsing level
     isNativeTag: () => true,
@@ -148,13 +147,22 @@ export function parse(
             false
           ) as SFCTemplateBlock
         } else {
-          warnDuplicateBlock(source, filename, node)
+          errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
         const block = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!block.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
+          if (block.src) {
+            errors.push(
+              new SyntaxError(
+                `<script setup> cannot be used with the "src" attribute since ` +
+                  `its syntax will be ambiguous outside of the component.`
+              )
+            )
+            break
+          }
           descriptor.scriptSetup = block
           break
         }
@@ -162,7 +170,7 @@ export function parse(
           descriptor.script = block
           break
         }
-        warnDuplicateBlock(source, filename, node, isSetup)
+        errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -208,23 +216,17 @@ export function parse(
   return result
 }
 
-function warnDuplicateBlock(
-  source: string,
-  filename: string,
+function createDuplicateBlockError(
   node: ElementNode,
   isScriptSetup = false
-) {
-  const codeFrame = generateCodeFrame(
-    source,
-    node.loc.start.offset,
-    node.loc.end.offset
-  )
-  const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
-  console.warn(
+): CompilerError {
+  const err = new SyntaxError(
     `Single file component can contain only one <${node.tag}${
       isScriptSetup ? ` setup` : ``
-    }> element (${location}):\n\n${codeFrame}`
-  )
+    }> element`
+  ) as CompilerError
+  err.loc = node.loc
+  return err
 }
 
 function createBlock(
