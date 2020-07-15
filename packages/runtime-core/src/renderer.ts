@@ -638,7 +638,31 @@ function baseCreateRenderer(
         optimized
       )
     } else {
-      patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
+      if (
+        __DEV__ &&
+        isHmrUpdating &&
+        hostCloneNode !== undefined &&
+        n2.patchFlag === PatchFlags.HOISTED
+      ) {
+        // https://github.com/vitejs/vite/issues/514
+        // reused hoisted trees are inserted with cloneNode
+        // which makes them not patch-able. In production hoisted trees are
+        // never patched (because they are not collected as dynamic nodes), but
+        // they can be udpated during HMR. In this case just mount it as new
+        // and remove the stale DOM tree.
+        mountElement(
+          n2,
+          container,
+          n1.el,
+          parentComponent,
+          parentSuspense,
+          isSVG,
+          optimized
+        )
+        hostRemove(n1.el!)
+      } else {
+        patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
+      }
     }
   }
 
