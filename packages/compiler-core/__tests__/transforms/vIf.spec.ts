@@ -29,7 +29,8 @@ import { createObjectMatcher } from '../testUtils'
 function parseWithIfTransform(
   template: string,
   options: CompilerOptions = {},
-  returnIndex: number = 0
+  returnIndex: number = 0,
+  childrenLen: number = 1
 ) {
   const ast = parse(template, options)
   transform(ast, {
@@ -37,8 +38,10 @@ function parseWithIfTransform(
     ...options
   })
   if (!options.onError) {
-    expect(ast.children.length).toBe(1)
-    expect(ast.children[0].type).toBe(NodeTypes.IF)
+    expect(ast.children.length).toBe(childrenLen)
+    for (let i = 0; i < childrenLen; i++) {
+      expect(ast.children[i].type).toBe(NodeTypes.IF)
+    }
   }
   return {
     root: ast,
@@ -455,6 +458,68 @@ describe('compiler: v-if', () => {
             content: `fine`
           }
         ]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('multiple v-if that are sibling nodes should have different keys', () => {
+      const { root } = parseWithIfTransform(
+        `<div v-if="ok"/><p v-if="orNot"/>`,
+        {},
+        0 /* returnIndex, just give the default value */,
+        2 /* childrenLen */
+      )
+
+      const ifNode = root.children[0] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const ifNode2 = root.children[1] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode2.codegenNode.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('increasing key: v-if + v-else-if + v-else', () => {
+      const { root } = parseWithIfTransform(
+        `<div v-if="ok"/><p v-else/><div v-if="another"/><p v-else-if="orNot"/><p v-else/>`,
+        {},
+        0 /* returnIndex, just give the default value */,
+        2 /* childrenLen */
+      )
+      const ifNode = root.children[0] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      expect(ifNode.codegenNode.alternate).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      const ifNode2 = root.children[1] as IfNode & {
+        codegenNode: IfConditionalExpression
+      }
+      expect(ifNode2.codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[2]` })
+      })
+      const branch = ifNode2.codegenNode.alternate as IfConditionalExpression
+      expect(branch.consequent).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[3]` })
+      })
+      expect(branch.alternate).toMatchObject({
+        tag: `"p"`,
+        props: createObjectMatcher({ key: `[4]` })
       })
       expect(generate(root).code).toMatchSnapshot()
     })

@@ -5,6 +5,7 @@ import {
 } from '../transform'
 import {
   NodeTypes,
+  ParentNode,
   ElementTypes,
   ElementNode,
   DirectiveNode,
@@ -36,14 +37,25 @@ import { PatchFlags, PatchFlagNames } from '@vue/shared'
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
-    return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+    return processIf(node, dir, context, (ifNode, branch, parent, isRoot) => {
+      // #1587: We need to dynamically calculate the key based on the current node's sibling nodes
+      const siblings = parent.children
+      let i = siblings.indexOf(ifNode)
+      let key = 0
+      while (i-- >= 0) {
+        const sibling = siblings[i]
+        if (sibling && sibling.type === NodeTypes.IF) {
+          key += sibling.branches.length
+        }
+      }
+
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
         if (isRoot) {
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
-            0,
+            key,
             context
           ) as IfConditionalExpression
         } else {
@@ -57,7 +69,7 @@ export const transformIf = createStructuralDirectiveTransform(
           }
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
-            ifNode.branches.length - 1,
+            key + ifNode.branches.length - 1,
             context
           )
         }
@@ -74,6 +86,7 @@ export function processIf(
   processCodegen?: (
     node: IfNode,
     branch: IfBranchNode,
+    parent: ParentNode,
     isRoot: boolean
   ) => (() => void) | undefined
 ) {
@@ -107,7 +120,7 @@ export function processIf(
     }
     context.replaceNode(ifNode)
     if (processCodegen) {
-      return processCodegen(ifNode, branch, true)
+      return processCodegen(ifNode, branch, context.parent!, true)
     }
   } else {
     // locate the adjacent v-if
@@ -129,7 +142,9 @@ export function processIf(
           branch.children = [...comments, ...branch.children]
         }
         sibling.branches.push(branch)
-        const onExit = processCodegen && processCodegen(sibling, branch, false)
+        const onExit =
+          processCodegen &&
+          processCodegen(sibling, branch, context.parent!, false)
         // since the branch was removed, it will not be traversed.
         // make sure to traverse here.
         traverseNode(branch, context)
