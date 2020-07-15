@@ -9,9 +9,8 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
-import { compileScript, SFCScriptCompileOptions } from './compileScript'
 
-export interface SFCParseOptions extends SFCScriptCompileOptions {
+export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
@@ -53,7 +52,6 @@ export interface SFCDescriptor {
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
-  scriptTransformed: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
 }
@@ -79,8 +77,7 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = CompilerDOM,
-    babelParserPlugins
+    compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -96,7 +93,6 @@ export function parse(
     template: null,
     script: null,
     scriptSetup: null,
-    scriptTransformed: null,
     styles: [],
     customBlocks: []
   }
@@ -196,16 +192,6 @@ export function parse(
     genMap(descriptor.template)
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
-  }
-
-  if (descriptor.script || descriptor.scriptSetup) {
-    try {
-      descriptor.scriptTransformed = compileScript(descriptor, {
-        babelParserPlugins
-      })
-    } catch (e) {
-      errors.push(e)
-    }
   }
 
   const result = {
