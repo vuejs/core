@@ -1,3 +1,21 @@
+# [3.0.0-beta.22](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.21...v3.0.0-beta.22) (2020-07-15)
+
+
+### Bug Fixes
+
+* **compiler-core:** generate incremental keys for v-if/else-if/else chains ([#1589](https://github.com/vuejs/vue-next/issues/1589)) ([64c7b2f](https://github.com/vuejs/vue-next/commit/64c7b2f9cedae676ec26a7a8da4c109bc88b48f1)), closes [#1587](https://github.com/vuejs/vue-next/issues/1587)
+* **compiler-sfc:** `<script setup>` warning ([9146cc4](https://github.com/vuejs/vue-next/commit/9146cc485e317ff29192796f9366471144ed3ad2))
+* **hmr:** fix hmr updates for reused hoisted trees ([5f61aa0](https://github.com/vuejs/vue-next/commit/5f61aa0f719cbd90182af1e27fad37b91c2c351e))
+* **runtime-core:** do not call transition enter hooks when mounting in suspense ([#1588](https://github.com/vuejs/vue-next/issues/1588)) ([246ec5c](https://github.com/vuejs/vue-next/commit/246ec5c594650f3fcccd0de94aa3f97b4d705e42)), closes [#1583](https://github.com/vuejs/vue-next/issues/1583)
+* **v-model:** handle more edge cases in `looseEqual()` ([#379](https://github.com/vuejs/vue-next/issues/379)) ([fe1b27b](https://github.com/vuejs/vue-next/commit/fe1b27b7f875e1c8aece12b04531e7fa3184be27))
+
+
+### Features
+
+* **types/reactivity:** use `DeepReadonly` type for `readonly` return type ([#1462](https://github.com/vuejs/vue-next/issues/1462)) ([b772bba](https://github.com/vuejs/vue-next/commit/b772bba5587726e78b20ccb9b61374120bd4b0ae)), closes [#1452](https://github.com/vuejs/vue-next/issues/1452)
+
+
+
 # [3.0.0-beta.21](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.20...v3.0.0-beta.21) (2020-07-14)
 
 
