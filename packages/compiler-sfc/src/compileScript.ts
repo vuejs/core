@@ -53,10 +53,9 @@ export function compileScript(
 
   const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
 
-  const isTS =
-    (script && script.lang === 'ts') ||
-    (scriptSetup && scriptSetup.lang === 'ts')
-
+  const scriptLang = script && script.lang
+  const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.babelParserPlugins || []),
     ...babelParserDefautPlugins,
@@ -67,6 +66,10 @@ export function compileScript(
     if (!script) {
       throw new Error(`SFC contains no <script> tags.`)
     }
+    if (scriptLang && scriptLang !== 'ts') {
+      // do not process non js/ts script blocks
+      return script
+    }
     return {
       ...script,
       content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
@@ -74,10 +77,15 @@ export function compileScript(
     }
   }
 
-  if (script && script.lang !== scriptSetup.lang) {
+  if (script && scriptLang !== scriptSetupLang) {
     throw new Error(
       `<script> and <script setup> must have the same language type.`
     )
+  }
+
+  if (scriptSetupLang && scriptSetupLang !== 'ts') {
+    // do not process non js/ts script blocks
+    return scriptSetup
   }
 
   const defaultTempVar = `__default__`

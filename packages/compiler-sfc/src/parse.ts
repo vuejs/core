@@ -150,15 +150,6 @@ export function parse(
         const block = createBlock(node, source, pad) as SFCScriptBlock
         const isSetup = !!block.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          if (block.src) {
-            errors.push(
-              new SyntaxError(
-                `<script setup> cannot be used with the "src" attribute since ` +
-                  `its syntax will be ambiguous outside of the component.`
-              )
-            )
-            break
-          }
           descriptor.scriptSetup = block
           break
         }
@@ -176,6 +167,27 @@ export function parse(
         break
     }
   })
+
+  if (descriptor.scriptSetup) {
+    if (descriptor.scriptSetup.src) {
+      errors.push(
+        new SyntaxError(
+          `<script setup> cannot use the "src" attribute because ` +
+            `its syntax will be ambiguous outside of the component.`
+        )
+      )
+      delete descriptor.scriptSetup
+    }
+    if (descriptor.script && descriptor.script.src) {
+      errors.push(
+        new SyntaxError(
+          `<script> cannot use the "src" attribute when <script setup> is ` +
+            `also present because they must be processed together.`
+        )
+      )
+      delete descriptor.script
+    }
+  }
 
   if (sourceMap) {
     const genMap = (block: SFCBlock | null) => {
