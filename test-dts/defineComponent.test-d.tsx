@@ -619,7 +619,7 @@ describe('emits', () => {
   defineComponent({
     emits: {
       click: (n: number) => typeof n === 'number',
-      input: () => null
+      input: (b: string) => b.length > 1
     },
     setup(props, { emit }) {
       emit('click', 1)
