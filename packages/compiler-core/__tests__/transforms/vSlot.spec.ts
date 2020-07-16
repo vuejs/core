@@ -719,6 +719,23 @@ describe('compiler: transform component slots', () => {
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
+  test('generate flag on forwarded slots', () => {
+    const { slots } = parseWithSlots(`<Comp><slot/></Comp>`)
+    expect(slots).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          key: { content: `default` },
+          value: { type: NodeTypes.JS_FUNCTION_EXPRESSION }
+        },
+        {
+          key: { content: `_` },
+          value: { content: `3` } // forwarded
+        }
+      ]
+    })
+  })
+
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
       const onError = jest.fn()

@@ -3,6 +3,7 @@ import { makeMap } from './makeMap'
 export { makeMap }
 export * from './patchFlags'
 export * from './shapeFlags'
+export * from './slotFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
 export * from './mockWarn'
