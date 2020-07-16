@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   compileStyle,
   compileStyleAsync,
@@ -5,6 +9,7 @@ import {
 } from '../src/compileStyle'
 import { mockWarn } from '@vue/shared'
 import path from 'path'
+
 describe('SFC scoped CSS', () => {
   mockWarn()
 
@@ -323,26 +328,15 @@ describe('SFC style preprocessors', () => {
   test('scss @import', () => {
     const res = compileStyle({
       source: `
-        @import "./fixture/import.scss";
+        @import "./import.scss";
       `,
-      filename: './fixture/test.scss',
+      filename: path.resolve(__dirname, './fixture/test.scss'),
       id: '',
-      preprocessLang: 'scss',
-      preprocessOptions: {
-        // test with file will get error which `import.scss is not find`
-        importer: function(url: string, prev: string, done: string) {
-          if (url === './fixture/import.scss') {
-            return { file: path.join(__dirname, url), contents: '' }
-          }
-        }
-      }
+      preprocessLang: 'scss'
     })
 
-    // test.scss will be include with 'http://localhost/test.scss'
-    expect(
-      Array.from(res.dependencies).filter(
-        d => !d.startsWith('http://localhost')
-      )
-    ).toStrictEqual([path.join(__dirname, './fixture/import.scss')])
+    expect([...res.dependencies]).toStrictEqual([
+      path.join(__dirname, './fixture/import.scss')
+    ])
   })
 })
