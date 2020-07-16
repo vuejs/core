@@ -1,12 +1,17 @@
 import merge from 'merge-source-map'
 import path from 'path'
+import { RawSourceMap } from 'source-map'
+import { SFCStyleCompileOptions } from './compileStyle'
 
 export interface StylePreprocessor {
   render(
     source: string,
-    map?: object,
-    options?: any,
-    customRequire?: (id: string) => any
+    map: RawSourceMap | undefined,
+    options: {
+      [key: string]: any
+      filename: string
+    },
+    customRequire: SFCStyleCompileOptions['preprocessCustomRequire']
   ): StylePreprocessorResults
 }
 
@@ -83,7 +88,7 @@ const less: StylePreprocessor = {
     // less output path is relative path
     const dependencies = getAbsolutePaths(
       result.imports,
-      path.dirname(options.fileName)
+      path.dirname(options.filename)
     )
     if (map) {
       return {
