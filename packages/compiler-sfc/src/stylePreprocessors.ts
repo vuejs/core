@@ -1,4 +1,5 @@
 import merge from 'merge-source-map'
+import path from 'path'
 
 export interface StylePreprocessor {
   render(
@@ -13,6 +14,7 @@ export interface StylePreprocessorResults {
   code: string
   map?: object
   errors: Error[]
+  dependencies: string[]
 }
 
 // .scss/.sass processor
@@ -29,18 +31,20 @@ const scss: StylePreprocessor = {
 
     try {
       const result = nodeSass.renderSync(finalOptions)
-
+      // sass output path is position path
+      const dependencies = result.stats.includedFiles
       if (map) {
         return {
           code: result.css.toString(),
           map: merge(map, JSON.parse(result.map.toString())),
-          errors: []
+          errors: [],
+          dependencies
         }
       }
 
-      return { code: result.css.toString(), errors: [] }
+      return { code: result.css.toString(), errors: [], dependencies }
     } catch (e) {
-      return { code: '', errors: [e] }
+      return { code: '', errors: [e], dependencies: [] }
     }
   }
 }
@@ -75,17 +79,26 @@ const less: StylePreprocessor = {
       }
     )
 
-    if (error) return { code: '', errors: [error] }
-
+    if (error) return { code: '', errors: [error], dependencies: [] }
+    // less output path is relative path
+    const dependencies = getAbsolutePaths(
+      result.imports,
+      path.dirname(options.fileName)
+    )
     if (map) {
       return {
         code: result.css.toString(),
         map: merge(map, result.map),
-        errors: []
+        errors: [],
+        dependencies: dependencies
       }
     }
 
-    return { code: result.css.toString(), errors: [] }
+    return {
+      code: result.css.toString(),
+      errors: [],
+      dependencies: dependencies
+    }
   }
 }
 
@@ -99,17 +112,23 @@ const styl: StylePreprocessor = {
       if (map) ref.set('sourcemap', { inline: false, comment: false })
 
       const result = ref.render()
+      // stylus output path is relative path
+      const dependencies = getAbsolutePaths(
+        ref.deps(),
+        path.dirname(options.fileName)
+      )
       if (map) {
         return {
           code: result,
           map: merge(map, ref.sourcemap),
-          errors: []
+          errors: [],
+          dependencies
         }
       }
 
-      return { code: result, errors: [] }
+      return { code: result, errors: [], dependencies }
     } catch (e) {
-      return { code: '', errors: [e] }
+      return { code: '', errors: [e], dependencies: [] }
     }
   }
 }
@@ -122,4 +141,8 @@ export const processors: Record<PreprocessLang, StylePreprocessor> = {
   scss,
   styl,
   stylus: styl
+}
+
+function getAbsolutePaths(relativePaths: string[], dirname: string): string[] {
+  return relativePaths.map(relativePath => path.join(dirname, relativePath))
 }
