@@ -143,7 +143,7 @@ export function doCompileStyle(
   const dependencies = new Set(
     preProcessedSource ? preProcessedSource.dependencies : []
   )
-  // sass has filename self when provider filename option
+  // sass has filename self when provided filename option
   dependencies.delete(filename)
 
   const errors: Error[] = []
@@ -154,7 +154,7 @@ export function doCompileStyle(
   const recordPlainCssDependencies = (messages: ResultMessage[]) => {
     messages.forEach(msg => {
       if (msg.type === 'dependency') {
-        // postcss output path is position path
+        // postcss output path is absolute position path
         dependencies.add(msg.file)
       }
     })
