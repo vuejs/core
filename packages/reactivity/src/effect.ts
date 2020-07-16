@@ -10,7 +10,7 @@ type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export interface ReactiveEffect<T = any> {
-  (...args: any[]): T
+  (): T
   _isEffect: true
   id: number
   active: boolean
@@ -77,12 +77,12 @@ export function stop(effect: ReactiveEffect) {
 let uid = 0
 
 function createReactiveEffect<T = any>(
-  fn: (...args: any[]) => T,
+  fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(...args: unknown[]): unknown {
+  const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
-      return options.scheduler ? undefined : fn(...args)
+      return options.scheduler ? undefined : fn()
     }
     if (!effectStack.includes(effect)) {
       cleanup(effect)
@@ -90,7 +90,7 @@ function createReactiveEffect<T = any>(
         enableTracking()
         effectStack.push(effect)
         activeEffect = effect
-        return fn(...args)
+        return fn()
       } finally {
         effectStack.pop()
         resetTracking()
