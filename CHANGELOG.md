@@ -1,3 +1,25 @@
+# [3.0.0-beta.23](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.22...v3.0.0-beta.23) (2020-07-16)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix useCssVars codegen ([9b5ff2b](https://github.com/vuejs/vue-next/commit/9b5ff2b567f5e29cc59e23e106f2278c3feaad21))
+* **compiler-sfc:** prohibit src usage for `<script setup>` + do not ([af4b0c2](https://github.com/vuejs/vue-next/commit/af4b0c2cf18b63990bc266eb0871a50ba2004fc0))
+* **runtime-dom:** unref when setting useCssVars ([44e6da1](https://github.com/vuejs/vue-next/commit/44e6da1402fa2b6f5a0a0c692cd693a8ff1a40a3))
+* **slots:** properly force update on forwarded slots ([aab99ab](https://github.com/vuejs/vue-next/commit/aab99abd28a5d17f2d1966678b0d334975d21877)), closes [#1594](https://github.com/vuejs/vue-next/issues/1594)
+
+
+### Features
+
+* **compiler-sfc:** export dependencies for css and css preprocessors ([#1278](https://github.com/vuejs/vue-next/issues/1278)) ([e41d831](https://github.com/vuejs/vue-next/commit/e41d8310de0d9299fce2bccd57af4e30b74e3795))
+
+
+### Performance Improvements
+
+* **runtime-core:** avoid duplicate postFlushCb invocation ([165068d](https://github.com/vuejs/vue-next/commit/165068dbc295bb70fdec9ae56dfcaac17d2f977c)), closes [#1595](https://github.com/vuejs/vue-next/issues/1595)
+
+
+
 # [3.0.0-beta.22](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.21...v3.0.0-beta.22) (2020-07-15)
 
 
