@@ -13,10 +13,12 @@ import { pauseTracking, resetTracking, DebuggerEvent } from '@vue/reactivity'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
+type NullableComponentInternalInstance = ComponentInternalInstance | null
+
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },
-  target: ComponentInternalInstance | null = currentInstance,
+  target: NullableComponentInternalInstance = currentInstance,
   prepend: boolean = false
 ) {
   if (target) {
@@ -65,7 +67,7 @@ export function injectHook(
 
 export const createHook = <T extends Function = () => any>(
   lifecycle: LifecycleHooks
-) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+) => (hook: T, target: NullableComponentInternalInstance = currentInstance) =>
   // post-create lifecycle registrations are noops during SSR
   !isInSSRComponentSetup && injectHook(lifecycle, hook, target)
 
@@ -92,7 +94,7 @@ export type ErrorCapturedHook = (
 
 export const onErrorCaptured = (
   hook: ErrorCapturedHook,
-  target: ComponentInternalInstance | null = currentInstance
+  target: NullableComponentInternalInstance = currentInstance
 ) => {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }
