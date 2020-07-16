@@ -65,6 +65,7 @@ import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentProxy'
+import { componentRemoved, componentUpdated } from './devtools'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1417,6 +1418,7 @@ function baseCreateRenderer(
         }
         if (__DEV__) {
           popWarningContext()
+          componentUpdated(instance)
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
@@ -2068,6 +2070,8 @@ function baseCreateRenderer(
         parentSuspense.resolve()
       }
     }
+
+    __DEV__ && componentRemoved(instance)
   }
 
   const unmountChildren: UnmountChildrenFn = (

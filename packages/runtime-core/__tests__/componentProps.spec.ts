@@ -45,7 +45,7 @@ describe('component props', () => {
     render(h(Comp, { 'foo-bar': 3, bar: 3, baz: 4, barBaz: 5 }), root)
     expect(proxy.fooBar).toBe(3)
     expect(proxy.barBaz).toBe(5)
-    expect(props).toEqual({ fooBar: 3,barBaz: 5 })
+    expect(props).toEqual({ fooBar: 3, barBaz: 5 })
     expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     render(h(Comp, { qux: 5 }), root)
