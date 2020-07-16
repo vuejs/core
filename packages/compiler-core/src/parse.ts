@@ -65,6 +65,7 @@ const decodeMap: Record<string, string> = {
 
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
+  whitespace: 'condense',
   getNamespace: () => Namespaces.HTML,
   getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
@@ -219,10 +220,9 @@ function parseChildren(
     }
   }
 
-  // Whitespace management for more efficient output
-  // (same as v2 whitespace: 'condense')
+  // Whitespace handling strategy like v2
   let removedWhitespace = false
-  if (mode !== TextModes.RAWTEXT && mode !== TextModes.RCDATA) {
+  if (context.options.whitespace === 'condense' && mode !== TextModes.RAWTEXT && mode !== TextModes.RCDATA) {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
       if (!context.inPre && node.type === NodeTypes.TEXT) {
