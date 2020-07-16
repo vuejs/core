@@ -1,3 +1,12 @@
+# [3.0.0-beta.24](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.23...v3.0.0-beta.24) (2020-07-16)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix preprocessor filename access ([9cb29ee](https://github.com/vuejs/vue-next/commit/9cb29eea3a61f7f4a6730fed56f2e3e9a13dbcc9))
+
+
+
 # [3.0.0-beta.23](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.22...v3.0.0-beta.23) (2020-07-16)
 
 
