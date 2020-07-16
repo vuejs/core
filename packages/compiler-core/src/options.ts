@@ -45,6 +45,10 @@ export interface ParserOptions {
    */
   delimiters?: [string, string]
   /**
+   * Whitespace handling strategy
+   */
+  whitespace?: 'preserve' | 'condense'
+  /**
    * Only needed for DOM compilers
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
