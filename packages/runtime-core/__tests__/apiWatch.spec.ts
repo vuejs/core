@@ -367,6 +367,112 @@ describe('api: watch', () => {
     expect(assertion).toHaveBeenCalledTimes(3)
   })
 
+  it('flush timing: final', async () => {
+    const count = ref(0)
+    let callCount = 0
+    const assertion = jest.fn(count => {
+      callCount++
+      // on mount, the watcher callback should be called before DOM render
+      // on update, should be called final the count is updated
+      const expectedDOM = callCount === 1 ? `` : `${count}`
+      expect(serializeInner(root)).toBe(expectedDOM)
+    })
+
+    const Comp = {
+      setup() {
+        watchEffect(() => {
+          assertion(count.value)
+        })
+        return () => count.value
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(assertion).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+    expect(assertion).toHaveBeenCalledTimes(2)
+  })
+
+  it('multi-iteration reactivity: post', async () => {
+    const count = ref(0)
+    const count2 = ref(0)
+    const count3 = ref(0)
+
+    watchEffect(() => {
+      count2.value = count.value * 2
+    })
+
+    watchEffect(() => {
+      count3.value = count2.value * 2
+    })
+
+    const results: number[] = []
+    const assertion = jest.fn(() => {
+      const c1 = count.value
+      const c2 = count2.value
+      const c3 = count3.value
+      results.push(c1 + 10 * c2 + 100 * c3)
+    })
+
+    watchEffect(
+      () => {
+        assertion()
+      },
+      {
+        flush: 'post'
+      }
+    )
+
+    expect(assertion).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+
+    expect(results).toEqual([0, 21, 421])
+    expect(assertion).toHaveBeenCalledTimes(3)
+  })
+
+  it('multi-iteration reactivity: final', async () => {
+    const count = ref(0)
+    const count2 = ref(0)
+    const count3 = ref(0)
+
+    watchEffect(() => {
+      count2.value = count.value * 2
+    })
+
+    watchEffect(() => {
+      count3.value = count2.value * 2
+    })
+
+    const results: number[] = []
+    const assertion = jest.fn(() => {
+      const c1 = count.value
+      const c2 = count2.value
+      const c3 = count3.value
+      results.push(c1 + 10 * c2 + 100 * c3)
+    })
+
+    watchEffect(
+      () => {
+        assertion()
+      },
+      {
+        flush: 'final'
+      }
+    )
+
+    expect(assertion).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+
+    expect(results).toEqual([0, 421])
+    expect(assertion).toHaveBeenCalledTimes(2)
+  })
+
   it('deep', async () => {
     const state = reactive({
       nested: {

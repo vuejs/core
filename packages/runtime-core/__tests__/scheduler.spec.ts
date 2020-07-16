@@ -2,7 +2,8 @@ import {
   queueJob,
   nextTick,
   queuePostFlushCb,
-  invalidateJob
+  invalidateJob,
+  queueFinalFlushCb
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -293,5 +294,110 @@ describe('scheduler', () => {
     queuePostFlushCb(cb2)
     await nextTick()
     expect(calls).toEqual(['cb1', 'cb2'])
+  })
+
+  describe('queueFinalFlushCb', () => {
+    it('basic usage', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+
+      queueFinalFlushCb([cb1, cb2])
+      queueFinalFlushCb(cb3)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('should dedupe queued finalFlushCb', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+
+      queueFinalFlushCb([cb1, cb2])
+      queueFinalFlushCb(cb3)
+
+      queueFinalFlushCb([cb1, cb3])
+      queueFinalFlushCb(cb2)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('queueFinalFlushCb while flushing', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+        // cb2 will be executed after cb1 at the same tick
+        queueFinalFlushCb(cb2)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      queuePostFlushCb(cb1)
+
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2'])
+    })
+
+    it('queueFinalFlushCb executed after postFlushCbs', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+        // cb2 will be executed after cb1 at the same tick
+        queueFinalFlushCb(cb2)
+        queuePostFlushCb(cb3)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+      queuePostFlushCb(cb1)
+
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb3', 'cb2'])
+    })
+
+    it('queueFinalFlushCb executed after multiple iterations of postFlushCbs', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+        // cb2 will be executed after cb1 at the same tick
+        queueFinalFlushCb(cb2)
+        queuePostFlushCb(cb3)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+        queuePostFlushCb(cb4)
+      }
+      const cb4 = () => {
+        calls.push('cb4')
+      }
+      queuePostFlushCb(cb1)
+
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb3', 'cb4', 'cb2'])
+    })
   })
 })

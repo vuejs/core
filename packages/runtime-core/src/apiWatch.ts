@@ -29,7 +29,7 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { queuePostRenderEffect } from './renderer'
+import { queueFinalRenderEffect, queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
 export type WatchEffect = (onInvalidate: InvalidateCbRegistrator) => void
@@ -59,7 +59,7 @@ type MapOldSources<T, Immediate> = {
 type InvalidateCbRegistrator = (cb: () => void) => void
 
 export interface WatchOptionsBase {
-  flush?: 'pre' | 'post' | 'sync'
+  flush?: 'pre' | 'post' | 'sync' | 'final'
   onTrack?: ReactiveEffectOptions['onTrack']
   onTrigger?: ReactiveEffectOptions['onTrigger']
 }
@@ -269,6 +269,9 @@ function doWatch(
         job()
       }
     }
+  } else if (flush === 'final') {
+    scheduler = job =>
+      queueFinalRenderEffect(job, instance && instance.suspense)
   } else {
     scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
   }

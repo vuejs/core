@@ -8,6 +8,7 @@ export interface Job {
 
 const queue: (Job | null)[] = []
 const postFlushCbs: Function[] = []
+const finalFlushCbs: Function[] = []
 const p = Promise.resolve()
 
 let isFlushing = false
@@ -15,6 +16,8 @@ let isFlushPending = false
 let flushIndex = 0
 let pendingPostFlushCbs: Function[] | null = null
 let pendingPostFlushIndex = 0
+let pendingFinalFlushCbs: Function[] | null = null
+let pendingFinalFlushIndex = 0
 
 const RECURSION_LIMIT = 100
 type CountMap = Map<Job | Function, number>
@@ -54,6 +57,20 @@ export function queuePostFlushCb(cb: Function | Function[]) {
   queueFlush()
 }
 
+export function queueFinalFlushCb(cb: Function | Function[]) {
+  if (!isArray(cb)) {
+    if (
+      !pendingFinalFlushCbs ||
+      !pendingFinalFlushCbs.includes(cb, pendingFinalFlushIndex)
+    ) {
+      finalFlushCbs.push(cb)
+    }
+  } else {
+    finalFlushCbs.push(...cb)
+  }
+  queueFlush()
+}
+
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
@@ -80,6 +97,31 @@ export function flushPostFlushCbs(seen?: CountMap) {
     }
     pendingPostFlushCbs = null
     pendingPostFlushIndex = 0
+  }
+}
+
+export function flushFinalFlushCbs(seen?: CountMap) {
+  if (finalFlushCbs.length) {
+    pendingFinalFlushCbs = [...new Set(finalFlushCbs)]
+    finalFlushCbs.length = 0
+    if (__DEV__) {
+      seen = seen || new Map()
+    }
+    for (
+      pendingFinalFlushIndex = 0;
+      pendingFinalFlushIndex < pendingFinalFlushCbs.length;
+      pendingFinalFlushIndex++
+    ) {
+      if (__DEV__) {
+        checkRecursiveUpdates(
+          seen!,
+          pendingFinalFlushCbs[pendingFinalFlushIndex]
+        )
+      }
+      pendingFinalFlushCbs[pendingFinalFlushIndex]()
+    }
+    pendingFinalFlushCbs = null
+    pendingFinalFlushIndex = 0
   }
 }
 
@@ -121,6 +163,13 @@ function flushJobs(seen?: CountMap) {
   // keep flushing until it drains.
   if (queue.length || postFlushCbs.length) {
     flushJobs(seen)
+  } else if (finalFlushCbs.length) {
+    flushFinalFlushCbs(seen)
+
+    // After flush callbacks may queue new items
+    if (queue.length || postFlushCbs.length || finalFlushCbs.length) {
+      flushJobs(seen)
+    }
   }
 }
 

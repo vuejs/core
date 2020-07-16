@@ -16,7 +16,7 @@ import { RendererInternals, invokeVNodeHook, setRef } from './renderer'
 import {
   SuspenseImpl,
   SuspenseBoundary,
-  queueEffectWithSuspense
+  queuePostEffectWithSuspense
 } from './components/Suspense'
 import { TeleportImpl } from './components/Teleport'
 
@@ -271,7 +271,7 @@ export function createHydrationFunctions(
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
       if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
-        queueEffectWithSuspense(() => {
+        queuePostEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)

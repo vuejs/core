@@ -41,7 +41,8 @@ import {
   queueJob,
   queuePostFlushCb,
   flushPostFlushCbs,
-  invalidateJob
+  invalidateJob,
+  queueFinalFlushCb
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -50,8 +51,9 @@ import { pushWarningContext, popWarningContext, warn } from './warning'
 import { createAppAPI, CreateAppFunction } from './apiCreateApp'
 import {
   SuspenseBoundary,
-  queueEffectWithSuspense,
-  SuspenseImpl
+  queuePostEffectWithSuspense,
+  SuspenseImpl,
+  queueFinalEffectWithSuspense
 } from './components/Suspense'
 import { TeleportImpl } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
@@ -269,8 +271,12 @@ function createDevEffectOptions(
 }
 
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
-  ? queueEffectWithSuspense
+  ? queuePostEffectWithSuspense
   : queuePostFlushCb
+
+export const queueFinalRenderEffect = __FEATURE_SUSPENSE__
+  ? queueFinalEffectWithSuspense
+  : queueFinalFlushCb
 
 export const setRef = (
   rawRef: VNodeNormalizedRef,

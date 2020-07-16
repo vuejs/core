@@ -9,7 +9,7 @@ import {
   RendererNode,
   RendererElement
 } from '../renderer'
-import { queuePostFlushCb, queueJob } from '../scheduler'
+import { queuePostFlushCb, queueJob, queueFinalFlushCb } from '../scheduler'
 import { updateHOCHostEl } from '../componentRenderUtils'
 import { pushWarningContext, popWarningContext } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
@@ -211,7 +211,8 @@ export interface SuspenseBoundary {
   isHydrating: boolean
   isResolved: boolean
   isUnmounted: boolean
-  effects: Function[]
+  postEffects: Function[]
+  finalEffects: Function[]
   resolve(): void
   recede(): void
   move(
@@ -279,7 +280,8 @@ function createSuspenseBoundary(
     isHydrating,
     isResolved: false,
     isUnmounted: false,
-    effects: [],
+    postEffects: [],
+    finalEffects: [],
 
     resolve() {
       if (__DEV__) {
@@ -298,7 +300,8 @@ function createSuspenseBoundary(
         vnode,
         subTree,
         fallbackTree,
-        effects,
+        postEffects,
+        finalEffects,
         parentComponent,
         container
       } = suspense
@@ -332,7 +335,8 @@ function createSuspenseBoundary(
         if (!parent.isResolved) {
           // found a pending parent suspense, merge buffered post jobs
           // into that parent
-          parent.effects.push(...effects)
+          parent.postEffects.push(...postEffects)
+          parent.finalEffects.push(...finalEffects)
           hasUnresolvedAncestor = true
           break
         }
@@ -340,10 +344,12 @@ function createSuspenseBoundary(
       }
       // no pending parent suspense, flush all jobs
       if (!hasUnresolvedAncestor) {
-        queuePostFlushCb(effects)
+        queuePostFlushCb(postEffects)
+        queueFinalFlushCb(finalEffects)
       }
       suspense.isResolved = true
-      suspense.effects = []
+      suspense.postEffects = []
+      suspense.finalEffects = []
       // invoke @resolve event
       const onResolve = vnode.props && vnode.props.onResolve
       if (isFunction(onResolve)) {
@@ -549,17 +555,32 @@ export function normalizeSuspenseChildren(
   }
 }
 
-export function queueEffectWithSuspense(
+export function queuePostEffectWithSuspense(
   fn: Function | Function[],
   suspense: SuspenseBoundary | null
 ): void {
   if (suspense && !suspense.isResolved) {
     if (isArray(fn)) {
-      suspense.effects.push(...fn)
+      suspense.postEffects.push(...fn)
     } else {
-      suspense.effects.push(fn)
+      suspense.postEffects.push(fn)
     }
   } else {
     queuePostFlushCb(fn)
+  }
+}
+
+export function queueFinalEffectWithSuspense(
+  fn: Function | Function[],
+  suspense: SuspenseBoundary | null
+): void {
+  if (suspense && !suspense.isResolved) {
+    if (isArray(fn)) {
+      suspense.finalEffects.push(...fn)
+    } else {
+      suspense.finalEffects.push(fn)
+    }
+  } else {
+    queueFinalFlushCb(fn)
   }
 }
