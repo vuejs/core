@@ -1,3 +1,46 @@
+# [3.0.0-beta.22](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.21...v3.0.0-beta.22) (2020-07-15)
+
+
+### Bug Fixes
+
+* **compiler-core:** generate incremental keys for v-if/else-if/else chains ([#1589](https://github.com/vuejs/vue-next/issues/1589)) ([64c7b2f](https://github.com/vuejs/vue-next/commit/64c7b2f9cedae676ec26a7a8da4c109bc88b48f1)), closes [#1587](https://github.com/vuejs/vue-next/issues/1587)
+* **compiler-sfc:** `<script setup>` warning ([9146cc4](https://github.com/vuejs/vue-next/commit/9146cc485e317ff29192796f9366471144ed3ad2))
+* **hmr:** fix hmr updates for reused hoisted trees ([5f61aa0](https://github.com/vuejs/vue-next/commit/5f61aa0f719cbd90182af1e27fad37b91c2c351e))
+* **runtime-core:** do not call transition enter hooks when mounting in suspense ([#1588](https://github.com/vuejs/vue-next/issues/1588)) ([246ec5c](https://github.com/vuejs/vue-next/commit/246ec5c594650f3fcccd0de94aa3f97b4d705e42)), closes [#1583](https://github.com/vuejs/vue-next/issues/1583)
+* **v-model:** handle more edge cases in `looseEqual()` ([#379](https://github.com/vuejs/vue-next/issues/379)) ([fe1b27b](https://github.com/vuejs/vue-next/commit/fe1b27b7f875e1c8aece12b04531e7fa3184be27))
+
+
+### Features
+
+* **types/reactivity:** use `DeepReadonly` type for `readonly` return type ([#1462](https://github.com/vuejs/vue-next/issues/1462)) ([b772bba](https://github.com/vuejs/vue-next/commit/b772bba5587726e78b20ccb9b61374120bd4b0ae)), closes [#1452](https://github.com/vuejs/vue-next/issues/1452)
+
+
+
+# [3.0.0-beta.21](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.20...v3.0.0-beta.21) (2020-07-14)
+
+
+### Bug Fixes
+
+* **compiler-dom:** fix v-on .left .right modifier handling ([6b63ba2](https://github.com/vuejs/vue-next/commit/6b63ba2f453b3f9bbf9e9e2167030de42f76b5ac))
+* **runtime-core:** avoid scopeId as attr for slot nodes with same scopeId ([#1561](https://github.com/vuejs/vue-next/issues/1561)) ([583a1c7](https://github.com/vuejs/vue-next/commit/583a1c7b45e67e9cd57e411853c20509248def89)), closes [vitejs/vite#536](https://github.com/vitejs/vite/issues/536)
+* **runtime-core/emits:** merge emits options from mixins/extends ([ba3b3cd](https://github.com/vuejs/vue-next/commit/ba3b3cdda98f6efb5d4c4fafc579b8f568a19bde)), closes [#1562](https://github.com/vuejs/vue-next/issues/1562)
+* **runtime-dom:** remove attrs with nullish values ([cb6a091](https://github.com/vuejs/vue-next/commit/cb6a0915c540af94f5d79c311022b99bc17f2965)), closes [#1576](https://github.com/vuejs/vue-next/issues/1576)
+* **runtime-dom/v-on:** only block event handlers based on attach timestamp ([8b320cc](https://github.com/vuejs/vue-next/commit/8b320cc12f74aafea9ec69f7ce70231d4f0d08fd)), closes [#1565](https://github.com/vuejs/vue-next/issues/1565)
+* **slots:** differentiate dynamic/static compiled slots ([65beba9](https://github.com/vuejs/vue-next/commit/65beba98fe5793133d3218945218b9e3f8d136eb)), closes [#1557](https://github.com/vuejs/vue-next/issues/1557)
+* **v-on:** capitalize dynamic event names ([9152a89](https://github.com/vuejs/vue-next/commit/9152a8901653d7cef864a52a3c618afcc70d827d))
+* **v-on:** refactor DOM event options modifer handling ([380c679](https://github.com/vuejs/vue-next/commit/380c6792d8899f1a43a9e6400c5df483c63290b6)), closes [#1567](https://github.com/vuejs/vue-next/issues/1567)
+
+
+### Features
+
+* ssr support for `<style vars>` ([b9595e6](https://github.com/vuejs/vue-next/commit/b9595e64cfdfc2607d3d3e6232b4a7ea199dd553))
+* **compiler-sfc:** `<script setup>` support (experimental) ([4c43d4e](https://github.com/vuejs/vue-next/commit/4c43d4e5b9df8732b601a269bf4030f9721d466f))
+* **compiler-sfc:** `<style vars>` CSS variable injection ([bd5c3b9](https://github.com/vuejs/vue-next/commit/bd5c3b96be2c6c4a0b84b096c3baa3c30feb95d6))
+* **compiler-sfc:** allow using :deep, :global & :slotted for short in `<style scoped>` ([f3cc41f](https://github.com/vuejs/vue-next/commit/f3cc41f0c8713475f2aa592bae3d82ffbc6b1300))
+* **runtime-dom:** useCssVars ([9f706a9](https://github.com/vuejs/vue-next/commit/9f706a9f5ee52c8256c52111da4271bf43b811ab))
+
+
+
 # [3.0.0-beta.20](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.19...v3.0.0-beta.20) (2020-07-08)
 
 
@@ -10,7 +53,7 @@
 
 ### Features
 
-* **types:** expose WritableComputedRef ([#1500](https://github.com/vuejs/vue-next/issues/1500)) ([220db9b](https://github.com/vuejs/vue-next/commit/220db9bcda17a56bb4e5222d2634800672513983))
+* **types:** expose `WritableComputedRef` ([#1500](https://github.com/vuejs/vue-next/issues/1500)) ([220db9b](https://github.com/vuejs/vue-next/commit/220db9bcda17a56bb4e5222d2634800672513983))
 
 
 
@@ -23,9 +66,9 @@
 * **keep-alive:** fix keep-alive with scopeId/fallthrough attrs ([d86b01b](https://github.com/vuejs/vue-next/commit/d86b01ba3a29e2e04c13597a1b9123ca35beaf57)), closes [#1511](https://github.com/vuejs/vue-next/issues/1511)
 * **runtime-core/template-ref:** template ref used in the same template should trigger update ([36b6b4f](https://github.com/vuejs/vue-next/commit/36b6b4f0228c4adf679c232bf4d1e8cff7fb6474)), closes [#1505](https://github.com/vuejs/vue-next/issues/1505)
 * **runtime-dom:** should set `<input list="...">` as attribute ([441c236](https://github.com/vuejs/vue-next/commit/441c23602f57d00b00fa3a590b30487003efe210)), closes [#1526](https://github.com/vuejs/vue-next/issues/1526)
-* **runtime-dom/style:** fix patchStyle on falsy next value ([#1504](https://github.com/vuejs/vue-next/issues/1504)) ([77538ec](https://github.com/vuejs/vue-next/commit/77538ec6d90fee66d229d6d3a4f977c6b548a9bd)), closes [#1506](https://github.com/vuejs/vue-next/issues/1506)
+* **runtime-dom/style:** fix `patchStyle` on falsy next value ([#1504](https://github.com/vuejs/vue-next/issues/1504)) ([77538ec](https://github.com/vuejs/vue-next/commit/77538ec6d90fee66d229d6d3a4f977c6b548a9bd)), closes [#1506](https://github.com/vuejs/vue-next/issues/1506)
 * **ssr:** support dynamic components that resolve to element or vnode ([41db49d](https://github.com/vuejs/vue-next/commit/41db49dfb7c520c4f743e522a03f06b33259a2eb)), closes [#1508](https://github.com/vuejs/vue-next/issues/1508)
-* **types/tsx:** add JSX.IntrinsicAttributes definition ([#1517](https://github.com/vuejs/vue-next/issues/1517)) ([a5b4332](https://github.com/vuejs/vue-next/commit/a5b4332c69146de569ad328cac9224c3cded15c9)), closes [#1516](https://github.com/vuejs/vue-next/issues/1516)
+* **types/tsx:** add `JSX.IntrinsicAttributes` definition ([#1517](https://github.com/vuejs/vue-next/issues/1517)) ([a5b4332](https://github.com/vuejs/vue-next/commit/a5b4332c69146de569ad328cac9224c3cded15c9)), closes [#1516](https://github.com/vuejs/vue-next/issues/1516)
 * **v-model:** consistent nullish value handling with 2.x ([#1530](https://github.com/vuejs/vue-next/issues/1530)) ([425335c](https://github.com/vuejs/vue-next/commit/425335c28bdb48f2f48f97021fc0a77eaa89ec34)), closes [#1528](https://github.com/vuejs/vue-next/issues/1528)
 * **v-model:** should ignore compiled v-model listeners in attr fallthrough ([6dd59ee](https://github.com/vuejs/vue-next/commit/6dd59ee301d8d93e7ca14447243d07a653e69159)), closes [#1510](https://github.com/vuejs/vue-next/issues/1510)
 * **watch:** stop instance-bound watchers in post render queue ([58b0706](https://github.com/vuejs/vue-next/commit/58b07069ad33c8a8e44cb47b81084a452dda2846)), closes [#1525](https://github.com/vuejs/vue-next/issues/1525)
@@ -37,7 +80,7 @@
 
 ### Bug Fixes
 
-* **runtime-core:** avoid accidental access of Object.prototype properties ([f3e9c1b](https://github.com/vuejs/vue-next/commit/f3e9c1b59d5d3999ac6180ed75c84d88b29c41e6))
+* **runtime-core:** avoid accidental access of `Object.prototype` properties ([f3e9c1b](https://github.com/vuejs/vue-next/commit/f3e9c1b59d5d3999ac6180ed75c84d88b29c41e6))
 * ensure vnode hooks are called consistently regardless of keep-alive ([4e8e689](https://github.com/vuejs/vue-next/commit/4e8e689572dcae0cb468989c5e0c531a837a900b))
 * **runtime-core:** pass unmount into inital mount patch prop ([2bdb5c1](https://github.com/vuejs/vue-next/commit/2bdb5c146449092623f06e20fb71ebaca7e5588f))
 * **runtime-dom:** allow force updating value bindings for controlled inputs ([b3536d8](https://github.com/vuejs/vue-next/commit/b3536d87a587dc1e78c8712cb29ca61ca0931ac9)), closes [#1471](https://github.com/vuejs/vue-next/issues/1471)

@@ -25,12 +25,12 @@ const rendererOptions = extend({ patchProp, forcePatchProp }, nodeOps)
 
 // lazy create the renderer - this makes core renderer logic tree-shakable
 // in case the user only imports reactivity utilities from Vue.
-let renderer: Renderer | HydrationRenderer
+let renderer: Renderer<Element> | HydrationRenderer
 
 let enabledHydration = false
 
 function ensureRenderer() {
-  return renderer || (renderer = createRenderer(rendererOptions))
+  return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
 
 function ensureHydrationRenderer() {

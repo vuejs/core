@@ -1,9 +1,10 @@
-import { parse, SFCScriptCompileOptions } from '../src'
+import { parse, SFCScriptCompileOptions, compileScript } from '../src'
 import { parse as babelParse } from '@babel/parser'
 import { babelParserDefautPlugins } from '@vue/shared'
 
 function compile(src: string, options?: SFCScriptCompileOptions) {
-  return parse(src, options).descriptor.scriptTransformed!
+  const { descriptor } = parse(src)
+  return compileScript(descriptor, options)
 }
 
 function assertCode(code: string) {
@@ -370,24 +371,23 @@ describe('SFC compile <script setup>', () => {
 
   describe('errors', () => {
     test('<script> and <script setup> must have same lang', () => {
-      expect(
-        parse(`<script>foo()</script><script setup lang="ts">bar()</script>`)
-          .errors[0].message
-      ).toMatch(`<script> and <script setup> must have the same language type`)
+      expect(() =>
+        compile(`<script>foo()</script><script setup lang="ts">bar()</script>`)
+      ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
     test('export local as default', () => {
-      expect(
-        parse(`<script setup>
+      expect(() =>
+        compile(`<script setup>
           const bar = 1
           export { bar as default }
-        </script>`).errors[0].message
-      ).toMatch(`Cannot export locally defined variable as default`)
+        </script>`)
+      ).toThrow(`Cannot export locally defined variable as default`)
     })
 
     test('export default referencing local var', () => {
-      expect(
-        parse(`<script setup>
+      expect(() =>
+        compile(`<script setup>
           const bar = 1
           export default {
             props: {
@@ -396,19 +396,19 @@ describe('SFC compile <script setup>', () => {
               }
             }
           }
-        </script>`).errors[0].message
-      ).toMatch(`cannot reference locally declared variables`)
+        </script>`)
+      ).toThrow(`cannot reference locally declared variables`)
     })
 
     test('export default referencing exports', () => {
-      expect(
-        parse(`<script setup>
+      expect(() =>
+        compile(`<script setup>
         export const bar = 1
         export default {
           props: bar
         }
-      </script>`).errors[0].message
-      ).toMatch(`cannot reference locally declared variables`)
+      </script>`)
+      ).toThrow(`cannot reference locally declared variables`)
     })
 
     test('should allow export default referencing scope var', () => {
@@ -457,20 +457,20 @@ describe('SFC compile <script setup>', () => {
       )
     })
 
-    test('error on duplicated defalut export', () => {
-      expect(
-        parse(`
+    test('error on duplicated default export', () => {
+      expect(() =>
+        compile(`
       <script>
       export default {}
       </script>
       <script setup>
       export default {}
       </script>
-      `).errors[0].message
-      ).toMatch(`Default export is already declared`)
+      `)
+      ).toThrow(`Default export is already declared`)
 
-      expect(
-        parse(`
+      expect(() =>
+        compile(`
       <script>
       export default {}
       </script>
@@ -478,33 +478,33 @@ describe('SFC compile <script setup>', () => {
       const x = {}
       export { x as default }
       </script>
-      `).errors[0].message
-      ).toMatch(`Default export is already declared`)
+      `)
+      ).toThrow(`Default export is already declared`)
 
-      expect(
-        parse(`
+      expect(() =>
+        compile(`
       <script>
       export default {}
       </script>
       <script setup>
       export { x as default } from './y'
       </script>
-      `).errors[0].message
-      ).toMatch(`Default export is already declared`)
+      `)
+      ).toThrow(`Default export is already declared`)
 
-      expect(
-        parse(`
+      expect(() =>
+        compile(`
       <script>
       export { x as default } from './y'
       </script>
       <script setup>
       export default {}
       </script>
-      `).errors[0].message
-      ).toMatch(`Default export is already declared`)
+      `)
+      ).toThrow(`Default export is already declared`)
 
-      expect(
-        parse(`
+      expect(() =>
+        compile(`
       <script>
       const x = {}
       export { x as default }
@@ -512,8 +512,8 @@ describe('SFC compile <script setup>', () => {
       <script setup>
       export default {}
       </script>
-      `).errors[0].message
-      ).toMatch(`Default export is already declared`)
+      `)
+      ).toThrow(`Default export is already declared`)
     })
   })
 })

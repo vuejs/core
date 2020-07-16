@@ -1,11 +1,8 @@
 import { parse } from '../src'
-import { mockWarn } from '@vue/shared'
 import { baseParse, baseCompile } from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map'
 
 describe('compiler:sfc', () => {
-  mockWarn()
-
   describe('source map', () => {
     test('style block', () => {
       // Padding determines how many blank lines will there be before the style block
@@ -143,36 +140,40 @@ h1 { color: red }
   })
 
   describe('warnings', () => {
+    function assertWarning(errors: Error[], msg: string) {
+      expect(errors.some(e => e.message.match(msg))).toBe(true)
+    }
+
     test('should only allow single template element', () => {
-      parse(`<template><div/></template><template><div/></template>`)
-      expect(
+      assertWarning(
+        parse(`<template><div/></template><template><div/></template>`).errors,
         `Single file component can contain only one <template> element`
-      ).toHaveBeenWarned()
+      )
     })
 
     test('should only allow single script element', () => {
-      parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
-      expect(
+      assertWarning(
+        parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
+          .errors,
         `Single file component can contain only one <script> element`
-      ).toHaveBeenWarned()
+      )
     })
 
     test('should only allow single script setup element', () => {
-      parse(
-        `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
-      )
-      expect(
+      assertWarning(
+        parse(
+          `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
+        ).errors,
         `Single file component can contain only one <script setup> element`
-      ).toHaveBeenWarned()
+      )
     })
 
     test('should not warn script & script setup', () => {
-      parse(
-        `<script setup>console.log(1)</script><script>console.log(1)</script>`
-      )
       expect(
-        `Single file component can contain only one`
-      ).not.toHaveBeenWarned()
+        parse(
+          `<script setup>console.log(1)</script><script>console.log(1)</script>`
+        ).errors.length
+      ).toBe(0)
     })
   })
 })

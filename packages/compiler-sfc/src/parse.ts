@@ -8,11 +8,9 @@ import {
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
-import { generateCodeFrame } from '@vue/shared'
 import { TemplateCompiler } from './compileTemplate'
-import { compileScript, SFCScriptCompileOptions } from './compileScript'
 
-export interface SFCParseOptions extends SFCScriptCompileOptions {
+export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
@@ -54,14 +52,13 @@ export interface SFCDescriptor {
   template: SFCTemplateBlock | null
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
-  scriptTransformed: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
 }
 
 export interface SFCParseResult {
   descriptor: SFCDescriptor
-  errors: CompilerError[]
+  errors: (CompilerError | SyntaxError)[]
 }
 
 const SFC_CACHE_MAX_SIZE = 500
@@ -80,8 +77,7 @@ export function parse(
     filename = 'component.vue',
     sourceRoot = '',
     pad = false,
-    compiler = CompilerDOM,
-    babelParserPlugins
+    compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -97,12 +93,11 @@ export function parse(
     template: null,
     script: null,
     scriptSetup: null,
-    scriptTransformed: null,
     styles: [],
     customBlocks: []
   }
 
-  const errors: CompilerError[] = []
+  const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     // there are no components at SFC parsing level
     isNativeTag: () => true,
@@ -148,7 +143,7 @@ export function parse(
             false
           ) as SFCTemplateBlock
         } else {
-          warnDuplicateBlock(source, filename, node)
+          errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
@@ -162,7 +157,7 @@ export function parse(
           descriptor.script = block
           break
         }
-        warnDuplicateBlock(source, filename, node, isSetup)
+        errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
         descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
@@ -172,6 +167,27 @@ export function parse(
         break
     }
   })
+
+  if (descriptor.scriptSetup) {
+    if (descriptor.scriptSetup.src) {
+      errors.push(
+        new SyntaxError(
+          `<script setup> cannot use the "src" attribute because ` +
+            `its syntax will be ambiguous outside of the component.`
+        )
+      )
+      delete descriptor.scriptSetup
+    }
+    if (descriptor.script && descriptor.script.src) {
+      errors.push(
+        new SyntaxError(
+          `<script> cannot use the "src" attribute when <script setup> is ` +
+            `also present because they must be processed together.`
+        )
+      )
+      delete descriptor.script
+    }
+  }
 
   if (sourceMap) {
     const genMap = (block: SFCBlock | null) => {
@@ -190,16 +206,6 @@ export function parse(
     descriptor.styles.forEach(genMap)
   }
 
-  if (descriptor.script || descriptor.scriptSetup) {
-    try {
-      descriptor.scriptTransformed = compileScript(descriptor, {
-        babelParserPlugins
-      })
-    } catch (e) {
-      errors.push(e)
-    }
-  }
-
   const result = {
     descriptor,
     errors
@@ -208,23 +214,17 @@ export function parse(
   return result
 }
 
-function warnDuplicateBlock(
-  source: string,
-  filename: string,
+function createDuplicateBlockError(
   node: ElementNode,
   isScriptSetup = false
-) {
-  const codeFrame = generateCodeFrame(
-    source,
-    node.loc.start.offset,
-    node.loc.end.offset
-  )
-  const location = `${filename}:${node.loc.start.line}:${node.loc.start.column}`
-  console.warn(
+): CompilerError {
+  const err = new SyntaxError(
     `Single file component can contain only one <${node.tag}${
       isScriptSetup ? ` setup` : ``
-    }> element (${location}):\n\n${codeFrame}`
-  )
+    }> element`
+  ) as CompilerError
+  err.loc = node.loc
+  return err
 }
 
 function createBlock(

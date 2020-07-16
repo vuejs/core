@@ -1,5 +1,5 @@
 import { Data } from '../component'
-import { Slots } from '../componentSlots'
+import { Slots, RawSlots } from '../componentSlots'
 import {
   VNodeArrayChildren,
   openBlock,
@@ -7,7 +7,7 @@ import {
   Fragment,
   VNode
 } from '../vnode'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
@@ -39,7 +39,9 @@ export function renderSlot(
       Fragment,
       { key: props.key },
       slot ? slot(props) : fallback ? fallback() : [],
-      slots._ ? PatchFlags.STABLE_FRAGMENT : PatchFlags.BAIL
+      (slots as RawSlots)._ === SlotFlags.STABLE
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL
     )
   )
 }
