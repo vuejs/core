@@ -213,7 +213,7 @@ function preprocess(
     )
   }
 
-  return preprocessor.render(
+  return preprocessor(
     options.source,
     options.map,
     {
