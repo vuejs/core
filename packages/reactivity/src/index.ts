@@ -15,7 +15,6 @@ export {
 export {
   reactive,
   readonly,
-  DeepReadonly,
   isReactive,
   isReadonly,
   isProxy,
@@ -23,7 +22,8 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags
+  ReactiveFlags,
+  DeepReadonly
 } from './reactive'
 export {
   computed,
