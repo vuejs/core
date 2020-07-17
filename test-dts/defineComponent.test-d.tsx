@@ -171,8 +171,9 @@ describe('with object props', () => {
       eee={() => ({ a: 'eee' })}
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
-      // should allow extraneous as attrs
+      // should allow class/style as attrs
       class="bar"
+      style={{ color: 'red' }}
       // should allow key
       key={'foo'}
       // should allow ref
