@@ -15,7 +15,11 @@ import {
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
-import { VNodeProps } from './vnode'
+import {
+  VNodeProps,
+  AllowedComponentProps,
+  ComponentCustomProps
+} from './vnode'
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -40,7 +44,7 @@ export function defineComponent<Props, RawBindings = object>(
     {},
     {},
     // public props
-    VNodeProps & Props
+    VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
   >
 > &
   FunctionalComponent<Props>
@@ -80,7 +84,7 @@ export function defineComponent<
     Mixin,
     Extends,
     E,
-    VNodeProps & Props
+    VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithoutProps<
@@ -131,7 +135,8 @@ export function defineComponent<
     M,
     Mixin,
     Extends,
-    E
+    E,
+    AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithArrayProps<
@@ -182,7 +187,7 @@ export function defineComponent<
     Mixin,
     Extends,
     E,
-    VNodeProps
+    VNodeProps & AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithObjectProps<

@@ -50,7 +50,7 @@ type RawProps = VNodeProps & {
   __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
-}
+} & { [key: string]: any }
 
 type RawChildren =
   | string
