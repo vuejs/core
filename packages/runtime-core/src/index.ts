@@ -126,7 +126,8 @@ export {
   WritableComputedRef,
   UnwrapRef,
   WritableComputedOptions,
-  ToRefs
+  ToRefs,
+  DeepReadonly
 } from '@vue/reactivity'
 export {
   // types
