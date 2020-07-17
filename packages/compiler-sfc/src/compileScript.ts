@@ -876,7 +876,7 @@ function genRuntimeEmits(emits: Set<string>) {
 }
 
 /**
- * export default {} inside <script setup> cannot access variables declared
+ * export default {} inside `<script setup>` cannot access variables declared
  * inside since it's hoisted. Walk and check to make sure.
  */
 function checkDefaultExport(

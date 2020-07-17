@@ -10,19 +10,19 @@ import { ParserPlugin } from '@babel/parser'
 
 export interface ParserOptions {
   /**
-   * e.g. platform native elements, e.g. <div> for browsers
+   * e.g. platform native elements, e.g. `<div>` for browsers
    */
   isNativeTag?: (tag: string) => boolean
   /**
-   * e.g. native elements that can self-close, e.g. <img>, <br>, <hr>
+   * e.g. native elements that can self-close, e.g. `<img>`, `<br>`, `<hr>`
    */
   isVoidTag?: (tag: string) => boolean
   /**
-   * e.g. elements that should preserve whitespace inside, e.g. <pre>
+   * e.g. elements that should preserve whitespace inside, e.g. `<pre>`
    */
   isPreTag?: (tag: string) => boolean
   /**
-   * Platform-specific built-in components e.g. <Transition>
+   * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void
   /**
@@ -127,7 +127,7 @@ export interface TransformOptions {
    */
   ssr?: boolean
   /**
-   * SFC <style vars> injection string
+   * SFC `<style vars>` injection string
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string

@@ -11,7 +11,7 @@ import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
- * Compiler runtime helper for rendering <slot/>
+ * Compiler runtime helper for rendering `<slot/>`
  * @private
  */
 export function renderSlot(
