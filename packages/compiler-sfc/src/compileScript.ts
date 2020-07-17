@@ -751,7 +751,7 @@ function inferRuntimeType(
       return ['Function']
     case 'TSArrayType':
     case 'TSTupleType':
-      // TODO (nice to have) genrate runtime element type/length checks
+      // TODO (nice to have) generate runtime element type/length checks
       return ['Array']
 
     case 'TSLiteralType':
