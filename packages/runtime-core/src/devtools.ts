@@ -47,32 +47,24 @@ export function appUnmounted(app: App) {
   devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
-export function componentAdded(component: ComponentInternalInstance) {
-  if (!devtools || !component.appContext.__app) return
-  devtools.emit(
-    DevtoolsHooks.COMPONENT_ADDED,
-    component.appContext.__app,
-    component.uid,
-    component.parent ? component.parent.uid : undefined
-  )
-}
+export const componentAdded = createDevtoolsHook(DevtoolsHooks.COMPONENT_ADDED)
 
-export function componentUpdated(component: ComponentInternalInstance) {
-  if (!devtools || !component.appContext.__app) return
-  devtools.emit(
-    DevtoolsHooks.COMPONENT_UPDATED,
-    component.appContext.__app,
-    component.uid,
-    component.parent ? component.parent.uid : undefined
-  )
-}
+export const componentUpdated = createDevtoolsHook(
+  DevtoolsHooks.COMPONENT_UPDATED
+)
 
-export function componentRemoved(component: ComponentInternalInstance) {
-  if (!devtools || !component.appContext.__app) return
-  devtools.emit(
-    DevtoolsHooks.COMPONENT_REMOVED,
-    component.appContext.__app,
-    component.uid,
-    component.parent ? component.parent.uid : undefined
-  )
+export const componentRemoved = createDevtoolsHook(
+  DevtoolsHooks.COMPONENT_REMOVED
+)
+
+function createDevtoolsHook(hook: DevtoolsHooks) {
+  return (component: ComponentInternalInstance) => {
+    if (!devtools || !component.appContext.__app) return
+    devtools.emit(
+      hook,
+      component.appContext.__app,
+      component.uid,
+      component.parent ? component.parent.uid : undefined
+    )
+  }
 }
