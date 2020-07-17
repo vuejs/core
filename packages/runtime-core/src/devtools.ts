@@ -6,7 +6,7 @@ export interface AppRecord {
   id: number
   app: App
   version: string
-  types: { [key: string]: string | Symbol }
+  types: Record<string, string | Symbol>
 }
 
 enum DevtoolsHooks {
