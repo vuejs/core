@@ -41,133 +41,39 @@ describe('runtime-dom: v-on directive', () => {
   })
 
   test('it should support key modifiers and system modifiers - ctrl', () => {
-    const el = document.createElement('div')
-    const fn = jest.fn()
-    // <div @keyup.ctrl.esc="test"/>
-    const nextValue = withKeys(withModifiers(fn, ['ctrl']), [
-      'esc',
-      'arrow-left'
-    ])
-    patchEvent(el, 'onKeyup', null, nextValue, null)
-
-    triggerEvent(el, 'keyup', e => (e.key = 'a'))
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.ctrlKey = false
-      e.key = 'esc'
-    })
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.ctrlKey = true
-      e.key = 'Escape'
-    })
-    expect(fn).toBeCalledTimes(1)
-
-    triggerEvent(el, 'keyup', e => {
-      e.ctrlKey = true
-      e.key = 'ArrowLeft'
-    })
-    expect(fn).toBeCalledTimes(2)
+    const keyNames = ["ctrl","shift","meta","alt"];
+    keyNames.forEach(keyName=>{
+      const el = document.createElement('div')
+      const fn = jest.fn()
+      // <div @keyup[keyName].esc="test"/>
+      const nextValue = withKeys(withModifiers(fn, [keyName]), [
+        'esc',
+        'arrow-left'
+      ])
+      patchEvent(el, 'onKeyup', null, nextValue, null)
+  
+      triggerEvent(el, 'keyup', e => (e.key = 'a'))
+      expect(fn).not.toBeCalled()
+  
+      triggerEvent(el, 'keyup', e => {
+        e[`${keyName}Key`] = false
+        e.key = 'esc'
+      })
+      expect(fn).not.toBeCalled()
+  
+      triggerEvent(el, 'keyup', e => {
+        e[`${keyName}Key`] = true
+        e.key = 'Escape'
+      })
+      expect(fn).toBeCalledTimes(1)
+  
+      triggerEvent(el, 'keyup', e => {
+        e[`${keyName}Key`] = true
+        e.key = 'ArrowLeft'
+      })
+      expect(fn).toBeCalledTimes(2)
+    });
   })
-
-  test('it should support key modifiers and system modifiers - shift', () => {
-    const el = document.createElement('div')
-    const fn = jest.fn()
-    // <div @keyup.shift.esc="test"/>
-    const nextValue = withKeys(withModifiers(fn, ['shift']), [
-      'esc',
-      'arrow-left'
-    ])
-    patchEvent(el, 'onKeyup', null, nextValue, null)
-
-    triggerEvent(el, 'keyup', e => (e.key = 'a'))
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.shiftKey = false
-      e.key = 'esc'
-    })
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.shiftKey = true
-      e.key = 'Escape'
-    })
-    expect(fn).toBeCalledTimes(1)
-
-    triggerEvent(el, 'keyup', e => {
-      e.shiftKey = true
-      e.key = 'ArrowLeft'
-    })
-    expect(fn).toBeCalledTimes(2)
-  })
-
-  test('it should support key modifiers and system modifiers - alt', () => {
-    const el = document.createElement('div')
-    const fn = jest.fn()
-    // <div @keyup.alt.esc="test"/>
-    const nextValue = withKeys(withModifiers(fn, ['alt']), [
-      'esc',
-      'arrow-left'
-    ])
-    patchEvent(el, 'onKeyup', null, nextValue, null)
-
-    triggerEvent(el, 'keyup', e => (e.key = 'a'))
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.altKey = false
-      e.key = 'esc'
-    })
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.altKey = true
-      e.key = 'Escape'
-    })
-    expect(fn).toBeCalledTimes(1)
-
-    triggerEvent(el, 'keyup', e => {
-      e.altKey = true
-      e.key = 'ArrowLeft'
-    })
-    expect(fn).toBeCalledTimes(2)
-  })
-
-  test('it should support key modifiers and system modifiers - meta', () => {
-    const el = document.createElement('div')
-    const fn = jest.fn()
-    // <div @keyup.meta.esc="test"/>
-    const nextValue = withKeys(withModifiers(fn, ['meta']), [
-      'esc',
-      'arrow-left'
-    ])
-    patchEvent(el, 'onKeyup', null, nextValue, null)
-
-    triggerEvent(el, 'keyup', e => (e.key = 'a'))
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.metaKey = false
-      e.key = 'esc'
-    })
-    expect(fn).not.toBeCalled()
-
-    triggerEvent(el, 'keyup', e => {
-      e.metaKey = true
-      e.key = 'Escape'
-    })
-    expect(fn).toBeCalledTimes(1)
-
-    triggerEvent(el, 'keyup', e => {
-      e.metaKey = true
-      e.key = 'ArrowLeft'
-    })
-    expect(fn).toBeCalledTimes(2)
-  })
-
   test('it should support "exact" modifier', () => {
     const el = document.createElement('div')
     // Case 1: <div @keyup.exact="test"/>
