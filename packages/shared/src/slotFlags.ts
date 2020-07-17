@@ -12,7 +12,7 @@ export const enum SlotFlags {
    */
   DYNAMIC = 2,
   /**
-   * <slot/> being forwarded into a child component. Whether the parent needs
+   * `<slot/>` being forwarded into a child component. Whether the parent needs
    * to update the child is dependent on what kind of slots the parent itself
    * received. This has to be refined at runtime, when the child's vnode
    * is being created (in `normalizeChildren`)
