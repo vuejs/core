@@ -1,4 +1,10 @@
-import postcss, { ProcessOptions, LazyResult, Result, ResultMap } from 'postcss'
+import postcss, {
+  ProcessOptions,
+  LazyResult,
+  Result,
+  ResultMap,
+  ResultMessage
+} from 'postcss'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
 import {
@@ -48,6 +54,7 @@ export interface SFCStyleCompileResults {
   rawResult: LazyResult | Result | undefined
   errors: Error[]
   modules?: Record<string, string>
+  dependencies: Set<string>
 }
 
 export function compileStyle(
@@ -132,10 +139,26 @@ export function doCompileStyle(
   let result: LazyResult | undefined
   let code: string | undefined
   let outMap: ResultMap | undefined
+  // stylus output include plain css. so need remove the repeat item
+  const dependencies = new Set(
+    preProcessedSource ? preProcessedSource.dependencies : []
+  )
+  // sass has filename self when provided filename option
+  dependencies.delete(filename)
 
   const errors: Error[] = []
   if (preProcessedSource && preProcessedSource.errors.length) {
     errors.push(...preProcessedSource.errors)
+  }
+
+  const recordPlainCssDependencies = (messages: ResultMessage[]) => {
+    messages.forEach(msg => {
+      if (msg.type === 'dependency') {
+        // postcss output path is absolute position path
+        dependencies.add(msg.file)
+      }
+    })
+    return dependencies
   }
 
   try {
@@ -149,16 +172,19 @@ export function doCompileStyle(
           map: result.map && (result.map.toJSON() as any),
           errors,
           modules: cssModules,
-          rawResult: result
+          rawResult: result,
+          dependencies: recordPlainCssDependencies(result.messages)
         }))
         .catch(error => ({
           code: '',
           map: undefined,
           errors: [...errors, error],
-          rawResult: undefined
+          rawResult: undefined,
+          dependencies
         }))
     }
 
+    recordPlainCssDependencies(result.messages)
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
@@ -170,7 +196,8 @@ export function doCompileStyle(
     code: code || ``,
     map: outMap && (outMap.toJSON() as any),
     errors,
-    rawResult: result
+    rawResult: result,
+    dependencies
   }
 }
 
@@ -186,7 +213,7 @@ function preprocess(
     )
   }
 
-  return preprocessor.render(
+  return preprocessor(
     options.source,
     options.map,
     {

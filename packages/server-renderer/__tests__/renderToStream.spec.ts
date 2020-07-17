@@ -84,7 +84,7 @@ describe('ssr: renderToStream', () => {
       expect(
         await renderToStream(
           createApp(
-            defineComponent((props: {}) => {
+            defineComponent(() => {
               const msg = ref('hello')
               return () => h('div', msg.value)
             })
@@ -266,7 +266,7 @@ describe('ssr: renderToStream', () => {
                   { msg: 'hello' },
                   {
                     // optimized slot using string push
-                    default: ({ msg }: any, push: any, p: any) => {
+                    default: ({ msg }: any, push: any) => {
                       push(`<span>${msg}</span>`)
                     },
                     // important to avoid slots being normalized

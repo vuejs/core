@@ -275,8 +275,6 @@ function doWatch(
 
   const runner = effect(getter, {
     lazy: true,
-    // so it runs before component update effects in pre flush mode
-    computed: true,
     onTrack,
     onTrigger,
     scheduler: applyCb ? () => scheduler(applyCb) : scheduler

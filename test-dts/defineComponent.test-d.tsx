@@ -7,7 +7,9 @@ import {
   createApp,
   expectError,
   expectType,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  ComponentOptions,
+  SetupContext
 } from './index'
 
 describe('with object props', () => {
@@ -620,7 +622,7 @@ describe('emits', () => {
   defineComponent({
     emits: {
       click: (n: number) => typeof n === 'number',
-      input: (b: string) => null
+      input: (b: string) => b.length > 1
     },
     setup(props, { emit }) {
       emit('click', 1)
@@ -683,4 +685,11 @@ describe('emits', () => {
   const instance = {} as ComponentPublicInstance
   instance.$emit('test', 1)
   instance.$emit('test')
+})
+
+describe('componentOptions setup should be `SetupContext`', () => {
+  expect<ComponentOptions['setup']>({} as (
+    props: Record<string, any>,
+    ctx: SetupContext
+  ) => any)
 })

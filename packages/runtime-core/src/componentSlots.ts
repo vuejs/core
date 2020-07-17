@@ -12,7 +12,8 @@ import {
   EMPTY_OBJ,
   ShapeFlags,
   extend,
-  def
+  def,
+  SlotFlags
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -27,24 +28,25 @@ export type InternalSlots = {
 
 export type Slots = Readonly<InternalSlots>
 
-export const enum CompiledSlotTypes {
-  STATIC = 1,
-  DYNAMIC = 2
-}
-
 export type RawSlots = {
   [name: string]: unknown
   // manual render fn hint to skip forced children updates
   $stable?: boolean
-  // internal, for tracking slot owner instance. This is attached during
-  // normalizeChildren when the component vnode is created.
+  /**
+   * for tracking slot owner instance. This is attached during
+   * normalizeChildren when the component vnode is created.
+   * @internal
+   */
   _ctx?: ComponentInternalInstance | null
-  // internal, indicates compiler generated slots
-  // we use a reserved property instead of a vnode patchFlag because the slots
-  // object may be directly passed down to a child component in a manual
-  // render function, and the optimization hint need to be on the slot object
-  // itself to be preserved.
-  _?: CompiledSlotTypes
+  /**
+   * indicates compiler generated slots
+   * we use a reserved property instead of a vnode patchFlag because the slots
+   * object may be directly passed down to a child component in a manual
+   * render function, and the optimization hint need to be on the slot object
+   * itself to be preserved.
+   * @internal
+   */
+  _?: SlotFlags
 }
 
 const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
@@ -141,8 +143,8 @@ export const updateSlots = (
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
-      } else if (type === CompiledSlotTypes.STATIC) {
-        // compiled AND static.
+      } else if (type === SlotFlags.STABLE) {
+        // compiled AND stable.
         // no need to update, and skip stale slots removal.
         needDeletionCheck = false
       } else {

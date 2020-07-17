@@ -40,21 +40,22 @@ export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions = {}
 ): SFCScriptBlock {
-  if (__DEV__ && !__TEST__ && !hasWarned) {
+  const { script, scriptSetup, styles, source, filename } = sfc
+
+  if (__DEV__ && !__TEST__ && !hasWarned && scriptSetup) {
     hasWarned = true
-    console.log(
+    // @ts-ignore `console.info` cannot be null error
+    console[console.info ? 'info' : 'log'](
       `\n[@vue/compiler-sfc] <script setup> is still an experimental proposal.\n` +
         `Follow https://github.com/vuejs/rfcs/pull/182 for its status.\n`
     )
   }
 
-  const { script, scriptSetup, styles, source, filename } = sfc
   const hasCssVars = styles.some(s => typeof s.attrs.vars === 'string')
 
-  const isTS =
-    (script && script.lang === 'ts') ||
-    (scriptSetup && scriptSetup.lang === 'ts')
-
+  const scriptLang = script && script.lang
+  const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isTS = scriptLang === 'ts' || scriptSetupLang === 'ts'
   const plugins: ParserPlugin[] = [
     ...(options.babelParserPlugins || []),
     ...babelParserDefautPlugins,
@@ -65,6 +66,10 @@ export function compileScript(
     if (!script) {
       throw new Error(`SFC contains no <script> tags.`)
     }
+    if (scriptLang && scriptLang !== 'ts') {
+      // do not process non js/ts script blocks
+      return script
+    }
     return {
       ...script,
       content: hasCssVars ? injectCssVarsCalls(sfc, plugins) : script.content,
@@ -72,10 +77,15 @@ export function compileScript(
     }
   }
 
-  if (script && script.lang !== scriptSetup.lang) {
+  if (script && scriptLang !== scriptSetupLang) {
     throw new Error(
       `<script> and <script setup> must have the same language type.`
     )
+  }
+
+  if (scriptSetupLang && scriptSetupLang !== 'ts') {
+    // do not process non js/ts script blocks
+    return scriptSetup
   }
 
   const defaultTempVar = `__default__`
@@ -547,7 +557,7 @@ export function compileScript(
 
   // inject `useCSSVars` calls
   if (hasCssVars) {
-    s.prepend(`import { useCSSVars as __useCSSVars__ } from 'vue'\n`)
+    s.prepend(`import { useCssVars as __useCssVars__ } from 'vue'\n`)
     for (const style of styles) {
       const vars = style.attrs.vars
       if (typeof vars === 'string') {

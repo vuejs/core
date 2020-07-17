@@ -33,6 +33,7 @@ import {
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { parseForExpression, createForLoopParams } from './vFor'
+import { SlotFlags } from '@vue/shared/src'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
@@ -321,13 +322,19 @@ export function buildSlots(
     }
   }
 
+  const slotFlag = hasDynamicSlots
+    ? SlotFlags.DYNAMIC
+    : hasForwardedSlots(node.children)
+      ? SlotFlags.FORWARDED
+      : SlotFlags.STABLE
+
   let slots = createObjectExpression(
     slotsProperties.concat(
       createObjectProperty(
         `_`,
         // 2 = compiled but dynamic = can skip normalization, but must run diff
         // 1 = compiled and static = can skip normalization AND diff as optimized
-        createSimpleExpression(hasDynamicSlots ? `2` : `1`, false)
+        createSimpleExpression('' + slotFlag, false)
       )
     ),
     loc
@@ -353,4 +360,20 @@ function buildDynamicSlot(
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
   ])
+}
+
+function hasForwardedSlots(children: TemplateChildNode[]): boolean {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.type === NodeTypes.ELEMENT) {
+      if (
+        child.tagType === ElementTypes.SLOT ||
+        (child.tagType === ElementTypes.ELEMENT &&
+          hasForwardedSlots(child.children))
+      ) {
+        return true
+      }
+    }
+  }
+  return false
 }

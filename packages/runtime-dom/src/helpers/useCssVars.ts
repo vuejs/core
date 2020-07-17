@@ -5,7 +5,8 @@ import {
   watchEffect,
   warn,
   VNode,
-  Fragment
+  Fragment,
+  unref
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared/src'
 
@@ -14,6 +15,7 @@ export function useCssVars(
   scoped = false
 ) {
   const instance = getCurrentInstance()
+  /* istanbul ignore next */
   if (!instance) {
     __DEV__ &&
       warn(`useCssVars is called without current active component instance.`)
@@ -44,7 +46,7 @@ function setVarsOnVNode(
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
     for (const key in vars) {
-      style.setProperty(`--${prefix}${key}`, vars[key])
+      style.setProperty(`--${prefix}${key}`, unref(vars[key]))
     }
   } else if (vnode.type === Fragment) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, prefix))

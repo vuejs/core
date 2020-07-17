@@ -107,4 +107,21 @@ describe('runtime-dom: props patching', () => {
 
     expect(`Failed setting prop "someProp" on <div>`).toHaveBeenWarnedLast()
   })
+
+  // #1576
+  test('remove attribute when value is falsy', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
+    patchProp(el, 'id', null, null)
+    expect(el.hasAttribute('id')).toBe(false)
+
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
+    patchProp(el, 'id', null, undefined)
+    expect(el.hasAttribute('id')).toBe(false)
+
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
+  })
 })

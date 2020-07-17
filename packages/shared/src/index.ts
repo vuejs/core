@@ -3,6 +3,7 @@ import { makeMap } from './makeMap'
 export { makeMap }
 export * from './patchFlags'
 export * from './shapeFlags'
+export * from './slotFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
 export * from './mockWarn'
@@ -56,6 +57,7 @@ export const hasOwn = (
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
+export const isDate = (val: unknown): val is Date => val instanceof Date
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'

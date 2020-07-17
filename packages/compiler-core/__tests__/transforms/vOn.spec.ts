@@ -6,7 +6,9 @@ import {
   CompilerOptions,
   ErrorCodes,
   NodeTypes,
-  VNodeCall
+  VNodeCall,
+  helperNameMap,
+  CAPITALIZE
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -73,7 +75,11 @@ describe('compiler: transform v-on', () => {
         {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`"on" + (`, { content: `event` }, `)`]
+            children: [
+              `"on" + _${helperNameMap[CAPITALIZE]}(`,
+              { content: `event` },
+              `)`
+            ]
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -94,7 +100,11 @@ describe('compiler: transform v-on', () => {
         {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`"on" + (`, { content: `_ctx.event` }, `)`]
+            children: [
+              `"on" + _${helperNameMap[CAPITALIZE]}(`,
+              { content: `_ctx.event` },
+              `)`
+            ]
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -116,7 +126,7 @@ describe('compiler: transform v-on', () => {
           key: {
             type: NodeTypes.COMPOUND_EXPRESSION,
             children: [
-              `"on" + (`,
+              `"on" + _${helperNameMap[CAPITALIZE]}(`,
               { content: `_ctx.event` },
               `(`,
               { content: `_ctx.foo` },

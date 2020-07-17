@@ -1,9 +1,14 @@
+/**
+ * @jest-environment node
+ */
+
 import {
   compileStyle,
   compileStyleAsync,
   SFCStyleCompileOptions
 } from '../src/compileStyle'
 import { mockWarn } from '@vue/shared'
+import path from 'path'
 
 describe('SFC scoped CSS', () => {
   mockWarn()
@@ -316,5 +321,22 @@ describe('SFC CSS modules', () => {
     expect(result.modules).toBeDefined()
     expect(result.modules!.fooBar).toMatch('__foo-bar__')
     expect(result.modules!.bazQux).toBeUndefined()
+  })
+})
+
+describe('SFC style preprocessors', () => {
+  test('scss @import', () => {
+    const res = compileStyle({
+      source: `
+        @import "./import.scss";
+      `,
+      filename: path.resolve(__dirname, './fixture/test.scss'),
+      id: '',
+      preprocessLang: 'scss'
+    })
+
+    expect([...res.dependencies]).toStrictEqual([
+      path.join(__dirname, './fixture/import.scss')
+    ])
   })
 })

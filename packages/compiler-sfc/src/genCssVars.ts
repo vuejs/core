@@ -38,7 +38,7 @@ export function genCssVarsCode(
           })
           .join('')
 
-  return `__useCSSVars__(_ctx => (${transformedString})${
+  return `__useCssVars__(_ctx => (${transformedString})${
     scoped ? `, true` : ``
   })`
 }
