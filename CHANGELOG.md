@@ -1,3 +1,19 @@
+# [3.0.0-rc.1](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.24...v3.0.0-rc.1) (2020-07-17)
+
+
+### Bug Fixes
+
+* **watch:** post flush watchers should not fire when component is unmounted ([341b30c](https://github.com/vuejs/vue-next/commit/341b30c961aa065fc59f0c2b592a11229cb6bd14)), closes [#1603](https://github.com/vuejs/vue-next/issues/1603)
+
+
+### Features
+
+* **types:** deny unknown attributes on component by default ([#1614](https://github.com/vuejs/vue-next/issues/1614)) ([5d8a64d](https://github.com/vuejs/vue-next/commit/5d8a64d53a27ad57fe9940dd0d4d745dfbaf3c9e)), closes [#1519](https://github.com/vuejs/vue-next/issues/1519)
+* **types:** expose DeepReadonly type ([#1606](https://github.com/vuejs/vue-next/issues/1606)) ([527c2c8](https://github.com/vuejs/vue-next/commit/527c2c8bbb5c8fcfdf827dd985a09d7e7388cdad))
+* Initial devtools support ([#1125](https://github.com/vuejs/vue-next/issues/1125)) ([568b6db](https://github.com/vuejs/vue-next/commit/568b6db12b9fa167569809dc0da7e0e3c026f204))
+
+
+
 # [3.0.0-beta.24](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.23...v3.0.0-beta.24) (2020-07-16)
 
 
