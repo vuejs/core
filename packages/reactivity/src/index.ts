@@ -15,6 +15,7 @@ export {
 export {
   reactive,
   readonly,
+  DeepReadonly,
   isReactive,
   isReadonly,
   isProxy,
