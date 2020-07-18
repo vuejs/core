@@ -54,7 +54,7 @@ export { h } from './h'
 // Advanced render function utilities
 export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 // VNode types
-export { Fragment, Text, Comment, Static } from './vnode'
+export { Fragment, Text, Comment, Static, ComponentCustomProps } from './vnode'
 // Built-in components
 export { Teleport, TeleportProps } from './components/Teleport'
 export { Suspense, SuspenseProps } from './components/Suspense'
@@ -93,7 +93,10 @@ export {
   getTransitionRawChildren
 } from './components/BaseTransition'
 
-// Types -----------------------------------------------------------------------
+// For devtools
+export { devtools, setDevtoolsHook } from './devtools'
+
+// Types -------------------------------------------------------------------------
 
 import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
@@ -123,7 +126,8 @@ export {
   WritableComputedRef,
   UnwrapRef,
   WritableComputedOptions,
-  ToRefs
+  ToRefs,
+  DeepReadonly
 } from '@vue/reactivity'
 export {
   // types

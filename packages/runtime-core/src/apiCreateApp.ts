@@ -13,6 +13,7 @@ import { isFunction, NO, isObject } from '@vue/shared'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
+import { initApp, appUnmounted } from './devtools'
 import { version } from '.'
 
 export interface App<HostElement = any> {
@@ -31,7 +32,7 @@ export interface App<HostElement = any> {
   unmount(rootContainer: HostElement | string): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
-  // internal. We need to expose these for the server-renderer
+  // internal. We need to expose these for the server-renderer and devtools
   _component: Component
   _props: Data | null
   _container: HostElement | null
@@ -73,6 +74,9 @@ export interface AppContext {
   directives: Record<string, Directive>
   provides: Record<string | symbol, any>
   reload?: () => void // HMR only
+
+  // internal for devtools
+  __app?: App
 }
 
 type PluginInstallFunction = (app: App, ...options: any[]) => any
@@ -226,6 +230,9 @@ export function createAppAPI<HostElement>(
           }
           isMounted = true
           app._container = rootContainer
+
+          __DEV__ && initApp(app, version)
+
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
@@ -240,6 +247,8 @@ export function createAppAPI<HostElement>(
       unmount() {
         if (isMounted) {
           render(null, app._container)
+
+          __DEV__ && appUnmounted(app)
         } else if (__DEV__) {
           warn(`Cannot unmount an app that is not mounted.`)
         }
@@ -259,6 +268,8 @@ export function createAppAPI<HostElement>(
         return app
       }
     }
+
+    context.__app = app
 
     return app
   }

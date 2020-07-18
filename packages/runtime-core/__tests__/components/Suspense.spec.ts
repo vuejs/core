@@ -170,7 +170,7 @@ describe('Suspense', () => {
         })
 
         const count = ref(0)
-        watch(count, v => {
+        watch(count, () => {
           calls.push('watch callback')
         })
         count.value++ // trigger the watcher now
@@ -367,7 +367,7 @@ describe('Suspense', () => {
     await nextTick()
     expect(serializeInner(root)).toBe(`<!---->`)
     // should discard effects (except for immediate ones)
-    expect(calls).toEqual(['immediate effect', 'watch callback', 'unmounted'])
+    expect(calls).toEqual(['immediate effect', 'unmounted'])
   })
 
   test('unmount suspense after resolve', async () => {

@@ -751,7 +751,7 @@ function inferRuntimeType(
       return ['Function']
     case 'TSArrayType':
     case 'TSTupleType':
-      // TODO (nice to have) genrate runtime element type/length checks
+      // TODO (nice to have) generate runtime element type/length checks
       return ['Array']
 
     case 'TSLiteralType':
@@ -876,7 +876,7 @@ function genRuntimeEmits(emits: Set<string>) {
 }
 
 /**
- * export default {} inside <script setup> cannot access variables declared
+ * export default {} inside `<script setup>` cannot access variables declared
  * inside since it's hoisted. Walk and check to make sure.
  */
 function checkDefaultExport(

@@ -197,7 +197,7 @@ function patchSuspense(
 }
 
 export interface SuspenseBoundary {
-  vnode: VNode
+  vnode: VNode<RendererNode, RendererElement, SuspenseProps>
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean

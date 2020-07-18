@@ -50,12 +50,16 @@ We are using [this thread](https://github.com/vuejs/jsx/issues/141) to unify the
 
 | Project             | Status |
 | ------------------- | ------ |
-| vue-devtools        | WIP (beta channel with Vue 3 support in early July) |
+| vue-devtools        | [![alpha][vd-badge]][vd-npm] [[Github][vd-code]] |
 | eslint-plugin-vue   | [![alpha][epv-badge]][epv-npm] [[Github][epv-code]] |
 | @vue/test-utils     | [![alpha][vtu-badge]][vtu-npm] [[Github][vtu-code]] |
 | vue-class-component | [![alpha][vcc-badge]][vcc-npm] [[Github][vcc-code]] |
 | vue-loader          | [![alpha][vl-badge]][vl-npm] [[Github][vl-code]] |
 | rollup-plugin-vue   | [![alpha][rpv-badge]][rpv-npm] [[Github][rpv-code]] |
+
+[vd-badge]: https://img.shields.io/npm/v/@vue/devtools/beta.svg
+[vd-npm]: https://www.npmjs.com/package/@vue/devtools/v/beta
+[vd-code]: https://github.com/vuejs/vue-devtools/tree/next
 
 [epv-badge]: https://img.shields.io/npm/v/eslint-plugin-vue/next.svg
 [epv-npm]: https://www.npmjs.com/package/eslint-plugin-vue/v/next

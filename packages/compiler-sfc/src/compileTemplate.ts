@@ -57,7 +57,7 @@ export interface SFCTemplateCompileOptions {
    */
   transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
 }
-  
+
 interface PreProcessor {
   render(
     source: string,

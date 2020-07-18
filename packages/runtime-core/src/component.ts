@@ -49,6 +49,7 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { startMeasure, endMeasure } from './profiling'
+import { componentAdded } from './devtools'
 
 export type Data = { [key: string]: unknown }
 
@@ -408,6 +409,9 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+
+  __DEV__ && componentAdded(instance)
+
   return instance
 }
 
