@@ -51,7 +51,7 @@ import {
 import { startMeasure, endMeasure } from './profiling'
 import { componentAdded } from './devtools'
 
-export type Data = { [key: string]: unknown }
+export type Data = Record<string, unknown>
 
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
