@@ -182,7 +182,8 @@ const KeepAliveImpl = {
     // cache sub tree in beforeMount/Update (i.e. right after the render)
     let pendingCacheKey: CacheKey | null = null
     const cacheSubtree = () => {
-      if (pendingCacheKey) {
+      // fix #1621, the pendingCacheKey could be 0
+      if (pendingCacheKey != null) {
         cache.set(pendingCacheKey, instance.subTree)
       }
     }
