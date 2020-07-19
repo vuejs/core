@@ -41,7 +41,8 @@ describe('runtime-dom: v-on directive', () => {
   })
 
   test('it should support key modifiers and system modifiers', () => {
-    const keyNames = ["ctrl","shift","meta","alt"];
+    const keyNames = ["ctrl","shift","meta","alt"]
+
     keyNames.forEach(keyName=>{
       const el = document.createElement('div')
       const fn = jest.fn()
@@ -74,6 +75,7 @@ describe('runtime-dom: v-on directive', () => {
       expect(fn).toBeCalledTimes(2)
     });
   })
+
   test('it should support "exact" modifier', () => {
     const el = document.createElement('div')
     // Case 1: <div @keyup.exact="test"/>
