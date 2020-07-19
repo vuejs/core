@@ -611,4 +611,23 @@ describe('api: watch', () => {
       oldValue: 2
     })
   })
+
+  it('should work sync', () => {
+    const v = ref(1)
+    let calls = 0
+
+    watch(
+      v,
+      () => {
+        ++calls
+      },
+      {
+        flush: 'sync'
+      }
+    )
+
+    expect(calls).toBe(0)
+    v.value++
+    expect(calls).toBe(1)
+  })
 })
