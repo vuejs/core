@@ -183,7 +183,7 @@ const KeepAliveImpl = {
     let pendingCacheKey: CacheKey | null = null
     const cacheSubtree = () => {
       // fix #1621, the pendingCacheKey could be 0
-      if (pendingCacheKey || pendingCacheKey === 0) {
+      if (pendingCacheKey != null) {
         cache.set(pendingCacheKey, instance.subTree)
       }
     }
