@@ -71,8 +71,6 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 
 export type WatchStopHandle = () => void
 
-const invoke = (fn: Function) => fn()
-
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
@@ -262,7 +260,7 @@ function doWatch(
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
-    scheduler = invoke
+    scheduler = job
   } else if (flush === 'pre') {
     // ensure it's queued before component updates (which have positive ids)
     job.id = -1
