@@ -1132,7 +1132,7 @@ function baseCreateRenderer(
     optimized: boolean
   ) => {
     if (n1 == null) {
-      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEEP_ALIVE) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,

@@ -261,7 +261,7 @@ const KeepAliveImpl = {
           setTransitionHooks(vnode, vnode.transition!)
         }
         // avoid vnode being mounted as fresh
-        vnode.shapeFlag |= ShapeFlags.COMPONENT_KEPT_ALIVE
+        vnode.shapeFlag |= ShapeFlags.COMPONENT_KEEP_ALIVE
         // make this key the freshest
         keys.delete(key)
         keys.add(key)
@@ -374,8 +374,8 @@ function resetShapeFlag(vnode: VNode) {
   if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
     shapeFlag -= ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   }
-  if (shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-    shapeFlag -= ShapeFlags.COMPONENT_KEPT_ALIVE
+  if (shapeFlag & ShapeFlags.COMPONENT_KEEP_ALIVE) {
+    shapeFlag -= ShapeFlags.COMPONENT_KEEP_ALIVE
   }
   vnode.shapeFlag = shapeFlag
 }
