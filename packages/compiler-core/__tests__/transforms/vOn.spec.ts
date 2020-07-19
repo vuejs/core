@@ -271,7 +271,7 @@ describe('compiler: transform v-on', () => {
     })
   })
 
-  test('should NOT wrap as function if expression is already function expression (Multi-line writing)', () => {
+  test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
     const { node } = parseWithVOn(
       `<div @click="
       $event => {
@@ -296,7 +296,7 @@ describe('compiler: transform v-on', () => {
     })
   })
 
-  test('should NOT wrap as function if expression is already function expression (Multi-line writing + function keyword)', () => {
+  test('should NOT wrap as function if expression is already function expression (with newlines + function keyword)', () => {
     const { node } = parseWithVOn(
       `<div @click="
       function($event) {
