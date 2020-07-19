@@ -119,6 +119,7 @@ export interface RendererOptions<
     anchor: HostNode | null,
     isSVG: boolean
   ): HostElement[]
+  getEqualNodeFromContainer?(container: HostElement, node: HostNode): HostNode
 }
 
 // Renderer Node can technically be any object in the context of core renderer
@@ -398,7 +399,8 @@ function baseCreateRenderer(
     nextSibling: hostNextSibling,
     setScopeId: hostSetScopeId = NOOP,
     cloneNode: hostCloneNode,
-    insertStaticContent: hostInsertStaticContent
+    insertStaticContent: hostInsertStaticContent,
+    getEqualNodeFromContainer: hostGetEqualNodeFromContainer
   } = options
 
   // Note: functions inside this closure should use `const xxx = () => {}`
@@ -651,16 +653,17 @@ function baseCreateRenderer(
         // never patched (because they are not collected as dynamic nodes), but
         // they can be udpated during HMR. In this case just mount it as new
         // and remove the stale DOM tree.
+        const el = hostGetEqualNodeFromContainer!(container, n1.el!)
         mountElement(
           n2,
           container,
-          n1.el,
+          el,
           parentComponent,
           parentSuspense,
           isSVG,
           optimized
         )
-        hostRemove(n1.el!)
+        hostRemove(el)
       } else {
         patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
       }

@@ -69,5 +69,17 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       node = temp.firstChild as Element
     }
     return [first, last]
+  },
+
+  getEqualNodeFromContainer(container, node) {
+    const parentNode = node.parentNode
+    if (parentNode === container) {
+      return node
+    } else {
+      const index = Array.prototype.slice
+        .call(parentNode!.children)
+        .indexOf(node)
+      return container.children[index]
+    }
   }
 }
