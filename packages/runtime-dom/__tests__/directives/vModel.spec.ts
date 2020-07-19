@@ -604,4 +604,41 @@ describe('vModel', () => {
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(true)
   })
+
+  it('should work with composition session', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: '' }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              'onUpdate:modelValue': setValue.bind(this)
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')!
+    const data = root._vnode.component.data
+    expect(input.value).toEqual('')
+
+    input.value = '使用拼音'
+    triggerEvent('compositionstart', input)
+    await nextTick()
+    expect(data.value).toEqual('')
+
+    input.value = '使用拼音输入'
+    triggerEvent('input', input)
+    await nextTick()
+    expect(data.value).toEqual('')
+
+    triggerEvent('compositionend', input)
+    await nextTick()
+    expect(data.value).toEqual('使用拼音输入')
+  })
 })
