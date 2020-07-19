@@ -53,6 +53,19 @@ import { componentAdded } from './devtools'
 
 export type Data = Record<string, unknown>
 
+/**
+ * For extending allowed non-declared props on components in TSX
+ */
+export interface ComponentCustomProps {}
+
+/**
+ * Default allowed non-declared props on ocmponent in TSX
+ */
+export interface AllowedComponentProps {
+  class?: unknown
+  style?: unknown
+}
+
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
 export interface ComponentInternalOptions {

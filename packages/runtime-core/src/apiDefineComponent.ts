@@ -7,7 +7,12 @@ import {
   ComponentOptionsMixin,
   RenderFunction
 } from './componentOptions'
-import { SetupContext, FunctionalComponent } from './component'
+import {
+  SetupContext,
+  FunctionalComponent,
+  AllowedComponentProps,
+  ComponentCustomProps
+} from './component'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
@@ -15,11 +20,7 @@ import {
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
-import {
-  VNodeProps,
-  AllowedComponentProps,
-  ComponentCustomProps
-} from './vnode'
+import { VNodeProps } from './vnode'
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
