@@ -110,7 +110,7 @@ const styl: StylePreprocessor = (source, map, options, load = require) => {
     // stylus output path is relative path
     const dependencies = getAbsolutePaths(
       ref.deps(),
-      path.dirname(options.fileName)
+      path.dirname(options.filename)
     )
     if (map) {
       return {
