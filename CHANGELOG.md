@@ -9,7 +9,7 @@
 ### Features
 
 * **types:** deny unknown attributes on component by default ([#1614](https://github.com/vuejs/vue-next/issues/1614)) ([5d8a64d](https://github.com/vuejs/vue-next/commit/5d8a64d53a27ad57fe9940dd0d4d745dfbaf3c9e)), closes [#1519](https://github.com/vuejs/vue-next/issues/1519)
-* **types:** expose DeepReadonly type ([#1606](https://github.com/vuejs/vue-next/issues/1606)) ([527c2c8](https://github.com/vuejs/vue-next/commit/527c2c8bbb5c8fcfdf827dd985a09d7e7388cdad))
+* **types:** expose `DeepReadonly` type ([#1606](https://github.com/vuejs/vue-next/issues/1606)) ([527c2c8](https://github.com/vuejs/vue-next/commit/527c2c8bbb5c8fcfdf827dd985a09d7e7388cdad))
 * Initial devtools support ([#1125](https://github.com/vuejs/vue-next/issues/1125)) ([568b6db](https://github.com/vuejs/vue-next/commit/568b6db12b9fa167569809dc0da7e0e3c026f204))
 
 
@@ -28,9 +28,9 @@
 
 ### Bug Fixes
 
-* **compiler-sfc:** fix useCssVars codegen ([9b5ff2b](https://github.com/vuejs/vue-next/commit/9b5ff2b567f5e29cc59e23e106f2278c3feaad21))
+* **compiler-sfc:** fix `useCssVars` codegen ([9b5ff2b](https://github.com/vuejs/vue-next/commit/9b5ff2b567f5e29cc59e23e106f2278c3feaad21))
 * **compiler-sfc:** prohibit src usage for `<script setup>` + do not ([af4b0c2](https://github.com/vuejs/vue-next/commit/af4b0c2cf18b63990bc266eb0871a50ba2004fc0))
-* **runtime-dom:** unref when setting useCssVars ([44e6da1](https://github.com/vuejs/vue-next/commit/44e6da1402fa2b6f5a0a0c692cd693a8ff1a40a3))
+* **runtime-dom:** unref when setting `useCssVars` ([44e6da1](https://github.com/vuejs/vue-next/commit/44e6da1402fa2b6f5a0a0c692cd693a8ff1a40a3))
 * **slots:** properly force update on forwarded slots ([aab99ab](https://github.com/vuejs/vue-next/commit/aab99abd28a5d17f2d1966678b0d334975d21877)), closes [#1594](https://github.com/vuejs/vue-next/issues/1594)
 
 
@@ -41,7 +41,7 @@
 
 ### Performance Improvements
 
-* **runtime-core:** avoid duplicate postFlushCb invocation ([165068d](https://github.com/vuejs/vue-next/commit/165068dbc295bb70fdec9ae56dfcaac17d2f977c)), closes [#1595](https://github.com/vuejs/vue-next/issues/1595)
+* **runtime-core:** avoid duplicate `postFlushCb` invocation ([165068d](https://github.com/vuejs/vue-next/commit/165068dbc295bb70fdec9ae56dfcaac17d2f977c)), closes [#1595](https://github.com/vuejs/vue-next/issues/1595)
 
 
 
@@ -50,7 +50,7 @@
 
 ### Bug Fixes
 
-* **compiler-core:** generate incremental keys for v-if/else-if/else chains ([#1589](https://github.com/vuejs/vue-next/issues/1589)) ([64c7b2f](https://github.com/vuejs/vue-next/commit/64c7b2f9cedae676ec26a7a8da4c109bc88b48f1)), closes [#1587](https://github.com/vuejs/vue-next/issues/1587)
+* **compiler-core:** generate incremental keys for `v-if/else-if/else` chains ([#1589](https://github.com/vuejs/vue-next/issues/1589)) ([64c7b2f](https://github.com/vuejs/vue-next/commit/64c7b2f9cedae676ec26a7a8da4c109bc88b48f1)), closes [#1587](https://github.com/vuejs/vue-next/issues/1587)
 * **compiler-sfc:** `<script setup>` warning ([9146cc4](https://github.com/vuejs/vue-next/commit/9146cc485e317ff29192796f9366471144ed3ad2))
 * **hmr:** fix hmr updates for reused hoisted trees ([5f61aa0](https://github.com/vuejs/vue-next/commit/5f61aa0f719cbd90182af1e27fad37b91c2c351e))
 * **runtime-core:** do not call transition enter hooks when mounting in suspense ([#1588](https://github.com/vuejs/vue-next/issues/1588)) ([246ec5c](https://github.com/vuejs/vue-next/commit/246ec5c594650f3fcccd0de94aa3f97b4d705e42)), closes [#1583](https://github.com/vuejs/vue-next/issues/1583)
@@ -68,8 +68,8 @@
 
 ### Bug Fixes
 
-* **compiler-dom:** fix v-on .left .right modifier handling ([6b63ba2](https://github.com/vuejs/vue-next/commit/6b63ba2f453b3f9bbf9e9e2167030de42f76b5ac))
-* **runtime-core:** avoid scopeId as attr for slot nodes with same scopeId ([#1561](https://github.com/vuejs/vue-next/issues/1561)) ([583a1c7](https://github.com/vuejs/vue-next/commit/583a1c7b45e67e9cd57e411853c20509248def89)), closes [vitejs/vite#536](https://github.com/vitejs/vite/issues/536)
+* **compiler-dom:** fix v-on `.left` `.right` modifier handling ([6b63ba2](https://github.com/vuejs/vue-next/commit/6b63ba2f453b3f9bbf9e9e2167030de42f76b5ac))
+* **runtime-core:** avoid `scopeId` as attr for slot nodes with same `scopeId` ([#1561](https://github.com/vuejs/vue-next/issues/1561)) ([583a1c7](https://github.com/vuejs/vue-next/commit/583a1c7b45e67e9cd57e411853c20509248def89)), closes [vitejs/vite#536](https://github.com/vitejs/vite/issues/536)
 * **runtime-core/emits:** merge emits options from mixins/extends ([ba3b3cd](https://github.com/vuejs/vue-next/commit/ba3b3cdda98f6efb5d4c4fafc579b8f568a19bde)), closes [#1562](https://github.com/vuejs/vue-next/issues/1562)
 * **runtime-dom:** remove attrs with nullish values ([cb6a091](https://github.com/vuejs/vue-next/commit/cb6a0915c540af94f5d79c311022b99bc17f2965)), closes [#1576](https://github.com/vuejs/vue-next/issues/1576)
 * **runtime-dom/v-on:** only block event handlers based on attach timestamp ([8b320cc](https://github.com/vuejs/vue-next/commit/8b320cc12f74aafea9ec69f7ce70231d4f0d08fd)), closes [#1565](https://github.com/vuejs/vue-next/issues/1565)
