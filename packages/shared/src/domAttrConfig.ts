@@ -68,7 +68,7 @@ export const isNoUnitNumericStyleProp = /*#__PURE__*/ makeMap(
  */
 export const isKnownAttr = /*#__PURE__*/ makeMap(
   `accept,accept-charset,accesskey,action,align,allow,alt,async,` +
-    `autocapitalize,autocomplete,autofocus,autoplay, background-image,bgcolor,` +
+    `autocapitalize,autocomplete,autofocus,autoplay,background-image,bgcolor,` +
     `border,buffered,capture,challenge,charset,checked,cite,class,code,` +
     `codebase,color,cols,colspan,content,contenteditable,contextmenu,controls,` +
     `coords,crossorigin,csp,data,datetime,decoding,default,defer,dir,dirname,` +
