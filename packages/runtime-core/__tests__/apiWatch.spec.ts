@@ -69,6 +69,16 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
+  it('watching single source: array', async () => {
+    const array = reactive([] as number[])
+    const spy = jest.fn()
+    watch(array, spy)
+    array.push(1)
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+  })
+
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
