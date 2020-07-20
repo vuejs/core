@@ -80,7 +80,7 @@ type InferPropType<T> = T extends null
   : T extends { type: null | true }
     ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
     : T extends ObjectConstructor | { type: ObjectConstructor }
-      ? { [key: string]: any }
+      ? Record<string, any>
       : T extends BooleanConstructor | { type: BooleanConstructor }
         ? boolean
         : T extends Prop<infer V> ? V : T

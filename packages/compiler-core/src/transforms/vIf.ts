@@ -30,7 +30,7 @@ import {
   OPEN_BLOCK,
   TELEPORT
 } from '../runtimeHelpers'
-import { injectProp } from '../utils'
+import { injectProp, findDir } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -166,7 +166,10 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children:
+      node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
+        ? node.children
+        : [node]
   }
 }
 

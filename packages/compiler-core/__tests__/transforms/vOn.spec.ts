@@ -271,6 +271,56 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="
+      $event => {
+        foo($event)
+      }
+    "/>`
+    )
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `
+      $event => {
+        foo($event)
+      }
+    `
+          }
+        }
+      ]
+    })
+  })
+
+  test('should NOT wrap as function if expression is already function expression (with newlines + function keyword)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="
+      function($event) {
+        foo($event)
+      }
+    "/>`
+    )
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `
+      function($event) {
+        foo($event)
+      }
+    `
+          }
+        }
+      ]
+    })
+  })
+
   test('should NOT wrap as function if expression is complex member expression', () => {
     const { node } = parseWithVOn(`<div @click="a['b' + c]"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
