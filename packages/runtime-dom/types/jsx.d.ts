@@ -1017,7 +1017,6 @@ interface IntrinsicElementAttributes {
   base: BaseHTMLAttributes
   bdi: HTMLAttributes
   bdo: HTMLAttributes
-  big: HTMLAttributes
   blockquote: BlockquoteHTMLAttributes
   body: HTMLAttributes
   br: HTMLAttributes
