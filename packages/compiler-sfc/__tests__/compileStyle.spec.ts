@@ -330,7 +330,7 @@ describe('SFC style preprocessors', () => {
       source: `
         @import "./import.scss";
       `,
-      filename: `test.css`,
+      filename: `test.scss`,
       id: '',
       preprocessLang: 'scss'
     })
