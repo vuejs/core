@@ -71,12 +71,6 @@ export type VNodeHook =
   | VNodeMountHook[]
   | VNodeUpdateHook[]
 
-export interface ComponentCustomProps {}
-export interface AllowedComponentProps {
-  class?: unknown
-  style?: unknown
-}
-
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
   key?: string | number

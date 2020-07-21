@@ -840,6 +840,44 @@ describe('compiler: v-for', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    // 1637
+    test('v-if + v-for on <template>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(`<template v-if="ok" v-for="i in list"/>`)
+      expect(codegenNode).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `ok` },
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          props: createObjectMatcher({
+            key: `[0]`
+          }),
+          isBlock: true,
+          disableTracking: true,
+          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          children: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: RENDER_LIST,
+            arguments: [
+              { content: `list` },
+              {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                params: [{ content: `i` }],
+                returns: {
+                  type: NodeTypes.VNODE_CALL,
+                  tag: FRAGMENT,
+                  isBlock: true
+                }
+              }
+            ]
+          }
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('v-for on element with custom directive', () => {
       const {
         root,

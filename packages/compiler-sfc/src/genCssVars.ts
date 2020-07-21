@@ -65,7 +65,7 @@ export function injectCssVarsCalls(
 
   return (
     script +
-    `\nimport { useCSSVars as __useCSSVars__ } from 'vue'\n` +
+    `\nimport { useCssVars as __useCssVars__ } from 'vue'\n` +
     `const __injectCSSVars__ = () => {\n${calls}}\n` +
     `const __setup__ = __default__.setup\n` +
     `__default__.setup = __setup__\n` +

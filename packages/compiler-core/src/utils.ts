@@ -32,9 +32,6 @@ import {
   BASE_TRANSITION
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend } from '@vue/shared'
-import { parse } from '@babel/parser'
-import { walk } from 'estree-walker'
-import { Node } from '@babel/types'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -51,35 +48,6 @@ export function isCoreComponent(tag: string): symbol | void {
     return KEEP_ALIVE
   } else if (isBuiltInType(tag, 'BaseTransition')) {
     return BASE_TRANSITION
-  }
-}
-
-export const parseJS: typeof parse = (code, options) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return parse(code, options)
-  }
-}
-
-interface Walker {
-  enter?(node: Node, parent: Node): void
-  leave?(node: Node): void
-}
-
-export const walkJS = (ast: Node, walker: Walker) => {
-  if (__BROWSER__) {
-    assert(
-      !__BROWSER__,
-      `Expression AST analysis can only be performed in non-browser builds.`
-    )
-    return null as any
-  } else {
-    return (walk as any)(ast, walker)
   }
 }
 

@@ -49,9 +49,22 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { startMeasure, endMeasure } from './profiling'
-import { componentAdded } from './devtools'
+import { devtoolsComponentAdded } from './devtools'
 
 export type Data = Record<string, unknown>
+
+/**
+ * For extending allowed non-declared props on components in TSX
+ */
+export interface ComponentCustomProps {}
+
+/**
+ * Default allowed non-declared props on ocmponent in TSX
+ */
+export interface AllowedComponentProps {
+  class?: unknown
+  style?: unknown
+}
 
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
@@ -410,7 +423,9 @@ export function createComponentInstance(
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
 
-  __DEV__ && componentAdded(instance)
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
 
   return instance
 }
@@ -634,7 +649,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
-  if (__FEATURE_OPTIONS__) {
+  if (__FEATURE_OPTIONS_API__) {
     currentInstance = instance
     applyOptions(instance, Component)
     currentInstance = null

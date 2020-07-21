@@ -39,7 +39,7 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
 const TransitionGroupImpl = {
   name: 'TransitionGroup',
 
-  props: extend({}, TransitionPropsValidators, {
+  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String
   }),
@@ -130,8 +130,14 @@ const TransitionGroupImpl = {
   }
 }
 
-// remove mode props as TransitionGroup doesn't support it
-delete TransitionGroupImpl.props.mode
+/**
+ * TransitionGroup does not support "mode" so we need to remove it from the
+ * props declarations, but direct delete operation is considered a side effect
+ * and will make the entire transition feature non-tree-shakeable, so we do it
+ * in a function and mark the function's invocation as pure.
+ */
+const removeMode = (props: any) => delete props.mode
+/*#__PURE__*/ removeMode(TransitionGroupImpl.props)
 
 export const TransitionGroup = (TransitionGroupImpl as unknown) as {
   new (): {

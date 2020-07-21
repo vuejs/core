@@ -1,3 +1,17 @@
+# [3.0.0-rc.2](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.1...v3.0.0-rc.2) (2020-07-19)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix v-if + v-for on `<template>` ([af7e100](https://github.com/vuejs/vue-next/commit/af7e100ef229e1088abfd270a71c5a7da44e760e)), closes [#1637](https://github.com/vuejs/vue-next/issues/1637)
+* **compiler-core/v-on:** fix codegen for event handler with newlines ([#1640](https://github.com/vuejs/vue-next/issues/1640)) ([f9826fa](https://github.com/vuejs/vue-next/commit/f9826fa963e67c495b8c44efb22b09b87df381de))
+* **compiler-sfc:** use `filename` from options when compile styl preprocessor ([#1635](https://github.com/vuejs/vue-next/issues/1635)) ([0526e5d](https://github.com/vuejs/vue-next/commit/0526e5d7faa9ba69f76e7ff71fe96d93a4e99684))
+* **keep-alive:**  handle "0" as cache key ([#1622](https://github.com/vuejs/vue-next/issues/1622)) ([2deb0c7](https://github.com/vuejs/vue-next/commit/2deb0c7a74d20e334bb1458bc2f28d65aeea704b)), closes [#1621](https://github.com/vuejs/vue-next/issues/1621)
+* **runtime-core/hmr:** only use cloneNode mount optimization in prod ([4655d69](https://github.com/vuejs/vue-next/commit/4655d699831b3356bb8be5b41c45da830dac9eb2)), closes [#1626](https://github.com/vuejs/vue-next/issues/1626)
+* **watch:** callback not called when using `flush:sync` ([#1633](https://github.com/vuejs/vue-next/issues/1633)) ([8facaef](https://github.com/vuejs/vue-next/commit/8facaefcc3eff1ca1fa19832172495e4272979e5))
+
+
+
 # [3.0.0-rc.1](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.24...v3.0.0-rc.1) (2020-07-17)
 
 

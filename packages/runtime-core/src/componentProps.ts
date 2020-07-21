@@ -322,7 +322,7 @@ export function normalizePropsOptions(
 
   // apply mixin/extends props
   let hasExtends = false
-  if (__FEATURE_OPTIONS__ && !isFunction(comp)) {
+  if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
       const [props, keys] = normalizePropsOptions(raw)
       extend(normalized, props)
