@@ -68,18 +68,18 @@ export const isNoUnitNumericStyleProp = /*#__PURE__*/ makeMap(
  */
 export const isKnownAttr = /*#__PURE__*/ makeMap(
   `accept,accept-charset,accesskey,action,align,allow,alt,async,` +
-    `autocapitalize,autocomplete,autofocus,autoplay,background,` +
+    `autocapitalize,autocomplete,autofocus,autoplay,` +
     `buffered,capture,challenge,charset,checked,cite,class,code,` +
     `codebase,color,cols,colspan,content,contenteditable,contextmenu,controls,` +
     `coords,crossorigin,csp,data,datetime,decoding,default,defer,dir,dirname,` +
     `disabled,download,draggable,dropzone,enctype,enterkeyhint,for,form,` +
     `formaction,formenctype,formmethod,formnovalidate,formtarget,headers,` +
-    `hidden,high,href,hreflang,http-equiv,icon,id,importance,integrity,` +
+    `height,hidden,high,href,hreflang,http-equiv,icon,id,importance,integrity,` +
     `ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,` +
     `manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,` +
     `open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,` +
     `referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,` +
     `selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,` +
     `start,step,style,summary,tabindex,target,title,translate,type,usemap,` +
-    `value,wrap`
+    `value,width,wrap`
 )
