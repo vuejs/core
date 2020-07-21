@@ -640,7 +640,7 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toEqual('')
 
-    // After compositionend event being fire, an input event will be automatically trigger
+    // After compositionend event being fired, an input event will be automatically trigger
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
