@@ -448,7 +448,7 @@ export function cloneVNode<T, U>(
     // however we don't want block nodes to de-opt their children, so if the
     // vnode is a block node, we only add the FULL_PROPS flag to it.
     patchFlag: extraProps
-      ? vnode.dynamicChildren
+      ? vnode.dynamicChildren || vnode.patchFlag & PatchFlags.NEED_PATCH
         ? vnode.patchFlag | PatchFlags.FULL_PROPS
         : PatchFlags.BAIL
       : vnode.patchFlag,
