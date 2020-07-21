@@ -7,6 +7,7 @@ import postcss, {
 } from 'postcss'
 import trimPlugin from './stylePluginTrim'
 import scopedPlugin from './stylePluginScoped'
+import scopedVarsPlugin from './stylePluginScopedVars'
 import {
   processors,
   StylePreprocessor,
@@ -95,11 +96,16 @@ export function doCompileStyle(
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
   const plugins = (postcssPlugins || []).slice()
+  if (vars && scoped) {
+    // vars + scoped, only applies to raw source before other transforms
+    // #1623
+    plugins.unshift(scopedVarsPlugin(id))
+  }
   if (trim) {
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin({ id, vars }))
+    plugins.push(scopedPlugin(id))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {

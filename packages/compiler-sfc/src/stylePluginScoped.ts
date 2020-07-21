@@ -3,10 +3,8 @@ import selectorParser, { Node, Selector } from 'postcss-selector-parser'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
-const cssVarRE = /\bvar\(--(global:)?([^)]+)\)/g
 
-export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
-  const { id, vars: hasInjectedVars } = options as { id: string; vars: boolean }
+export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
   const keyframes = Object.create(null)
   const shortId = id.replace(/^data-v-/, '')
 
@@ -135,46 +133,37 @@ export default postcss.plugin('vue-scoped', (options: any) => (root: Root) => {
     }).processSync(node.selector)
   })
 
-  const hasKeyframes = Object.keys(keyframes).length
-  if (hasKeyframes || hasInjectedVars)
+  if (Object.keys(keyframes).length) {
+    // If keyframes are found in this <style>, find and rewrite animation names
+    // in declarations.
+    // Caveat: this only works for keyframes and animation rules in the same
+    // <style> element.
+    // individual animation-name declaration
     root.walkDecls(decl => {
-      // If keyframes are found in this <style>, find and rewrite animation names
-      // in declarations.
-      // Caveat: this only works for keyframes and animation rules in the same
-      // <style> element.
-      if (hasKeyframes) {
-        // individual animation-name declaration
-        if (animationNameRE.test(decl.prop)) {
-          decl.value = decl.value
-            .split(',')
-            .map(v => keyframes[v.trim()] || v.trim())
-            .join(',')
-        }
-        // shorthand
-        if (animationRE.test(decl.prop)) {
-          decl.value = decl.value
-            .split(',')
-            .map(v => {
-              const vals = v.trim().split(/\s+/)
-              const i = vals.findIndex(val => keyframes[val])
-              if (i !== -1) {
-                vals.splice(i, 1, keyframes[vals[i]])
-                return vals.join(' ')
-              } else {
-                return v
-              }
-            })
-            .join(',')
-        }
+      if (animationNameRE.test(decl.prop)) {
+        decl.value = decl.value
+          .split(',')
+          .map(v => keyframes[v.trim()] || v.trim())
+          .join(',')
       }
-
-      // rewrite CSS variables
-      if (hasInjectedVars && cssVarRE.test(decl.value)) {
-        decl.value = decl.value.replace(cssVarRE, (_, $1, $2) => {
-          return $1 ? `var(--${$2})` : `var(--${shortId}-${$2})`
-        })
+      // shorthand
+      if (animationRE.test(decl.prop)) {
+        decl.value = decl.value
+          .split(',')
+          .map(v => {
+            const vals = v.trim().split(/\s+/)
+            const i = vals.findIndex(val => keyframes[val])
+            if (i !== -1) {
+              vals.splice(i, 1, keyframes[vals[i]])
+              return vals.join(' ')
+            } else {
+              return v
+            }
+          })
+          .join(',')
       }
     })
+  }
 })
 
 function isSpaceCombinator(node: Node) {
