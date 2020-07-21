@@ -279,7 +279,7 @@ export function shouldUpdateComponent(
     return true
   }
 
-  if (patchFlag > 0) {
+  if (optimized && patchFlag > 0) {
     if (patchFlag & PatchFlags.DYNAMIC_SLOTS) {
       // slot content that references values that might have changed,
       // e.g. in a v-for
@@ -300,7 +300,7 @@ export function shouldUpdateComponent(
         }
       }
     }
-  } else if (!optimized) {
+  } else {
     // this path is only taken by manually written render functions
     // so presence of any children leads to a forced update
     if (prevChildren || nextChildren) {

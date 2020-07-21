@@ -310,7 +310,11 @@ function _createVNode(
   }
 
   if (isVNode(type)) {
-    return cloneVNode(type, props, children)
+    const cloned = cloneVNode(type, props)
+    if (children) {
+      normalizeChildren(cloned, children)
+    }
+    return cloned
   }
 
   // class component normalization.
@@ -420,8 +424,7 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps | null,
-  children?: unknown
+  extraProps?: Data & VNodeProps | null
 ): VNode<T, U> {
   const props = extraProps
     ? vnode.props
@@ -430,7 +433,7 @@ export function cloneVNode<T, U>(
     : vnode.props
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  const cloned: VNode<T, U> = {
+  return {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
@@ -444,14 +447,11 @@ export function cloneVNode<T, U>(
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
-    // existing patch flag to be reliable and need to bail out of optimized mode.
-    // however we don't want block nodes to de-opt their children, so if the
-    // vnode is a block node, we only add the FULL_PROPS flag to it.
-    patchFlag: extraProps
-      ? vnode.dynamicChildren
+    // existing patch flag to be reliable and need to add the FULL_PROPS flag.
+    patchFlag:
+      extraProps && vnode.type !== Fragment
         ? vnode.patchFlag | PatchFlags.FULL_PROPS
-        : PatchFlags.BAIL
-      : vnode.patchFlag,
+        : vnode.patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -467,10 +467,6 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
-  if (children) {
-    normalizeChildren(cloned, children)
-  }
-  return cloned
 }
 
 /**
