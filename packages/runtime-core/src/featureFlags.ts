@@ -23,11 +23,9 @@ export function initFeatureFlags() {
   if (__DEV__ && needWarn) {
     console.warn(
       `You are running the esm-bundler build of Vue. It is recommended to ` +
-        `configure your bundler to explicitly replace the following global ` +
-        `variables with boolean literals so that it can remove unnecessary code:\n\n` +
-        `- __VUE_OPTIONS_API__ (support for Options API, default: true)\n` +
-        `- __VUE_PROD_DEVTOOLS__ (enable devtools inspection in production, default: false)`
-      // TODO link to docs
+        `configure your bundler to explicitly replace feature flag globals ` +
+        `with boolean literals to get proper tree-shaking in the final bundle. ` +
+        `See http://link.vuejs.org/feature-flags for more details.`
     )
   }
 }
