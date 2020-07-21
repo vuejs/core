@@ -627,16 +627,20 @@ describe('vModel', () => {
     const data = root._vnode.component.data
     expect(input.value).toEqual('')
 
+    //developer.mozilla.org/en-US/docs/Web/API/Element/compositionstart_event
+    //compositionstart event could be fired after a user starts entering a Chinese character using a Pinyin IME
     input.value = '使用拼音'
     triggerEvent('compositionstart', input)
     await nextTick()
     expect(data.value).toEqual('')
 
+    // input event has no effect during composition session
     input.value = '使用拼音输入'
     triggerEvent('input', input)
     await nextTick()
     expect(data.value).toEqual('')
 
+    // After compositionend event being fire, an input event will be automatically trigger
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
