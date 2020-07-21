@@ -9,7 +9,8 @@ import {
   normalizeStyle,
   PatchFlags,
   ShapeFlags,
-  SlotFlags
+  SlotFlags,
+  isOn
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -583,8 +584,6 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-const handlersRE = /^on|^vnode/
-
 export function mergeProps(...args: (Data & VNodeProps)[]) {
   const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
@@ -596,8 +595,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
-      } else if (handlersRE.test(key)) {
-        // on*, vnode*
+      } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
         if (existing !== incoming) {
