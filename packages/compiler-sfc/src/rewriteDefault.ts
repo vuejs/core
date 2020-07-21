@@ -4,7 +4,7 @@ import MagicString from 'magic-string'
 const defaultExportRE = /((?:^|\n|;)\s*)export default/
 
 /**
- * Utility for rewriting `export default` in a script block into a varaible
+ * Utility for rewriting `export default` in a script block into a variable
  * declaration so that we can inject things into it
  */
 export function rewriteDefault(

@@ -52,7 +52,7 @@ export interface SFCTemplateCompileOptions {
    */
   preprocessCustomRequire?: (id: string) => any
   /**
-   * Configure what tags/attributes to trasnform into asset url imports,
+   * Configure what tags/attributes to transform into asset url imports,
    * or disable the transform altogether with `false`.
    */
   transformAssetUrls?: AssetURLOptions | AssetURLTagConfig | boolean
