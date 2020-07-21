@@ -215,6 +215,9 @@ export function renderComponentRoot(
   return result
 }
 
+/**
+ * dev only
+ */
 const getChildRoot = (
   vnode: VNode
 ): [VNode, ((root: VNode) => void) | undefined] => {
@@ -231,12 +234,14 @@ const getChildRoot = (
   }
   const childRoot = children[0]
   const index = rawChildren.indexOf(childRoot)
-  const dynamicIndex = dynamicChildren
-    ? dynamicChildren.indexOf(childRoot)
-    : null
+  const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot = (updatedRoot: VNode) => {
     rawChildren[index] = updatedRoot
-    if (dynamicIndex !== null) dynamicChildren[dynamicIndex] = updatedRoot
+    if (dynamicIndex > -1) {
+      dynamicChildren[dynamicIndex] = updatedRoot
+    } else if (dynamicChildren && updatedRoot.patchFlag > 0) {
+      dynamicChildren.push(updatedRoot)
+    }
   }
   return [normalizeVNode(childRoot), setRoot]
 }

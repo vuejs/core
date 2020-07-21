@@ -426,19 +426,20 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps | null
 ): VNode<T, U> {
-  const props = extraProps
-    ? vnode.props
-      ? mergeProps(vnode.props, extraProps)
-      : extend({}, extraProps)
-    : vnode.props
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
+  const { props, patchFlag } = vnode
+  const mergedProps = extraProps
+    ? props
+      ? mergeProps(props, extraProps)
+      : extend({}, extraProps)
+    : props
   return {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
-    props,
-    key: props && normalizeKey(props),
+    props: mergedProps,
+    key: mergedProps && normalizeKey(mergedProps),
     ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
@@ -448,10 +449,14 @@ export function cloneVNode<T, U>(
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
     // existing patch flag to be reliable and need to add the FULL_PROPS flag.
+    // note: perserve flag for fragments since they use the flag for children
+    // fast paths only.
     patchFlag:
       extraProps && vnode.type !== Fragment
-        ? vnode.patchFlag | PatchFlags.FULL_PROPS
-        : vnode.patchFlag,
+        ? patchFlag === -1 // hoisted node
+          ? PatchFlags.FULL_PROPS
+          : patchFlag | PatchFlags.FULL_PROPS
+        : patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
