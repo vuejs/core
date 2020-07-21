@@ -206,6 +206,6 @@ export function defineComponent<
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
   return isFunction(options)
-    ? ((options.name != null) ? { setup: options, name: options.name } : { setup: options })
+    ? { setup: options, name: options.name }
     : options
 }
