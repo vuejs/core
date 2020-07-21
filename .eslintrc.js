@@ -32,6 +32,13 @@ module.exports = {
         'no-restricted-syntax': 'off'
       }
     },
+    // shared, may be used in any env
+    {
+      files: ['packages/shared/**'],
+      rules: {
+        'no-restricted-globals': 'off'
+      }
+    },
     // Packages targeting DOM
     {
       files: ['packages/{vue,runtime-dom}/**'],

@@ -1,14 +1,14 @@
-import { version, setDevtoolsHook } from '@vue/runtime-dom'
+import { setDevtoolsHook } from '@vue/runtime-dom'
+import { getGlobalThis } from '@vue/shared'
 
 export function initDev() {
-  const target: any = __BROWSER__ ? window : global
+  const target = getGlobalThis()
 
-  target.__VUE__ = version
+  target.__VUE__ = true
   setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__)
 
   if (__BROWSER__) {
-    // @ts-ignore `console.info` cannot be null error
-    console[console.info ? 'info' : 'log'](
+    console.info(
       `You are running a development build of Vue.\n` +
         `Make sure to use the production build (*.prod.js) when deploying for production.`
     )
