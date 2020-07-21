@@ -330,7 +330,7 @@ describe('SFC style preprocessors', () => {
       source: `
         @import "./import.scss";
       `,
-      filename: path.resolve(__dirname, './fixture/test.scss'),
+      filename: `test.css`,
       id: '',
       preprocessLang: 'scss'
     })
