@@ -54,7 +54,6 @@ function createRef(rawValue: unknown, shallow = false) {
     },
     set value(newVal) {
       if (hasChanged(toRaw(newVal), rawValue)) {
-        rawValue = newVal
         value = shallow ? newVal : convert(newVal)
         trigger(
           r,
