@@ -1017,6 +1017,10 @@ interface IntrinsicElementAttributes {
   base: BaseHTMLAttributes
   bdi: HTMLAttributes
   bdo: HTMLAttributes
+  /**
+   * https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/big
+   * @deprecated in ARIA 1.1
+   */
   big: HTMLAttributes
   blockquote: BlockquoteHTMLAttributes
   body: HTMLAttributes
@@ -1071,6 +1075,10 @@ interface IntrinsicElementAttributes {
   map: MapHTMLAttributes
   mark: HTMLAttributes
   menu: MenuHTMLAttributes
+  /**
+   * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/menuitem
+   * @deprecated in ARIA 1.1
+   */
   menuitem: HTMLAttributes
   meta: MetaHTMLAttributes
   meter: MeterHTMLAttributes
