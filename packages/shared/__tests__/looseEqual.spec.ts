@@ -134,6 +134,12 @@ describe('utils/looseEqual', () => {
     const obj5 = { ...obj4, z: 999 }
     const nestedObj1 = { ...obj1, bar: [{ ...obj1 }, { ...obj1 }] }
     const nestedObj2 = { ...obj1, bar: [{ ...obj1 }, { ...obj2 }] }
+    const emptyObject = {}
+    const nonEnumerableObject = {}
+    Object.defineProperty(nonEnumerableObject, 'foo', {
+      enumerable: false,
+      value: 'bar'
+    })
 
     // Identical object references
     expect(looseEqual(obj1, obj1)).toBe(true)
@@ -151,6 +157,9 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(nestedObj1, { ...nestedObj1 })).toBe(true)
     // Object definitions with nested array (which has different order)
     expect(looseEqual(nestedObj1, nestedObj2)).toBe(false)
+    // Object with non enumerable properties
+    expect(looseEqual(obj1, nonEnumerableObject)).toBe(true)
+    expect(looseEqual(emptyObject, nonEnumerableObject)).toBe(false)
   })
 
   test('compares different types correctly', () => {
