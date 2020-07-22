@@ -81,6 +81,25 @@ export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
+const shallowUnwrapHandlers: ProxyHandler<any> = {
+  get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
+  set: (target, key, value, receiver) => {
+    const oldValue = target[key]
+    if (isRef(oldValue) && !isRef(value)) {
+      oldValue.value = value
+      return true
+    } else {
+      return Reflect.set(target, key, value, receiver)
+    }
+  }
+}
+
+export function proxyRefs<T extends object>(
+  objectWithRefs: T
+): ShallowUnwrapRef<T> {
+  return new Proxy(objectWithRefs, shallowUnwrapHandlers)
+}
+
 export type CustomRefFactory<T> = (
   track: () => void,
   trigger: () => void
@@ -155,6 +174,10 @@ type BaseTypes = string | number | boolean
  * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
+
+export type ShallowUnwrapRef<T> = {
+  [K in keyof T]: T[K] extends Ref<infer V> ? V : T[K]
+}
 
 export type UnwrapRef<T> = T extends Ref<infer V>
   ? UnwrapRefSimple<V>
