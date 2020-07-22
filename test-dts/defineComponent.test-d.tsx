@@ -146,7 +146,7 @@ describe('with object props', () => {
 
       // assert setup context unwrapping
       expectType<number>(this.c)
-      expectType<string>(this.d.e)
+      expectType<string>(this.d.e.value)
       expectType<GT>(this.f.g)
 
       // setup context properties should be mutable
