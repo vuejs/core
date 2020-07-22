@@ -13,12 +13,12 @@ export function rewriteDefault(
   as: string,
   parserPlugins?: ParserPlugin[]
 ): string {
-  if (!defaultExportRE.test(input) && !namedDefaultExportRE.test(input)) {
+  if (!hasDefaultExport(input)) {
     return input + `\nconst ${as} = {}`
   }
 
   const replaced = input.replace(defaultExportRE, `$1const ${as} =`)
-  if (!defaultExportRE.test(replaced) && !namedDefaultExportRE.test(input)) {
+  if (!hasDefaultExport(replaced)) {
     return replaced
   }
 
@@ -51,4 +51,8 @@ export function rewriteDefault(
     }
   })
   return s.toString()
+}
+
+export function hasDefaultExport(input: string): boolean {
+  return defaultExportRE.test(input) || namedDefaultExportRE.test(input)
 }

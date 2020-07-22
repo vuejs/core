@@ -1,6 +1,13 @@
 import { rewriteDefault } from '../src'
 
 describe('compiler sfc: rewriteDefault', () => {
+  test('without export default', () => {
+    expect(rewriteDefault(`export  a = {}`, 'script')).toMatchInlineSnapshot(`
+      "export  a = {}
+      const script = {}"
+    `)
+  })
+
   test('rewrite export default', () => {
     expect(
       rewriteDefault(`export  default {}`, 'script')
