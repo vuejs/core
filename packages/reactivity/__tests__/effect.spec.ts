@@ -759,7 +759,7 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('should trigger all effects when array length is set 0', () => {
+  it('should trigger all effects when array length is set to 0', () => {
     const observed: any = reactive([1])
     let dummy, record
     effect(() => {

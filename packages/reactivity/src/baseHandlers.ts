@@ -142,7 +142,9 @@ function deleteProperty(target: object, key: string | symbol): boolean {
 
 function has(target: object, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
-  track(target, TrackOpTypes.HAS, key)
+  if (!isSymbol(key) || !builtInSymbols.has(key)) {
+    track(target, TrackOpTypes.HAS, key)
+  }
   return result
 }
 
