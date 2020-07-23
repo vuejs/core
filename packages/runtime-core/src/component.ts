@@ -607,7 +607,8 @@ function finishComponentSetup(
         startMeasure(instance, `compile`)
       }
       Component.render = compile(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO
+        isCustomElement: instance.appContext.config.isCustomElement
+        // delimiters: Component.delimiters
       })
       if (__DEV__) {
         endMeasure(instance, `compile`)
