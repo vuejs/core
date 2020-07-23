@@ -1,5 +1,4 @@
 import merge from 'merge-source-map'
-import path from 'path'
 import { RawSourceMap } from 'source-map'
 import { SFCStyleCompileOptions } from './compileStyle'
 
@@ -33,7 +32,6 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
 
   try {
     const result = nodeSass.renderSync(finalOptions)
-    // sass output path is position path
     const dependencies = result.stats.includedFiles
     if (map) {
       return {
@@ -77,11 +75,7 @@ const less: StylePreprocessor = (source, map, options, load = require) => {
   )
 
   if (error) return { code: '', errors: [error], dependencies: [] }
-  // less output path is relative path
-  const dependencies = getAbsolutePaths(
-    result.imports,
-    path.dirname(options.filename)
-  )
+  const dependencies = result.imports
   if (map) {
     return {
       code: result.css.toString(),
@@ -107,11 +101,7 @@ const styl: StylePreprocessor = (source, map, options, load = require) => {
     if (map) ref.set('sourcemap', { inline: false, comment: false })
 
     const result = ref.render()
-    // stylus output path is relative path
-    const dependencies = getAbsolutePaths(
-      ref.deps(),
-      path.dirname(options.filename)
-    )
+    const dependencies = ref.deps()
     if (map) {
       return {
         code: result,
@@ -135,8 +125,4 @@ export const processors: Record<PreprocessLang, StylePreprocessor> = {
   scss,
   styl,
   stylus: styl
-}
-
-function getAbsolutePaths(relativePaths: string[], dirname: string): string[] {
-  return relativePaths.map(relativePath => path.join(dirname, relativePath))
 }
