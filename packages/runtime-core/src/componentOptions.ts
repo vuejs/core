@@ -381,9 +381,6 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
-    // assets
-    components,
-    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -568,14 +565,6 @@ export function applyOptions(
     for (const key in provides) {
       provide(key, provides[key])
     }
-  }
-
-  // asset options
-  if (components) {
-    extend(instance.components, components)
-  }
-  if (directives) {
-    extend(instance.directives, directives)
   }
 
   // lifecycle options
