@@ -1,7 +1,7 @@
 import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isObject, hasChanged } from '@vue/shared'
-import { reactive, isProxy, toRaw } from './reactive'
+import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
@@ -97,7 +97,9 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {
-  return new Proxy(objectWithRefs, shallowUnwrapHandlers)
+  return isReactive(objectWithRefs)
+    ? objectWithRefs
+    : new Proxy(objectWithRefs, shallowUnwrapHandlers)
 }
 
 export type CustomRefFactory<T> = (
