@@ -321,6 +321,9 @@ interface LegacyOptions<
   renderTracked?: DebuggerHook
   renderTriggered?: DebuggerHook
   errorCaptured?: ErrorCapturedHook
+
+  // runtime compile only
+  delimiters?: [string, string]
 }
 
 export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M'
