@@ -606,10 +606,16 @@ function finishComponentSetup(
       if (__DEV__) {
         startMeasure(instance, `compile`)
       }
-      Component.render = compile(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO,
-        delimiters: Component.delimiters
-      })
+
+      let options: CompilerOptions = {
+        isCustomElement: instance.appContext.config.isCustomElement || NO
+      }
+
+      if (Component.delimiters) {
+        options.delimiters = Component.delimiters
+      }
+
+      Component.render = compile(Component.template, options)
       if (__DEV__) {
         endMeasure(instance, `compile`)
       }
