@@ -105,7 +105,7 @@ function normalizeEmitsOptions(
 
   // apply mixin/extends props
   let hasExtends = false
-  if (__FEATURE_OPTIONS__ && !isFunction(comp)) {
+  if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     if (comp.extends) {
       hasExtends = true
       extend(normalized, normalizeEmitsOptions(comp.extends))

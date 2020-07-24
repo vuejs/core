@@ -16,7 +16,7 @@ import { validateBrowserExpression } from '../validateExpression'
 import { isMemberExpression, hasScopeRef } from '../utils'
 import { CAPITALIZE } from '../runtimeHelpers'
 
-const fnExpRE = /^([\w$_]+|\([^)]*?\))\s*=>|^function(?:\s+[\w$]+)?\s*\(/
+const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^\s*function(?:\s+[\w$]+)?\s*\(/
 
 export interface VOnDirectiveNode extends DirectiveNode {
   // v-on without arg is handled directly in ./transformElements.ts due to it affecting

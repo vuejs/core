@@ -82,7 +82,7 @@ export const transformFor = createStructuralDirectiveTransform(
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
         const needFragmentWrapper =
-          children.length > 1 || children[0].type !== NodeTypes.ELEMENT
+          children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
           ? node
           : isTemplate &&

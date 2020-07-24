@@ -141,12 +141,11 @@ function createReactiveObject(
     return target
   }
   // target already has corresponding Proxy
-  if (
-    hasOwn(target, isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE)
-  ) {
-    return isReadonly
-      ? target[ReactiveFlags.READONLY]
-      : target[ReactiveFlags.REACTIVE]
+  const reactiveFlag = isReadonly
+    ? ReactiveFlags.READONLY
+    : ReactiveFlags.REACTIVE
+  if (hasOwn(target, reactiveFlag)) {
+    return target[reactiveFlag]
   }
   // only a whitelist of value types can be observed.
   if (!canObserve(target)) {
@@ -156,11 +155,7 @@ function createReactiveObject(
     target,
     collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
   )
-  def(
-    target,
-    isReadonly ? ReactiveFlags.READONLY : ReactiveFlags.REACTIVE,
-    observed
-  )
+  def(target, reactiveFlag, observed)
   return observed
 }
 

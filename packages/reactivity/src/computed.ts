@@ -2,6 +2,7 @@ import { effect, ReactiveEffect, trigger, track } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
 import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
+import { ReactiveFlags } from './reactive'
 
 export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   readonly value: T
@@ -56,6 +57,9 @@ export function computed<T>(
   })
   computed = {
     __v_isRef: true,
+    [ReactiveFlags.IS_READONLY]:
+      isFunction(getterOrOptions) || !getterOrOptions.set,
+
     // expose effect so computed can be stopped
     effect: runner,
     get value() {

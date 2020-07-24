@@ -10,7 +10,8 @@ import {
   openBlock,
   createBlock,
   FunctionalComponent,
-  createCommentVNode
+  createCommentVNode,
+  Fragment
 } from '@vue/runtime-dom'
 import { mockWarn } from '@vue/shared'
 
@@ -573,12 +574,15 @@ describe('attribute fallthrough', () => {
     }
 
     const Child = {
-      setup(props: any) {
-        return () => [
-          createCommentVNode('hello'),
-          h('button'),
-          createCommentVNode('world')
-        ]
+      setup() {
+        return () => (
+          openBlock(),
+          createBlock(Fragment, null, [
+            createCommentVNode('hello'),
+            h('button'),
+            createCommentVNode('world')
+          ])
+        )
       }
     }
 

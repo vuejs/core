@@ -9,7 +9,7 @@ export interface AppRecord {
   types: Record<string, string | Symbol>
 }
 
-enum DevtoolsHooks {
+const enum DevtoolsHooks {
   APP_INIT = 'app:init',
   APP_UNMOUNT = 'app:unmount',
   COMPONENT_UPDATED = 'component:updated',
@@ -31,38 +31,40 @@ export function setDevtoolsHook(hook: DevtoolsHook) {
   devtools = hook
 }
 
-export function initApp(app: App, version: string) {
+export function devtoolsInitApp(app: App, version: string) {
   // TODO queue if devtools is undefined
   if (!devtools) return
   devtools.emit(DevtoolsHooks.APP_INIT, app, version, {
-    Fragment: Fragment,
-    Text: Text,
-    Comment: Comment,
-    Static: Static
+    Fragment,
+    Text,
+    Comment,
+    Static
   })
 }
 
-export function appUnmounted(app: App) {
+export function devtoolsUnmountApp(app: App) {
   if (!devtools) return
   devtools.emit(DevtoolsHooks.APP_UNMOUNT, app)
 }
 
-export const componentAdded = createDevtoolsHook(DevtoolsHooks.COMPONENT_ADDED)
+export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsHook(
+  DevtoolsHooks.COMPONENT_ADDED
+)
 
-export const componentUpdated = createDevtoolsHook(
+export const devtoolsComponentUpdated = /*#__PURE__*/ createDevtoolsHook(
   DevtoolsHooks.COMPONENT_UPDATED
 )
 
-export const componentRemoved = createDevtoolsHook(
+export const devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsHook(
   DevtoolsHooks.COMPONENT_REMOVED
 )
 
 function createDevtoolsHook(hook: DevtoolsHooks) {
   return (component: ComponentInternalInstance) => {
-    if (!devtools || !component.appContext.__app) return
+    if (!devtools) return
     devtools.emit(
       hook,
-      component.appContext.__app,
+      component.appContext.app,
       component.uid,
       component.parent ? component.parent.uid : undefined
     )

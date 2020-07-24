@@ -1,4 +1,4 @@
-import { createApp } from '../src'
+import { createApp, ref, nextTick } from '../src'
 import { mockWarn } from '@vue/shared'
 
 describe('compiler + runtime integration', () => {
@@ -16,6 +16,62 @@ describe('compiler + runtime integration', () => {
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
+  })
+
+  it('keep-alive with compiler + runtime integration', async () => {
+    const container = document.createElement('div')
+    const one = {
+      name: 'one',
+      template: 'one',
+      created: jest.fn(),
+      mounted: jest.fn(),
+      activated: jest.fn(),
+      deactivated: jest.fn(),
+      destroyed: jest.fn()
+    }
+
+    const toggle = ref(true)
+
+    const App = {
+      template: `
+        <keep-alive>
+          <one v-if="toggle"></one>
+        </keep-alive>
+      `,
+      data() {
+        return {
+          toggle
+        }
+      },
+      components: {
+        One: one
+      }
+    }
+    createApp(App).mount(container)
+    expect(container.innerHTML).toBe(`one`)
+    expect(one.created).toHaveBeenCalledTimes(1)
+    expect(one.mounted).toHaveBeenCalledTimes(1)
+    expect(one.activated).toHaveBeenCalledTimes(1)
+    expect(one.deactivated).toHaveBeenCalledTimes(0)
+    expect(one.destroyed).toHaveBeenCalledTimes(0)
+
+    toggle.value = false;
+    await nextTick()
+    expect(container.innerHTML).toBe(`<!--v-if-->`)
+    expect(one.created).toHaveBeenCalledTimes(1)
+    expect(one.mounted).toHaveBeenCalledTimes(1)
+    expect(one.activated).toHaveBeenCalledTimes(1)
+    expect(one.deactivated).toHaveBeenCalledTimes(1)
+    expect(one.destroyed).toHaveBeenCalledTimes(0)
+
+    toggle.value = true;
+    await nextTick()
+    expect(container.innerHTML).toBe(`one`)
+    expect(one.created).toHaveBeenCalledTimes(1)
+    expect(one.mounted).toHaveBeenCalledTimes(1)
+    expect(one.activated).toHaveBeenCalledTimes(2)
+    expect(one.deactivated).toHaveBeenCalledTimes(1)
+    expect(one.destroyed).toHaveBeenCalledTimes(0)
   })
 
   it('should support runtime template via CSS ID selector', () => {

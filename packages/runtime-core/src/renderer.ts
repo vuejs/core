@@ -10,8 +10,7 @@ import {
   isSameVNodeType,
   Static,
   VNodeNormalizedRef,
-  VNodeHook,
-  isVNode
+  VNodeHook
 } from './vnode'
 import {
   ComponentInternalInstance,
@@ -65,7 +64,8 @@ import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import { ComponentPublicInstance } from './componentProxy'
-import { componentRemoved, componentUpdated } from './devtools'
+import { devtoolsComponentRemoved, devtoolsComponentUpdated } from './devtools'
+import { initFeatureFlags } from './featureFlags'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -384,6 +384,11 @@ function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
 ): any {
+  // compile-time feature flags check
+  if (__ESM_BUNDLER__ && !__TEST__) {
+    initFeatureFlags()
+  }
+
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -639,31 +644,7 @@ function baseCreateRenderer(
         optimized
       )
     } else {
-      if (
-        __DEV__ &&
-        isHmrUpdating &&
-        hostCloneNode !== undefined &&
-        n2.patchFlag === PatchFlags.HOISTED
-      ) {
-        // https://github.com/vitejs/vite/issues/514
-        // reused hoisted trees are inserted with cloneNode
-        // which makes them not patch-able. In production hoisted trees are
-        // never patched (because they are not collected as dynamic nodes), but
-        // they can be udpated during HMR. In this case just mount it as new
-        // and remove the stale DOM tree.
-        mountElement(
-          n2,
-          container,
-          n1.el,
-          parentComponent,
-          parentSuspense,
-          isSVG,
-          optimized
-        )
-        hostRemove(n1.el!)
-      } else {
-        patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
-      }
+      patchElement(n1, n2, parentComponent, parentSuspense, isSVG, optimized)
     }
   }
 
@@ -688,6 +669,7 @@ function baseCreateRenderer(
       dirs
     } = vnode
     if (
+      !__DEV__ &&
       vnode.el &&
       hostCloneNode !== undefined &&
       patchFlag === PatchFlags.HOISTED
@@ -695,6 +677,7 @@ function baseCreateRenderer(
       // If a vnode has non-null el, it means it's being reused.
       // Only static vnodes can be reused, so its mounted DOM nodes should be
       // exactly the same, and we can simply do a clone here.
+      // only do this in production since cloned trees cannot be HMR updated.
       el = vnode.el = hostCloneNode(vnode.el)
     } else {
       el = vnode.el = hostCreateElement(
@@ -1416,9 +1399,13 @@ function baseCreateRenderer(
             invokeVNodeHook(vnodeHook!, parent, next!, vnode)
           }, parentSuspense)
         }
+
+        if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+          devtoolsComponentUpdated(instance)
+        }
+
         if (__DEV__) {
           popWarningContext()
-          componentUpdated(instance)
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
@@ -2069,7 +2056,9 @@ function baseCreateRenderer(
       }
     }
 
-    __DEV__ && componentRemoved(instance)
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      devtoolsComponentRemoved(instance)
+    }
   }
 
   const unmountChildren: UnmountChildrenFn = (
@@ -2107,14 +2096,11 @@ function baseCreateRenderer(
     const ch2 = n2.children
     if (isArray(ch1) && isArray(ch2)) {
       for (let i = 0; i < ch1.length; i++) {
-        const c1 = ch1[i]
-        const c2 = ch2[i]
-        if (
-          isVNode(c1) &&
-          isVNode(c2) &&
-          c2.shapeFlag & ShapeFlags.ELEMENT &&
-          !c2.dynamicChildren
-        ) {
+        // this is only called in the optimized path so array children are
+        // guaranteed to be vnodes
+        const c1 = ch1[i] as VNode
+        const c2 = (ch2[i] = cloneIfMounted(ch2[i] as VNode))
+        if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
           if (c2.patchFlag <= 0) {
             c2.el = c1.el
           }

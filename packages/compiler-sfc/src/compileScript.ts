@@ -555,7 +555,7 @@ export function compileScript(
     returned = `Object.assign(\n  ${returned}\n)`
   }
 
-  // inject `useCSSVars` calls
+  // inject `useCssVars` calls
   if (hasCssVars) {
     s.prepend(`import { useCssVars as __useCssVars__ } from 'vue'\n`)
     for (const style of styles) {

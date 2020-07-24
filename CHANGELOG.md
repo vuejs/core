@@ -1,3 +1,49 @@
+# [3.0.0-rc.4](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.3...v3.0.0-rc.4) (2020-07-21)
+
+
+### Bug Fixes
+
+* **deps:** move @babel/types back to dependencies ([11c2ad4](https://github.com/vuejs/vue-next/commit/11c2ad4a04c000ea828a0f5017e41fc7e0816868))
+
+
+
+# [3.0.0-rc.3](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.2...v3.0.0-rc.3) (2020-07-21)
+
+
+### Bug Fixes
+
+* **build:** make transition tree-shakeable again ([ad199e1](https://github.com/vuejs/vue-next/commit/ad199e1a252f80c85a8e40a4b4539ad27c39505c))
+* **compiler-sfc:** `<style vars scoped>` prefixing should only apply to pre-transform source ([4951d43](https://github.com/vuejs/vue-next/commit/4951d4352605eb9f4bcbea40ecc68fc6cbc3dce2)), closes [#1623](https://github.com/vuejs/vue-next/issues/1623)
+* **compiler-sfc:** use correct importer with `useCssVars` ([#1658](https://github.com/vuejs/vue-next/issues/1658)) ([6f148d0](https://github.com/vuejs/vue-next/commit/6f148d0b9a0630dc87c741ed951c82b639e776b2))
+* **runtime-core:** do not use bail patchFlag on cloned vnodes ([6390ddf](https://github.com/vuejs/vue-next/commit/6390ddfb7d0ed83ac4bae15d0497cba4de3e1972)), closes [#1665](https://github.com/vuejs/vue-next/issues/1665)
+* **runtime-core:** fix attr fallthrough on compiled framgent w/ single static element + comments ([1af3531](https://github.com/vuejs/vue-next/commit/1af35317195772ea8f2728abc8f5ac159a5b7b75))
+* **v-model:** v-model listeners should not fallthrough to plain element root ([c852bf1](https://github.com/vuejs/vue-next/commit/c852bf18d7a51be0c3255357f0c30f39ae9bb540)), closes [#1643](https://github.com/vuejs/vue-next/issues/1643)
+* **watch:** fix watching reactive array ([#1656](https://github.com/vuejs/vue-next/issues/1656)) ([288b4ea](https://github.com/vuejs/vue-next/commit/288b4eab9e10187eb14d4d6d54dc9f077343a2a5)), closes [#1655](https://github.com/vuejs/vue-next/issues/1655)
+
+
+### Features
+
+* **compiler-core/internal:** add `onContextCreated` option to `generate` ([#1672](https://github.com/vuejs/vue-next/issues/1672)) ([615dccd](https://github.com/vuejs/vue-next/commit/615dccd00e7d85a3f4b82e62d6cb6c41f167d8c6))
+* **runtime-core:** respect function name when using `defineComponent` function shorthand ([#1661](https://github.com/vuejs/vue-next/issues/1661)) ([304830a](https://github.com/vuejs/vue-next/commit/304830a764cd9f28098cfb0ac0e520e1bb2f57c7))
+* provide ability to overwrite feature flags in esm-bundler builds ([54727f9](https://github.com/vuejs/vue-next/commit/54727f9874abe8d0c99ee153d252269ae519b45d))
+* **computed:** add readonly flag if no setter is provided ([#1654](https://github.com/vuejs/vue-next/issues/1654)) ([dabdc5e](https://github.com/vuejs/vue-next/commit/dabdc5e115514f98b5f8559a3819e96416939f43))
+
+
+
+# [3.0.0-rc.2](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.1...v3.0.0-rc.2) (2020-07-19)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix v-if + v-for on `<template>` ([af7e100](https://github.com/vuejs/vue-next/commit/af7e100ef229e1088abfd270a71c5a7da44e760e)), closes [#1637](https://github.com/vuejs/vue-next/issues/1637)
+* **compiler-core/v-on:** fix codegen for event handler with newlines ([#1640](https://github.com/vuejs/vue-next/issues/1640)) ([f9826fa](https://github.com/vuejs/vue-next/commit/f9826fa963e67c495b8c44efb22b09b87df381de))
+* **compiler-sfc:** use `filename` from options when compile styl preprocessor ([#1635](https://github.com/vuejs/vue-next/issues/1635)) ([0526e5d](https://github.com/vuejs/vue-next/commit/0526e5d7faa9ba69f76e7ff71fe96d93a4e99684))
+* **keep-alive:**  handle "0" as cache key ([#1622](https://github.com/vuejs/vue-next/issues/1622)) ([2deb0c7](https://github.com/vuejs/vue-next/commit/2deb0c7a74d20e334bb1458bc2f28d65aeea704b)), closes [#1621](https://github.com/vuejs/vue-next/issues/1621)
+* **runtime-core/hmr:** only use cloneNode mount optimization in prod ([4655d69](https://github.com/vuejs/vue-next/commit/4655d699831b3356bb8be5b41c45da830dac9eb2)), closes [#1626](https://github.com/vuejs/vue-next/issues/1626)
+* **watch:** callback not called when using `flush:sync` ([#1633](https://github.com/vuejs/vue-next/issues/1633)) ([8facaef](https://github.com/vuejs/vue-next/commit/8facaefcc3eff1ca1fa19832172495e4272979e5))
+
+
+
 # [3.0.0-rc.1](https://github.com/vuejs/vue-next/compare/v3.0.0-beta.24...v3.0.0-rc.1) (2020-07-17)
 
 

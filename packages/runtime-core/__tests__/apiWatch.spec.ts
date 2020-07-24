@@ -69,6 +69,16 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
+  it('watching single source: array', async () => {
+    const array = reactive([] as number[])
+    const spy = jest.fn()
+    watch(array, spy)
+    array.push(1)
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+  })
+
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
@@ -610,5 +620,24 @@ describe('api: watch', () => {
       key: 'foo',
       oldValue: 2
     })
+  })
+
+  it('should work sync', () => {
+    const v = ref(1)
+    let calls = 0
+
+    watch(
+      v,
+      () => {
+        ++calls
+      },
+      {
+        flush: 'sync'
+      }
+    )
+
+    expect(calls).toBe(0)
+    v.value++
+    expect(calls).toBe(1)
   })
 })

@@ -41,6 +41,8 @@ export const NO = () => false
 const onRE = /^on[^a-z]/
 export const isOn = (key: string) => onRE.test(key)
 
+export const isModelListener = (key: string) => key.startsWith('onUpdate:')
+
 export const extend = Object.assign
 
 export const remove = <T>(arr: T[], el: T) => {
@@ -145,4 +147,21 @@ export const def = (obj: object, key: string | symbol, value: any) => {
 export const toNumber = (val: any): any => {
   const n = parseFloat(val)
   return isNaN(n) ? val : n
+}
+
+let _globalThis: any
+export const getGlobalThis = (): any => {
+  return (
+    _globalThis ||
+    (_globalThis =
+      typeof globalThis !== 'undefined'
+        ? globalThis
+        : typeof self !== 'undefined'
+          ? self
+          : typeof window !== 'undefined'
+            ? window
+            : typeof global !== 'undefined'
+              ? global
+              : {})
+  )
 }
