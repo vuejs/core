@@ -188,6 +188,11 @@ export function renderComponentRoot(
       root = cloneVNode(root, extras)
     }
 
+    // inherit component
+    if (vnode.component) {
+      root.component = vnode.component
+    }
+
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
