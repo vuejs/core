@@ -6,9 +6,12 @@ import {
   Teleport,
   Text,
   ref,
-  nextTick
+  nextTick,
+  openBlock,
+  createBlock
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
+import { PatchFlags } from '@vue/shared'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -298,5 +301,56 @@ describe('renderer: teleport', () => {
       `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toBe('')
+  })
+
+  test('should work with block tree', async () => {
+    const target = nodeOps.createElement('div')
+    const root = nodeOps.createElement('div')
+    const disabled = ref(false)
+
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createBlock(
+            Fragment,
+            null,
+            [
+              h(
+                Teleport,
+                { to: target, disabled: disabled.value },
+                h('div', 'teleported')
+              ),
+              h('div', 'root')
+            ],
+            PatchFlags.STABLE_FRAGMENT
+          )
+        )
+      }
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><!--teleport end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+
+    disabled.value = true
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toBe(``)
+
+    // toggle back
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><!--teleport end--><div>root</div>"`
+    )
+    expect(serializeInner(target)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 })
