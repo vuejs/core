@@ -189,7 +189,7 @@ export function renderComponentRoot(
     }
 
     // inherit component
-    if (vnode.component) {
+    if (root.shapeFlag & ShapeFlags.ELEMENT) {
       root.component = vnode.component
     }
 
