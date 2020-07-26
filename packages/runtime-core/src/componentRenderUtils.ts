@@ -208,10 +208,6 @@ export function renderComponentRoot(
       }
       root.transition = vnode.transition
     }
-    // inherit component
-    if (root.shapeFlag & ShapeFlags.ELEMENT) {
-      root.component = vnode.component
-    }
 
     if (__DEV__ && setRoot) {
       setRoot(root)
