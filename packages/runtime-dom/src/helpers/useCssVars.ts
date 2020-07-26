@@ -40,8 +40,8 @@ function setVarsOnVNode(
   prefix: string
 ) {
   // drill down HOCs until it's a non-component vnode
-  while (vnode.component) {
-    vnode = vnode.component.subTree
+  while (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    vnode = vnode.component!.subTree
   }
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
