@@ -188,11 +188,6 @@ export function renderComponentRoot(
       root = cloneVNode(root, extras)
     }
 
-    // inherit component
-    if (root.shapeFlag & ShapeFlags.ELEMENT) {
-      root.component = vnode.component
-    }
-
     // inherit directives
     if (vnode.dirs) {
       if (__DEV__ && !isElementRoot(root)) {
@@ -212,6 +207,10 @@ export function renderComponentRoot(
         )
       }
       root.transition = vnode.transition
+    }
+    // inherit component
+    if (root.shapeFlag & ShapeFlags.ELEMENT) {
+      root.component = vnode.component
     }
 
     if (__DEV__ && setRoot) {
