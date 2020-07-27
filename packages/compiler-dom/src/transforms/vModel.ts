@@ -44,7 +44,12 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   const { tag } = node
-  if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+  if (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    context.isCustomElement(tag)
+  ) {
     let directiveToUse = V_MODEL_TEXT
     let isInvalidType = false
     if (tag === 'input') {
@@ -86,7 +91,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       }
     } else if (tag === 'select') {
       directiveToUse = V_MODEL_SELECT
-    } else if (tag === 'textarea') {
+    }
+    {
+      // textarea or custom elements
       __DEV__ && checkDuplicatedValue()
     }
     // inject runtime directive
