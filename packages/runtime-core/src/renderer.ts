@@ -744,9 +744,12 @@ function baseCreateRenderer(
     }
 
     hostInsert(el, container, anchor)
-    // #1583 For inside suspense case, enter hook should call when suspense resolved
+    // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
+    // #1689 For inside suspense + suspense resolved case, just call it
     const needCallTransitionHooks =
-      !parentSuspense && transition && !transition.persisted
+      (!parentSuspense || (parentSuspense && parentSuspense!.isResolved)) &&
+      transition &&
+      !transition.persisted
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
       needCallTransitionHooks ||
