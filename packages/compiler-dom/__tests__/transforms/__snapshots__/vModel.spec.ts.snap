@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`compiler: transform v-model errors should allow custom element 1`] = `
+exports[`compiler: transform v-model errors should allow usage on custom element 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
