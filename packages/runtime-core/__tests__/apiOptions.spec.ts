@@ -520,6 +520,17 @@ describe('api: options', () => {
     ])
   })
 
+  test('render from mixin', () => {
+    const Comp = {
+      mixins: [
+        {
+          render: () => 'from mixin'
+        }
+      ]
+    }
+    expect(renderToString(h(Comp))).toBe('from mixin')
+  })
+
   test('extends', () => {
     const calls: string[] = []
     const Base = {
