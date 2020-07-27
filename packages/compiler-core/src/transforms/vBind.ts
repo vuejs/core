@@ -25,7 +25,10 @@ export const transformBind: DirectiveTransform = (dir, node, context) => {
     }
   }
 
-  if (!exp || (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content)) {
+  if (
+    !exp ||
+    (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
+  ) {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
     return {
       props: [createObjectProperty(arg!, createSimpleExpression('', true, loc))]
