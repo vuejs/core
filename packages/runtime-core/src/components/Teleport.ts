@@ -157,7 +157,7 @@ export const TeleportImpl = {
           // move into main container
           moveTeleport(
             n2,
-            container,
+            mainAnchor.parentNode,
             mainAnchor,
             internals,
             TeleportMoveTypes.TOGGLE
