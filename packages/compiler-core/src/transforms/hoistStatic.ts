@@ -94,7 +94,7 @@ function walk(
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
             !hasDynamicKeyOrRef(child) &&
-            !hasCachedProps(child, context)
+            !hasCachedProps(context, child)
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -160,7 +160,7 @@ export function getStaticType(
       if (
         !flag &&
         !hasDynamicKeyOrRef(node) &&
-        !hasCachedProps(node, context)
+        !hasCachedProps(context, node)
       ) {
         // element self is static. check its children.
         let returnType = StaticType.FULL_STATIC
@@ -252,8 +252,8 @@ function hasDynamicKeyOrRef(node: ElementNode): boolean {
 }
 
 function hasCachedProps(
-  node: PlainElementNode,
-  context: TransformContext
+  context: TransformContext,
+  node: PlainElementNode
 ): boolean {
   if (__BROWSER__) {
     return false
