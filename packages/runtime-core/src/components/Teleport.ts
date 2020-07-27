@@ -11,6 +11,8 @@ import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 
+export type TeleportVNode = VNode<RendererNode, RendererElement, TeleportProps>
+
 export interface TeleportProps {
   to: string | RendererElement
   disabled?: boolean
@@ -39,7 +41,10 @@ const resolveTarget = <T = RendererElement>(
       if (!target) {
         __DEV__ &&
           warn(
-            `Failed to locate Teleport target with selector "${targetSelector}".`
+            `Failed to locate Teleport target with selector "${targetSelector}". ` +
+              `Note the target element must exist before the component is mounted - ` +
+              `i.e. the target cannot be rendered by the component itself, and ` +
+              `ideally should be outside of the entire Vue component tree.`
           )
       }
       return target as any
@@ -55,8 +60,8 @@ const resolveTarget = <T = RendererElement>(
 export const TeleportImpl = {
   __isTeleport: true,
   process(
-    n1: VNode | null,
-    n2: VNode,
+    n1: TeleportVNode | null,
+    n2: TeleportVNode,
     container: RendererElement,
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
@@ -85,10 +90,7 @@ export const TeleportImpl = {
       insert(placeholder, container, anchor)
       insert(mainAnchor, container, anchor)
 
-      const target = (n2.target = resolveTarget(
-        n2.props as TeleportProps,
-        querySelector
-      ))
+      const target = (n2.target = resolveTarget(n2.props, querySelector))
       const targetAnchor = (n2.targetAnchor = createText(''))
       if (target) {
         insert(targetAnchor, target)
@@ -165,7 +167,7 @@ export const TeleportImpl = {
         // target changed
         if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
           const nextTarget = (n2.target = resolveTarget(
-            n2.props as TeleportProps,
+            n2.props,
             querySelector
           ))
           if (nextTarget) {
@@ -267,7 +269,7 @@ interface TeleportTargetElement extends Element {
 
 function hydrateTeleport(
   node: Node,
-  vnode: VNode,
+  vnode: TeleportVNode,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   optimized: boolean,
@@ -284,7 +286,7 @@ function hydrateTeleport(
   ) => Node | null
 ): Node | null {
   const target = (vnode.target = resolveTarget<Element>(
-    vnode.props as TeleportProps,
+    vnode.props,
     querySelector
   ))
   if (target) {

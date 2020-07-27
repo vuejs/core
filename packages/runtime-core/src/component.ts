@@ -24,7 +24,7 @@ import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
-import { Directive, validateDirectiveName } from './directives'
+import { validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './componentOptions'
 import {
   EmitsOptions,
@@ -49,8 +49,22 @@ import {
   markAttrsAccessed
 } from './componentRenderUtils'
 import { startMeasure, endMeasure } from './profiling'
+import { devtoolsComponentAdded } from './devtools'
 
-export type Data = { [key: string]: unknown }
+export type Data = Record<string, unknown>
+
+/**
+ * For extending allowed non-declared props on components in TSX
+ */
+export interface ComponentCustomProps {}
+
+/**
+ * Default allowed non-declared props on ocmponent in TSX
+ */
+export interface AllowedComponentProps {
+  class?: unknown
+  style?: unknown
+}
 
 // Note: can't mark this whole interface internal because some public interfaces
 // extend it.
@@ -59,6 +73,10 @@ export interface ComponentInternalOptions {
    * @internal
    */
   __props?: NormalizedPropsOptions | []
+  /**
+   * @internal
+   */
+  __emits?: ObjectEmitsOptions
   /**
    * @internal
    */
@@ -77,16 +95,13 @@ export interface ComponentInternalOptions {
   __file?: string
 }
 
-export interface FunctionalComponent<
-  P = {},
-  E extends EmitsOptions = Record<string, any>
-> extends ComponentInternalOptions {
+export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
+  extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (props: P, ctx: SetupContext<E>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
-  inheritRef?: boolean
   displayName?: string
 }
 
@@ -131,7 +146,7 @@ export const enum LifecycleHooks {
   ERROR_CAPTURED = 'ec'
 }
 
-export interface SetupContext<E = ObjectEmitsOptions> {
+export interface SetupContext<E = EmitsOptions> {
   attrs: Data
   slots: Slots
   emit: EmitFn<E>
@@ -143,7 +158,12 @@ export interface SetupContext<E = ObjectEmitsOptions> {
 export type InternalRenderFunction = {
   (
     ctx: ComponentPublicInstance,
-    cache: ComponentInternalInstance['renderCache']
+    cache: ComponentInternalInstance['renderCache'],
+    // for compiler-optimized bindings
+    $props: ComponentInternalInstance['props'],
+    $setup: ComponentInternalInstance['setupState'],
+    $data: ComponentInternalInstance['data'],
+    $options: ComponentInternalInstance['ctx']
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
 }
@@ -203,17 +223,6 @@ export interface ComponentInternalInstance {
    */
   renderCache: (Function | VNode)[]
 
-  /**
-   * Asset hashes that prototypally inherits app-level asset hashes for fast
-   * resolution
-   * @internal
-   */
-  components: Record<string, Component>
-  /**
-   * @internal
-   */
-  directives: Record<string, Directive>
-
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -240,6 +249,8 @@ export interface ComponentInternalInstance {
   slots: InternalSlots
   refs: Data
   emit: EmitFn
+  // used for keeping track of .once event handlers on components
+  emitted: Record<string, boolean> | null
 
   /**
    * setup related
@@ -332,15 +343,17 @@ export function createComponentInstance(
   parent: ComponentInternalInstance | null,
   suspense: SuspenseBoundary | null
 ) {
+  const type = vnode.type as Component
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
+
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
+    type,
     parent,
     appContext,
-    type: vnode.type as Component,
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
@@ -362,10 +375,6 @@ export function createComponentInstance(
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
-
-    // per-instance asset storage (mutable during options resolution)
-    components: Object.create(appContext.components),
-    directives: Object.create(appContext.directives),
 
     // suspense related
     suspense,
@@ -390,7 +399,8 @@ export function createComponentInstance(
     rtg: null,
     rtc: null,
     ec: null,
-    emit: null as any // to be set immediately
+    emit: null as any, // to be set immediately
+    emitted: null
   }
   if (__DEV__) {
     instance.ctx = createRenderContext(instance)
@@ -399,6 +409,11 @@ export function createComponentInstance(
   }
   instance.root = parent ? parent.root : instance
   instance.emit = emit.bind(null, instance)
+
+  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+    devtoolsComponentAdded(instance)
+  }
+
   return instance
 }
 
@@ -579,7 +594,8 @@ function finishComponentSetup(
         startMeasure(instance, `compile`)
       }
       Component.render = compile(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO
+        isCustomElement: instance.appContext.config.isCustomElement,
+        delimiters: Component.delimiters
       })
       if (__DEV__) {
         endMeasure(instance, `compile`)
@@ -621,7 +637,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
-  if (__FEATURE_OPTIONS__) {
+  if (__FEATURE_OPTIONS_API__) {
     currentInstance = instance
     applyOptions(instance, Component)
     currentInstance = null
@@ -681,7 +697,9 @@ const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
+/* istanbul ignore next */
 export function formatComponentName(
+  instance: ComponentInternalInstance | null,
   Component: Component,
   isRoot = false
 ): string {
@@ -694,5 +712,21 @@ export function formatComponentName(
       name = match[1]
     }
   }
+
+  if (!name && instance && instance.parent) {
+    // try to infer the name based on reverse resolution
+    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+      for (const key in registry) {
+        if (registry[key] === Component) {
+          return key
+        }
+      }
+    }
+    name =
+      inferFromRegistry(
+        (instance.parent.type as ComponentOptions).components
+      ) || inferFromRegistry(instance.appContext.components)
+  }
+
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
 }

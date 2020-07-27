@@ -9,7 +9,7 @@ return function render(_ctx, _cache) {
   return (_openBlock(), _createBlock(_component_Comp, null, {
     [_ctx.one]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
     [_ctx.two]: _withCtx(({ bar }) => [_toDisplayString(_ctx.foo), _toDisplayString(bar)]),
-    _: 1
+    _: 2
   }, 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
@@ -35,7 +35,7 @@ exports[`compiler: transform component slots named slot with v-for w/ prefixIden
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 }, [
     _renderList(_ctx.list, (name) => {
       return {
         name: name,
@@ -52,7 +52,7 @@ exports[`compiler: transform component slots named slot with v-if + prefixIdenti
 return function render(_ctx, _cache) {
   const _component_Comp = _resolveComponent(\\"Comp\\")
 
-  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 }, [
     (_ctx.ok)
       ? {
           name: \\"one\\",
@@ -72,7 +72,7 @@ return function render(_ctx, _cache) {
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 }, [
       ok
         ? {
             name: \\"one\\",
@@ -101,7 +101,7 @@ return function render(_ctx, _cache) {
 
     const _component_Comp = _resolveComponent(\\"Comp\\")
 
-    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 1 }, [
+    return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 }, [
       ok
         ? {
             name: \\"one\\",
@@ -145,7 +145,7 @@ return function render(_ctx, _cache) {
     default: _withCtx(({ foo }) => [
       _createVNode(_component_Inner, null, {
         default: _withCtx(({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)]),
-        _: 1
+        _: 2
       }, 1024 /* DYNAMIC_SLOTS */),
       \\" \\",
       _toDisplayString(foo),
@@ -165,8 +165,8 @@ return function render(_ctx, _cache) {
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     [_ctx.named]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
-    _: 1
-  }))
+    _: 2
+  }, 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 

@@ -4,7 +4,8 @@ import {
   effect,
   stop,
   ref,
-  WritableComputedRef
+  WritableComputedRef,
+  isReadonly
 } from '../src'
 import { mockWarn } from '@vue/shared'
 
@@ -176,5 +177,23 @@ describe('reactivity/computed', () => {
     expect(
       'Write operation failed: computed value is readonly'
     ).toHaveBeenWarnedLast()
+  })
+
+  it('should be readonly', () => {
+    let a = { a: 1 }
+    const x = computed(() => a)
+    expect(isReadonly(x)).toBe(true)
+    expect(isReadonly(x.value)).toBe(false)
+    expect(isReadonly(x.value.a)).toBe(false)
+    const z = computed<typeof a>({
+      get() {
+        return a
+      },
+      set(v) {
+        a = v
+      }
+    })
+    expect(isReadonly(z)).toBe(false)
+    expect(isReadonly(z.value.a)).toBe(false)
   })
 })

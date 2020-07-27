@@ -560,15 +560,18 @@ describe('compiler: v-for', () => {
     function assertSharedCodegen(
       node: ForCodegenNode,
       keyed: boolean = false,
-      customReturn: boolean = false
+      customReturn: boolean = false,
+      disableTracking: boolean = true
     ) {
       expect(node).toMatchObject({
         type: NodeTypes.VNODE_CALL,
         tag: FRAGMENT,
-        isForBlock: true,
-        patchFlag: keyed
-          ? genFlagText(PatchFlags.KEYED_FRAGMENT)
-          : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+        disableTracking,
+        patchFlag: !disableTracking
+          ? genFlagText(PatchFlags.STABLE_FRAGMENT)
+          : keyed
+            ? genFlagText(PatchFlags.KEYED_FRAGMENT)
+            : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
         children: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_LIST,
@@ -580,7 +583,7 @@ describe('compiler: v-for', () => {
                 ? {}
                 : {
                     type: NodeTypes.VNODE_CALL,
-                    isBlock: true
+                    isBlock: disableTracking
                   }
             }
           ]
@@ -654,6 +657,43 @@ describe('compiler: v-for', () => {
       expect(assertSharedCodegen(codegenNode)).toMatchObject({
         source: { content: `items` },
         params: [{ content: `_` }, { content: `__` }, { content: `index` }]
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-for with constant expression', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform('<p v-for="item in 10">{{item}}</p>', {
+        prefixIdentifiers: true
+      })
+
+      expect(
+        assertSharedCodegen(
+          codegenNode,
+          false /* keyed */,
+          false /* customReturn */,
+          false /* disableTracking */
+        )
+      ).toMatchObject({
+        source: { content: `10`, isConstant: true },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          tag: `"p"`,
+          props: undefined,
+          isBlock: false,
+          children: {
+            type: NodeTypes.INTERPOLATION,
+            content: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'item',
+              isStatic: false,
+              isConstant: false
+            }
+          },
+          patchFlag: genFlagText(PatchFlags.TEXT)
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -777,7 +817,7 @@ describe('compiler: v-for', () => {
             key: `[0]`
           }),
           isBlock: true,
-          isForBlock: true,
+          disableTracking: true,
           patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
           children: {
             type: NodeTypes.JS_CALL_EXPRESSION,
@@ -790,6 +830,44 @@ describe('compiler: v-for', () => {
                 returns: {
                   type: NodeTypes.VNODE_CALL,
                   tag: `"div"`,
+                  isBlock: true
+                }
+              }
+            ]
+          }
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    // 1637
+    test('v-if + v-for on <template>', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(`<template v-if="ok" v-for="i in list"/>`)
+      expect(codegenNode).toMatchObject({
+        type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+        test: { content: `ok` },
+        consequent: {
+          type: NodeTypes.VNODE_CALL,
+          props: createObjectMatcher({
+            key: `[0]`
+          }),
+          isBlock: true,
+          disableTracking: true,
+          patchFlag: genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+          children: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: RENDER_LIST,
+            arguments: [
+              { content: `list` },
+              {
+                type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                params: [{ content: `i` }],
+                returns: {
+                  type: NodeTypes.VNODE_CALL,
+                  tag: FRAGMENT,
                   isBlock: true
                 }
               }

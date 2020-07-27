@@ -278,4 +278,20 @@ describe('scheduler', () => {
     await nextTick()
     expect(calls).toEqual(['job3', 'job2', 'job1'])
   })
+
+  // #1595
+  test('avoid duplicate postFlushCb invocation', async () => {
+    const calls: string[] = []
+    const cb1 = () => {
+      calls.push('cb1')
+      queuePostFlushCb(cb2)
+    }
+    const cb2 = () => {
+      calls.push('cb2')
+    }
+    queuePostFlushCb(cb1)
+    queuePostFlushCb(cb2)
+    await nextTick()
+    expect(calls).toEqual(['cb1', 'cb2'])
+  })
 })

@@ -8,7 +8,9 @@ import {
   normalizeClass,
   normalizeStyle,
   PatchFlags,
-  ShapeFlags
+  ShapeFlags,
+  SlotFlags,
+  isOn
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -46,6 +48,7 @@ export const Static = Symbol(__DEV__ ? 'Static' : undefined)
 
 export type VNodeTypes =
   | string
+  | VNode
   | Component
   | typeof Text
   | typeof Static
@@ -69,8 +72,8 @@ export type VNodeHook =
   | VNodeMountHook[]
   | VNodeUpdateHook[]
 
-export interface VNodeProps {
-  [key: string]: any
+// https://github.com/microsoft/TypeScript/issues/33099
+export type VNodeProps = {
   key?: string | number
   ref?: VNodeRef
 
@@ -92,8 +95,7 @@ type VNodeChildAtom =
   | undefined
   | void
 
-export interface VNodeArrayChildren
-  extends Array<VNodeArrayChildren | VNodeChildAtom> {}
+export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
@@ -103,7 +105,11 @@ export type VNodeNormalizedChildren =
   | RawSlots
   | null
 
-export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
+export interface VNode<
+  HostNode = RendererNode,
+  HostElement = RendererElement,
+  ExtraProps = { [key: string]: any }
+> {
   /**
    * @internal
    */
@@ -113,7 +119,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
    */
   __v_skip: true
   type: VNodeTypes
-  props: VNodeProps | null
+  props: (VNodeProps & ExtraProps) | null
   key: string | number | null
   ref: VNodeNormalizedRef | null
   scopeId: string | null // SFC only
@@ -203,7 +209,7 @@ export function setBlockTracking(value: number) {
  */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
-  props?: { [key: string]: any } | null,
+  props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,
   dynamicProps?: string[]
@@ -304,6 +310,14 @@ function _createVNode(
     type = Comment
   }
 
+  if (isVNode(type)) {
+    const cloned = cloneVNode(type, props)
+    if (children) {
+      normalizeChildren(cloned, children)
+    }
+    return cloned
+  }
+
   // class component normalization.
   if (isFunction(type) && '__vccOpts' in type) {
     type = type.__vccOpts
@@ -379,6 +393,11 @@ function _createVNode(
     appContext: null
   }
 
+  // validate key
+  if (__DEV__ && vnode.key !== vnode.key) {
+    warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
+  }
+
   normalizeChildren(vnode, children)
 
   // presence of a patch flag indicates this node needs patching on updates.
@@ -406,21 +425,22 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps
+  extraProps?: Data & VNodeProps | null
 ): VNode<T, U> {
-  const props = (extraProps
-    ? vnode.props
-      ? mergeProps(vnode.props, extraProps)
-      : extend({}, extraProps)
-    : vnode.props) as any
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
+  const { props, patchFlag } = vnode
+  const mergedProps = extraProps
+    ? props
+      ? mergeProps(props, extraProps)
+      : extend({}, extraProps)
+    : props
   return {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
-    props,
-    key: props && normalizeKey(props),
+    props: mergedProps,
+    key: mergedProps && normalizeKey(mergedProps),
     ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
@@ -429,14 +449,15 @@ export function cloneVNode<T, U>(
     staticCount: vnode.staticCount,
     shapeFlag: vnode.shapeFlag,
     // if the vnode is cloned with extra props, we can no longer assume its
-    // existing patch flag to be reliable and need to bail out of optimized mode.
-    // however we don't want block nodes to de-opt their children, so if the
-    // vnode is a block node, we only add the FULL_PROPS flag to it.
-    patchFlag: extraProps
-      ? vnode.dynamicChildren
-        ? vnode.patchFlag | PatchFlags.FULL_PROPS
-        : PatchFlags.BAIL
-      : vnode.patchFlag,
+    // existing patch flag to be reliable and need to add the FULL_PROPS flag.
+    // note: perserve flag for fragments since they use the flag for children
+    // fast paths only.
+    patchFlag:
+      extraProps && vnode.type !== Fragment
+        ? patchFlag === -1 // hoisted node
+          ? PatchFlags.FULL_PROPS
+          : patchFlag | PatchFlags.FULL_PROPS
+        : patchFlag,
     dynamicProps: vnode.dynamicProps,
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
@@ -528,10 +549,22 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
       return
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
-      if (!(children as RawSlots)._ && !(InternalObjectKey in children!)) {
+      const slotFlag = (children as RawSlots)._
+      if (!slotFlag && !(InternalObjectKey in children!)) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance
+      } else if (slotFlag === SlotFlags.FORWARDED && currentRenderingInstance) {
+        // a child component receives forwarded slots from the parent.
+        // its slot type is determined by its parent's slot type.
+        if (
+          currentRenderingInstance.vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS
+        ) {
+          ;(children as RawSlots)._ = SlotFlags.DYNAMIC
+          vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        } else {
+          ;(children as RawSlots)._ = SlotFlags.STABLE
+        }
       }
     }
   } else if (isFunction(children)) {
@@ -551,11 +584,8 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-const handlersRE = /^on|^vnode/
-
 export function mergeProps(...args: (Data & VNodeProps)[]) {
-  const ret: Data = {}
-  extend(ret, args[0])
+  const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
@@ -565,8 +595,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
-      } else if (handlersRE.test(key)) {
-        // on*, vnode*
+      } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
         if (existing !== incoming) {

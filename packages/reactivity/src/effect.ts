@@ -10,7 +10,7 @@ type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<any, KeyToDepMap>()
 
 export interface ReactiveEffect<T = any> {
-  (...args: any[]): T
+  (): T
   _isEffect: true
   id: number
   active: boolean
@@ -21,7 +21,6 @@ export interface ReactiveEffect<T = any> {
 
 export interface ReactiveEffectOptions {
   lazy?: boolean
-  computed?: boolean
   scheduler?: (job: ReactiveEffect) => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
@@ -78,12 +77,12 @@ export function stop(effect: ReactiveEffect) {
 let uid = 0
 
 function createReactiveEffect<T = any>(
-  fn: (...args: any[]) => T,
+  fn: () => T,
   options: ReactiveEffectOptions
 ): ReactiveEffect<T> {
-  const effect = function reactiveEffect(...args: unknown[]): unknown {
+  const effect = function reactiveEffect(): unknown {
     if (!effect.active) {
-      return options.scheduler ? undefined : fn(...args)
+      return options.scheduler ? undefined : fn()
     }
     if (!effectStack.includes(effect)) {
       cleanup(effect)
@@ -91,7 +90,7 @@ function createReactiveEffect<T = any>(
         enableTracking()
         effectStack.push(effect)
         activeEffect = effect
-        return fn(...args)
+        return fn()
       } finally {
         effectStack.pop()
         resetTracking()
@@ -177,16 +176,11 @@ export function trigger(
   }
 
   const effects = new Set<ReactiveEffect>()
-  const computedRunners = new Set<ReactiveEffect>()
   const add = (effectsToAdd: Set<ReactiveEffect> | undefined) => {
     if (effectsToAdd) {
       effectsToAdd.forEach(effect => {
         if (effect !== activeEffect || !shouldTrack) {
-          if (effect.options.computed) {
-            computedRunners.add(effect)
-          } else {
-            effects.add(effect)
-          }
+          effects.add(effect)
         } else {
           // the effect mutated its own dependency during its execution.
           // this can be caused by operations like foo.value++
@@ -245,8 +239,5 @@ export function trigger(
     }
   }
 
-  // Important: computed effects must be run first so that computed getters
-  // can be invalidated before any normal effects that depend on them are run.
-  computedRunners.forEach(run)
   effects.forEach(run)
 }

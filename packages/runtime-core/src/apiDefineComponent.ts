@@ -7,7 +7,12 @@ import {
   ComponentOptionsMixin,
   RenderFunction
 } from './componentOptions'
-import { SetupContext, FunctionalComponent } from './component'
+import {
+  SetupContext,
+  FunctionalComponent,
+  AllowedComponentProps,
+  ComponentCustomProps
+} from './component'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
@@ -40,7 +45,7 @@ export function defineComponent<Props, RawBindings = object>(
     {},
     {},
     // public props
-    VNodeProps & Props
+    VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
   >
 > &
   FunctionalComponent<Props>
@@ -80,7 +85,7 @@ export function defineComponent<
     Mixin,
     Extends,
     E,
-    VNodeProps & Props
+    VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithoutProps<
@@ -121,7 +126,7 @@ export function defineComponent<
     EE
   >
 ): ComponentPublicInstanceConstructor<
-  // array props technically doesn't place any contraints on props in TSX before,
+  // array props technically doesn't place any constraints on props in TSX before,
   // but now we can export array props in TSX
   CreateComponentPublicInstance<
     Readonly<{ [key in PropNames]?: any }>,
@@ -131,7 +136,8 @@ export function defineComponent<
     M,
     Mixin,
     Extends,
-    E
+    E,
+    AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithArrayProps<
@@ -182,7 +188,7 @@ export function defineComponent<
     Mixin,
     Extends,
     E,
-    VNodeProps
+    VNodeProps & AllowedComponentProps & ComponentCustomProps
   >
 > &
   ComponentOptionsWithObjectProps<
@@ -199,5 +205,7 @@ export function defineComponent<
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
-  return isFunction(options) ? { setup: options } : options
+  return isFunction(options)
+    ? { setup: options, name: options.name }
+    : options
 }

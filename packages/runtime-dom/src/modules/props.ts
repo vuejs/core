@@ -4,7 +4,7 @@
 
 import { warn } from '@vue/runtime-core'
 
-// functions. The user is reponsible for using them with only trusted content.
+// functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
   el: any,
   key: string,
@@ -37,6 +37,7 @@ export function patchDOMProp(
   } else if (value == null && typeof el[key] === 'string') {
     // e.g. <div :id="null">
     el[key] = ''
+    el.removeAttribute(key)
   } else {
     // some properties perform value validation and throw
     try {

@@ -29,7 +29,6 @@ import {
   callWithErrorHandling,
   callWithAsyncErrorHandling
 } from './errorHandling'
-import { onBeforeUnmount } from './apiLifecycle'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 
@@ -71,8 +70,6 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 }
 
 export type WatchStopHandle = () => void
-
-const invoke = (fn: Function) => fn()
 
 // Simple effect.
 export function watchEffect(
@@ -134,7 +131,8 @@ export function watch<T = any>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
+  instance = currentInstance
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -160,10 +158,13 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
-
   let getter: () => any
-  if (isArray(source)) {
+  if (isRef(source)) {
+    getter = () => source.value
+  } else if (isReactive(source)) {
+    getter = () => source
+    deep = true
+  } else if (isArray(source)) {
     getter = () =>
       source.map(s => {
         if (isRef(s)) {
@@ -176,11 +177,6 @@ function doWatch(
           __DEV__ && warnInvalidSource(s)
         }
       })
-  } else if (isRef(source)) {
-    getter = () => source.value
-  } else if (isReactive(source)) {
-    getter = () => source
-    deep = true
   } else if (isFunction(source)) {
     if (cb) {
       // getter with cb
@@ -236,33 +232,39 @@ function doWatch(
   }
 
   let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
-  const applyCb = cb
-    ? () => {
-        if (instance && instance.isUnmounted) {
-          return
+  const job = () => {
+    if (!runner.active) {
+      return
+    }
+    if (cb) {
+      // watch(source, cb)
+      const newValue = runner()
+      if (deep || hasChanged(newValue, oldValue)) {
+        // cleanup before running cb again
+        if (cleanup) {
+          cleanup()
         }
-        const newValue = runner()
-        if (deep || hasChanged(newValue, oldValue)) {
-          // cleanup before running cb again
-          if (cleanup) {
-            cleanup()
-          }
-          callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-            newValue,
-            // pass undefined as the old value when it's changed for the first time
-            oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-            onInvalidate
-          ])
-          oldValue = newValue
-        }
+        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+          newValue,
+          // pass undefined as the old value when it's changed for the first time
+          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
+          onInvalidate
+        ])
+        oldValue = newValue
       }
-    : void 0
+    } else {
+      // watchEffect
+      runner()
+    }
+  }
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
-    scheduler = invoke
+    scheduler = job
   } else if (flush === 'pre') {
-    scheduler = job => {
+    // ensure it's queued before component updates (which have positive ids)
+    job.id = -1
+    scheduler = () => {
       if (!instance || instance.isMounted) {
         queueJob(job)
       } else {
@@ -272,24 +274,22 @@ function doWatch(
       }
     }
   } else {
-    scheduler = job => queuePostRenderEffect(job, instance && instance.suspense)
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
     lazy: true,
-    // so it runs before component update effects in pre flush mode
-    computed: true,
     onTrack,
     onTrigger,
-    scheduler: applyCb ? () => scheduler(applyCb) : scheduler
+    scheduler
   })
 
   recordInstanceBoundEffect(runner)
 
   // initial run
-  if (applyCb) {
+  if (cb) {
     if (immediate) {
-      applyCb()
+      job()
     } else {
       oldValue = runner()
     }
@@ -316,9 +316,7 @@ export function instanceWatch(
   const getter = isString(source)
     ? () => publicThis[source]
     : source.bind(publicThis)
-  const stop = watch(getter, cb.bind(publicThis), options)
-  onBeforeUnmount(stop, this)
-  return stop
+  return doWatch(getter, cb.bind(publicThis), options, this)
 }
 
 function traverse(value: unknown, seen: Set<unknown> = new Set()) {

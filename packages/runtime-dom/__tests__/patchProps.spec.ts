@@ -88,12 +88,12 @@ describe('runtime-dom: props patching', () => {
     // anyway, here we just want to make sure Vue doesn't set non-string props
     // to an empty string on nullish values - it should reset to its default
     // value.
-    const intiialValue = el.srcObject
+    const initialValue = el.srcObject
     const fakeObject = {}
     patchProp(el, 'srcObject', null, fakeObject)
     expect(el.srcObject).not.toBe(fakeObject)
     patchProp(el, 'srcObject', null, null)
-    expect(el.srcObject).toBe(intiialValue)
+    expect(el.srcObject).toBe(initialValue)
   })
 
   test('catch and warn prop set TypeError', () => {
@@ -106,5 +106,22 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'someProp', null, 'foo')
 
     expect(`Failed setting prop "someProp" on <div>`).toHaveBeenWarnedLast()
+  })
+
+  // #1576
+  test('remove attribute when value is falsy', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
+    patchProp(el, 'id', null, null)
+    expect(el.hasAttribute('id')).toBe(false)
+
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
+    patchProp(el, 'id', null, undefined)
+    expect(el.hasAttribute('id')).toBe(false)
+
+    patchProp(el, 'id', null, '')
+    expect(el.hasAttribute('id')).toBe(true)
   })
 })

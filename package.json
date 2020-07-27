@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.0.0-beta.15",
+  "version": "3.0.0-rc.4",
   "workspaces": [
     "packages/*"
   ],
@@ -11,7 +11,7 @@
     "lint": "eslint --ext .ts packages/*/src/**",
     "format": "prettier --write --parser typescript \"packages/**/*.ts?(x)\"",
     "ls-lint": "ls-lint",
-    "test": "node scripts/build.js vue -f global -d && jest",
+    "test": "node scripts/build.js vue -f global -d && jest --runInBand",
     "test-dts": "node scripts/build.js shared reactivity runtime-core runtime-dom -dt -f esm-bundler && yarn test-dts-only",
     "test-dts-only": "tsc -p ./test-dts/tsconfig.json && tsc -p ./test-dts/tsconfig.build.json",
     "release": "node scripts/release.js",

@@ -1,11 +1,8 @@
 import { parse } from '../src'
-import { mockWarn } from '@vue/shared'
 import { baseParse, baseCompile } from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map'
 
 describe('compiler:sfc', () => {
-  mockWarn()
-
   describe('source map', () => {
     test('style block', () => {
       // Padding determines how many blank lines will there be before the style block
@@ -143,18 +140,40 @@ h1 { color: red }
   })
 
   describe('warnings', () => {
+    function assertWarning(errors: Error[], msg: string) {
+      expect(errors.some(e => e.message.match(msg))).toBe(true)
+    }
+
     test('should only allow single template element', () => {
-      parse(`<template><div/></template><template><div/></template>`)
-      expect(
-        `Single file component can contain only one template element`
-      ).toHaveBeenWarned()
+      assertWarning(
+        parse(`<template><div/></template><template><div/></template>`).errors,
+        `Single file component can contain only one <template> element`
+      )
     })
 
     test('should only allow single script element', () => {
-      parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
+      assertWarning(
+        parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
+          .errors,
+        `Single file component can contain only one <script> element`
+      )
+    })
+
+    test('should only allow single script setup element', () => {
+      assertWarning(
+        parse(
+          `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
+        ).errors,
+        `Single file component can contain only one <script setup> element`
+      )
+    })
+
+    test('should not warn script & script setup', () => {
       expect(
-        `Single file component can contain only one script element`
-      ).toHaveBeenWarned()
+        parse(
+          `<script setup>console.log(1)</script><script>console.log(1)</script>`
+        ).errors.length
+      ).toBe(0)
     })
   })
 })

@@ -69,6 +69,16 @@ describe('api: watch', () => {
     expect(dummy).toMatchObject([1, 0])
   })
 
+  it('watching single source: array', async () => {
+    const array = reactive([] as number[])
+    const spy = jest.fn()
+    watch(array, spy)
+    array.push(1)
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+  })
+
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
@@ -260,12 +270,13 @@ describe('api: watch', () => {
   it('flush timing: post (default)', async () => {
     const count = ref(0)
     let callCount = 0
+    let result
     const assertion = jest.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called after the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result = serializeInner(root) === expectedDOM
     })
 
     const Comp = {
@@ -279,10 +290,12 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result).toBe(true)
 
     count.value++
     await nextTick()
     expect(assertion).toHaveBeenCalledTimes(2)
+    expect(result).toBe(true)
   })
 
   it('flush timing: pre', async () => {
@@ -290,16 +303,18 @@ describe('api: watch', () => {
     const count2 = ref(0)
 
     let callCount = 0
+    let result1
+    let result2
     const assertion = jest.fn((count, count2Value) => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count - 1}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result1 = serializeInner(root) === expectedDOM
 
       // in a pre-flush callback, all state should have been updated
-      const expectedState = callCount === 1 ? 0 : 1
-      expect(count2Value).toBe(expectedState)
+      const expectedState = callCount - 1
+      result2 = count === expectedState && count2Value === expectedState
     })
 
     const Comp = {
@@ -318,12 +333,16 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
 
     count.value++
     count2.value++
     await nextTick()
     // two mutations should result in 1 callback execution
     expect(assertion).toHaveBeenCalledTimes(2)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
   })
 
   it('flush timing: sync', async () => {
@@ -331,17 +350,19 @@ describe('api: watch', () => {
     const count2 = ref(0)
 
     let callCount = 0
+    let result1
+    let result2
     const assertion = jest.fn(count => {
       callCount++
       // on mount, the watcher callback should be called before DOM render
       // on update, should be called before the count is updated
       const expectedDOM = callCount === 1 ? `` : `${count - 1}`
-      expect(serializeInner(root)).toBe(expectedDOM)
+      result1 = serializeInner(root) === expectedDOM
 
       // in a sync callback, state mutation on the next line should not have
       // executed yet on the 2nd call, but will be on the 3rd call.
       const expectedState = callCount < 3 ? 0 : 1
-      expect(count2.value).toBe(expectedState)
+      result2 = count2.value === expectedState
     })
 
     const Comp = {
@@ -360,11 +381,57 @@ describe('api: watch', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(assertion).toHaveBeenCalledTimes(1)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
 
     count.value++
     count2.value++
     await nextTick()
     expect(assertion).toHaveBeenCalledTimes(3)
+    expect(result1).toBe(true)
+    expect(result2).toBe(true)
+  })
+
+  it('should not fire on component unmount w/ flush: post', async () => {
+    const toggle = ref(true)
+    const cb = jest.fn()
+    const Comp = {
+      setup() {
+        watch(toggle, cb)
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return toggle.value ? h(Comp) : null
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    toggle.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('should fire on component unmount w/ flush: pre', async () => {
+    const toggle = ref(true)
+    const cb = jest.fn()
+    const Comp = {
+      setup() {
+        watch(toggle, cb, { flush: 'pre' })
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return toggle.value ? h(Comp) : null
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    toggle.value = false
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
   })
 
   it('deep', async () => {
@@ -553,5 +620,24 @@ describe('api: watch', () => {
       key: 'foo',
       oldValue: 2
     })
+  })
+
+  it('should work sync', () => {
+    const v = ref(1)
+    let calls = 0
+
+    watch(
+      v,
+      () => {
+        ++calls
+      },
+      {
+        flush: 'sync'
+      }
+    )
+
+    expect(calls).toBe(0)
+    v.value++
+    expect(calls).toBe(1)
   })
 })

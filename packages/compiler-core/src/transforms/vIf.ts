@@ -30,20 +30,33 @@ import {
   OPEN_BLOCK,
   TELEPORT
 } from '../runtimeHelpers'
-import { injectProp } from '../utils'
+import { injectProp, findDir } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
   (node, dir, context) => {
     return processIf(node, dir, context, (ifNode, branch, isRoot) => {
+      // #1587: We need to dynamically increment the key based on the current
+      // node's sibling nodes, since chained v-if/else branches are
+      // rendered at the same depth
+      const siblings = context.parent!.children
+      let i = siblings.indexOf(ifNode)
+      let key = 0
+      while (i-- >= 0) {
+        const sibling = siblings[i]
+        if (sibling && sibling.type === NodeTypes.IF) {
+          key += sibling.branches.length
+        }
+      }
+
       // Exit callback. Complete the codegenNode when all children have been
       // transformed.
       return () => {
         if (isRoot) {
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
-            0,
+            key,
             context
           ) as IfConditionalExpression
         } else {
@@ -57,7 +70,7 @@ export const transformIf = createStructuralDirectiveTransform(
           }
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
-            ifNode.branches.length - 1,
+            key + ifNode.branches.length - 1,
             context
           )
         }
@@ -153,7 +166,10 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children:
+      node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
+        ? node.children
+        : [node]
   }
 }
 
