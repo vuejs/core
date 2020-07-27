@@ -157,7 +157,7 @@ export const transformElement: NodeTransform = (node, context) => {
         const hasDynamicTextChild =
           type === NodeTypes.INTERPOLATION ||
           type === NodeTypes.COMPOUND_EXPRESSION
-        if (hasDynamicTextChild && !getStaticType(child)) {
+        if (hasDynamicTextChild && !getStaticType(context, child)) {
           patchFlag |= PatchFlags.TEXT
         }
         // pass directly if the only child is a text node
@@ -293,7 +293,7 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          getStaticType(value) > 0)
+          getStaticType(context, value) > 0)
       ) {
         // skip if the prop is a cached handler or has constant value
         return

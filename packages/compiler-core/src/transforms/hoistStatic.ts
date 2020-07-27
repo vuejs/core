@@ -72,7 +72,7 @@ function walk(
       let staticType
       if (
         !doNotHoistNode &&
-        (staticType = getStaticType(child, resultCache)) > 0
+        (staticType = getStaticType(context, child, resultCache)) > 0
       ) {
         if (staticType === StaticType.HAS_RUNTIME_CONSTANT) {
           hasRuntimeConstant = true
@@ -94,7 +94,7 @@ function walk(
               flag === PatchFlags.NEED_PATCH ||
               flag === PatchFlags.TEXT) &&
             !hasDynamicKeyOrRef(child) &&
-            !hasCachedProps(child)
+            !hasCachedProps(child, context)
           ) {
             const props = getNodeProps(child)
             if (props) {
@@ -104,7 +104,7 @@ function walk(
         }
       }
     } else if (child.type === NodeTypes.TEXT_CALL) {
-      const staticType = getStaticType(child.content, resultCache)
+      const staticType = getStaticType(context, child.content, resultCache)
       if (staticType > 0) {
         if (staticType === StaticType.HAS_RUNTIME_CONSTANT) {
           hasRuntimeConstant = true
@@ -139,6 +139,7 @@ function walk(
 }
 
 export function getStaticType(
+  context: TransformContext,
   node: TemplateChildNode | SimpleExpressionNode,
   resultCache: Map<TemplateChildNode, StaticType> = new Map()
 ): StaticType {
@@ -156,11 +157,19 @@ export function getStaticType(
         return StaticType.NOT_STATIC
       }
       const flag = getPatchFlag(codegenNode)
-      if (!flag && !hasDynamicKeyOrRef(node) && !hasCachedProps(node)) {
+      if (
+        !flag &&
+        !hasDynamicKeyOrRef(node) &&
+        !hasCachedProps(node, context)
+      ) {
         // element self is static. check its children.
         let returnType = StaticType.FULL_STATIC
         for (let i = 0; i < node.children.length; i++) {
-          const childType = getStaticType(node.children[i], resultCache)
+          const childType = getStaticType(
+            context,
+            node.children[i],
+            resultCache
+          )
           if (childType === StaticType.NOT_STATIC) {
             resultCache.set(node, StaticType.NOT_STATIC)
             return StaticType.NOT_STATIC
@@ -207,7 +216,7 @@ export function getStaticType(
       return StaticType.NOT_STATIC
     case NodeTypes.INTERPOLATION:
     case NodeTypes.TEXT_CALL:
-      return getStaticType(node.content, resultCache)
+      return getStaticType(context, node.content, resultCache)
     case NodeTypes.SIMPLE_EXPRESSION:
       return node.isConstant
         ? node.isRuntimeConstant
@@ -221,7 +230,7 @@ export function getStaticType(
         if (isString(child) || isSymbol(child)) {
           continue
         }
-        const childType = getStaticType(child, resultCache)
+        const childType = getStaticType(context, child, resultCache)
         if (childType === StaticType.NOT_STATIC) {
           return StaticType.NOT_STATIC
         } else if (childType === StaticType.HAS_RUNTIME_CONSTANT) {
@@ -242,8 +251,14 @@ function hasDynamicKeyOrRef(node: ElementNode): boolean {
   return !!(findProp(node, 'key', true) || findProp(node, 'ref', true))
 }
 
-function hasCachedProps(node: PlainElementNode): boolean {
+function hasCachedProps(
+  node: PlainElementNode,
+  context: TransformContext
+): boolean {
   if (__BROWSER__) {
+    return false
+  }
+  if (!context.cacheHandlers) {
     return false
   }
   const props = getNodeProps(node)
