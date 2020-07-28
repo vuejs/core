@@ -26,7 +26,7 @@ export function nextTick(fn?: () => void): Promise<void> {
 }
 
 export function queueJob(job: Job) {
-  if (!queue.includes(job, flushIndex)) {
+  if (!queue.includes(job, flushIndex + 1)) {
     queue.push(job)
     queueFlush()
   }
@@ -43,7 +43,7 @@ export function queuePostFlushCb(cb: Function | Function[]) {
   if (!isArray(cb)) {
     if (
       !pendingPostFlushCbs ||
-      !pendingPostFlushCbs.includes(cb, pendingPostFlushIndex)
+      !pendingPostFlushCbs.includes(cb, pendingPostFlushIndex + 1)
     ) {
       postFlushCbs.push(cb)
     }
