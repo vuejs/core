@@ -7,11 +7,10 @@ import {
   Text,
   ref,
   nextTick,
-  openBlock,
-  createBlock
+  markRaw
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
-import { PatchFlags } from '@vue/shared'
+import { compile } from 'vue'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -309,37 +308,31 @@ describe('renderer: teleport', () => {
     const disabled = ref(false)
 
     const App = {
-      render() {
-        return (
-          openBlock(),
-          createBlock(
-            Fragment,
-            null,
-            [
-              h(
-                Teleport,
-                { to: target, disabled: disabled.value },
-                h('div', 'teleported')
-              ),
-              h('div', 'root')
-            ],
-            PatchFlags.STABLE_FRAGMENT
-          )
-        )
-      }
+      setup() {
+        return {
+          target: markRaw(target),
+          disabled
+        }
+      },
+      render: compile(`
+      <teleport :to="target" :disabled="disabled">
+        <div>teleported</div><span>{{ disabled }}</span>
+      </teleport>
+      <div>root</div>
+      `)
     }
     render(h(App), root)
     expect(serializeInner(root)).toMatchInlineSnapshot(
       `"<!--teleport start--><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
-      `"<div>teleported</div>"`
+      `"<div>teleported</div><span>false</span>"`
     )
 
     disabled.value = true
     await nextTick()
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`
+      `"<!--teleport start--><div>teleported</div><span>true</span><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toBe(``)
 
@@ -350,7 +343,7 @@ describe('renderer: teleport', () => {
       `"<!--teleport start--><!--teleport end--><div>root</div>"`
     )
     expect(serializeInner(target)).toMatchInlineSnapshot(
-      `"<div>teleported</div>"`
+      `"<div>teleported</div><span>false</span>"`
     )
   })
 })

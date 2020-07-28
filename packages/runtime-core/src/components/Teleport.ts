@@ -139,6 +139,13 @@ export const TeleportImpl = {
           parentSuspense,
           isSVG
         )
+        if (n2.patchFlag > 0 && n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          const oldChildren = n1.children as VNode[]
+          const children = n2.children as VNode[]
+          for (let i = 0; i < children.length; i++) {
+            children[i].el = oldChildren[i].el
+          }
+        }
       } else if (!optimized) {
         patchChildren(
           n1,
