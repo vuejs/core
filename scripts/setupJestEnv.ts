@@ -80,9 +80,10 @@ afterEach(() => {
     })
   warn.mockRestore()
   if (nonAssertedWarnings.length) {
-    nonAssertedWarnings.forEach(warning => {
-      console.warn(warning)
-    })
-    throw new Error(`test case threw unexpected warnings.`)
+    throw new Error(
+      `test case threw unexpected warnings:\n - ${nonAssertedWarnings.join(
+        '\n - '
+      )}`
+    )
   }
 })
