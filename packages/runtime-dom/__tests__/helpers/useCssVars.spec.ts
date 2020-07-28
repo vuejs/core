@@ -97,9 +97,7 @@ describe('useCssVars', () => {
     }
     // AsyncComp resolve
     await nextTick()
-    // suspense effects into post queue
-    await nextTick()
-    // post queue is flushed
+    // Suspense effects flush
     await nextTick()
     // css vars use with default tree
     for (const c of [].slice.call(root.children as any)) {
