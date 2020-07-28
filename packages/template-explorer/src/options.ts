@@ -10,7 +10,12 @@ export const compilerOptions: CompilerOptions = reactive({
   hoistStatic: false,
   cacheHandlers: false,
   scopeId: null,
-  ssrCssVars: `{ color }`
+  ssrCssVars: `{ color }`,
+  bindingMetadata: {
+    TestComponent: 'setup',
+    foo: 'setup',
+    bar: 'props'
+  }
 })
 
 const App = {

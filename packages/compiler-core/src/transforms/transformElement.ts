@@ -244,7 +244,12 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (resolve)
+  // 3. user component (from setup bindings)
+  if (context.bindingMetadata[tag] === 'setup') {
+    return `$setup[${JSON.stringify(tag)}]`
+  }
+
+  // 4. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
