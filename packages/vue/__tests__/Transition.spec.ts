@@ -1,10 +1,8 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
-import { mockWarn } from '@vue/shared'
 import { h, createApp, Transition } from 'vue'
 
 describe('e2e: Transition', () => {
-  mockWarn()
   const {
     page,
     html,
@@ -1095,6 +1093,155 @@ describe('e2e: Transition', () => {
         ])
         await transitionFinish()
         expect(await html('#container')).toBe('<!--v-if-->')
+      },
+      E2E_TIMEOUT
+    )
+  })
+
+  describe('transition with Suspense', () => {
+    // #1583
+    test(
+      'async component transition inside Suspense',
+      async () => {
+        const onLeaveSpy = jest.fn()
+        const onEnterSpy = jest.fn()
+
+        await page().exposeFunction('onLeaveSpy', onLeaveSpy)
+        await page().exposeFunction('onEnterSpy', onEnterSpy)
+
+        await page().evaluate(() => {
+          const { onEnterSpy, onLeaveSpy } = window as any
+          const { createApp, ref, h } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <Suspense>
+                <transition @enter="onEnterSpy"
+                            @leave="onLeaveSpy">
+                  <Comp v-if="toggle" class="test">content</Comp>
+                </transition>
+              </Suspense>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            components: {
+              Comp: {
+                async setup() {
+                  return () => h('div', { class: 'test' }, 'content')
+                }
+              }
+            },
+            setup: () => {
+              const toggle = ref(true)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click, onEnterSpy, onLeaveSpy }
+            }
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div class="test">content</div>')
+
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-from'
+        ])
+        expect(onLeaveSpy).toBeCalledTimes(1)
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+
+        // enter
+        const enterClass = await page().evaluate(async () => {
+          (document.querySelector('#toggleBtn') as any)!.click()
+          // nextTrick for patch start
+          await Promise.resolve()
+          // nextTrick for Suspense resolve
+          await Promise.resolve()
+          // nextTrick for dom transition start
+          await Promise.resolve()
+          return document
+            .querySelector('#container div')!
+            .className.split(/\s+/g)
+        })
+        expect(enterClass).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-from'
+        ])
+        expect(onEnterSpy).toBeCalledTimes(1)
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">content</div>')
+      },
+      E2E_TIMEOUT
+    )
+
+    // #1689
+    test(
+      'static node transition inside Suspense',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, ref } = (window as any).Vue
+          createApp({
+            template: `
+            <div id="container">
+              <Suspense>
+                <transition>
+                  <div v-if="toggle" class="test">content</div>
+                </transition>
+              </Suspense>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const toggle = ref(true)
+              const click = () => (toggle.value = !toggle.value)
+              return { toggle, click }
+            }
+          }).mount('#app')
+        })
+        expect(await html('#container')).toBe('<div class="test">content</div>')
+
+        // leave
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-from'
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-leave-active',
+          'v-leave-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<!--v-if-->')
+
+        // enter
+        expect(await classWhenTransitionStart()).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-from'
+        ])
+        await nextFrame()
+        expect(await classList('.test')).toStrictEqual([
+          'test',
+          'v-enter-active',
+          'v-enter-to'
+        ])
+        await transitionFinish()
+        expect(await html('#container')).toBe('<div class="test">content</div>')
       },
       E2E_TIMEOUT
     )

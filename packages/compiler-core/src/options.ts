@@ -28,7 +28,7 @@ export interface ParserOptions {
   /**
    * Separate option for end users to extend the native elements list
    */
-  isCustomElement?: (tag: string) => boolean
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Get tag namespace
    */
@@ -83,6 +83,10 @@ export interface TransformOptions {
    * for them.
    */
   isBuiltInComponent?: (tag: string) => symbol | void
+  /**
+   * Used by some transforms that expects only native elements
+   */
+  isCustomElement?: (tag: string) => boolean | void
   /**
    * Transform expressions like {{ foo }} to `_ctx.foo`.
    * If this option is false, the generated code will be wrapped in a

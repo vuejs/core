@@ -6,8 +6,7 @@ import {
   TrackOpTypes,
   TriggerOpTypes,
   DebuggerEvent,
-  markRaw,
-  ref
+  markRaw
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -781,15 +780,5 @@ describe('reactivity/effect', () => {
     observed.length = 0
     expect(dummy).toBe(0)
     expect(record).toBeUndefined()
-  })
-
-  it('should handle self dependency mutations', () => {
-    const count = ref(0)
-    effect(() => {
-      count.value++
-    })
-    expect(count.value).toBe(1)
-    count.value = 10
-    expect(count.value).toBe(11)
   })
 })

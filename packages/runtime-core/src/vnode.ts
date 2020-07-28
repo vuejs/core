@@ -411,11 +411,7 @@ function _createVNode(
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
     patchFlag !== PatchFlags.HYDRATE_EVENTS &&
-    (patchFlag > 0 ||
-      shapeFlag & ShapeFlags.SUSPENSE ||
-      shapeFlag & ShapeFlags.TELEPORT ||
-      shapeFlag & ShapeFlags.STATEFUL_COMPONENT ||
-      shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT)
+    (patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT)
   ) {
     currentBlock.push(vnode)
   }

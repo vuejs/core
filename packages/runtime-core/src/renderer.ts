@@ -744,9 +744,12 @@ function baseCreateRenderer(
     }
 
     hostInsert(el, container, anchor)
-    // #1583 For inside suspense case, enter hook should call when suspense resolved
+    // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
+    // #1689 For inside suspense + suspense resolved case, just call it
     const needCallTransitionHooks =
-      !parentSuspense && transition && !transition.persisted
+      (!parentSuspense || (parentSuspense && parentSuspense!.isResolved)) &&
+      transition &&
+      !transition.persisted
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
       needCallTransitionHooks ||
@@ -957,7 +960,8 @@ function baseCreateRenderer(
         // which also requires the correct parent container
         !isSameVNodeType(oldVNode, newVNode) ||
         // - In the case of a component, it could contain anything.
-        oldVNode.shapeFlag & ShapeFlags.COMPONENT
+        oldVNode.shapeFlag & ShapeFlags.COMPONENT ||
+        oldVNode.shapeFlag & ShapeFlags.TELEPORT
           ? hostParentNode(oldVNode.el!)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.

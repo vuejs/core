@@ -30,7 +30,7 @@ import {
   OPEN_BLOCK,
   TELEPORT
 } from '../runtimeHelpers'
-import { injectProp, findDir } from '../utils'
+import { injectProp, findDir, findProp } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -111,6 +111,11 @@ export function processIf(
     validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
+  const userKey = /*#__PURE__*/ findProp(node, 'key')
+  if (userKey) {
+    context.onError(createCompilerError(ErrorCodes.X_V_IF_KEY, userKey.loc))
+  }
+
   if (dir.name === 'if') {
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
@@ -175,13 +180,13 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): IfConditionalExpression | BlockCodegenNode {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, index, context),
+      createChildrenCodegenNode(branch, keyIndex, context),
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -190,19 +195,19 @@ function createCodegenNodeForBranch(
       ])
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, index, context)
+    return createChildrenCodegenNode(branch, keyIndex, context)
   }
 }
 
 function createChildrenCodegenNode(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): BlockCodegenNode {
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
-    createSimpleExpression(index + '', false)
+    createSimpleExpression(`${keyIndex}`, false)
   )
   const { children } = branch
   const firstChild = children[0]

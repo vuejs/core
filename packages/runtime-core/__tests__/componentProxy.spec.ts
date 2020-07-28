@@ -6,12 +6,9 @@ import {
   createApp,
   shallowReadonly
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 import { ComponentInternalInstance } from '../src/component'
 
 describe('component: proxy', () => {
-  mockWarn()
-
   test('data', () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any

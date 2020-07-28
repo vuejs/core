@@ -7,12 +7,9 @@ import {
   compileStyleAsync,
   SFCStyleCompileOptions
 } from '../src/compileStyle'
-import { mockWarn } from '@vue/shared'
 import path from 'path'
 
 describe('SFC scoped CSS', () => {
-  mockWarn()
-
   function compileScoped(
     source: string,
     options?: Partial<SFCStyleCompileOptions>

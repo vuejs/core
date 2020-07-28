@@ -1,11 +1,8 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
-import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
-  mockWarn()
-
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)

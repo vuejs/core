@@ -8,11 +8,12 @@ export interface Job {
 
 const queue: (Job | null)[] = []
 const postFlushCbs: Function[] = []
-const p = Promise.resolve()
+const resolvedPromise: Promise<any> = Promise.resolve()
+let currentFlushPromise: Promise<void> | null = null
 
 let isFlushing = false
 let isFlushPending = false
-let flushIndex = 0
+let flushIndex = -1
 let pendingPostFlushCbs: Function[] | null = null
 let pendingPostFlushIndex = 0
 
@@ -20,11 +21,12 @@ const RECURSION_LIMIT = 100
 type CountMap = Map<Job | Function, number>
 
 export function nextTick(fn?: () => void): Promise<void> {
+  const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(fn) : p
 }
 
 export function queueJob(job: Job) {
-  if (!queue.includes(job, flushIndex)) {
+  if (!queue.includes(job, flushIndex + 1)) {
     queue.push(job)
     queueFlush()
   }
@@ -41,7 +43,7 @@ export function queuePostFlushCb(cb: Function | Function[]) {
   if (!isArray(cb)) {
     if (
       !pendingPostFlushCbs ||
-      !pendingPostFlushCbs.includes(cb, pendingPostFlushIndex)
+      !pendingPostFlushCbs.includes(cb, pendingPostFlushIndex + 1)
     ) {
       postFlushCbs.push(cb)
     }
@@ -57,7 +59,7 @@ export function queuePostFlushCb(cb: Function | Function[]) {
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
-    nextTick(flushJobs)
+    currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
 
@@ -112,11 +114,12 @@ function flushJobs(seen?: CountMap) {
       callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
     }
   }
-  flushIndex = 0
+  flushIndex = -1
   queue.length = 0
 
   flushPostFlushCbs(seen)
   isFlushing = false
+  currentFlushPromise = null
   // some postFlushCb queued jobs!
   // keep flushing until it drains.
   if (queue.length || postFlushCbs.length) {

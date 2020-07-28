@@ -44,10 +44,16 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   const { tag } = node
-  if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+  const isCustomElement = context.isCustomElement(tag)
+  if (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    isCustomElement
+  ) {
     let directiveToUse = V_MODEL_TEXT
     let isInvalidType = false
-    if (tag === 'input') {
+    if (tag === 'input' || isCustomElement) {
       const type = findProp(node, `type`)
       if (type) {
         if (type.type === NodeTypes.DIRECTIVE) {
@@ -86,7 +92,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       }
     } else if (tag === 'select') {
       directiveToUse = V_MODEL_SELECT
-    } else if (tag === 'textarea') {
+    } else {
+      // textarea
       __DEV__ && checkDuplicatedValue()
     }
     // inject runtime directive

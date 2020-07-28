@@ -35,7 +35,8 @@ import {
   MERGE_PROPS,
   TO_HANDLERS,
   TELEPORT,
-  KEEP_ALIVE
+  KEEP_ALIVE,
+  SUSPENSE
 } from '../runtimeHelpers'
 import {
   getInnerRange,
@@ -89,6 +90,8 @@ export const transformElement: NodeTransform = (node, context) => {
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
       isDynamicComponent ||
+      vnodeTag === TELEPORT ||
+      vnodeTag === SUSPENSE ||
       (!isComponent &&
         // <svg> and <foreignObject> must be forced into blocks so that block
         // updates inside get proper isSVG flag at runtime. (#639, #643)

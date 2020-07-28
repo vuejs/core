@@ -10,11 +10,8 @@ import {
   serializeInner
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
-import { mockWarn } from '@vue/shared'
 
 describe('component props', () => {
-  mockWarn()
-
   test('stateful', () => {
     let props: any
     let attrs: any
