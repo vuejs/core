@@ -10,12 +10,12 @@ import {
 } from '@vue/shared'
 import {
   ReactiveEffect,
-  UnwrapRef,
   toRaw,
   shallowReadonly,
   ReactiveFlags,
   track,
-  TrackOpTypes
+  TrackOpTypes,
+  ShallowUnwrapRef
 } from '@vue/reactivity'
 import {
   ExtractComputedReturns,
@@ -154,7 +154,7 @@ export type ComponentPublicInstance<
   $nextTick: typeof nextTick
   $watch: typeof instanceWatch
 } & P &
-  UnwrapRef<B> &
+  ShallowUnwrapRef<B> &
   D &
   ExtractComputedReturns<C> &
   M &
