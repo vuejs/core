@@ -134,25 +134,20 @@ export function handleError(
   logError(err, type, contextVNode)
 }
 
-// Test-only toggle for testing the unhandled warning behavior
-let forceRecover = false
-export function setErrorRecovery(value: boolean) {
-  forceRecover = value
-}
-
 function logError(err: unknown, type: ErrorTypes, contextVNode: VNode | null) {
-  // default behavior is crash in prod & test, recover in dev.
-  if (__DEV__ && (forceRecover || !__TEST__)) {
+  if (__DEV__) {
     const info = ErrorTypeStrings[type]
     if (contextVNode) {
       pushWarningContext(contextVNode)
     }
     warn(`Unhandled error${info ? ` during execution of ${info}` : ``}`)
-    console.error(err)
     if (contextVNode) {
       popWarningContext()
     }
-  } else {
+    // crash in dev so it's more noticeable
     throw err
+  } else {
+    // recover in prod to reduce the impact on end-user
+    console.error(err)
   }
 }
