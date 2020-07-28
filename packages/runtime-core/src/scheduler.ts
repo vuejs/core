@@ -13,7 +13,7 @@ let currentFlushPromise: Promise<void> | null = null
 
 let isFlushing = false
 let isFlushPending = false
-let flushIndex = 0
+let flushIndex = -1
 let pendingPostFlushCbs: Function[] | null = null
 let pendingPostFlushIndex = 0
 
@@ -114,7 +114,7 @@ function flushJobs(seen?: CountMap) {
       callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
     }
   }
-  flushIndex = 0
+  flushIndex = -1
   queue.length = 0
 
   flushPostFlushCbs(seen)
