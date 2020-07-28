@@ -269,6 +269,19 @@ describe('type inference w/ options API', () => {
       d(): number {
         expectType<number>(this.b)
         return this.b + 1
+      },
+      e: {
+        get(): number {
+          expectType<number>(this.b)
+          expectType<number>(this.d)
+
+          return this.b + this.d
+        },
+        set(v: number) {
+          expectType<number>(this.b)
+          expectType<number>(this.d)
+          expectType<number>(v)
+        }
       }
     },
     watch: {
@@ -286,6 +299,8 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.c)
       // computed
       expectType<number>(this.d)
+      // computed get/set
+      expectType<number>(this.e)
     },
     methods: {
       doSomething() {
@@ -297,6 +312,8 @@ describe('type inference w/ options API', () => {
         expectType<number>(this.c)
         // computed
         expectType<number>(this.d)
+        // computed get/set
+        expectType<number>(this.e)
       },
       returnSomething() {
         return this.a
@@ -311,6 +328,8 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.c)
       // computed
       expectType<number>(this.d)
+      // computed get/set
+      expectType<number>(this.e)
       // method
       expectType<() => number | undefined>(this.returnSomething)
     }
