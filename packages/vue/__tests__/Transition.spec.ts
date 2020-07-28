@@ -1,10 +1,8 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
-import { mockWarn } from '@vue/shared'
 import { h, createApp, Transition } from 'vue'
 
 describe('e2e: Transition', () => {
-  mockWarn()
   const {
     page,
     html,

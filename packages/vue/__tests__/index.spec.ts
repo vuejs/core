@@ -1,9 +1,6 @@
 import { createApp, ref, nextTick } from '../src'
-import { mockWarn } from '@vue/shared'
 
 describe('compiler + runtime integration', () => {
-  mockWarn()
-
   it('should support runtime template compilation', () => {
     const container = document.createElement('div')
     const App = {
@@ -55,7 +52,7 @@ describe('compiler + runtime integration', () => {
     expect(one.deactivated).toHaveBeenCalledTimes(0)
     expect(one.destroyed).toHaveBeenCalledTimes(0)
 
-    toggle.value = false;
+    toggle.value = false
     await nextTick()
     expect(container.innerHTML).toBe(`<!--v-if-->`)
     expect(one.created).toHaveBeenCalledTimes(1)
@@ -64,7 +61,7 @@ describe('compiler + runtime integration', () => {
     expect(one.deactivated).toHaveBeenCalledTimes(1)
     expect(one.destroyed).toHaveBeenCalledTimes(0)
 
-    toggle.value = true;
+    toggle.value = true
     await nextTick()
     expect(container.innerHTML).toBe(`one`)
     expect(one.created).toHaveBeenCalledTimes(1)

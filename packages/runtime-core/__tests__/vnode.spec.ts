@@ -11,14 +11,12 @@ import {
   transformVNodeArgs
 } from '../src/vnode'
 import { Data } from '../src/component'
-import { ShapeFlags, PatchFlags, mockWarn } from '@vue/shared'
+import { ShapeFlags, PatchFlags } from '@vue/shared'
 import { h, reactive, isReactive } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderUtils'
 
 describe('vnode', () => {
-  mockWarn()
-
   test('create with just tag', () => {
     const vnode = createVNode('p')
     expect(vnode.type).toBe('p')

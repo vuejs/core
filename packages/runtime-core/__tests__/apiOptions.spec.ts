@@ -10,7 +10,6 @@ import {
   ref,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -705,8 +704,6 @@ describe('api: options', () => {
   })
 
   describe('warnings', () => {
-    mockWarn()
-
     test('Expected a function as watch handler', () => {
       const Comp = {
         watch: {

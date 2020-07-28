@@ -1,10 +1,7 @@
 import { patchProp } from '../src/patchProp'
 import { render, h } from '../src'
-import { mockWarn } from '@vue/shared'
 
 describe('runtime-dom: props patching', () => {
-  mockWarn()
-
   test('basic', () => {
     const el = document.createElement('div')
     patchProp(el, 'id', null, 'foo')

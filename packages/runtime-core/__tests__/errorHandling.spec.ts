@@ -11,11 +11,8 @@ import {
   watchEffect
 } from '@vue/runtime-test'
 import { setErrorRecovery } from '../src/errorHandling'
-import { mockWarn } from '@vue/shared'
 
 describe('error handling', () => {
-  mockWarn()
-
   beforeEach(() => {
     setErrorRecovery(true)
   })

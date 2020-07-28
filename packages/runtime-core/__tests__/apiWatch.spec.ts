@@ -14,13 +14,10 @@ import {
   TrackOpTypes,
   TriggerOpTypes
 } from '@vue/reactivity'
-import { mockWarn } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
 describe('api: watch', () => {
-  mockWarn()
-
   it('effect', async () => {
     const state = reactive({ count: 0 })
     let dummy
