@@ -2105,7 +2105,7 @@ function baseCreateRenderer(
         const c1 = ch1[i] as VNode
         const c2 = (ch2[i] = cloneIfMounted(ch2[i] as VNode))
         if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
-          if (c2.patchFlag <= 0) {
+          if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
             c2.el = c1.el
           }
           traverseStaticChildren(c1, c2)
