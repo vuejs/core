@@ -7,11 +7,8 @@ import {
   WritableComputedRef,
   isReadonly
 } from '../src'
-import { mockWarn } from '@vue/shared'
 
 describe('reactivity/computed', () => {
-  mockWarn()
-
   it('should return updated value', () => {
     const value = reactive<{ foo?: number }>({})
     const cValue = computed(() => value.foo)

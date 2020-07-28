@@ -294,4 +294,19 @@ describe('scheduler', () => {
     await nextTick()
     expect(calls).toEqual(['cb1', 'cb2'])
   })
+
+  test('nextTick should capture scheduler flush errors', async () => {
+    const err = new Error('test')
+    queueJob(() => {
+      throw err
+    })
+    try {
+      await nextTick()
+    } catch (e) {
+      expect(e).toBe(err)
+    }
+    expect(
+      `Unhandled error during execution of scheduler flush`
+    ).toHaveBeenWarned()
+  })
 })

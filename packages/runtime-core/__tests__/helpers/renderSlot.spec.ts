@@ -1,9 +1,7 @@
 import { renderSlot } from '../../src/helpers/renderSlot'
 import { h } from '../../src/h'
-import { mockWarn } from '@vue/shared'
 
 describe('renderSlot', () => {
-  mockWarn()
   it('should render slot', () => {
     let child
     const vnode = renderSlot(

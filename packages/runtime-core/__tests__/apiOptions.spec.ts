@@ -10,7 +10,6 @@ import {
   ref,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -520,6 +519,17 @@ describe('api: options', () => {
     ])
   })
 
+  test('render from mixin', () => {
+    const Comp = {
+      mixins: [
+        {
+          render: () => 'from mixin'
+        }
+      ]
+    }
+    expect(renderToString(h(Comp))).toBe('from mixin')
+  })
+
   test('extends', () => {
     const calls: string[] = []
     const Base = {
@@ -694,8 +704,6 @@ describe('api: options', () => {
   })
 
   describe('warnings', () => {
-    mockWarn()
-
     test('Expected a function as watch handler', () => {
       const Comp = {
         watch: {

@@ -1,10 +1,7 @@
 import { reactive, effect, isReactive, toRaw } from '../../src'
-import { mockWarn } from '@vue/shared'
 
 describe('reactivity/collections', () => {
   describe('Set', () => {
-    mockWarn()
-
     it('instanceof', () => {
       const original = new Set()
       const observed = reactive(original)

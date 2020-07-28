@@ -4,7 +4,8 @@ import {
   SetupContext,
   ComponentInternalOptions,
   PublicAPIComponent,
-  Component
+  Component,
+  InternalRenderFunction
 } from './component'
 import {
   isFunction,
@@ -381,9 +382,6 @@ export function applyOptions(
     watch: watchOptions,
     provide: provideOptions,
     inject: injectOptions,
-    // assets
-    components,
-    directives,
     // lifecycle
     beforeMount,
     mounted,
@@ -393,6 +391,7 @@ export function applyOptions(
     deactivated,
     beforeUnmount,
     unmounted,
+    render,
     renderTracked,
     renderTriggered,
     errorCaptured
@@ -401,7 +400,10 @@ export function applyOptions(
   const publicThis = instance.proxy!
   const ctx = instance.ctx
   const globalMixins = instance.appContext.mixins
-  // call it only during dev
+
+  if (asMixin && render && instance.render === NOOP) {
+    instance.render = render as InternalRenderFunction
+  }
 
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
@@ -409,6 +411,7 @@ export function applyOptions(
     // global mixins are applied first
     applyMixins(instance, globalMixins, deferredData, deferredWatch)
   }
+
   // extending a base component...
   if (extendsOptions) {
     applyOptions(instance, extendsOptions, deferredData, deferredWatch, true)
@@ -568,14 +571,6 @@ export function applyOptions(
     for (const key in provides) {
       provide(key, provides[key])
     }
-  }
-
-  // asset options
-  if (components) {
-    extend(instance.components, components)
-  }
-  if (directives) {
-    extend(instance.directives, directives)
   }
 
   // lifecycle options

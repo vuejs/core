@@ -56,12 +56,7 @@ function createRef(rawValue: unknown, shallow = false) {
       if (hasChanged(toRaw(newVal), rawValue)) {
         rawValue = newVal
         value = shallow ? newVal : convert(newVal)
-        trigger(
-          r,
-          TriggerOpTypes.SET,
-          'value',
-          __DEV__ ? { newValue: newVal } : void 0
-        )
+        trigger(r, TriggerOpTypes.SET, 'value', newVal)
       }
     }
   }
@@ -69,12 +64,7 @@ function createRef(rawValue: unknown, shallow = false) {
 }
 
 export function triggerRef(ref: Ref) {
-  trigger(
-    ref,
-    TriggerOpTypes.SET,
-    'value',
-    __DEV__ ? { newValue: ref.value } : void 0
-  )
+  trigger(ref, TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
 export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {

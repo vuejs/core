@@ -10,14 +10,11 @@ import {
   createTextVNode,
   createStaticVNode
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
+import { escapeHtml } from '@vue/shared'
 import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { Readable } from 'stream'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-
-mockWarn()
-
 const promisifyStream = (stream: Readable) => {
   return new Promise((resolve, reject) => {
     let result = ''

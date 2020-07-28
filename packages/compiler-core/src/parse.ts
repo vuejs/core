@@ -87,10 +87,15 @@ export function baseParse(
 
 function createParserContext(
   content: string,
-  options: ParserOptions
+  rawOptions: ParserOptions
 ): ParserContext {
+  const options = extend({}, defaultParserOptions)
+  for (const key in rawOptions) {
+    // @ts-ignore
+    options[key] = rawOptions[key] || defaultParserOptions[key]
+  }
   return {
-    options: extend({}, defaultParserOptions, options),
+    options,
     column: 1,
     line: 1,
     offset: 0,
