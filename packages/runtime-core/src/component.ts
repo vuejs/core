@@ -601,8 +601,6 @@ function finishComponentSetup(
       if (__DEV__) {
         endMeasure(instance, `compile`)
       }
-      // mark the function as runtime compiled
-      ;(Component.render as InternalRenderFunction)._rc = true
     }
 
     instance.render = (Component.render || NOOP) as InternalRenderFunction
