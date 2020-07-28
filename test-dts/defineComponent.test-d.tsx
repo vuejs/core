@@ -297,6 +297,9 @@ describe('type inference w/ options API', () => {
         expectType<number>(this.c)
         // computed
         expectType<number>(this.d)
+      },
+      returnSomething() {
+        return this.a
       }
     },
     render() {
@@ -308,6 +311,8 @@ describe('type inference w/ options API', () => {
       expectType<number>(this.c)
       // computed
       expectType<number>(this.d)
+      // method
+      expectType<() => number | undefined>(this.returnSomething)
     }
   })
 })
