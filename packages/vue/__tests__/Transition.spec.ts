@@ -1799,7 +1799,41 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT
     )
 
-    // fixme
-    test.todo('warn invalid durations')
+    test(
+      'warn invalid durations',
+      async () => {
+        createApp({
+          template: `
+            <div id="container">
+              <transition name="test" :duration="NaN">
+                <div class="test">content</div>
+              </transition>
+            </div>
+          `
+        }).mount(document.createElement('div'))
+        expect(
+          `[Vue warn]: <transition> explicit duration is NaN - ` +
+            'the duration expression might be incorrect.'
+        ).toHaveBeenWarned()
+
+        createApp({
+          template: `
+            <div id="container">
+              <transition name="test" :duration="{
+                enter: {},
+                leave: {}
+              }">
+                <div class="test">content</div>
+              </transition>
+            </div>
+          `
+        }).mount(document.createElement('div'))
+        expect(
+          `[Vue warn]: <transition> explicit duration is not a valid number - ` +
+            `got ${JSON.stringify({})}`
+        ).toHaveBeenWarned()
+      },
+      E2E_TIMEOUT
+    )
   })
 })
