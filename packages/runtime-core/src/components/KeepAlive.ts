@@ -104,6 +104,10 @@ const KeepAliveImpl = {
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
+      instance.shouldActive = true
+      if (instance.ba) {
+        invokeArrayFns(instance.ba)
+      }
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -130,6 +134,10 @@ const KeepAliveImpl = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+      instance.shouldActive = false
+      if (instance.bda) {
+        invokeArrayFns(instance.bda)
+      }
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
@@ -192,13 +200,16 @@ const KeepAliveImpl = {
 
     onBeforeUnmount(() => {
       cache.forEach(cached => {
-        const { subTree, suspense } = instance
+        const { subTree } = instance
         if (cached.type === subTree.type) {
           // current instance will be unmounted as part of keep-alive's unmount
           resetShapeFlag(subTree)
-          // but invoke its deactivated hook here
-          const da = subTree.component!.da
-          da && queuePostRenderEffect(da, suspense)
+          // but invoke its beforeDeactivate hook and deactivated hook here
+          onBeforeUnmount(() => {
+            const { bda, da, suspense } = subTree.component!
+            bda && invokeArrayFns(bda)
+            da && queuePostRenderEffect(da, suspense)
+          }, subTree.component)
           return
         }
         unmount(cached)
@@ -306,11 +317,25 @@ function matches(pattern: MatchPattern, name: string): boolean {
   return false
 }
 
+export function onBeforeActivate(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.BEFORE_ACTIVATE, target)
+}
+
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null
 ) {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
+}
+
+export function onBeforeDeactivate(
+  hook: Function,
+  target?: ComponentInternalInstance | null
+) {
+  registerKeepAliveHook(hook, LifecycleHooks.BEFORE_DEACTIVATE, target)
 }
 
 export function onDeactivated(
@@ -334,7 +359,7 @@ function registerKeepAliveHook(
       // only fire the hook if the target instance is NOT in a deactivated branch.
       let current: ComponentInternalInstance | null = target
       while (current) {
-        if (current.isDeactivated) {
+        if (current.isDeactivated && !current.shouldActive) {
           return
         }
         current = current.parent

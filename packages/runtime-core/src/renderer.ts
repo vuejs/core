@@ -1263,7 +1263,7 @@ function baseCreateRenderer(
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
         const { el, props } = initialVNode
-        const { bm, m, a, parent } = instance
+        const { bm, m, ba, a, parent } = instance
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
@@ -1274,6 +1274,13 @@ function baseCreateRenderer(
         // beforeMount hook
         if (bm) {
           invokeArrayFns(bm)
+        }
+        // beforeActivate hook for keep-alive roots.
+        if (
+          ba &&
+          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+        ) {
+          invokeArrayFns(ba)
         }
         // onVnodeBeforeMount
         if ((vnodeHook = props && props.onVnodeBeforeMount)) {
@@ -2010,10 +2017,27 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, effects, update, subTree, um, da, isDeactivated } = instance
+    const {
+      bum,
+      effects,
+      update,
+      subTree,
+      um,
+      bda,
+      da,
+      isDeactivated
+    } = instance
     // beforeUnmount hook
     if (bum) {
       invokeArrayFns(bum)
+    }
+    // beforeDeactivate hook
+    if (
+      bda &&
+      !isDeactivated &&
+      instance.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
+    ) {
+      invokeArrayFns(bda)
     }
     if (effects) {
       for (let i = 0; i < effects.length; i++) {

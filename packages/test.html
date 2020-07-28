@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <keep-alive v-if="!teardown">
+            <one v-if="toggle"></one>
+        </keep-alive>
+    </div>
+    <script src="./vue/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref } = Vue
+        const one = {
+            name: 'one',
+            template: 'one',
+            beforeCreate() {
+                console.log('beforeCreate')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            created() {
+                console.log('created')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            beforeMount() {
+                console.log('beforeMount')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            mounted() {
+                console.log('mounted')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            beforeUpdate() {
+                console.log('beforeUpdate')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            updated() {
+                console.log('updated')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            beforeActivate() {
+                console.log('beforeActivate')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            activated() {
+                console.log('activated')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            beforeDeactivate() {
+                console.log('beforeDeactivate')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            deactivated() {
+                console.log('deactivated')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            beforeUnmount() {
+                console.log('beforeUnmount')
+                console.log(document.querySelector('#app').innerHTML)
+            },
+            unmounted() {
+                console.log('unmounted')
+                console.log(document.querySelector('#app').innerHTML)
+            }
+        }
+
+        const toggle = ref(true)
+        const teardown = ref(false)
+
+        const app = createApp({
+            data() {
+                return {
+                    toggle,
+                    teardown
+                }
+            },
+            components: {
+                One: one,
+            }
+        })
+        app.mount('#app')
+    </script>
+</body>
+</html>
