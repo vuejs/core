@@ -235,7 +235,11 @@ const getChildRoot = (
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren as VNodeArrayChildren
   const children = rawChildren.filter(child => {
-    return !(isVNode(child) && child.type === Comment)
+    return !(
+      isVNode(child) &&
+      child.type === Comment &&
+      child.children !== 'v-if'
+    )
   })
   if (children.length !== 1) {
     return [vnode, undefined]
