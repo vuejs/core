@@ -427,6 +427,9 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: Data & VNodeProps | null
 ): VNode<T, U> {
+  if (extraProps && Object.keys(extraProps).length === 0) {
+    extraProps = null
+  }
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
   const { props, patchFlag } = vnode
