@@ -217,4 +217,24 @@ describe('component: proxy', () => {
       `was accessed during render but is not defined`
     ).not.toHaveBeenWarned()
   })
+
+  test('should allow symbol to access on render', () => {
+    const Comp = {
+      render() {
+        if ((this as any)[Symbol.unscopables]) {
+          return '1'
+        }
+        return '2'
+      }
+    }
+
+    const app = createApp(Comp)
+    app.mount(nodeOps.createElement('div'))
+
+    expect(
+      `Property ${JSON.stringify(
+        Symbol.unscopables
+      )} was accessed during render ` + `but is not defined on instance.`
+    ).toHaveBeenWarned()
+  })
 })

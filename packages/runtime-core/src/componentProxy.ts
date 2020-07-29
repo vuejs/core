@@ -6,7 +6,8 @@ import {
   hasOwn,
   isGloballyWhitelisted,
   NOOP,
-  extend
+  extend,
+  isString
 } from '@vue/shared'
 import {
   ReactiveEffect,
@@ -286,9 +287,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     } else if (
       __DEV__ &&
       currentRenderingInstance &&
-      // #1091 avoid internal isRef/isVNode checks on component instance leading
-      // to infinite warning loop
-      key.indexOf('__v') !== 0
+      (!isString(key) ||
+        // #1091 avoid internal isRef/isVNode checks on component instance leading
+        // to infinite warning loop
+        key.indexOf('__v') !== 0)
     ) {
       if (data !== EMPTY_OBJ && key[0] === '$' && hasOwn(data, key)) {
         warn(
