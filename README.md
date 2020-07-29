@@ -35,9 +35,7 @@ The only difference between Vuex 4.0 and 3.x is that it's Vue 3 compatible! It i
 
 ### Vue CLI
 
-Vue 3 support in Vue CLI is currently provided via the [vue-cli-plugin-vue-next](https://github.com/vuejs/vue-cli-plugin-vue-next) plugin. You can scaffold a new project and then run `vue add vue-next` to switch to Vue 3. Vue 3 will become a option in the project creation process when it reaches RC.
-
-Note if you are not particularly attached to webpack and IE11 support, you can also start a Vue 3 project with [Vite](https://github.com/vitejs/vite).
+As of v4.5.0, `vue-cli` now provides built-in option to choose Vue 3 preset when creating a new project.
 
 ### JSX Support
 
