@@ -1327,7 +1327,7 @@ type NativeElements = {
 
 declare global {
   namespace JSX {
-    interface Element {}
+    interface Element extends RuntimeCore.VNode {}
     interface ElementClass {
       $props: {}
     }
