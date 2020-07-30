@@ -135,7 +135,7 @@ export function createAppAPI<HostElement>(
         return context.config
       },
 
-      set config() {
+      set config(v) {
         if (__DEV__) {
           warn(
             `app.config cannot be replaced. Modify individual options instead.`
