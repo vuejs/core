@@ -308,5 +308,49 @@ describe('scheduler', () => {
     expect(
       `Unhandled error during execution of scheduler flush`
     ).toHaveBeenWarned()
+
+    // this one should no longer error
+    await nextTick()
+  })
+
+  test('should prevent self-triggering jobs by default', async () => {
+    let count = 0
+    const job = () => {
+      if (count < 3) {
+        count++
+        queueJob(job)
+      }
+    }
+    queueJob(job)
+    await nextTick()
+    // only runs once - a job cannot queue itself
+    expect(count).toBe(1)
+  })
+
+  test('should allow watcher callbacks to trigger itself', async () => {
+    // normal job
+    let count = 0
+    const job = () => {
+      if (count < 3) {
+        count++
+        queueJob(job)
+      }
+    }
+    job.cb = true
+    queueJob(job)
+    await nextTick()
+    expect(count).toBe(3)
+
+    // post cb
+    const cb = () => {
+      if (count < 5) {
+        count++
+        queuePostFlushCb(cb)
+      }
+    }
+    cb.cb = true
+    queuePostFlushCb(cb)
+    await nextTick()
+    expect(count).toBe(5)
   })
 })
