@@ -182,10 +182,10 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
   })
-
-  test('should not observe frozen objects', () => {
+  // a seal or freeze object also not extensions, so here use preventExtensions to test
+  test('should not observe preventExtensions objects', () => {
     const obj = reactive({
-      foo: Object.freeze({ a: 1 })
+      foo: Object.preventExtensions({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
   })
