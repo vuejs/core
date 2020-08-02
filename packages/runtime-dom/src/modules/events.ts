@@ -11,7 +11,7 @@ interface Invoker extends EventListener {
 }
 
 type EventValue = (Function | Function[]) & {
-  invoker?: Invoker | null
+  invokers?: Map<ComponentInternalInstance, Invoker> | null
 }
 
 // Async edge case fix requires storing an event listener's attach timestamp.
@@ -65,12 +65,16 @@ export function patchEvent(
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
-  const invoker = prevValue && prevValue.invoker
+  const invoker =
+    prevValue && prevValue.invokers && prevValue.invokers.get(instance!)
   if (nextValue && invoker) {
     // patch
-    ;(prevValue as EventValue).invoker = null
+    (prevValue as EventValue).invokers!.delete(instance!)
     invoker.value = nextValue
-    nextValue.invoker = invoker
+    if (!nextValue.invokers) {
+      nextValue.invokers = new Map<ComponentInternalInstance, Invoker>()
+    }
+    nextValue.invokers.set(instance!, invoker)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
@@ -120,7 +124,11 @@ function createInvoker(
     }
   }
   invoker.value = initialValue
-  initialValue.invoker = invoker
+  if (!initialValue.invokers) {
+    // fix #1747, avoid invoker being overridden
+    initialValue.invokers = new Map<ComponentInternalInstance, Invoker>()
+  }
+  initialValue.invokers.set(instance!, invoker)
   invoker.attached = getNow()
   return invoker
 }
