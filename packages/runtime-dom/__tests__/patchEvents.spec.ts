@@ -34,6 +34,33 @@ describe(`runtime-dom: events patching`, () => {
     expect(nextFn).toHaveBeenCalledTimes(2)
   })
 
+  it('#1747', async () => {
+    const el1 = document.createElement('div')
+    const el2 = document.createElement('div')
+
+    const event = new Event('click')
+    const prevFn = jest.fn()
+    const nextFn = jest.fn()
+
+    patchProp(el1, 'onClick', null, prevFn)
+    patchProp(el2, 'onClick', null, prevFn)
+    el1.dispatchEvent(event)
+    el2.dispatchEvent(event)
+
+    patchProp(el1, 'onClick', prevFn, nextFn)
+    patchProp(el2, 'onClick', prevFn, nextFn)
+    await timeout()
+    el1.dispatchEvent(event)
+    el2.dispatchEvent(event)
+    await timeout()
+    el1.dispatchEvent(event)
+    el2.dispatchEvent(event)
+    await timeout()
+
+    expect(prevFn).toHaveBeenCalledTimes(2)
+    expect(nextFn).toHaveBeenCalledTimes(4)
+  })
+
   it('should support multiple event handlers', async () => {
     const el = document.createElement('div')
     const event = new Event('click')
