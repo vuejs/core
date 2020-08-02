@@ -11,7 +11,7 @@ interface Invoker extends EventListener {
 }
 
 type EventValue = (Function | Function[]) & {
-  invokers?: Map<ComponentInternalInstance, Invoker> | null
+  invokers?: WeakMap<Element, Invoker> | null
 }
 
 // Async edge case fix requires storing an event listener's attach timestamp.
@@ -65,20 +65,24 @@ export function patchEvent(
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
-  const invoker =
-    prevValue && prevValue.invokers && prevValue.invokers.get(instance!)
+  const invoker = prevValue && prevValue.invokers && prevValue.invokers.get(el)
   if (nextValue && invoker) {
     // patch
-    (prevValue as EventValue).invokers!.delete(instance!)
+    (prevValue as EventValue).invokers!.delete(el)
     invoker.value = nextValue
     if (!nextValue.invokers) {
-      nextValue.invokers = new Map<ComponentInternalInstance, Invoker>()
+      nextValue.invokers = new WeakMap<Element, Invoker>()
     }
-    nextValue.invokers.set(instance!, invoker)
+    nextValue.invokers.set(el, invoker)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
-      addEventListener(el, name, createInvoker(nextValue, instance), options)
+      addEventListener(
+        el,
+        name,
+        createInvoker(nextValue, instance, el),
+        options
+      )
     } else if (invoker) {
       // remove
       removeEventListener(el, name, invoker, options)
@@ -104,7 +108,8 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
 
 function createInvoker(
   initialValue: EventValue,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
+  el: Element
 ) {
   const invoker: Invoker = (e: Event) => {
     // async edge case #6566: inner click event triggers patch, event handler
@@ -126,9 +131,9 @@ function createInvoker(
   invoker.value = initialValue
   if (!initialValue.invokers) {
     // fix #1747, avoid invoker being overridden
-    initialValue.invokers = new Map<ComponentInternalInstance, Invoker>()
+    initialValue.invokers = new WeakMap<Element, Invoker>()
   }
-  initialValue.invokers.set(instance!, invoker)
+  initialValue.invokers.set(el, invoker)
   invoker.attached = getNow()
   return invoker
 }
