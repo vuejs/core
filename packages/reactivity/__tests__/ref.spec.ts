@@ -272,6 +272,21 @@ describe('reactivity/ref', () => {
     toRefs(obj)
     expect(console.warn).toBeCalled()
   })
+  test('toRefs array', () => {
+    console.warn = jest.fn()
+    const arr = ['a', 'b', 'c']
+    toRefs(arr)
+    expect(console.warn).toBeCalled()
+  })
+  test('toRefs reactive array', () => {
+    const arr = reactive(['a', 'b', 'c'])
+    const refs = toRefs(arr)
+    refs[0].value = '1'
+    expect(arr[0]).toBe('1')
+
+    arr[1] = '2'
+    expect(refs[1].value).toBe('2')
+  })
   test('customRef', () => {
     let value = 1
     let _trigger: () => void
