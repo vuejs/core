@@ -364,6 +364,8 @@ function createDuplicateChecker() {
 
 type DataFn = (vm: ComponentPublicInstance) => any
 
+export let isInBeforeCreate = false
+
 export function applyOptions(
   instance: ComponentInternalInstance,
   options: ComponentOptions,
@@ -407,7 +409,9 @@ export function applyOptions(
 
   // applyOptions is called non-as-mixin once per instance
   if (!asMixin) {
+    isInBeforeCreate = true
     callSyncHook('beforeCreate', options, publicThis, globalMixins)
+    isInBeforeCreate = false
     // global mixins are applied first
     applyMixins(instance, globalMixins, deferredData, deferredWatch)
   }
