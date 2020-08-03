@@ -44,7 +44,7 @@ export function queueJob(job: SchedulerJob) {
   // ensure it doesn't end up in an infinite loop.
   if (
     !queue.length ||
-    !queue.includes(job, job.cb ? flushIndex + 1 : flushIndex)
+    !queue.includes(job, isFlushing && job.cb ? flushIndex + 1 : flushIndex)
   ) {
     queue.push(job)
     queueFlush()

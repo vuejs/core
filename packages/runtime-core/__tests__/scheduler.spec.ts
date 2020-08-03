@@ -353,4 +353,16 @@ describe('scheduler', () => {
     await nextTick()
     expect(count).toBe(5)
   })
+
+  test('should prevent duplicate queue', async () => {
+    let count = 0
+    const job = () => {
+      count++
+    }
+    job.cb = true
+    queueJob(job)
+    queueJob(job)
+    await nextTick()
+    expect(count).toBe(1)
+  })
 })
