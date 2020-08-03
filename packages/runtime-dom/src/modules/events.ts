@@ -80,6 +80,7 @@ export function patchEvent(
     } else if (existingInvoker) {
       // remove
       removeEventListener(el, name, existingInvoker, options)
+      invokers[rawName] = undefined
     }
   }
 }
