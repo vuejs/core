@@ -10,9 +10,7 @@ interface Invoker extends EventListener {
   attached: number
 }
 
-type EventValue = (Function | Function[]) & {
-  invoker?: Invoker | null
-}
+type EventValue = Function | Function[]
 
 // Async edge case fix requires storing an event listener's attach timestamp.
 let _getNow: () => number = Date.now
@@ -70,11 +68,11 @@ export function patchEvent(
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    ;(prevValue as EventValue).invoker = null
     existingInvoker.value = nextValue
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
+      // add
       const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
