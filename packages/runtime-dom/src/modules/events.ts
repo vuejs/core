@@ -59,25 +59,27 @@ export function removeEventListener(
 }
 
 export function patchEvent(
-  el: Element,
+  el: Element & { _vei?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
-  const invoker = prevValue && prevValue.invoker
-  if (nextValue && invoker) {
+  // vei = vue event invokers
+  const invokers = el._vei || (el._vei = {})
+  const existingInvoker = invokers[rawName]
+  if (nextValue && existingInvoker) {
     // patch
     ;(prevValue as EventValue).invoker = null
-    invoker.value = nextValue
-    nextValue.invoker = invoker
+    existingInvoker.value = nextValue
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
-      addEventListener(el, name, createInvoker(nextValue, instance), options)
-    } else if (invoker) {
+      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      addEventListener(el, name, invoker, options)
+    } else if (existingInvoker) {
       // remove
-      removeEventListener(el, name, invoker, options)
+      removeEventListener(el, name, existingInvoker, options)
     }
   }
 }
@@ -120,7 +122,6 @@ function createInvoker(
     }
   }
   invoker.value = initialValue
-  initialValue.invoker = invoker
   invoker.attached = getNow()
   return invoker
 }
