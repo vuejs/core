@@ -704,10 +704,14 @@ function createWatcher(
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, ctx, publicThis, key))
     } else {
-      const handler = isString(raw.handler)
-        ? (ctx[raw.handler] as WatchCallback)
-        : raw.handler
-      watch(getter, handler.bind(publicThis), raw)
+      const handler = isFunction(raw.handler)
+        ? raw.handler.bind(publicThis)
+        : (ctx[raw.handler] as WatchCallback)
+      if (isFunction(handler)) {
+        watch(getter, handler, raw)
+      } else if (__DEV__) {
+        warn(`Invalid watch handler specified by key "${raw}"`, handler)
+      }
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`)

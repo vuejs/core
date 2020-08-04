@@ -718,7 +718,10 @@ describe('api: options', () => {
     test('Expected a function as watch handler', () => {
       const Comp = {
         watch: {
-          foo: 'notExistingMethod'
+          foo: 'notExistingMethod',
+          foo2: {
+            handler: 'notExistingMethod2'
+          }
         },
         render() {}
       }
@@ -728,6 +731,9 @@ describe('api: options', () => {
 
       expect(
         'Invalid watch handler specified by key "notExistingMethod"'
+      ).toHaveBeenWarned()
+      expect(
+        'Invalid watch handler specified by key "notExistingMethod2"'
       ).toHaveBeenWarned()
     })
 
