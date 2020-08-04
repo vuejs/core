@@ -710,7 +710,7 @@ function createWatcher(
       if (isFunction(handler)) {
         watch(getter, handler, raw)
       } else if (__DEV__) {
-        warn(`Invalid watch handler specified by key "${raw}"`, handler)
+        warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
       }
     }
   } else if (__DEV__) {
