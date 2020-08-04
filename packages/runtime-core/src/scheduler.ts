@@ -27,6 +27,7 @@ let flushIndex = 0
 let pendingPostFlushCbs: Function[] | null = null
 let pendingPostFlushIndex = 0
 let hasPendingPreFlushJobs = false
+let currentPreFlushParentJob: SchedulerJob | null = null
 
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob | Function, number>
@@ -44,9 +45,16 @@ export function queueJob(job: SchedulerJob) {
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
   if (
-    !queue.length ||
-    !queue.includes(job, isFlushing && job.cb ? flushIndex + 1 : flushIndex)
+    (!queue.length ||
+      !queue.includes(
+        job,
+        isFlushing && job.cb ? flushIndex + 1 : flushIndex
+      )) &&
+    job !== currentPreFlushParentJob
   ) {
+    if (job.id && job.id > 0) {
+      debugger
+    }
     queue.push(job)
     if ((job.id as number) < 0) hasPendingPreFlushJobs = true
     queueFlush()
@@ -60,16 +68,27 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
-export function runPreflushJobs() {
+/**
+ * Run flush: 'pre' watcher callbacks. This is only called in
+ * `updateComponentPreRender` to cover the case where pre-flush watchers are
+ * triggered by the change of a component's props. This means the scheduler is
+ * already flushing and we are already inside the component's update effect,
+ * right when the render function is about to be called. So if the watcher
+ * triggers the same component to update, we don't want it to be queued (this
+ * is checked via `currentPreFlushParentJob`).
+ */
+export function runPreflushJobs(parentJob: SchedulerJob) {
   if (hasPendingPreFlushJobs) {
+    currentPreFlushParentJob = parentJob
     hasPendingPreFlushJobs = false
-    for (let job, i = queue.length - 1; i > flushIndex; i--) {
+    for (let job, i = flushIndex + 1; i < queue.length; i++) {
       job = queue[i]
       if (job && (job.id as number) < 0) {
         job()
         queue[i] = null
       }
     }
+    currentPreFlushParentJob = null
   }
 }
 

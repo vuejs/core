@@ -436,6 +436,7 @@ describe('api: watch', () => {
   it('flush: pre watcher watching props should fire before child update', async () => {
     const a = ref(0)
     const b = ref(0)
+    const c = ref(0)
     const calls: string[] = []
 
     const Comp = {
@@ -444,11 +445,22 @@ describe('api: watch', () => {
         watch(
           () => props.a + props.b,
           () => {
-            calls.push('watcher')
+            calls.push('watcher 1')
+            c.value++
+          },
+          { flush: 'pre' }
+        )
+
+        // #1777 chained pre-watcher
+        watch(
+          c,
+          () => {
+            calls.push('watcher 2')
           },
           { flush: 'pre' }
         )
         return () => {
+          c.value
           calls.push('render')
         }
       }
@@ -469,7 +481,7 @@ describe('api: watch', () => {
     a.value++
     b.value++
     await nextTick()
-    expect(calls).toEqual(['render', 'watcher', 'render'])
+    expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
   })
 
   it('deep', async () => {

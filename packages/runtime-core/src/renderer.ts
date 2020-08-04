@@ -1430,7 +1430,7 @@ function baseCreateRenderer(
     instance.next = null
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children)
-    runPreflushJobs()
+    runPreflushJobs(instance.update)
   }
 
   const patchChildren: PatchChildrenFn = (
