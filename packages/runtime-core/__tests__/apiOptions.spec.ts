@@ -112,6 +112,7 @@ describe('api: options', () => {
     const spyA = jest.fn(returnThis)
     const spyB = jest.fn(returnThis)
     const spyC = jest.fn(returnThis)
+    const spyD = jest.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -121,7 +122,8 @@ describe('api: options', () => {
           bar: 2,
           baz: {
             qux: 3
-          }
+          },
+          qux: 4
         }
       },
       watch: {
@@ -132,10 +134,14 @@ describe('api: options', () => {
         baz: {
           handler: spyC,
           deep: true
+        },
+        qux: {
+          handler: 'onQuxChange'
         }
       },
       methods: {
-        onFooChange: spyA
+        onFooChange: spyA,
+        onQuxChange: spyD
       },
       render() {
         ctx = this
@@ -164,6 +170,11 @@ describe('api: options', () => {
     expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
     assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
+
+    ctx.qux++
+    await nextTick()
+    expect(spyD).toHaveBeenCalledTimes(1)
+    assertCall(spyD, 0, [5, 4])
   })
 
   test('watch array', async () => {
