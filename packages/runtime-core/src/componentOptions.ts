@@ -266,7 +266,7 @@ export type ExtractComputedReturns<T extends any> = {
 type WatchOptionItem =
   | string
   | WatchCallback
-  | { handler: WatchCallback } & WatchOptions
+  | { handler: WatchCallback | string } & WatchOptions
 
 type ComponentWatchOptionItem = WatchOptionItem | WatchOptionItem[]
 
@@ -704,7 +704,14 @@ function createWatcher(
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, ctx, publicThis, key))
     } else {
-      watch(getter, raw.handler.bind(publicThis), raw)
+      const handler = isFunction(raw.handler)
+        ? raw.handler.bind(publicThis)
+        : (ctx[raw.handler] as WatchCallback)
+      if (isFunction(handler)) {
+        watch(getter, handler, raw)
+      } else if (__DEV__) {
+        warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
+      }
     }
   } else if (__DEV__) {
     warn(`Invalid watch option: "${key}"`)
