@@ -63,7 +63,7 @@ export const enum ErrorCodes {
 
   // transform errors
   X_V_IF_NO_EXPRESSION,
-  X_V_IF_KEY,
+  X_V_IF_SAME_KEY,
   X_V_ELSE_NO_ADJACENT_IF,
   X_V_FOR_NO_EXPRESSION,
   X_V_FOR_MALFORMED_EXPRESSION,
@@ -136,10 +136,7 @@ export const errorMessages: { [code: number]: string } = {
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
-  [ErrorCodes.X_V_IF_KEY]:
-    `v-if branches must use compiler generated keys. ` +
-    `In many cases, you can simply remove this key. ` +
-    `If this tag is inside of a <template v-for="...">, then you can move the key up to the parent <template>.`,
+  [ErrorCodes.X_V_IF_SAME_KEY]: `v-if/else branches must use unique keys.`,
   [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
