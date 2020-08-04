@@ -29,10 +29,9 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
         // find the last child node to insert attribute selector
         selector.each(n => {
           // DEPRECATED ">>>" and "/deep/" combinator
-          const { type, value } = n
           if (
-            type === 'combinator' &&
-            (value === '>>>' || value === '/deep/')
+            n.type === 'combinator' &&
+            (n.value === '>>>' || n.value === '/deep/')
           ) {
             n.value = ' '
             n.spaces.before = n.spaces.after = ''
@@ -43,7 +42,8 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
             return false
           }
 
-          if (type === 'pseudo') {
+          if (n.type === 'pseudo') {
+            const { value } = n
             // deep: inject [id] attribute at the node before the ::v-deep
             // combinator.
             if (value === ':deep' || value === '::v-deep') {
@@ -100,7 +100,7 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
             }
           }
 
-          if (type !== 'pseudo' && type !== 'combinator') {
+          if (n.type !== 'pseudo' && n.type !== 'combinator') {
             node = n
           }
         })
