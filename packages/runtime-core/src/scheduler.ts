@@ -52,9 +52,6 @@ export function queueJob(job: SchedulerJob) {
       )) &&
     job !== currentPreFlushParentJob
   ) {
-    if (job.id && job.id > 0) {
-      debugger
-    }
     queue.push(job)
     if ((job.id as number) < 0) hasPendingPreFlushJobs = true
     queueFlush()
