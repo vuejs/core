@@ -121,4 +121,12 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'id', null, '')
     expect(el.hasAttribute('id')).toBe(true)
   })
+
+  test('form attribute', () => {
+    const el = document.createElement('input')
+    patchProp(el, 'form', null, 'foo')
+    // non existant element
+    expect(el.form).toBe(null)
+    expect(el.getAttribute('form')).toBe('foo')
+  })
 })
