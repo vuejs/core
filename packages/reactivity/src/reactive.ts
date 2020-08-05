@@ -39,7 +39,7 @@ const canObserve = (value: Target): boolean => {
   return (
     !value[ReactiveFlags.SKIP] &&
     isObservableType(toRawType(value)) &&
-    !Object.isFrozen(value)
+    Object.isExtensible(value)
   )
 }
 
