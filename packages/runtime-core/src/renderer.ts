@@ -41,7 +41,7 @@ import {
   queuePostFlushCb,
   flushPostFlushCbs,
   invalidateJob,
-  runPreflushJobs
+  flushPreFlushCbs
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -1430,7 +1430,10 @@ function baseCreateRenderer(
     instance.next = null
     updateProps(instance, nextVNode.props, prevProps, optimized)
     updateSlots(instance, nextVNode.children)
-    runPreflushJobs(instance.update)
+
+    // props update may have triggered pre-flush watchers.
+    // flush them before the render update.
+    flushPreFlushCbs(undefined, instance.update)
   }
 
   const patchChildren: PatchChildrenFn = (

@@ -16,17 +16,23 @@ export interface SchedulerJob {
   cb?: boolean
 }
 
+let isFlushing = false
+let isFlushPending = false
+
 const queue: (SchedulerJob | null)[] = []
-const postFlushCbs: Function[] = []
+let flushIndex = 0
+
+const pendingPreFlushCbs: Function[] = []
+let activePreFlushCbs: Function[] | null = null
+let preFlushIndex = 0
+
+const pendingPostFlushCbs: Function[] = []
+let activePostFlushCbs: Function[] | null = null
+let postFlushIndex = 0
+
 const resolvedPromise: Promise<any> = Promise.resolve()
 let currentFlushPromise: Promise<void> | null = null
 
-let isFlushing = false
-let isFlushPending = false
-let flushIndex = 0
-let pendingPostFlushCbs: Function[] | null = null
-let pendingPostFlushIndex = 0
-let hasPendingPreFlushJobs = false
 let currentPreFlushParentJob: SchedulerJob | null = null
 
 const RECURSION_LIMIT = 100
@@ -53,8 +59,14 @@ export function queueJob(job: SchedulerJob) {
     job !== currentPreFlushParentJob
   ) {
     queue.push(job)
-    if ((job.id as number) < 0) hasPendingPreFlushJobs = true
     queueFlush()
+  }
+}
+
+function queueFlush() {
+  if (!isFlushing && !isFlushPending) {
+    isFlushPending = true
+    currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
 
@@ -65,78 +77,84 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
-/**
- * Run flush: 'pre' watcher callbacks. This is only called in
- * `updateComponentPreRender` to cover the case where pre-flush watchers are
- * triggered by the change of a component's props. This means the scheduler is
- * already flushing and we are already inside the component's update effect,
- * right when the render function is about to be called. So if the watcher
- * triggers the same component to update, we don't want it to be queued (this
- * is checked via `currentPreFlushParentJob`).
- */
-export function runPreflushJobs(parentJob: SchedulerJob) {
-  if (hasPendingPreFlushJobs) {
-    currentPreFlushParentJob = parentJob
-    hasPendingPreFlushJobs = false
-    for (let job, i = flushIndex + 1; i < queue.length; i++) {
-      job = queue[i]
-      if (job && (job.id as number) < 0) {
-        job()
-        queue[i] = null
-      }
-    }
-    currentPreFlushParentJob = null
-  }
-}
-
-export function queuePostFlushCb(cb: Function | Function[]) {
+function queueCb(
+  cb: Function | Function[],
+  activeQueue: Function[] | null,
+  pendingQueue: Function[],
+  index: number
+) {
   if (!isArray(cb)) {
     if (
-      !pendingPostFlushCbs ||
-      !pendingPostFlushCbs.includes(
-        cb,
-        (cb as SchedulerJob).cb
-          ? pendingPostFlushIndex + 1
-          : pendingPostFlushIndex
-      )
+      !activeQueue ||
+      !activeQueue.includes(cb, (cb as SchedulerJob).cb ? index + 1 : index)
     ) {
-      postFlushCbs.push(cb)
+      pendingQueue.push(cb)
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip dupicate check here to improve perf
-    postFlushCbs.push(...cb)
+    pendingQueue.push(...cb)
   }
   queueFlush()
 }
 
-function queueFlush() {
-  if (!isFlushing && !isFlushPending) {
-    isFlushPending = true
-    currentFlushPromise = resolvedPromise.then(flushJobs)
-  }
+export function queuePreFlushCb(cb: Function) {
+  queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 }
 
-export function flushPostFlushCbs(seen?: CountMap) {
-  if (postFlushCbs.length) {
-    pendingPostFlushCbs = [...new Set(postFlushCbs)]
-    postFlushCbs.length = 0
+export function queuePostFlushCb(cb: Function | Function[]) {
+  queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
+}
+
+export function flushPreFlushCbs(
+  seen?: CountMap,
+  parentJob: SchedulerJob | null = null
+) {
+  if (pendingPreFlushCbs.length) {
+    currentPreFlushParentJob = parentJob
+    activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
+    pendingPreFlushCbs.length = 0
     if (__DEV__) {
       seen = seen || new Map()
     }
     for (
-      pendingPostFlushIndex = 0;
-      pendingPostFlushIndex < pendingPostFlushCbs.length;
-      pendingPostFlushIndex++
+      preFlushIndex = 0;
+      preFlushIndex < activePreFlushCbs.length;
+      preFlushIndex++
     ) {
       if (__DEV__) {
-        checkRecursiveUpdates(seen!, pendingPostFlushCbs[pendingPostFlushIndex])
+        checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
       }
-      pendingPostFlushCbs[pendingPostFlushIndex]()
+      activePreFlushCbs[preFlushIndex]()
     }
-    pendingPostFlushCbs = null
-    pendingPostFlushIndex = 0
+    activePreFlushCbs = null
+    preFlushIndex = 0
+    currentPreFlushParentJob = null
+    // recursively flush until it drains
+    flushPreFlushCbs(seen, parentJob)
+  }
+}
+
+export function flushPostFlushCbs(seen?: CountMap) {
+  if (pendingPostFlushCbs.length) {
+    activePostFlushCbs = [...new Set(pendingPostFlushCbs)]
+    pendingPostFlushCbs.length = 0
+    if (__DEV__) {
+      seen = seen || new Map()
+    }
+    for (
+      postFlushIndex = 0;
+      postFlushIndex < activePostFlushCbs.length;
+      postFlushIndex++
+    ) {
+      if (__DEV__) {
+        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+      }
+      activePostFlushCbs[postFlushIndex]()
+    }
+    activePostFlushCbs = null
+    postFlushIndex = 0
   }
 }
 
@@ -148,6 +166,8 @@ function flushJobs(seen?: CountMap) {
   if (__DEV__) {
     seen = seen || new Map()
   }
+
+  flushPreFlushCbs(seen)
 
   // Sort queue before flush.
   // This ensures that:
@@ -175,11 +195,12 @@ function flushJobs(seen?: CountMap) {
     queue.length = 0
 
     flushPostFlushCbs(seen)
+
     isFlushing = false
     currentFlushPromise = null
     // some postFlushCb queued jobs!
     // keep flushing until it drains.
-    if (queue.length || postFlushCbs.length) {
+    if (queue.length || pendingPostFlushCbs.length) {
       flushJobs(seen)
     }
   }
