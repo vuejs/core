@@ -354,6 +354,42 @@ describe('reactivity/readonly', () => {
     expect(dummy).toBe(2)
   })
 
+  test('readonly collection should not track', () => {
+    const map = new Map()
+    map.set('foo', 1)
+
+    const reMap = reactive(map)
+    const roMap = readonly(map)
+
+    let dummy
+    effect(() => {
+      dummy = roMap.get('foo')
+    })
+    expect(dummy).toBe(1)
+    reMap.set('foo', 2)
+    expect(roMap.get('foo')).toBe(2)
+    // should not trigger
+    expect(dummy).toBe(1)
+  })
+
+  test('readonly should track and trigger if wrapping reactive original (collection)', () => {
+    const a = reactive(new Map())
+    const b = readonly(a)
+    // should return true since it's wrapping a reactive source
+    expect(isReactive(b)).toBe(true)
+
+    a.set('foo', 1)
+
+    let dummy
+    effect(() => {
+      dummy = b.get('foo')
+    })
+    expect(dummy).toBe(1)
+    a.set('foo', 2)
+    expect(b.get('foo')).toBe(2)
+    expect(dummy).toBe(2)
+  })
+
   test('wrapping already wrapped value should return same Proxy', () => {
     const original = { foo: 1 }
     const wrapped = readonly(original)
