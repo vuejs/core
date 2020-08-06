@@ -1323,7 +1323,8 @@ function baseCreateRenderer(
           }, parentSuspense)
         }
         // activated hook for keep-alive roots.
-        // fix 1742, delay the assignment
+        // #1742 activated hook must be accessed after first render
+        // since the hook may be injected by a child keep-alive
         const { a } = instance
         if (
           a &&
