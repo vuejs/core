@@ -206,18 +206,16 @@ describe('reactivity/readonly', () => {
       })
 
       test('should allow trigger effect for values in a readonly&reactive map ', () => {
-        const originMap = reactive(new Collection())
+        const key = 'default'
+        const originMap = reactive(new Map([[key, { name: 'value' }]]))
         const readonlyMap = readonly(originMap)
-        const key = {}
-        let dummy
+        let name
         effect(() => {
-          dummy = readonlyMap.get(key)
+          name = readonlyMap.get(key)!.name
         })
-        expect(dummy).toBeUndefined()
-        originMap.set(key, 1)
-        expect(dummy).toBe(1)
-        originMap.set(key, 2)
-        expect(dummy).toBe(2)
+        expect(name).toBe('value')
+        originMap.get(key)!.name = 'new value'
+        expect(name).toBe('new value')
       })
 
       if (Collection === Map) {
