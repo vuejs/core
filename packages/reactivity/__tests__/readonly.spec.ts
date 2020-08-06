@@ -205,6 +205,21 @@ describe('reactivity/readonly', () => {
         ).toHaveBeenWarned()
       })
 
+      test('should allow trigger effect for values in a readonly&reactive map ', () => {
+        const originMap = reactive(new Collection())
+        const readonlyMap = readonly(originMap)
+        const key = {}
+        let dummy
+        effect(() => {
+          dummy = readonlyMap.get(key)
+        })
+        expect(dummy).toBeUndefined()
+        originMap.set(key, 1)
+        expect(dummy).toBe(1)
+        originMap.set(key, 2)
+        expect(dummy).toBe(2)
+      })
+
       if (Collection === Map) {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}

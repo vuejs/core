@@ -1,4 +1,10 @@
-import { toRaw, reactive, readonly, ReactiveFlags } from './reactive'
+import {
+  toRaw,
+  reactive,
+  readonly,
+  ReactiveFlags,
+  isReactive
+} from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -254,7 +260,11 @@ const shallowInstrumentations: Record<string, Function> = {
 
 const readonlyInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
-    return get(this, key, toReadonly)
+    return get(
+      this,
+      key,
+      isReactive(this) ? value => toReadonly(toReactive(value)) : toReadonly
+    )
   },
   get size() {
     return size((this as unknown) as IterableCollections)
