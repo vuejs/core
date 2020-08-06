@@ -105,6 +105,8 @@ export function useTransitionState(): TransitionState {
   return state
 }
 
+const TransitionHookValidator = [Function, Array]
+
 const BaseTransitionImpl = {
   name: `BaseTransition`,
 
@@ -113,20 +115,20 @@ const BaseTransitionImpl = {
     appear: Boolean,
     persisted: Boolean,
     // enter
-    onBeforeEnter: Function,
-    onEnter: Function,
-    onAfterEnter: Function,
-    onEnterCancelled: Function,
+    onBeforeEnter: TransitionHookValidator,
+    onEnter: TransitionHookValidator,
+    onAfterEnter: TransitionHookValidator,
+    onEnterCancelled: TransitionHookValidator,
     // leave
-    onBeforeLeave: Function,
-    onLeave: Function,
-    onAfterLeave: Function,
-    onLeaveCancelled: Function,
+    onBeforeLeave: TransitionHookValidator,
+    onLeave: TransitionHookValidator,
+    onAfterLeave: TransitionHookValidator,
+    onLeaveCancelled: TransitionHookValidator,
     // appear
-    onBeforeAppear: Function,
-    onAppear: Function,
-    onAfterAppear: Function,
-    onAppearCancelled: Function
+    onBeforeAppear: TransitionHookValidator,
+    onAppear: TransitionHookValidator,
+    onAfterAppear: TransitionHookValidator,
+    onAppearCancelled: TransitionHookValidator
   },
 
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
