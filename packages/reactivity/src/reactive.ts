@@ -151,10 +151,16 @@ function createReactiveObject(
   if (!canObserve(target)) {
     return target
   }
-  const observed = new Proxy(
-    target,
-    collectionTypes.has(target.constructor) ? collectionHandlers : baseHandlers
-  )
+
+  let handler = baseHandlers
+  for (const collectionType of collectionTypes) {
+    if (target instanceof collectionType) {
+      handler = collectionHandlers
+      break
+    }
+  }
+
+  const observed = new Proxy(target, handler)
   def(target, reactiveFlag, observed)
   return observed
 }
