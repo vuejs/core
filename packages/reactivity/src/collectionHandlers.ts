@@ -32,17 +32,20 @@ function get(
   key: unknown,
   wrap: typeof toReactive | typeof toReadonly | typeof toShallow
 ) {
-  target = toRaw(target)
+  // #1772: readonly(reactive(Map)) should return readonly + reactive version
+  // of the value
+  target = (target as any)[ReactiveFlags.RAW]
+  const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (key !== rawKey) {
-    track(target, TrackOpTypes.GET, key)
+    track(rawTarget, TrackOpTypes.GET, key)
   }
-  track(target, TrackOpTypes.GET, rawKey)
-  const { has, get } = getProto(target)
-  if (has.call(target, key)) {
-    return wrap(get.call(target, key))
-  } else if (has.call(target, rawKey)) {
-    return wrap(get.call(target, rawKey))
+  track(rawTarget, TrackOpTypes.GET, rawKey)
+  const { has } = getProto(rawTarget)
+  if (has.call(rawTarget, key)) {
+    return wrap(target.get(key))
+  } else if (has.call(rawTarget, rawKey)) {
+    return wrap(target.get(rawKey))
   }
 }
 
@@ -176,15 +179,16 @@ function createIterableMethod(
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
-    const target = toRaw(this)
-    const isMap = target instanceof Map
+    const target = (this as any)[ReactiveFlags.RAW]
+    const rawTarget = toRaw(this)
+    const isMap = rawTarget instanceof Map
     const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
     const isKeyOnly = method === 'keys' && isMap
-    const innerIterator = getProto(target)[method].apply(target, args)
+    const innerIterator = target[method](...args)
     const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
     !isReadonly &&
       track(
-        target,
+        rawTarget,
         TrackOpTypes.ITERATE,
         isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
       )
