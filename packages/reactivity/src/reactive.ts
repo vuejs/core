@@ -18,7 +18,9 @@ export const enum ReactiveFlags {
   IS_READONLY = '__v_isReadonly',
   RAW = '__v_raw',
   REACTIVE = '__v_reactive',
-  READONLY = '__v_readonly'
+  READONLY = '__v_readonly',
+
+  IS_COLLECTION = '__v_isCollection'
 }
 
 interface Target {
@@ -28,9 +30,15 @@ interface Target {
   [ReactiveFlags.RAW]?: any
   [ReactiveFlags.REACTIVE]?: any
   [ReactiveFlags.READONLY]?: any
+
+  [ReactiveFlags.IS_COLLECTION]?: boolean
 }
 
-const collectionTypes = new Set<Function>([Set, Map, WeakMap, WeakSet])
+;([Set, Map, WeakMap, WeakSet] as Array<Function>).forEach(
+  collectionType =>
+    (collectionType.prototype[ReactiveFlags.IS_COLLECTION] = true)
+)
+
 const isObservableType = /*#__PURE__*/ makeMap(
   'Object,Array,Map,Set,WeakMap,WeakSet'
 )
@@ -152,15 +160,10 @@ function createReactiveObject(
     return target
   }
 
-  let handler = baseHandlers
-  for (const collectionType of collectionTypes) {
-    if (target instanceof collectionType) {
-      handler = collectionHandlers
-      break
-    }
-  }
-
-  const observed = new Proxy(target, handler)
+  const observed = new Proxy(
+    target,
+    target[ReactiveFlags.IS_COLLECTION] ? collectionHandlers : baseHandlers
+  )
   def(target, reactiveFlag, observed)
   return observed
 }
