@@ -93,6 +93,12 @@ function shouldSetAsProp(
     return false
   }
 
+  // #1787 form as an attribute must be a string, while it accepts an Element as
+  // a prop
+  if (key === 'form' && typeof value === 'string') {
+    return false
+  }
+
   // #1526 <input list> must be set as attribute
   if (key === 'list' && el.tagName === 'INPUT') {
     return false

@@ -18,7 +18,8 @@ import {
   IfConditionalExpression,
   BlockCodegenNode,
   IfNode,
-  createVNodeCall
+  createVNodeCall,
+  AttributeNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -111,11 +112,6 @@ export function processIf(
     validateBrowserExpression(dir.exp as SimpleExpressionNode, context)
   }
 
-  const userKey = /*#__PURE__*/ findProp(node, 'key')
-  if (userKey) {
-    context.onError(createCompilerError(ErrorCodes.X_V_IF_KEY, userKey.loc))
-  }
-
   if (dir.name === 'if') {
     const branch = createIfBranch(node, dir)
     const ifNode: IfNode = {
@@ -146,6 +142,24 @@ export function processIf(
         if (__DEV__ && comments.length) {
           branch.children = [...comments, ...branch.children]
         }
+
+        // check if user is forcing same key on different branches
+        if (__DEV__ || !__BROWSER__) {
+          const key = branch.userKey
+          if (key) {
+            sibling.branches.forEach(({ userKey }) => {
+              if (isSameKey(userKey, key)) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_IF_SAME_KEY,
+                    branch.userKey!.loc
+                  )
+                )
+              }
+            })
+          }
+        }
+
         sibling.branches.push(branch)
         const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
@@ -174,7 +188,8 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     children:
       node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
         ? node.children
-        : [node]
+        : [node],
+    userKey: findProp(node, `key`)
   }
 }
 
@@ -255,4 +270,33 @@ function createChildrenCodegenNode(
     injectProp(vnodeCall, keyProperty, context)
     return vnodeCall
   }
+}
+
+function isSameKey(
+  a: AttributeNode | DirectiveNode | undefined,
+  b: AttributeNode | DirectiveNode
+): boolean {
+  if (!a || a.type !== b.type) {
+    return false
+  }
+  if (a.type === NodeTypes.ATTRIBUTE) {
+    if (a.value!.content !== (b as AttributeNode).value!.content) {
+      return false
+    }
+  } else {
+    // directive
+    const exp = a.exp!
+    const branchExp = (b as DirectiveNode).exp!
+    if (exp.type !== branchExp.type) {
+      return false
+    }
+    if (
+      exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
+      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+        exp.content !== (branchExp as SimpleExpressionNode).content)
+    ) {
+      return false
+    }
+  }
+  return true
 }

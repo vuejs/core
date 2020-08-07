@@ -432,6 +432,58 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
+  // #1763
+  it('flush: pre watcher watching props should fire before child update', async () => {
+    const a = ref(0)
+    const b = ref(0)
+    const c = ref(0)
+    const calls: string[] = []
+
+    const Comp = {
+      props: ['a', 'b'],
+      setup(props: any) {
+        watch(
+          () => props.a + props.b,
+          () => {
+            calls.push('watcher 1')
+            c.value++
+          },
+          { flush: 'pre' }
+        )
+
+        // #1777 chained pre-watcher
+        watch(
+          c,
+          () => {
+            calls.push('watcher 2')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          c.value
+          calls.push('render')
+        }
+      }
+    }
+
+    const App = {
+      render() {
+        return h(Comp, { a: a.value, b: b.value })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render'])
+
+    // both props are updated
+    // should trigger pre-flush watcher first and only once
+    // then trigger child render
+    a.value++
+    b.value++
+    await nextTick()
+    expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
+  })
+
   it('deep', async () => {
     const state = reactive({
       nested: {

@@ -2,7 +2,9 @@ import {
   queueJob,
   nextTick,
   queuePostFlushCb,
-  invalidateJob
+  invalidateJob,
+  queuePreFlushCb,
+  flushPreFlushCbs
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -72,6 +74,128 @@ describe('scheduler', () => {
 
       await nextTick()
       expect(calls).toEqual(['job1', 'job2'])
+    })
+  })
+
+  describe('queuePreFlushCb', () => {
+    it('basic usage', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+
+      queuePreFlushCb(cb1)
+      queuePreFlushCb(cb2)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2'])
+    })
+
+    it('should dedupe queued preFlushCb', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+
+      queuePreFlushCb(cb1)
+      queuePreFlushCb(cb2)
+      queuePreFlushCb(cb1)
+      queuePreFlushCb(cb2)
+      queuePreFlushCb(cb3)
+
+      expect(calls).toEqual([])
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
+    })
+
+    it('chained queuePreFlushCb', async () => {
+      const calls: string[] = []
+      const cb1 = () => {
+        calls.push('cb1')
+        // cb2 will be executed after cb1 at the same tick
+        queuePreFlushCb(cb2)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+      queuePreFlushCb(cb1)
+
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2'])
+    })
+  })
+
+  describe('queueJob w/ queuePreFlushCb', () => {
+    it('queueJob inside preFlushCb', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        // queueJob in postFlushCb
+        calls.push('cb1')
+        queueJob(job1)
+      }
+
+      queuePreFlushCb(cb1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'job1'])
+    })
+
+    it('queueJob & preFlushCb inside preFlushCb', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+        queueJob(job1)
+        // cb2 should execute before the job
+        queuePreFlushCb(cb2)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+
+      queuePreFlushCb(cb1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'job1'])
+    })
+
+    it('preFlushCb inside queueJob', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        // the only case where a pre-flush cb can be queued inside a job is
+        // when updating the props of a child component. This is handled
+        // directly inside `updateComponentPreRender` to avoid non atomic
+        // cb triggers (#1763)
+        queuePreFlushCb(cb1)
+        queuePreFlushCb(cb2)
+        flushPreFlushCbs(undefined, job1)
+        calls.push('job1')
+      }
+      const cb1 = () => {
+        calls.push('cb1')
+        // a cb triggers its parent job, which should be skipped
+        queueJob(job1)
+      }
+      const cb2 = () => {
+        calls.push('cb2')
+      }
+
+      queueJob(job1)
+      await nextTick()
+      expect(calls).toEqual(['cb1', 'cb2', 'job1'])
     })
   })
 
@@ -352,5 +476,17 @@ describe('scheduler', () => {
     queuePostFlushCb(cb)
     await nextTick()
     expect(count).toBe(5)
+  })
+
+  test('should prevent duplicate queue', async () => {
+    let count = 0
+    const job = () => {
+      count++
+    }
+    job.cb = true
+    queueJob(job)
+    queueJob(job)
+    await nextTick()
+    expect(count).toBe(1)
   })
 })

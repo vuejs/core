@@ -16,16 +16,24 @@ export interface SchedulerJob {
   cb?: boolean
 }
 
+let isFlushing = false
+let isFlushPending = false
+
 const queue: (SchedulerJob | null)[] = []
-const postFlushCbs: Function[] = []
+let flushIndex = 0
+
+const pendingPreFlushCbs: Function[] = []
+let activePreFlushCbs: Function[] | null = null
+let preFlushIndex = 0
+
+const pendingPostFlushCbs: Function[] = []
+let activePostFlushCbs: Function[] | null = null
+let postFlushIndex = 0
+
 const resolvedPromise: Promise<any> = Promise.resolve()
 let currentFlushPromise: Promise<void> | null = null
 
-let isFlushing = false
-let isFlushPending = false
-let flushIndex = 0
-let pendingPostFlushCbs: Function[] | null = null
-let pendingPostFlushIndex = 0
+let currentPreFlushParentJob: SchedulerJob | null = null
 
 const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob | Function, number>
@@ -43,11 +51,22 @@ export function queueJob(job: SchedulerJob) {
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
   if (
-    !queue.length ||
-    !queue.includes(job, job.cb ? flushIndex + 1 : flushIndex)
+    (!queue.length ||
+      !queue.includes(
+        job,
+        isFlushing && job.cb ? flushIndex + 1 : flushIndex
+      )) &&
+    job !== currentPreFlushParentJob
   ) {
     queue.push(job)
     queueFlush()
+  }
+}
+
+function queueFlush() {
+  if (!isFlushing && !isFlushPending) {
+    isFlushPending = true
+    currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
 
@@ -58,54 +77,84 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
-export function queuePostFlushCb(cb: Function | Function[]) {
+function queueCb(
+  cb: Function | Function[],
+  activeQueue: Function[] | null,
+  pendingQueue: Function[],
+  index: number
+) {
   if (!isArray(cb)) {
     if (
-      !pendingPostFlushCbs ||
-      !pendingPostFlushCbs.includes(
-        cb,
-        (cb as SchedulerJob).cb
-          ? pendingPostFlushIndex + 1
-          : pendingPostFlushIndex
-      )
+      !activeQueue ||
+      !activeQueue.includes(cb, (cb as SchedulerJob).cb ? index + 1 : index)
     ) {
-      postFlushCbs.push(cb)
+      pendingQueue.push(cb)
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip dupicate check here to improve perf
-    postFlushCbs.push(...cb)
+    pendingQueue.push(...cb)
   }
   queueFlush()
 }
 
-function queueFlush() {
-  if (!isFlushing && !isFlushPending) {
-    isFlushPending = true
-    currentFlushPromise = resolvedPromise.then(flushJobs)
-  }
+export function queuePreFlushCb(cb: Function) {
+  queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 }
 
-export function flushPostFlushCbs(seen?: CountMap) {
-  if (postFlushCbs.length) {
-    pendingPostFlushCbs = [...new Set(postFlushCbs)]
-    postFlushCbs.length = 0
+export function queuePostFlushCb(cb: Function | Function[]) {
+  queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
+}
+
+export function flushPreFlushCbs(
+  seen?: CountMap,
+  parentJob: SchedulerJob | null = null
+) {
+  if (pendingPreFlushCbs.length) {
+    currentPreFlushParentJob = parentJob
+    activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
+    pendingPreFlushCbs.length = 0
     if (__DEV__) {
       seen = seen || new Map()
     }
     for (
-      pendingPostFlushIndex = 0;
-      pendingPostFlushIndex < pendingPostFlushCbs.length;
-      pendingPostFlushIndex++
+      preFlushIndex = 0;
+      preFlushIndex < activePreFlushCbs.length;
+      preFlushIndex++
     ) {
       if (__DEV__) {
-        checkRecursiveUpdates(seen!, pendingPostFlushCbs[pendingPostFlushIndex])
+        checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
       }
-      pendingPostFlushCbs[pendingPostFlushIndex]()
+      activePreFlushCbs[preFlushIndex]()
     }
-    pendingPostFlushCbs = null
-    pendingPostFlushIndex = 0
+    activePreFlushCbs = null
+    preFlushIndex = 0
+    currentPreFlushParentJob = null
+    // recursively flush until it drains
+    flushPreFlushCbs(seen, parentJob)
+  }
+}
+
+export function flushPostFlushCbs(seen?: CountMap) {
+  if (pendingPostFlushCbs.length) {
+    activePostFlushCbs = [...new Set(pendingPostFlushCbs)]
+    pendingPostFlushCbs.length = 0
+    if (__DEV__) {
+      seen = seen || new Map()
+    }
+    for (
+      postFlushIndex = 0;
+      postFlushIndex < activePostFlushCbs.length;
+      postFlushIndex++
+    ) {
+      if (__DEV__) {
+        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+      }
+      activePostFlushCbs[postFlushIndex]()
+    }
+    activePostFlushCbs = null
+    postFlushIndex = 0
   }
 }
 
@@ -117,6 +166,8 @@ function flushJobs(seen?: CountMap) {
   if (__DEV__) {
     seen = seen || new Map()
   }
+
+  flushPreFlushCbs(seen)
 
   // Sort queue before flush.
   // This ensures that:
@@ -144,11 +195,12 @@ function flushJobs(seen?: CountMap) {
     queue.length = 0
 
     flushPostFlushCbs(seen)
+
     isFlushing = false
     currentFlushPromise = null
     // some postFlushCb queued jobs!
     // keep flushing until it drains.
-    if (queue.length || postFlushCbs.length) {
+    if (queue.length || pendingPostFlushCbs.length) {
       flushJobs(seen)
     }
   }

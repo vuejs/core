@@ -10,7 +10,6 @@ import {
   SimpleExpressionNode,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes,
   createObjectExpression,
   createObjectProperty,
   ForCodegenNode,
@@ -81,6 +80,25 @@ export const transformFor = createStructuralDirectiveTransform(
         let childBlock: BlockCodegenNode
         const isTemplate = isTemplateNode(node)
         const { children } = forNode
+
+        // check <template v-for> key placement
+        if ((__DEV__ || !__BROWSER__) && isTemplate) {
+          node.children.some(c => {
+            if (c.type === NodeTypes.ELEMENT) {
+              const key = findProp(c, 'key')
+              if (key) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT,
+                    key.loc
+                  )
+                )
+                return true
+              }
+            }
+          })
+        }
+
         const needFragmentWrapper =
           children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
         const slotOutlet = isSlotOutlet(node)
@@ -183,7 +201,7 @@ export function processFor(
     keyAlias: key,
     objectIndexAlias: index,
     parseResult,
-    children: node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+    children: isTemplateNode(node) ? node.children : [node]
   }
 
   context.replaceNode(forNode)

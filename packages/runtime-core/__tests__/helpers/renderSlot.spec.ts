@@ -1,5 +1,13 @@
 import { renderSlot } from '../../src/helpers/renderSlot'
-import { h } from '../../src/h'
+import {
+  h,
+  withCtx,
+  createVNode,
+  openBlock,
+  createBlock,
+  Fragment
+} from '../../src'
+import { PatchFlags } from '@vue/shared/src'
 
 describe('renderSlot', () => {
   it('should render slot', () => {
@@ -19,5 +27,24 @@ describe('renderSlot', () => {
   it('should warn render ssr slot', () => {
     renderSlot({ default: (_a, _b, _c) => [h('child')] }, 'default')
     expect('SSR-optimized slot function detected').toHaveBeenWarned()
+  })
+
+  // #1745
+  it('should force enable tracking', () => {
+    const slot = withCtx(
+      () => {
+        return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
+      },
+      // mock instance
+      {} as any
+    )
+
+    // manual invocation should not track
+    const manual = (openBlock(), createBlock(Fragment, null, slot()))
+    expect(manual.dynamicChildren!.length).toBe(0)
+
+    // renderSlot should track
+    const templateRendered = renderSlot({ default: slot }, 'default')
+    expect(templateRendered.dynamicChildren!.length).toBe(1)
   })
 })

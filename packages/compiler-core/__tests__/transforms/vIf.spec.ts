@@ -285,10 +285,23 @@ describe('compiler: v-if', () => {
 
     test('error on user key', () => {
       const onError = jest.fn()
-      parseWithIfTransform(`<div v-if="ok" :key="1" />`, { onError })
+      // dynamic
+      parseWithIfTransform(
+        `<div v-if="ok" :key="a + 1" /><div v-else :key="a + 1" />`,
+        { onError }
+      )
       expect(onError.mock.calls[0]).toMatchObject([
         {
-          code: ErrorCodes.X_V_IF_KEY
+          code: ErrorCodes.X_V_IF_SAME_KEY
+        }
+      ])
+      // static
+      parseWithIfTransform(`<div v-if="ok" key="1" /><div v-else key="1" />`, {
+        onError
+      })
+      expect(onError.mock.calls[1]).toMatchObject([
+        {
+          code: ErrorCodes.X_V_IF_SAME_KEY
         }
       ])
     })
