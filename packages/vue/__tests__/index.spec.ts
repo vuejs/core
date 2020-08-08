@@ -71,6 +71,41 @@ describe('compiler + runtime integration', () => {
     expect(one.destroyed).toHaveBeenCalledTimes(0)
   })
 
+  // #1789
+  it('$refs should refer to the correct value', async () => {
+    const container = document.createElement('div')
+    const toggle = ref(true)
+    let instanceProxy: any
+    const App = {
+      template: `
+        <div v-if="toggle" ref="divEl">true</div>
+        <div v-if="!toggle" ref="divEl">false</div>
+      `,
+      data() {
+        return {
+          toggle
+        }
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+
+    createApp(App).mount(container)
+    expect(container.innerHTML).toBe('<div>true</div><!--v-if-->')
+    expect(instanceProxy.$refs.divEl).toBe(container.children[0])
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<!--v-if--><div>false</div>')
+    expect(instanceProxy.$refs.divEl).toBe(container.children[0])
+
+    toggle.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>true</div><!--v-if-->')
+    expect(instanceProxy.$refs.divEl).toBe(container.children[0])
+  })
+
   it('should support runtime template via CSS ID selector', () => {
     const container = document.createElement('div')
     const template = document.createElement('div')
