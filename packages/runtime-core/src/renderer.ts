@@ -330,10 +330,6 @@ export const setRef = (
       }, parentSuspense)
     }
   } else if (isRef(ref)) {
-    // #1789
-    if (ref.value != null && value == null) {
-      return
-    }
     ref.value = value
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
