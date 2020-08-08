@@ -319,6 +319,10 @@ export const setRef = (
   }
 
   if (isString(ref)) {
+    // #1789
+    if (refs[ref] != null && value == null) {
+      return
+    }
     refs[ref] = value
     if (hasOwn(setupState, ref)) {
       queuePostRenderEffect(() => {
@@ -326,6 +330,10 @@ export const setRef = (
       }, parentSuspense)
     }
   } else if (isRef(ref)) {
+    // #1789
+    if (ref.value != null && value == null) {
+      return
+    }
     ref.value = value
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
