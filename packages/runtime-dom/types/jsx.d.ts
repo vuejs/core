@@ -737,6 +737,13 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
 export interface SVGAttributes extends AriaAttributes {
   innerHTML?: string
 
+  /**
+   * SVG Styling Attributes
+   * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
+   */
+  class?: any
+  style?: string | CSSProperties
+
   color?: string
   height?: number | string
   id?: string
