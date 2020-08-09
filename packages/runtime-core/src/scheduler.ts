@@ -111,54 +111,53 @@ export function flushPreFlushCbs(
   seen?: CountMap,
   parentJob: SchedulerJob | null = null
 ) {
-  if (pendingPreFlushCbs.length) {
-    currentPreFlushParentJob = parentJob
-    activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
-    pendingPreFlushCbs.length = 0
-    if (__DEV__) {
-      seen = seen || new Map()
-    }
-    for (
-      preFlushIndex = 0;
-      preFlushIndex < activePreFlushCbs.length;
-      preFlushIndex++
-    ) {
-      if (__DEV__) {
-        checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
-      }
-      activePreFlushCbs[preFlushIndex]()
-    }
-    activePreFlushCbs = null
-    preFlushIndex = 0
-    currentPreFlushParentJob = null
-    // recursively flush until it drains
-    flushPreFlushCbs(seen, parentJob)
+  if (!pendingPreFlushCbs.length) return
+  currentPreFlushParentJob = parentJob
+  activePreFlushCbs = [...new Set(pendingPreFlushCbs)]
+  pendingPreFlushCbs.length = 0
+  if (__DEV__) {
+    seen = seen || new Map()
   }
+  for (
+    preFlushIndex = 0;
+    preFlushIndex < activePreFlushCbs.length;
+    preFlushIndex++
+  ) {
+    if (__DEV__) {
+      checkRecursiveUpdates(seen!, activePreFlushCbs[preFlushIndex])
+    }
+    activePreFlushCbs[preFlushIndex]()
+  }
+  activePreFlushCbs = null
+  preFlushIndex = 0
+  currentPreFlushParentJob = null
+  // recursively flush until it drains
+  flushPreFlushCbs(seen, parentJob)
 }
 
 export function flushPostFlushCbs(seen?: CountMap) {
-  if (pendingPostFlushCbs.length) {
-    activePostFlushCbs = [...new Set(pendingPostFlushCbs)]
-    pendingPostFlushCbs.length = 0
-    if (__DEV__) {
-      seen = seen || new Map()
-    }
-    for (
-      postFlushIndex = 0;
-      postFlushIndex < activePostFlushCbs.length;
-      postFlushIndex++
-    ) {
-      if (__DEV__) {
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      }
-      activePostFlushCbs[postFlushIndex]()
-    }
-    activePostFlushCbs = null
-    postFlushIndex = 0
+  if (!pendingPostFlushCbs.length) return
+  activePostFlushCbs = [...new Set(pendingPostFlushCbs)]
+  pendingPostFlushCbs.length = 0
+  if (__DEV__) {
+    seen = seen || new Map()
   }
+  for (
+    postFlushIndex = 0;
+    postFlushIndex < activePostFlushCbs.length;
+    postFlushIndex++
+  ) {
+    if (__DEV__) {
+      checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+    }
+    activePostFlushCbs[postFlushIndex]()
+  }
+  activePostFlushCbs = null
+  postFlushIndex = 0
 }
 
-const getId = (job: SchedulerJob) => (job.id == null ? Infinity : job.id)
+const getId = (job: SchedulerJob): number =>
+  job.id === undefined ? Infinity : job.id
 
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
