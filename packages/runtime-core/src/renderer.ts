@@ -319,14 +319,16 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    refs[ref] = value
-    if (hasOwn(setupState, ref)) {
-      queuePostRenderEffect(() => {
+    queuePostRenderEffect(() => {
+      refs[ref] = value
+      if (hasOwn(setupState, ref)) {
         setupState[ref] = value
-      }, parentSuspense)
-    }
+      }
+    }, parentSuspense)
   } else if (isRef(ref)) {
-    ref.value = value
+    queuePostRenderEffect(() => {
+      ref.value = value
+    }, parentSuspense)
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
       value,
