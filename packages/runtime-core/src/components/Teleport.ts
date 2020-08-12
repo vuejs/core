@@ -139,6 +139,8 @@ export const TeleportImpl = {
           parentSuspense,
           isSVG
         )
+        // #1813, sometimes when the patchFlag is 0,
+        // this branch may need to run
         if (n2.patchFlag >= 0 && n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           const oldChildren = n1.children as VNode[]
           const children = n2.children as VNode[]
