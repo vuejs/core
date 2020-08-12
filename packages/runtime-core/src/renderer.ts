@@ -319,16 +319,27 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    queuePostRenderEffect(() => {
+    // Unset ref synchronously and reset ref in the post-render queue
+    if (value) {
+      queuePostRenderEffect(() => {
+        refs[ref] = value
+      }, parentSuspense)
+    } else {
       refs[ref] = value
-      if (hasOwn(setupState, ref)) {
+    }
+    if (hasOwn(setupState, ref)) {
+      queuePostRenderEffect(() => {
         setupState[ref] = value
-      }
-    }, parentSuspense)
+      }, parentSuspense)
+    }
   } else if (isRef(ref)) {
-    queuePostRenderEffect(() => {
+    if (value) {
+      queuePostRenderEffect(() => {
+        ref.value = value
+      }, parentSuspense)
+    } else {
       ref.value = value
-    }, parentSuspense)
+    }
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
       value,
