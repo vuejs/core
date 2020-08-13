@@ -319,18 +319,28 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    // #1789
-    if (refs[ref] != null && value == null) {
+    // #1789, should save the last non-null value
+    if (value == null) {
+      refs[ref] = value
+      if (hasOwn(setupState, ref)) {
+        setupState[ref] = value
+      }
       return
     }
-    refs[ref] = value
-    if (hasOwn(setupState, ref)) {
-      queuePostRenderEffect(() => {
+    queuePostRenderEffect(() => {
+      refs[ref] = value
+      if (hasOwn(setupState, ref)) {
         setupState[ref] = value
-      }, parentSuspense)
-    }
+      }
+    }, parentSuspense)
   } else if (isRef(ref)) {
-    ref.value = value
+    if (value == null) {
+      ref.value = value
+      return
+    }
+    queuePostRenderEffect(() => {
+      ref.value = value
+    }, parentSuspense)
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
       value,
