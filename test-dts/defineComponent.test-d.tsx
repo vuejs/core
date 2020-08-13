@@ -710,6 +710,17 @@ describe('emits', () => {
   const instance = {} as ComponentPublicInstance
   instance.$emit('test', 1)
   instance.$emit('test')
+
+  // `this` should be void inside of emits validators
+  defineComponent({
+    props: ['bar'],
+    emits: {
+      foo(): boolean {
+        // @ts-expect-error
+        return this.bar === 3
+      }
+    }
+  })
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
