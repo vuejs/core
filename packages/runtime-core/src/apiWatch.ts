@@ -14,7 +14,6 @@ import {
   isArray,
   isFunction,
   isString,
-  hasChanged,
   NOOP,
   remove
 } from '@vue/shared'
@@ -78,9 +77,6 @@ export function watchEffect(
 ): WatchStopHandle {
   return doWatch(effect, null, options)
 }
-
-// initial value for watchers to trigger on undefined initial values
-const INITIAL_WATCHER_VALUE = {}
 
 // overload #1: array of multiple sources + cb
 // Readonly constraint helps the callback to correctly infer value types based
@@ -159,9 +155,8 @@ function doWatch(
   }
 
   let getter: () => any
-  const isRefSource = isRef(source)
-  if (isRefSource) {
-    getter = () => (source as Ref).value
+  if (isRef(source)) {
+    getter = () => source.value
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
@@ -232,7 +227,7 @@ function doWatch(
     return NOOP
   }
 
-  let oldValue = isArray(source) ? [] : INITIAL_WATCHER_VALUE
+  let oldValue = isArray(source) ? [] : undefined
   const job: SchedulerJob = () => {
     if (!runner.active) {
       return
@@ -240,19 +235,16 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
-        }
-        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-          newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE ? undefined : oldValue,
-          onInvalidate
-        ])
-        oldValue = newValue
+      // cleanup before running cb again
+      if (cleanup) {
+        cleanup()
       }
+      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+        newValue,
+        oldValue,
+        onInvalidate
+      ])
+      oldValue = newValue
     } else {
       // watchEffect
       runner()
