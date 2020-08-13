@@ -294,4 +294,42 @@ describe('api: template refs', () => {
     await nextTick()
     expect(el.value).toBe(root.children[2])
   })
+
+  // #1789
+  test('the same ref should save the last non-null value about setupState', async () => {
+    const root = nodeOps.createElement('div')
+    const toggle = ref(true)
+    const el = ref(null)
+    let instanceProxy: any
+
+    const Comp = {
+      setup() {
+        return {
+          el
+        }
+      },
+      render() {
+        return [
+          h('div', { ref: 'el' }),
+          toggle.value ? h('div', { ref: 'el' }) : null
+        ]
+      },
+      mounted() {
+        instanceProxy = this
+      }
+    }
+    render(h(Comp), root)
+    expect(el.value).toBe(root.children[2])
+    expect(instanceProxy.$refs.el).toBe(root.children[2])
+
+    toggle.value = false
+    await nextTick()
+    expect(el.value).toBe(root.children[1])
+    expect(instanceProxy.$refs.el).toBe(root.children[1])
+
+    toggle.value = true
+    await nextTick()
+    expect(el.value).toBe(root.children[2])
+    expect(instanceProxy.$refs.el).toBe(root.children[2])
+  })
 })
