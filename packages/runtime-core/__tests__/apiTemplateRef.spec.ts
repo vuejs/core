@@ -268,4 +268,30 @@ describe('api: template refs', () => {
     // ref should be updated
     expect(serializeInner(root)).toBe(`<div id="foo">foo</div>`)
   })
+
+  // #1789
+  test('the same ref should save the last non-null value', async () => {
+    const root = nodeOps.createElement('div')
+    const toggle = ref(true)
+    const el = ref(null)
+
+    const Comp = {
+      render() {
+        return [
+          h('div', { ref: el }),
+          toggle.value ? h('div', { ref: el }) : null
+        ]
+      }
+    }
+    render(h(Comp), root)
+    expect(el.value).toBe(root.children[2])
+
+    toggle.value = false
+    await nextTick()
+    expect(el.value).toBe(root.children[1])
+
+    toggle.value = true
+    await nextTick()
+    expect(el.value).toBe(root.children[2])
+  })
 })
