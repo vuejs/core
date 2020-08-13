@@ -319,18 +319,19 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    // Unset ref synchronously and reset ref in the post-render queue
-    if (value) {
-      queuePostRenderEffect(() => {
-        refs[ref] = value
-      }, parentSuspense)
-    } else {
+    const doSet = () => {
       refs[ref] = value
-    }
-    if (hasOwn(setupState, ref)) {
-      queuePostRenderEffect(() => {
+      if (hasOwn(setupState, ref)) {
         setupState[ref] = value
-      }, parentSuspense)
+      }
+    }
+    // #1789: for non-null values, set them after render
+    // null values means this is unmount and it should not overwrite another
+    // ref with the same key
+    if (value) {
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
     }
   } else if (isRef(ref)) {
     if (value) {
