@@ -451,7 +451,7 @@ describe('scheduler', () => {
     expect(count).toBe(1)
   })
 
-  test('should allow watcher callbacks to trigger itself', async () => {
+  test('should allow explicitly marked jobs to trigger itself', async () => {
     // normal job
     let count = 0
     const job = () => {
@@ -460,7 +460,7 @@ describe('scheduler', () => {
         queueJob(job)
       }
     }
-    job.cb = true
+    job.allowRecurse = true
     queueJob(job)
     await nextTick()
     expect(count).toBe(3)
@@ -472,7 +472,7 @@ describe('scheduler', () => {
         queuePostFlushCb(cb)
       }
     }
-    cb.cb = true
+    cb.allowRecurse = true
     queuePostFlushCb(cb)
     await nextTick()
     expect(count).toBe(5)

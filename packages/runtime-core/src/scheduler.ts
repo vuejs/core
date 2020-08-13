@@ -8,12 +8,18 @@ export interface SchedulerJob {
    */
   id?: number
   /**
-   * Indicates this is a watch() callback and is allowed to trigger itself.
-   * A watch callback doesn't track its dependencies so if it triggers itself
-   * again, it's likely intentional and it is the user's responsibility to
-   * perform recursive state mutation that eventually stabilizes.
+   * Indicates whether the job is allowed to recursively trigger itself.
+   * By default, a job cannot trigger itself because some built-in method calls,
+   * e.g. Array.prototype.push actually performs reads as well (#1740) which
+   * can lead to confusing infinite loops.
+   * The allowed cases are component render functions and watch callbacks.
+   * Render functions may update child component props, which in turn trigger
+   * flush: "pre" watch callbacks that mutates state that the parent relies on
+   * (#1801). Watch callbacks doesn't track its dependencies so if it triggers
+   * itself again, it's likely intentional and it is the user's responsibility
+   * to perform recursive state mutation that eventually stabilizes (#1727).
    */
-  cb?: boolean
+  allowRecurse?: boolean
 }
 
 let isFlushing = false
@@ -54,7 +60,7 @@ export function queueJob(job: SchedulerJob) {
     (!queue.length ||
       !queue.includes(
         job,
-        isFlushing && job.cb ? flushIndex + 1 : flushIndex
+        isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
       )) &&
     job !== currentPreFlushParentJob
   ) {
@@ -86,7 +92,10 @@ function queueCb(
   if (!isArray(cb)) {
     if (
       !activeQueue ||
-      !activeQueue.includes(cb, (cb as SchedulerJob).cb ? index + 1 : index)
+      !activeQueue.includes(
+        cb,
+        (cb as SchedulerJob).allowRecurse ? index + 1 : index
+      )
     ) {
       pendingQueue.push(cb)
     }

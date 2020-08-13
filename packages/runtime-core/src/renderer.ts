@@ -41,7 +41,8 @@ import {
   queuePostFlushCb,
   flushPostFlushCbs,
   invalidateJob,
-  flushPreFlushCbs
+  flushPreFlushCbs,
+  SchedulerJob
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -1429,6 +1430,8 @@ function baseCreateRenderer(
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+    // #1801 mark it to allow recursive updates
+    ;(instance.update as SchedulerJob).allowRecurse = true
   }
 
   const updateComponentPreRender = (
