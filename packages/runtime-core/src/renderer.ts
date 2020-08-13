@@ -319,14 +319,28 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    refs[ref] = value
-    if (hasOwn(setupState, ref)) {
-      queuePostRenderEffect(() => {
+    const doSet = () => {
+      refs[ref] = value
+      if (hasOwn(setupState, ref)) {
         setupState[ref] = value
-      }, parentSuspense)
+      }
+    }
+    // #1789: for non-null values, set them after render
+    // null values means this is unmount and it should not overwrite another
+    // ref with the same key
+    if (value) {
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
     }
   } else if (isRef(ref)) {
-    ref.value = value
+    if (value) {
+      queuePostRenderEffect(() => {
+        ref.value = value
+      }, parentSuspense)
+    } else {
+      ref.value = value
+    }
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
       value,
