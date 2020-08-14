@@ -261,7 +261,7 @@ function doWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows it
   // it is allowed to self-trigger (#1727)
-  job.cb = !!cb
+  job.allowRecurse = !!cb
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {

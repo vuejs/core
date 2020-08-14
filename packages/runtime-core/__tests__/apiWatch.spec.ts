@@ -7,7 +7,7 @@ import {
   ref,
   h
 } from '../src/index'
-import { render, nodeOps, serializeInner } from '@vue/runtime-test'
+import { render, nodeOps, serializeInner, TestElement } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
   DebuggerEvent,
@@ -482,6 +482,37 @@ describe('api: watch', () => {
     b.value++
     await nextTick()
     expect(calls).toEqual(['render', 'watcher 1', 'watcher 2', 'render'])
+  })
+
+  // #1852
+  it('flush: post watcher should fire after template refs updated', async () => {
+    const toggle = ref(false)
+    let dom: TestElement | null = null
+
+    const App = {
+      setup() {
+        const domRef = ref<TestElement | null>(null)
+
+        watch(
+          toggle,
+          () => {
+            dom = domRef.value
+          },
+          { flush: 'post' }
+        )
+
+        return () => {
+          return toggle.value ? h('p', { ref: domRef }) : null
+        }
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(dom).toBe(null)
+
+    toggle.value = true
+    await nextTick()
+    expect(dom!.tag).toBe('p')
   })
 
   it('deep', async () => {

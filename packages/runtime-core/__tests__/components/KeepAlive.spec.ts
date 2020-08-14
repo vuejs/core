@@ -165,6 +165,36 @@ describe('KeepAlive', () => {
     assertHookCalls(two, [1, 1, 2, 2, 0])
   })
 
+  // #1742
+  test('should call lifecycle hooks on nested components when root component no hooks', async () => {
+    const two = {
+      name: 'two',
+      data: () => ({ msg: 'two' }),
+      render(this: any) {
+        return h('div', this.msg)
+      },
+      activated: jest.fn()
+    }
+    const one = {
+      name: 'one',
+      data: () => ({ msg: 'one' }),
+      render(this: any) {
+        return h(two)
+      }
+    }
+
+    const toggle = ref(true)
+    const App = {
+      render() {
+        return h(KeepAlive, () => (toggle.value ? h(one) : null))
+      }
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    expect(two.activated).toHaveBeenCalledTimes(1)
+  })
+
   test('should call correct hooks for nested keep-alive', async () => {
     const toggle2 = ref(true)
     one.render = () => h(KeepAlive, () => (toggle2.value ? h(two) : null))
