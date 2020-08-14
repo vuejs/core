@@ -105,7 +105,7 @@ function queueCb(
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
-    // we can skip dupicate check here to improve perf
+    // we can skip duplicate check here to improve perf
     pendingQueue.push(...cb)
   }
   queueFlush()
