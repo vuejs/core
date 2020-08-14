@@ -22,18 +22,21 @@ export interface SchedulerJob {
   allowRecurse?: boolean
 }
 
+export type SchedulerCb = Function & { id?: number }
+export type SchedulerCbs = SchedulerCb | SchedulerCb[]
+
 let isFlushing = false
 let isFlushPending = false
 
 const queue: (SchedulerJob | null)[] = []
 let flushIndex = 0
 
-const pendingPreFlushCbs: Function[] = []
-let activePreFlushCbs: Function[] | null = null
+const pendingPreFlushCbs: SchedulerCb[] = []
+let activePreFlushCbs: SchedulerCb[] | null = null
 let preFlushIndex = 0
 
-const pendingPostFlushCbs: Function[] = []
-let activePostFlushCbs: Function[] | null = null
+const pendingPostFlushCbs: SchedulerCb[] = []
+let activePostFlushCbs: SchedulerCb[] | null = null
 let postFlushIndex = 0
 
 const resolvedPromise: Promise<any> = Promise.resolve()
@@ -42,7 +45,7 @@ let currentFlushPromise: Promise<void> | null = null
 let currentPreFlushParentJob: SchedulerJob | null = null
 
 const RECURSION_LIMIT = 100
-type CountMap = Map<SchedulerJob | Function, number>
+type CountMap = Map<SchedulerJob | SchedulerCb, number>
 
 export function nextTick(fn?: () => void): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
@@ -84,9 +87,9 @@ export function invalidateJob(job: SchedulerJob) {
 }
 
 function queueCb(
-  cb: Function | Function[],
-  activeQueue: Function[] | null,
-  pendingQueue: Function[],
+  cb: SchedulerCbs,
+  activeQueue: SchedulerCb[] | null,
+  pendingQueue: SchedulerCb[],
   index: number
 ) {
   if (!isArray(cb)) {
@@ -108,11 +111,11 @@ function queueCb(
   queueFlush()
 }
 
-export function queuePreFlushCb(cb: Function) {
+export function queuePreFlushCb(cb: SchedulerCb) {
   queueCb(cb, activePreFlushCbs, pendingPreFlushCbs, preFlushIndex)
 }
 
-export function queuePostFlushCb(cb: Function | Function[]) {
+export function queuePostFlushCb(cb: SchedulerCbs) {
   queueCb(cb, activePostFlushCbs, pendingPostFlushCbs, postFlushIndex)
 }
 
@@ -152,6 +155,9 @@ export function flushPostFlushCbs(seen?: CountMap) {
     if (__DEV__) {
       seen = seen || new Map()
     }
+
+    activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
+
     for (
       postFlushIndex = 0;
       postFlushIndex < activePostFlushCbs.length;
@@ -167,7 +173,8 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 
-const getId = (job: SchedulerJob) => (job.id == null ? Infinity : job.id)
+const getId = (job: SchedulerJob | SchedulerCb) =>
+  job.id == null ? Infinity : job.id
 
 function flushJobs(seen?: CountMap) {
   isFlushPending = false
@@ -215,7 +222,7 @@ function flushJobs(seen?: CountMap) {
   }
 }
 
-function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | Function) {
+function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob | SchedulerCb) {
   if (!seen.has(fn)) {
     seen.set(fn, 1)
   } else {
