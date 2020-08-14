@@ -42,7 +42,8 @@ import {
   flushPostFlushCbs,
   invalidateJob,
   flushPreFlushCbs,
-  SchedulerJob
+  SchedulerJob,
+  SchedulerCb
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -330,17 +331,20 @@ export const setRef = (
     // null values means this is unmount and it should not overwrite another
     // ref with the same key
     if (value) {
+      ;(doSet as SchedulerCb).id = -1
       queuePostRenderEffect(doSet, parentSuspense)
     } else {
       doSet()
     }
   } else if (isRef(ref)) {
-    if (value) {
-      queuePostRenderEffect(() => {
-        ref.value = value
-      }, parentSuspense)
-    } else {
+    const doSet = () => {
       ref.value = value
+    }
+    if (value) {
+      ;(doSet as SchedulerCb).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
     }
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
