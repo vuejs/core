@@ -2,7 +2,7 @@ import { App } from './apiCreateApp'
 import { Fragment, Text, Comment, Static } from './vnode'
 import { ComponentInternalInstance } from './component'
 
-export interface AppRecord {
+interface AppRecord {
   id: number
   app: App
   version: string
@@ -17,7 +17,7 @@ const enum DevtoolsHooks {
   COMPONENT_REMOVED = 'component:removed'
 }
 
-export interface DevtoolsHook {
+interface DevtoolsHook {
   emit: (event: string, ...payload: any[]) => void
   on: (event: string, handler: Function) => void
   once: (event: string, handler: Function) => void
