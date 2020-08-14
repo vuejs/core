@@ -311,9 +311,7 @@ export const setRef = (
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (hasOwn(setupState, oldRef)) {
-        queuePostRenderEffect(() => {
-          setupState[oldRef] = null
-        }, parentSuspense)
+        setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
       oldRef.value = null
