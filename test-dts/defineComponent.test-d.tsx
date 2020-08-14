@@ -27,6 +27,7 @@ describe('with object props', () => {
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
+    validated?: string
   }
 
   type GT = string & { __brand: unknown }
@@ -75,6 +76,10 @@ describe('with object props', () => {
       hhh: {
         type: Boolean,
         required: true
+      },
+      validated: {
+        type: String,
+        validator: (val: unknown) => val !== ''
       }
     },
     setup(props) {
@@ -92,6 +97,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
+      expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
