@@ -50,7 +50,8 @@ export const defaultParserOptions: MergedParserOptions = {
   isCustomElement: NO,
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
-  onError: defaultOnError
+  onError: defaultOnError,
+  comments: false
 }
 
 export const enum TextModes {
@@ -228,7 +229,11 @@ function parseChildren(
           } else {
             node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
           }
-        } else if (!__DEV__ && node.type === NodeTypes.COMMENT) {
+        } else if (
+          !__DEV__ &&
+          node.type === NodeTypes.COMMENT &&
+          !context.options.comments
+        ) {
           // remove comment nodes in prod
           removedWhitespace = true
           nodes[i] = null as any
