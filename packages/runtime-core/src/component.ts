@@ -1,10 +1,10 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
-  reactive,
   ReactiveEffect,
   pauseTracking,
   resetTracking,
-  shallowReadonly
+  shallowReadonly,
+  proxyRefs
 } from '@vue/reactivity'
 import {
   CreateComponentPublicInstance,
@@ -24,7 +24,7 @@ import { Slots, initSlots, InternalSlots } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
-import { Directive, validateDirectiveName } from './directives'
+import { validateDirectiveName } from './directives'
 import { applyOptions, ComponentOptions } from './componentOptions'
 import {
   EmitsOptions,
@@ -223,17 +223,6 @@ export interface ComponentInternalInstance {
    */
   renderCache: (Function | VNode)[]
 
-  /**
-   * Asset hashes that prototypally inherits app-level asset hashes for fast
-   * resolution
-   * @internal
-   */
-  components: Record<string, Component>
-  /**
-   * @internal
-   */
-  directives: Record<string, Directive>
-
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
@@ -354,15 +343,17 @@ export function createComponentInstance(
   parent: ComponentInternalInstance | null,
   suspense: SuspenseBoundary | null
 ) {
+  const type = vnode.type as Component
   // inherit parent app context - or - if root, adopt from root vnode
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
+
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
+    type,
     parent,
     appContext,
-    type: vnode.type as Component,
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
@@ -384,10 +375,6 @@ export function createComponentInstance(
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
-
-    // per-instance asset storage (mutable during options resolution)
-    components: Object.create(appContext.components),
-    directives: Object.create(appContext.directives),
 
     // suspense related
     suspense,
@@ -561,7 +548,7 @@ export function handleSetupResult(
     }
     // setup returned bindings.
     // assuming a render function compiled from template is present.
-    instance.setupState = reactive(setupResult)
+    instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
     }
@@ -602,36 +589,17 @@ function finishComponentSetup(
       instance.render = Component.render as InternalRenderFunction
     }
   } else if (!instance.render) {
+    // could be set from setup()
     if (compile && Component.template && !Component.render) {
       if (__DEV__) {
         startMeasure(instance, `compile`)
       }
       Component.render = compile(Component.template, {
-        isCustomElement: instance.appContext.config.isCustomElement || NO
+        isCustomElement: instance.appContext.config.isCustomElement,
+        delimiters: Component.delimiters
       })
       if (__DEV__) {
         endMeasure(instance, `compile`)
-      }
-      // mark the function as runtime compiled
-      ;(Component.render as InternalRenderFunction)._rc = true
-    }
-
-    if (__DEV__ && !Component.render) {
-      /* istanbul ignore if */
-      if (!compile && Component.template) {
-        warn(
-          `Component provided template option but ` +
-            `runtime compilation is not supported in this build of Vue.` +
-            (__ESM_BUNDLER__
-              ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
-              : __ESM_BROWSER__
-                ? ` Use "vue.esm-browser.js" instead.`
-                : __GLOBAL__
-                  ? ` Use "vue.global.js" instead.`
-                  : ``) /* should not happen */
-        )
-      } else {
-        warn(`Component is missing template or render function.`)
       }
     }
 
@@ -653,6 +621,26 @@ function finishComponentSetup(
     currentInstance = instance
     applyOptions(instance, Component)
     currentInstance = null
+  }
+
+  // warn missing template/render
+  if (__DEV__ && !Component.render && instance.render === NOOP) {
+    /* istanbul ignore if */
+    if (!compile && Component.template) {
+      warn(
+        `Component provided template option but ` +
+          `runtime compilation is not supported in this build of Vue.` +
+          (__ESM_BUNDLER__
+            ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
+            : __ESM_BROWSER__
+              ? ` Use "vue.esm-browser.js" instead.`
+              : __GLOBAL__
+                ? ` Use "vue.global.js" instead.`
+                : ``) /* should not happen */
+      )
+    } else {
+      warn(`Component is missing template or render function.`)
+    }
   }
 }
 
@@ -726,14 +714,18 @@ export function formatComponentName(
   }
 
   if (!name && instance && instance.parent) {
-    // try to infer the name based on local resolution
-    const registry = instance.parent.components
-    for (const key in registry) {
-      if (registry[key] === Component) {
-        name = key
-        break
+    // try to infer the name based on reverse resolution
+    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+      for (const key in registry) {
+        if (registry[key] === Component) {
+          return key
+        }
       }
     }
+    name =
+      inferFromRegistry(
+        (instance.parent.type as ComponentOptions).components
+      ) || inferFromRegistry(instance.appContext.components)
   }
 
   return name ? classify(name) : isRoot ? `App` : `Anonymous`

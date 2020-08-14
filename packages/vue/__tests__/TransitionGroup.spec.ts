@@ -1,10 +1,8 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
-import { mockWarn } from '@vue/shared'
 import { createApp, ref } from 'vue'
 
 describe('e2e: TransitionGroup', () => {
-  mockWarn()
   const { page, html, nextFrame, timeout } = setupPuppeteer()
   const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
 

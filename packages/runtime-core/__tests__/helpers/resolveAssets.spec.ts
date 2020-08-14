@@ -12,11 +12,8 @@ import {
   Comment,
   VNode
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('resolveAssets', () => {
-  mockWarn()
-
   test('should work', () => {
     const FooBar = () => null
     const BarBaz = { mounted: () => null }

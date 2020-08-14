@@ -39,10 +39,23 @@ function setVarsOnVNode(
   vars: Record<string, string>,
   prefix: string
 ) {
+  if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+    const { isResolved, isHydrating, fallbackTree, subTree } = vnode.suspense!
+    if (isResolved || isHydrating) {
+      vnode = subTree
+    } else {
+      vnode.suspense!.effects.push(() => {
+        setVarsOnVNode(subTree, vars, prefix)
+      })
+      vnode = fallbackTree
+    }
+  }
+
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
     vnode = vnode.component.subTree
   }
+
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     const style = vnode.el.style
     for (const key in vars) {

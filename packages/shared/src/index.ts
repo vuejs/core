@@ -6,7 +6,6 @@ export * from './shapeFlags'
 export * from './slotFlags'
 export * from './globalsWhitelist'
 export * from './codeframe'
-export * from './mockWarn'
 export * from './normalizeProp'
 export * from './domTagConfig'
 export * from './domAttrConfig'
@@ -40,6 +39,8 @@ export const NO = () => false
 
 const onRE = /^on[^a-z]/
 export const isOn = (key: string) => onRE.test(key)
+
+export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
 export const extend = Object.assign
 

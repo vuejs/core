@@ -3,7 +3,7 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction } from '@vue/shared'
+import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
@@ -35,7 +35,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     default:
       if (isOn(key)) {
         // ignore v-model listeners
-        if (!key.startsWith('onUpdate:')) {
+        if (!isModelListener(key)) {
           patchEvent(el, key, prevValue, nextValue, parentComponent)
         }
       } else if (shouldSetAsProp(el, key, nextValue, isSVG)) {
@@ -90,6 +90,12 @@ function shouldSetAsProp(
   // Note that `contentEditable` doesn't have this problem: its DOM
   // property is also enumerated string values.
   if (key === 'spellcheck' || key === 'draggable') {
+    return false
+  }
+
+  // #1787 form as an attribute must be a string, while it accepts an Element as
+  // a prop
+  if (key === 'form' && typeof value === 'string') {
     return false
   }
 

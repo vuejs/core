@@ -1,11 +1,8 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
-import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
-  mockWarn()
-
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -186,11 +183,16 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  test('should not observe frozen objects', () => {
+  test('should not observe non-extensible objects', () => {
     const obj = reactive({
-      foo: Object.freeze({ a: 1 })
+      foo: Object.preventExtensions({ a: 1 }),
+      // sealed or frozen objects are considered non-extensible as well
+      bar: Object.freeze({ a: 1 }),
+      baz: Object.seal({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
+    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReactive(obj.baz)).toBe(false)
   })
 
   test('should not observe objects with __v_skip', () => {

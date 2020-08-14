@@ -18,7 +18,8 @@ import {
   IfConditionalExpression,
   BlockCodegenNode,
   IfNode,
-  createVNodeCall
+  createVNodeCall,
+  AttributeNode
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -30,7 +31,7 @@ import {
   OPEN_BLOCK,
   TELEPORT
 } from '../runtimeHelpers'
-import { injectProp, findDir } from '../utils'
+import { injectProp, findDir, findProp } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -141,6 +142,24 @@ export function processIf(
         if (__DEV__ && comments.length) {
           branch.children = [...comments, ...branch.children]
         }
+
+        // check if user is forcing same key on different branches
+        if (__DEV__ || !__BROWSER__) {
+          const key = branch.userKey
+          if (key) {
+            sibling.branches.forEach(({ userKey }) => {
+              if (isSameKey(userKey, key)) {
+                context.onError(
+                  createCompilerError(
+                    ErrorCodes.X_V_IF_SAME_KEY,
+                    branch.userKey!.loc
+                  )
+                )
+              }
+            })
+          }
+        }
+
         sibling.branches.push(branch)
         const onExit = processCodegen && processCodegen(sibling, branch, false)
         // since the branch was removed, it will not be traversed.
@@ -169,19 +188,20 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     children:
       node.tagType === ElementTypes.TEMPLATE && !findDir(node, 'for')
         ? node.children
-        : [node]
+        : [node],
+    userKey: findProp(node, `key`)
   }
 }
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): IfConditionalExpression | BlockCodegenNode {
   if (branch.condition) {
     return createConditionalExpression(
       branch.condition,
-      createChildrenCodegenNode(branch, index, context),
+      createChildrenCodegenNode(branch, keyIndex, context),
       // make sure to pass in asBlock: true so that the comment node call
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
@@ -190,19 +210,19 @@ function createCodegenNodeForBranch(
       ])
     ) as IfConditionalExpression
   } else {
-    return createChildrenCodegenNode(branch, index, context)
+    return createChildrenCodegenNode(branch, keyIndex, context)
   }
 }
 
 function createChildrenCodegenNode(
   branch: IfBranchNode,
-  index: number,
+  keyIndex: number,
   context: TransformContext
 ): BlockCodegenNode {
   const { helper } = context
   const keyProperty = createObjectProperty(
     `key`,
-    createSimpleExpression(index + '', false)
+    createSimpleExpression(`${keyIndex}`, false)
   )
   const { children } = branch
   const firstChild = children[0]
@@ -250,4 +270,33 @@ function createChildrenCodegenNode(
     injectProp(vnodeCall, keyProperty, context)
     return vnodeCall
   }
+}
+
+function isSameKey(
+  a: AttributeNode | DirectiveNode | undefined,
+  b: AttributeNode | DirectiveNode
+): boolean {
+  if (!a || a.type !== b.type) {
+    return false
+  }
+  if (a.type === NodeTypes.ATTRIBUTE) {
+    if (a.value!.content !== (b as AttributeNode).value!.content) {
+      return false
+    }
+  } else {
+    // directive
+    const exp = a.exp!
+    const branchExp = (b as DirectiveNode).exp!
+    if (exp.type !== branchExp.type) {
+      return false
+    }
+    if (
+      exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
+      (exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+        exp.content !== (branchExp as SimpleExpressionNode).content)
+    ) {
+      return false
+    }
+  }
+  return true
 }

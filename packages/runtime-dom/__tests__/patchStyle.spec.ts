@@ -74,6 +74,7 @@ describe(`runtime-dom: style patching`, () => {
     const store: any = {}
     return {
       style: {
+        display: '',
         WebkitTransition: '',
         setProperty(key: string, val: string) {
           store[key] = val
@@ -95,5 +96,16 @@ describe(`runtime-dom: style patching`, () => {
     const el = mockElementWithStyle()
     patchProp(el as any, 'style', {}, { transition: 'all 1s' })
     expect(el.style.WebkitTransition).toBe('all 1s')
+  })
+
+  it('multiple values', () => {
+    const el = mockElementWithStyle()
+    patchProp(
+      el as any,
+      'style',
+      {},
+      { display: ['-webkit-box', '-ms-flexbox', 'flex'] }
+    )
+    expect(el.style.display).toBe('flex')
   })
 })

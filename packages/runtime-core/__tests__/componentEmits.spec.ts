@@ -1,13 +1,10 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { mockWarn } from '@vue/shared'
 import { render, defineComponent, h, nodeOps } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
 describe('component: emit', () => {
-  mockWarn()
-
   test('trigger handlers', () => {
     const Foo = defineComponent({
       render() {},

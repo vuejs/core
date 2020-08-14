@@ -1,3 +1,76 @@
+# [3.0.0-rc.5](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.4...v3.0.0-rc.5) (2020-07-28)
+
+
+### Bug Fixes
+
+* **build:** fix component resolution when disabling options API ([a75b8a2](https://github.com/vuejs/vue-next/commit/a75b8a268fca800a49c7d772b4a290b4435e85b9)), closes [#1688](https://github.com/vuejs/vue-next/issues/1688)
+* **compiler-core:** always compile Teleport and Suspense as blocks ([fbf865d](https://github.com/vuejs/vue-next/commit/fbf865d9d4744a0233db1ed6e5543b8f3ef51e8d))
+* **compiler-core:** prevent generating invalid code for v-bind with empty expression ([#1720](https://github.com/vuejs/vue-next/issues/1720)) ([d452723](https://github.com/vuejs/vue-next/commit/d4527230e40c4728e5becdd35c3e039f0992ae4c))
+* **compiler-core/v-on:** only cache empty handler when the option is used ([5fbd1f4](https://github.com/vuejs/vue-next/commit/5fbd1f4ccb22bf62bdf749460f8c6dadee3b6b89)), closes [#1716](https://github.com/vuejs/vue-next/issues/1716)
+* **compiler-sfc:** `less` and `stylus` output deps path is absolute p… ([#1685](https://github.com/vuejs/vue-next/issues/1685)) ([578f25c](https://github.com/vuejs/vue-next/commit/578f25c34efab0a71a7afd8bff278bd147a16a64))
+* **compiler-sfc:** fix rewrite named export default ([#1675](https://github.com/vuejs/vue-next/issues/1675)) ([452edb7](https://github.com/vuejs/vue-next/commit/452edb73cb02c4aecb518a45df9b01aaa1516b19))
+* **hmr:** should update el for `HYDRATE_EVENTS` patchFlags node ([#1707](https://github.com/vuejs/vue-next/issues/1707)) ([de62cc0](https://github.com/vuejs/vue-next/commit/de62cc040c22e3bd93222a9cc84b6564a4b08b51))
+* **reactivity:** avoid tracking internal symbols in has trap ([7edfdf7](https://github.com/vuejs/vue-next/commit/7edfdf7e239ef8f58a343f9802d675d84ed51d64)), closes [#1683](https://github.com/vuejs/vue-next/issues/1683)
+* **reactivity:** fix ref mutation debugger event values ([b7ef38b](https://github.com/vuejs/vue-next/commit/b7ef38b7731a16b6fa4391978132ee379a1bbdc2))
+* **runtime-core:** dev root resolution should differentiate user comments vs v-if comments ([355c052](https://github.com/vuejs/vue-next/commit/355c05262252b247ec29ed4c4fd6ab69143dd6b7)), closes [#1704](https://github.com/vuejs/vue-next/issues/1704)
+* **runtime-core:** fix scheduler dedupe when not flushing ([4ef5c8d](https://github.com/vuejs/vue-next/commit/4ef5c8d42408fd444114604292106c0027600fa4))
+* **runtime-core:** respect render function from mixins ([354d79c](https://github.com/vuejs/vue-next/commit/354d79c42bf152643b77d83520757818d913de4f)), closes [#1630](https://github.com/vuejs/vue-next/issues/1630)
+* **runtime-core:** scheduler should allow intentional self triggering effects ([c27dfe1](https://github.com/vuejs/vue-next/commit/c27dfe1d0994c65de601760d082cf4668dc3fad0)), closes [#1727](https://github.com/vuejs/vue-next/issues/1727)
+* **runtime-core:** use correct container for moving `Teleport` content ([#1703](https://github.com/vuejs/vue-next/issues/1703)) ([04a4eba](https://github.com/vuejs/vue-next/commit/04a4ebaaeb4418d211293fc7b92c19c42a425cbd))
+* **style-vars:** fix css vars on component with suspense as root ([#1718](https://github.com/vuejs/vue-next/issues/1718)) ([07ece2e](https://github.com/vuejs/vue-next/commit/07ece2e9260fe30a50e7cf317d2ff69f113ecad1))
+* **v-model:** enable v-model type detection on custom elements ([0b3b1cf](https://github.com/vuejs/vue-next/commit/0b3b1cfa487a359c8762794cfd74726d55b9ef8f))
+* runtime compilation marker should be applied in exposed compile function ([b3b65b4](https://github.com/vuejs/vue-next/commit/b3b65b40582d7fbdc776bfe8a1542b80aebe0aac))
+* **transition:** should call transition hooks inside already resolved suspense ([#1698](https://github.com/vuejs/vue-next/issues/1698)) ([2a633c8](https://github.com/vuejs/vue-next/commit/2a633c84ff0e522a7562d3194a8f4e4012eb8281)), closes [#1689](https://github.com/vuejs/vue-next/issues/1689)
+* **v-model:** allow v-model usage on declared custom elements ([71c3c6e](https://github.com/vuejs/vue-next/commit/71c3c6e2a03095ddd4c2a1e15957afd3ec8d4120)), closes [#1699](https://github.com/vuejs/vue-next/issues/1699)
+
+
+### Features
+
+* **reactivity:** `proxyRefs` method and `ShallowUnwrapRefs` type ([#1682](https://github.com/vuejs/vue-next/issues/1682)) ([aa06b10](https://github.com/vuejs/vue-next/commit/aa06b1034d8268fa15cb6b4b6916440701238b2d))
+* **sfc:** support resolving template components from `<script setup>` exports ([6f5d840](https://github.com/vuejs/vue-next/commit/6f5d840612dbced2dbb4584c979a8f0cfc1f72f0))
+* support delimiters option for runtime compilation ([ba17c87](https://github.com/vuejs/vue-next/commit/ba17c871d80f833e064a51900d07efa358eafb89)), closes [#1679](https://github.com/vuejs/vue-next/issues/1679)
+
+
+### BREAKING CHANGES
+
+* **reactivity:** template auto ref unwrapping are now applied shallowly,
+i.e. only at the root level. See https://github.com/vuejs/vue-next/pull/1682 for
+more details.
+
+
+
+# [3.0.0-rc.4](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.3...v3.0.0-rc.4) (2020-07-21)
+
+
+### Bug Fixes
+
+* **deps:** move @babel/types back to dependencies ([11c2ad4](https://github.com/vuejs/vue-next/commit/11c2ad4a04c000ea828a0f5017e41fc7e0816868))
+
+
+
+# [3.0.0-rc.3](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.2...v3.0.0-rc.3) (2020-07-21)
+
+
+### Bug Fixes
+
+* **build:** make transition tree-shakeable again ([ad199e1](https://github.com/vuejs/vue-next/commit/ad199e1a252f80c85a8e40a4b4539ad27c39505c))
+* **compiler-sfc:** `<style vars scoped>` prefixing should only apply to pre-transform source ([4951d43](https://github.com/vuejs/vue-next/commit/4951d4352605eb9f4bcbea40ecc68fc6cbc3dce2)), closes [#1623](https://github.com/vuejs/vue-next/issues/1623)
+* **compiler-sfc:** use correct importer with `useCssVars` ([#1658](https://github.com/vuejs/vue-next/issues/1658)) ([6f148d0](https://github.com/vuejs/vue-next/commit/6f148d0b9a0630dc87c741ed951c82b639e776b2))
+* **runtime-core:** do not use bail patchFlag on cloned vnodes ([6390ddf](https://github.com/vuejs/vue-next/commit/6390ddfb7d0ed83ac4bae15d0497cba4de3e1972)), closes [#1665](https://github.com/vuejs/vue-next/issues/1665)
+* **runtime-core:** fix attr fallthrough on compiled framgent w/ single static element + comments ([1af3531](https://github.com/vuejs/vue-next/commit/1af35317195772ea8f2728abc8f5ac159a5b7b75))
+* **v-model:** v-model listeners should not fallthrough to plain element root ([c852bf1](https://github.com/vuejs/vue-next/commit/c852bf18d7a51be0c3255357f0c30f39ae9bb540)), closes [#1643](https://github.com/vuejs/vue-next/issues/1643)
+* **watch:** fix watching reactive array ([#1656](https://github.com/vuejs/vue-next/issues/1656)) ([288b4ea](https://github.com/vuejs/vue-next/commit/288b4eab9e10187eb14d4d6d54dc9f077343a2a5)), closes [#1655](https://github.com/vuejs/vue-next/issues/1655)
+
+
+### Features
+
+* **compiler-core/internal:** add `onContextCreated` option to `generate` ([#1672](https://github.com/vuejs/vue-next/issues/1672)) ([615dccd](https://github.com/vuejs/vue-next/commit/615dccd00e7d85a3f4b82e62d6cb6c41f167d8c6))
+* **runtime-core:** respect function name when using `defineComponent` function shorthand ([#1661](https://github.com/vuejs/vue-next/issues/1661)) ([304830a](https://github.com/vuejs/vue-next/commit/304830a764cd9f28098cfb0ac0e520e1bb2f57c7))
+* provide ability to overwrite feature flags in esm-bundler builds ([54727f9](https://github.com/vuejs/vue-next/commit/54727f9874abe8d0c99ee153d252269ae519b45d))
+* **computed:** add readonly flag if no setter is provided ([#1654](https://github.com/vuejs/vue-next/issues/1654)) ([dabdc5e](https://github.com/vuejs/vue-next/commit/dabdc5e115514f98b5f8559a3819e96416939f43))
+
+
+
 # [3.0.0-rc.2](https://github.com/vuejs/vue-next/compare/v3.0.0-rc.1...v3.0.0-rc.2) (2020-07-19)
 
 

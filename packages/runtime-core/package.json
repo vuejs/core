@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-core",
-  "version": "3.0.0-rc.2",
+  "version": "3.0.0-rc.5",
   "description": "@vue/runtime-core",
   "main": "index.js",
   "module": "dist/runtime-core.esm-bundler.js",
@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/vuejs/vue-next/tree/master/packages/runtime-core#readme",
   "dependencies": {
-    "@vue/shared": "3.0.0-rc.2",
-    "@vue/reactivity": "3.0.0-rc.2"
+    "@vue/shared": "3.0.0-rc.5",
+    "@vue/reactivity": "3.0.0-rc.5"
   }
 }

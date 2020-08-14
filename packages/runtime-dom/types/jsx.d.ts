@@ -246,7 +246,7 @@ interface AriaAttributes {
 }
 
 export interface HTMLAttributes extends AriaAttributes {
-  domPropsInnerHTML?: string
+  innerHTML?: string
 
   class?: any
   style?: string | CSSProperties
@@ -735,7 +735,14 @@ export interface WebViewHTMLAttributes extends HTMLAttributes {
 }
 
 export interface SVGAttributes extends AriaAttributes {
-  domPropsInnerHTML?: string
+  innerHTML?: string
+
+  /**
+   * SVG Styling Attributes
+   * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
+   */
+  class?: any
+  style?: string | CSSProperties
 
   color?: string
   height?: number | string

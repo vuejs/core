@@ -4,7 +4,8 @@ import {
   h,
   reactive,
   nextTick,
-  ComponentOptions
+  ComponentOptions,
+  Suspense
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -66,6 +67,48 @@ describe('useCssVars', () => {
         return () => h(Child)
       }
     }))
+  })
+
+  test('on suspense root', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+
+    const AsyncComp = {
+      async setup() {
+        return () => h('p', 'default')
+      }
+    }
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () =>
+          h(Suspense, null, {
+            default: h(AsyncComp),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    render(h(App), root)
+    // css vars use with fallback tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+    // AsyncComp resolve
+    await nextTick()
+    // Suspense effects flush
+    await nextTick()
+    // css vars use with default tree
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+    }
+
+    state.color = 'green'
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+    }
   })
 
   test('with <style scoped>', async () => {

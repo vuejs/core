@@ -8,10 +8,6 @@ import {
   serialize,
   serializeInner
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
-
-mockWarn()
-
 function toSpan(content: any) {
   if (typeof content === 'string') {
     return h('span', content.toString())
