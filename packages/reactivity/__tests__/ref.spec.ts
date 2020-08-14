@@ -115,6 +115,15 @@ describe('reactivity/ref', () => {
     expect((arr[1] as Ref).value).toBe(3)
   })
 
+  it('should unwrap ref types as props of arrays', () => {
+    const arr = [ref(0)]
+    arr['' as any] = ref(1)
+    const arrRef = ref(arr).value
+    expect(isRef(arrRef[0])).toBe(true)
+    expect(isRef(arrRef['' as any])).toBe(false)
+    expect(arrRef['' as any]).toBe(1)
+  })
+
   it('should keep tuple types', () => {
     const tuple: [number, string, { a: number }, () => number, Ref<number>] = [
       0,

@@ -81,7 +81,10 @@ function createGetter(isReadonly = false, shallow = false) {
 
     if (isRef(res)) {
       // ref unwrapping, only for Objects, not for Arrays.
-      return targetIsArray ? res : res.value
+      const shouldUnwrap =
+        !targetIsArray || isNaN(key as any) || isSymbol(key) || key === ''
+
+      return shouldUnwrap ? res.value : res
     }
 
     if (isObject(res)) {
