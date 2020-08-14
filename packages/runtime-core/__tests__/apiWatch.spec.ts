@@ -77,6 +77,21 @@ describe('api: watch', () => {
     expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
   })
 
+  it('should not fire if watched getter result did not change', async () => {
+    const spy = jest.fn()
+    const n = ref(0)
+    watch(() => n.value % 2, spy)
+
+    n.value++
+    await nextTick()
+    expect(spy).toBeCalledTimes(1)
+
+    n.value += 2
+    await nextTick()
+    // should not be called again because getter result did not change
+    expect(spy).toBeCalledTimes(1)
+  })
+
   it('watching single source: computed ref', async () => {
     const count = ref(0)
     const plus = computed(() => count.value + 1)
