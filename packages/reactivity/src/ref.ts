@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-declare const RefSymbol: unique symbol
+export declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   /**
@@ -47,7 +47,7 @@ export function shallowRef(value?: unknown) {
 class _Ref<T> implements Ref<T> {
   private _value: T
 
-  constructor(private _rawValue: T, private _shallow = false) {
+  constructor(private _rawValue: T, private readonly _shallow = false) {
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
@@ -159,7 +159,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 }
 
 class _ObjectRef<T extends object, K extends keyof T> implements Ref<T[K]> {
-  constructor(private _object: T, private _key: K) {}
+  constructor(private readonly _object: T, private readonly _key: K) {}
 
   get value() {
     return this._object[this._key]
