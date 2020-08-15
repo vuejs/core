@@ -93,7 +93,7 @@ export default postcss.plugin('vue-scoped', (id: any) => (root: Root) => {
 
             // global: replace with inner selector and do not inject [id].
             // ::v-global(.foo) -> .foo
-            if (value === ':global' || n.value === '::v-global') {
+            if (value === ':global' || value === '::v-global') {
               selectors.insertAfter(selector, n.nodes[0])
               selectors.removeChild(selector)
               return false

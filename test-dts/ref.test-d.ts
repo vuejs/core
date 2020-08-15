@@ -1,4 +1,12 @@
-import { Ref, ref, isRef, unref, reactive, expectType } from './index'
+import {
+  Ref,
+  ref,
+  isRef,
+  unref,
+  reactive,
+  expectType,
+  proxyRefs
+} from './index'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -111,3 +119,21 @@ const state = reactive({
 })
 
 expectType<string>(state.foo.label)
+
+// proxyRefs: should return `reactive` directly
+const r1 = reactive({
+  k: 'v'
+})
+const p1 = proxyRefs(r1)
+expectType<typeof r1>(p1)
+
+// proxyRefs: `ShallowUnwrapRef`
+const r2 = {
+  a: ref(1),
+  obj: {
+    k: ref('foo')
+  }
+}
+const p2 = proxyRefs(r2)
+expectType<number>(p2.a)
+expectType<Ref<string>>(p2.obj.k)

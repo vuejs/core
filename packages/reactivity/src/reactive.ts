@@ -21,7 +21,7 @@ export const enum ReactiveFlags {
   READONLY = '__v_readonly'
 }
 
-interface Target {
+export interface Target {
   [ReactiveFlags.SKIP]?: boolean
   [ReactiveFlags.IS_REACTIVE]?: boolean
   [ReactiveFlags.IS_READONLY]?: boolean
