@@ -234,7 +234,7 @@ function parseChildren(
           node.type === NodeTypes.COMMENT &&
           !context.options.comments
         ) {
-          // remove comment nodes in prod
+          // remove comment nodes in prod by default
           removedWhitespace = true
           nodes[i] = null as any
         }
