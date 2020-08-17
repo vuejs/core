@@ -48,7 +48,7 @@ export { defineAsyncComponent } from './apiAsyncComponent'
 
 // For getting a hold of the internal instance in setup() - useful for advanced
 // plugins
-export { getCurrentInstance } from './component'
+export { getCurrentInstance, PublicAPIComponent } from './component'
 
 // For raw render function users
 export { h } from './h'
