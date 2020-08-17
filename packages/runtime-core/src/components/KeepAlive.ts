@@ -288,6 +288,7 @@ export const KeepAlive = (KeepAliveImpl as any) as {
   new (): {
     $props: VNodeProps & KeepAliveProps
   }
+  __isKeepAlive: true
 }
 
 function getName(comp: Component): string | void {
