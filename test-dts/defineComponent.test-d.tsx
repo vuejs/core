@@ -11,6 +11,8 @@ import {
   ComponentOptions,
   SetupContext
 } from './index'
+import { PublicAPIComponent } from '@vue/vue/src'
+import { PublicAPIComponent } from '@vue/vue/src'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -161,6 +163,8 @@ describe('with object props', () => {
       return null
     }
   })
+
+  expectType<PublicAPIComponent>(MyComponent)
 
   // Test TSX
   expectType<JSX.Element>(
@@ -727,6 +731,8 @@ describe('emits', () => {
       }
     }
   })
+
+  expectType<PublicAPIComponent>(instance)
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
