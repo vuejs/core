@@ -8,11 +8,10 @@ import {
   expectError,
   expectType,
   ComponentPublicInstance,
+  PublicAPIComponent,
   ComponentOptions,
   SetupContext
 } from './index'
-import { PublicAPIComponent } from '@vue/vue/src'
-import { PublicAPIComponent } from '@vue/vue/src'
 
 describe('with object props', () => {
   interface ExpectedProps {
