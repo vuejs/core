@@ -44,6 +44,24 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed.array[0])).toBe(true)
   })
 
+  test('process subtypes of collections properly', () => {
+    class CustomMap extends Map {
+      count = 0
+
+      set(key: any, value: any): this {
+        super.set(key, value)
+        this.count++
+        return this
+      }
+    }
+
+    const testMap = new CustomMap()
+    const observed = reactive(testMap)
+    expect(observed.count).toBe(0)
+    observed.set('test', 'value')
+    expect(observed.count).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
