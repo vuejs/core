@@ -374,6 +374,16 @@ describe('compiler: parse', () => {
         }
       })
     })
+
+    test('comments option', () => {
+      __DEV__ = false
+      const astNoComment = baseParse('<!--abc-->')
+      const astWithComments = baseParse('<!--abc-->', { comments: true })
+      __DEV__ = true
+
+      expect(astNoComment.children).toHaveLength(0)
+      expect(astWithComments.children).toHaveLength(1)
+    })
   })
 
   describe('Element', () => {

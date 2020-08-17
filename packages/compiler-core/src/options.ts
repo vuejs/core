@@ -49,6 +49,10 @@ export interface ParserOptions {
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   onError?: (error: CompilerError) => void
+  /**
+   * Keep comments in the templates AST, even in production
+   */
+  comments?: boolean
 }
 
 export type HoistTransform = (
