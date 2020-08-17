@@ -190,6 +190,17 @@ describe('with object props', () => {
     />
   )
 
+  expectType<PublicAPIComponent>(
+    <MyComponent
+      b="b"
+      dd={{ n: 1 }}
+      ddd={['ddd']}
+      eee={() => ({ a: 'eee' })}
+      fff={(a, b) => ({ a: a > +b })}
+      hhh={false}
+    />
+  )
+
   // @ts-expect-error missing required props
   expectError(<MyComponent />)
 
