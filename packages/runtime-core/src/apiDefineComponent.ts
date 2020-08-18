@@ -44,12 +44,8 @@ export type DefineComponent<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   PP = PublicProps,
-  RequiredProps = PropsOrPropOptions extends string
-    ? Readonly<{ [K in PropsOrPropOptions]?: any }>
-    : Readonly<ExtractPropTypes<PropsOrPropOptions>>,
-  OptionalProps = PropsOrPropOptions extends string
-    ? Readonly<{ [K in PropsOrPropOptions]?: any }>
-    : Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
+  RequiredProps = Readonly<ExtractPropTypes<PropsOrPropOptions>>,
+  OptionalProps = Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
 > = DefineComponentJSX<
   CreateComponentPublicInstance<
     OptionalProps,

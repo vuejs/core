@@ -357,9 +357,6 @@ describe('with mixins', () => {
       }
     }
   })
-
-  expectType<string>(MixinA.aP1)
-  
   const MixinB = defineComponent({
     props: ['bP1', 'bP2'],
     data() {
