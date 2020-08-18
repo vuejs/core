@@ -29,18 +29,27 @@ export interface DefineComponentJSX<T extends ComponentPublicInstance> {
 }
 
 export type DefineComponent<
-  Options extends
-    | ComponentOptions
-    | ComponentOptionsBase<any, any, any, any, any, any, any, any>,
-  Props,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
+  Props = any,
+  RawBindings = any,
+  D = any,
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  PublicProps = {},
+  PublicProps = any,
+  Options extends
+    | ComponentOptions
+    | ComponentOptionsBase<
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any
+      > = ComponentOptions,
   PublicInstance extends ComponentPublicInstance = CreateComponentPublicInstance<
     Props,
     RawBindings,
@@ -52,7 +61,7 @@ export type DefineComponent<
     E,
     PublicProps
   >
-> = PublicInstance & Options & DefineComponentJSX<PublicInstance>
+> = Options & DefineComponentJSX<PublicInstance>
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -67,7 +76,6 @@ export function defineComponent<Props, RawBindings = object>(
     ctx: SetupContext
   ) => RawBindings | RenderFunction
 ): DefineComponent<
-  any,
   Props,
   RawBindings,
   {},
@@ -77,7 +85,8 @@ export function defineComponent<Props, RawBindings = object>(
   {},
   {},
   // public props
-  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
+  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps,
+  ComponentOptions
 >
 
 // overload 2: object format with no props
@@ -106,6 +115,15 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps,
   ComponentOptionsWithoutProps<
     Props,
     RawBindings,
@@ -116,16 +134,7 @@ export function defineComponent<
     Extends,
     E,
     EE
-  >,
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
+  >
 >
 
 // overload 3: object format with array props declaration
@@ -154,6 +163,15 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  Readonly<{ [key in PropNames]?: any }>,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  AllowedComponentProps & ComponentCustomProps,
   ComponentOptionsWithArrayProps<
     PropNames,
     RawBindings,
@@ -164,16 +182,7 @@ export function defineComponent<
     Extends,
     E,
     EE
-  >,
-  Readonly<{ [key in PropNames]?: any }>,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  AllowedComponentProps & ComponentCustomProps
+  >
 >
 
 // overload 4: object format with object props declaration
@@ -203,6 +212,15 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  ExtractPropTypes<PropsOptions, false>,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  VNodeProps & AllowedComponentProps & ComponentCustomProps,
   ComponentOptionsWithObjectProps<
     PropsOptions,
     RawBindings,
@@ -213,16 +231,7 @@ export function defineComponent<
     Extends,
     E,
     EE
-  >,
-  ExtractPropTypes<PropsOptions, false>,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  VNodeProps & AllowedComponentProps & ComponentCustomProps
+  >
 >
 
 // implementation, close to no-op
