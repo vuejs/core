@@ -13,6 +13,7 @@ import { RawSlots } from './componentSlots'
 import { FunctionalComponent, Component } from './component'
 import { ComponentOptions } from './componentOptions'
 import { EmitsOptions } from './componentEmits'
+import { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -129,6 +130,13 @@ export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+// fake constructor type returned by `defineComponent`
+export function h(type: DefineComponent, children?: RawChildren): VNode
+export function h<P>(
+  type: DefineComponent<P>,
+  props: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
 
