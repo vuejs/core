@@ -9,7 +9,15 @@ import {
   expectType,
   ComponentPublicInstance,
   ComponentOptions,
-  SetupContext
+  SetupContext,
+  FunctionalComponent,
+  h,
+  Component,
+  ComponentOptionsWithoutProps,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
+  ComponentPropsOptions,
+  newDefineComponent
 } from './index'
 
 describe('with object props', () => {
@@ -735,3 +743,31 @@ describe('componentOptions setup should be `SetupContext`', () => {
     ctx: SetupContext
   ) => any)
 })
+
+const Wprops = defineComponent({
+  props: {
+    x1: {
+      type: String,
+      required: true
+    },
+    x2: Number
+  }
+})
+
+const Xprops = newDefineComponent({
+  props: {
+    x1: {
+      type: String,
+      required: true
+    },
+    x2: Number
+  }
+})
+
+// @ts-expect-error
+expectType<JSX.Element>(<Xprops />)
+
+// @ts-expect-error
+expectError(<Xprops />)
+// @ts-expect-error
+expectError(<Wprops />)

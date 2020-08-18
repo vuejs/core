@@ -1,4 +1,9 @@
-import { defineComponent, expectError, expectType } from './index'
+import {
+  defineComponent,
+  expectError,
+  expectType,
+  newDefineComponent
+} from './index'
 
 declare module '@vue/runtime-core' {
   interface ComponentCustomOptions {
@@ -55,3 +60,45 @@ expectError(<Custom baz="baz" />)
 expectError(<Custom baz={1} notExist={1} />)
 // @ts-expect-error
 expectError(<Custom baz={1} custom="custom" />)
+
+const Custom2 = newDefineComponent({
+  props: {
+    bar: String,
+    baz: {
+      type: Number,
+      required: true
+    }
+  },
+
+  data: () => ({ counter: 0 }),
+
+  test(n) {
+    expectType<number>(n)
+  },
+
+  methods: {
+    aMethod() {
+      // @ts-expect-error
+      expectError(this.notExisting)
+      this.counter++
+      this.state = 'running'
+      // @ts-expect-error
+      expectError((this.state = 'not valid'))
+    }
+  }
+})
+
+expectType<JSX.Element>(<Custom2 baz={1} />)
+expectType<JSX.Element>(<Custom2 custom={1} baz={1} />)
+expectType<JSX.Element>(<Custom2 bar="bar" baz={1} />)
+
+// @ts-expect-error
+expectType<JSX.Element>(<Custom2 />)
+// @ts-expect-error
+expectError(<Custom2 bar="bar" />)
+// @ts-expect-error
+expectError(<Custom2 baz="baz" />)
+// @ts-expect-error
+expectError(<Custom2 baz={1} notExist={1} />)
+// @ts-expect-error
+expectError(<Custom2 baz={1} custom="custom" />)
