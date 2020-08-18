@@ -280,6 +280,8 @@ describe('reactivity/ref', () => {
     const arr = reactive(['a', 'b', 'c'])
     const refs = toRefs(arr)
     
+    expect(Array.isArray(refs)).toBe(true)
+    
     refs[0].value = '1'
     expect(arr[0]).toBe('1')
     
