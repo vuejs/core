@@ -7,7 +7,7 @@ import {
   ReactiveEffectOptions,
   isReactive
 } from '@vue/reactivity'
-import { queueJob, SchedulerJob } from './scheduler'
+import { SchedulerJob, queuePreFlushCb } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -261,7 +261,7 @@ function doWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows it
   // it is allowed to self-trigger (#1727)
-  job.cb = !!cb
+  job.allowRecurse = !!cb
 
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
@@ -271,7 +271,7 @@ function doWatch(
     job.id = -1
     scheduler = () => {
       if (!instance || instance.isMounted) {
-        queueJob(job)
+        queuePreFlushCb(job)
       } else {
         // with 'pre' option, the first call must happen before
         // the component is mounted so it is called synchronously.

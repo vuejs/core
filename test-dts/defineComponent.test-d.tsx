@@ -27,6 +27,7 @@ describe('with object props', () => {
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
+    validated?: string
   }
 
   type GT = string & { __brand: unknown }
@@ -75,6 +76,10 @@ describe('with object props', () => {
       hhh: {
         type: Boolean,
         required: true
+      },
+      validated: {
+        type: String,
+        validator: (val: unknown) => val !== ''
       }
     },
     setup(props) {
@@ -92,6 +97,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
+      expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -710,6 +716,17 @@ describe('emits', () => {
   const instance = {} as ComponentPublicInstance
   instance.$emit('test', 1)
   instance.$emit('test')
+
+  // `this` should be void inside of emits validators
+  defineComponent({
+    props: ['bar'],
+    emits: {
+      foo(): boolean {
+        // @ts-expect-error
+        return this.bar === 3
+      }
+    }
+  })
 })
 
 describe('componentOptions setup should be `SetupContext`', () => {
