@@ -201,11 +201,19 @@ export function renderComponentRoot(
     // inherit transition data
     if (vnode.transition) {
       if (__DEV__ && !isElementRoot(root)) {
-        warn(
-          `Component inside <Transition> renders non-element root node ` +
-            `that cannot be animated.`
-        )
+        if (root.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          warn(
+            `<Transition> serve as transition effects only for single element/component. ` +
+              `<Transition-group> is for multiple elements/components.`
+          )
+        } else {
+          warn(
+            `Component inside <Transition> renders non-element root node ` +
+              `that cannot be animated.`
+          )
+        }
       }
+
       root.transition = vnode.transition
     }
 
