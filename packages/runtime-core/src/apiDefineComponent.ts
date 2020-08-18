@@ -26,7 +26,7 @@ declare const JSX: unique symbol
 export interface DefineComponentJSX<
   T extends ComponentPublicInstance = ComponentPublicInstance
 > {
-  [JSX]: true
+  new (): T
 }
 
 export type PublicProps = VNodeProps &
