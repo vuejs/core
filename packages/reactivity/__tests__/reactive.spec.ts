@@ -1,11 +1,8 @@
 import { ref, isRef } from '../src/ref'
 import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
-import { mockWarn } from '@vue/shared'
 import { computed } from '../src/computed'
 
 describe('reactivity/reactive', () => {
-  mockWarn()
-
   test('Object', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -45,6 +42,24 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed.nested)).toBe(true)
     expect(isReactive(observed.array)).toBe(true)
     expect(isReactive(observed.array[0])).toBe(true)
+  })
+
+  test('process subtypes of collections properly', () => {
+    class CustomMap extends Map {
+      count = 0
+
+      set(key: any, value: any): this {
+        super.set(key, value)
+        this.count++
+        return this
+      }
+    }
+
+    const testMap = new CustomMap()
+    const observed = reactive(testMap)
+    expect(observed.count).toBe(0)
+    observed.set('test', 'value')
+    expect(observed.count).toBe(1)
   })
 
   test('observed value should proxy mutations to original (Object)', () => {
@@ -186,11 +201,16 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.bar)).toBe(false)
   })
 
-  test('should not observe frozen objects', () => {
+  test('should not observe non-extensible objects', () => {
     const obj = reactive({
-      foo: Object.freeze({ a: 1 })
+      foo: Object.preventExtensions({ a: 1 }),
+      // sealed or frozen objects are considered non-extensible as well
+      bar: Object.freeze({ a: 1 }),
+      baz: Object.seal({ a: 1 })
     })
     expect(isReactive(obj.foo)).toBe(false)
+    expect(isReactive(obj.bar)).toBe(false)
+    expect(isReactive(obj.baz)).toBe(false)
   })
 
   test('should not observe objects with __v_skip', () => {

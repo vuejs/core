@@ -1,10 +1,7 @@
 import { reactive, effect, toRaw, isReactive } from '../../src'
-import { mockWarn } from '@vue/shared'
 
 describe('reactivity/collections', () => {
   describe('Map', () => {
-    mockWarn()
-
     test('instanceof', () => {
       const original = new Map()
       const observed = reactive(original)

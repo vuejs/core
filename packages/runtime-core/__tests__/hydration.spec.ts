@@ -12,7 +12,6 @@ import {
   defineComponent
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
-import { mockWarn } from '@vue/shared'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -34,8 +33,6 @@ const triggerEvent = (type: string, el: Element) => {
 }
 
 describe('SSR hydration', () => {
-  mockWarn()
-
   beforeEach(() => {
     document.body.innerHTML = ''
   })

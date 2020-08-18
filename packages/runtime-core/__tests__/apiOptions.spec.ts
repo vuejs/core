@@ -10,7 +10,6 @@ import {
   ref,
   defineComponent
 } from '@vue/runtime-test'
-import { mockWarn } from '@vue/shared'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -113,6 +112,7 @@ describe('api: options', () => {
     const spyA = jest.fn(returnThis)
     const spyB = jest.fn(returnThis)
     const spyC = jest.fn(returnThis)
+    const spyD = jest.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -122,7 +122,8 @@ describe('api: options', () => {
           bar: 2,
           baz: {
             qux: 3
-          }
+          },
+          qux: 4
         }
       },
       watch: {
@@ -133,10 +134,14 @@ describe('api: options', () => {
         baz: {
           handler: spyC,
           deep: true
+        },
+        qux: {
+          handler: 'onQuxChange'
         }
       },
       methods: {
-        onFooChange: spyA
+        onFooChange: spyA,
+        onQuxChange: spyD
       },
       render() {
         ctx = this
@@ -165,6 +170,11 @@ describe('api: options', () => {
     expect(spyC).toHaveBeenCalledTimes(1)
     // new and old objects have same identity
     assertCall(spyC, 0, [{ qux: 4 }, { qux: 4 }])
+
+    ctx.qux++
+    await nextTick()
+    expect(spyD).toHaveBeenCalledTimes(1)
+    assertCall(spyD, 0, [5, 4])
   })
 
   test('watch array', async () => {
@@ -520,6 +530,17 @@ describe('api: options', () => {
     ])
   })
 
+  test('render from mixin', () => {
+    const Comp = {
+      mixins: [
+        {
+          render: () => 'from mixin'
+        }
+      ]
+    }
+    expect(renderToString(h(Comp))).toBe('from mixin')
+  })
+
   test('extends', () => {
     const calls: string[] = []
     const Base = {
@@ -694,12 +715,13 @@ describe('api: options', () => {
   })
 
   describe('warnings', () => {
-    mockWarn()
-
     test('Expected a function as watch handler', () => {
       const Comp = {
         watch: {
-          foo: 'notExistingMethod'
+          foo: 'notExistingMethod',
+          foo2: {
+            handler: 'notExistingMethod2'
+          }
         },
         render() {}
       }
@@ -709,6 +731,9 @@ describe('api: options', () => {
 
       expect(
         'Invalid watch handler specified by key "notExistingMethod"'
+      ).toHaveBeenWarned()
+      expect(
+        'Invalid watch handler specified by key "notExistingMethod2"'
       ).toHaveBeenWarned()
     })
 

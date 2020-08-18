@@ -268,4 +268,61 @@ describe('api: template refs', () => {
     // ref should be updated
     expect(serializeInner(root)).toBe(`<div id="foo">foo</div>`)
   })
+
+  // #1834
+  test('exchange refs', async () => {
+    const refToggle = ref(false)
+    const spy = jest.fn()
+
+    const Comp = {
+      render(this: any) {
+        return [
+          h('p', { ref: refToggle.value ? 'foo' : 'bar' }),
+          h('i', { ref: refToggle.value ? 'bar' : 'foo' })
+        ]
+      },
+      mounted(this: any) {
+        spy(this.$refs.foo.tag, this.$refs.bar.tag)
+      },
+      updated(this: any) {
+        spy(this.$refs.foo.tag, this.$refs.bar.tag)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(spy.mock.calls[0][0]).toBe('i')
+    expect(spy.mock.calls[0][1]).toBe('p')
+    refToggle.value = true
+    await nextTick()
+    expect(spy.mock.calls[1][0]).toBe('p')
+    expect(spy.mock.calls[1][1]).toBe('i')
+  })
+
+  // #1789
+  test('toggle the same ref to different elements', async () => {
+    const refToggle = ref(false)
+    const spy = jest.fn()
+
+    const Comp = {
+      render(this: any) {
+        return refToggle.value ? h('p', { ref: 'foo' }) : h('i', { ref: 'foo' })
+      },
+      mounted(this: any) {
+        spy(this.$refs.foo.tag)
+      },
+      updated(this: any) {
+        spy(this.$refs.foo.tag)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    expect(spy.mock.calls[0][0]).toBe('i')
+    refToggle.value = true
+    await nextTick()
+    expect(spy.mock.calls[1][0]).toBe('p')
+  })
 })

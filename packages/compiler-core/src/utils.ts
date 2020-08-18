@@ -161,7 +161,11 @@ export function findProp(
       if (p.name === name && (p.value || allowEmpty)) {
         return p
       }
-    } else if (p.name === 'bind' && p.exp && isBindKey(p.arg, name)) {
+    } else if (
+      p.name === 'bind' &&
+      (p.exp || allowEmpty) &&
+      isBindKey(p.arg, name)
+    ) {
       return p
     }
   }
