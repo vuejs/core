@@ -11,8 +11,7 @@ import {
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps,
-  ComponentOptions
+  ComponentCustomProps
 } from './component'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
@@ -28,6 +27,11 @@ export interface DefineComponentJSX<T extends ComponentPublicInstance> {
   [JSX]: true
 }
 
+export type PublicProps<Props> = VNodeProps &
+  Props &
+  AllowedComponentProps &
+  ComponentCustomProps
+
 export type DefineComponent<
   Props = any,
   RawBindings = any,
@@ -37,31 +41,24 @@ export type DefineComponent<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  PublicProps = any,
-  Options extends
-    | ComponentOptions
-    | ComponentOptionsBase<
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any
-      > = ComponentOptions,
-  PublicInstance extends ComponentPublicInstance = CreateComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    PublicProps
-  >
-> = Options & DefineComponentJSX<PublicInstance>
+  EE extends string = string,
+  PP = PublicProps<Props>
+> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> &
+  DefineComponentJSX<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      PP
+    >
+  > &
+  PP
+// public props
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -75,19 +72,7 @@ export function defineComponent<Props, RawBindings = object>(
     props: Readonly<Props>,
     ctx: SetupContext
   ) => RawBindings | RenderFunction
-): DefineComponent<
-  Props,
-  RawBindings,
-  {},
-  {},
-  {},
-  {},
-  {},
-  {},
-  // public props
-  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps,
-  ComponentOptions
->
+): DefineComponent<Props, RawBindings>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -96,11 +81,11 @@ export function defineComponent<
   Props = {},
   RawBindings = {},
   D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
+  C extends ComputedOptions = ComputedOptions,
+  M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string
 >(
   options: ComponentOptionsWithoutProps<
@@ -114,28 +99,7 @@ export function defineComponent<
     E,
     EE
   >
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  VNodeProps & Props & AllowedComponentProps & ComponentCustomProps,
-  ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
->
+): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -171,18 +135,7 @@ export function defineComponent<
   Mixin,
   Extends,
   E,
-  AllowedComponentProps & ComponentCustomProps,
-  ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+  EE
 >
 
 // overload 4: object format with object props declaration
@@ -220,18 +173,7 @@ export function defineComponent<
   Mixin,
   Extends,
   E,
-  VNodeProps & AllowedComponentProps & ComponentCustomProps,
-  ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+  EE
 >
 
 // implementation, close to no-op

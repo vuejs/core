@@ -110,7 +110,7 @@ export interface ClassComponent {
   __vccOpts: ComponentOptions
 }
 
-export type Component = ComponentOptions | FunctionalComponent<any>
+export type Component = ComponentOptions | FunctionalComponent<any, any>
 
 // A type used in public APIs where a component type is expected.
 // The constructor type is an artificial type returned by defineComponent().
