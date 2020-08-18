@@ -5,12 +5,14 @@ import {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
-  RenderFunction
+  RenderFunction,
+  ComponentOptionsBase
 } from './componentOptions'
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  ComponentOptions
 } from './component'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
@@ -29,6 +31,9 @@ export interface DefineComponentJSX<T extends ComponentPublicInstance> {
 }
 
 export type DefineComponent<
+  Options extends
+    | ComponentOptions
+    | ComponentOptionsBase<any, any, any, any, any, any, any, any>,
   Props,
   RawBindings,
   D,
@@ -38,17 +43,18 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   PublicProps = {}
-> = CreateComponentPublicInstance<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  PublicProps
-> & { [DefineComponent]: true } & DefineComponentJSX<
+> = Options &
+  CreateComponentPublicInstance<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    PublicProps
+  > & { [DefineComponent]: true } & DefineComponentJSX<
     CreateComponentPublicInstance<
       Props,
       RawBindings,
@@ -75,6 +81,7 @@ export function defineComponent<Props, RawBindings = object>(
     ctx: SetupContext
   ) => RawBindings | RenderFunction
 ): DefineComponent<
+  any,
   Props,
   RawBindings,
   {},
@@ -113,6 +120,17 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >,
   Props,
   RawBindings,
   D,
@@ -150,6 +168,17 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >,
   Readonly<{ [key in PropNames]?: any }>,
   RawBindings,
   D,
@@ -188,6 +217,17 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
+  ComponentOptionsWithObjectProps<
+    PropsOptions,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  >,
   ExtractPropTypes<PropsOptions, false>,
   RawBindings,
   D,

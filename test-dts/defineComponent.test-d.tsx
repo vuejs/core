@@ -9,15 +9,7 @@ import {
   expectType,
   ComponentPublicInstance,
   ComponentOptions,
-  SetupContext,
-  FunctionalComponent,
-  h,
-  Component,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentPropsOptions,
-  newDefineComponent
+  SetupContext
 } from './index'
 
 describe('with object props', () => {
