@@ -23,7 +23,9 @@ import {
 } from './componentProxy'
 
 declare const JSX: unique symbol
-export interface DefineComponentJSX<T extends ComponentPublicInstance> {
+export interface DefineComponentJSX<
+  T extends ComponentPublicInstance = ComponentPublicInstance
+> {
   [JSX]: true
 }
 
@@ -41,16 +43,16 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  // extract currect options
-  Props = PropsOrPropOptions extends ComponentPropsOptions
-    ? Readonly<ExtractPropTypes<PropsOrPropOptions>>
-    : PropsOrPropOptions,
-  PP = PublicProps
+  PP = PublicProps,
+  RequiredProps = PropsOrPropOptions extends string
+    ? Readonly<{ [K in PropsOrPropOptions]?: any }>
+    : Readonly<ExtractPropTypes<PropsOrPropOptions>>,
+  OptionalProps = PropsOrPropOptions extends string
+    ? Readonly<{ [K in PropsOrPropOptions]?: any }>
+    : Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
 > = DefineComponentJSX<
   CreateComponentPublicInstance<
-    PropsOrPropOptions extends ComponentPropsOptions
-      ? Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
-      : Props,
+    OptionalProps,
     RawBindings,
     D,
     C,
@@ -58,10 +60,20 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    PP
+    PP & OptionalProps
   >
 > &
-  ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> &
+  ComponentOptionsBase<
+    RequiredProps,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  > &
   PP
 
 // defineComponent is a utility that is primarily used for type inference

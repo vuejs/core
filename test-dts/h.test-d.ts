@@ -99,6 +99,8 @@ describe('h inference w/ defineComponent', () => {
     }
   })
 
+  new Foo().$props.bar
+
   h(Foo, { bar: 1 })
   h(Foo, { bar: 1, foo: 'ok' })
   // should allow extraneous props (attrs fallthrough)
