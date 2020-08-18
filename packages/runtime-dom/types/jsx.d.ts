@@ -1316,6 +1316,12 @@ type EventHandlers<E> = {
 // named imports.
 import * as RuntimeCore from '@vue/runtime-core'
 
+declare module '@vue/runtime-core/' {
+  interface DefineComponentJSX<T> {
+    new (): T
+  }
+}
+
 type ReservedProps = {
   key?: string | number
   ref?:
@@ -1352,9 +1358,3 @@ declare global {
 
 // suppress ts:2669
 export {}
-
-declare module '@vue/runtime-core' {
-  interface DefineComponentJSX<T> {
-    new (): T
-  }
-}

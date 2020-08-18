@@ -23,9 +23,7 @@ import {
   ComponentPublicInstance
 } from './componentProxy'
 
-declare const DefineComponent: unique symbol
 declare const JSX: unique symbol
-
 export interface DefineComponentJSX<T extends ComponentPublicInstance> {
   [JSX]: true
 }
@@ -42,9 +40,8 @@ export type DefineComponent<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  PublicProps = {}
-> = Options &
-  CreateComponentPublicInstance<
+  PublicProps = {},
+  PublicInstance extends ComponentPublicInstance = CreateComponentPublicInstance<
     Props,
     RawBindings,
     D,
@@ -54,19 +51,8 @@ export type DefineComponent<
     Extends,
     E,
     PublicProps
-  > & { [DefineComponent]: true } & DefineComponentJSX<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      PublicProps
-    >
   >
+> = PublicInstance & Options & DefineComponentJSX<PublicInstance>
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
