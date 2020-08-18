@@ -27,13 +27,12 @@ export interface DefineComponentJSX<T extends ComponentPublicInstance> {
   [JSX]: true
 }
 
-export type PublicProps<Props> = VNodeProps &
-  Props &
+export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
 export type DefineComponent<
-  Props = any,
+  PropsOrPropOptions = any,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
@@ -42,23 +41,28 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  PP = PublicProps<Props>
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> &
-  DefineComponentJSX<
-    CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      PP
-    >
-  > &
+  // extract currect options
+  Props = PropsOrPropOptions extends ComponentPropsOptions
+    ? Readonly<ExtractPropTypes<PropsOrPropOptions>>
+    : PropsOrPropOptions,
+  PP = PublicProps
+> = DefineComponentJSX<
+  CreateComponentPublicInstance<
+    PropsOrPropOptions extends ComponentPropsOptions
+      ? Readonly<ExtractPropTypes<PropsOrPropOptions, false>>
+      : Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    PP
+  >
+> &
+  ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> &
   PP
-// public props
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -164,17 +168,7 @@ export function defineComponent<
     E,
     EE
   >
-): DefineComponent<
-  Readonly<ExtractPropTypes<PropsOptions>>,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE
->
+): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
 
 // implementation, close to no-op
 export function defineComponent(options: unknown) {
