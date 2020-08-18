@@ -291,7 +291,7 @@ function resolvePropValue(
       const defaultValue = opt.default
       value =
         opt.type !== Function && isFunction(defaultValue)
-          ? defaultValue()
+          ? defaultValue(props)
           : defaultValue
     }
     // boolean casting
