@@ -165,7 +165,7 @@ export function defineComponent<
     EE
   >
 ): DefineComponent<
-  ExtractPropTypes<PropsOptions, false>,
+  Readonly<ExtractPropTypes<PropsOptions>>,
   RawBindings,
   D,
   C,
