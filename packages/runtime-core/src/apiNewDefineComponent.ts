@@ -9,20 +9,26 @@ import {
 } from './componentOptions'
 import {
   SetupContext,
-  FunctionalComponent,
   AllowedComponentProps,
   ComponentCustomProps
 } from './component'
-import {
-  CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
-} from './componentProxy'
 import { ExtractPropTypes, ComponentPropsOptions } from './componentProps'
 import { EmitsOptions } from './componentEmits'
 import { isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
+import {
+  CreateComponentPublicInstance,
+  ComponentPublicInstance
+} from './componentProxy'
 
-export interface DefineJSX<
+declare const DefineComponent: unique symbol
+declare const JSX: unique symbol
+
+export interface DefineComponentJSX<T extends ComponentPublicInstance> {
+  [JSX]: true
+}
+
+export type DefineComponent<
   Props,
   RawBindings,
   D,
@@ -32,7 +38,29 @@ export interface DefineJSX<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   PublicProps = {}
-> {}
+> = CreateComponentPublicInstance<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  PublicProps
+> & { [DefineComponent]: true } & DefineComponentJSX<
+    CreateComponentPublicInstance<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      PublicProps
+    >
+  >
 
 // newDefineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -46,7 +74,7 @@ export function newDefineComponent<Props, RawBindings = object>(
     props: Readonly<Props>,
     ctx: SetupContext
   ) => RawBindings | RenderFunction
-): DefineJSX<
+): DefineComponent<
   Props,
   RawBindings,
   {},
@@ -57,8 +85,7 @@ export function newDefineComponent<Props, RawBindings = object>(
   {},
   // public props
   VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
-> &
-  FunctionalComponent<Props>
+>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -85,18 +112,7 @@ export function newDefineComponent<
     E,
     EE
   >
-  /**
-   *   Props,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  PublicProps = {}
-   */
-): DefineJSX<
+): DefineComponent<
   Props,
   RawBindings,
   D,
@@ -106,18 +122,7 @@ export function newDefineComponent<
   Extends,
   E,
   VNodeProps & Props & AllowedComponentProps & ComponentCustomProps
-> &
-  ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -144,7 +149,7 @@ export function newDefineComponent<
     E,
     EE
   >
-): DefineJSX<
+): DefineComponent<
   Readonly<{ [key in PropNames]?: any }>,
   RawBindings,
   D,
@@ -154,18 +159,7 @@ export function newDefineComponent<
   Extends,
   E,
   AllowedComponentProps & ComponentCustomProps
-> &
-  ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+>
 
 // overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
@@ -193,7 +187,7 @@ export function newDefineComponent<
     E,
     EE
   >
-): DefineJSX<
+): DefineComponent<
   ExtractPropTypes<PropsOptions, false>,
   RawBindings,
   D,
@@ -203,18 +197,7 @@ export function newDefineComponent<
   Extends,
   E,
   VNodeProps & AllowedComponentProps & ComponentCustomProps
-> &
-  ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE
-  >
+>
 
 // implementation, close to no-op
 export function newDefineComponent(options: unknown) {

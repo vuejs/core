@@ -42,7 +42,11 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
-export { newDefineComponent, DefineJSX } from './apiNewDefineComponent'
+export {
+  newDefineComponent,
+  DefineComponentJSX,
+  DefineComponent
+} from './apiNewDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 
 // Advanced API ----------------------------------------------------------------

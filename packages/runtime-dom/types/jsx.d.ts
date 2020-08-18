@@ -1354,27 +1354,7 @@ declare global {
 export {}
 
 declare module '@vue/runtime-core' {
-  interface DefineJSX<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    PublicProps
-  > {
-    new (): RuntimeCore.CreateComponentPublicInstance<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      PublicProps
-    >
+  interface DefineComponentJSX<T> {
+    new (): T
   }
 }
