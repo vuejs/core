@@ -42,7 +42,7 @@ export type ComponentObjectPropsOptions<P = Data> = {
 
 export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
-type DefaultFactory<T> = () => T | null | undefined
+type DefaultFactory<T> = (props: Data) => T | null | undefined
 
 interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null

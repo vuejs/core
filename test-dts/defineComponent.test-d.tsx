@@ -18,6 +18,7 @@ describe('with object props', () => {
     b: string
     e?: Function
     bb: string
+    bbb: string
     cc?: string[] | undefined
     dd: { n: 1 }
     ee?: () => string
@@ -45,6 +46,11 @@ describe('with object props', () => {
       // default value should infer type and make it non-void
       bb: {
         default: 'hello'
+      },
+      bbb: {
+        // Note: default function value requires arrow syntax + explicit
+        // annotation
+        default: (props: any) => (props.bb as string) || 'foo'
       },
       // explicit type casting
       cc: Array as PropType<string[]>,
@@ -85,6 +91,7 @@ describe('with object props', () => {
       },
       validated: {
         type: String,
+        // validator requires explicit annotation
         validator: (val: unknown) => val !== ''
       }
     },
@@ -94,6 +101,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['b']>(props.b)
       expectType<ExpectedProps['e']>(props.e)
       expectType<ExpectedProps['bb']>(props.bb)
+      expectType<ExpectedProps['bbb']>(props.bbb)
       expectType<ExpectedProps['cc']>(props.cc)
       expectType<ExpectedProps['dd']>(props.dd)
       expectType<ExpectedProps['ee']>(props.ee)
