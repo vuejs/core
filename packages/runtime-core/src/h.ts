@@ -124,14 +124,6 @@ export function h<Options extends ComponentOptions | FunctionalComponent<{}>>(
   children?: RawChildren | RawSlots
 ): VNode
 
-// // fake constructor type returned by `defineComponent`
-// export function h(type: DefineComponent, children?: RawChildren): VNode
-// export function h<P>(
-//   type: DefineComponent<P>,
-//   props: (RawProps & P) | ({} extends P ? null : never),
-//   children?: RawChildren | RawSlots
-// ): VNode
-
 // fake constructor type returned by `defineComponent` or class component
 export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
