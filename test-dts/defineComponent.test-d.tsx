@@ -27,6 +27,7 @@ describe('with object props', () => {
     eee: () => { a: string }
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
+    ggg: 'foo' | 'bar'
     validated?: string
   }
 
@@ -77,6 +78,11 @@ describe('with object props', () => {
         type: Boolean,
         required: true
       },
+      // default + type casting
+      ggg: {
+        type: String as PropType<'foo' | 'bar'>,
+        default: 'foo'
+      },
       validated: {
         type: String,
         validator: (val: unknown) => val !== ''
@@ -97,6 +103,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
+      expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly
@@ -128,6 +135,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['eee']>(props.eee)
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
+      expectType<ExpectedProps['ggg']>(props.ggg)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
@@ -146,6 +154,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['eee']>(this.eee)
       expectType<ExpectedProps['fff']>(this.fff)
       expectType<ExpectedProps['hhh']>(this.hhh)
+      expectType<ExpectedProps['ggg']>(this.ggg)
 
       // @ts-expect-error props on `this` should be readonly
       expectError((this.a = 1))
@@ -177,6 +186,7 @@ describe('with object props', () => {
       eee={() => ({ a: 'eee' })}
       fff={(a, b) => ({ a: a > +b })}
       hhh={false}
+      ggg="foo"
       // should allow class/style as attrs
       class="bar"
       style={{ color: 'red' }}
@@ -193,6 +203,10 @@ describe('with object props', () => {
   expectError(
     // @ts-expect-error wrong prop types
     <MyComponent a={'wrong type'} b="foo" dd={{ n: 1 }} ddd={['foo']} />
+  )
+  expectError(
+    // @ts-expect-error wrong prop types
+    <MyComponent ggg="baz" />
   )
   // @ts-expect-error
   expectError(<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />)
