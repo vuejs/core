@@ -210,6 +210,27 @@ describe('with object props', () => {
   )
   // @ts-expect-error
   expectError(<MyComponent b="foo" dd={{ n: 'string' }} ddd={['foo']} />)
+
+  // `this` should be void inside of prop validators and prop default factories
+  defineComponent({
+    props: {
+      myProp: {
+        type: Number,
+        validator(val: unknown): boolean {
+          // @ts-expect-error
+          return val !== this.otherProp
+        },
+        default(): number {
+          // @ts-expect-error
+          return this.otherProp + 1
+        }
+      },
+      otherProp: {
+        type: Number,
+        required: true
+      }
+    }
+  })
 })
 
 // describe('type inference w/ optional props declaration', () => {
