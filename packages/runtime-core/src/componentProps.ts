@@ -497,7 +497,7 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
       valid = value instanceof type
     }
   } else if (expectedType === 'Object') {
-    valid = toRawType(value) === 'Object'
+    valid = isObject(value)
   } else if (expectedType === 'Array') {
     valid = isArray(value)
   } else {
