@@ -20,7 +20,7 @@ import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
   isGloballyWhitelisted,
   makeMap,
-  babelParserDefautPlugins,
+  babelParserDefaultPlugins,
   hasOwn
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -135,7 +135,7 @@ export function processExpression(
     : `(${rawExp})${asParams ? `=>{}` : ``}`
   try {
     ast = parse(source, {
-      plugins: [...context.expressionPlugins, ...babelParserDefautPlugins]
+      plugins: [...context.expressionPlugins, ...babelParserDefaultPlugins]
     }).program
   } catch (e) {
     context.onError(
