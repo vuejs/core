@@ -8,7 +8,7 @@ import {
   isFunction,
   extend
 } from '@vue/shared'
-import { ComponentInternalInstance, Component } from './component'
+import { ComponentInternalInstance, ConcreteComponent } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
 import { normalizePropsOptions } from './componentProps'
@@ -94,7 +94,7 @@ export function emit(
 }
 
 function normalizeEmitsOptions(
-  comp: Component
+  comp: ConcreteComponent
 ): ObjectEmitsOptions | undefined {
   if (hasOwn(comp, '__emits')) {
     return comp.__emits
@@ -131,7 +131,7 @@ function normalizeEmitsOptions(
 // Check if an incoming prop key is a declared emit event listener.
 // e.g. With `emits: { click: null }`, props named `onClick` and `onclick` are
 // both considered matched listeners.
-export function isEmitListener(comp: Component, key: string): boolean {
+export function isEmitListener(comp: ConcreteComponent, key: string): boolean {
   let emits: ObjectEmitsOptions | undefined
   if (!isOn(key) || !(emits = normalizeEmitsOptions(comp))) {
     return false

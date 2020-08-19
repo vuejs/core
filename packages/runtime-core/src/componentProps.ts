@@ -27,7 +27,7 @@ import {
   Data,
   ComponentInternalInstance,
   ComponentOptions,
-  Component
+  ConcreteComponent
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -310,7 +310,7 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  comp: Component
+  comp: ConcreteComponent
 ): NormalizedPropsOptions | [] {
   if (comp.__props) {
     return comp.__props
@@ -411,7 +411,7 @@ function getTypeIndex(
 /**
  * dev only
  */
-function validateProps(props: Data, comp: Component) {
+function validateProps(props: Data, comp: ConcreteComponent) {
   const rawValues = toRaw(props)
   const options = normalizePropsOptions(comp)[0]
   for (const key in options) {

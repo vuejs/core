@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-globals */
 import {
-  Component,
+  ConcreteComponent,
   ComponentInternalInstance,
   ComponentOptions,
   InternalRenderFunction
@@ -10,7 +10,7 @@ import { extend } from '@vue/shared'
 
 export let isHmrUpdating = false
 
-export const hmrDirtyComponents = new Set<Component>()
+export const hmrDirtyComponents = new Set<ConcreteComponent>()
 
 export interface HMRRuntime {
   createRecord: typeof createRecord
