@@ -2,7 +2,6 @@ import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
 
@@ -180,7 +179,6 @@ export type UnwrapRef<T> = T extends Ref<infer V>
 
 type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
