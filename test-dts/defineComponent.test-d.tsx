@@ -30,6 +30,7 @@ describe('with object props', () => {
     fff: (a: number, b: string) => { a: boolean }
     hhh: boolean
     ggg: 'foo' | 'bar'
+    ffff: (a: number, b: string) => { a: boolean }
     validated?: string
   }
 
@@ -90,6 +91,11 @@ describe('with object props', () => {
         type: String as PropType<'foo' | 'bar'>,
         default: 'foo'
       },
+      // default + function
+      ffff: {
+        type: Function as PropType<(a: number, b: string) => { a: boolean }>,
+        default: (a: number, b: string) => ({ a: true })
+      },
       validated: {
         type: String,
         // validator requires explicit annotation
@@ -113,6 +119,7 @@ describe('with object props', () => {
       expectType<ExpectedProps['fff']>(props.fff)
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
+      expectType<ExpectedProps['ffff']>(props.ffff)
       expectType<ExpectedProps['validated']>(props.validated)
 
       // @ts-expect-error props should be readonly

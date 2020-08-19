@@ -47,7 +47,7 @@ type DefaultFactory<T> = (props: Data) => T | null | undefined
 interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
-  default?: D | DefaultFactory<D> | null | undefined
+  default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
 }
 
