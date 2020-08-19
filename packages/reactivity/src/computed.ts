@@ -1,6 +1,6 @@
 import { effect, ReactiveEffect, trigger, track } from './effect'
 import { TriggerOpTypes, TrackOpTypes } from './operations'
-import { Ref, RefSymbol } from './ref'
+import { Ref } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags } from './reactive'
 
@@ -20,7 +20,7 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-class _ComputedRef<T> implements ComputedRef<T> {
+class _ComputedRef<T> {
   private _value!: T
   private _dirty = true
 
@@ -45,8 +45,6 @@ class _ComputedRef<T> implements ComputedRef<T> {
 
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
-
-  [RefSymbol]: true
 
   get value() {
     if (this._dirty) {
@@ -92,5 +90,5 @@ export function computed<T>(
     getter,
     setter,
     isFunction(getterOrOptions) || !getterOrOptions.set
-  )
+  ) as any
 }

@@ -4,7 +4,7 @@ import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
-export declare const RefSymbol: unique symbol
+declare const RefSymbol: unique symbol
 
 export interface Ref<T = any> {
   /**
@@ -23,7 +23,7 @@ const convert = <T extends unknown>(val: T): T =>
 
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return r ? r.__v_isRef === true : false
+  return Boolean(r && r.__v_isRef === true)
 }
 
 export function ref<T extends object>(
@@ -44,7 +44,7 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-class _Ref<T> implements Ref<T> {
+class _Ref<T> {
   private _value: T
 
   constructor(private _rawValue: T, private readonly _shallow = false) {
@@ -63,8 +63,6 @@ class _Ref<T> implements Ref<T> {
       trigger(this, TriggerOpTypes.SET, 'value', newVal)
     }
   }
-
-  [RefSymbol]: true
 
   get __v_isRef() {
     return true
@@ -115,7 +113,7 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class _CustomRef<T> implements Ref<T> {
+class _CustomRef<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
 
@@ -136,15 +134,13 @@ class _CustomRef<T> implements Ref<T> {
     this._set(newVal)
   }
 
-  [RefSymbol]: true
-
   get __v_isRef() {
     return true
   }
 }
 
 export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
-  return new _CustomRef(factory)
+  return new _CustomRef(factory) as any
 }
 
 export function toRefs<T extends object>(object: T): ToRefs<T> {
@@ -158,7 +154,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
-class _ObjectRef<T extends object, K extends keyof T> implements Ref<T[K]> {
+class _ObjectRef<T extends object, K extends keyof T> {
   constructor(private readonly _object: T, private readonly _key: K) {}
 
   get value() {
@@ -169,8 +165,6 @@ class _ObjectRef<T extends object, K extends keyof T> implements Ref<T[K]> {
     this._object[this._key] = newVal
   }
 
-  [RefSymbol]: true
-
   get __v_isRef() {
     return true
   }
@@ -180,7 +174,7 @@ export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  return new _ObjectRef(object, key)
+  return new _ObjectRef(object, key) as any
 }
 
 // corner case when use narrows type
