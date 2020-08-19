@@ -1,4 +1,4 @@
-import { reactive, readonly, toRaw, ReactiveFlags } from './reactive'
+import { reactive, readonly, toRaw, ReactiveFlags, Target } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { track, trigger, ITERATE_KEY } from './effect'
 import {
@@ -41,7 +41,7 @@ const arrayInstrumentations: Record<string, Function> = {}
 })
 
 function createGetter(isReadonly = false, shallow = false) {
-  return function get(target: object, key: string | symbol, receiver: object) {
+  return function get(target: Target, key: string | symbol, receiver: object) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -50,8 +50,8 @@ function createGetter(isReadonly = false, shallow = false) {
       key === ReactiveFlags.RAW &&
       receiver ===
         (isReadonly
-          ? (target as any)[ReactiveFlags.READONLY]
-          : (target as any)[ReactiveFlags.REACTIVE])
+          ? target[ReactiveFlags.READONLY]
+          : target[ReactiveFlags.REACTIVE])
     ) {
       return target
     }

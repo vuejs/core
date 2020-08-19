@@ -139,7 +139,10 @@ export const TeleportImpl = {
           parentSuspense,
           isSVG
         )
-        if (n2.patchFlag > 0 && n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // even in block tree mode we need to make sure all root-level nodes
+        // in the teleport inherit previous DOM references so that they can
+        // be moved in future patches.
+        if (n2.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           const oldChildren = n1.children as VNode[]
           const children = n2.children as VNode[]
           for (let i = 0; i < children.length; i++) {

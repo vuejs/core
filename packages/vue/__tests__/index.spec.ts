@@ -208,4 +208,43 @@ describe('compiler + runtime integration', () => {
     ).toHaveBeenWarned()
     document.querySelector = origin
   })
+
+  // #1813
+  it('should not report an error when "0" as patchFlag value', async () => {
+    const container = document.createElement('div')
+    const target = document.createElement('div')
+    const count = ref(0)
+    const origin = document.querySelector
+    document.querySelector = jest.fn().mockReturnValue(target)
+
+    const App = {
+      template: `
+      <teleport v-if="count < 2" to="#target">
+        <div>
+          <div>{{ count }}</div>
+        </div>
+      </teleport>
+      `,
+      data() {
+        return {
+          count
+        }
+      }
+    }
+    createApp(App).mount(container)
+    expect(container.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
+    expect(target.innerHTML).toBe(`<div><div>0</div></div>`)
+
+    count.value++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
+    expect(target.innerHTML).toBe(`<div><div>1</div></div>`)
+
+    count.value++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<!--v-if-->`)
+    expect(target.innerHTML).toBe(``)
+
+    document.querySelector = origin
+  })
 })

@@ -5,7 +5,8 @@ import {
   isRef,
   unref,
   reactive,
-  expectType
+  expectType,
+  proxyRefs
 } from './index'
 
 function plainType(arg: number | Ref<number>) {
@@ -120,6 +121,7 @@ const state = reactive({
 
 expectType<string>(state.foo.label)
 
+// shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
 if (shallowStatus.value === 'initial') {
@@ -134,3 +136,21 @@ if (refStatus.value === 'initial') {
   expectType<Status>(shallowStatus.value)
   refStatus.value = 'invalidating'
 }
+
+// proxyRefs: should return `reactive` directly
+const r1 = reactive({
+  k: 'v'
+})
+const p1 = proxyRefs(r1)
+expectType<typeof r1>(p1)
+
+// proxyRefs: `ShallowUnwrapRef`
+const r2 = {
+  a: ref(1),
+  obj: {
+    k: ref('foo')
+  }
+}
+const p2 = proxyRefs(r2)
+expectType<number>(p2.a)
+expectType<Ref<string>>(p2.obj.k)

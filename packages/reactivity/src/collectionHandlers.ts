@@ -30,37 +30,42 @@ const getProto = <T extends CollectionTypes>(v: T): any =>
 function get(
   target: MapTypes,
   key: unknown,
-  wrap: typeof toReactive | typeof toReadonly | typeof toShallow
+  isReadonly = false,
+  isShallow = false
 ) {
-  target = toRaw(target)
+  // #1772: readonly(reactive(Map)) should return readonly + reactive version
+  // of the value
+  target = (target as any)[ReactiveFlags.RAW]
+  const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (key !== rawKey) {
-    track(target, TrackOpTypes.GET, key)
+    !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
   }
-  track(target, TrackOpTypes.GET, rawKey)
-  const { has, get } = getProto(target)
-  if (has.call(target, key)) {
-    return wrap(get.call(target, key))
-  } else if (has.call(target, rawKey)) {
-    return wrap(get.call(target, rawKey))
+  !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
+  const { has } = getProto(rawTarget)
+  const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
+  if (has.call(rawTarget, key)) {
+    return wrap(target.get(key))
+  } else if (has.call(rawTarget, rawKey)) {
+    return wrap(target.get(rawKey))
   }
 }
 
-function has(this: CollectionTypes, key: unknown): boolean {
-  const target = toRaw(this)
+function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
+  const target = (this as any)[ReactiveFlags.RAW]
+  const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (key !== rawKey) {
-    track(target, TrackOpTypes.HAS, key)
+    !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
   }
-  track(target, TrackOpTypes.HAS, rawKey)
-  const has = getProto(target).has
-  return has.call(target, key) || has.call(target, rawKey)
+  !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
+  return target.has(key) || target.has(rawKey)
 }
 
-function size(target: IterableCollections) {
-  target = toRaw(target)
-  track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
-  return Reflect.get(getProto(target), 'size', target)
+function size(target: IterableCollections, isReadonly = false) {
+  target = (target as any)[ReactiveFlags.RAW]
+  !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+  return Reflect.get(target, 'size', target)
 }
 
 function add(this: SetTypes, value: unknown) {
@@ -134,7 +139,7 @@ function clear(this: IterableCollections) {
   return result
 }
 
-function createForEach(isReadonly: boolean, shallow: boolean) {
+function createForEach(isReadonly: boolean, isShallow: boolean) {
   return function forEach(
     this: IterableCollections,
     callback: Function,
@@ -142,7 +147,7 @@ function createForEach(isReadonly: boolean, shallow: boolean) {
   ) {
     const observed = this
     const target = toRaw(observed)
-    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
+    const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
     !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
     // important: create sure the callback is
     // 1. invoked with the reactive map as `this` and 3rd arg
@@ -170,21 +175,22 @@ interface IterationResult {
 function createIterableMethod(
   method: string | symbol,
   isReadonly: boolean,
-  shallow: boolean
+  isShallow: boolean
 ) {
   return function(
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
-    const target = toRaw(this)
-    const isMap = target instanceof Map
+    const target = (this as any)[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
+    const isMap = rawTarget instanceof Map
     const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
     const isKeyOnly = method === 'keys' && isMap
-    const innerIterator = getProto(target)[method].apply(target, args)
-    const wrap = isReadonly ? toReadonly : shallow ? toShallow : toReactive
+    const innerIterator = target[method](...args)
+    const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
     !isReadonly &&
       track(
-        target,
+        rawTarget,
         TrackOpTypes.ITERATE,
         isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
       )
@@ -224,7 +230,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 
 const mutableInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
-    return get(this, key, toReactive)
+    return get(this, key)
   },
   get size() {
     return size((this as unknown) as IterableCollections)
@@ -239,7 +245,7 @@ const mutableInstrumentations: Record<string, Function> = {
 
 const shallowInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
-    return get(this, key, toShallow)
+    return get(this, key, false, true)
   },
   get size() {
     return size((this as unknown) as IterableCollections)
@@ -254,12 +260,14 @@ const shallowInstrumentations: Record<string, Function> = {
 
 const readonlyInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
-    return get(this, key, toReadonly)
+    return get(this, key, true)
   },
   get size() {
-    return size((this as unknown) as IterableCollections)
+    return size((this as unknown) as IterableCollections, true)
   },
-  has,
+  has(this: MapTypes, key: unknown) {
+    return has.call(this, key, true)
+  },
   add: createReadonlyMethod(TriggerOpTypes.ADD),
   set: createReadonlyMethod(TriggerOpTypes.SET),
   delete: createReadonlyMethod(TriggerOpTypes.DELETE),

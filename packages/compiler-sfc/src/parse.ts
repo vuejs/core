@@ -204,6 +204,7 @@ export function parse(
     genMap(descriptor.template)
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
+    descriptor.customBlocks.forEach(genMap)
   }
 
   const result = {
