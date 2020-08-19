@@ -232,7 +232,7 @@ export function getStaticType(
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
-        exhaustiveCheck
+        return exhaustiveCheck
       }
       return StaticType.NOT_STATIC
   }

@@ -316,7 +316,7 @@ export function hasScopeRef(
     default:
       if (__DEV__) {
         const exhaustiveCheck: never = node
-        exhaustiveCheck
+        return exhaustiveCheck
       }
       return false
   }
