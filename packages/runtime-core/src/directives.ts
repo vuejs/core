@@ -58,12 +58,6 @@ export type Directive<T = any, V = any> =
 
 export type DirectiveModifiers = Record<string, boolean>
 
-export type VNodeDirectiveData = [
-  unknown,
-  string | undefined,
-  DirectiveModifiers
-]
-
 const isBuiltInDirective = /*#__PURE__*/ makeMap(
   'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text'
 )
