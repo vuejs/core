@@ -35,7 +35,10 @@ export function ref(value?: unknown) {
   return createRef(value)
 }
 
-export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T extends object>(
+  value: T
+): T extends Ref ? T : Ref<T>
+export function shallowRef<T>(value: T): Ref<T>
 export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)

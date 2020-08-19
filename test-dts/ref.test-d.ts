@@ -1,6 +1,7 @@
 import {
   Ref,
   ref,
+  shallowRef,
   isRef,
   unref,
   reactive,
@@ -119,6 +120,22 @@ const state = reactive({
 })
 
 expectType<string>(state.foo.label)
+
+// shallowRef
+type Status = 'initial' | 'ready' | 'invalidating'
+const shallowStatus = shallowRef<Status>('initial')
+if (shallowStatus.value === 'initial') {
+  expectType<Ref<Status>>(shallowStatus)
+  expectType<Status>(shallowStatus.value)
+  shallowStatus.value = 'invalidating'
+}
+
+const refStatus = ref<Status>('initial')
+if (refStatus.value === 'initial') {
+  expectType<Ref<Status>>(shallowStatus)
+  expectType<Status>(shallowStatus.value)
+  refStatus.value = 'invalidating'
+}
 
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
