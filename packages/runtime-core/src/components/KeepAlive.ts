@@ -285,6 +285,7 @@ const KeepAliveImpl = {
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
+  __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
   }
