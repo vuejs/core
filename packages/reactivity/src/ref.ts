@@ -52,7 +52,7 @@ class _Ref<T> {
   }
 
   get value() {
-    track(this, TrackOpTypes.GET, 'value')
+    track(toRaw(this), TrackOpTypes.GET, 'value')
     return this._value
   }
 
@@ -60,7 +60,7 @@ class _Ref<T> {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
       this._value = this._shallow ? newVal : convert(newVal)
-      trigger(this, TriggerOpTypes.SET, 'value', newVal)
+      trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
   }
 
