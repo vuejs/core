@@ -49,7 +49,7 @@ interface PropOptions<T = any, D = T> {
   required?: boolean
   default?:
     | D
-    | DefaultFactory<D extends (...arg: any) => any ? T : D>
+    | DefaultFactory<T extends (...arg: any) => any ? D : T>
     | null
     | undefined
   validator?(value: unknown): boolean
