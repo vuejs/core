@@ -30,6 +30,8 @@ describe('with object props', () => {
     hhh: boolean
     ggg: 'foo' | 'bar'
     validated?: string
+    fnWithDefault: (a: number) => number
+    fnWithoutDefault?: (a: number) => number
   }
 
   type GT = string & { __brand: unknown }
@@ -93,6 +95,13 @@ describe('with object props', () => {
         type: String,
         // validator requires explicit annotation
         validator: (val: unknown) => val !== ''
+      },
+      fnWithDefault: {
+        type: Function as PropType<(a: number) => number>,
+        default: (a: number) => a * 2
+      },
+      fnWithoutDefault: {
+        type: Function as PropType<(a: number) => number>
       }
     },
     setup(props) {
@@ -113,6 +122,8 @@ describe('with object props', () => {
       expectType<ExpectedProps['hhh']>(props.hhh)
       expectType<ExpectedProps['ggg']>(props.ggg)
       expectType<ExpectedProps['validated']>(props.validated)
+      expectType<ExpectedProps['fnWithDefault']>(props.fnWithDefault)
+      expectType<ExpectedProps['fnWithoutDefault']>(props.fnWithoutDefault)
 
       // @ts-expect-error props should be readonly
       expectError((props.a = 1))
