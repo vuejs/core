@@ -41,7 +41,9 @@ import {
   queuePostFlushCb,
   flushPostFlushCbs,
   invalidateJob,
-  flushPreFlushCbs
+  flushPreFlushCbs,
+  SchedulerJob,
+  SchedulerCb
 } from './scheduler'
 import { effect, stop, ReactiveEffectOptions, isRef } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -309,9 +311,7 @@ export const setRef = (
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (hasOwn(setupState, oldRef)) {
-        queuePostRenderEffect(() => {
-          setupState[oldRef] = null
-        }, parentSuspense)
+        setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
       oldRef.value = null
@@ -319,14 +319,31 @@ export const setRef = (
   }
 
   if (isString(ref)) {
-    refs[ref] = value
-    if (hasOwn(setupState, ref)) {
-      queuePostRenderEffect(() => {
+    const doSet = () => {
+      refs[ref] = value
+      if (hasOwn(setupState, ref)) {
         setupState[ref] = value
-      }, parentSuspense)
+      }
+    }
+    // #1789: for non-null values, set them after render
+    // null values means this is unmount and it should not overwrite another
+    // ref with the same key
+    if (value) {
+      ;(doSet as SchedulerCb).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
     }
   } else if (isRef(ref)) {
-    ref.value = value
+    const doSet = () => {
+      ref.value = value
+    }
+    if (value) {
+      ;(doSet as SchedulerCb).id = -1
+      queuePostRenderEffect(doSet, parentSuspense)
+    } else {
+      doSet()
+    }
   } else if (isFunction(ref)) {
     callWithErrorHandling(ref, parentComponent, ErrorCodes.FUNCTION_REF, [
       value,
@@ -738,19 +755,17 @@ function baseCreateRenderer(
       if (treeOwnerId && treeOwnerId !== scopeId) {
         hostSetScopeId(el, treeOwnerId + '-s')
       }
-
-      if (transition && !transition.persisted) {
-        transition.beforeEnter(el)
-      }
     }
-
-    hostInsert(el, container, anchor)
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
     const needCallTransitionHooks =
       (!parentSuspense || (parentSuspense && parentSuspense!.isResolved)) &&
       transition &&
       !transition.persisted
+    if (needCallTransitionHooks) {
+      transition!.beforeEnter(el)
+    }
+    hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
       needCallTransitionHooks ||
@@ -1417,6 +1432,8 @@ function baseCreateRenderer(
         }
       }
     }, __DEV__ ? createDevEffectOptions(instance) : prodEffectOptions)
+    // #1801 mark it to allow recursive updates
+    ;(instance.update as SchedulerJob).allowRecurse = true
   }
 
   const updateComponentPreRender = (

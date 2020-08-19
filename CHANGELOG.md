@@ -216,7 +216,7 @@ more details.
 
 * **runtime-core:** avoid accidental access of `Object.prototype` properties ([f3e9c1b](https://github.com/vuejs/vue-next/commit/f3e9c1b59d5d3999ac6180ed75c84d88b29c41e6))
 * ensure vnode hooks are called consistently regardless of keep-alive ([4e8e689](https://github.com/vuejs/vue-next/commit/4e8e689572dcae0cb468989c5e0c531a837a900b))
-* **runtime-core:** pass unmount into inital mount patch prop ([2bdb5c1](https://github.com/vuejs/vue-next/commit/2bdb5c146449092623f06e20fb71ebaca7e5588f))
+* **runtime-core:** pass unmount into initial mount patch prop ([2bdb5c1](https://github.com/vuejs/vue-next/commit/2bdb5c146449092623f06e20fb71ebaca7e5588f))
 * **runtime-dom:** allow force updating value bindings for controlled inputs ([b3536d8](https://github.com/vuejs/vue-next/commit/b3536d87a587dc1e78c8712cb29ca61ca0931ac9)), closes [#1471](https://github.com/vuejs/vue-next/issues/1471)
 * **slots:** make compiled slot marker non-enumerable ([062835d](https://github.com/vuejs/vue-next/commit/062835d45aaf4168ddf2e39a5c7e162b3a18ccae)), closes [#1470](https://github.com/vuejs/vue-next/issues/1470)
 
@@ -418,7 +418,7 @@ more details.
 
 ### Performance Improvements
 
-* **compiler-sfc:** improve asset url trasnform efficiency ([c5dcfe1](https://github.com/vuejs/vue-next/commit/c5dcfe16f6cd3503ce1d5349cfacbe099a7e19be))
+* **compiler-sfc:** improve asset url transform efficiency ([c5dcfe1](https://github.com/vuejs/vue-next/commit/c5dcfe16f6cd3503ce1d5349cfacbe099a7e19be))
 * **compiler-sfc:** only add character mapping if not whitespace ([2f69167](https://github.com/vuejs/vue-next/commit/2f69167e889f2817138629a04c01c6baf565d485))
 
 
@@ -948,7 +948,7 @@ renamed to `errorComponent` and `loadingComponent` respectively.
 * **reactivity:** allow effect trigger inside no-track execution contexts ([274f81c](https://github.com/vuejs/vue-next/commit/274f81c5db83f0f77e1aba3240b2134a2474a72f)), closes [#804](https://github.com/vuejs/vue-next/issues/804)
 * **reactivity:** Map/Set identity methods should work even if raw value contains reactive entries ([cc69fd7](https://github.com/vuejs/vue-next/commit/cc69fd72e3f9ef3572d2be40af71d22232e1b9af)), closes [#799](https://github.com/vuejs/vue-next/issues/799)
 * **reactivity:** should not trigger length dependency on Array delete ([a306658](https://github.com/vuejs/vue-next/commit/a3066581f3014aae31f2d96b96428100f1674166)), closes [#774](https://github.com/vuejs/vue-next/issues/774)
-* **runtime-core:** ensure inhertied attrs update on optimized child root ([6810d14](https://github.com/vuejs/vue-next/commit/6810d1402e214a12fa274ff5fb7475bad002d1b1)), closes [#677](https://github.com/vuejs/vue-next/issues/677) [#784](https://github.com/vuejs/vue-next/issues/784)
+* **runtime-core:** ensure inherited attrs update on optimized child root ([6810d14](https://github.com/vuejs/vue-next/commit/6810d1402e214a12fa274ff5fb7475bad002d1b1)), closes [#677](https://github.com/vuejs/vue-next/issues/677) [#784](https://github.com/vuejs/vue-next/issues/784)
 * **slots:** fix conditional slot ([3357ff4](https://github.com/vuejs/vue-next/commit/3357ff438c6ff0d4fea67923724dd3cb99ff2756)), closes [#787](https://github.com/vuejs/vue-next/issues/787)
 * **ssr:** fix ssr on-the-fly compilation + slot fallback branch helper injection ([3be3785](https://github.com/vuejs/vue-next/commit/3be3785f945253918469da456a14a2d9381bcbd0))
 

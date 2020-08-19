@@ -5,7 +5,7 @@ const defaultExportRE = /((?:^|\n|;)\s*)export(\s*)default/
 const namedDefaultExportRE = /((?:^|\n|;)\s*)export(.+)as(\s*)default/
 
 /**
- * Utility for rewriting `export default` in a script block into a varaible
+ * Utility for rewriting `export default` in a script block into a variable
  * declaration so that we can inject things into it
  */
 export function rewriteDefault(

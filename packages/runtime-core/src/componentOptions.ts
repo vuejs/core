@@ -106,7 +106,7 @@ export interface ComponentOptionsBase<
   components?: Record<string, PublicAPIComponent>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
-  emits?: E | EE[]
+  emits?: (E | EE[]) & ThisType<void>
 
   // Internal ------------------------------------------------------------------
 
@@ -217,7 +217,7 @@ export type ComponentOptionsWithObjectProps<
   EE extends string = string,
   Props = Readonly<ExtractPropTypes<PropsOptions>>
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE> & {
-  props: PropsOptions
+  props: PropsOptions & ThisType<void>
 } & ThisType<
     CreateComponentPublicInstance<
       Props,

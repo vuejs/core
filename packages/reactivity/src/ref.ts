@@ -1,6 +1,6 @@
 import { track, trigger } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isObject, hasChanged } from '@vue/shared'
+import { isArray, isObject, hasChanged } from '@vue/shared'
 import { reactive, isProxy, toRaw, isReactive } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 
@@ -35,7 +35,10 @@ export function ref(value?: unknown) {
   return createRef(value)
 }
 
-export function shallowRef<T>(value: T): T extends Ref ? T : Ref<T>
+export function shallowRef<T extends object>(
+  value: T
+): T extends Ref ? T : Ref<T>
+export function shallowRef<T>(value: T): Ref<T>
 export function shallowRef<T = any>(): Ref<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
@@ -121,7 +124,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
-  const ret: any = {}
+  const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
     ret[key] = toRef(object, key)
   }
