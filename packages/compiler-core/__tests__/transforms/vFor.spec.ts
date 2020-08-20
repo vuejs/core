@@ -770,6 +770,29 @@ describe('compiler: v-for', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    // #1907
+    test('template v-for key injection with single child', () => {
+      const {
+        root,
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="item.id"><span :id="item.id" /></template>'
+      )
+      expect(assertSharedCodegen(codegenNode, true)).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        innerVNodeCall: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"span"`,
+          props: createObjectMatcher({
+            key: '[item.id]',
+            id: '[item.id]'
+          })
+        }
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('v-for on <slot/>', () => {
       const {
         root,
