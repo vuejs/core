@@ -108,6 +108,7 @@ export const transformFor = createStructuralDirectiveTransform(
             isSlotOutlet(node.children[0])
             ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
             : null
+        debugger
         const keyProperty = keyProp
           ? createObjectProperty(
               `key`,
@@ -145,6 +146,9 @@ export const transformFor = createStructuralDirectiveTransform(
           // but mark it as a block.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
+          if (isTemplate && keyProperty) {
+            injectProp(forNode.codegenNode as VNodeCall, keyProperty, context)
+          }
           childBlock.isBlock = !isStableFragment
           if (childBlock.isBlock) {
             helper(OPEN_BLOCK)
