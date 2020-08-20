@@ -235,8 +235,8 @@ export type ComponentOptions<
   Props = {},
   RawBindings = any,
   D = any,
-  C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  C extends ComputedOptions = any,
+  M extends MethodOptions = any
 > = ComponentOptionsBase<Props, RawBindings, D, C, M, any, any, any>
 
 export type ComponentOptionsMixin = ComponentOptionsBase<

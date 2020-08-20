@@ -136,7 +136,7 @@ export type ConcreteComponent<
  * The constructor type is an artificial type returned by defineComponent().
  */
 export type Component<
-  Props = {},
+  Props = any,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
