@@ -44,8 +44,10 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
-class _Ref<T> {
+class RefImpl<T> {
   private _value: T
+
+  public readonly __v_isRef = true
 
   constructor(private _rawValue: T, private readonly _shallow = false) {
     this._value = _shallow ? _rawValue : convert(_rawValue)
@@ -63,17 +65,13 @@ class _Ref<T> {
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
   }
-
-  get __v_isRef() {
-    return true
-  }
 }
 
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
   }
-  return new _Ref(rawValue, shallow)
+  return new RefImpl(rawValue, shallow)
 }
 
 export function triggerRef(ref: Ref) {
@@ -113,9 +111,11 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
-class _CustomRef<T> {
+class CustomRefImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
+
+  public readonly __v_isRef = true
 
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
@@ -133,14 +133,10 @@ class _CustomRef<T> {
   set value(newVal) {
     this._set(newVal)
   }
-
-  get __v_isRef() {
-    return true
-  }
 }
 
 export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
-  return new _CustomRef(factory) as any
+  return new CustomRefImpl(factory) as any
 }
 
 export function toRefs<T extends object>(object: T): ToRefs<T> {
@@ -154,7 +150,9 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
-class _ObjectRef<T extends object, K extends keyof T> {
+class ObjectRefImpl<T extends object, K extends keyof T> {
+  public readonly __v_isRef = true
+
   constructor(private readonly _object: T, private readonly _key: K) {}
 
   get value() {
@@ -164,17 +162,13 @@ class _ObjectRef<T extends object, K extends keyof T> {
   set value(newVal) {
     this._object[this._key] = newVal
   }
-
-  get __v_isRef() {
-    return true
-  }
 }
 
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
-  return new _ObjectRef(object, key) as any
+  return new ObjectRefImpl(object, key) as any
 }
 
 // corner case when use narrows type

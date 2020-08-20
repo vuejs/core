@@ -20,13 +20,14 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
-class _ComputedRef<T> {
+class ComputedRefImpl<T> {
   private _value!: T
   private _dirty = true
 
-  public readonly effect: ReactiveEffect<T>;
+  public readonly effect: ReactiveEffect<T>
 
-  public [ReactiveFlags.IS_READONLY]: boolean
+  public readonly __v_isRef = true;
+  public readonly [ReactiveFlags.IS_READONLY]: boolean
 
   constructor(
     getter: ComputedGetter<T>,
@@ -58,10 +59,6 @@ class _ComputedRef<T> {
   set value(newValue: T) {
     this._setter(newValue)
   }
-
-  get __v_isRef() {
-    return true
-  }
 }
 
 export function computed<T>(getter: ComputedGetter<T>): ComputedRef<T>
@@ -86,7 +83,7 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  return new _ComputedRef(
+  return new ComputedRefImpl(
     getter,
     setter,
     isFunction(getterOrOptions) || !getterOrOptions.set
